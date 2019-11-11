@@ -2,9 +2,9 @@
 ** Development
    Remote machine for development is on dev.qfield.cloud 78.47.109.156
 *** Django
-    To create a Django app
+    To create a Django app inside the qfieldcloud project
     #+begin_src sh
-      docker-compose run web django-admin startproject qfieldcloud .
+      docker-compose run web python3 manage.py startapp appname
     #+end_src
 
     To run Django migration
