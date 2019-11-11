@@ -1,1 +1,25 @@
 * Repository of QFieldcloud server
+** Development
+   Remote machine for development is on dev.qfield.cloud 78.47.109.156
+*** Django
+    To create a Django app
+    #+begin_src sh
+      docker-compose run web django-admin startproject qfieldcloud .
+    #+end_src
+
+    To run Django migration
+    #+begin_src sh
+      docker-compose run web python3 manage.py migrate
+    #+end_src
+** Technological stack
+** Django
+   LTS (2.2)
+*** Django REST framework
+** Python "official" docker image
+   https://hub.docker.com/_/python
+   =3.7-buster=
+   See [[https://pythonspeed.com/articles/base-image-python-docker-images/][here]] why not use the alpine-based one.
+** Postgres
+   https://hub.docker.com/_/postgres
+   By docker "official" image =11=, I still don't use the 12 because
+   of some incompatibilites with QGIS (at the moment)

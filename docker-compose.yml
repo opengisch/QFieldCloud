@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:11
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - net
+
+  web:
+    build: ./docker-python
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    command: python3 manage.py runserver 0.0.0.0:8000
+    networks:
+      - net
+
+networks:
+  net:
