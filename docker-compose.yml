@@ -10,7 +10,7 @@ services:
       - net
 
   web:
-    build: ./docker-python
+    build: ./docker-django
     restart: unless-stopped
     tty: true
     stdin_open: true
