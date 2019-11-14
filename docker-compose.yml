@@ -5,25 +5,24 @@ services:
     image: postgres:11
     restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: postgres
-    networks:
-      - net
+      - POSTGRES_USER=hello_django
+      - POSTGRES_PASSWORD=hello_django
+      - POSTGRES_DB=hello_django_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
 
   web:
-    build: ./docker-django
+    build: ./app
     restart: unless-stopped
-    tty: true
-    stdin_open: true
-    expose:
-      - "8000"
     ports:
       - "8000:8000"
-    working_dir: /app
     volumes:
-      - ./app:/app
+      - ./app:/usr/src/app/
     command: python3 manage.py runserver 0.0.0.0:8000
-    networks:
-      - net
+    depends_on:
+      - db
+    env_file:
+      - ./.env.dev
 
-networks:
-  net:
+volumes:
+  postgres_data:
