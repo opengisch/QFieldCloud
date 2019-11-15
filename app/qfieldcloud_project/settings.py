@@ -25,7 +25,7 @@ SECRET_KEY = 'g#n^=)(lx-0i#+t-*kix_6q^8%$*jir9)9b90!maes=%fpol56'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['dev.qfield.cloud']
+ALLOWED_HOSTS = ['localhost', 'dev.qfield.cloud']
 
 
 # Application definition
