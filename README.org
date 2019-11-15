@@ -12,6 +12,12 @@
 
     It will read =docker-compose.yml= and =.env.dev= and start a
     django built-in server at http://localhost:8000
+
+    To run django commands on the docker, enter in the docker bash or
+    postpone =docker-compose run web= to the commands, e.g.:
+    #+begin_src sh
+      docker-compose run web manage.py startserver
+    #+end_src
 *** Production
     To build production images and run the containers:
     #+begin_src sh
@@ -21,7 +27,8 @@
     It will read =docker-compose.prod.yml=, =.env.prod= and
     =.env.prod.db= and start a nginx server at http://localhost:1337
 
-    Prod has no mounted folders. To apply changes, the image must be re-built.
+    Prod has no mounted folders. To apply changes, the image must be
+    re-built.
 ** Technological stack
 *** Django
     LTS (2.2)
@@ -32,6 +39,7 @@
     See [[https://pythonspeed.com/articles/base-image-python-docker-images/][here]] why not use the alpine-based one.
 *** Postgres
     https://hub.docker.com/_/postgres
+
     By docker "official" image =11=, I still don't use the 12 because
     of some incompatibilites with QGIS (at the moment)
 *** Nginx
