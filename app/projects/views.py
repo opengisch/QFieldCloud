@@ -11,6 +11,8 @@ class ProjectList(generics.ListCreateAPIView):
     def get_queryset(self):
         return Project.objects.filter(uploaded_by=self.request.user)
 
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
 
 class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
     """Shows and edits Project"""
