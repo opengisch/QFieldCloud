@@ -15,12 +15,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-
+from rest_framework_swagger.views import get_swagger_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('projects.urls')),
     path('api-auth/', include('rest_framework.urls')),
     path('api/v1/rest-auth/', include('rest_auth.urls')),
-    path('api/v1/rest-auth/registration/', include('rest_auth.registration.urls'))
+    path('api/v1/rest-auth/registration/', include('rest_auth.registration.urls')),
+    path('docs/', get_swagger_view(title='QFieldcloud REST API')),
 ]

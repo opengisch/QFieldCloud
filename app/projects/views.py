@@ -5,6 +5,7 @@ from .serializers import ProjectSerializer
 
 
 class ProjectList(generics.ListCreateAPIView):
+    """Lists user's Projects"""
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
@@ -12,6 +13,7 @@ class ProjectList(generics.ListCreateAPIView):
 
 
 class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
+    """Shows and edits Project"""
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
