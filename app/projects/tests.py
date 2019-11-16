@@ -60,3 +60,16 @@ class APITests(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['key'], self.token.key)
+
+    def test_login_session_authentication_wrong_password(self):
+        response = self.client.post(
+            '/api/v1/rest-auth/login/',
+            {
+                "username": "test_user1",
+                "password": "abc1234"
+            }
+        )
+        self.assertTrue(status.is_client_error(response.status_code))
+        self.assertFalse('key' in response.data)
+
+    # TODO: add token tests
