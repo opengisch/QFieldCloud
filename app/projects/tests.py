@@ -31,7 +31,7 @@ class APITests(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-       # Create a user
+        # Create a user
         test_user1 = User.objects.create_user(
             username='test_user1', password='abc123')
         test_user1.save()

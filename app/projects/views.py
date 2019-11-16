@@ -14,6 +14,7 @@ class ProjectList(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user)
 
+
 class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
     """Retrieves (GET), Updates (PUT, PATCH) or Deletes (DELETE) a Project"""
     serializer_class = ProjectSerializer
