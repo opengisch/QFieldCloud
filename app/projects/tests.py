@@ -37,6 +37,9 @@ class APITests(APITestCase):
         test_user1.save()
         cls.token = Token.objects.get_or_create(user=test_user1)[0]
 
+    def tearDown(self):
+        # Remove credentials
+        self.client.credentials()
 
     def test_register_user(self):
         response = self.client.post(
@@ -72,4 +75,14 @@ class APITests(APITestCase):
         self.assertTrue(status.is_client_error(response.status_code))
         self.assertFalse('key' in response.data)
 
-    # TODO: add token tests
+    def test_token_authorization(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Project list should be visible now
+        self.assertTrue(status.is_success(
+            self.client.get('/api/v1/').status_code))
+
+    def test_unauthorized_without_token(self):
+        # Project list should be denied for unauthorized users
+        self.assertTrue(status.is_client_error(
+            self.client.get('/api/v1/').status_code))
