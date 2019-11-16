@@ -5,7 +5,7 @@ from .serializers import ProjectSerializer
 
 
 class ProjectList(generics.ListCreateAPIView):
-    """Lists user's Projects"""
+    """Creates (POST) or Lists (GET) user's Projects"""
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
@@ -15,7 +15,7 @@ class ProjectList(generics.ListCreateAPIView):
         serializer.save(uploaded_by=self.request.user)
 
 class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
-    """Shows and edits Project"""
+    """Retrieves (GET), Updates (PUT, PATCH) or Deletes (DELETE) a Project"""
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
