@@ -1,4 +1,6 @@
-from rest_framework import generics
+from rest_framework import generics, views
+from rest_framework.parsers import FileUploadParser
+from rest_framework.response import Response
 
 from .models import Project
 from .serializers import ProjectSerializer
@@ -21,3 +23,20 @@ class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Project.objects.filter(uploaded_by=self.request.user)
+
+
+class FileUploadView(views.APIView):
+    parser_classes = [FileUploadParser]
+
+    def put(self, request, filename, format=None):
+    
+        print()
+        print(f'{filename} uploaded by {request.user}')
+        print()
+
+        #file_obj = request.data['file']
+
+        # TODO: do some stuff with uploaded file
+
+        return Response(status=204)
+
