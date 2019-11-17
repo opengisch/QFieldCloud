@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
-from .models import Project
+from .models import Repository
 
 
-class ProjectSerializer(serializers.ModelSerializer):
+class RepositorySerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'name', 'file_name', 'created_at')
-        model = Project
+        fields = ('id', 'name', 'created_at', 'is_public')
+        model = Repository
