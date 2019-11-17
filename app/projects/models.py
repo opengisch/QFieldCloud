@@ -17,14 +17,14 @@ class Project(models.Model):
 
     def __str__(self):
         return self.name
-    
-    
+
+
 class GenericFile(models.Model):
     """Represent a generic file stored on the cloud"""
     filename = models.CharField(max_length=255)
     upload = models.FileField(upload_to=user_directory_path)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    
+
     def __str__(self):
         return self.filename

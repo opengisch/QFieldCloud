@@ -1,5 +1,4 @@
 from rest_framework import generics, views, status
-from rest_framework.parsers import FileUploadParser
 from rest_framework.response import Response
 
 from .models import Project, GenericFile
@@ -23,11 +22,11 @@ class ProjectFileView(generics.ListAPIView):
 
     def get_queryset(self):
         project_name = self.request.parser_context['kwargs']['project_name']
-        
+
         return GenericFile.objects.filter(
             owner=self.request.user,
             project=Project.objects.get(name=project_name)
-    )
+        )
 
 
 class PushView(views.APIView):
