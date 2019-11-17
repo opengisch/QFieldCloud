@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.test import APITestCase, APIRequestFactory
+from rest_framework.test import APITestCase
 from .models import Project
 
 
@@ -58,14 +58,14 @@ class APITests(APITestCase):
 
         # Remove credentials
         self.client.credentials()
-        
+
     def tearDown(self):
         # Remove test's MEDIA_ROOT
         shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
 
         # Remove credentials
         self.client.credentials()
- 
+
     def test_register_user(self):
         response = self.client.post(
             '/api/v1/rest-auth/registration/',
@@ -168,7 +168,7 @@ class APITests(APITestCase):
         response = self.client.get('/api/v1/1/')
         self.assertTrue(status.is_success(response.status_code))
         self.assertTrue(response.data['name'] == 'test_project')
-        self.assertTrue(response.data['is_public'] == True)
+        self.assertTrue(response.data['is_public'] is True)
 
     @skip('not possible at the moment')
     def test_project_update(self):
@@ -195,16 +195,16 @@ class APITests(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertTrue(response.data['name'] == 'new_name')
-        self.assertTrue(response.data['is_public'] == False)
-        
+        self.assertTrue(response.data['is_public'] is False)
+
     @skip('Waiting refactoring')
     def test_file_upload(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
 
         file_path = testdata_path('file.txt')
-        with open(file_path, "rb") as binaryfile :
+        with open(file_path, "rb") as binaryfile:
             file_data = bytearray(binaryfile.read())
-            #myArr = bytearray(binaryfile.read())
+            # myArr = bytearray(binaryfile.read())
         print(file_data)
 
         with open(file_path) as fp:
@@ -215,11 +215,11 @@ class APITests(APITestCase):
         #                }
         # )
 
-        self.assertTrue(status.is_success(response.status_code))        
+        self.assertTrue(status.is_success(response.status_code))
 
         # Check if the file is actually stored in the correct position
         stored_file = os.path.join(settings.MEDIA_ROOT, 'user_1', 'file.txt')
         self.assertTrue(os.path.isfile(stored_file))
-        
+
         # Check if file content is still the same
         self.assertTrue(filecmp.cmp(file_path, stored_file))
