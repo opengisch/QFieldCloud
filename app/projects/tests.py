@@ -103,15 +103,72 @@ class APITests(APITestCase):
     def test_token_authorization(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
 
-        # Project list should be visible now
+        # Repository list should be visible now
         self.assertTrue(status.is_success(
             self.client.get('/api/v1/').status_code))
 
     def test_unauthorized_without_token(self):
-        # Project list should be denied for unauthorized users
+        # Repository list should be denied for unauthorized users
         self.assertTrue(status.is_client_error(
             self.client.get('/api/v1/').status_code))
 
+    def test_repository_creation(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        response = self.client.post(
+            '/api/v1/',
+            {
+                "name": "test_repo",
+                "is_public": True
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        repo = Repository.objects.get(id=1)
+        self.assertEqual(repo.name, 'test_repo')
+        self.assertEqual(repo.is_public, True)
+        self.assertEqual(str(repo.owner), 'test_user1')
+
+        self.assertEqual(len(Repository.objects.all()), 1)
+
+    def test_repostiory_deletion(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Create a repo
+        response = self.client.post(
+            '/api/v1/',
+            {
+                "name": "test_repo",
+                "is_public": True
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Delete it
+        response = self.client.delete('/api/v1/1/')
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(Repository.objects.all()), 0)
+
+
+    def test_repository_details(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Create a repo
+        response = self.client.post(
+            '/api/v1/',
+            {
+                "name": "test_repo",
+                "is_public": True
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Retrieve details
+        response = self.client.get('/api/v1/1/')
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertTrue(response.data['name'] == 'test_repo')
+        self.assertTrue(response.data['is_public'] == True)
+        
     @skip('Waiting refactoring')
     def test_file_upload(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
