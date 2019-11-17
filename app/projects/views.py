@@ -1,72 +1,44 @@
-from rest_framework import generics, views
+from rest_framework import generics, views, status
 from rest_framework.parsers import FileUploadParser
 from rest_framework.response import Response
 
-from .models import Repository, GenericFile
-from .serializers import RepositorySerializer
+from .models import Project, GenericFile
+from .serializers import ProjectSerializer, GenericFileSerializer
 
 
-class RepositoryList(generics.ListCreateAPIView):
-    """Creates (POST) or Lists (GET) user's Repositories"""
-    # TODO: list only public repositories and / owner's private ones?
-    serializer_class = RepositorySerializer
+class ProjectView(generics.ListCreateAPIView):
+    """Creates (POST) or Lists (GET) user's Projects"""
+    serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return Repository.objects.filter(owner=self.request.user)
+        return Project.objects.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
 
-class RepositoryDetail(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieves (GET), Updates (PUT, PATCH) or Deletes (DELETE) a Repository"""
-    serializer_class = RepositorySerializer
+class ProjectFileView(generics.ListAPIView):
+    """Lists files of project"""
+    serializer_class = GenericFileSerializer
 
     def get_queryset(self):
-        return Repository.objects.filter(owner=self.request.user)
-
-    
-class FileUploadView(views.APIView):
-    parser_classes = [FileUploadParser]
-
-    def put(self, request, filename, format=None):
-
-        if 'file' not in request.data:
-            raise ParseError("Empty content")
-
-        f = request.data['file']
-
-        generic_file = GenericFile(
-            filename=filename,
-            #upload=request.data['file'],
-            user=request.user
-        )
-
-        generic_file.upload.save(f.name, f, save=True)
-        #return Response(status=status.HTTP_201_CREATED)
-
+        project_name = self.request.parser_context['kwargs']['project_name']
         
-        print()
-        print(f'{filename} uploaded by {request.user}')
-        print(request.data)
-        print(request.FILES.get('file'))
+        return GenericFile.objects.filter(
+            owner=self.request.user,
+            project=Project.objects.get(name=project_name)
+    )
 
-        #up_file = request.FILES['file']
-        #destination = open('/Users/Username/' + up_file.name, 'wb+')
-        
-        #for chunk in up_file.chunks():
-        #    destination.write(chunk)
-        #    destination.close()
 
-        #generic_file = GenericFile(
-        #    filename=filename,
-        #    upload=request.data['file'],
-        #    user=request.user
-        #)
-        #generic_file.save()
-        #file_obj = request.data['file']
+class PushView(views.APIView):
+    """Push project"""
 
-        # TODO: do some stuff with uploaded file
+    def post(self, request, project_name):
+        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
 
-        return Response(status=204)
 
+class PullView(views.APIView):
+    """Pull project"""
+
+    def get(self, request, project_name):
+        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
