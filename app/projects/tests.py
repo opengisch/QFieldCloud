@@ -168,6 +168,32 @@ class APITests(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertTrue(response.data['name'] == 'test_repo')
         self.assertTrue(response.data['is_public'] == True)
+
+    def test_repository_update(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Create a repo
+        response = self.client.post(
+            '/api/v1/',
+            {
+                "name": "test_repo",
+                "is_public": True
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Update values
+        response = self.client.put(
+            '/api/v1/1/',
+            {
+                "name": "new_name",
+                "is_public": False
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertTrue(response.data['name'] == 'new_name')
+        self.assertTrue(response.data['is_public'] == False)
         
     @skip('Waiting refactoring')
     def test_file_upload(self):
