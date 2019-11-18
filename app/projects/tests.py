@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
-from .models import Project
+from .models import Project, GenericFile
 
 
 settings.MEDIA_ROOT += '_test'
@@ -130,6 +130,43 @@ class APITests(APITestCase):
         self.assertEqual(str(project.owner), 'test_user1')
 
         self.assertEqual(len(Project.objects.all()), 1)
+
+    def test_push_file(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Create a project
+        response = self.client.post(
+            '/api/v1/projects/',
+            {
+                "name": "test_project",
+                "is_public": True
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('file.txt')
+        # Push a file
+        response = self.client.post(
+            '/api/v1/projects/test_project/push/',
+            {
+                "datafile": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Check if the related entry is present in the db
+        self.assertEqual(len(GenericFile.objects.all()), 1)
+        stored_file_object = GenericFile.objects.get(id=1)
+        self.assertEqual(stored_file_object.filename, 'file.txt')
+
+        # Check if the file is actually stored in the correct position
+        stored_file = os.path.join(settings.MEDIA_ROOT, 'user_1', 'file.txt')
+        self.assertTrue(os.path.isfile(stored_file))
+
+        # Check if file content is still the same
+        self.assertTrue(filecmp.cmp(file_path, stored_file))
+
 
     @skip('not possible at the moment')
     def test_project_deletion(self):

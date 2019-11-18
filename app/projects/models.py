@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return 'user_{0}/{1}'.format(instance.user.id, filename)
+    return 'user_{0}/{1}'.format(
+        instance.owner.id, filename)
 
 
 class Project(models.Model):
@@ -22,9 +23,10 @@ class Project(models.Model):
 class GenericFile(models.Model):
     """Represent a generic file stored on the cloud"""
     filename = models.CharField(max_length=255)
-    upload = models.FileField(upload_to=user_directory_path)
+    datafile = models.FileField(upload_to=user_directory_path)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.filename
