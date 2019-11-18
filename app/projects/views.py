@@ -39,14 +39,16 @@ class FileUploadViewSet(generics.CreateAPIView):
     parser_classes = (MultiPartParser, FormParser,)
 
     def post(self, request, project_name):
+        for afile in request.FILES.getlist('datafile'):
 
-        g = GenericFile(
-            owner=self.request.user,
-            project=Project.objects.get(name=project_name),
-            filename=str(self.request.data.get('datafile')),
-            datafile=self.request.data.get('datafile')
-        )
-        g.save()
+            g = GenericFile(
+                owner=self.request.user,
+                project=Project.objects.get(name=project_name),
+                filename=str(afile),
+                datafile=afile
+            )
+            g.save()
+
         return Response(status=status.HTTP_201_CREATED)
 
 

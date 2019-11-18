@@ -167,6 +167,49 @@ class APITests(APITestCase):
         # Check if file content is still the same
         self.assertTrue(filecmp.cmp(file_path, stored_file))
 
+    def test_push_multiple_files(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Create a project
+        response = self.client.post(
+            '/api/v1/projects/',
+            {
+                "name": "test_project",
+                "is_public": True
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('file.txt')
+        file_path2 = testdata_path('file2.txt')
+
+        # Push the files
+        response = self.client.post(
+            '/api/v1/projects/test_project/push/',
+            {
+                "datafile": [open(file_path, 'rb'), open(file_path2, 'rb')]
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Check if the related entries are present in the db
+        self.assertEqual(len(GenericFile.objects.all()), 2)
+        stored_file_object = GenericFile.objects.get(id=1)
+        self.assertEqual(stored_file_object.filename, 'file.txt')
+        stored_file_object2 = GenericFile.objects.get(id=2)
+        self.assertEqual(stored_file_object2.filename, 'file2.txt')
+        
+        # Check if the files are actually stored in the correct position
+        stored_file = os.path.join(settings.MEDIA_ROOT, 'user_1', 'file.txt')
+        self.assertTrue(os.path.isfile(stored_file))
+        stored_file2 = os.path.join(settings.MEDIA_ROOT, 'user_1', 'file2.txt')
+        self.assertTrue(os.path.isfile(stored_file2))
+
+        # Check if files content is still the same
+        self.assertTrue(filecmp.cmp(file_path, stored_file))
+        self.assertTrue(filecmp.cmp(file_path2, stored_file2))
+
 
     @skip('not possible at the moment')
     def test_project_deletion(self):
