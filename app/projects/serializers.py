@@ -11,5 +11,5 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class GenericFileSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'owner', 'project')
+        fields = ('id', 'filename', 'created_at')
         model = GenericFile

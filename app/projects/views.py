@@ -40,6 +40,7 @@ class PushView(generics.CreateAPIView):
     def post(self, request, project_name):
         for afile in request.FILES.getlist('datafile'):
 
+            # TODO: Check if the user is allowed to push in this project
             g = GenericFile(
                 owner=self.request.user,
                 project=Project.objects.get(name=project_name),
