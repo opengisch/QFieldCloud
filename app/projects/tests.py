@@ -52,6 +52,12 @@ class APITests(APITestCase):
         test_user1.save()
         cls.token = Token.objects.get_or_create(user=test_user1)[0]
 
+        # Create a second user
+        test_user2 = User.objects.create_user(
+            username='test_user2', password='123456')
+        test_user2.save()
+        cls.token2 = Token.objects.get_or_create(user=test_user2)[0]
+
     def setUp(self):
         # Remove test's MEDIA_ROOT
         shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
@@ -199,7 +205,7 @@ class APITests(APITestCase):
         self.assertEqual(stored_file_object.filename, 'file.txt')
         stored_file_object2 = GenericFile.objects.get(id=2)
         self.assertEqual(stored_file_object2.filename, 'file2.txt')
-        
+
         # Check if the files are actually stored in the correct position
         stored_file = os.path.join(settings.MEDIA_ROOT, 'user_1', 'file.txt')
         self.assertTrue(os.path.isfile(stored_file))
@@ -210,6 +216,50 @@ class APITests(APITestCase):
         self.assertTrue(filecmp.cmp(file_path, stored_file))
         self.assertTrue(filecmp.cmp(file_path2, stored_file2))
 
+    def test_push_list_file_multi_users(self):
+        # User1
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Create a project
+        response = self.client.post(
+            '/api/v1/projects/',
+            {
+                "name": "test_project",
+                "is_public": True
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('file.txt')
+        file_path2 = testdata_path('file2.txt')
+
+        # Push two files
+        response = self.client.post(
+            '/api/v1/projects/test_project/push/',
+            {
+                "datafile": [open(file_path, 'rb'), open(file_path2, 'rb')]
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # List the files in the project
+        response = self.client.get(
+            '/api/v1/projects/test_project/')
+
+        self.assertEqual(len(response.data), 2)
+        self.assertTrue('file.txt' in str(response.json()))
+        self.assertTrue('file2.txt' in str(response.json()))
+
+        # User2
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
+
+        # List the files in the project
+        response = self.client.get(
+            '/api/v1/projects/test_project/')
+
+        # Should be zero
+        self.assertEqual(len(response.data), 0)
 
     @skip('not possible at the moment')
     def test_project_deletion(self):
