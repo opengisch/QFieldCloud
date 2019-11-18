@@ -1,6 +1,4 @@
-from django.contrib.auth.models import User
 from rest_framework import generics, views, status
-from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
@@ -32,7 +30,8 @@ class ProjectFileView(generics.ListAPIView):
         )
 
 
-class FileUploadViewSet(generics.CreateAPIView):
+class PushView(generics.CreateAPIView):
+    """Push one or more files"""
 
     queryset = GenericFile.objects.all()
     serializer_class = GenericFileSerializer
@@ -50,24 +49,6 @@ class FileUploadViewSet(generics.CreateAPIView):
             g.save()
 
         return Response(status=status.HTTP_201_CREATED)
-
-
-class PushView(views.APIView):
-    """Push project"""
-
-    parser_classes = (MultiPartParser, FormParser,)
-
-    def post(self, request, project_name):
-        # return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
-        print("########", request.FILES)
-        my_file = request.FILES['file']
-        filename = '/tmp/myfile'
-        with open(filename, 'wb+') as temp_file:
-            for chunk in my_file.chunks():
-                temp_file.write(chunk)
-
-        # my_saved_file = open(filename)
-        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 class PullView(views.APIView):
