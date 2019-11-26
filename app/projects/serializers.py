@@ -1,15 +1,14 @@
 from rest_framework import serializers
 
-from .models import Project, GenericFile
+from .models import Project
 
 
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'name', 'created_at', 'is_public')
+        fields = ('id', 'name', 'description', 'homepage', 'private',
+                  'created_at')
         model = Project
 
 
-class GenericFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('id', 'filename', 'created_at')
-        model = GenericFile
+class FileSerializer(serializers.Serializer):
+    file_content = serializers.FileField()

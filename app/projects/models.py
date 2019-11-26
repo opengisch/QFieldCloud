@@ -1,32 +1,19 @@
 from django.db import models
-from django.contrib.auth.models import User
-
-
-def user_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return 'user_{0}/{1}'.format(
-        instance.owner.id, filename)
+from django.conf import settings
 
 
 class Project(models.Model):
-    """Represent a project"""
+    """Represent a QFieldcluod project (i.e. a directory on the file system
+    with at most one QGIS project inside"""
+
     name = models.CharField(max_length=255)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    description = models.TextField()
+    homepage = models.CharField(max_length=512)
+    private = models.BooleanField(default=False)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_public = models.BooleanField(blank=True)
 
     def __str__(self):
         return self.name
-
-
-class GenericFile(models.Model):
-    """Represent a generic file stored on the cloud"""
-    filename = models.CharField(max_length=255)
-    datafile = models.FileField(upload_to=user_directory_path)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.filename

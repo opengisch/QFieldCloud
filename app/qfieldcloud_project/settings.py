@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
     # Local
     'projects.apps.ProjectsConfig',
+    'users.apps.UsersConfig',
 ]
 
 MIDDLEWARE = [
@@ -134,7 +135,13 @@ USE_TZ = True
 STATIC_URL = '/staticfiles/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+MEDIA_URL = '/mediafiles/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'mediafiles')
+
+# QFieldcloud project management settings
+PROJECTS_ROOT = os.path.join(BASE_DIR, 'user_projects_files')
+
+AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [

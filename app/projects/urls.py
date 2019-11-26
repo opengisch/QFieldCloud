@@ -1,11 +1,23 @@
-from django.urls import path, re_path
+from django.urls import path
 
-from .views import ProjectView, ProjectFileView, PushView, PullView
+from .views import (
+    ListProjectsView,
+    ListUserProjectsView,
+    ListCreateProjectView,
+    RetrieveUpdateDestroyProjectView,
+    PushFileView,
+    ListFilesView,
+    RetrieveDestroyFileView
+)
 
 
 urlpatterns = [
-    path('', ProjectView.as_view()),
-    re_path(r'^(?P<project_name>[^/]+)/$', ProjectFileView.as_view()),
-    re_path(r'^(?P<project_name>[^/]+)/push/$', PushView.as_view()),
-    re_path(r'^(?P<project_name>[^/]+)/pull/$', PullView.as_view()),
+    path('', ListProjectsView.as_view()),
+    path('user/', ListUserProjectsView.as_view()),
+    path('<str:owner>/', ListCreateProjectView.as_view()),
+    path('<str:owner>/<str:project>/', RetrieveUpdateDestroyProjectView.as_view()),
+    path('<str:owner>/<str:project>/push/', PushFileView.as_view()),
+    path('<str:owner>/<str:project>/files/', ListFilesView.as_view()),
+    path('<str:owner>/<str:project>/<str:filename>/',
+         RetrieveDestroyFileView.as_view()),
 ]
