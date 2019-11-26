@@ -23,7 +23,6 @@ urlpatterns = [
     path('api/v1/users/', include('users.urls')),
     path('api/v1/auth/', include('rest_auth.urls')),
     path('api/v1/auth/registration/', include('rest_auth.registration.urls')),
-    
     path('docs/', get_swagger_view(title='QFieldcloud REST API')),
     path('auth/', include('rest_framework.urls')),
     # path('api/v1/projects/', include('projects.urls')),

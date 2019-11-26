@@ -1,6 +1,4 @@
-from rest_framework import generics, views, status
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import views
 
 
 class RetrieveUserView(views.APIView):

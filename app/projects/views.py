@@ -5,7 +5,6 @@ from django.http import FileResponse
 
 from rest_framework import generics, views, status
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.settings import api_settings
 
 from .models import Project
