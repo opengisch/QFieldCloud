@@ -209,3 +209,21 @@ class ProjectTests(APITestCase):
 
         self.assertEqual(response.filename, 'file.txt')
         self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
+
+    def test_get_files_list_api(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Pull the project
+        response = self.client.get(
+            '/api/v1/projects/test_user1/test_project2/files/')
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.json()[0]['name'], 'file.txt')
+        self.assertEqual(response.json()[1]['name'], 'file2.txt')
+        self.assertEqual(response.json()[0]['size'], 13)
+        self.assertEqual(response.json()[1]['size'], 13)
+        self.assertEqual(
+            response.json()[0]['sha256'],
+            '8663bab6d124806b9727f89bb4ab9db4cbcc3862f6bbf22024dfa7212aa4ab7d')
+        self.assertEqual(
+            response.json()[1]['sha256'],
+            'fcc85fb502bd772aa675a0263b5fa665bccd5d8d93349d1dbc9f0f6394dd37b9')

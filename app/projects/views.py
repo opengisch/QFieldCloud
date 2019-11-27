@@ -103,8 +103,45 @@ class PushFileView(views.APIView):
 class ListFilesView(views.APIView):
 
     # TODO: check if user is allowed
-    def get(self, request, owner, repo):
+    def get(self, request, owner, project):
         """List files in repository"""
+        result = []
+
+        dir_path = os.path.join(
+            settings.PROJECTS_ROOT,
+            owner,
+            project)
+
+        file_names = os.listdir(dir_path)
+
+        for file_name in file_names:
+
+            size = os.path.getsize(
+                os.path.join(dir_path, file_name))
+
+            hash = self.hashfile(
+                os.path.join(dir_path, file_name))
+
+            result.append(
+                {'name': file_name,
+                 'size': size,
+                 'sha256': hash
+                 })
+
+        return Response(result)
+
+    def hashfile(self, afile):
+        """Return the sha256 hash of the passed file"""
+        import hashlib
+        BLOCKSIZE = 65536
+        hasher = hashlib.sha256()
+        with open(afile, 'rb') as f:
+            buf = f.read(BLOCKSIZE)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = f.read(BLOCKSIZE)
+
+        return hasher.hexdigest()
 
 
 class RetrieveDestroyFileView(views.APIView):
@@ -127,6 +164,7 @@ class RetrieveDestroyFileView(views.APIView):
             as_attachment=True,
             filename=filename)
         return response
+    # TODO: manage errors e.g. file not found and return a proper response
 
     def delete(self, request, owner, repo, filename):
         """Delete a file"""
