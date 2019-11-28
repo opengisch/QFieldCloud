@@ -63,3 +63,54 @@
     Docker =1.17.5-alpine=
 *** Gunicorn
     =19.9.0=
+** API endpoints
+   #+OPTIONS: *:nil
+    | HTTP Verb | Endpoint                                                       | Description                                                                 |
+    |-----------+----------------------------------------------------------------+-----------------------------------------------------------------------------|
+    | GET       | /users/                                                        | Get all users (personal user accounts and organization accounts)            |
+    | GET       | /users/{name}/                                                 | Get a single user (publicly information)                                    |
+    | GET       | /users/user/                                                   | Get the authenticated user                                                  |
+    | PATCH     | /users/user/                                                   | Update the authenticated user                                               |
+    |           |                                                                |                                                                             |
+    | GET       | /projects/                                                     | List all public projectsitories                                             |
+    | GET       | /projects/user/                                                | List projects that the authenticated user has explicit permission to access |
+    | POST      | /projects/{owner}/                                             | Create a new projects                                                       |
+    | GET       | /projects/{owner}/                                             | List allowed projects of the specified user or organizazion                 |
+    | GET       | /projects/{owner}/{project}/                                   | Get projects informations                                                   |
+    | PATCH     | /projects/{owner}/{project}/                                   | Edit projects informations                                                  |
+    | DELETE    | /projects/{owner}/{project}/                                   | Delete a projects                                                           |
+    | POST      | /projects/{owner}/{project}/transfer/                          | Transfer a projects                                                         |
+    | GET       | /projects/{owner}/{project}/collaborators/                     | List collaborators                                                          |
+    | GET       | /projects/{owner}/{project}/collaborators/{username}/         | Check if a user is a collaborator                                           |
+    | GET       | /projects/{owner}/{project}/collaborators/{username}/permission/ | Review a user's permission level                                            |
+    | POST      | /projects/{owner}/{project}/collaborators/{username}/          | Add user as a collaborator                                                  |
+    | DELETE    | /projects/{owner}/{project}/collaborators/{username}/          | Remove a user as a collaborator                                             |
+    | POST      | /projects/{owner}/{project}/push/                              | Push/upload a file                                                          |
+    | GET       | /projects/{owner}/{project}/files/                             | List project files (filename, size, sha)                                    |
+    | GET       | /projects/{owner}/{project}/{file}/                            | Download a file                                                             |
+    | DELETE    | /projects/{owner}/{project}/{file}/                            | Delete a file                                                               |
+** Data model
+*** (User) Owner
+    Organization is a user with type organization
+    | Name       | Type   | Req. | Description              |
+    |------------+--------+------+--------------------------|
+    | id         | int    | t    | django auto generated id |
+    | username   | string | t    | username                 |
+    | password   | string | t    |                          |
+    | type       |        | t    | user / organization      |
+    | email      | string |      | email adress             |
+    | created_at | date   | auto |                          |
+    | updated_at | date   | auto |                          |
+*** Project
+    A project represent the repository of the user's files
+    A project can have only one QGIS project inside (qgs or qgz)
+
+    | Name        | Type    | Req. | Description                                 |
+    |-------------+---------+------+---------------------------------------------|
+    | name        | string  | t    | name of the project                         |
+    | description | string  |      | short description of the project            |
+    | homepage    | string  |      | URL with more information about the project |
+    | private     | boolean |      | Default: false                              |
+    | owner       | FK      | t    | user / organization                         |
+    | created_at  | date    | auto |                                             |
+    | updated_ad  | date    | auto |                                             |
