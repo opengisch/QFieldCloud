@@ -81,7 +81,6 @@
     | POST      | =/projects/{owner}/{project}/transfer/=                            | Transfer a projects                                                         |
     | GET       | =/projects/{owner}/{project}/collaborators/=                       | List collaborators                                                          |
     | GET       | =/projects/{owner}/{project}/collaborators/{username}/=            | Check if a user is a collaborator                                           |
-    | GET       | =/projects/{owner}/{project}/collaborators/{username}/permission/= | Review a user's permission level                                            |
     | POST      | =/projects/{owner}/{project}/collaborators/{username}/=            | Add user as a collaborator                                                  |
     | DELETE    | =/projects/{owner}/{project}/collaborators/{username}/=            | Remove a user as a collaborator                                             |
     | POST      | =/projects/{owner}/{project}/push/=                                | Push/upload a file                                                          |
@@ -96,7 +95,7 @@
     | id         | int    | t    | django auto generated id |
     | username   | string | t    | username                 |
     | password   | string | t    |                          |
-    | type       |        | t    | user / organization      |
+    | type       | int    | t    | user / organization      |
     | email      | string |      | email adress             |
     | created_at | date   | auto |                          |
     | updated_at | date   | auto |                          |
@@ -113,3 +112,14 @@
     | owner       | FK      | t    | user / organization                         |
     | created_at  | date    | auto |                                             |
     | updated_ad  | date    | auto |                                             |
+*** Collaborator
+    A user can have 3 different permissions on a project:
+    - admin, if the user is the owner of the project, is always admin
+    - write
+    - read
+
+    | Name    | Type | Req. | Description          |
+    |---------+------+------+----------------------|
+    | user    | FK   | t    |                      |
+    | project | FK   | t    |                      |
+    | role    | int  | t    | admin / read / write |

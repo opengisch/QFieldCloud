@@ -12,7 +12,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
-from projects.models import Project
+from projects.models import Project, Collaborator
+
+from . import permissions
 
 
 settings.PROJECTS_ROOT += '_test'
@@ -35,6 +37,18 @@ class ProjectTests(APITestCase):
             username='test_user1', password='abc123')
         self.test_user1.save()
         self.token = Token.objects.get_or_create(user=self.test_user1)[0]
+
+        # Insert a second user into the db
+        self.test_user2 = get_user_model().objects.create_user(
+            username='test_user2', password='abc123')
+        self.test_user2.save()
+        self.token2 = Token.objects.get_or_create(user=self.test_user2)[0]
+
+        # Insert a third user into the db
+        self.test_user3 = get_user_model().objects.create_user(
+            username='test_user3', password='abc123')
+        self.test_user3.save()
+        self.token3 = Token.objects.get_or_create(user=self.test_user3)[0]
 
         # Insert a public project into the db
         self.test_project1 = Project(
@@ -253,3 +267,138 @@ class ProjectTests(APITestCase):
                     'test_user1',
                     'test_project2',
                     'file.txt')))
+
+    def test_add_collaborator_api(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        self.assertFalse(Collaborator.objects.all())
+        response = self.client.post(
+            '/api/v1/projects/test_user1/test_project1/collaborators/test_user2/',
+            {
+                "role": "read",
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertTrue(Collaborator.objects.all())
+
+        self.assertEqual(
+            Collaborator.objects.all()[0].user.username, 'test_user2')
+        self.assertEqual(
+            Collaborator.objects.all()[0].project.name, 'test_project1')
+        self.assertEqual(
+            Collaborator.objects.all()[0].role,
+            settings.PERMISSION_ROLE['read'])
+
+    def test_list_collaborators_api(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # Create 2 permissions on test_project1
+        self.assertFalse(Collaborator.objects.all())
+        self.client.post(
+            '/api/v1/projects/test_user1/test_project1/collaborators/test_user2/',
+            {
+                "role": "admin",
+            }
+        )
+
+        self.client.post(
+            '/api/v1/projects/test_user1/test_project1/collaborators/test_user3/',
+            {
+                "role": "write",
+            }
+        )
+
+        # Ask for the collaborators list
+        response = self.client.get(
+            '/api/v1/projects/test_user1/test_project1/collaborators/')
+
+        self.assertEqual(response.json()[0], ['test_user2', 'admin'])
+        self.assertEqual(response.json()[1], ['test_user3', 'write'])
+
+    def test_is_owner(self):
+
+        self.assertTrue(permissions.is_owner('test_user1', 'test_project1'))
+        self.assertFalse(permissions.is_owner('test_user2', 'test_project1'))
+        self.assertFalse(permissions.is_owner('test_user2', 'test_project2'))
+
+    def test_can_admin(self):
+
+        # If it's owner, then can admin
+        self.assertTrue(permissions.can_admin('test_user1', 'test_project1'))
+
+        # test_user2 cannot admin
+        self.assertFalse(permissions.can_admin('test_user2', 'test_project1'))
+
+        # Lets define test_user2 as admin
+        Collaborator.objects.create(
+            user=self.test_user2,
+            project=self.test_project1,
+            role=settings.PERMISSION_ROLE['admin'])
+
+        # Now should be allowed to admin
+        self.assertTrue(permissions.can_admin('test_user2', 'test_project1'))
+
+        # Lets set write permission to test_user3
+        Collaborator.objects.create(
+            user=self.test_user3,
+            project=self.test_project1,
+            role=settings.PERMISSION_ROLE['write'])
+
+        # Should not be allowed to admin
+        self.assertFalse(permissions.can_admin('test_user3', 'test_project1'))
+
+    def test_can_write(self):
+        # If it's owner, then can write
+        self.assertTrue(permissions.can_write('test_user1', 'test_project1'))
+
+        # test_user2 cannot write
+        self.assertFalse(permissions.can_write('test_user2', 'test_project1'))
+
+        # Lets set write permission to test_user2
+        Collaborator.objects.create(
+            user=self.test_user2,
+            project=self.test_project1,
+            role=settings.PERMISSION_ROLE['write'])
+
+        # Now should be allowed to write
+        self.assertTrue(permissions.can_write('test_user2', 'test_project1'))
+
+        # Lets set read permission to test_user3
+        Collaborator.objects.create(
+            user=self.test_user3,
+            project=self.test_project1,
+            role=settings.PERMISSION_ROLE['read'])
+
+        # Should not be allowed to write
+        self.assertFalse(permissions.can_write('test_user3', 'test_project1'))
+
+    def test_can_read(self):
+        # Lets set test_project1 as private
+        self.test_project1.private = True
+        self.test_project1.save()
+
+        # If it's owner, then can read
+        self.assertTrue(permissions.can_read('test_user1', 'test_project1'))
+
+        # test_user2 cannot read
+        self.assertFalse(permissions.can_read('test_user2', 'test_project1'))
+
+        # Lets set read permission to test_user2
+        Collaborator.objects.create(
+            user=self.test_user2,
+            project=self.test_project1,
+            role=settings.PERMISSION_ROLE['read'])
+
+        # Now should be allowed to read
+        self.assertTrue(permissions.can_read('test_user2', 'test_project1'))
+
+        # test_user3 cannot read
+        self.assertFalse(permissions.can_read('test_user3', 'test_project1'))
+
+        # Lets set test_project1 as public
+        self.test_project1.private = False
+        self.test_project1.save()
+
+        # Now test_user3 should be allowed to read
+        self.assertTrue(permissions.can_read('test_user3', 'test_project1'))

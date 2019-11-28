@@ -7,8 +7,11 @@ from rest_framework import generics, views, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from .models import Project
-from .serializers import ProjectSerializer, FileSerializer
+from .models import Project, Collaborator
+from .serializers import (
+    ProjectSerializer, FileSerializer, CollaboratorSerializer)
+
+from . import permissions
 
 
 class ListProjectsView(generics.ListAPIView):
@@ -177,3 +180,40 @@ class RetrieveDestroyFileView(views.APIView):
         # TODO: manage errors
 
         return Response(status=status.HTTP_200_OK)
+
+
+class ListCollaboratorsView(views.APIView):
+    """List collaborators"""
+
+    def get(self, request, owner, project):
+        project_id = Project.objects.get(name=project)
+        p = Collaborator.objects.filter(project=project_id)
+
+        result = []
+        for _ in p:
+            result.append(
+                (str(_.user),
+                 permissions.get_key_from_value(_.role)))
+        return Response(result)
+
+
+class CheckCreateDestroyCollaboratorView(views.APIView):
+    """Check if a user is a collaborator"""
+
+    serializer_class = CollaboratorSerializer
+
+    def post(self, request, owner, project, username):
+        # TODO: check that logged user is either admin or owner
+
+        user_id = get_user_model().objects.get(username=username)
+        project_id = Project.objects.get(name=project)
+
+        serializer = CollaboratorSerializer(data=request.data)
+
+        if serializer.is_valid():
+            role = serializer.data['role']
+            Collaborator.objects.create(user=user_id, project=project_id,
+                                        role=settings.PERMISSION_ROLE[role])
+            return Response(status=status.HTTP_200_OK)
+
+        return Response(status=status.HTTP_400_BAD_REQUEST)
