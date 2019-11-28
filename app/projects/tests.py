@@ -197,7 +197,7 @@ class ProjectTests(APITestCase):
     def test_pull_file_api(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
 
-        # Pull the project
+        # Pull the file
         response = self.client.get(
             '/api/v1/projects/test_user1/test_project2/file.txt/')
         self.assertTrue(status.is_success(response.status_code))
@@ -213,7 +213,7 @@ class ProjectTests(APITestCase):
     def test_get_files_list_api(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
 
-        # Pull the project
+        # Pull the file
         response = self.client.get(
             '/api/v1/projects/test_user1/test_project2/files/')
         self.assertTrue(status.is_success(response.status_code))
@@ -227,3 +227,29 @@ class ProjectTests(APITestCase):
         self.assertEqual(
             response.json()[1]['sha256'],
             'fcc85fb502bd772aa675a0263b5fa665bccd5d8d93349d1dbc9f0f6394dd37b9')
+
+    def test_delete_file_api(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+        # The file exists
+        self.assertTrue(
+            os.path.isfile(
+                os.path.join(
+                    settings.PROJECTS_ROOT,
+                    'test_user1',
+                    'test_project2',
+                    'file.txt')))
+
+        # Delete the file
+        response = self.client.delete(
+            '/api/v1/projects/test_user1/test_project2/file.txt/')
+        self.assertTrue(status.is_success(response.status_code))
+
+        # The file doesn't exist
+        self.assertFalse(
+            os.path.isfile(
+                os.path.join(
+                    settings.PROJECTS_ROOT,
+                    'test_user1',
+                    'test_project2',
+                    'file.txt')))

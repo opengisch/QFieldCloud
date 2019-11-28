@@ -151,8 +151,6 @@ class RetrieveDestroyFileView(views.APIView):
     def get(self, request, owner, project, filename):
         """Download a file"""
 
-        #     def get(self, request, project_name):
-
         file_path = os.path.join(
             settings.PROJECTS_ROOT,
             owner,
@@ -166,5 +164,16 @@ class RetrieveDestroyFileView(views.APIView):
         return response
     # TODO: manage errors e.g. file not found and return a proper response
 
-    def delete(self, request, owner, repo, filename):
+    def delete(self, request, owner, project, filename):
         """Delete a file"""
+
+        file_path = os.path.join(
+            settings.PROJECTS_ROOT,
+            owner,
+            project,
+            filename)
+
+        os.remove(file_path)
+        # TODO: manage errors
+
+        return Response(status=status.HTTP_200_OK)
