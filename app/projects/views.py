@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from .models import Project, Collaborator
+from . import permissions
 from .serializers import (
     ProjectSerializer, FileSerializer, CollaboratorSerializer)
 
@@ -82,12 +83,17 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 
 class PushFileView(views.APIView):
 
-    # TODO: check if user is allowed
-
     serializer_class = FileSerializer
 
     def post(self, request, owner, project):
         """Upload one or more file/s"""
+
+        username = request.user.username
+        if not permissions.is_manager(
+                username, project):
+
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
         for afile in request.FILES.getlist('file_content'):
             filename = os.path.join(
                 settings.PROJECTS_ROOT,
@@ -105,9 +111,15 @@ class PushFileView(views.APIView):
 
 class ListFilesView(views.APIView):
 
-    # TODO: check if user is allowed
     def get(self, request, owner, project):
         """List files in repository"""
+
+        username = request.user.username
+        if not permissions.is_reader(
+                username, project):
+
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
         result = []
 
         dir_path = os.path.join(
