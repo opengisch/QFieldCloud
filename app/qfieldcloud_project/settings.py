@@ -145,8 +145,10 @@ AUTH_USER_MODEL = 'users.User'
 
 PERMISSION_ROLE = {
     'admin': 1,
-    'write': 2,
-    'read': 3,
+    'manager': 2,
+    'editor': 3,
+    'reporter': 4,
+    'reader': 5,
 }
 
 REST_FRAMEWORK = {

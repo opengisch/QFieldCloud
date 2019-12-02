@@ -21,8 +21,10 @@ class Project(models.Model):
 
 PERMISSION_ROLE_CHOICES = (
     (settings.PERMISSION_ROLE['admin'], 'admin'),
-    (settings.PERMISSION_ROLE['write'], 'write'),
-    (settings.PERMISSION_ROLE['read'], 'read'),
+    (settings.PERMISSION_ROLE['manager'], 'manager'),
+    (settings.PERMISSION_ROLE['editor'], 'editor'),
+    (settings.PERMISSION_ROLE['reporter'], 'reporter'),
+    (settings.PERMISSION_ROLE['reader'], 'reader'),
 )
 
 
@@ -32,4 +34,4 @@ class Collaborator(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     role = models.IntegerField(choices=PERMISSION_ROLE_CHOICES,
-                               default=settings.PERMISSION_ROLE['read'])
+                               default=settings.PERMISSION_ROLE['reader'])

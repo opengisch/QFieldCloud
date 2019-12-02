@@ -87,7 +87,7 @@
     | GET       | =/projects/{owner}/{project}/files/=                               | List project files (filename, size, sha)                                    |
     | GET       | =/projects/{owner}/{project}/{file}/=                              | Download a file                                                             |
     | DELETE    | =/projects/{owner}/{project}/{file}/=                              | Delete a file                                                               |
-** Data model
+** Data model and entities
 *** (User) Owner
     Organization is a user with type organization
     | Name       | Type   | Req. | Description              |
@@ -113,13 +113,21 @@
     | created_at  | date    | auto |                                             |
     | updated_ad  | date    | auto |                                             |
 *** Collaborator
-    A user can have 3 different permissions on a project:
-    - admin, if the user is the owner of the project, is always admin
-    - write
-    - read
-
     | Name    | Type | Req. | Description          |
     |---------+------+------+----------------------|
     | user    | FK   | t    |                      |
     | project | FK   | t    |                      |
     | role    | int  | t    | admin / read / write |
+
+    A collaborator of an normal user project can only be reporter or
+    reader. Editor or manager can only be set to an organization's project.
+*** Roles
+    A higher role always include also the lowest ones
+
+    | Name     | Description                                                                                |
+    |----------+--------------------------------------------------------------------------------------------|
+    | admin    | The owner of a project is always admin of the project. He can add and remove collaborators |
+    | manager  | Can create new projects                                                                    |
+    | editor   | Can edit data                                                                              |
+    | reporter | Can only insert data (no update nor delete). (Don't have to be a collaborator?)            |
+    | reader   | Can read data. (Don't have to be a collaborator?)                                          |
