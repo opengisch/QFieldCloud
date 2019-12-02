@@ -112,7 +112,7 @@
     | owner       | FK      | t    | user / organization                         |
     | created_at  | date    | auto |                                             |
     | updated_ad  | date    | auto |                                             |
-*** Collaborator
+*** Project roles
     | Name    | Type | Req. | Description          |
     |---------+------+------+----------------------|
     | user    | FK   | t    |                      |
@@ -121,6 +121,11 @@
 
     A collaborator of an normal user project can only be reporter or
     reader. Editor or manager can only be set to an organization's project.
+*** Organization roles
+    # TODO: complete
+    A user can have a role in a organization:
+    - admin, se she can create projects and define organization roles for other users
+    - collaborator (difference compared to an other user is for billing reasons)
 *** Roles
     A higher role always include also the lowest ones
 

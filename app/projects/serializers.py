@@ -15,10 +15,10 @@ class FileSerializer(serializers.Serializer):
     file_content = serializers.FileField()
 
 
-class CollaboratorSerializer(serializers.Serializer):
+class ProjectRoleSerializer(serializers.Serializer):
     role = serializers.CharField(max_length=20)
 
     def validate_role(self, value):
-        if value not in settings.PERMISSION_ROLE:
+        if value not in settings.PROJECT_ROLE:
             raise serializers.ValidationError("Role has a unknown value")
         return value

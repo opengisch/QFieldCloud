@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from .models import Project, Collaborator
+from .models import Project, ProjectRole
 
 # TODO: rename the module to permission_utils?
 
@@ -10,8 +10,8 @@ def get_key_from_value(value):
     """Return the key from the role value
     e.g. return 'admin' for 1"""
 
-    return dict(zip(settings.PERMISSION_ROLE.values(),
-                    settings.PERMISSION_ROLE.keys()))[value]
+    return dict(zip(settings.PROJECT_ROLE.values(),
+                    settings.PROJECT_ROLE.keys()))[value]
 
 
 def is_owner(username, project_name):
@@ -34,9 +34,9 @@ def is_admin(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if Collaborator.objects.filter(
+    if ProjectRole.objects.filter(
             user=user, project=project,
-            role=settings.PERMISSION_ROLE['admin']):
+            role=settings.PROJECT_ROLE['admin']):
         return True
 
     return False
@@ -55,9 +55,9 @@ def is_manager(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if Collaborator.objects.filter(
+    if ProjectRole.objects.filter(
             user=user, project=project,
-            role=settings.PERMISSION_ROLE['manager']):
+            role=settings.PROJECT_ROLE['manager']):
         return True
 
     return False
@@ -79,9 +79,9 @@ def is_editor(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if Collaborator.objects.filter(
+    if ProjectRole.objects.filter(
             user=user, project=project,
-            role=settings.PERMISSION_ROLE['editor']):
+            role=settings.PROJECT_ROLE['editor']):
         return True
 
     return False
@@ -106,9 +106,9 @@ def is_reporter(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if Collaborator.objects.filter(
+    if ProjectRole.objects.filter(
             user=user, project=project,
-            role=settings.PERMISSION_ROLE['reporter']):
+            role=settings.PROJECT_ROLE['reporter']):
         return True
 
     return False
@@ -137,9 +137,9 @@ def is_reader(username, project_name):
 
     user = get_user_model().objects.get(username=username)
 
-    if Collaborator.objects.filter(
+    if ProjectRole.objects.filter(
             user=user, project=project,
-            role=settings.PERMISSION_ROLE['reader']):
+            role=settings.PROJECT_ROLE['reader']):
         return True
 
     return False

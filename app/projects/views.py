@@ -7,12 +7,10 @@ from rest_framework import generics, views, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from .models import Project, Collaborator
+from .models import Project, ProjectRole
 from . import permissions
 from .serializers import (
-    ProjectSerializer, FileSerializer, CollaboratorSerializer)
-
-from . import permissions
+    ProjectSerializer, FileSerializer, ProjectRoleSerializer)
 
 
 class ListProjectsView(generics.ListAPIView):
@@ -199,7 +197,7 @@ class ListCollaboratorsView(views.APIView):
 
     def get(self, request, owner, project):
         project_id = Project.objects.get(name=project)
-        p = Collaborator.objects.filter(project=project_id)
+        p = ProjectRole.objects.filter(project=project_id)
 
         result = []
         for _ in p:
@@ -212,7 +210,7 @@ class ListCollaboratorsView(views.APIView):
 class CheckCreateDestroyCollaboratorView(views.APIView):
     """Check if a user is a collaborator"""
 
-    serializer_class = CollaboratorSerializer
+    serializer_class = ProjectRoleSerializer
 
     def post(self, request, owner, project, username):
         # TODO: check that logged user is either admin or owner
@@ -220,12 +218,12 @@ class CheckCreateDestroyCollaboratorView(views.APIView):
         user_id = get_user_model().objects.get(username=username)
         project_id = Project.objects.get(name=project)
 
-        serializer = CollaboratorSerializer(data=request.data)
+        serializer = ProjectRoleSerializer(data=request.data)
 
         if serializer.is_valid():
             role = serializer.data['role']
-            Collaborator.objects.create(user=user_id, project=project_id,
-                                        role=settings.PERMISSION_ROLE[role])
+            ProjectRole.objects.create(user=user_id, project=project_id,
+                                       role=settings.PROJECT_ROLE[role])
             return Response(status=status.HTTP_200_OK)
 
         return Response(status=status.HTTP_400_BAD_REQUEST)

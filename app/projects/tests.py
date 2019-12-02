@@ -12,7 +12,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
-from projects.models import Project, Collaborator
+from projects.models import Project, ProjectRole
 
 from . import permissions
 
@@ -271,7 +271,7 @@ class ProjectTests(APITestCase):
     def test_add_collaborator_api(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
 
-        self.assertFalse(Collaborator.objects.all())
+        self.assertFalse(ProjectRole.objects.all())
         response = self.client.post(
             '/api/v1/projects/test_user1/test_project1/collaborators/test_user2/',
             {
@@ -280,21 +280,21 @@ class ProjectTests(APITestCase):
         )
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertTrue(Collaborator.objects.all())
+        self.assertTrue(ProjectRole.objects.all())
 
         self.assertEqual(
-            Collaborator.objects.all()[0].user.username, 'test_user2')
+            ProjectRole.objects.all()[0].user.username, 'test_user2')
         self.assertEqual(
-            Collaborator.objects.all()[0].project.name, 'test_project1')
+            ProjectRole.objects.all()[0].project.name, 'test_project1')
         self.assertEqual(
-            Collaborator.objects.all()[0].role,
-            settings.PERMISSION_ROLE['reader'])
+            ProjectRole.objects.all()[0].role,
+            settings.PROJECT_ROLE['reader'])
 
     def test_list_collaborators_api(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
 
         # Create 2 permissions on test_project1
-        self.assertFalse(Collaborator.objects.all())
+        self.assertFalse(ProjectRole.objects.all())
         self.client.post(
             '/api/v1/projects/test_user1/test_project1/collaborators/test_user2/',
             {
@@ -331,19 +331,19 @@ class ProjectTests(APITestCase):
         self.assertFalse(permissions.is_admin('test_user2', 'test_project1'))
 
         # Lets define test_user2 as admin
-        Collaborator.objects.create(
+        ProjectRole.objects.create(
             user=self.test_user2,
             project=self.test_project1,
-            role=settings.PERMISSION_ROLE['admin'])
+            role=settings.PROJECT_ROLE['admin'])
 
         # Now should be allowed to admin
         self.assertTrue(permissions.is_admin('test_user2', 'test_project1'))
 
         # Lets set write permission to test_user3
-        Collaborator.objects.create(
+        ProjectRole.objects.create(
             user=self.test_user3,
             project=self.test_project1,
-            role=settings.PERMISSION_ROLE['editor'])
+            role=settings.PROJECT_ROLE['editor'])
 
         # Should not be allowed to admin
         self.assertFalse(permissions.is_admin('test_user3', 'test_project1'))
@@ -356,19 +356,19 @@ class ProjectTests(APITestCase):
         self.assertFalse(permissions.is_manager('test_user2', 'test_project1'))
 
         # Lets set manager permission to test_user2
-        Collaborator.objects.create(
+        ProjectRole.objects.create(
             user=self.test_user2,
             project=self.test_project1,
-            role=settings.PERMISSION_ROLE['manager'])
+            role=settings.PROJECT_ROLE['manager'])
 
         # Now should be allowed to manage
         self.assertTrue(permissions.is_manager('test_user2', 'test_project1'))
 
         # Lets set read permission to test_user3
-        Collaborator.objects.create(
+        ProjectRole.objects.create(
             user=self.test_user3,
             project=self.test_project1,
-            role=settings.PERMISSION_ROLE['reader'])
+            role=settings.PROJECT_ROLE['reader'])
 
         # Should not be allowed to manage
         self.assertFalse(permissions.is_manager('test_user3', 'test_project1'))
@@ -389,10 +389,10 @@ class ProjectTests(APITestCase):
         self.assertFalse(permissions.is_reader('test_user2', 'test_project1'))
 
         # Lets set read permission to test_user2
-        Collaborator.objects.create(
+        ProjectRole.objects.create(
             user=self.test_user2,
             project=self.test_project1,
-            role=settings.PERMISSION_ROLE['reader'])
+            role=settings.PROJECT_ROLE['reader'])
 
         # Now should be allowed to read
         self.assertTrue(permissions.is_reader('test_user2', 'test_project1'))

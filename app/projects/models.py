@@ -19,19 +19,38 @@ class Project(models.Model):
         return self.name
 
 
-PERMISSION_ROLE_CHOICES = (
-    (settings.PERMISSION_ROLE['admin'], 'admin'),
-    (settings.PERMISSION_ROLE['manager'], 'manager'),
-    (settings.PERMISSION_ROLE['editor'], 'editor'),
-    (settings.PERMISSION_ROLE['reporter'], 'reporter'),
-    (settings.PERMISSION_ROLE['reader'], 'reader'),
+PROJECT_ROLE_CHOICES = (
+    (settings.PROJECT_ROLE['admin'], 'admin'),
+    (settings.PROJECT_ROLE['manager'], 'manager'),
+    (settings.PROJECT_ROLE['editor'], 'editor'),
+    (settings.PROJECT_ROLE['reporter'], 'reporter'),
+    (settings.PROJECT_ROLE['reader'], 'reader'),
 )
 
 
-class Collaborator(models.Model):
+ORGANIZATION_ROLE_CHOICES = (
+    (settings.ORGANIZATION_ROLE['admin'], 'admin'),
+    (settings.ORGANIZATION_ROLE['collaborator'], 'collaborator'),
+)
+
+
+class ProjectRole(models.Model):
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    role = models.IntegerField(choices=PERMISSION_ROLE_CHOICES,
-                               default=settings.PERMISSION_ROLE['reader'])
+    role = models.IntegerField(choices=PROJECT_ROLE_CHOICES,
+                               default=settings.PROJECT_ROLE['reader'])
+
+
+class OrganizationRole(models.Model):
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='user')
+    organization = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='organization')
+    role = models.IntegerField(
+        choices=ORGANIZATION_ROLE_CHOICES,
+        default=settings.ORGANIZATION_ROLE['collaborator'])
