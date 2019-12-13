@@ -149,10 +149,10 @@
     | admin  | She can add and remove members                                     |
     | member | (difference compared to an other user is for billing reasons only) |
 ** File and directory structure
-   | Path                                     | Description                        |
-   |------------------------------------------+------------------------------------|
-   | =.=                                      | Repository root                    |
-   | =\vert{}-- app=                          | Root of all the django code        |
-   | =\vert{}   \vert{}--qfieldcloud_project= | Django project                     |
-   | =\vert{}   \vert{}--projects=            | Django app for project managements |
+   | Path                         | Description                        |
+   |------------------------------+------------------------------------|
+   | =.=                          | Repository root                    |
+   | =¦-- app=                    | Root of all the django code        |
+   | =¦   ¦--qfieldcloud_project= | Django project                     |
+   | =¦   ¦--projects=            | Django app for project managements |
 
