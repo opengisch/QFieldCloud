@@ -316,19 +316,19 @@ class ProjectTests(APITestCase):
         self.assertEqual(response.json()[0], ['test_user2', 'admin'])
         self.assertEqual(response.json()[1], ['test_user3', 'editor'])
 
-    def test_is_owner(self):
+    def test_is_project_owner(self):
 
-        self.assertTrue(permissions.is_owner('test_user1', 'test_project1'))
-        self.assertFalse(permissions.is_owner('test_user2', 'test_project1'))
-        self.assertFalse(permissions.is_owner('test_user2', 'test_project2'))
+        self.assertTrue(permissions.is_project_owner('test_user1', 'test_project1'))
+        self.assertFalse(permissions.is_project_owner('test_user2', 'test_project1'))
+        self.assertFalse(permissions.is_project_owner('test_user2', 'test_project2'))
 
-    def test_is_admin(self):
+    def test_is_project_admin(self):
 
         # If it's owner, then can admin
-        self.assertTrue(permissions.is_admin('test_user1', 'test_project1'))
+        self.assertTrue(permissions.is_project_admin('test_user1', 'test_project1'))
 
         # test_user2 cannot admin
-        self.assertFalse(permissions.is_admin('test_user2', 'test_project1'))
+        self.assertFalse(permissions.is_project_admin('test_user2', 'test_project1'))
 
         # Lets define test_user2 as admin
         ProjectRole.objects.create(
@@ -337,7 +337,7 @@ class ProjectTests(APITestCase):
             role=settings.PROJECT_ROLE['admin'])
 
         # Now should be allowed to admin
-        self.assertTrue(permissions.is_admin('test_user2', 'test_project1'))
+        self.assertTrue(permissions.is_project_admin('test_user2', 'test_project1'))
 
         # Lets set write permission to test_user3
         ProjectRole.objects.create(
@@ -346,14 +346,14 @@ class ProjectTests(APITestCase):
             role=settings.PROJECT_ROLE['editor'])
 
         # Should not be allowed to admin
-        self.assertFalse(permissions.is_admin('test_user3', 'test_project1'))
+        self.assertFalse(permissions.is_project_admin('test_user3', 'test_project1'))
 
-    def test_is_manager(self):
+    def test_is_project_manager(self):
         # If it's owner, then is also manager
-        self.assertTrue(permissions.is_manager('test_user1', 'test_project1'))
+        self.assertTrue(permissions.is_project_manager('test_user1', 'test_project1'))
 
         # test_user2 isn't manager
-        self.assertFalse(permissions.is_manager('test_user2', 'test_project1'))
+        self.assertFalse(permissions.is_project_manager('test_user2', 'test_project1'))
 
         # Lets set manager permission to test_user2
         ProjectRole.objects.create(
@@ -362,7 +362,7 @@ class ProjectTests(APITestCase):
             role=settings.PROJECT_ROLE['manager'])
 
         # Now should be allowed to manage
-        self.assertTrue(permissions.is_manager('test_user2', 'test_project1'))
+        self.assertTrue(permissions.is_project_manager('test_user2', 'test_project1'))
 
         # Lets set read permission to test_user3
         ProjectRole.objects.create(
@@ -371,22 +371,21 @@ class ProjectTests(APITestCase):
             role=settings.PROJECT_ROLE['reader'])
 
         # Should not be allowed to manage
-        self.assertFalse(permissions.is_manager('test_user3', 'test_project1'))
+        self.assertFalse(permissions.is_project_manager('test_user3', 'test_project1'))
 
     # TODO: test_is_reporter
     # TODO: test_is_editor
 
-
-    def test_is_reader(self):
+    def test_is_project_reader(self):
         # Lets set test_project1 as private
         self.test_project1.private = True
         self.test_project1.save()
 
         # If it's owner, then can read
-        self.assertTrue(permissions.is_reader('test_user1', 'test_project1'))
+        self.assertTrue(permissions.is_project_reader('test_user1', 'test_project1'))
 
         # test_user2 cannot read
-        self.assertFalse(permissions.is_reader('test_user2', 'test_project1'))
+        self.assertFalse(permissions.is_project_reader('test_user2', 'test_project1'))
 
         # Lets set read permission to test_user2
         ProjectRole.objects.create(
@@ -395,14 +394,16 @@ class ProjectTests(APITestCase):
             role=settings.PROJECT_ROLE['reader'])
 
         # Now should be allowed to read
-        self.assertTrue(permissions.is_reader('test_user2', 'test_project1'))
+        self.assertTrue(permissions.is_project_reader('test_user2', 'test_project1'))
 
         # test_user3 cannot read
-        self.assertFalse(permissions.is_reader('test_user3', 'test_project1'))
+        self.assertFalse(permissions.is_project_reader('test_user3', 'test_project1'))
 
         # Lets set test_project1 as public
         self.test_project1.private = False
         self.test_project1.save()
 
         # Now test_user3 should be allowed to read
-        self.assertTrue(permissions.is_reader('test_user3', 'test_project1'))
+        self.assertTrue(permissions.is_project_reader('test_user3', 'test_project1'))
+
+    # TODO: test organization roles

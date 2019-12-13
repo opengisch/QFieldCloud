@@ -22,10 +22,13 @@ class ListProjectsView(generics.ListAPIView):
         return Project.objects.filter(private=False)
 
 
-class ListUserProjectsView(views.APIView):
+class ListUserProjectsView(generics.GenericAPIView):
 
     def get(self, request):
-        """List projects that the authenticated user has explicit permission to access"""
+        """List projects that the authenticated user has explicit permission
+        to access"""
+
+        # TODO: implement
 
 
 class ListCreateProjectView(generics.GenericAPIView):
@@ -87,7 +90,7 @@ class PushFileView(views.APIView):
         """Upload one or more file/s"""
 
         username = request.user.username
-        if not permissions.is_manager(
+        if not permissions.is_project_manager(
                 username, project):
 
             return Response(status=status.HTTP_403_FORBIDDEN)
@@ -113,7 +116,7 @@ class ListFilesView(views.APIView):
         """List files in repository"""
 
         username = request.user.username
-        if not permissions.is_reader(
+        if not permissions.is_project_reader(
                 username, project):
 
             return Response(status=status.HTTP_403_FORBIDDEN)

@@ -30,7 +30,7 @@ PROJECT_ROLE_CHOICES = (
 
 ORGANIZATION_ROLE_CHOICES = (
     (settings.ORGANIZATION_ROLE['admin'], 'admin'),
-    (settings.ORGANIZATION_ROLE['collaborator'], 'collaborator'),
+    (settings.ORGANIZATION_ROLE['member'], 'member'),
 )
 
 
@@ -53,4 +53,4 @@ class OrganizationRole(models.Model):
         related_name='organization')
     role = models.IntegerField(
         choices=ORGANIZATION_ROLE_CHOICES,
-        default=settings.ORGANIZATION_ROLE['collaborator'])
+        default=settings.ORGANIZATION_ROLE['member'])

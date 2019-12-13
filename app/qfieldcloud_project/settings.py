@@ -153,7 +153,7 @@ PROJECT_ROLE = {
 
 ORGANIZATION_ROLE = {
     'admin': 1,
-    'collaborator': 2,
+    'member': 2,
 }
 
 REST_FRAMEWORK = {
