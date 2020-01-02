@@ -15,9 +15,9 @@
     django built-in server at http://localhost:8000
 
     To run django commands on the docker, enter in the docker bash or
-    postpone =docker-compose run web= to the commands, e.g.:
+    place =docker-compose run web= before the command, e.g.:
     #+begin_src sh
-      docker-compose run web manage.py startserver
+      docker-compose run web python manage.py runserver
     #+end_src
 *** Production
     To build production images and run the containers:
