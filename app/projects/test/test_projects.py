@@ -14,7 +14,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 from projects.models import Project, ProjectRole
 
-from . import permissions
+from .. import permissions
 
 
 settings.PROJECTS_ROOT += '_test'
