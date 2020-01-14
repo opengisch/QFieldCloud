@@ -152,7 +152,9 @@
    | Path                         | Description                        |
    |------------------------------+------------------------------------|
    | =.=                          | Repository root                    |
-   | =¦-- app=                    | Root of all the django code        |
-   | =¦   ¦--qfieldcloud_project= | Django project                     |
-   | =¦   ¦--projects=            | Django app for project managements |
+   | =¦-- web-app=                | Root of all the django code        |
+   | =¦   ¦--qfieldcloud=         | Django project                     |
+   | =¦      ¦--model=            | Django app with the model          |
+   | =¦      ¦--api=              | Django app with the rest API views |
+   | =¦      ¦--web=              | Django app with the web views      |
 
