@@ -12,12 +12,12 @@ services:
       - postgres_data:/var/lib/postgresql/data/
 
   web:
-    build: ./app
+    build: ./web-app
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/usr/src/app/
+      - ./web-app:/usr/src/app/
     command: python3 manage.py runserver 0.0.0.0:8000
     depends_on:
       - db

@@ -11,7 +11,7 @@ services:
 
   web:
     build:
-      context: ./app
+      context: ./web-app
       dockerfile: Dockerfile.prod
     restart: unless-stopped
     command: gunicorn qfieldcloud.wsgi:application --bind 0.0.0.0:8000
