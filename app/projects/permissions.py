@@ -1,9 +1,65 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
+from rest_framework import permissions
+
 from .models import Project, ProjectRole, OrganizationRole
 
-# TODO: rename the module to permission_utils?
+
+class IsProjectOwner(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
+
+
+class IsProjectAdmin(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
+
+
+class IsProjectManagerOrHigher(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
+
+
+class IsProjectEditorOrHigher(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
+
+
+class IsProjectReporterOrHigher(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
+
+
+class IsProjectReaderOrHigher(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
+
+
+class IsOrganizationAdmin(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
+
+
+class IsOrganizationMemberOrHigher(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # TODO: implement
+        return True
 
 
 def get_key_from_value(value):
