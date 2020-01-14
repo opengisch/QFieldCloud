@@ -50,8 +50,6 @@ INSTALLED_APPS = [
     'rest_auth.registration',
 
     # Local
-    #'projects.apps.ProjectsConfig',
-    #'users.apps.UsersConfig',
     'qfieldcloud.apps.model',
     'qfieldcloud.apps.api',
     'qfieldcloud.apps.web',
