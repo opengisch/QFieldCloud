@@ -4,13 +4,19 @@ from django.contrib.auth import get_user_model
 from rest_framework import permissions
 
 from qfieldcloud.apps.model.models import (
-    Project, ProjectRole, OrganizationRole)
-
+    Project,
+    #ProjectRole
+)
 
 class IsProjectOwner(permissions.BasePermission):
 
+    def has_permission(self, request, view):
+        print("has permission: {} {}".format(request, view))
+        return True
+
     def has_object_permission(self, request, view, obj):
         # TODO: implement
+        print("isProjectOwner: {} {} {}".format(request, view, obj))
         return True
 
 
@@ -91,10 +97,10 @@ def is_project_admin(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if ProjectRole.objects.filter(
-            user=user, project=project,
-            role=settings.PROJECT_ROLE['admin']):
-        return True
+    #if ProjectRole.objects.filter(
+    #        user=user, project=project,
+    #        role=settings.PROJECT_ROLE['admin']):
+    #    return True
 
     return False
 
@@ -112,10 +118,10 @@ def is_project_manager(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if ProjectRole.objects.filter(
-            user=user, project=project,
-            role=settings.PROJECT_ROLE['manager']):
-        return True
+    #if ProjectRole.objects.filter(
+    #        user=user, project=project,
+    #        role=settings.PROJECT_ROLE['manager']):
+    #    return True
 
     return False
 
@@ -136,10 +142,10 @@ def is_project_editor(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if ProjectRole.objects.filter(
-            user=user, project=project,
-            role=settings.PROJECT_ROLE['editor']):
-        return True
+    #if ProjectRole.objects.filter(
+    #        user=user, project=project,
+    #        role=settings.PROJECT_ROLE['editor']):
+    #    return True
 
     return False
 
@@ -163,10 +169,10 @@ def is_project_reporter(username, project_name):
     project = Project.objects.get(name=project_name)
     user = get_user_model().objects.get(username=username)
 
-    if ProjectRole.objects.filter(
-            user=user, project=project,
-            role=settings.PROJECT_ROLE['reporter']):
-        return True
+    #if ProjectRole.objects.filter(
+    #        user=user, project=project,
+    #        role=settings.PROJECT_ROLE['reporter']):
+    #    return True
 
     return False
 
@@ -194,42 +200,9 @@ def is_project_reader(username, project_name):
 
     user = get_user_model().objects.get(username=username)
 
-    if ProjectRole.objects.filter(
-            user=user, project=project,
-            role=settings.PROJECT_ROLE['reader']):
-        return True
-
-    return False
-
-
-def is_organization_admin(username, organization_name):
-    """Return True if the user is admin of the organizazion
-    otherwise return False"""
-
-    user = get_user_model().objects.get(username=username)
-    organization = get_user_model().objects.get(username=organization_name)
-
-    if OrganizationRole.objects.filter(
-            user=user, organization=organization,
-            role=settings.ORGANIZATION_ROLE['admin']):
-        return True
-
-    return False
-
-
-def is_organization_member(username, organization_name):
-    """Return True if the user is admin or member of the organizazion
-    otherwise return False"""
-
-    if is_organization_admin(username, organization_name):
-        return True
-
-    user = get_user_model().objects.get(username=username)
-    organization = get_user_model().objects.get(username=organization_name)
-
-    if OrganizationRole.objects.filter(
-            user=user, organization=organization,
-            role=settings.ORGANIZATION_ROLE['member']):
-        return True
+    #if ProjectRole.objects.filter(
+    #        user=user, project=project,
+    #        role=settings.PROJECT_ROLE['reader']):
+    #    return True
 
     return False

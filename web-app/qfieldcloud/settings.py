@@ -144,19 +144,6 @@ PROJECTS_ROOT = os.path.join(BASE_DIR, 'user_projects_files')
 
 AUTH_USER_MODEL = 'model.User'
 
-PROJECT_ROLE = {
-    'admin': 1,
-    'manager': 2,
-    'editor': 3,
-    'reporter': 4,
-    'reader': 5,
-}
-
-ORGANIZATION_ROLE = {
-    'admin': 1,
-    'member': 2,
-}
-
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',

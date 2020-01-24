@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     RetrieveUserView,
     ListUsersView,
-    RetrieveUpdateAuthenticatedUserView,    
+    RetrieveUpdateAuthenticatedUserView,
     ListProjectsView,
     ListUserProjectsView,
     ListCreateProjectView,
@@ -27,6 +27,9 @@ urlpatterns = [
     path('projects/<str:owner>/<str:project>/',
          RetrieveUpdateDestroyProjectView.as_view()),
     path('projects/<str:owner>/<str:project>/push/', PushFileView.as_view()),
+
+    # TODO: use <path:...> to get the path
+
     path('projects/<str:owner>/<str:project>/files/', ListFilesView.as_view()),
     path('projects/<str:owner>/<str:project>/collaborators/',
          ListCollaboratorsView.as_view()),

@@ -6,11 +6,16 @@ from django.http import FileResponse
 from rest_framework import generics, views, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
+from rest_framework.exceptions import ParseError
+from rest_framework.parsers import FileUploadParser, MultiPartParser
 
-from qfieldcloud.apps.model.models import Project, ProjectRole
+from qfieldcloud.apps.model.models import Project #, ProjectRole
 from . import permissions
 from .serializers import (
     ProjectSerializer, FileSerializer, ProjectRoleSerializer)
+
+from .permissions import IsProjectOwner
+from qfieldcloud.apps.model.models import File
 
 
 class RetrieveUserView(views.APIView):
@@ -18,13 +23,20 @@ class RetrieveUserView(views.APIView):
     def get(self, request, username):
         """Get a single user (publicly information)"""
         # TODO: implement
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 class ListUsersView(views.APIView):
+    permission_classes = [IsProjectOwner]
 
     def get(self, request):
         """Get all users and organizations"""
+        print("get list users")
+        #return None
         # TODO: implement
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 class RetrieveUpdateAuthenticatedUserView(views.APIView):
@@ -32,10 +44,15 @@ class RetrieveUpdateAuthenticatedUserView(views.APIView):
     def get(self, request):
         """Get the authenticated user"""
         # TODO: implement
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+        
 
     def patch(self, request):
         """Update the authenticated user"""
         # TODO: implement
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 class ListProjectsView(generics.ListAPIView):
@@ -54,6 +71,8 @@ class ListUserProjectsView(generics.GenericAPIView):
         to access"""
 
         # TODO: implement
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 class ListCreateProjectView(generics.GenericAPIView):
@@ -63,7 +82,7 @@ class ListCreateProjectView(generics.GenericAPIView):
 
     def get(self, request, owner):
         """List allowed projects of the specified user or organizazion"""
-
+        
         owner_id = get_user_model().objects.get(username=owner)
         queryset = Project.objects.filter(owner=owner_id)
 
@@ -109,28 +128,26 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 
 class PushFileView(views.APIView):
 
-    serializer_class = FileSerializer
+    # TODO: check if user is allowed
+    # TODO: check if owner and project exist otherwise return bad request?
+    # TODO: pass relative path
 
-    def post(self, request, owner, project):
-        """Upload one or more file/s"""
+    parser_classes = [MultiPartParser]
 
-        username = request.user.username
-        if not permissions.is_project_manager(
-                username, project):
+    def post(self, request, owner, project, format=None):
+        owner_obj = get_user_model().objects.get(username=owner)
+        project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-            return Response(status=status.HTTP_403_FORBIDDEN)
+        if 'file' not in request.data:
+            raise ParseError("Empty content")
 
-        for afile in request.FILES.getlist('file_content'):
-            filename = os.path.join(
-                settings.PROJECTS_ROOT,
-                owner,
-                project,
-                afile.name)
+        request_file = request.data['file']
 
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            with open(filename, "wb") as f:
-                for chunk in afile.chunks():
-                    f.write(chunk)
+        file = File.objects.create(
+            project=project_obj,
+            stored_file=request_file)
+
+        file.save()
 
         return Response(status=status.HTTP_201_CREATED)
 
@@ -138,51 +155,20 @@ class PushFileView(views.APIView):
 class ListFilesView(views.APIView):
 
     def get(self, request, owner, project):
-        """List files in repository"""
+        """List files in project"""
 
-        username = request.user.username
-        if not permissions.is_project_reader(
-                username, project):
+        owner_obj = get_user_model().objects.get(username=owner)
+        project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-            return Response(status=status.HTTP_403_FORBIDDEN)
+        # TOCO: check if user is allowed to see
+        # otherwise return Response(status=status.HTTP_403_FORBIDDEN)
 
+        files = File.objects.filter(project=project_obj)
         result = []
-
-        dir_path = os.path.join(
-            settings.PROJECTS_ROOT,
-            owner,
-            project)
-
-        file_names = os.listdir(dir_path)
-
-        for file_name in file_names:
-
-            size = os.path.getsize(
-                os.path.join(dir_path, file_name))
-
-            hash = self.hashfile(
-                os.path.join(dir_path, file_name))
-
+        for _ in files:
             result.append(
-                {'name': file_name,
-                 'size': size,
-                 'sha256': hash
-                 })
-
+                (str(_.stored_file.name), str(_.stored_file.size)))
         return Response(result)
-
-    def hashfile(self, afile):
-        """Return the sha256 hash of the passed file"""
-        import hashlib
-        BLOCKSIZE = 65536
-        hasher = hashlib.sha256()
-        with open(afile, 'rb') as f:
-            buf = f.read(BLOCKSIZE)
-            while len(buf) > 0:
-                hasher.update(buf)
-                buf = f.read(BLOCKSIZE)
-
-        return hasher.hexdigest()
 
 
 class RetrieveDestroyFileView(views.APIView):
@@ -192,17 +178,19 @@ class RetrieveDestroyFileView(views.APIView):
     def get(self, request, owner, project, filename):
         """Download a file"""
 
-        file_path = os.path.join(
-            settings.PROJECTS_ROOT,
-            owner,
-            project,
-            filename)
+        owner_obj = get_user_model().objects.get(username=owner)
+        project_obj = Project.objects.get(name=project, owner=owner_obj)
+
+        filename = '094e1eb3-69f8-4dae-9d1f-6a3dec4b6c38/' + filename  # FIXME:
+
+        file = File.objects.get(stored_file=filename, project=project_obj)
 
         response = FileResponse(
-            open(file_path, 'rb'),
+            file.stored_file,
             as_attachment=True,
             filename=filename)
         return response
+
     # TODO: manage errors e.g. file not found and return a proper response
 
     def delete(self, request, owner, project, filename):
@@ -225,8 +213,8 @@ class ListCollaboratorsView(views.APIView):
 
     def get(self, request, owner, project):
         project_id = Project.objects.get(name=project)
-        p = ProjectRole.objects.filter(project=project_id)
-
+        #p = ProjectRole.objects.filter(project=project_id)
+        p = None
         result = []
         for _ in p:
             result.append(
@@ -250,8 +238,8 @@ class CheckCreateDestroyCollaboratorView(views.APIView):
 
         if serializer.is_valid():
             role = serializer.data['role']
-            ProjectRole.objects.create(user=user_id, project=project_id,
-                                       role=settings.PROJECT_ROLE[role])
+            #ProjectRole.objects.create(user=user_id, project=project_id,
+            #                           role=settings.PROJECT_ROLE[role])
             return Response(status=status.HTTP_200_OK)
 
         return Response(status=status.HTTP_400_BAD_REQUEST)

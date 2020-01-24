@@ -1,18 +1,20 @@
 from django.conf import settings
 from rest_framework import serializers
 
-from qfieldcloud.apps.model.models import Project
+from qfieldcloud.apps.model.models import Project, File
 
 
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'name', 'description', 'homepage', 'private',
+        fields = ('id', 'name', 'description', 'private',
                   'created_at')
         model = Project
 
 
-class FileSerializer(serializers.Serializer):
-    file_content = serializers.FileField()
+class FileSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('project', 'stored_file', 'created_at')
+        model = File
 
 
 class ProjectRoleSerializer(serializers.Serializer):

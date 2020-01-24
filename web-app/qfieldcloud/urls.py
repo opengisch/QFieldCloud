@@ -19,9 +19,9 @@ from rest_framework_swagger.views import get_swagger_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/', include('qfieldcloud.apps.api.urls')),
-    path('api/v1/auth/', include('rest_auth.urls')),
     path('api/v1/auth/registration/', include('rest_auth.registration.urls')),
+    path('api/v1/auth/', include('rest_auth.urls')),
+    path('api/v1/', include('qfieldcloud.apps.api.urls')),
     path('docs/', get_swagger_view(title='QFieldcloud REST API')),
     path('auth/', include('rest_framework.urls')),
 ]
