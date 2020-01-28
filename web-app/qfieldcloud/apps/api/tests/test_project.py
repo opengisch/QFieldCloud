@@ -41,19 +41,30 @@ class ProjectTestCase(APITestCase):
 
         self.assertEqual(str(project.owner), 'user1')
 
-    @skip("yet not ready")
-    def test_list_public_projects_api(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+    def test_list_public_projects(self):
+
+        # Create a public project
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=False,
+            owner=self.user1)
+        self.project1.save()
+
+        # Create a private project
+        self.project1 = Project.objects.create(
+            name='project2',
+            private=True,
+            owner=self.user1)
+        self.project1.save()
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get('/api/v1/projects/')
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(len(response.data), 2)
-        self.assertTrue(
-            response.data[0]['name'] in ['test_project1', 'test_project2'])
-        self.assertTrue(
-            response.data[1]['name'] in ['test_project1', 'test_project2'])
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], 'project1')
 
-    def test_list_user_projects_api(self):
+    def test_list_user_projects(self):
 
         # Create a project
         self.project1 = Project.objects.create(
