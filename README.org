@@ -19,6 +19,13 @@
     #+begin_src sh
       docker-compose run web python manage.py runserver
     #+end_src
+
+    To run the tests:
+    #+begin_src sh
+      docker-compose run web python manage.py test qfieldcloud.apps.api.tests
+    #+end_src
+    replacing `qfieldcloud.apps.api.tests` with the desired test module
+
 *** Production
     To build production images and run the containers:
     #+begin_src sh
