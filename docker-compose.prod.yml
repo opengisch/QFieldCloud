@@ -19,6 +19,7 @@ services:
       - static_volume:/home/app/web/staticfiles
       - media_volume:/home/app/web/mediafiles
       - ./web-app/user_projects_files:/home/app/web/user_projects_files
+      - dev_db:/home/app/web/db.sqlite3
     expose:
       - 8000
     env_file:
@@ -40,3 +41,4 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
+  dev_db:
