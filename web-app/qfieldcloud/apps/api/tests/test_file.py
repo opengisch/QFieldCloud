@@ -3,6 +3,7 @@ import shutil
 import filecmp
 import tempfile
 
+from django.core.files import File as django_file
 from django.contrib.auth import get_user_model
 from django.conf import settings
 
@@ -77,20 +78,12 @@ class FileTestCase(APITransactionTestCase):
     # TODO: test push file in directory
 
     def test_pull_file(self):
-        # TODO: insert the file directly instead of using API
-
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        file_path = testdata_path('file.txt')
-        # Push a file
-        response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
-            {
-                "file": open(file_path, 'rb')
-            },
-            format='multipart'
-        )
-        self.assertTrue(status.is_success(response.status_code))
+        f = open(testdata_path('file.txt'))
+        File.objects.create(
+            project=self.project1,
+            stored_file=django_file(f, name=os.path.basename(f.name))).save()
 
         # Pull the file
         response = self.client.get(
@@ -108,20 +101,17 @@ class FileTestCase(APITransactionTestCase):
         self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
 
     def test_list_files(self):
-        # TODO: insert the file directly instead of using API
-
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        file_path = testdata_path('file.txt')
-        # Push a file
-        response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
-            {
-                "file": open(file_path, 'rb')
-            },
-            format='multipart'
-        )
-        self.assertTrue(status.is_success(response.status_code))
+        f = open(testdata_path('file.txt'))
+        File.objects.create(
+            project=self.project1,
+            stored_file=django_file(f, name=os.path.basename(f.name))).save()
+
+        f = open(testdata_path('file2.txt'))
+        File.objects.create(
+            project=self.project1,
+            stored_file=django_file(f, name=os.path.basename(f.name))).save()
 
         response = self.client.get(
             '/api/v1/projects/user1/project1/files/')
@@ -129,3 +119,5 @@ class FileTestCase(APITransactionTestCase):
 
         self.assertEqual(response.json()[0][0], 'file.txt')
         self.assertEqual(response.json()[0][1], 13)
+        self.assertEqual(response.json()[1][0], 'file2.txt')
+        self.assertEqual(response.json()[1][1], 13)
