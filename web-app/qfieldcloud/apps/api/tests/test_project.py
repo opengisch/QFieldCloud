@@ -53,10 +53,27 @@ class ProjectTestCase(APITestCase):
         self.assertTrue(
             response.data[1]['name'] in ['test_project1', 'test_project2'])
 
-    @skip("yet not ready")
     def test_list_user_projects_api(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
-        response = self.client.get('/api/v1/projects/test_user1/')
+
+        # Create a project
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
+        self.project1.save()
+
+        # Create a project
+        self.project1 = Project.objects.create(
+            name='project2',
+            private=True,
+            owner=self.user1)
+        self.project1.save()
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.get('/api/v1/projects/user1/')
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(len(response.data), 3)
+        self.assertEqual(len(response.data), 2)
+
+        self.assertEqual(response.json()[0]['name'], 'project1')
+        self.assertEqual(response.json()[1]['name'], 'project2')
