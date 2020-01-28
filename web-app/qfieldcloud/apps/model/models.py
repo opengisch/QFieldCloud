@@ -125,6 +125,12 @@ class ProjectCollaborator(models.Model):
         choices=ROLE_CHOICES, default=ROLE_READER)
 
 
+class FileManager(models.Manager):
+    def delete(self):
+        for obj in self.get_queryset():
+            obj.delete()
+
+
 class File(models.Model):
 
     def file_path(instance, filename):
@@ -135,6 +141,8 @@ class File(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = FileManager()
+
     # TODO: sha256?
     # TODO: history?
     def filename(self):
@@ -143,6 +151,10 @@ class File(models.Model):
 
     def __str__(self):
         return self.filename()
+
+    def delete(self, using=None, keep_parents=False):
+        self.stored_file.storage.delete(self.stored_file.name)
+        super().delete()
 
     def hashfile(self, afile):
         """Return the sha256 hash of the passed file"""

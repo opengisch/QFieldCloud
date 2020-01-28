@@ -121,3 +121,29 @@ class FileTestCase(APITransactionTestCase):
         self.assertEqual(response.json()[0]['size'], 13)
         self.assertEqual(response.json()[1]['name'], 'file2.txt')
         self.assertEqual(response.json()[1]['size'], 13)
+
+    def test_delete_file(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        f = open(testdata_path('file.txt'))
+        File.objects.create(
+            project=self.project1,
+            stored_file=django_file(f, name=os.path.basename(f.name))).save()
+
+        stored_file_path = os.path.join(
+            settings.PROJECTS_ROOT,
+            str(self.project1.id),
+            'file.txt')
+        self.assertTrue(os.path.isfile(stored_file_path))
+        self.assertEqual(len(File.objects.all()), 1)
+        response = self.client.delete(
+            '/api/v1/projects/user1/project1/file.txt/')
+        self.assertTrue(status.is_success(response.status_code))
+
+        self.assertEqual(len(File.objects.all()), 0)
+
+        stored_file_path = os.path.join(
+            settings.PROJECTS_ROOT,
+            str(self.project1.id),
+            'file.txt')
+        self.assertFalse(os.path.isfile(stored_file_path))

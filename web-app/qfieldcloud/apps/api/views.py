@@ -81,7 +81,7 @@ class ListCreateProjectView(generics.GenericAPIView):
 
     def get(self, request, owner):
         """List allowed projects of the specified user or organizazion"""
-        
+
         owner_id = get_user_model().objects.get(username=owner)
         queryset = Project.objects.filter(owner=owner_id)
 
@@ -196,14 +196,14 @@ class RetrieveDestroyFileView(views.APIView):
     def delete(self, request, owner, project, filename):
         """Delete a file"""
 
-        file_path = os.path.join(
-            settings.PROJECTS_ROOT,
-            owner,
-            project,
-            filename)
+        owner_obj = get_user_model().objects.get(username=owner)
+        project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-        os.remove(file_path)
-        # TODO: manage errors
+        file_path = str(project_obj.id) + '/' + filename
+
+        file = File.objects.get(stored_file=file_path, project=project_obj)
+
+        file.delete()
 
         return Response(status=status.HTTP_200_OK)
 
