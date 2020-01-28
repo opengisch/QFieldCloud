@@ -156,15 +156,14 @@ class File(models.Model):
         self.stored_file.storage.delete(self.stored_file.name)
         super().delete()
 
-    def hashfile(self, afile):
-        """Return the sha256 hash of the passed file"""
+    def sha256(self):
+        """Return the sha256 hash of the stored file"""
         import hashlib
         BLOCKSIZE = 65536
         hasher = hashlib.sha256()
-        with open(afile, 'rb') as f:
+        with self.stored_file.file as f:
             buf = f.read(BLOCKSIZE)
             while len(buf) > 0:
                 hasher.update(buf)
                 buf = f.read(BLOCKSIZE)
-
         return hasher.hexdigest()

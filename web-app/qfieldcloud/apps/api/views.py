@@ -167,7 +167,9 @@ class ListFilesView(views.APIView):
         for _ in files:
             result.append(
                 {'name': _.filename(),
-                 'size': _.stored_file.size})
+                 'size': _.stored_file.size,
+                 'sha256': _.sha256(),
+                 })
         return Response(result)
 
 
