@@ -48,40 +48,6 @@ class UsersAPITests(APITestCase):
         # Remove credentials
         self.client.credentials()
 
-    def test_register_user(self):
-        response = self.client.post(
-            '/api/v1/auth/registration/',
-            {
-                "username": "pippo",
-                "email": "pippo@topolinia.tp",
-                "password1": "secure_pass123",
-                "password2": "secure_pass123",
-            }
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-    def test_login_session_authentication(self):
-        response = self.client.post(
-            '/api/v1/auth/login/',
-            {
-                "username": "test_user1",
-                "password": "abc123"
-            }
-        )
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.data['key'], self.token.key)
-
-    def test_login_session_authentication_wrong_password(self):
-        response = self.client.post(
-            '/api/v1/auth/login/',
-            {
-                "username": "test_user1",
-                "password": "abc1234"
-            }
-        )
-        self.assertTrue(status.is_client_error(response.status_code))
-        self.assertFalse('key' in response.data)
-
 
 class ProjectTests(APITestCase):
 
@@ -159,6 +125,7 @@ class ProjectTests(APITestCase):
         # Remove test's PROJECTS_ROOT
         shutil.rmtree(settings.PROJECTS_ROOT, ignore_errors=True)
 
+    # TODO: va nei test del model
     def test_project_content(self):
         project = Project.objects.get(name='test_project1')
         self.assertEqual(project.name, 'test_project1')
@@ -166,66 +133,8 @@ class ProjectTests(APITestCase):
         self.assertFalse(project.private)
         self.assertEqual(str(project.owner), 'test_user1')
 
-    def test_list_public_projects_api(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
-        response = self.client.get('/api/v1/projects/')
 
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(len(response.data), 2)
-        self.assertTrue(
-            response.data[0]['name'] in ['test_project1', 'test_project2'])
-        self.assertTrue(
-            response.data[1]['name'] in ['test_project1', 'test_project2'])
 
-    def test_list_user_projects_api(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
-        response = self.client.get('/api/v1/projects/test_user1/')
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(len(response.data), 3)
-
-    def test_create_user_project_api(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
-        response = self.client.post(
-            '/api/v1/projects/test_user1/',
-            {
-                'name': 'api_created_project',
-                'description': 'desc',
-                'private': True,
-            }
-        )
-
-        self.assertTrue(status.is_success(response.status_code))
-
-        project = Project.objects.get(name='api_created_project')
-        # Will raise exception if donesn't exist
-
-        self.assertEqual(str(project.owner), 'test_user1')
-
-    def test_push_file_api(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
-
-        file_path = testdata_path('file.txt')
-        # Push a file
-        response = self.client.post(
-            '/api/v1/projects/test_user1/test_project1/push/',
-            {
-                "file_content": open(file_path, 'rb')
-            },
-            format='multipart'
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Check if the file is actually stored in the correct position
-        stored_file = os.path.join(
-            settings.PROJECTS_ROOT,
-            'test_user1',
-            'test_project1',
-            'file.txt')
-        self.assertTrue(os.path.isfile(stored_file))
-
-        # Check if file content is still the same
-        self.assertTrue(filecmp.cmp(file_path, stored_file))
 
     def test_push_multiple_files_api(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
