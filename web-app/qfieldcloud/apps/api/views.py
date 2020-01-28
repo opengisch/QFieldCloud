@@ -46,7 +46,6 @@ class RetrieveUpdateAuthenticatedUserView(views.APIView):
         # TODO: implement
         content = {'please move along': 'nothing to see here'}
         return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
-        
 
     def patch(self, request):
         """Update the authenticated user"""
@@ -167,7 +166,7 @@ class ListFilesView(views.APIView):
         result = []
         for _ in files:
             result.append(
-                (str(_.stored_file.name), str(_.stored_file.size)))
+                (_.filename(), _.stored_file.size))
         return Response(result)
 
 
@@ -181,9 +180,9 @@ class RetrieveDestroyFileView(views.APIView):
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-        filename = '094e1eb3-69f8-4dae-9d1f-6a3dec4b6c38/' + filename  # FIXME:
+        file_path = str(project_obj.id) + '/' + filename
 
-        file = File.objects.get(stored_file=filename, project=project_obj)
+        file = File.objects.get(stored_file=file_path, project=project_obj)
 
         response = FileResponse(
             file.stored_file,
