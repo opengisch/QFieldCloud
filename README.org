@@ -25,7 +25,16 @@
       docker-compose run web python manage.py test qfieldcloud.apps.api.tests
     #+end_src
     replacing `qfieldcloud.apps.api.tests` with the desired test module
-
+**** Demo data
+     Initial demo data:
+     - superuser
+       - username: demo_admin
+       - password: demo_pwd
+     - normal user
+       - username: demo_user
+       - password: demo_pwd
+     - project
+       - project name: demo_project
 *** Production
     To build production images and run the containers:
     #+begin_src sh
