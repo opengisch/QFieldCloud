@@ -137,8 +137,12 @@ class File(models.Model):
 
     # TODO: sha256?
     # TODO: history?
+    def filename(self):
+        # Return the absolute path inside the project directory
+        return '/'.join(self.stored_file.name.split('/')[1:])
+
     def __str__(self):
-        return self.stored_file.name
+        return self.filename()
 
     def hashfile(self, afile):
         """Return the sha256 hash of the passed file"""
@@ -152,4 +156,3 @@ class File(models.Model):
                 buf = f.read(BLOCKSIZE)
 
         return hasher.hexdigest()
-    
