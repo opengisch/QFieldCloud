@@ -142,6 +142,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'mediafiles')
 # QFieldcloud project management settings
 PROJECTS_ROOT = os.path.join(BASE_DIR, 'user_projects_files')
 
+DEFAULT_FILE_STORAGE = 'qfieldcloud.apps.model.qfield_file_storage.QFieldStorage'
+
 AUTH_USER_MODEL = 'model.User'
 
 REST_FRAMEWORK = {
