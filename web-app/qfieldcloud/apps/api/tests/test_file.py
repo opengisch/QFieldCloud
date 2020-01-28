@@ -117,7 +117,7 @@ class FileTestCase(APITransactionTestCase):
             '/api/v1/projects/user1/project1/files/')
         self.assertTrue(status.is_success(response.status_code))
 
-        self.assertEqual(response.json()[0][0], 'file.txt')
-        self.assertEqual(response.json()[0][1], 13)
-        self.assertEqual(response.json()[1][0], 'file2.txt')
-        self.assertEqual(response.json()[1][1], 13)
+        self.assertEqual(response.json()[0]['name'], 'file.txt')
+        self.assertEqual(response.json()[0]['size'], 13)
+        self.assertEqual(response.json()[1]['name'], 'file2.txt')
+        self.assertEqual(response.json()[1]['size'], 13)
