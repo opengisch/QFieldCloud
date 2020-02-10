@@ -14,7 +14,7 @@ from . import permissions
 from .serializers import (
     ProjectSerializer, ProjectRoleSerializer)
 
-from .permissions import (FilePermission)
+from .permissions import (FilePermission, ProjectPermission)
 from qfieldcloud.apps.model.models import File
 
 
@@ -74,13 +74,14 @@ class ListUserProjectsView(generics.GenericAPIView):
 
 
 class ListCreateProjectView(generics.GenericAPIView):
-    # TODO: check if user is allowed
 
+    permission_classes = [ProjectPermission]
     serializer_class = ProjectSerializer
 
     def get(self, request, owner):
         """List allowed projects of the specified user or organizazion"""
 
+        # TODO: only allowed ones
         owner_id = get_user_model().objects.get(username=owner)
         queryset = Project.objects.filter(owner=owner_id)
 
@@ -112,10 +113,10 @@ class ListCreateProjectView(generics.GenericAPIView):
 class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
     """Get, edit or delete project"""
 
+    permission_classes = [ProjectPermission]
     serializer_class = ProjectSerializer
 
     def get_object(self):
-        # TODO: check if user is allowed
 
         project = self.request.parser_context['kwargs']['project']
         owner = self.request.parser_context['kwargs']['owner']

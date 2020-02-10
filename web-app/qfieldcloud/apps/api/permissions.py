@@ -4,8 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import permissions
 
 from qfieldcloud.apps.model.models import (
-    Project, ProjectCollaborator
-)
+    Project, ProjectCollaborator, OrganizationMember)
 
 
 class FilePermission(permissions.BasePermission):
@@ -19,7 +18,7 @@ class FilePermission(permissions.BasePermission):
         except ObjectDoesNotExist:
             return False
 
-        # If is the owner can do anything
+        # The owner can do anything
         if request.user == owner:
             return True
 
@@ -32,7 +31,7 @@ class FilePermission(permissions.BasePermission):
 
         if request.method == 'GET' and not collaborator:
             return not project.private
-        if request.method == 'GET' and collaborator:
+        elif request.method == 'GET' and collaborator:
             return collaborator.role in [
                 ProjectCollaborator.ROLE_ADMIN,
                 ProjectCollaborator.ROLE_MANAGER,
@@ -55,8 +54,33 @@ class FilePermission(permissions.BasePermission):
 
 
 class ProjectPermission(permissions.BasePermission):
-    # TODO: implement
-    pass
+
+    def has_permission(self, request, view):
+        request_owner = request.parser_context['kwargs']['owner']
+        try:
+            owner = get_user_model().objects.get(username=request_owner)
+        except ObjectDoesNotExist:
+            return False
+
+        # The owner can do anything
+        if request.user == owner:
+            return True
+
+        member = None
+        try:
+            member = OrganizationMember.objects.get(
+                organization=owner, member=request.user)
+        except ObjectDoesNotExist:
+            pass
+
+        if request.method == 'GET':
+            return True
+        elif request.method == 'POST' and member:
+            return member == OrganizationMember.ROLE_ADMIN
+        elif request.method == 'DELETE' and member:
+            return member == OrganizationMember.ROLE_ADMIN
+        else:
+            return False
 
 
 class OrganizationPermission(permissions.BasePermission):

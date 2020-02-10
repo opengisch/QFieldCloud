@@ -147,7 +147,7 @@
     | Name     | Description                                                                                |
     |----------+--------------------------------------------------------------------------------------------|
     | admin    | The owner of a project is always admin of the project. He can add and remove collaborators |
-    | manager  | Can create new projects                                                                    |
+    | manager  | Can add or remove collaborators                                                            |
     | editor   | Can edit data                                                                              |
     | reporter | Can only insert data (no update nor delete). (Don't have to be a collaborator?)            |
     | reader   | Can read data. (Don't have to be a collaborator?)                                          |
@@ -160,10 +160,10 @@
 **** Roles
     A higher role always include also the lowest ones
 
-    | Name   | Description                                                        |
-    |--------+--------------------------------------------------------------------|
-    | admin  | She can add and remove members                                     |
-    | member | (difference compared to an other user is for billing reasons only) |
+    | Name    | Description                                                        |
+    |---------+--------------------------------------------------------------------|
+    | admin   | She can add and remove members and create project                  |
+    | member  | (difference compared to an other user is for billing reasons only) |
 ** File and directory structure
    | Path                         | Description                        |
    |------------------------------+------------------------------------|
