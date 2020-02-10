@@ -6,7 +6,6 @@ from django.http import FileResponse
 from rest_framework import generics, views, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
-from rest_framework.exceptions import ParseError
 from rest_framework.parsers import MultiPartParser
 
 from qfieldcloud.apps.model.models import Project
