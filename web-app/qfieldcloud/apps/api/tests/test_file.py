@@ -35,9 +35,6 @@ class FileTestCase(APITransactionTestCase):
             owner=self.user1)
         self.project1.save()
 
-        # TODO: use a custom test directory for the projects and
-        # remove the directory after the test
-
     def tearDown(self):
         get_user_model().objects.all().delete()
         # Remove credentials
