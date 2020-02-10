@@ -8,113 +8,8 @@ from qfieldcloud.apps.model.models import (
 )
 
 
-class IsProjectOwner(permissions.BasePermission):
+class FilePermission(permissions.BasePermission):
 
-    def has_permission(self, request, view):
-        request_owner = request.parser_context['kwargs']['owner']
-        try:
-            owner = get_user_model().objects.get(username=request_owner)
-        except get_user_model().DoesNotExist:
-            return False
-        return request.user == owner
-
-
-class IsProjectAdmin(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        request_project = request.parser_context['kwargs']['project']
-        request_owner = request.parser_context['kwargs']['owner']
-        try:
-            owner = get_user_model().objects.get(username=request_owner)
-            project = Project.objects.get(name=request_project, owner=owner)
-
-            ProjectCollaborator.objects.get(
-                project=project, collaborator=request.user,
-                role=ProjectCollaborator.ROLE_ADMIN
-            )
-        except ObjectDoesNotExist:
-            return False
-
-        return True
-
-
-class IsProjectManager(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        request_project = request.parser_context['kwargs']['project']
-        request_owner = request.parser_context['kwargs']['owner']
-        try:
-            owner = get_user_model().objects.get(username=request_owner)
-            project = Project.objects.get(name=request_project, owner=owner)
-
-            ProjectCollaborator.objects.get(
-                project=project, collaborator=request.user,
-                role=ProjectCollaborator.ROLE_MANAGER
-            )
-        except ObjectDoesNotExist:
-            return False
-
-        return True
-
-
-class IsProjectEditor(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        request_project = request.parser_context['kwargs']['project']
-        request_owner = request.parser_context['kwargs']['owner']
-        try:
-            owner = get_user_model().objects.get(username=request_owner)
-            project = Project.objects.get(name=request_project, owner=owner)
-
-            ProjectCollaborator.objects.get(
-                project=project, collaborator=request.user,
-                role=ProjectCollaborator.ROLE_EDITOR
-            )
-        except ObjectDoesNotExist:
-            return False
-
-        return True
-
-
-class IsProjectReporter(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        request_project = request.parser_context['kwargs']['project']
-        request_owner = request.parser_context['kwargs']['owner']
-        try:
-            owner = get_user_model().objects.get(username=request_owner)
-            project = Project.objects.get(name=request_project, owner=owner)
-
-            ProjectCollaborator.objects.get(
-                project=project, collaborator=request.user,
-                role=ProjectCollaborator.ROLE_REPORTER
-            )
-        except ObjectDoesNotExist:
-            return False
-
-        return True
-
-
-class IsProjectReader(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        request_project = request.parser_context['kwargs']['project']
-        request_owner = request.parser_context['kwargs']['owner']
-        try:
-            owner = get_user_model().objects.get(username=request_owner)
-            project = Project.objects.get(name=request_project, owner=owner)
-
-            ProjectCollaborator.objects.get(
-                project=project, collaborator=request.user,
-                role=ProjectCollaborator.ROLE_READER
-            )
-        except ObjectDoesNotExist:
-            return False
-
-        return True
-
-
-class IsProjectPublic(permissions.BasePermission):
     def has_permission(self, request, view):
         request_project = request.parser_context['kwargs']['project']
         request_owner = request.parser_context['kwargs']['owner']
@@ -124,17 +19,46 @@ class IsProjectPublic(permissions.BasePermission):
         except ObjectDoesNotExist:
             return False
 
-        return not project.private
+        # If is the owner can do anything
+        if request.user == owner:
+            return True
 
-class IsOrganizationAdmin(permissions.BasePermission):
+        collaborator = None
+        try:
+            collaborator = ProjectCollaborator.objects.get(
+                project=project, collaborator=request.user)
+        except ObjectDoesNotExist:
+            pass
 
-    def has_object_permission(self, request, view, obj):
-        # TODO: implement
-        return True
+        if request.method == 'GET' and not collaborator:
+            return not project.private
+        if request.method == 'GET' and collaborator:
+            return collaborator.role in [
+                ProjectCollaborator.ROLE_ADMIN,
+                ProjectCollaborator.ROLE_MANAGER,
+                ProjectCollaborator.ROLE_EDITOR,
+                ProjectCollaborator.ROLE_REPORTER,
+                ProjectCollaborator.ROLE_READER]
+        elif request.method == 'POST' and collaborator:
+            return collaborator.role in [
+                ProjectCollaborator.ROLE_ADMIN,
+                ProjectCollaborator.ROLE_MANAGER,
+                ProjectCollaborator.ROLE_EDITOR,
+                ProjectCollaborator.ROLE_REPORTER]
+        elif request.method == 'DELETE':
+            return collaborator.role in [
+                ProjectCollaborator.ROLE_ADMIN,
+                ProjectCollaborator.ROLE_MANAGER,
+                ProjectCollaborator.ROLE_EDITOR]
+        else:
+            return False
 
 
-class IsOrganizationMember(permissions.BasePermission):
+class ProjectPermission(permissions.BasePermission):
+    # TODO: implement
+    pass
 
-    def has_object_permission(self, request, view, obj):
-        # TODO: implement
-        return True
+
+class OrganizationPermission(permissions.BasePermission):
+    # TODO: implement
+    pass
