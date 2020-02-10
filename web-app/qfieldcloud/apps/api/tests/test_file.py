@@ -71,7 +71,37 @@ class FileTestCase(APITransactionTestCase):
         # Check if file content is still the same
         self.assertTrue(filecmp.cmp(file_path, stored_file_path))
 
-    # TODO: test overwrite of file
+    def test_overwrite_file(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        file_path = testdata_path('file.txt')
+        # Push a file
+        response = self.client.post(
+            '/api/v1/projects/user1/project1/push/',
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        stored_file = os.path.join(str(self.project1.id), 'file.txt')
+        updated1 = File.objects.get(stored_file=stored_file).updated_at
+
+        # Push again the file
+        response = self.client.post(
+            '/api/v1/projects/user1/project1/push/',
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(File.objects.all()), 1)
+
+        updated2 = File.objects.get(stored_file=stored_file).updated_at
+
+        self.assertTrue(updated2 > updated1)
+        self.assertTrue(File.objects.get(stored_file=stored_file))
 
     def test_push_file_with_path(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

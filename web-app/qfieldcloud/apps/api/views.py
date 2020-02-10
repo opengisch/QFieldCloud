@@ -149,7 +149,7 @@ class PushFileView(views.APIView):
 
         request_file = request.data['file']
 
-        relative_dir = './'
+        relative_dir = ''
         if 'path' in request.data:
             relative_dir = request.data['path']
 
@@ -161,12 +161,16 @@ class PushFileView(views.APIView):
 
         request_file._name = relative_path
 
-        file = File.objects.create(
-            project=project_obj,
-            stored_file=request_file,
-        )
+        stored_file = os.path.join(str(project_obj.id), request_file._name)
 
-        file.save()
+        if File.objects.filter(stored_file=stored_file).exists():
+            # Update the updated_at field
+            File.objects.get(stored_file=stored_file).save()
+        else:
+            File.objects.create(
+                project=project_obj,
+                stored_file=request_file,
+            )
 
         return Response(status=status.HTTP_201_CREATED)
 
