@@ -114,6 +114,18 @@ class IsProjectReader(permissions.BasePermission):
         return True
 
 
+class IsProjectPublic(permissions.BasePermission):
+    def has_permission(self, request, view):
+        request_project = request.parser_context['kwargs']['project']
+        request_owner = request.parser_context['kwargs']['owner']
+        try:
+            owner = get_user_model().objects.get(username=request_owner)
+            project = Project.objects.get(name=request_project, owner=owner)
+        except ObjectDoesNotExist:
+            return False
+
+        return not project.private
+
 class IsOrganizationAdmin(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
