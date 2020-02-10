@@ -145,7 +145,8 @@ class PushFileView(views.APIView):
                 'Invalid project', status=status.HTTP_400_BAD_REQUEST)
 
         if 'file' not in request.data:
-            raise ParseError("Empty content")
+            return Response(
+                'Empty content', status=status.HTTP_400_BAD_REQUEST)
 
         request_file = request.data['file']
 
