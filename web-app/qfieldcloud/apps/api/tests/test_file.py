@@ -167,6 +167,33 @@ class FileTestCase(APITransactionTestCase):
         self.assertEqual(response.filename, 'file.txt')
         self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
 
+    def test_pull_file_with_path(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        f = open(testdata_path('file.txt'))
+        File.objects.create(
+            project=self.project1,
+            stored_file=django_file(
+                f,
+                name=os.path.join(
+                    'foo/bar',
+                    os.path.basename(f.name)))).save()
+
+        # Pull the file
+        response = self.client.get(
+            '/api/v1/projects/user1/project1/foo/bar/file.txt/')
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.filename, 'foo/bar/file.txt')
+
+        temp_file = tempfile.NamedTemporaryFile()
+        with open(temp_file.name, 'wb') as f:
+            for _ in response.streaming_content:
+                f.write(_)
+
+        self.assertEqual(response.filename, 'foo/bar/file.txt')
+        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
+
     def test_list_files(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
@@ -219,4 +246,34 @@ class FileTestCase(APITransactionTestCase):
             settings.PROJECTS_ROOT,
             str(self.project1.id),
             'file.txt')
+        self.assertFalse(os.path.isfile(stored_file_path))
+
+    def test_delete_file_with_path(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        f = open(testdata_path('file.txt'))
+        File.objects.create(
+            project=self.project1,
+            stored_file=django_file(
+                f,
+                name=os.path.join(
+                    'foo/bar',
+                    os.path.basename(f.name)))).save()
+
+        stored_file_path = os.path.join(
+            settings.PROJECTS_ROOT,
+            str(self.project1.id),
+            'foo/bar/file.txt')
+        self.assertTrue(os.path.isfile(stored_file_path))
+        self.assertEqual(len(File.objects.all()), 1)
+        response = self.client.delete(
+            '/api/v1/projects/user1/project1/foo/bar/file.txt/')
+        self.assertTrue(status.is_success(response.status_code))
+
+        self.assertEqual(len(File.objects.all()), 0)
+
+        stored_file_path = os.path.join(
+            settings.PROJECTS_ROOT,
+            str(self.project1.id),
+            'foo/bar/file.txt')
         self.assertFalse(os.path.isfile(stored_file_path))

@@ -28,13 +28,11 @@ urlpatterns = [
          RetrieveUpdateDestroyProjectView.as_view()),
     path('projects/<str:owner>/<str:project>/push/', PushFileView.as_view()),
 
-    # TODO: use <path:...> to get the path
-
     path('projects/<str:owner>/<str:project>/files/', ListFilesView.as_view()),
     path('projects/<str:owner>/<str:project>/collaborators/',
          ListCollaboratorsView.as_view()),
     path('projects/<str:owner>/<str:project>/collaborators/<str:username>/',
          CheckCreateDestroyCollaboratorView.as_view()),
-    path('projects/<str:owner>/<str:project>/<str:filename>/',
+    path('projects/<str:owner>/<str:project>/<path:filename>/',
          RetrieveDestroyFileView.as_view()),
 ]

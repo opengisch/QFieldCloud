@@ -202,9 +202,13 @@ class RetrieveDestroyFileView(views.APIView):
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-        file_path = str(project_obj.id) + '/' + filename
+        file_path = os.path.join(str(project_obj.id), filename)
 
-        file = File.objects.get(stored_file=file_path, project=project_obj)
+        try:
+            file = File.objects.get(stored_file=file_path, project=project_obj)
+        except File.DoesNotExist:
+            return Response(
+                'File does not exist', status=status.HTTP_400_BAD_REQUEST)
 
         response = FileResponse(
             file.stored_file,
@@ -212,17 +216,19 @@ class RetrieveDestroyFileView(views.APIView):
             filename=filename)
         return response
 
-    # TODO: manage errors e.g. file not found and return a proper response
-
     def delete(self, request, owner, project, filename):
         """Delete a file"""
 
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-        file_path = str(project_obj.id) + '/' + filename
+        file_path = os.path.join(str(project_obj.id), filename)
 
-        file = File.objects.get(stored_file=file_path, project=project_obj)
+        try:
+            file = File.objects.get(stored_file=file_path, project=project_obj)
+        except File.DoesNotExist:
+            return Response(
+                'File does not exist', status=status.HTTP_400_BAD_REQUEST)
 
         file.delete()
 
