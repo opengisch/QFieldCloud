@@ -14,10 +14,7 @@ from . import permissions
 from .serializers import (
     ProjectSerializer, ProjectRoleSerializer)
 
-from .permissions import (
-    IsProjectOwner, IsProjectAdmin, IsProjectManager,
-    IsProjectEditor, IsProjectReporter,
-    IsProjectReader, IsProjectPublic)
+from .permissions import (FilePermission)
 from qfieldcloud.apps.model.models import File
 
 
@@ -31,7 +28,6 @@ class RetrieveUserView(views.APIView):
 
 
 class ListUsersView(views.APIView):
-    permission_classes = [IsProjectOwner]
 
     def get(self, request):
         """Get all users and organizations"""
@@ -132,8 +128,7 @@ class PushFileView(views.APIView):
 
     # TODO: check only one qgs/qgz file per project
 
-    permission_classes = [IsProjectOwner | IsProjectAdmin | IsProjectManager |
-                          IsProjectEditor | IsProjectReporter]
+    permission_classes = [FilePermission]
     parser_classes = [MultiPartParser]
 
     def post(self, request, owner, project, format=None):
@@ -177,9 +172,7 @@ class PushFileView(views.APIView):
 
 class ListFilesView(views.APIView):
 
-    permission_classes = [IsProjectOwner | IsProjectAdmin | IsProjectManager |
-                          IsProjectEditor | IsProjectReporter |
-                          IsProjectReader | IsProjectPublic]
+    permission_classes = [FilePermission]
 
     def get(self, request, owner, project):
         """List files in project"""
@@ -200,7 +193,7 @@ class ListFilesView(views.APIView):
 
 class RetrieveDestroyFileView(views.APIView):
 
-    # TODO: check if user is allowed
+    permission_classes = [FilePermission]
 
     def get(self, request, owner, project, filename):
         """Download a file"""
