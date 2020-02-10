@@ -15,7 +15,10 @@ from . import permissions
 from .serializers import (
     ProjectSerializer, FileSerializer, ProjectRoleSerializer)
 
-from .permissions import IsProjectOwner
+from .permissions import (
+    IsProjectOwner, IsProjectAdmin, IsProjectManager,
+    IsProjectEditor, IsProjectReporter,
+    IsProjectReader, IsProjectPublic)
 from qfieldcloud.apps.model.models import File
 
 
@@ -128,9 +131,10 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 
 class PushFileView(views.APIView):
 
-    # TODO: check if user is allowed
     # TODO: check only one qgs/qgz file per project
 
+    permission_classes = [IsProjectOwner | IsProjectAdmin | IsProjectManager |
+                          IsProjectEditor | IsProjectReporter]
     parser_classes = [MultiPartParser]
 
     def post(self, request, owner, project, format=None):
@@ -174,14 +178,15 @@ class PushFileView(views.APIView):
 
 class ListFilesView(views.APIView):
 
+    permission_classes = [IsProjectOwner | IsProjectAdmin | IsProjectManager |
+                          IsProjectEditor | IsProjectReporter | IsProjectReader |
+                          IsProjectPublic]
+
     def get(self, request, owner, project):
         """List files in project"""
 
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
-
-        # TOCO: check if user is allowed to see
-        # otherwise return Response(status=status.HTTP_403_FORBIDDEN)
 
         files = File.objects.filter(project=project_obj)
         result = []
