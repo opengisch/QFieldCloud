@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
 
@@ -8,12 +7,12 @@ from rest_framework import generics, views, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.exceptions import ParseError
-from rest_framework.parsers import FileUploadParser, MultiPartParser
+from rest_framework.parsers import MultiPartParser
 
-from qfieldcloud.apps.model.models import Project #, ProjectRole
+from qfieldcloud.apps.model.models import Project
 from . import permissions
 from .serializers import (
-    ProjectSerializer, FileSerializer, ProjectRoleSerializer)
+    ProjectSerializer, ProjectRoleSerializer)
 
 from .permissions import (
     IsProjectOwner, IsProjectAdmin, IsProjectManager,
@@ -37,7 +36,7 @@ class ListUsersView(views.APIView):
     def get(self, request):
         """Get all users and organizations"""
         print("get list users")
-        #return None
+        # return None
         # TODO: implement
         content = {'please move along': 'nothing to see here'}
         return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
@@ -179,8 +178,8 @@ class PushFileView(views.APIView):
 class ListFilesView(views.APIView):
 
     permission_classes = [IsProjectOwner | IsProjectAdmin | IsProjectManager |
-                          IsProjectEditor | IsProjectReporter | IsProjectReader |
-                          IsProjectPublic]
+                          IsProjectEditor | IsProjectReporter |
+                          IsProjectReader | IsProjectPublic]
 
     def get(self, request, owner, project):
         """List files in project"""
@@ -241,7 +240,7 @@ class ListCollaboratorsView(views.APIView):
 
     def get(self, request, owner, project):
         project_id = Project.objects.get(name=project)
-        #p = ProjectRole.objects.filter(project=project_id)
+        # p = ProjectRole.objects.filter(project=project_id)
         p = None
         result = []
         for _ in p:
@@ -266,9 +265,8 @@ class CheckCreateDestroyCollaboratorView(views.APIView):
 
         if serializer.is_valid():
             role = serializer.data['role']
-            #ProjectRole.objects.create(user=user_id, project=project_id,
+            # ProjectRole.objects.create(user=user_id, project=project_id,
             #                           role=settings.PROJECT_ROLE[role])
             return Response(status=status.HTTP_200_OK)
 
         return Response(status=status.HTTP_400_BAD_REQUEST)
-
