@@ -75,7 +75,77 @@ class FileTestCase(APITransactionTestCase):
         self.assertTrue(filecmp.cmp(file_path, stored_file_path))
 
     # TODO: test overwrite of file
-    # TODO: test push file in directory
+
+    def test_push_file_with_path(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        file_path = testdata_path('file.txt')
+        # Push a file
+        response = self.client.post(
+            '/api/v1/projects/user1/project1/push/',
+            {
+                "file": open(file_path, 'rb'),
+                "path": 'foo/bar',
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        stored_file = os.path.join(
+            str(self.project1.id), 'foo/bar', 'file.txt')
+        self.assertTrue(File.objects.get(stored_file=stored_file))
+
+        # Check if the file is actually stored in the correct position
+        stored_file_path = os.path.join(
+            settings.PROJECTS_ROOT,
+            str(self.project1.id),
+            'foo/bar/file.txt')
+        self.assertTrue(os.path.isfile(stored_file_path))
+
+    def test_push_file_with_unsafe_path(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        file_path = testdata_path('file.txt')
+        # Push a file
+        response = self.client.post(
+            '/api/v1/projects/user1/project1/push/',
+            {
+                "file": open(file_path, 'rb'),
+                "path": '../foo/bar',
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_client_error(response.status_code))
+
+    def test_push_file_invalid_user(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        file_path = testdata_path('file.txt')
+        # Push a file
+        response = self.client.post(
+            '/api/v1/projects/user1234/project1/push/',
+            {
+                "file": open(file_path, 'rb'),
+                "path": '../foo/bar',
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_client_error(response.status_code))
+
+    def test_push_file_invalid_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        file_path = testdata_path('file.txt')
+        # Push a file
+        response = self.client.post(
+            '/api/v1/projects/user1/project1234/push/',
+            {
+                "file": open(file_path, 'rb'),
+                "path": '../foo/bar',
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_client_error(response.status_code))
 
     def test_pull_file(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

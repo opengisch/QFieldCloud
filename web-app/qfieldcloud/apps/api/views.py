@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
@@ -128,23 +129,43 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 class PushFileView(views.APIView):
 
     # TODO: check if user is allowed
-    # TODO: check if owner and project exist otherwise return bad request?
-    # TODO: pass relative path
+    # TODO: check only one qgs/qgz file per project
 
     parser_classes = [MultiPartParser]
 
     def post(self, request, owner, project, format=None):
-        owner_obj = get_user_model().objects.get(username=owner)
-        project_obj = Project.objects.get(name=project, owner=owner_obj)
+
+        try:
+            owner_obj = get_user_model().objects.get(username=owner)
+            project_obj = Project.objects.get(name=project, owner=owner_obj)
+        except get_user_model().DoesNotExist:
+            return Response(
+                'Invalid owner', status=status.HTTP_400_BAD_REQUEST)
+        except Project.DoesNotExist:
+            return Response(
+                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
 
         if 'file' not in request.data:
             raise ParseError("Empty content")
 
         request_file = request.data['file']
 
+        relative_dir = './'
+        if 'path' in request.data:
+            relative_dir = request.data['path']
+
+        relative_path = os.path.join(relative_dir, request_file.name)
+
+        # Check if the path is safe i.e. is not over the current directory
+        if not Path('./').resolve() in Path(relative_path).resolve().parents:
+            return Response('Invalid path', status=status.HTTP_400_BAD_REQUEST)
+
+        request_file._name = relative_path
+
         file = File.objects.create(
             project=project_obj,
-            stored_file=request_file)
+            stored_file=request_file,
+        )
 
         file.save()
 

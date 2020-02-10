@@ -1,3 +1,4 @@
+import os
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -134,7 +135,7 @@ class FileManager(models.Manager):
 class File(models.Model):
 
     def file_path(instance, filename):
-        return '{0}/{1}'.format(instance.project.id, filename)
+        return os.path.join(str(instance.project.id), filename)
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     stored_file = models.FileField(upload_to=file_path)
