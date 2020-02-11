@@ -99,5 +99,8 @@ class ProjectTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 2)
 
-        self.assertEqual(response.json()[0]['name'], 'project1')
-        self.assertEqual(response.json()[1]['name'], 'project2')
+        json = response.json()
+        json = sorted(json, key=lambda k: k['name'])
+
+        self.assertEqual(json[0]['name'], 'project1')
+        self.assertEqual(json[1]['name'], 'project2')
