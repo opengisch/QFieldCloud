@@ -20,6 +20,17 @@ class UserTestCase(APITestCase):
         self.assertTrue('key' in response.data)
         self.assertTrue(get_user_model().objects.get(username='pippo'))
 
+    def test_register_user_reserved_word(self):
+        response = self.client.post(
+            '/api/v1/auth/registration/',
+            {
+                "username": "user",
+                "password1": "secure_pass123",
+                "password2": "secure_pass123",
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_login(self):
         # Create a user
         pippo = get_user_model().objects.create_user(

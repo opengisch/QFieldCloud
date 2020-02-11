@@ -3,6 +3,15 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
+
+
+def reserved_words_validator(value):
+    reserved_words = ['user', 'users', 'project', 'projects', 'owner', 'push',
+                      'file', 'files', 'collaborator', 'collaborators',
+                      'member', 'organization', 'qfield', 'qfieldcloud']
+    if value.lower() in reserved_words:
+        raise ValidationError('"{}" is a reserved word!'.format(value))
 
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -20,6 +29,11 @@ class User(AbstractUser):
 
     user_type = models.PositiveSmallIntegerField(
         choices=TYPE_CHOICES, default=TYPE_USER)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._meta.get_field('username').validators.append(
+            reserved_words_validator)
 
     def __str__(self):
         return self.username
@@ -86,7 +100,8 @@ class Project(models.Model):
         max_length=255,
         validators=[allowed_symbols_validator,
                     min_lenght_validator,
-                    first_sybol_validator],
+                    first_sybol_validator,
+                    reserved_words_validator],
         help_text='Project name'
     )
 

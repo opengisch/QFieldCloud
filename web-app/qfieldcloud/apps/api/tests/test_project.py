@@ -41,6 +41,19 @@ class ProjectTestCase(APITestCase):
 
         self.assertEqual(str(project.owner), 'user1')
 
+    def test_create_project_reserved_name(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.post(
+            '/api/v1/projects/user1/',
+            {
+                'name': 'project',
+                'description': 'desc',
+                'private': True,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_list_public_projects(self):
 
         # Create a public project
