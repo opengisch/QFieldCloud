@@ -10,6 +10,12 @@ from qfieldcloud.apps.model.models import (
 class FilePermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
+        if 'owner' not in request.parser_context['kwargs']:
+            return False
+
+        if 'project' not in request.parser_context['kwargs']:
+            return False
+
         request_project = request.parser_context['kwargs']['project']
         request_owner = request.parser_context['kwargs']['owner']
         try:
@@ -56,6 +62,9 @@ class FilePermission(permissions.BasePermission):
 class ProjectPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
+        if 'owner' not in request.parser_context['kwargs']:
+            return False
+
         request_owner = request.parser_context['kwargs']['owner']
         try:
             owner = get_user_model().objects.get(username=request_owner)
