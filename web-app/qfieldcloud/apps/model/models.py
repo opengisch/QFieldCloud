@@ -25,8 +25,6 @@ class User(AbstractUser):
         (TYPE_ORGANIZATION, 'organization'),
     )
 
-    # TODO: check if user name is not a reserved word
-
     user_type = models.PositiveSmallIntegerField(
         choices=TYPE_CHOICES, default=TYPE_USER)
 
@@ -93,8 +91,6 @@ class Project(models.Model):
         r'^[a-zA-Z].*$',
         'The project name must begin with a letter.')
 
-    # TODO: check if project name is not a reserved word
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
         max_length=255,
@@ -159,7 +155,6 @@ class File(models.Model):
 
     objects = FileManager()
 
-    # TODO: sha256?
     # TODO: history?
     def filename(self):
         # Return the absolute path inside the project directory
