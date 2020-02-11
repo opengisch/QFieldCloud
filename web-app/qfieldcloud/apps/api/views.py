@@ -243,8 +243,6 @@ class ListCollaboratorsView(views.APIView):
     """List collaborators"""
 
     def get(self, request, owner, project):
-        project_id = Project.objects.get(name=project)
-        # p = ProjectRole.objects.filter(project=project_id)
         p = None
         result = []
         for _ in p:
@@ -262,13 +260,10 @@ class CheckCreateDestroyCollaboratorView(views.APIView):
     def post(self, request, owner, project, username):
         # TODO: check that logged user is either admin or owner
 
-        user_id = get_user_model().objects.get(username=username)
-        project_id = Project.objects.get(name=project)
-
         serializer = ProjectRoleSerializer(data=request.data)
 
         if serializer.is_valid():
-            role = serializer.data['role']
+            # role = serializer.data['role']
             # ProjectRole.objects.create(user=user_id, project=project_id,
             #                           role=settings.PROJECT_ROLE[role])
             return Response(status=status.HTTP_200_OK)
