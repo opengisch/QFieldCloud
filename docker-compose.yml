@@ -5,9 +5,9 @@ services:
     image: postgres:11
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=hello_django
-      - POSTGRES_PASSWORD=hello_django
-      - POSTGRES_DB=hello_django_dev
+      - POSTGRES_USER=qfieldcloud_dev_db_admin
+      - POSTGRES_PASSWORD=zc3muugx
+      - POSTGRES_DB=qfieldcloud_dev_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
 
