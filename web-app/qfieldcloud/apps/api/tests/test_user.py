@@ -126,3 +126,17 @@ class UserTestCase(APITestCase):
         self.assertEqual(response.data['user_type'], 2)
         self.assertEqual(response.data['organization_owner'], 'user1')
         self.assertEqual(len(response.data['members']), 1)
+
+    def test_list_users(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.get('/api/v1/users/')
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k['username'])
+
+        self.assertEqual(json[0]['username'], 'organization1')
+        self.assertEqual(json[1]['username'], 'user1')
+        self.assertEqual(json[2]['username'], 'user2')

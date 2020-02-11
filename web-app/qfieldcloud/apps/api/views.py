@@ -42,15 +42,13 @@ class RetrieveUserView(views.APIView):
         return Response(serializer.data)
 
 
-class ListUsersView(views.APIView):
+class ListUsersView(generics.ListAPIView):
+    """Get all users and organizations"""
 
-    def get(self, request):
-        """Get all users and organizations"""
-        print("get list users")
-        # return None
-        # TODO: implement
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+    serializer_class = PublicInfoUserSerializer
+
+    def get_queryset(self):
+        return get_user_model().objects.all()
 
 
 class RetrieveUpdateAuthenticatedUserView(views.APIView):
