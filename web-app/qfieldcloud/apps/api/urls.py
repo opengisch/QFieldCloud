@@ -19,7 +19,7 @@ from .views import (
 urlpatterns = [
     path('users/user/', RetrieveUpdateAuthenticatedUserView.as_view()),
     path('users/', ListUsersView.as_view()),
-    path('users/<str:name>/', RetrieveUserView.as_view()),
+    path('users/<str:username>/', RetrieveUserView.as_view()),
 
     path('projects/user/', ListUserProjectsView.as_view()),
     path('projects/', ListProjectsView.as_view()),

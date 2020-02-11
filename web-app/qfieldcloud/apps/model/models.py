@@ -63,13 +63,16 @@ class OrganizationMember(models.Model):
 
     organization = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_ORGANIZATION))
+        limit_choices_to=models.Q(user_type=User.TYPE_ORGANIZATION),
+        related_name='members')
     member = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='member',
         limit_choices_to=models.Q(user_type=User.TYPE_USER))
     role = models.PositiveSmallIntegerField(
         choices=ROLE_CHOICES, default=ROLE_MEMBER)
+
+    def __str__(self):
+        return self.organization.username + ': ' + self.member.username
 
 
 class Project(models.Model):

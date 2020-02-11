@@ -8,10 +8,11 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.parsers import MultiPartParser
 
-from qfieldcloud.apps.model.models import Project
+from qfieldcloud.apps.model.models import Project, Organization
 from . import permissions
 from .serializers import (
-    ProjectSerializer, ProjectRoleSerializer)
+    ProjectSerializer, ProjectRoleSerializer,
+    CompleteUserSerializer, PublicInfoUserSerializer, OrganizationSerializer)
 
 from .permissions import (FilePermission, ProjectPermission)
 from qfieldcloud.apps.model.models import File
@@ -20,10 +21,25 @@ from qfieldcloud.apps.model.models import File
 class RetrieveUserView(views.APIView):
 
     def get(self, request, username):
-        """Get a single user (publicly information)"""
-        # TODO: implement
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+        """Get a single user's (or organization) publicly
+        information or complete info if the request is done by the user"""
+
+        try:
+            user = get_user_model().objects.get(username=username)
+        except get_user_model().DoesNotExist:
+            return Response(
+                'Invalid user', status=status.HTTP_400_BAD_REQUEST)
+
+        if user.user_type == get_user_model().TYPE_ORGANIZATION:
+            organization = Organization.objects.get(username=username)
+            serializer = OrganizationSerializer(organization)
+        else:
+            if request.user == user:
+                serializer = CompleteUserSerializer(user)
+            else:
+                serializer = PublicInfoUserSerializer(user)
+
+        return Response(serializer.data)
 
 
 class ListUsersView(views.APIView):
