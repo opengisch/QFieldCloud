@@ -140,3 +140,30 @@ class UserTestCase(APITestCase):
         self.assertEqual(json[0]['username'], 'organization1')
         self.assertEqual(json[1]['username'], 'user1')
         self.assertEqual(json[2]['username'], 'user2')
+
+    def test_get_the_authenticated_user(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.get('/api/v1/users/user/')
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.data['username'], 'user1')
+        self.assertEqual(response.data['user_type'], 1)
+        self.assertTrue('email' in response.json())
+
+    def test_update_the_authenticated_user(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.patch('/api/v1/users/user/',
+                                     {
+                                         'first_name': 'Charles',
+                                         'last_name': 'Darwin',
+                                         'email': 'charles@beagle.uk',
+                                     })
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.data['username'], 'user1')
+        self.assertEqual(response.data['user_type'], 1)
+        self.assertEqual(response.data['first_name'], 'Charles')
+        self.assertEqual(response.data['last_name'], 'Darwin')
+        self.assertEqual(response.data['email'], 'charles@beagle.uk')

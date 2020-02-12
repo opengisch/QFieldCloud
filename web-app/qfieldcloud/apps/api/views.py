@@ -51,19 +51,13 @@ class ListUsersView(generics.ListAPIView):
         return get_user_model().objects.all()
 
 
-class RetrieveUpdateAuthenticatedUserView(views.APIView):
+class RetrieveUpdateAuthenticatedUserView(generics.RetrieveUpdateAPIView):
+    """Get or Update the authenticated user"""
 
-    def get(self, request):
-        """Get the authenticated user"""
-        # TODO: implement
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+    serializer_class = CompleteUserSerializer
 
-    def patch(self, request):
-        """Update the authenticated user"""
-        # TODO: implement
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+    def get_object(self):
+        return self.request.user
 
 
 class ListProjectsView(generics.ListAPIView):
