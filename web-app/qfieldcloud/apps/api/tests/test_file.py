@@ -15,7 +15,7 @@ from qfieldcloud.apps.model.models import Project, File
 from .utils import testdata_path
 
 
-# Use a different PRJECT_ROOT for the tests
+# Use a different PROJECTS_ROOT for the tests
 settings.PROJECTS_ROOT += '_test'
 
 
