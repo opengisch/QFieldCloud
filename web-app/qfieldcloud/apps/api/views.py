@@ -12,8 +12,9 @@ from qfieldcloud.apps.model.models import (
     Project, Organization, ProjectCollaborator)
 from . import permissions
 from .serializers import (
-    ProjectSerializer, ProjectRoleSerializer,
-    CompleteUserSerializer, PublicInfoUserSerializer, OrganizationSerializer)
+    ProjectSerializer, CompleteUserSerializer,
+    PublicInfoUserSerializer, OrganizationSerializer,
+    ProjectCollaboratorSerializer)
 
 from .permissions import (FilePermission, ProjectPermission)
 from qfieldcloud.apps.model.models import File
@@ -252,33 +253,32 @@ class RetrieveDestroyFileView(views.APIView):
         return Response(status=status.HTTP_200_OK)
 
 
-class ListCollaboratorsView(views.APIView):
-    """List collaborators"""
+class ListCollaboratorsView(generics.ListAPIView):
+    """List collaborators of a project"""
 
-    def get(self, request, owner, project):
-        p = None
-        result = []
-        for _ in p:
-            result.append(
-                (str(_.user),
-                 permissions.get_key_from_value(_.role)))
-        return Response(result)
+    serializer_class = ProjectCollaboratorSerializer
+
+    def get_queryset(self):
+        owner = self.request.parser_context['kwargs']['owner']
+        project = self.request.parser_context['kwargs']['project']
+
+        owner_obj = get_user_model().objects.get(username=owner)
+        project_obj = Project.objects.get(name=project, owner=owner_obj)
+
+        return ProjectCollaborator.objects.filter(project=project_obj)
 
 
 class CheckCreateDestroyCollaboratorView(views.APIView):
-    """Check if a user is a collaborator"""
+    """Check if a user is a collaborator, add a user as a collaborator, remove a user as a collaborator"""
 
-    serializer_class = ProjectRoleSerializer
+    def get(self, request, owner, project, username):
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
 
     def post(self, request, owner, project, username):
-        # TODO: check that logged user is either admin or owner
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
 
-        serializer = ProjectRoleSerializer(data=request.data)
-
-        if serializer.is_valid():
-            # role = serializer.data['role']
-            # ProjectRole.objects.create(user=user_id, project=project_id,
-            #                           role=settings.PROJECT_ROLE[role])
-            return Response(status=status.HTTP_200_OK)
-
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+    def delete(self, request, owner, project, username):
+        content = {'please move along': 'nothing to see here'}
+        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)

@@ -23,6 +23,11 @@ class ProjectTestCase(APITestCase):
             username='user2', password='abc123')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
+        # Create a user
+        self.user3 = get_user_model().objects.create_user(
+            username='user3', password='abc123')
+        self.token3 = Token.objects.get_or_create(user=self.user3)[0]
+
     def tearDown(self):
         get_user_model().objects.all().delete()
         # Remove credentials
@@ -105,6 +110,32 @@ class ProjectTestCase(APITestCase):
 
         self.assertEqual(json[0]['name'], 'project1')
         self.assertEqual(json[1]['name'], 'project2')
+
+    def test_list_collaborators_of_project(self):
+
+        # Create a project of user1
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
+
+        # Add user2 as collaborator
+        ProjectCollaborator.objects.create(
+            project=self.project1,
+            collaborator=self.user2,
+            role=ProjectCollaborator.ROLE_MANAGER)
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.get(
+            '/api/v1/projects/user1/project1/collaborators/')
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 1)
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k['collaborator'])
+
+        self.assertEqual(json[0]['collaborator'], 'user2')
 
     def test_list_projects_of_authenticated_user(self):
 
