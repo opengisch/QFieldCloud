@@ -131,14 +131,17 @@ class ProjectCollaborator(models.Model):
     )
 
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE)
+        Project, on_delete=models.CASCADE,
+        related_name='collaborators',
+    )
     collaborator = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='collaborator',
         limit_choices_to=models.Q(type=User.TYPE_USER))
     role = models.PositiveSmallIntegerField(
         choices=ROLE_CHOICES, default=ROLE_READER)
 
+    def __str__(self):
+        return self.project.name + ': ' + self.collaborator.username
 
 class FileManager(models.Manager):
     def delete(self):

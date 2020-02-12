@@ -6,7 +6,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
 
-from qfieldcloud.apps.model.models import Project
+from qfieldcloud.apps.model.models import (
+    Project, ProjectCollaborator)
 
 
 class ProjectTestCase(APITestCase):
@@ -15,8 +16,12 @@ class ProjectTestCase(APITestCase):
         # Create a user
         self.user1 = get_user_model().objects.create_user(
             username='user1', password='abc123')
-        self.user1.save()
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
+
+        # Create a user
+        self.user2 = get_user_model().objects.create_user(
+            username='user2', password='abc123')
+        self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
     def tearDown(self):
         get_user_model().objects.all().delete()
@@ -61,14 +66,12 @@ class ProjectTestCase(APITestCase):
             name='project1',
             private=False,
             owner=self.user1)
-        self.project1.save()
 
         # Create a private project
         self.project1 = Project.objects.create(
             name='project2',
             private=True,
             owner=self.user1)
-        self.project1.save()
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get('/api/v1/projects/')
@@ -77,21 +80,19 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], 'project1')
 
-    def test_list_user_projects(self):
+    def test_list_projects_of_specific_user(self):
 
         # Create a project
         self.project1 = Project.objects.create(
             name='project1',
             private=True,
             owner=self.user1)
-        self.project1.save()
 
         # Create a project
         self.project1 = Project.objects.create(
             name='project2',
             private=True,
             owner=self.user1)
-        self.project1.save()
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get('/api/v1/projects/user1/')
@@ -104,3 +105,47 @@ class ProjectTestCase(APITestCase):
 
         self.assertEqual(json[0]['name'], 'project1')
         self.assertEqual(json[1]['name'], 'project2')
+
+    def test_list_projects_of_authenticated_user(self):
+
+        # Create a project of user1
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
+
+        # Create another project of user1
+        self.project2 = Project.objects.create(
+            name='project2',
+            private=True,
+            owner=self.user1)
+
+        # Create a project of user2 without access to user1
+        self.project3 = Project.objects.create(
+            name='project3',
+            private=True,
+            owner=self.user2)
+
+        # Create a project of user2 with access to user1
+        self.project4 = Project.objects.create(
+            name='project4',
+            private=True,
+            owner=self.user2)
+
+        ProjectCollaborator.objects.create(
+            project=self.project4,
+            collaborator=self.user1,
+            role=ProjectCollaborator.ROLE_MANAGER)
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.get('/api/v1/projects/user/')
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 3)
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k['name'])
+
+        self.assertEqual(json[0]['name'], 'project1')
+        self.assertEqual(json[1]['name'], 'project2')
+        self.assertEqual(json[2]['name'], 'project4')

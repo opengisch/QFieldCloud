@@ -8,7 +8,8 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.parsers import MultiPartParser
 
-from qfieldcloud.apps.model.models import Project, Organization
+from qfieldcloud.apps.model.models import (
+    Project, Organization, ProjectCollaborator)
 from . import permissions
 from .serializers import (
     ProjectSerializer, ProjectRoleSerializer,
@@ -69,15 +70,19 @@ class ListProjectsView(generics.ListAPIView):
         return Project.objects.filter(private=False)
 
 
-class ListUserProjectsView(generics.GenericAPIView):
+class ListUserProjectsView(generics.ListAPIView):
+    """List projects owned by the authenticated user or that she has
+    explicit permission to access (i.e. she is a project collaborator)"""
 
-    def get(self, request):
-        """List projects that the authenticated user has explicit permission
-        to access"""
+    serializer_class = ProjectSerializer
 
-        # TODO: implement
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+    def get_queryset(self):
+
+        qs = Project.objects.filter(owner=self.request.user) | \
+            Project.objects.filter(
+                collaborators__in=ProjectCollaborator.objects.filter(
+                    collaborator=self.request.user))
+        return qs
 
 
 class ListCreateProjectView(generics.GenericAPIView):
