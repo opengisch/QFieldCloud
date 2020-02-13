@@ -47,3 +47,8 @@ class ProjectCollaboratorSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectCollaborator
         fields = ('collaborator', 'role')
+
+
+class PushFileSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    path = serializers.CharField(required=False)

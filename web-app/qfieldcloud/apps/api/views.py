@@ -2,20 +2,21 @@ import os
 from pathlib import Path
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
+from django.utils.decorators import method_decorator
 
 from rest_framework import generics, views, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.parsers import MultiPartParser
 
+from drf_yasg.utils import swagger_auto_schema
+
 from qfieldcloud.apps.model.models import (
     Project, Organization, ProjectCollaborator)
-from . import permissions
 from .serializers import (
     ProjectSerializer, CompleteUserSerializer,
     PublicInfoUserSerializer, OrganizationSerializer,
-    ProjectCollaboratorSerializer)
-
+    ProjectCollaboratorSerializer, PushFileSerializer)
 from .permissions import (FilePermission, ProjectPermission)
 from qfieldcloud.apps.model.models import File
 
@@ -62,8 +63,11 @@ class RetrieveUpdateAuthenticatedUserView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="List all public projects",
+        operation_id="List public projects",))
 class ListProjectsView(generics.ListAPIView):
-    """List all public projects"""
 
     serializer_class = ProjectSerializer
 
@@ -71,6 +75,12 @@ class ListProjectsView(generics.ListAPIView):
         return Project.objects.filter(private=False)
 
 
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="""List projects owned by the authenticated
+        user or that the authenticated user has explicit permission to access
+        (i.e. she is a project collaborator)""",
+        operation_id="List current user's projects",))
 class ListUserProjectsView(generics.ListAPIView):
     """List projects owned by the authenticated user or that she has
     explicit permission to access (i.e. she is a project collaborator)"""
@@ -91,12 +101,22 @@ class ListCreateProjectView(generics.GenericAPIView):
     permission_classes = [ProjectPermission]
     serializer_class = ProjectSerializer
 
+    @swagger_auto_schema(
+        operation_description="""List all allowed projects of the specified
+        user or organization""",
+        operation_id="List projects of a user or organization",)
     def get(self, request, owner):
-        """List allowed projects of the specified user or organizazion"""
 
         # TODO: only allowed ones
-        owner_id = get_user_model().objects.get(username=owner)
-        queryset = Project.objects.filter(owner=owner_id)
+        try:
+            owner_id = get_user_model().objects.get(username=owner)
+            queryset = Project.objects.filter(owner=owner_id)
+        except get_user_model().DoesNotExist:
+            return Response(
+                'Invalid owner', status=status.HTTP_400_BAD_REQUEST)
+        except Project.DoesNotExist:
+            return Response(
+                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -106,8 +126,12 @@ class ListCreateProjectView(generics.GenericAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        operation_description="""Create a new project owned by the specified
+        user or organization""",
+        operation_id="Create a new project",)
     def post(self, request, owner):
-        """Create a new project"""
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         owner_id = get_user_model().objects.get(username=owner)
@@ -123,8 +147,22 @@ class ListCreateProjectView(generics.GenericAPIView):
             serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="Get a project", operation_id="Get a project",))
+@method_decorator(
+    name='put', decorator=swagger_auto_schema(
+        operation_description="Update a project",
+        operation_id="Update a project",))
+@method_decorator(
+    name='patch', decorator=swagger_auto_schema(
+        operation_description="Patch a project",
+        operation_id="Patch a project",))
+@method_decorator(
+    name='delete', decorator=swagger_auto_schema(
+        operation_description="Delete a project",
+        operation_id="Delete a project",))
 class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
-    """Get, edit or delete project"""
 
     permission_classes = [ProjectPermission]
     serializer_class = ProjectSerializer
@@ -145,6 +183,10 @@ class PushFileView(views.APIView):
     permission_classes = [FilePermission]
     parser_classes = [MultiPartParser]
 
+    @swagger_auto_schema(
+        operation_description="""Push a file in the root of the project
+        or in a subdirectory if the path parameter is specified""",
+        operation_id="Push a file", request_body=PushFileSerializer)
     def post(self, request, owner, project, format=None):
 
         try:
@@ -214,8 +256,11 @@ class RetrieveDestroyFileView(views.APIView):
 
     permission_classes = [FilePermission]
 
+    @swagger_auto_schema(
+        operation_description="""Download a file, filename can also be a
+        relative path""",
+        operation_id="Download a file",)
     def get(self, request, owner, project, filename):
-        """Download a file"""
 
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
@@ -234,8 +279,11 @@ class RetrieveDestroyFileView(views.APIView):
             filename=filename)
         return response
 
+    @swagger_auto_schema(
+        operation_description="""Delete a file, filename can also
+        be a relative path""",
+        operation_id="Delete a file",)
     def delete(self, request, owner, project, filename):
-        """Delete a file"""
 
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
@@ -269,7 +317,10 @@ class ListCollaboratorsView(generics.ListAPIView):
 
 
 class CheckCreateDestroyCollaboratorView(views.APIView):
-    """Check if a user is a collaborator, add a user as a collaborator, remove a user as a collaborator"""
+    """Check if a user is a collaborator, add a user as a collaborator,
+    remove a user as a collaborator"""
+
+    # TODO: implement
 
     def get(self, request, owner, project, username):
         content = {'please move along': 'nothing to see here'}
