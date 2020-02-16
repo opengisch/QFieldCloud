@@ -8,18 +8,12 @@ from qfieldcloud.apps.model.models import (
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('id', 'name', 'description', 'private',
-                  'created_at')
-        model = Project
-
-
-class ProjectInfoSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
 
     class Meta:
-        fields = ('id', 'name', 'description', 'owner', 'private',
+        fields = ('id', 'name', 'owner', 'description', 'private',
                   'created_at')
+        read_only_fields = ('owner',)
         model = Project
 
 
