@@ -80,10 +80,10 @@ class ProjectTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get('/api/v1/projects/')
-
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], 'project1')
+        self.assertEqual(response.data[0]['owner'], 'user1')
 
     def test_list_projects_of_specific_user(self):
 
@@ -109,7 +109,9 @@ class ProjectTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['name'])
 
         self.assertEqual(json[0]['name'], 'project1')
+        self.assertEqual(json[0]['owner'], 'user1')
         self.assertEqual(json[1]['name'], 'project2')
+        self.assertEqual(json[0]['owner'], 'user1')
 
     def test_list_collaborators_of_project(self):
 
@@ -178,5 +180,8 @@ class ProjectTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['name'])
 
         self.assertEqual(json[0]['name'], 'project1')
+        self.assertEqual(json[0]['owner'], 'user1')
         self.assertEqual(json[1]['name'], 'project2')
+        self.assertEqual(json[1]['owner'], 'user1')
         self.assertEqual(json[2]['name'], 'project4')
+        self.assertEqual(json[2]['owner'], 'user2')

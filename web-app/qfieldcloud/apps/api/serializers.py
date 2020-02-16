@@ -14,6 +14,15 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
 
 
+class ProjectInfoSerializer(serializers.ModelSerializer):
+    owner = serializers.StringRelatedField()
+
+    class Meta:
+        fields = ('id', 'name', 'description', 'owner', 'private',
+                  'created_at')
+        model = Project
+
+
 class FileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('project', 'stored_file', 'created_at')

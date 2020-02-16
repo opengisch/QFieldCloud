@@ -14,7 +14,7 @@ from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.apps.model.models import (
     Project, Organization, ProjectCollaborator)
 from .serializers import (
-    ProjectSerializer, CompleteUserSerializer,
+    ProjectSerializer, ProjectInfoSerializer, CompleteUserSerializer,
     PublicInfoUserSerializer, OrganizationSerializer,
     ProjectCollaboratorSerializer, PushFileSerializer)
 from .permissions import (FilePermission, ProjectPermission)
@@ -69,7 +69,7 @@ class RetrieveUpdateAuthenticatedUserView(generics.RetrieveUpdateAPIView):
         operation_id="List public projects",))
 class ListProjectsView(generics.ListAPIView):
 
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectInfoSerializer
 
     def get_queryset(self):
         return Project.objects.filter(private=False)
@@ -85,7 +85,7 @@ class ListUserProjectsView(generics.ListAPIView):
     """List projects owned by the authenticated user or that she has
     explicit permission to access (i.e. she is a project collaborator)"""
 
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectInfoSerializer
 
     def get_queryset(self):
 
@@ -99,7 +99,7 @@ class ListUserProjectsView(generics.ListAPIView):
 class ListCreateProjectView(generics.GenericAPIView):
 
     permission_classes = [ProjectPermission]
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectInfoSerializer
 
     @swagger_auto_schema(
         operation_description="""List all allowed projects of the specified
@@ -132,6 +132,7 @@ class ListCreateProjectView(generics.GenericAPIView):
         operation_id="Create a new project",)
     def post(self, request, owner):
 
+        self.serializer_class = ProjectSerializer
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         owner_id = get_user_model().objects.get(username=owner)
@@ -165,7 +166,7 @@ class ListCreateProjectView(generics.GenericAPIView):
 class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 
     permission_classes = [ProjectPermission]
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectInfoSerializer
 
     def get_object(self):
 
