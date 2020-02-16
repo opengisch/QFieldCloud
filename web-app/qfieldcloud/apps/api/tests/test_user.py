@@ -191,3 +191,36 @@ class UserTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['token'], self.token1.key)
         self.assertEqual(response.data['user'], 'user1')
+
+    def test_api_token_auth_after_logout(self):
+        response = self.client.post(
+            '/api/v1/auth/token/',
+            {
+                "username": "user1",
+                "password": "abc123"
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.data['token'], self.token1.key)
+        self.assertEqual(response.data['user'], 'user1')
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.post('/api/v1/auth/logout/')
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Remove the old token from the headers
+        self.client.credentials()
+
+        response = self.client.post(
+            '/api/v1/auth/token/',
+            {
+                "username": "user1",
+                "password": "abc123"
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+        # The token should be different from before
+        self.assertNotEqual(response.data['token'], self.token1.key)
+        self.assertEqual(response.data['user'], 'user1')
