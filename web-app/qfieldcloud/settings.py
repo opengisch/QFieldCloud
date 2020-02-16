@@ -175,3 +175,7 @@ SWAGGER_SETTINGS = {
     'LOGIN_URL': 'rest_framework:login',
     'LOGOUT_URL': 'rest_framework:logout',
 }
+
+REST_AUTH_SERIALIZERS = {
+     'TOKEN_SERIALIZER': 'qfieldcloud.apps.api.serializers.TokenSerializer',
+}

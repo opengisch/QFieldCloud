@@ -79,6 +79,7 @@ class UserTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['key'], token.key)
+        self.assertEqual(response.data['user'], 'pippo')
 
     def test_login_wrong_password(self):
         # Create a user

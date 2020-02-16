@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 
 from rest_framework import serializers
+from rest_framework.authtoken.models import Token
 
 from qfieldcloud.apps.model.models import (
     Project, File, Organization, ProjectCollaborator)
@@ -52,3 +53,11 @@ class ProjectCollaboratorSerializer(serializers.ModelSerializer):
 class PushFileSerializer(serializers.Serializer):
     file = serializers.FileField()
     path = serializers.CharField(required=False)
+
+
+class TokenSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()
+
+    class Meta:
+        model = Token
+        fields = ('key', 'user')
