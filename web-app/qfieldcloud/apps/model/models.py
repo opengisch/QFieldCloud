@@ -143,6 +143,7 @@ class ProjectCollaborator(models.Model):
     def __str__(self):
         return self.project.name + ': ' + self.collaborator.username
 
+
 class FileManager(models.Manager):
     def delete(self):
         for obj in self.get_queryset():
