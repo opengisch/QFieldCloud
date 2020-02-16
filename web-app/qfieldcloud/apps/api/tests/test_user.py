@@ -168,3 +168,13 @@ class UserTestCase(APITestCase):
         self.assertEqual(response.data['first_name'], 'Charles')
         self.assertEqual(response.data['last_name'], 'Darwin')
         self.assertEqual(response.data['email'], 'charles@beagle.uk')
+
+    def test_logout(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.post('/api/v1/auth/logout/')
+        self.assertTrue(status.is_success(response.status_code))
+
+        # The token should not work anymore
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.get('/api/v1/users/user/')
+        self.assertFalse(status.is_success(response.status_code))
