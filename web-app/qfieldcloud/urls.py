@@ -22,16 +22,16 @@ from drf_yasg import openapi
 
 
 schema_view = get_schema_view(
-   openapi.Info(
-      title="QFieldcloud REST API",
-      default_version='v1',
-      description="Test description",
-      terms_of_service="https://",
-      contact=openapi.Contact(email="info@opengis.ch"),
-      license=openapi.License(name="License"),
-   ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
+    openapi.Info(
+        title="QFieldcloud REST API",
+        default_version='v1',
+        description="Test description",
+        terms_of_service="https://",
+        contact=openapi.Contact(email="info@opengis.ch"),
+        license=openapi.License(name="License"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
 )
 
 urlpatterns = [

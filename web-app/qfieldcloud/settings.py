@@ -177,5 +177,5 @@ SWAGGER_SETTINGS = {
 }
 
 REST_AUTH_SERIALIZERS = {
-     'TOKEN_SERIALIZER': 'qfieldcloud.apps.api.serializers.TokenSerializer',
+    'TOKEN_SERIALIZER': 'qfieldcloud.apps.api.serializers.TokenSerializer',
 }
