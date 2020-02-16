@@ -178,3 +178,16 @@ class UserTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get('/api/v1/users/user/')
         self.assertFalse(status.is_success(response.status_code))
+
+    def test_api_token_auth(self):
+        response = self.client.post(
+            '/api/v1/auth/token/',
+            {
+                "username": "user1",
+                "password": "abc123"
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.data['token'], self.token1.key)
+        self.assertEqual(response.data['user'], 'user1')
