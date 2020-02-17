@@ -79,7 +79,7 @@ class UserTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['token'], token.key)
-        self.assertEqual(response.data['user'], 'pippo')
+        self.assertEqual(response.data['username'], 'pippo')
 
     def test_login_wrong_password(self):
         # Create a user
@@ -190,7 +190,7 @@ class UserTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['token'], self.token1.key)
-        self.assertEqual(response.data['user'], 'user1')
+        self.assertEqual(response.data['username'], 'user1')
 
     def test_api_token_auth_after_logout(self):
         response = self.client.post(
@@ -203,7 +203,7 @@ class UserTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['token'], self.token1.key)
-        self.assertEqual(response.data['user'], 'user1')
+        self.assertEqual(response.data['username'], 'user1')
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.post('/api/v1/auth/logout/')
@@ -223,4 +223,4 @@ class UserTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
         # The token should be different from before
         self.assertNotEqual(response.data['token'], self.token1.key)
-        self.assertEqual(response.data['user'], 'user1')
+        self.assertEqual(response.data['username'], 'user1')

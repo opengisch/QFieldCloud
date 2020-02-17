@@ -59,9 +59,9 @@ class PushFileSerializer(serializers.Serializer):
 
 
 class TokenSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()
+    username = serializers.StringRelatedField(source='user')
     token = serializers.CharField(source='key')
 
     class Meta:
         model = Token
-        fields = ('token', 'user')
+        fields = ('token', 'username')
