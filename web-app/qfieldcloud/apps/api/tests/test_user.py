@@ -62,40 +62,27 @@ class UserTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_login(self):
-        # Create a user
-        pippo = get_user_model().objects.create_user(
-            username='pippo', password='abc123')
-        pippo.save()
-
-        # Get the user's token
-        token = Token.objects.get_or_create(user=pippo)[0]
-
         response = self.client.post(
             '/api/v1/auth/login/',
             {
-                "username": "pippo",
+                "username": "user1",
                 "password": "abc123"
             }
         )
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.data['token'], token.key)
-        self.assertEqual(response.data['username'], 'pippo')
+        self.assertEqual(response.data['token'], self.token1.key)
+        self.assertEqual(response.data['username'], 'user1')
 
     def test_login_wrong_password(self):
-        # Create a user
-        pippo = get_user_model().objects.create_user(
-            username='pippo', password='abc123')
-        pippo.save()
-
         response = self.client.post(
             '/api/v1/auth/login/',
             {
-                "username": "pippo",
-                "password": "1234"
+                "username": "user1",
+                "password": "wrong_password"
             }
         )
         self.assertTrue(status.is_client_error(response.status_code))
-        self.assertFalse('key' in response.data)
+        self.assertFalse('token' in response.data)
 
     def test_get_user(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
