@@ -47,7 +47,7 @@ class UserTestCase(APITestCase):
             }
         )
         self.assertTrue(status.is_success(response.status_code))
-        self.assertTrue('key' in response.data)
+        self.assertTrue('token' in response.data)
         self.assertTrue(get_user_model().objects.get(username='pippo'))
 
     def test_register_user_reserved_word(self):
@@ -78,7 +78,7 @@ class UserTestCase(APITestCase):
             }
         )
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.data['key'], token.key)
+        self.assertEqual(response.data['token'], token.key)
         self.assertEqual(response.data['user'], 'pippo')
 
     def test_login_wrong_password(self):

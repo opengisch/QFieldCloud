@@ -35,8 +35,8 @@ class FunctionalTestCasse(APITestCase):
         # She gets a success answer
         self.assertTrue(status.is_success(response.status_code))
         # She gets the token
-        self.assertTrue('key' in response.data)
-        token = response.data['key']
+        self.assertTrue('token' in response.data)
+        token = response.data['token']
 
         # She can now use her token as credentials
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + token)
