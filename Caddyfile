@@ -1,0 +1,18 @@
+#{
+#    # use the staging let's encrypt certs
+#    acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+#    email info@opengis.ch
+#}
+
+dev.qfield.cloud {
+    root * /home/app/web/
+    file_server
+
+    @notStatic {
+        not {
+            path /staticfiles/*
+        }
+    }
+
+    reverse_proxy @notStatic web:8000
+}

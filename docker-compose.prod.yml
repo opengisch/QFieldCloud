@@ -8,6 +8,8 @@ services:
       - ./postgres_data:/var/lib/postgresql/data/
     env_file:
       - ./.env.prod.db
+    networks:
+      - net
 
   web:
     build:
@@ -25,17 +27,29 @@ services:
       - ./.env.prod
     depends_on:
       - db
+    networks:
+      - net
 
-  nginx:
-    build: ./docker-nginx
-    volumes:
-      - static_volume:/home/app/web/staticfiles
-      - media_volume:/home/app/web/mediafiles
-    ports:
-      - 80:80
+  caddy:
+    image: caddy/caddy:alpine
+    restart: unless-stopped
     depends_on:
       - web
+    environment:
+      ACME_AGREE: "true"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - static_volume:/home/app/web/staticfiles
+      - media_volume:/home/app/web/mediafiles
+    networks:
+      - net
+    ports:
+      - 80:80
+      - 443:443
 
 volumes:
   static_volume:
   media_volume:
+
+networks:
+  net:
