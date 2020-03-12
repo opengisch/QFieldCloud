@@ -11,9 +11,10 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 from rest_framework.authtoken.models import Token
 
-from qfieldcloud.apps.model.models import Project, File
+from qfieldcloud.apps.model.models import Project, File, FileVersion
 from .utils import testdata_path
 
+import unittest
 
 # Use a different PROJECTS_ROOT for the tests
 settings.PROJECTS_ROOT += '_test'
@@ -58,18 +59,19 @@ class FileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        stored_file = os.path.join(str(self.project1.id), 'file.txt')
-        self.assertTrue(File.objects.get(stored_file=stored_file))
+        self.assertTrue(File.objects.filter(original_path='file.txt').exists())
 
-        # Check if the file is actually stored in the correct position
-        stored_file_path = os.path.join(
+        file_obj = File.objects.get(original_path='file.txt')
+
+        self.assertTrue(FileVersion.objects.filter(file=file_obj).exists())
+
+        file_version_obj = FileVersion.objects.get(file=file_obj)
+
+        file_version_obj_path = os.path.join(
             settings.PROJECTS_ROOT,
-            str(self.project1.id),
-            'file.txt')
-        self.assertTrue(os.path.isfile(stored_file_path))
+            file_version_obj.stored_file.name)
 
-        # Check if file content is still the same
-        self.assertTrue(filecmp.cmp(file_path, stored_file_path))
+        self.assertTrue(filecmp.cmp(file_path, file_version_obj_path))
 
     def test_overwrite_file(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -84,8 +86,8 @@ class FileTestCase(APITransactionTestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
-        stored_file = os.path.join(str(self.project1.id), 'file.txt')
-        updated1 = File.objects.get(stored_file=stored_file).updated_at
+        # stored_file = os.path.join(str(self.project1.id), 'file.txt')
+        updated_at1 = File.objects.get(original_path='file.txt').updated_at
 
         # Push again the file
         response = self.client.post(
@@ -98,10 +100,15 @@ class FileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(File.objects.all()), 1)
 
-        updated2 = File.objects.get(stored_file=stored_file).updated_at
+        self.assertEqual(len(FileVersion.objects.all()), 2)
 
-        self.assertTrue(updated2 > updated1)
-        self.assertTrue(File.objects.get(stored_file=stored_file))
+        updated_at2 = File.objects.get(original_path='file.txt').updated_at
+
+        self.assertTrue(updated_at2 > updated_at1)
+
+        self.assertNotEqual(
+            FileVersion.objects.all()[0].stored_file.name,
+            FileVersion.objects.all()[1].stored_file.name)
 
     def test_push_file_with_path(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -118,16 +125,7 @@ class FileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        stored_file = os.path.join(
-            str(self.project1.id), 'foo/bar', 'file.txt')
-        self.assertTrue(File.objects.get(stored_file=stored_file))
-
-        # Check if the file is actually stored in the correct position
-        stored_file_path = os.path.join(
-            settings.PROJECTS_ROOT,
-            str(self.project1.id),
-            'foo/bar/file.txt')
-        self.assertTrue(os.path.isfile(stored_file_path))
+        self.assertTrue(File.objects.filter(original_path='foo/bar/file.txt').exists())
 
     def test_push_file_with_unsafe_path(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -178,9 +176,13 @@ class FileTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         f = open(testdata_path('file.txt'))
-        File.objects.create(
+        file_obj = File.objects.create(
             project=self.project1,
-            stored_file=django_file(f, name=os.path.basename(f.name))).save()
+            original_path='file.txt')
+
+        FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f, name=os.path.basename(f.name)))
 
         # Pull the file
         response = self.client.get(
@@ -201,13 +203,17 @@ class FileTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         f = open(testdata_path('file.txt'))
-        File.objects.create(
+        file_obj = File.objects.create(
             project=self.project1,
+            original_path='foo/bar/file.txt')
+
+        FileVersion.objects.create(
+            file=file_obj,
             stored_file=django_file(
                 f,
                 name=os.path.join(
                     'foo/bar',
-                    os.path.basename(f.name)))).save()
+                    os.path.basename(f.name))))
 
         # Pull the file
         response = self.client.get(
@@ -228,14 +234,22 @@ class FileTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         f = open(testdata_path('file.txt'))
-        File.objects.create(
+        file_obj = File.objects.create(
             project=self.project1,
-            stored_file=django_file(f, name=os.path.basename(f.name))).save()
+            original_path='file.txt')
+
+        FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f, name=os.path.basename(f.name)))
 
         f = open(testdata_path('file2.txt'))
-        File.objects.create(
+        file_obj = File.objects.create(
             project=self.project1,
-            stored_file=django_file(f, name=os.path.basename(f.name))).save()
+            original_path='file2.txt')
+
+        FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f, name=os.path.basename(f.name)))
 
         response = self.client.get(
             '/api/v1/projects/user1/project1/files/')
@@ -259,54 +273,56 @@ class FileTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         f = open(testdata_path('file.txt'))
-        File.objects.create(
+        file_obj = File.objects.create(
             project=self.project1,
-            stored_file=django_file(f, name=os.path.basename(f.name))).save()
+            original_path='file.txt')
 
-        stored_file_path = os.path.join(
+        file_version_obj = FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f, name=os.path.basename(f.name)))
+
+        file_path_on_server = os.path.join(
             settings.PROJECTS_ROOT,
-            str(self.project1.id),
-            'file.txt')
-        self.assertTrue(os.path.isfile(stored_file_path))
+            file_version_obj.stored_file.name
+        )
+        self.assertTrue(os.path.isfile(file_path_on_server))
+
         self.assertEqual(len(File.objects.all()), 1)
+        self.assertEqual(len(FileVersion.objects.all()), 1)
+
         response = self.client.delete(
             '/api/v1/projects/user1/project1/file.txt/')
         self.assertTrue(status.is_success(response.status_code))
 
         self.assertEqual(len(File.objects.all()), 0)
-
-        stored_file_path = os.path.join(
-            settings.PROJECTS_ROOT,
-            str(self.project1.id),
-            'file.txt')
-        self.assertFalse(os.path.isfile(stored_file_path))
+        self.assertEqual(len(FileVersion.objects.all()), 0)
+        self.assertFalse(os.path.isfile(file_path_on_server))
 
     def test_delete_file_with_path(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         f = open(testdata_path('file.txt'))
-        File.objects.create(
+        file_obj = File.objects.create(
             project=self.project1,
-            stored_file=django_file(
-                f,
-                name=os.path.join(
-                    'foo/bar',
-                    os.path.basename(f.name)))).save()
+            original_path='foo/bar/file.txt')
 
-        stored_file_path = os.path.join(
+        file_version_obj = FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f, name=os.path.basename(f.name)))
+
+        file_path_on_server = os.path.join(
             settings.PROJECTS_ROOT,
-            str(self.project1.id),
-            'foo/bar/file.txt')
-        self.assertTrue(os.path.isfile(stored_file_path))
+            file_version_obj.stored_file.name
+        )
+        self.assertTrue(os.path.isfile(file_path_on_server))
+
         self.assertEqual(len(File.objects.all()), 1)
+        self.assertEqual(len(FileVersion.objects.all()), 1)
+
         response = self.client.delete(
             '/api/v1/projects/user1/project1/foo/bar/file.txt/')
         self.assertTrue(status.is_success(response.status_code))
 
         self.assertEqual(len(File.objects.all()), 0)
-
-        stored_file_path = os.path.join(
-            settings.PROJECTS_ROOT,
-            str(self.project1.id),
-            'foo/bar/file.txt')
-        self.assertFalse(os.path.isfile(stored_file_path))
+        self.assertEqual(len(FileVersion.objects.all()), 0)
+        self.assertFalse(os.path.isfile(file_path_on_server))

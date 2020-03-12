@@ -20,7 +20,7 @@ from .serializers import (
     PublicInfoUserSerializer, OrganizationSerializer,
     ProjectCollaboratorSerializer, PushFileSerializer)
 from .permissions import (FilePermission, ProjectPermission)
-from qfieldcloud.apps.model.models import File
+from qfieldcloud.apps.model.models import File, FileVersion
 
 
 class RetrieveUserView(views.APIView):
@@ -219,14 +219,24 @@ class PushFileView(views.APIView):
 
         request_file._name = relative_path
 
-        stored_file = os.path.join(str(project_obj.id), request_file._name)
+        if File.objects.filter(original_path=relative_path).exists():
+            file_obj = File.objects.get(original_path=relative_path)
 
-        if File.objects.filter(stored_file=stored_file).exists():
             # Update the updated_at field
-            File.objects.get(stored_file=stored_file).save()
+            file_obj.save()
+
+            FileVersion.objects.create(
+                file=file_obj,
+                stored_file=request_file,
+            )
         else:
-            File.objects.create(
+            file_obj = File.objects.create(
                 project=project_obj,
+                original_path=relative_path,
+            )
+
+            FileVersion.objects.create(
+                file=file_obj,
                 stored_file=request_file,
             )
 
@@ -247,9 +257,9 @@ class ListFilesView(views.APIView):
         result = []
         for _ in files:
             result.append(
-                {'name': _.filename(),
-                 'size': _.stored_file.size,
-                 'sha256': _.sha256(),
+                {'name': _.original_path,
+                 'size': _.get_last_file_version().stored_file.size,
+                 'sha256': _.get_last_file_version().sha256(),
                  })
         return Response(result)
 
@@ -267,16 +277,16 @@ class RetrieveDestroyFileView(views.APIView):
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-        file_path = os.path.join(str(project_obj.id), filename)
-
         try:
-            file = File.objects.get(stored_file=file_path, project=project_obj)
+            file = File.objects.get(
+                original_path=filename, project=project_obj)
+            pass
         except File.DoesNotExist:
             return Response(
                 'File does not exist', status=status.HTTP_400_BAD_REQUEST)
 
         response = FileResponse(
-            file.stored_file,
+            file.get_last_file_version().stored_file,
             as_attachment=True,
             filename=filename)
         return response
@@ -290,10 +300,10 @@ class RetrieveDestroyFileView(views.APIView):
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-        file_path = os.path.join(str(project_obj.id), filename)
-
         try:
-            file = File.objects.get(stored_file=file_path, project=project_obj)
+            file = File.objects.get(
+                original_path=filename, project=project_obj)
+            pass
         except File.DoesNotExist:
             return Response(
                 'File does not exist', status=status.HTTP_400_BAD_REQUEST)

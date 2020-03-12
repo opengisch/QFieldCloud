@@ -4,6 +4,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
+from django.dispatch import receiver
 
 
 def reserved_words_validator(value):
@@ -145,34 +146,42 @@ class ProjectCollaborator(models.Model):
 
 
 class FileManager(models.Manager):
+
     def delete(self):
+        print("customCoso")
         for obj in self.get_queryset():
             obj.delete()
 
 
 class File(models.Model):
+    """This represent the original file as seen by the client"""
 
     def file_path(instance, filename):
         return os.path.join(str(instance.project.id), filename)
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    stored_file = models.FileField(upload_to=file_path)
+
+    # absolute_path of the file, filename included
+    original_path = models.CharField(max_length=1024)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = FileManager()
-
-    # TODO: history?
-    def filename(self):
-        # Return the absolute path inside the project directory
-        return '/'.join(self.stored_file.name.split('/')[1:])
-
     def __str__(self):
-        return self.filename()
+        return self.original_path
 
-    def delete(self, using=None, keep_parents=False):
-        self.stored_file.storage.delete(self.stored_file.name)
-        super().delete()
+    def get_last_file_version(self):
+        return FileVersion.objects.filter(file=self).latest('created_at')
+
+
+class FileVersion(models.Model):
+
+    def file_path(instance, filename):
+        return os.path.join(str(instance.file.project.id),  str(uuid.uuid4()))
+
+    file = models.ForeignKey(File, on_delete=models.CASCADE)
+
+    stored_file = models.FileField(upload_to=file_path)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def sha256(self):
         """Return the sha256 hash of the stored file"""
@@ -185,3 +194,12 @@ class File(models.Model):
                 hasher.update(buf)
                 buf = f.read(BLOCKSIZE)
         return hasher.hexdigest()
+
+    def __str__(self):
+        return self.stored_file.name
+
+
+@receiver(models.signals.post_delete, sender=FileVersion)
+def delete_file(sender, instance, *args, **kwargs):
+    """Deletes physical file"""
+    instance.stored_file.storage.delete(instance.stored_file.name)
