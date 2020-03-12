@@ -14,7 +14,6 @@ from rest_framework.authtoken.models import Token
 from qfieldcloud.apps.model.models import Project, File, FileVersion
 from .utils import testdata_path
 
-import unittest
 
 # Use a different PROJECTS_ROOT for the tests
 settings.PROJECTS_ROOT += '_test'

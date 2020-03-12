@@ -14,7 +14,7 @@ from .utils import testdata_path
 settings.PROJECTS_ROOT += '_test'
 
 
-class FunctionalTestCasse(APITestCase):
+class FunctionalTestCase(APITestCase):
     """Functional test using only API calls and not direct django data
     access"""
 
