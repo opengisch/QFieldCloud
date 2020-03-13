@@ -355,12 +355,14 @@ class AuthToken(ObtainAuthToken):
         })
 
 
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="List file history",
+        operation_id="List file history",))
 class HistoryView(generics.ListAPIView):
     """ File history """
 
-    # TODO: permissions
-    # TODO: doc
-
+    permission_classes = [FilePermission]
     serializer_class = FileVersionSerializer
 
     def get_queryset(self):
