@@ -52,4 +52,6 @@ urlpatterns = [
     path('api/v1/auth/', include('rest_auth.urls')),
     path('api/v1/', include('qfieldcloud.apps.api.urls')),
     path('auth/', include('rest_framework.urls')),
+
+    path('', include('qfieldcloud.apps.web.urls')),
 ]
