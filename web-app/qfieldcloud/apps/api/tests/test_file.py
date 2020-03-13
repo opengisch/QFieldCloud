@@ -375,3 +375,57 @@ class FileTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]['uploaded_by'], 'user1')
         self.assertEqual(json[1]['uploaded_by'], 'user2')
+
+    def test_pull_file_version(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        f = open(testdata_path('file.txt'))
+        f2 = open(testdata_path('file2.txt'))
+
+        file_obj = File.objects.create(
+            project=self.project1,
+            original_path='foo/bar/file.txt')
+
+        file_version_obj = FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f, name=os.path.basename(f.name)),
+            uploaded_by=self.user1)
+
+        FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f2, name=os.path.basename(f.name)),
+            uploaded_by=self.user2)
+
+        # Pull the last file
+        response = self.client.get(
+            '/api/v1/projects/user1/project1/foo/bar/file.txt/')
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.filename, 'foo/bar/file.txt')
+
+        temp_file = tempfile.NamedTemporaryFile()
+        with open(temp_file.name, 'wb') as f:
+            for _ in response.streaming_content:
+                f.write(_)
+
+        self.assertEqual(response.filename, 'foo/bar/file.txt')
+        self.assertFalse(
+            filecmp.cmp(temp_file.name, testdata_path('file.txt')))
+
+        response = self.client.get(
+            '/api/v1/projects/user1/project1/foo/bar/file.txt/',
+            {
+                "version": file_version_obj.created_at
+            },
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.filename, 'foo/bar/file.txt')
+
+        temp_file = tempfile.NamedTemporaryFile()
+        with open(temp_file.name, 'wb') as f:
+            for _ in response.streaming_content:
+                f.write(_)
+
+        self.assertEqual(response.filename, 'foo/bar/file.txt')
+        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))

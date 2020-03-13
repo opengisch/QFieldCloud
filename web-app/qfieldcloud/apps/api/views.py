@@ -267,12 +267,16 @@ class RetrieveDestroyFileView(views.APIView):
 
     @swagger_auto_schema(
         operation_description="""Download a file, filename can also be a
-        relative path""",
+        relative path, optional 'version' parameter for a specific version""",
         operation_id="Download a file",)
     def get(self, request, owner, project, filename):
 
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
+        version = None
+
+        if 'version' in self.request.query_params:
+            version = self.request.query_params['version']
 
         try:
             file = File.objects.get(
@@ -282,10 +286,17 @@ class RetrieveDestroyFileView(views.APIView):
             return Response(
                 'File does not exist', status=status.HTTP_400_BAD_REQUEST)
 
-        response = FileResponse(
-            file.get_last_file_version().stored_file,
-            as_attachment=True,
-            filename=filename)
+        if version:
+            response = FileResponse(
+                file.get_version(version).stored_file,
+                as_attachment=True,
+                filename=filename)
+        else:
+            response = FileResponse(
+                file.get_last_file_version().stored_file,
+                as_attachment=True,
+                filename=filename)
+
         return response
 
     @swagger_auto_schema(

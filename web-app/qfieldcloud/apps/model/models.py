@@ -173,6 +173,12 @@ class File(models.Model):
     def get_last_file_version(self):
         return FileVersion.objects.filter(file=self).latest('created_at')
 
+    def get_version(self, version):
+        try:
+            return FileVersion.objects.get(file=self, created_at=version)
+        except FileVersion.DoesNotExist:
+            return None
+
     def size(self):
         return self.get_last_file_version().stored_file.size
 
