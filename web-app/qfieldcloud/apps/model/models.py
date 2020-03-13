@@ -173,6 +173,15 @@ class File(models.Model):
     def get_last_file_version(self):
         return FileVersion.objects.filter(file=self).latest('created_at')
 
+    def size(self):
+        return self.get_last_file_version().stored_file.size
+
+    def sha256(self):
+        return self.get_last_file_version().sha256()
+
+    def name(self):
+        return self.original_path
+
 
 class FileVersion(models.Model):
 

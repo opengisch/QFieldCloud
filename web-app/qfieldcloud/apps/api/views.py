@@ -19,7 +19,7 @@ from .serializers import (
     ProjectSerializer, CompleteUserSerializer,
     PublicInfoUserSerializer, OrganizationSerializer,
     ProjectCollaboratorSerializer, PushFileSerializer,
-    FileVersionSerializer)
+    FileVersionSerializer, ListFileSerializer)
 from .permissions import (FilePermission, ProjectPermission)
 from qfieldcloud.apps.model.models import File, FileVersion
 
@@ -244,25 +244,19 @@ class PushFileView(views.APIView):
         return Response(status=status.HTTP_201_CREATED)
 
 
-class ListFilesView(views.APIView):
+class ListFilesView(generics.ListAPIView):
 
     permission_classes = [FilePermission]
+    serializer_class = ListFileSerializer
 
-    def get(self, request, owner, project):
-        """List files in project"""
+    def get_queryset(self):
+        owner = self.request.parser_context['kwargs']['owner']
+        project = self.request.parser_context['kwargs']['project']
 
         owner_obj = get_user_model().objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
-        files = File.objects.filter(project=project_obj)
-        result = []
-        for _ in files:
-            result.append(
-                {'name': _.original_path,
-                 'size': _.get_last_file_version().stored_file.size,
-                 'sha256': _.get_last_file_version().sha256(),
-                 })
-        return Response(result)
+        return File.objects.filter(project=project_obj)
 
 
 class RetrieveDestroyFileView(views.APIView):
@@ -304,7 +298,6 @@ class RetrieveDestroyFileView(views.APIView):
         try:
             file = File.objects.get(
                 original_path=filename, project=project_obj)
-            pass
         except File.DoesNotExist:
             return Response(
                 'File does not exist', status=status.HTTP_400_BAD_REQUEST)

@@ -24,6 +24,12 @@ class FileSerializer(serializers.ModelSerializer):
         model = File
 
 
+class ListFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('name', 'size', 'sha256')
+        model = File
+
+
 class FileVersionSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('created_at', 'sha256', 'size')
