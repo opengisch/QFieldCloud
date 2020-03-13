@@ -31,8 +31,10 @@ class ListFileSerializer(serializers.ModelSerializer):
 
 
 class FileVersionSerializer(serializers.ModelSerializer):
+    uploaded_by = serializers.StringRelatedField()
+
     class Meta:
-        fields = ('created_at', 'sha256', 'size')
+        fields = ('created_at', 'sha256', 'size', 'uploaded_by')
         model = FileVersion
 
 

@@ -192,6 +192,8 @@ class FileVersion(models.Model):
 
     stored_file = models.FileField(upload_to=file_path)
     created_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True)
 
     def sha256(self):
         """Return the sha256 hash of the stored file"""

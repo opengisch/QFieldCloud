@@ -26,6 +26,11 @@ class FileTestCase(APITransactionTestCase):
         self.user1 = get_user_model().objects.create_user(
             username='user1', password='abc123')
         self.user1.save()
+
+        self.user2 = get_user_model().objects.create_user(
+            username='user2', password='abc123')
+        self.user2.save()
+
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
 
         # Create a project
@@ -338,11 +343,13 @@ class FileTestCase(APITransactionTestCase):
 
         FileVersion.objects.create(
             file=file_obj,
-            stored_file=django_file(f, name=os.path.basename(f.name)))
+            stored_file=django_file(f, name=os.path.basename(f.name)),
+            uploaded_by=self.user1)
 
         FileVersion.objects.create(
             file=file_obj,
-            stored_file=django_file(f2, name=os.path.basename(f.name)))
+            stored_file=django_file(f2, name=os.path.basename(f.name)),
+            uploaded_by=self.user2)
 
         response = self.client.get(
             '/api/v1/history/user1/project1/foo/bar/file.txt/')
@@ -365,3 +372,6 @@ class FileTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]['size'], 13)
         self.assertEqual(json[1]['size'], 13)
+
+        self.assertEqual(json[0]['uploaded_by'], 'user1')
+        self.assertEqual(json[1]['uploaded_by'], 'user2')

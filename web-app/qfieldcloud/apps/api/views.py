@@ -229,6 +229,7 @@ class PushFileView(views.APIView):
             FileVersion.objects.create(
                 file=file_obj,
                 stored_file=request_file,
+                uploaded_by=request.user,
             )
         else:
             file_obj = File.objects.create(
@@ -239,6 +240,7 @@ class PushFileView(views.APIView):
             FileVersion.objects.create(
                 file=file_obj,
                 stored_file=request_file,
+                uploaded_by=request.user,
             )
 
         return Response(status=status.HTTP_201_CREATED)
