@@ -20,6 +20,7 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from .apps.api.views import AuthToken
+from .apps.web.views import IndexView
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -53,5 +54,6 @@ urlpatterns = [
     path('api/v1/', include('qfieldcloud.apps.api.urls')),
     path('auth/', include('rest_framework.urls')),
 
-    path('', include('qfieldcloud.apps.web.urls')),
+    path('', IndexView.as_view()),
+    path('web/', include('qfieldcloud.apps.web.urls')),
 ]
