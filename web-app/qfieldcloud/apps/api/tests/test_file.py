@@ -325,3 +325,43 @@ class FileTestCase(APITransactionTestCase):
         self.assertEqual(len(File.objects.all()), 0)
         self.assertEqual(len(FileVersion.objects.all()), 0)
         self.assertFalse(os.path.isfile(file_path_on_server))
+
+    def test_file_history(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        f = open(testdata_path('file.txt'))
+        f2 = open(testdata_path('file2.txt'))
+
+        file_obj = File.objects.create(
+            project=self.project1,
+            original_path='foo/bar/file.txt')
+
+        FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f, name=os.path.basename(f.name)))
+
+        FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(f2, name=os.path.basename(f.name)))
+
+        response = self.client.get(
+            '/api/v1/history/user1/project1/foo/bar/file.txt/')
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        json = response.json()
+
+        self.assertEqual(len(json), 2)
+        self.assertTrue(
+            response.json()[0]['created_at'] <
+            response.json()[1]['created_at'])
+
+        self.assertEqual(
+            json[0]['sha256'],
+            '8663bab6d124806b9727f89bb4ab9db4cbcc3862f6bbf22024dfa7212aa4ab7d')
+        self.assertEqual(
+            json[1]['sha256'],
+            'fcc85fb502bd772aa675a0263b5fa665bccd5d8d93349d1dbc9f0f6394dd37b9')
+
+        self.assertEqual(json[0]['size'], 13)
+        self.assertEqual(json[1]['size'], 13)

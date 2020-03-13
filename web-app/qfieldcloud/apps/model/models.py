@@ -10,7 +10,8 @@ from django.dispatch import receiver
 def reserved_words_validator(value):
     reserved_words = ['user', 'users', 'project', 'projects', 'owner', 'push',
                       'file', 'files', 'collaborator', 'collaborators',
-                      'member', 'organization', 'qfield', 'qfieldcloud']
+                      'member', 'organization', 'qfield', 'qfieldcloud',
+                      'history', 'version']
     if value.lower() in reserved_words:
         raise ValidationError('"{}" is a reserved word!'.format(value))
 
@@ -194,6 +195,9 @@ class FileVersion(models.Model):
                 hasher.update(buf)
                 buf = f.read(BLOCKSIZE)
         return hasher.hexdigest()
+
+    def size(self):
+        return self.stored_file.size
 
     def __str__(self):
         return self.stored_file.name

@@ -4,7 +4,8 @@ from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
 from qfieldcloud.apps.model.models import (
-    Project, File, Organization, ProjectCollaborator)
+    Project, File, Organization, ProjectCollaborator,
+    FileVersion)
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -21,6 +22,12 @@ class FileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('project', 'stored_file', 'created_at')
         model = File
+
+
+class FileVersionSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('created_at', 'sha256', 'size')
+        model = FileVersion
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):

@@ -18,7 +18,8 @@ from qfieldcloud.apps.model.models import (
 from .serializers import (
     ProjectSerializer, CompleteUserSerializer,
     PublicInfoUserSerializer, OrganizationSerializer,
-    ProjectCollaboratorSerializer, PushFileSerializer)
+    ProjectCollaboratorSerializer, PushFileSerializer,
+    FileVersionSerializer)
 from .permissions import (FilePermission, ProjectPermission)
 from qfieldcloud.apps.model.models import File, FileVersion
 
@@ -359,3 +360,29 @@ class AuthToken(ObtainAuthToken):
             'token': token.key,
             'username': user.username,
         })
+
+
+class HistoryView(generics.ListAPIView):
+    """ File history """
+
+    # TODO: permissions
+    # TODO: doc
+
+    serializer_class = FileVersionSerializer
+
+    def get_queryset(self):
+        owner = self.request.parser_context['kwargs']['owner']
+        project = self.request.parser_context['kwargs']['project']
+        filename = self.request.parser_context['kwargs']['filename']
+
+        owner_obj = get_user_model().objects.get(username=owner)
+        project_obj = Project.objects.get(name=project, owner=owner_obj)
+
+        try:
+            file = File.objects.get(
+                original_path=filename, project=project_obj)
+        except File.DoesNotExist:
+            return Response(
+                'File does not exist', status=status.HTTP_400_BAD_REQUEST)
+
+        return FileVersion.objects.filter(file=file)
