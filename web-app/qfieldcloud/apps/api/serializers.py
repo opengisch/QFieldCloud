@@ -7,6 +7,8 @@ from qfieldcloud.apps.model.models import (
     Project, File, Organization, ProjectCollaborator,
     FileVersion)
 
+User = get_user_model()
+
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
@@ -40,13 +42,13 @@ class FileVersionSerializer(serializers.ModelSerializer):
 
 class CompleteUserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = get_user_model()
+        model = User
         exclude = ('id', 'password')
 
 
 class PublicInfoUserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = get_user_model()
+        model = User
         fields = ('username', 'user_type')
 
 

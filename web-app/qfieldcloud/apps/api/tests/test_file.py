@@ -14,6 +14,7 @@ from rest_framework.authtoken.models import Token
 from qfieldcloud.apps.model.models import Project, File, FileVersion
 from .utils import testdata_path
 
+User = get_user_model()
 
 # Use a different PROJECTS_ROOT for the tests
 settings.PROJECTS_ROOT += '_test'
@@ -23,11 +24,11 @@ class FileTestCase(APITransactionTestCase):
 
     def setUp(self):
         # Create a user
-        self.user1 = get_user_model().objects.create_user(
+        self.user1 = User.objects.create_user(
             username='user1', password='abc123')
         self.user1.save()
 
-        self.user2 = get_user_model().objects.create_user(
+        self.user2 = User.objects.create_user(
             username='user2', password='abc123')
         self.user2.save()
 
@@ -41,7 +42,7 @@ class FileTestCase(APITransactionTestCase):
         self.project1.save()
 
     def tearDown(self):
-        get_user_model().objects.all().delete()
+        User.objects.all().delete()
         # Remove credentials
         self.client.credentials()
         Project.objects.all().delete()

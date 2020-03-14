@@ -7,17 +7,19 @@ from rest_framework.authtoken.models import Token
 from qfieldcloud.apps.model.models import (
     Organization, OrganizationMember)
 
+User = get_user_model()
+
 
 class UserTestCase(APITestCase):
 
     def setUp(self):
         # Create a user
-        self.user1 = get_user_model().objects.create_user(
+        self.user1 = User.objects.create_user(
             username='user1', password='abc123')
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
 
         # Create a second user
-        self.user2 = get_user_model().objects.create_user(
+        self.user2 = User.objects.create_user(
             username='user2', password='abc123')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
@@ -32,7 +34,7 @@ class UserTestCase(APITestCase):
             role=OrganizationMember.ROLE_MEMBER).save()
 
     def tearDown(self):
-        get_user_model().objects.all().delete()
+        User.objects.all().delete()
         Organization.objects.all().delete()
         # Remove credentials
         self.client.credentials()
@@ -48,7 +50,7 @@ class UserTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertTrue('token' in response.data)
-        self.assertTrue(get_user_model().objects.get(username='pippo'))
+        self.assertTrue(User.objects.get(username='pippo'))
 
     def test_register_user_reserved_word(self):
         response = self.client.post(

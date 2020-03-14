@@ -9,27 +9,29 @@ from rest_framework.authtoken.models import Token
 from qfieldcloud.apps.model.models import (
     Project, ProjectCollaborator)
 
+User = get_user_model()
+
 
 class ProjectTestCase(APITestCase):
 
     def setUp(self):
         # Create a user
-        self.user1 = get_user_model().objects.create_user(
+        self.user1 = User.objects.create_user(
             username='user1', password='abc123')
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
 
         # Create a user
-        self.user2 = get_user_model().objects.create_user(
+        self.user2 = User.objects.create_user(
             username='user2', password='abc123')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
         # Create a user
-        self.user3 = get_user_model().objects.create_user(
+        self.user3 = User.objects.create_user(
             username='user3', password='abc123')
         self.token3 = Token.objects.get_or_create(user=self.user3)[0]
 
     def tearDown(self):
-        get_user_model().objects.all().delete()
+        User.objects.all().delete()
         # Remove credentials
         self.client.credentials()
 

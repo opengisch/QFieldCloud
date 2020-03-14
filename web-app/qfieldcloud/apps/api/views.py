@@ -23,6 +23,8 @@ from .serializers import (
 from .permissions import (FilePermission, ProjectPermission)
 from qfieldcloud.apps.model.models import File, FileVersion
 
+User = get_user_model()
+
 
 class RetrieveUserView(views.APIView):
 
@@ -31,12 +33,12 @@ class RetrieveUserView(views.APIView):
         information or complete info if the request is done by the user"""
 
         try:
-            user = get_user_model().objects.get(username=username)
-        except get_user_model().DoesNotExist:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
             return Response(
                 'Invalid user', status=status.HTTP_400_BAD_REQUEST)
 
-        if user.user_type == get_user_model().TYPE_ORGANIZATION:
+        if user.user_type == User.TYPE_ORGANIZATION:
             organization = Organization.objects.get(username=username)
             serializer = OrganizationSerializer(organization)
         else:
@@ -54,7 +56,7 @@ class ListUsersView(generics.ListAPIView):
     serializer_class = PublicInfoUserSerializer
 
     def get_queryset(self):
-        return get_user_model().objects.all()
+        return User.objects.all()
 
 
 class RetrieveUpdateAuthenticatedUserView(generics.RetrieveUpdateAPIView):
@@ -112,9 +114,9 @@ class ListCreateProjectView(generics.GenericAPIView):
 
         # TODO: only allowed ones
         try:
-            owner_id = get_user_model().objects.get(username=owner)
+            owner_id = User.objects.get(username=owner)
             queryset = Project.objects.filter(owner=owner_id)
-        except get_user_model().DoesNotExist:
+        except User.DoesNotExist:
             return Response(
                 'Invalid owner', status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
@@ -137,7 +139,7 @@ class ListCreateProjectView(generics.GenericAPIView):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        owner_id = get_user_model().objects.get(username=owner)
+        owner_id = User.objects.get(username=owner)
         serializer.save(owner=owner_id)
 
         try:
@@ -174,7 +176,7 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 
         project = self.request.parser_context['kwargs']['project']
         owner = self.request.parser_context['kwargs']['owner']
-        owner_id = get_user_model().objects.get(username=owner)
+        owner_id = User.objects.get(username=owner)
 
         return Project.objects.get(name=project, owner=owner_id)
 
@@ -193,9 +195,9 @@ class PushFileView(views.APIView):
     def post(self, request, owner, project, format=None):
 
         try:
-            owner_obj = get_user_model().objects.get(username=owner)
+            owner_obj = User.objects.get(username=owner)
             project_obj = Project.objects.get(name=project, owner=owner_obj)
-        except get_user_model().DoesNotExist:
+        except User.DoesNotExist:
             return Response(
                 'Invalid owner', status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
@@ -255,7 +257,7 @@ class ListFilesView(generics.ListAPIView):
         owner = self.request.parser_context['kwargs']['owner']
         project = self.request.parser_context['kwargs']['project']
 
-        owner_obj = get_user_model().objects.get(username=owner)
+        owner_obj = User.objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
         return File.objects.filter(project=project_obj)
@@ -271,7 +273,7 @@ class RetrieveDestroyFileView(views.APIView):
         operation_id="Download a file",)
     def get(self, request, owner, project, filename):
 
-        owner_obj = get_user_model().objects.get(username=owner)
+        owner_obj = User.objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
         version = None
 
@@ -305,7 +307,7 @@ class RetrieveDestroyFileView(views.APIView):
         operation_id="Delete a file",)
     def delete(self, request, owner, project, filename):
 
-        owner_obj = get_user_model().objects.get(username=owner)
+        owner_obj = User.objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
         try:
@@ -329,7 +331,7 @@ class ListCollaboratorsView(generics.ListAPIView):
         owner = self.request.parser_context['kwargs']['owner']
         project = self.request.parser_context['kwargs']['project']
 
-        owner_obj = get_user_model().objects.get(username=owner)
+        owner_obj = User.objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
         return ProjectCollaborator.objects.filter(project=project_obj)
@@ -383,7 +385,7 @@ class HistoryView(generics.ListAPIView):
         project = self.request.parser_context['kwargs']['project']
         filename = self.request.parser_context['kwargs']['filename']
 
-        owner_obj = get_user_model().objects.get(username=owner)
+        owner_obj = User.objects.get(username=owner)
         project_obj = Project.objects.get(name=project, owner=owner_obj)
 
         try:

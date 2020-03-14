@@ -6,6 +6,8 @@ from rest_framework import permissions
 from qfieldcloud.apps.model.models import (
     Project, ProjectCollaborator, OrganizationMember)
 
+User = get_user_model()
+
 
 class FilePermission(permissions.BasePermission):
 
@@ -19,7 +21,7 @@ class FilePermission(permissions.BasePermission):
         request_project = request.parser_context['kwargs']['project']
         request_owner = request.parser_context['kwargs']['owner']
         try:
-            owner = get_user_model().objects.get(username=request_owner)
+            owner = User.objects.get(username=request_owner)
             project = Project.objects.get(name=request_project, owner=owner)
         except ObjectDoesNotExist:
             return False
@@ -67,7 +69,7 @@ class ProjectPermission(permissions.BasePermission):
 
         request_owner = request.parser_context['kwargs']['owner']
         try:
-            owner = get_user_model().objects.get(username=request_owner)
+            owner = User.objects.get(username=request_owner)
         except ObjectDoesNotExist:
             return False
 
