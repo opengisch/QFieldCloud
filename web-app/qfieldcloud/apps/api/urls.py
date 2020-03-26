@@ -33,11 +33,11 @@ urlpatterns = [
     path('collaborators/<str:owner>/<str:project>/<str:username>/',
          CheckCreateDestroyCollaboratorView.as_view()),
 
-    path('projects/<str:owner>/<str:project>/push/', PushFileView.as_view()),
-    path('projects/<str:owner>/<str:project>/files/', ListFilesView.as_view()),
-
-    path('projects/<str:owner>/<str:project>/<path:filename>/',
+    path('files/<str:owner>/<str:project>/', ListFilesView.as_view()),
+    path('files/<str:owner>/<str:project>/<path:filename>/',
          RetrieveDestroyFileView.as_view()),
+
+    path('projects/<str:owner>/<str:project>/push/', PushFileView.as_view()),
 
     # TODO: choose a better name?
     path('history/<str:owner>/<str:project>/<path:filename>/',

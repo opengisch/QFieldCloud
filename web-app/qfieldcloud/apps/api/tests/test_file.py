@@ -191,7 +191,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            '/api/v1/projects/user1/project1/file.txt/')
+            '/api/v1/files/user1/project1/file.txt/')
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.filename, 'file.txt')
@@ -222,7 +222,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            '/api/v1/projects/user1/project1/foo/bar/file.txt/')
+            '/api/v1/files/user1/project1/foo/bar/file.txt/')
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.filename, 'foo/bar/file.txt')
@@ -257,7 +257,7 @@ class FileTestCase(APITransactionTestCase):
             stored_file=django_file(f, name=os.path.basename(f.name)))
 
         response = self.client.get(
-            '/api/v1/projects/user1/project1/files/')
+            '/api/v1/files/user1/project1/')
         self.assertTrue(status.is_success(response.status_code))
 
         json = response.json()
@@ -296,7 +296,7 @@ class FileTestCase(APITransactionTestCase):
         self.assertEqual(len(FileVersion.objects.all()), 1)
 
         response = self.client.delete(
-            '/api/v1/projects/user1/project1/file.txt/')
+            '/api/v1/files/user1/project1/file.txt/')
         self.assertTrue(status.is_success(response.status_code))
 
         self.assertEqual(len(File.objects.all()), 0)
@@ -325,7 +325,7 @@ class FileTestCase(APITransactionTestCase):
         self.assertEqual(len(FileVersion.objects.all()), 1)
 
         response = self.client.delete(
-            '/api/v1/projects/user1/project1/foo/bar/file.txt/')
+            '/api/v1/files/user1/project1/foo/bar/file.txt/')
         self.assertTrue(status.is_success(response.status_code))
 
         self.assertEqual(len(File.objects.all()), 0)
@@ -399,7 +399,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Pull the last file
         response = self.client.get(
-            '/api/v1/projects/user1/project1/foo/bar/file.txt/')
+            '/api/v1/files/user1/project1/foo/bar/file.txt/')
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.filename, 'foo/bar/file.txt')
@@ -414,7 +414,7 @@ class FileTestCase(APITransactionTestCase):
             filecmp.cmp(temp_file.name, testdata_path('file.txt')))
 
         response = self.client.get(
-            '/api/v1/projects/user1/project1/foo/bar/file.txt/',
+            '/api/v1/files/user1/project1/foo/bar/file.txt/',
             {
                 "version": file_version_obj.created_at
             },
