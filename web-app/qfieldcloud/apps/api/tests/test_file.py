@@ -350,29 +350,29 @@ class FileTestCase(APITransactionTestCase):
             uploaded_by=self.user2)
 
         response = self.client.get(
-            '/api/v1/history/user1/project1/foo/bar/file.txt/')
+            '/api/v1/files/user1/project1/')
 
         self.assertTrue(status.is_success(response.status_code))
 
-        json = response.json()
+        versions = response.json()[0]['versions']
 
-        self.assertEqual(len(json), 2)
+        self.assertEqual(len(versions), 2)
         self.assertTrue(
-            response.json()[0]['created_at'] <
-            response.json()[1]['created_at'])
+            versions[0]['created_at'] <
+            versions[1]['created_at'])
 
         self.assertEqual(
-            json[0]['sha256'],
+            versions[0]['sha256'],
             '8663bab6d124806b9727f89bb4ab9db4cbcc3862f6bbf22024dfa7212aa4ab7d')
         self.assertEqual(
-            json[1]['sha256'],
+            versions[1]['sha256'],
             'fcc85fb502bd772aa675a0263b5fa665bccd5d8d93349d1dbc9f0f6394dd37b9')
 
-        self.assertEqual(json[0]['size'], 13)
-        self.assertEqual(json[1]['size'], 13)
+        self.assertEqual(versions[0]['size'], 13)
+        self.assertEqual(versions[1]['size'], 13)
 
-        self.assertEqual(json[0]['uploaded_by'], 'user1')
-        self.assertEqual(json[1]['uploaded_by'], 'user2')
+        self.assertEqual(versions[0]['uploaded_by'], 'user1')
+        self.assertEqual(versions[1]['uploaded_by'], 'user2')
 
     def test_pull_file_version(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

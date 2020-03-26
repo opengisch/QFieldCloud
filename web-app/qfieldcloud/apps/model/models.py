@@ -188,6 +188,9 @@ class File(models.Model):
     def name(self):
         return self.original_path
 
+    def versions(self):
+        return FileVersion.objects.filter(file=self)
+
 
 class FileVersion(models.Model):
 
@@ -198,6 +201,8 @@ class FileVersion(models.Model):
 
     stored_file = models.FileField(upload_to=file_path)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # Is really needed the uploaded_by field?
     uploaded_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True)
 
@@ -217,7 +222,7 @@ class FileVersion(models.Model):
         return self.stored_file.size
 
     def __str__(self):
-        return self.stored_file.name
+        return self.stored_file.name + ' ' + self.created_at
 
 
 @receiver(models.signals.post_delete, sender=FileVersion)

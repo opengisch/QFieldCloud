@@ -12,7 +12,6 @@ from .views import (
     CreateRetrieveDestroyFileView,
     ListCollaboratorsView,
     CheckCreateDestroyCollaboratorView,
-    HistoryView,
 )
 
 
@@ -35,8 +34,4 @@ urlpatterns = [
     path('files/<str:owner>/<str:project>/', ListFilesView.as_view()),
     path('files/<str:owner>/<str:project>/<path:filename>/',
          CreateRetrieveDestroyFileView.as_view()),
-
-    # TODO: choose a better name?
-    path('history/<str:owner>/<str:project>/<path:filename>/',
-         HistoryView.as_view()),
 ]

@@ -361,31 +361,3 @@ class AuthToken(ObtainAuthToken):
             'token': token.key,
             'username': user.username,
         })
-
-
-@method_decorator(
-    name='get', decorator=swagger_auto_schema(
-        operation_description="List file history",
-        operation_id="List file history",))
-class HistoryView(generics.ListAPIView):
-    """ File history """
-
-    permission_classes = [FilePermission]
-    serializer_class = FileVersionSerializer
-
-    def get_queryset(self):
-        owner = self.request.parser_context['kwargs']['owner']
-        project = self.request.parser_context['kwargs']['project']
-        filename = self.request.parser_context['kwargs']['filename']
-
-        owner_obj = User.objects.get(username=owner)
-        project_obj = Project.objects.get(name=project, owner=owner_obj)
-
-        try:
-            file = File.objects.get(
-                original_path=filename, project=project_obj)
-        except File.DoesNotExist:
-            return Response(
-                'File does not exist', status=status.HTTP_400_BAD_REQUEST)
-
-        return FileVersion.objects.filter(file=file)

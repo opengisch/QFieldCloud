@@ -26,18 +26,20 @@ class FileSerializer(serializers.ModelSerializer):
         model = File
 
 
-class ListFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('name', 'size', 'sha256')
-        model = File
-
-
 class FileVersionSerializer(serializers.ModelSerializer):
     uploaded_by = serializers.StringRelatedField()
 
     class Meta:
         fields = ('created_at', 'sha256', 'size', 'uploaded_by')
         model = FileVersion
+
+
+class ListFileSerializer(serializers.ModelSerializer):
+    versions = FileVersionSerializer(many=True)
+
+    class Meta:
+        fields = ('name', 'size', 'sha256', 'versions')
+        model = File
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
