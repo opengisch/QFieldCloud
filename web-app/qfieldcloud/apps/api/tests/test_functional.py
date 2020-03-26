@@ -64,7 +64,7 @@ class FunctionalTestCase(APITestCase):
         # Maya uploads her qgis project and geopackage
         file_path = testdata_path('simple_bumblebees.qgs')
         response = self.client.post(
-            '/api/v1/projects/maya/beehives/push/',
+            '/api/v1/files/maya/beehives/simple_bumblebees.qgs/',
             {
                 "file": open(file_path, 'rb')
             },
@@ -74,7 +74,7 @@ class FunctionalTestCase(APITestCase):
 
         file_path = testdata_path('bumblebees.gpkg')
         response = self.client.post(
-            '/api/v1/projects/maya/beehives/push/',
+            '/api/v1/files/maya/beehives/bumblebees.gpkg/',
             {
                 "file": open(file_path, 'rb')
             },
@@ -85,10 +85,9 @@ class FunctionalTestCase(APITestCase):
         # And she also put some images in the DCIM subdirectory
         file_path = testdata_path('DCIM/1.jpg')
         response = self.client.post(
-            '/api/v1/projects/maya/beehives/push/',
+            '/api/v1/files/maya/beehives/DCIM/1.jpg/',
             {
                 "file": open(file_path, 'rb'),
-                "path": 'DCIM/',
             },
             format='multipart'
         )
@@ -96,10 +95,9 @@ class FunctionalTestCase(APITestCase):
 
         file_path = testdata_path('DCIM/2.jpg')
         response = self.client.post(
-            '/api/v1/projects/maya/beehives/push/',
+            '/api/v1/files/maya/beehives/DCIM/2.jpg/',
             {
                 "file": open(file_path, 'rb'),
-                "path": 'DCIM/',
             },
             format='multipart'
         )

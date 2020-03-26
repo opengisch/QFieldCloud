@@ -58,7 +58,7 @@ class PermissionTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
+            '/api/v1/files/user1/project1/file.txt/',
             {
                 "file": open(file_path, 'rb')
             },
@@ -75,7 +75,7 @@ class PermissionTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
+            '/api/v1/files/user1/project1/file.txt/',
             {
                 "file": open(file_path, 'rb')
             },

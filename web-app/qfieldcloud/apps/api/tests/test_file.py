@@ -56,7 +56,7 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
+            '/api/v1/files/user1/project1/file.txt/',
             {
                 "file": open(file_path, 'rb')
             },
@@ -84,7 +84,7 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
+            '/api/v1/files/user1/project1/file.txt/',
             {
                 "file": open(file_path, 'rb')
             },
@@ -96,7 +96,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Push again the file
         response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
+            '/api/v1/files/user1/project1/file.txt/',
             {
                 "file": open(file_path, 'rb')
             },
@@ -121,16 +121,16 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
+            '/api/v1/files/user1/project1/foo/bar/file.txt/',
             {
                 "file": open(file_path, 'rb'),
-                "path": 'foo/bar',
             },
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        self.assertTrue(File.objects.filter(original_path='foo/bar/file.txt').exists())
+        self.assertTrue(
+            File.objects.filter(original_path='foo/bar/file.txt').exists())
 
     def test_push_file_with_unsafe_path(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -138,14 +138,13 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1/project1/push/',
+            '/api/v1/files/user1/project1/../foo/bar/file.txt/',
             {
                 "file": open(file_path, 'rb'),
-                "path": '../foo/bar',
             },
             format='multipart'
         )
-        self.assertTrue(status.is_client_error(response.status_code))
+        self.assertEqual(response.status_code, 400)
 
     def test_push_file_invalid_user(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -153,14 +152,13 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1234/project1/push/',
+            '/api/v1/files/user1234/project1/foo/bar/file.txt/',
             {
                 "file": open(file_path, 'rb'),
-                "path": '../foo/bar',
             },
             format='multipart'
         )
-        self.assertTrue(status.is_client_error(response.status_code))
+        self.assertEqual(response.status_code, 403)
 
     def test_push_file_invalid_project(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -168,14 +166,13 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/projects/user1/project1234/push/',
+            '/api/v1/files/user1/project1234/foo/bar/file.txt/',
             {
                 "file": open(file_path, 'rb'),
-                "path": '../foo/bar',
             },
             format='multipart'
         )
-        self.assertTrue(status.is_client_error(response.status_code))
+        self.assertTrue(response.status_code in [400, 403])
 
     def test_pull_file(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -430,3 +427,20 @@ class FileTestCase(APITransactionTestCase):
 
         self.assertEqual(response.filename, 'foo/bar/file.txt')
         self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
+
+    def test_push_file_different_filename(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        file_path = testdata_path('file.txt')
+        # Push a file
+        response = self.client.post(
+            '/api/v1/files/user1/project1/foo/bar/filezz.txt/',
+            {
+                "file": open(file_path, 'rb'),
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        self.assertTrue(
+            File.objects.filter(original_path='foo/bar/filezz.txt').exists())

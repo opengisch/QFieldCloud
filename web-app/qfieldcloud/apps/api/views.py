@@ -181,73 +181,6 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
         return Project.objects.get(name=project, owner=owner_id)
 
 
-class PushFileView(views.APIView):
-
-    # TODO: check only one qgs/qgz file per project
-
-    permission_classes = [FilePermission]
-    parser_classes = [MultiPartParser]
-
-    @swagger_auto_schema(
-        operation_description="""Push a file in the root of the project
-        or in a subdirectory if the path parameter is specified""",
-        operation_id="Push a file", request_body=PushFileSerializer)
-    def post(self, request, owner, project, format=None):
-
-        try:
-            owner_obj = User.objects.get(username=owner)
-            project_obj = Project.objects.get(name=project, owner=owner_obj)
-        except User.DoesNotExist:
-            return Response(
-                'Invalid owner', status=status.HTTP_400_BAD_REQUEST)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
-
-        if 'file' not in request.data:
-            return Response(
-                'Empty content', status=status.HTTP_400_BAD_REQUEST)
-
-        request_file = request.data['file']
-
-        relative_dir = ''
-        if 'path' in request.data:
-            relative_dir = request.data['path']
-
-        relative_path = os.path.join(relative_dir, request_file.name)
-
-        # Check if the path is safe i.e. is not over the current directory
-        if not Path('./').resolve() in Path(relative_path).resolve().parents:
-            return Response('Invalid path', status=status.HTTP_400_BAD_REQUEST)
-
-        request_file._name = relative_path
-
-        if File.objects.filter(original_path=relative_path).exists():
-            file_obj = File.objects.get(original_path=relative_path)
-
-            # Update the updated_at field
-            file_obj.save()
-
-            FileVersion.objects.create(
-                file=file_obj,
-                stored_file=request_file,
-                uploaded_by=request.user,
-            )
-        else:
-            file_obj = File.objects.create(
-                project=project_obj,
-                original_path=relative_path,
-            )
-
-            FileVersion.objects.create(
-                file=file_obj,
-                stored_file=request_file,
-                uploaded_by=request.user,
-            )
-
-        return Response(status=status.HTTP_201_CREATED)
-
-
 class ListFilesView(generics.ListAPIView):
 
     permission_classes = [FilePermission]
@@ -263,9 +196,10 @@ class ListFilesView(generics.ListAPIView):
         return File.objects.filter(project=project_obj)
 
 
-class RetrieveDestroyFileView(views.APIView):
+class CreateRetrieveDestroyFileView(views.APIView):
 
     permission_classes = [FilePermission]
+    parser_classes = [MultiPartParser]
 
     @swagger_auto_schema(
         operation_description="""Download a file, filename can also be a
@@ -320,6 +254,62 @@ class RetrieveDestroyFileView(views.APIView):
         file.delete()
 
         return Response(status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_description="""Push a file in the root of the project
+        or in a subdirectory if the path parameter is specified""",
+        operation_id="Push a file", request_body=PushFileSerializer)
+    def post(self, request, owner, project, filename, format=None):
+        # TODO: check only one qgs/qgz file per project
+
+        try:
+            owner_obj = User.objects.get(username=owner)
+            project_obj = Project.objects.get(name=project, owner=owner_obj)
+        except User.DoesNotExist:
+            return Response(
+                'Invalid owner', status=status.HTTP_400_BAD_REQUEST)
+        except Project.DoesNotExist:
+            return Response(
+                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
+
+        if 'file' not in request.data:
+            return Response(
+                'Empty content', status=status.HTTP_400_BAD_REQUEST)
+
+        request_file = request.data['file']
+
+        relative_path = filename
+
+        # Check if the path is safe i.e. is not over the current directory
+        if not Path('./').resolve() in Path(relative_path).resolve().parents:
+            return Response('Invalid path', status=status.HTTP_400_BAD_REQUEST)
+
+        request_file._name = relative_path
+
+        if File.objects.filter(original_path=relative_path).exists():
+            file_obj = File.objects.get(original_path=relative_path)
+
+            # Update the updated_at field
+            file_obj.save()
+
+            FileVersion.objects.create(
+                file=file_obj,
+                stored_file=request_file,
+                uploaded_by=request.user,
+            )
+        else:
+            file_obj = File.objects.create(
+                project=project_obj,
+                original_path=relative_path,
+            )
+
+            FileVersion.objects.create(
+                file=file_obj,
+                stored_file=request_file,
+                uploaded_by=request.user,
+            )
+
+        return Response(status=status.HTTP_201_CREATED)
 
 
 class ListCollaboratorsView(generics.ListAPIView):
