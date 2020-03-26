@@ -68,24 +68,24 @@ class ProjectTestCase(APITestCase):
 
     def test_list_public_projects(self):
 
-        # Create a public project
+        # Create a public project of user2
         self.project1 = Project.objects.create(
             name='project1',
             private=False,
-            owner=self.user1)
+            owner=self.user2)
 
-        # Create a private project
+        # Create a private project of user2
         self.project1 = Project.objects.create(
             name='project2',
             private=True,
-            owner=self.user1)
+            owner=self.user2)
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
-        response = self.client.get('/api/v1/projects/')
+        response = self.client.get('/api/v1/projects/?include-public=true')
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], 'project1')
-        self.assertEqual(response.data[0]['owner'], 'user1')
+        self.assertEqual(response.data[0]['owner'], 'user2')
 
     def test_list_projects_of_specific_user(self):
 
@@ -173,7 +173,7 @@ class ProjectTestCase(APITestCase):
             role=ProjectCollaborator.ROLE_MANAGER)
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
-        response = self.client.get('/api/v1/projects/user/')
+        response = self.client.get('/api/v1/projects/')
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 3)

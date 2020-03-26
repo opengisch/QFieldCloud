@@ -53,7 +53,7 @@ class FunctionalTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Now the new project is in the list of her projects
-        response = self.client.get('/api/v1/projects/user/')
+        response = self.client.get('/api/v1/projects/')
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)

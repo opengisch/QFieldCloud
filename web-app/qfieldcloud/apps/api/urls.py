@@ -4,7 +4,6 @@ from .views import (
     ListUsersView,
     RetrieveUpdateUserView,
     ListProjectsView,
-    ListUserProjectsView,
     ListCreateProjectView,
     RetrieveUpdateDestroyProjectView,
     ListFilesView,
@@ -19,7 +18,6 @@ urlpatterns = [
     path('users/<str:username>/',
          RetrieveUpdateUserView.as_view()),
 
-    path('projects/user/', ListUserProjectsView.as_view()),
     path('projects/', ListProjectsView.as_view()),
     path('projects/<str:owner>/', ListCreateProjectView.as_view()),
     path('projects/<str:owner>/<str:project>/',
