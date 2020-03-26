@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
 from django.utils.decorators import method_decorator
@@ -281,7 +282,6 @@ class CreateRetrieveDestroyFileView(views.APIView):
         operation_description="""Push a file""",
         operation_id="Push a file", request_body=PushFileSerializer)
     def post(self, request, owner, project, filename, format=None):
-        # TODO: check only one qgs/qgz file per project
 
         try:
             owner_obj = User.objects.get(username=owner)
@@ -296,6 +296,17 @@ class CreateRetrieveDestroyFileView(views.APIView):
         if 'file' not in request.data:
             return Response(
                 'Empty content', status=status.HTTP_400_BAD_REQUEST)
+
+        # check only one qgs/qgz file per project
+        if os.path.splitext(filename)[1].lower() in ['.qgs', '.qgz'] and \
+           File.objects.filter(
+               Q(project=project_obj),
+               Q(original_path__iendswith='.qgs') |
+               Q(original_path__iendswith='.qgz')):
+
+            return Response(
+                'Only one QGIS project per project allowed',
+                status=status.HTTP_400_BAD_REQUEST)
 
         request_file = request.data['file']
 

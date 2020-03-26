@@ -444,3 +444,38 @@ class FileTestCase(APITransactionTestCase):
 
         self.assertTrue(
             File.objects.filter(original_path='foo/bar/filezz.txt').exists())
+
+    def test_one_qgis_project_per_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        file_path = testdata_path('file.txt')
+
+        # Push a QGIS project file
+        response = self.client.post(
+            '/api/v1/files/user1/project1/foo/bar/file.qgs/',
+            {
+                "file": open(file_path, 'rb'),
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Push another QGIS project file
+        response = self.client.post(
+            '/api/v1/files/user1/project1/foo/bar/file2.qgs/',
+            {
+                "file": open(file_path, 'rb'),
+            },
+            format='multipart'
+        )
+        self.assertEqual(response.status_code, 400)
+
+        # Push another QGIS project file
+        response = self.client.post(
+            '/api/v1/files/user1/project1/foo/bar/file2.qgz/',
+            {
+                "file": open(file_path, 'rb'),
+            },
+            format='multipart'
+        )
+        self.assertEqual(response.status_code, 400)
