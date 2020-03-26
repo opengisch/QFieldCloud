@@ -72,7 +72,6 @@ class ProjectCollaboratorSerializer(serializers.ModelSerializer):
 
 class PushFileSerializer(serializers.Serializer):
     file = serializers.FileField()
-    path = serializers.CharField(required=False)
 
 
 class TokenSerializer(serializers.ModelSerializer):

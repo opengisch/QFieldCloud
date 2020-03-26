@@ -181,6 +181,10 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
         return Project.objects.get(name=project, owner=owner_id)
 
 
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="List project files",
+        operation_id="List project files",))
 class ListFilesView(generics.ListAPIView):
 
     permission_classes = [FilePermission]
@@ -256,8 +260,7 @@ class CreateRetrieveDestroyFileView(views.APIView):
         return Response(status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        operation_description="""Push a file in the root of the project
-        or in a subdirectory if the path parameter is specified""",
+        operation_description="""Push a file""",
         operation_id="Push a file", request_body=PushFileSerializer)
     def post(self, request, owner, project, filename, format=None):
         # TODO: check only one qgs/qgz file per project
