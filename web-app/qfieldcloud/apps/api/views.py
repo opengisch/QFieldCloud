@@ -19,18 +19,51 @@ from .serializers import (
     ProjectSerializer, CompleteUserSerializer,
     PublicInfoUserSerializer, OrganizationSerializer,
     ProjectCollaboratorSerializer, PushFileSerializer,
-    FileVersionSerializer, ListFileSerializer)
-from .permissions import (FilePermission, ProjectPermission)
+    ListFileSerializer)
+from .permissions import (
+    FilePermission, ProjectPermission, UserPermission)
 from qfieldcloud.apps.model.models import File, FileVersion
 
 User = get_user_model()
 
 
-class RetrieveUserView(views.APIView):
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="List all users and organizations",
+        operation_id="List users and organizations",))
+class ListUsersView(generics.ListAPIView):
+
+    serializer_class = PublicInfoUserSerializer
+
+    def get_queryset(self):
+        return User.objects.all()
+
+
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="""Get a single user's (or organization) publicly
+        information or complete info if the request is done by the user
+        himself""",
+        operation_id="Get user",))
+@method_decorator(
+    name='put', decorator=swagger_auto_schema(
+        operation_description="Update a user",
+        operation_id="Update a user",))
+@method_decorator(
+    name='patch', decorator=swagger_auto_schema(
+        operation_description="Patch a user",
+        operation_id="Patch a user",))
+class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
+    """Get or Update the authenticated user"""
+
+    permission_classes = [UserPermission]
+    serializer_class = CompleteUserSerializer
+
+    def get_object(self):
+        username = self.request.parser_context['kwargs']['username']
+        return User.objects.get(username=username)
 
     def get(self, request, username):
-        """Get a single user's (or organization) publicly
-        information or complete info if the request is done by the user"""
 
         try:
             user = User.objects.get(username=username)
@@ -48,24 +81,6 @@ class RetrieveUserView(views.APIView):
                 serializer = PublicInfoUserSerializer(user)
 
         return Response(serializer.data)
-
-
-class ListUsersView(generics.ListAPIView):
-    """Get all users and organizations"""
-
-    serializer_class = PublicInfoUserSerializer
-
-    def get_queryset(self):
-        return User.objects.all()
-
-
-class RetrieveUpdateAuthenticatedUserView(generics.RetrieveUpdateAPIView):
-    """Get or Update the authenticated user"""
-
-    serializer_class = CompleteUserSerializer
-
-    def get_object(self):
-        return self.request.user
 
 
 @method_decorator(

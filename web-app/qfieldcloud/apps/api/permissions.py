@@ -94,6 +94,26 @@ class ProjectPermission(permissions.BasePermission):
             return False
 
 
+class UserPermission(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        if 'username' not in request.parser_context['kwargs']:
+            return False
+
+        request_username = request.parser_context['kwargs']['username']
+        try:
+            user = User.objects.get(username=request_username)
+        except ObjectDoesNotExist:
+            return False
+
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        elif request.user == user:
+            return True
+        else:
+            return False
+
+
 class OrganizationPermission(permissions.BasePermission):
     # TODO: implement
     pass

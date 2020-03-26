@@ -134,7 +134,7 @@ class UserTestCase(APITestCase):
     def test_get_the_authenticated_user(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        response = self.client.get('/api/v1/users/user/')
+        response = self.client.get('/api/v1/users/user1/')
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['username'], 'user1')
@@ -144,7 +144,7 @@ class UserTestCase(APITestCase):
     def test_update_the_authenticated_user(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        response = self.client.patch('/api/v1/users/user/',
+        response = self.client.patch('/api/v1/users/user1/',
                                      {
                                          'first_name': 'Charles',
                                          'last_name': 'Darwin',
@@ -157,6 +157,18 @@ class UserTestCase(APITestCase):
         self.assertEqual(response.data['first_name'], 'Charles')
         self.assertEqual(response.data['last_name'], 'Darwin')
         self.assertEqual(response.data['email'], 'charles@beagle.uk')
+
+    def test_update_another_user(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.patch('/api/v1/users/user2/',
+                                     {
+                                         'first_name': 'Sasha',
+                                         'last_name': 'Grey',
+                                         'email': 'sasha@grey.org',
+                                     })
+
+        self.assertEqual(response.status_code, 403)
 
     def test_logout(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
