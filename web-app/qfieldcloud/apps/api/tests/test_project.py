@@ -131,7 +131,7 @@ class ProjectTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get(
-            '/api/v1/projects/user1/project1/collaborators/')
+            '/api/v1/collaborators/user1/project1/')
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
