@@ -64,7 +64,7 @@ class OrganizationMember(models.Model):
     )
 
     organization = models.ForeignKey(
-        User, on_delete=models.CASCADE,
+        Organization, on_delete=models.CASCADE,
         limit_choices_to=models.Q(user_type=User.TYPE_ORGANIZATION),
         related_name='members')
     member = models.ForeignKey(
