@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 
 from qfieldcloud.apps.model.models import (
     Project, File, Organization, ProjectCollaborator,
-    FileVersion)
+    FileVersion, OrganizationMember)
 
 User = get_user_model()
 
@@ -84,6 +84,16 @@ class ProjectCollaboratorSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectCollaborator
         fields = ('collaborator', 'role')
+
+
+class OrganizationMemberSerializer(serializers.ModelSerializer):
+    member = serializers.StringRelatedField()
+    role = RoleChoiceField(
+        choices=OrganizationMember.ROLE_CHOICES)
+
+    class Meta:
+        model = OrganizationMember
+        fields = ('member', 'role')
 
 
 class PushFileSerializer(serializers.Serializer):

@@ -16,12 +16,13 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 from qfieldcloud.apps.model.models import (
-    Project, Organization, ProjectCollaborator)
+    Project, Organization, ProjectCollaborator,
+    OrganizationMember)
 from .serializers import (
     ProjectSerializer, CompleteUserSerializer,
     PublicInfoUserSerializer, OrganizationSerializer,
     ProjectCollaboratorSerializer, PushFileSerializer,
-    ListFileSerializer)
+    ListFileSerializer, OrganizationMemberSerializer)
 from .permissions import (
     FilePermission, ProjectPermission, UserPermission)
 from qfieldcloud.apps.model.models import File, FileVersion
@@ -384,6 +385,7 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
         return Response(
             serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+
 @method_decorator(
     name='get', decorator=swagger_auto_schema(
         operation_description="Get the role of a collaborator",
@@ -401,8 +403,6 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
         operation_description="Remove a collaborator from a project",
         operation_id="Delete collaborator",))
 class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
-    """Check if a user is a collaborator, add a user as a collaborator,
-    remove a user as a collaborator"""
 
     # TODO: permissions
 
@@ -419,6 +419,77 @@ class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
         return ProjectCollaborator.objects.get(
             project=project_obj,
             collaborator=collaborator_obj)
+
+
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="List members of an organization",
+        operation_id="List memebers",))
+@method_decorator(
+    name='post', decorator=swagger_auto_schema(
+        operation_description="Add a user as member of an organization",
+        operation_id="Create member",))
+class ListCreateMembersView(generics.ListCreateAPIView):
+
+    # TODO: permissions
+    serializer_class = OrganizationMemberSerializer
+
+    def get_queryset(self):
+        organization = self.request.parser_context['kwargs']['organization']
+        organization_obj = User.objects.get(username=organization)
+
+        return OrganizationMember.objects.filter(organization=organization_obj)
+
+    def post(self, request, organization):
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        organization_obj = Organization.objects.get(username=organization)
+        member_obj = User.objects.get(username=request.data['member'])
+        serializer.save(member=member_obj, organization=organization_obj)
+
+        try:
+            headers = {
+                'Location': str(serializer.data[api_settings.URL_FIELD_NAME])}
+        except (TypeError, KeyError):
+            headers = {}
+
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="Get the role of a member of an organization",
+        operation_id="Get memeber",))
+@method_decorator(
+    name='put', decorator=swagger_auto_schema(
+        operation_description="Update a memeber of an organization",
+        operation_id="Update member",))
+@method_decorator(
+    name='patch', decorator=swagger_auto_schema(
+        operation_description="Partial update a member of an organization",
+        operation_id="Patch member",))
+@method_decorator(
+    name='delete', decorator=swagger_auto_schema(
+        operation_description="Remove a member from an organization",
+        operation_id="Delete member",))
+class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
+
+    # TODO: permissions
+
+    serializer_class = OrganizationMemberSerializer
+
+    def get_object(self):
+        organization = self.request.parser_context['kwargs']['organization']
+        member = self.request.parser_context['kwargs']['username']
+
+        organization_obj = Organization.objects.get(username=organization)
+        member_obj = User.objects.get(username=member)
+        return OrganizationMember.objects.get(
+            organization=organization_obj,
+            member=member_obj)
 
 
 class AuthToken(ObtainAuthToken):

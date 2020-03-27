@@ -10,6 +10,8 @@ from .views import (
     CreateRetrieveDestroyFileView,
     ListCreateCollaboratorsView,
     GetUpdateDestroyCollaboratorView,
+    ListCreateMembersView,
+    GetUpdateDestroyMemberView,
 )
 
 
@@ -31,4 +33,9 @@ urlpatterns = [
     path('files/<str:owner>/<str:project>/', ListFilesView.as_view()),
     path('files/<str:owner>/<str:project>/<path:filename>/',
          CreateRetrieveDestroyFileView.as_view()),
+
+    path('members/<str:organization>/',
+         ListCreateMembersView.as_view()),
+    path('members/<str:organization>/<str:username>/',
+         GetUpdateDestroyMemberView.as_view()),
 ]
