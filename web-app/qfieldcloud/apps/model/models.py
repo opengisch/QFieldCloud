@@ -149,7 +149,6 @@ class ProjectCollaborator(models.Model):
 class FileManager(models.Manager):
 
     def delete(self):
-        print("customCoso")
         for obj in self.get_queryset():
             obj.delete()
 
