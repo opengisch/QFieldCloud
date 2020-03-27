@@ -24,7 +24,8 @@ from .serializers import (
     ProjectCollaboratorSerializer, PushFileSerializer,
     ListFileSerializer, OrganizationMemberSerializer)
 from .permissions import (
-    FilePermission, ProjectPermission, UserPermission)
+    FilePermission, ProjectPermission, UserPermission,
+    OrganizationPermission)
 from qfieldcloud.apps.model.models import File, FileVersion
 
 User = get_user_model()
@@ -431,7 +432,7 @@ class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
         operation_id="Create member",))
 class ListCreateMembersView(generics.ListCreateAPIView):
 
-    # TODO: permissions
+    permission_classes = [OrganizationPermission]
     serializer_class = OrganizationMemberSerializer
 
     def get_queryset(self):
@@ -477,8 +478,7 @@ class ListCreateMembersView(generics.ListCreateAPIView):
         operation_id="Delete member",))
 class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
 
-    # TODO: permissions
-
+    permission_classes = [OrganizationPermission]
     serializer_class = OrganizationMemberSerializer
 
     def get_object(self):

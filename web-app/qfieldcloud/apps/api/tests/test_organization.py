@@ -42,14 +42,14 @@ class ProjectTestCase(APITestCase):
 
     def test_list_members(self):
 
-        # Set user1 as member of organization1
-        OrganizationMember.objects.create(
-            organization=self.organization1, member=self.user1,
-            role=OrganizationMember.ROLE_MEMBER)
-
-        # Set user2 as admin of organization1
+        # Set user2 as member of organization1
         OrganizationMember.objects.create(
             organization=self.organization1, member=self.user2,
+            role=OrganizationMember.ROLE_MEMBER)
+
+        # Set user3 as admin of organization1
+        OrganizationMember.objects.create(
+            organization=self.organization1, member=self.user3,
             role=OrganizationMember.ROLE_ADMIN)
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -61,9 +61,9 @@ class ProjectTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['member'])
 
         self.assertEqual(len(json), 2)
-        self.assertEqual(json[0]['member'], 'user1')
+        self.assertEqual(json[0]['member'], 'user2')
         self.assertEqual(json[0]['role'], 'member')
-        self.assertEqual(json[1]['member'], 'user2')
+        self.assertEqual(json[1]['member'], 'user3')
         self.assertEqual(json[1]['role'], 'admin')
 
     def test_create_member(self):
@@ -86,14 +86,14 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(members[0].role, OrganizationMember.ROLE_ADMIN)
 
     def test_update_member(self):
-        # Set user1 as member of organization1
+        # Set user2 as member of organization1
         OrganizationMember.objects.create(
-            organization=self.organization1, member=self.user1,
+            organization=self.organization1, member=self.user2,
             role=OrganizationMember.ROLE_MEMBER)
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.patch(
-            '/api/v1/members/organization1/user1/',
+            '/api/v1/members/organization1/user2/',
             {
                 'role': 'member',
             }
@@ -104,21 +104,54 @@ class ProjectTestCase(APITestCase):
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0].organization, self.organization1)
-        self.assertEqual(members[0].member, self.user1)
+        self.assertEqual(members[0].member, self.user2)
         self.assertEqual(members[0].role, OrganizationMember.ROLE_MEMBER)
 
     def test_delete_member(self):
 
-        # Set user1 as member of organization1
+        # Set user2 as member of organization1
         OrganizationMember.objects.create(
-            organization=self.organization1, member=self.user1,
+            organization=self.organization1, member=self.user2,
             role=OrganizationMember.ROLE_MEMBER)
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.delete(
-            '/api/v1/members/organization1/user1/')
+            '/api/v1/members/organization1/user2/')
 
         self.assertTrue(status.is_success(response.status_code))
 
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 0)
+
+    def test_admin_can_add_member(self):
+        # Set user2 as member of organization1
+        OrganizationMember.objects.create(
+            organization=self.organization1, member=self.user2,
+            role=OrganizationMember.ROLE_MEMBER)
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
+        response = self.client.post(
+            '/api/v1/members/organization1/',
+            {
+                'member': 'user3',
+                'role': 'member',
+            }
+        )
+
+        self.assertFalse(status.is_success(response.status_code))
+
+        # Set user2 as admin of organization1
+        obj = OrganizationMember.objects.all()[0]
+        obj.role = OrganizationMember.ROLE_ADMIN
+        obj.save()
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
+        response = self.client.post(
+            '/api/v1/members/organization1/',
+            {
+                'member': 'user3',
+                'role': 'member',
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))

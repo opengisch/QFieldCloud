@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import permissions
 
 from qfieldcloud.apps.model.models import (
-    Project, ProjectCollaborator, OrganizationMember)
+    Project, ProjectCollaborator, OrganizationMember,
+    Organization)
 
 User = get_user_model()
 
@@ -115,5 +116,30 @@ class UserPermission(permissions.BasePermission):
 
 
 class OrganizationPermission(permissions.BasePermission):
-    # TODO: implement
-    pass
+
+    def has_permission(self, request, view):
+        if 'organization' not in request.parser_context['kwargs']:
+            return False
+
+        organization_request = request.parser_context['kwargs']['organization']
+        try:
+            organization_owner = Organization.objects.get(
+                username=organization_request).organization_owner
+        except ObjectDoesNotExist:
+            return False
+
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # The owner can do anything
+        if request.user == organization_owner:
+            return True
+
+        try:
+            organization_member = OrganizationMember.objects.get(
+                member=request.user)
+        except ObjectDoesNotExist:
+            return False
+
+        if organization_member.role == organization_member.ROLE_ADMIN:
+            return True
