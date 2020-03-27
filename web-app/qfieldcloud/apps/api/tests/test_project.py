@@ -140,6 +140,7 @@ class ProjectTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['collaborator'])
 
         self.assertEqual(json[0]['collaborator'], 'user2')
+        self.assertEqual(json[0]['role'], 'manager')
 
     def test_list_projects_of_authenticated_user(self):
 
@@ -187,3 +188,105 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(json[1]['owner'], 'user1')
         self.assertEqual(json[2]['name'], 'project4')
         self.assertEqual(json[2]['owner'], 'user2')
+
+    def test_create_collaborator(self):
+
+        # Create a project of user1
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.post(
+            '/api/v1/collaborators/user1/project1/',
+            {
+                'collaborator': 'user2',
+                'role': 'editor',
+            }
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        collaborators = ProjectCollaborator.objects.all()
+        self.assertEqual(len(collaborators), 1)
+        self.assertEqual(collaborators[0].project, self.project1)
+        self.assertEqual(collaborators[0].collaborator, self.user2)
+        self.assertEqual(
+            collaborators[0].role, ProjectCollaborator.ROLE_EDITOR)
+
+    def test_get_collaborator(self):
+
+        # Create a project of user1
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
+
+        # Add user2 as collaborator
+        ProjectCollaborator.objects.create(
+            project=self.project1,
+            collaborator=self.user2,
+            role=ProjectCollaborator.ROLE_REPORTER)
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.get(
+            '/api/v1/collaborators/user1/project1/user2/')
+
+        self.assertTrue(status.is_success(response.status_code))
+        json = response.json()
+        self.assertEqual(json['collaborator'], 'user2')
+        self.assertEqual(json['role'], 'reporter')
+
+    def test_update_collaborator(self):
+
+        # Create a project of user1
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
+
+        # Add user2 as collaborator
+        ProjectCollaborator.objects.create(
+            project=self.project1,
+            collaborator=self.user2,
+            role=ProjectCollaborator.ROLE_REPORTER)
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.patch(
+            '/api/v1/collaborators/user1/project1/user2/',
+            {
+                'role': 'admin',
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        collaborators = ProjectCollaborator.objects.all()
+        self.assertEqual(len(collaborators), 1)
+        self.assertEqual(collaborators[0].project, self.project1)
+        self.assertEqual(collaborators[0].collaborator, self.user2)
+        self.assertEqual(
+            collaborators[0].role, ProjectCollaborator.ROLE_ADMIN)
+
+    def test_delete_collaborator(self):
+
+        # Create a project of user1
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
+
+        # Add user2 as collaborator
+        ProjectCollaborator.objects.create(
+            project=self.project1,
+            collaborator=self.user2,
+            role=ProjectCollaborator.ROLE_REPORTER)
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+        response = self.client.delete(
+            '/api/v1/collaborators/user1/project1/user2/')
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        collaborators = ProjectCollaborator.objects.all()
+        self.assertEqual(len(collaborators), 0)

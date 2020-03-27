@@ -344,9 +344,17 @@ class CreateRetrieveDestroyFileView(views.APIView):
         return Response(status=status.HTTP_201_CREATED)
 
 
-class ListCollaboratorsView(generics.ListAPIView):
-    """List collaborators of a project"""
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="List collaborators of the project",
+        operation_id="List collaborators",))
+@method_decorator(
+    name='post', decorator=swagger_auto_schema(
+        operation_description="Add a user as collaborator of the project",
+        operation_id="Create collaborator",))
+class ListCreateCollaboratorsView(generics.ListCreateAPIView):
 
+    # TODO: permissions
     serializer_class = ProjectCollaboratorSerializer
 
     def get_queryset(self):
@@ -358,24 +366,59 @@ class ListCollaboratorsView(generics.ListAPIView):
 
         return ProjectCollaborator.objects.filter(project=project_obj)
 
+    def post(self, request, owner, project):
 
-class CheckCreateDestroyCollaboratorView(views.APIView):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        collaborator = User.objects.get(username=request.data['collaborator'])
+        owner_obj = User.objects.get(username=owner)
+        project = Project.objects.get(owner=owner_obj, name=project)
+        serializer.save(collaborator=collaborator, project=project)
+
+        try:
+            headers = {
+                'Location': str(serializer.data[api_settings.URL_FIELD_NAME])}
+        except (TypeError, KeyError):
+            headers = {}
+
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="Get the role of a collaborator",
+        operation_id="Get collaborator",))
+@method_decorator(
+    name='put', decorator=swagger_auto_schema(
+        operation_description="Update a collaborator",
+        operation_id="Update collaborator",))
+@method_decorator(
+    name='patch', decorator=swagger_auto_schema(
+        operation_description="Partial update collaborator",
+        operation_id="Patch collaborator",))
+@method_decorator(
+    name='delete', decorator=swagger_auto_schema(
+        operation_description="Remove a collaborator from a project",
+        operation_id="Delete collaborator",))
+class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
     """Check if a user is a collaborator, add a user as a collaborator,
     remove a user as a collaborator"""
 
-    # TODO: implement
+    # TODO: permissions
 
-    def get(self, request, owner, project, username):
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+    serializer_class = ProjectCollaboratorSerializer
 
-    def post(self, request, owner, project, username):
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+    def get_object(self):
+        owner = self.request.parser_context['kwargs']['owner']
+        project = self.request.parser_context['kwargs']['project']
+        collaborator = self.request.parser_context['kwargs']['username']
 
-    def delete(self, request, owner, project, username):
-        content = {'please move along': 'nothing to see here'}
-        return Response(content, status=status.HTTP_501_NOT_IMPLEMENTED)
+        owner_obj = User.objects.get(username=owner)
+        project_obj = Project.objects.get(name=project, owner=owner_obj)
+        collaborator_obj = User.objects.get(username=collaborator)
+        return ProjectCollaborator.objects.get(
+            project=project_obj,
+            collaborator=collaborator_obj)
 
 
 class AuthToken(ObtainAuthToken):

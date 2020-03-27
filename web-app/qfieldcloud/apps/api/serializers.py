@@ -55,7 +55,6 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
-
     organization_owner = serializers.StringRelatedField()
     members = serializers.StringRelatedField(many=True)
 
@@ -64,8 +63,23 @@ class OrganizationSerializer(serializers.ModelSerializer):
         exclude = ('id', 'password', 'first_name', 'last_name')
 
 
+class RoleChoiceField(serializers.ChoiceField):
+    def to_representation(self, obj):
+        return self._choices[obj]
+
+    def to_internal_value(self, data):
+        for i in self._choices:
+            if self._choices[i] == data:
+                return i
+        raise serializers.ValidationError(
+            "Invalid role. Acceptable values are {0}.".format(
+                list(self._choices.values())))
+
+
 class ProjectCollaboratorSerializer(serializers.ModelSerializer):
     collaborator = serializers.StringRelatedField()
+    role = RoleChoiceField(
+        choices=ProjectCollaborator.ROLE_CHOICES)
 
     class Meta:
         model = ProjectCollaborator
