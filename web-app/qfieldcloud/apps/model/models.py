@@ -194,7 +194,7 @@ class File(models.Model):
 class FileVersion(models.Model):
 
     def file_path(instance, filename):
-        return os.path.join(str(instance.file.project.id),  str(uuid.uuid4()))
+        return os.path.join(str(instance.file.project.id), str(uuid.uuid4()))
 
     file = models.ForeignKey(File, on_delete=models.CASCADE)
 

@@ -303,8 +303,7 @@ class CreateRetrieveDestroyFileView(views.APIView):
         if os.path.splitext(filename)[1].lower() in ['.qgs', '.qgz'] and \
            File.objects.filter(
                Q(project=project_obj),
-               Q(original_path__iendswith='.qgs') |
-               Q(original_path__iendswith='.qgz')):
+               Q(original_path__iendswith='.qgs') | Q(original_path__iendswith='.qgz')):
 
             return Response(
                 'Only one QGIS project per project allowed',

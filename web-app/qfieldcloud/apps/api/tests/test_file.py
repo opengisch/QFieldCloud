@@ -358,8 +358,7 @@ class FileTestCase(APITransactionTestCase):
 
         self.assertEqual(len(versions), 2)
         self.assertTrue(
-            versions[0]['created_at'] <
-            versions[1]['created_at'])
+            versions[0]['created_at'] < versions[1]['created_at'])
 
         self.assertEqual(
             versions[0]['sha256'],
