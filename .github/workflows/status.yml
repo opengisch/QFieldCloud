@@ -1,0 +1,17 @@
+name: Check deployed APIs status
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+jobs:
+  dev:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Check
+        run: curl -f https://dev.qfield.cloud/api/v1/status/
+
+  # TODO: enable for prod too
+  # prod:
+  #   runs-on: ubuntu-18.04
+  #   steps:
+  #     - name: Check
+  #       run: curl -f https://app.qfield.cloud/api/v1/status/
