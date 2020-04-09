@@ -1,0 +1,30 @@
+name: Test
+on: push
+jobs:
+  test:
+    name: Code check and tests
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          ref: master
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.6
+      - name: Install flake8
+        uses: BSFishy/pip-action@v1
+        with:
+          packages: flake8
+      - name: Run Flake8
+        run: python -m flake8 --ignore=E501,F401
+      - name: Install docker and docker compose
+        run: |
+          sudo apt update
+          sudo apt install docker
+          sudo apt install docker-compose
+      - name: Build and run Django app
+        run: docker-compose up -d --build
+      - name: Run unit and functional tests
+        run: docker-compose run web python manage.py test -v2

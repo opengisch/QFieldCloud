@@ -1,0 +1,27 @@
+name: Deploy on dev.qfield.cloud
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: Deploy on dev.qfield.cloud
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@master
+        env:
+          DEV_PASSWORD: ${{ secrets.DEV_PASSWORD }}
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: dev.qfield.cloud
+          username: ${{ secrets.DEV_USERNAME }}
+          password: ${{ secrets.DEV_PASSWORD }}
+          envs: DEV_PASSWORD,REPO_TOKEN
+          script: |
+            cd /opt/qfieldcloud
+            docker-compose stop
+            git pull https://"$REPO_TOKEN"@github.com/opengisch/qfieldcloud
+            docker-compose up -d --build
+
