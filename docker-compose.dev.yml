@@ -38,7 +38,7 @@ services:
     environment:
       ACME_AGREE: "true"
     volumes:
-      - ./Caddyfile-prod:/etc/caddy/Caddyfile
+      - ./Caddyfile-dev:/etc/caddy/Caddyfile
       - static_volume:/home/app/web/staticfiles
       - media_volume:/home/app/web/mediafiles
     networks:
