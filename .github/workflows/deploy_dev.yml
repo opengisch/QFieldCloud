@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - deploy_check
 
 jobs:
   deploy:
@@ -13,15 +14,26 @@ jobs:
         uses: appleboy/ssh-action@master
         env:
           DEV_PASSWORD: ${{ secrets.DEV_PASSWORD }}
+          REPO_USERNAME: ${{ secrets.REPO_USERNAME }}
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: dev.qfield.cloud
           username: ${{ secrets.DEV_USERNAME }}
           password: ${{ secrets.DEV_PASSWORD }}
-          envs: DEV_PASSWORD,REPO_TOKEN
+          envs: DEV_PASSWORD,REPO_TOKEN,REPO_USERNAME
+          script_stop: true
           script: |
             cd /opt/qfieldcloud
-            docker-compose stop
-            git pull https://"$REPO_TOKEN"@github.com/opengisch/qfieldcloud
-            docker-compose up -d --build
+            docker-compose -f docker-compose.prod.yml stop
+            echo "$DEV_PASSWORD" | sudo -S git pull https://"$REPO_USERNAME":"$REPO_TOKEN"@github.com/opengisch/qfieldcloud
+            docker-compose -f docker-compose.prod.yml up -d --build
+            docker-compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --no-input --clear
+            docker-compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
 
+  status:
+    name: Check dev.qfield.cloud status
+    runs-on: ubuntu-18.04
+    needs: deploy
+    steps:
+      - name: Check
+        run: curl -f https://dev.qfield.cloud/api/v1/status/

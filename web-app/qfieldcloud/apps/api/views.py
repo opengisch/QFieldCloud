@@ -11,6 +11,7 @@ from rest_framework.settings import api_settings
 from rest_framework.parsers import MultiPartParser
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -503,3 +504,15 @@ class AuthToken(ObtainAuthToken):
             'token': token.key,
             'username': user.username,
         })
+
+
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="Get the current status of the APIs",
+        operation_id="Get status",))
+class APIStatusView(views.APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        # TODO: implement more accurated test
+        return Response(status=status.HTTP_200_OK)

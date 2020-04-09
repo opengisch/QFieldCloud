@@ -12,6 +12,7 @@ from .views import (
     GetUpdateDestroyCollaboratorView,
     ListCreateMembersView,
     GetUpdateDestroyMemberView,
+    APIStatusView,
 )
 
 
@@ -38,4 +39,6 @@ urlpatterns = [
          ListCreateMembersView.as_view()),
     path('members/<str:organization>/<str:username>/',
          GetUpdateDestroyMemberView.as_view()),
+
+    path('status/', APIStatusView.as_view()),
 ]
