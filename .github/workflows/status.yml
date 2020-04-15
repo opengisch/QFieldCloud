@@ -1,7 +1,7 @@
 name: Check deployed APIs status
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '0 * * * *'
 jobs:
   dev:
     runs-on: ubuntu-18.04
