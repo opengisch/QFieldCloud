@@ -11,10 +11,10 @@
    projects in QField and later it will also allow to synchronize data
    and view and edit projects via web interface.
 
-   #+CAPTION: Offline editing mode with desktop synchronization
+   *Offline editing mode with desktop synchronization*
    [[./docs/assets/images/offline-schema.png]]
 
-   #+CAPTION: Hybrid editing mode with synchronization on the server
+   *Hybrid editing mode with synchronization on the server*
    [[./docs/assets/images/hybrid-schema.png]]
 ** Development
 *** Launch a local instance
