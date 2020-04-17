@@ -24,5 +24,14 @@ services:
     env_file:
       - ./.env.dev
 
+  qgis:
+    build:
+      context: .
+      dockerfile: ./docker-qgis/Dockerfile
+      args:
+        QGIS_VERSION: final-3_10_3
+    tty: true
+    command: bash -c "echo QGIS builded"
+
 volumes:
   postgres_data:

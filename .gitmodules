@@ -1,0 +1,3 @@
+[submodule "docker-qgis/qfieldsync"]
+	path = docker-qgis/qfieldsync
+	url = https://github.com/opengisch/qfieldsync.git

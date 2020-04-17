@@ -8,7 +8,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
-          ref: master
+          submodules: recursive
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
@@ -16,15 +16,19 @@ jobs:
       - name: Install flake8
         uses: BSFishy/pip-action@v1
         with:
-          packages: flake8
+          packages: |
+            flake8
+            nose
       - name: Run Flake8
-        run: python -m flake8 --ignore=E501,F401
+        run: python -m flake8 --ignore=E501,F401 web-app
       - name: Install docker and docker compose
         run: |
           sudo apt update
           sudo apt install docker
           sudo apt install docker-compose
-      - name: Build and run Django app
+      - name: Build and run docker containers
         run: docker-compose up -d --build
-      - name: Run unit and functional tests
+      - name: Run Django unit and functional tests
         run: docker-compose run web python manage.py test -v2
+      - name: Run QGIS caller unit tests
+        run: nosetests -v docker-qgis/tests
