@@ -52,6 +52,9 @@ class FunctionalTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
+        # And she gets the project id in the response
+        project_id = response.json()['id']
+
         # Now the new project is in the list of her projects
         response = self.client.get('/api/v1/projects/')
 
@@ -60,11 +63,12 @@ class FunctionalTestCase(APITestCase):
 
         json = response.json()
         self.assertEqual(json[0]['name'], 'beehives')
+        self.assertEqual(json[0]['id'], project_id)
 
         # Maya uploads her qgis project and geopackage
         file_path = testdata_path('simple_bumblebees.qgs')
         response = self.client.post(
-            '/api/v1/files/maya/beehives/simple_bumblebees.qgs/',
+            '/api/v1/files/{}/simple_bumblebees.qgs/'.format(project_id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -74,7 +78,7 @@ class FunctionalTestCase(APITestCase):
 
         file_path = testdata_path('bumblebees.gpkg')
         response = self.client.post(
-            '/api/v1/files/maya/beehives/bumblebees.gpkg/',
+            '/api/v1/files/{}/bumblebees.gpkg/'.format(project_id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -85,7 +89,7 @@ class FunctionalTestCase(APITestCase):
         # And she also put some images in the DCIM subdirectory
         file_path = testdata_path('DCIM/1.jpg')
         response = self.client.post(
-            '/api/v1/files/maya/beehives/DCIM/1.jpg/',
+            '/api/v1/files/{}/DCIM/1.jpg/'.format(project_id),
             {
                 "file": open(file_path, 'rb'),
             },
@@ -95,7 +99,7 @@ class FunctionalTestCase(APITestCase):
 
         file_path = testdata_path('DCIM/2.jpg')
         response = self.client.post(
-            '/api/v1/files/maya/beehives/DCIM/2.jpg/',
+            '/api/v1/files/{}/DCIM/2.jpg/'.format(project_id),
             {
                 "file": open(file_path, 'rb'),
             },
@@ -105,7 +109,7 @@ class FunctionalTestCase(APITestCase):
 
         # When she looks at the file list she finds all her uploaded files
         response = self.client.get(
-            '/api/v1/files/maya/beehives/')
+            '/api/v1/files/{}/'.format(project_id))
         self.assertTrue(status.is_success(response.status_code))
 
         json = response.json()
@@ -120,13 +124,13 @@ class FunctionalTestCase(APITestCase):
         # But she notices that she uploaded a picture that she doesn't
         # need and she deletes it
         response = self.client.delete(
-            '/api/v1/files/maya/beehives/DCIM/2.jpg/')
+            '/api/v1/files/{}/DCIM/2.jpg/'.format(project_id))
         self.assertTrue(status.is_success(response.status_code))
 
         # And she verifies the list of the files again
         # When she looks at the file list she finds all her uploaded files
         response = self.client.get(
-            '/api/v1/files/maya/beehives/')
+            '/api/v1/files/{}/'.format(project_id))
         self.assertTrue(status.is_success(response.status_code))
 
         json = response.json()
@@ -139,7 +143,7 @@ class FunctionalTestCase(APITestCase):
 
         # She downloads all the files on another device
         response = self.client.get(
-            '/api/v1/files/maya/beehives/simple_bumblebees.qgs/')
+            '/api/v1/files/{}/simple_bumblebees.qgs/'.format(project_id))
         self.assertTrue(status.is_success(response.status_code))
         temp_file = tempfile.NamedTemporaryFile()
         with open(temp_file.name, 'wb') as f:
@@ -149,7 +153,7 @@ class FunctionalTestCase(APITestCase):
             temp_file.name, testdata_path('simple_bumblebees.qgs')))
 
         response = self.client.get(
-            '/api/v1/files/maya/beehives/bumblebees.gpkg/')
+            '/api/v1/files/{}/bumblebees.gpkg/'.format(project_id))
         self.assertTrue(status.is_success(response.status_code))
         temp_file = tempfile.NamedTemporaryFile()
         with open(temp_file.name, 'wb') as f:
@@ -159,7 +163,7 @@ class FunctionalTestCase(APITestCase):
             temp_file.name, testdata_path('bumblebees.gpkg')))
 
         response = self.client.get(
-            '/api/v1/files/maya/beehives/DCIM/1.jpg/')
+            '/api/v1/files/{}/DCIM/1.jpg/'.format(project_id))
         self.assertTrue(status.is_success(response.status_code))
         temp_file = tempfile.NamedTemporaryFile()
         with open(temp_file.name, 'wb') as f:

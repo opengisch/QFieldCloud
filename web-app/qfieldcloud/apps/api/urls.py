@@ -23,16 +23,16 @@ urlpatterns = [
 
     path('projects/', ListProjectsView.as_view()),
     path('projects/<str:owner>/', ListCreateProjectView.as_view()),
-    path('projects/<str:owner>/<str:project>/',
+    path('projects/<uuid:projectid>/',
          RetrieveUpdateDestroyProjectView.as_view()),
 
-    path('collaborators/<str:owner>/<str:project>/',
+    path('collaborators/<uuid:projectid>/',
          ListCreateCollaboratorsView.as_view()),
-    path('collaborators/<str:owner>/<str:project>/<str:username>/',
+    path('collaborators/<uuid:projectid>/<str:username>/',
          GetUpdateDestroyCollaboratorView.as_view()),
 
-    path('files/<str:owner>/<str:project>/', ListFilesView.as_view()),
-    path('files/<str:owner>/<str:project>/<path:filename>/',
+    path('files/<uuid:projectid>/', ListFilesView.as_view()),
+    path('files/<uuid:projectid>/<path:filename>/',
          CreateRetrieveDestroyFileView.as_view()),
 
     path('members/<str:organization>/',

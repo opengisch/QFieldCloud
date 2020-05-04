@@ -13,22 +13,18 @@ User = get_user_model()
 class FilePermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        if 'owner' not in request.parser_context['kwargs']:
+        if 'projectid' not in request.parser_context['kwargs']:
             return False
 
-        if 'project' not in request.parser_context['kwargs']:
-            return False
+        project_id = request.parser_context['kwargs']['projectid']
 
-        request_project = request.parser_context['kwargs']['project']
-        request_owner = request.parser_context['kwargs']['owner']
         try:
-            owner = User.objects.get(username=request_owner)
-            project = Project.objects.get(name=request_project, owner=owner)
+            project = Project.objects.get(id=project_id)
         except ObjectDoesNotExist:
             return False
 
         # The owner can do anything
-        if request.user == owner:
+        if request.user == project.owner:
             return True
 
         collaborator = None

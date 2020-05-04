@@ -56,7 +56,7 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/user1/project1/file.txt/',
+            '/api/v1/files/{}/file.txt/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -84,7 +84,7 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/user1/project1/file.txt/',
+            '/api/v1/files/{}/file.txt/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -96,7 +96,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Push again the file
         response = self.client.post(
-            '/api/v1/files/user1/project1/file.txt/',
+            '/api/v1/files/{}/file.txt/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -121,7 +121,7 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/user1/project1/foo/bar/file.txt/',
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb'),
             },
@@ -138,7 +138,7 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/user1/project1/../foo/bar/file.txt/',
+            '/api/v1/files/{}/../foo/bar/file.txt/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb'),
             },
@@ -146,27 +146,14 @@ class FileTestCase(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, 400)
 
-    def test_push_file_invalid_user(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
-
-        file_path = testdata_path('file.txt')
-        # Push a file
-        response = self.client.post(
-            '/api/v1/files/user1234/project1/foo/bar/file.txt/',
-            {
-                "file": open(file_path, 'rb'),
-            },
-            format='multipart'
-        )
-        self.assertEqual(response.status_code, 403)
-
     def test_push_file_invalid_project(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/user1/project1234/foo/bar/file.txt/',
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(
+                '979bdbc8-448d-42f1-91c2-6dc80a836418'),  # Random uuid
             {
                 "file": open(file_path, 'rb'),
             },
@@ -188,7 +175,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            '/api/v1/files/user1/project1/file.txt/')
+            '/api/v1/files/{}/file.txt/'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.filename, 'file.txt')
@@ -219,7 +206,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            '/api/v1/files/user1/project1/foo/bar/file.txt/')
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.filename, 'foo/bar/file.txt')
@@ -254,7 +241,7 @@ class FileTestCase(APITransactionTestCase):
             stored_file=django_file(f, name=os.path.basename(f.name)))
 
         response = self.client.get(
-            '/api/v1/files/user1/project1/')
+            '/api/v1/files/{}/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
 
         json = response.json()
@@ -293,7 +280,7 @@ class FileTestCase(APITransactionTestCase):
         self.assertEqual(len(FileVersion.objects.all()), 1)
 
         response = self.client.delete(
-            '/api/v1/files/user1/project1/file.txt/')
+            '/api/v1/files/{}/file.txt/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
 
         self.assertEqual(len(File.objects.all()), 0)
@@ -322,7 +309,7 @@ class FileTestCase(APITransactionTestCase):
         self.assertEqual(len(FileVersion.objects.all()), 1)
 
         response = self.client.delete(
-            '/api/v1/files/user1/project1/foo/bar/file.txt/')
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
 
         self.assertEqual(len(File.objects.all()), 0)
@@ -350,7 +337,7 @@ class FileTestCase(APITransactionTestCase):
             uploaded_by=self.user2)
 
         response = self.client.get(
-            '/api/v1/files/user1/project1/')
+            '/api/v1/files/{}/'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
 
@@ -395,7 +382,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Pull the last file
         response = self.client.get(
-            '/api/v1/files/user1/project1/foo/bar/file.txt/')
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.filename, 'foo/bar/file.txt')
@@ -410,7 +397,7 @@ class FileTestCase(APITransactionTestCase):
             filecmp.cmp(temp_file.name, testdata_path('file.txt')))
 
         response = self.client.get(
-            '/api/v1/files/user1/project1/foo/bar/file.txt/',
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id),
             {
                 "version": file_version_obj.created_at
             },
@@ -433,7 +420,7 @@ class FileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/user1/project1/foo/bar/filezz.txt/',
+            '/api/v1/files/{}/foo/bar/filezz.txt/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb'),
             },
@@ -451,7 +438,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Push a QGIS project file
         response = self.client.post(
-            '/api/v1/files/user1/project1/foo/bar/file.qgs/',
+            '/api/v1/files/{}/foo/bar/file.qgs/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb'),
             },
@@ -461,7 +448,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Push another QGIS project file
         response = self.client.post(
-            '/api/v1/files/user1/project1/foo/bar/file2.qgs/',
+            '/api/v1/files/{}/foo/bar/file2.qgs/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb'),
             },
@@ -471,7 +458,7 @@ class FileTestCase(APITransactionTestCase):
 
         # Push another QGIS project file
         response = self.client.post(
-            '/api/v1/files/user1/project1/foo/bar/file2.qgz/',
+            '/api/v1/files/{}/foo/bar/file2.qgz/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb'),
             },

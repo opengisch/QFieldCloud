@@ -196,11 +196,9 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
 
-        project = self.request.parser_context['kwargs']['project']
-        owner = self.request.parser_context['kwargs']['owner']
-        owner_id = User.objects.get(username=owner)
+        project_id = self.request.parser_context['kwargs']['projectid']
 
-        return Project.objects.get(name=project, owner=owner_id)
+        return Project.objects.get(id=project_id)
 
 
 @method_decorator(
@@ -213,11 +211,9 @@ class ListFilesView(generics.ListAPIView):
     serializer_class = ListFileSerializer
 
     def get_queryset(self):
-        owner = self.request.parser_context['kwargs']['owner']
-        project = self.request.parser_context['kwargs']['project']
+        project_id = self.request.parser_context['kwargs']['projectid']
 
-        owner_obj = User.objects.get(username=owner)
-        project_obj = Project.objects.get(name=project, owner=owner_obj)
+        project_obj = Project.objects.get(id=project_id)
 
         return File.objects.filter(project=project_obj)
 
@@ -231,10 +227,9 @@ class CreateRetrieveDestroyFileView(views.APIView):
         operation_description="""Download a file, filename can also be a
         relative path, optional 'version' parameter for a specific version""",
         operation_id="Download a file",)
-    def get(self, request, owner, project, filename):
+    def get(self, request, projectid, filename):
 
-        owner_obj = User.objects.get(username=owner)
-        project_obj = Project.objects.get(name=project, owner=owner_obj)
+        project_obj = Project.objects.get(id=projectid)
         version = None
 
         if 'version' in self.request.query_params:
@@ -265,10 +260,9 @@ class CreateRetrieveDestroyFileView(views.APIView):
         operation_description="""Delete a file, filename can also
         be a relative path""",
         operation_id="Delete a file",)
-    def delete(self, request, owner, project, filename):
+    def delete(self, request, projectid, filename):
 
-        owner_obj = User.objects.get(username=owner)
-        project_obj = Project.objects.get(name=project, owner=owner_obj)
+        project_obj = Project.objects.get(id=projectid)
 
         try:
             file = File.objects.get(
@@ -284,11 +278,10 @@ class CreateRetrieveDestroyFileView(views.APIView):
     @swagger_auto_schema(
         operation_description="""Push a file""",
         operation_id="Push a file", request_body=PushFileSerializer)
-    def post(self, request, owner, project, filename, format=None):
+    def post(self, request, projectid, filename, format=None):
 
         try:
-            owner_obj = User.objects.get(username=owner)
-            project_obj = Project.objects.get(name=project, owner=owner_obj)
+            project_obj = Project.objects.get(id=projectid)
         except User.DoesNotExist:
             return Response(
                 'Invalid owner', status=status.HTTP_400_BAD_REQUEST)
@@ -360,21 +353,17 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
     serializer_class = ProjectCollaboratorSerializer
 
     def get_queryset(self):
-        owner = self.request.parser_context['kwargs']['owner']
-        project = self.request.parser_context['kwargs']['project']
-
-        owner_obj = User.objects.get(username=owner)
-        project_obj = Project.objects.get(name=project, owner=owner_obj)
+        project_id = self.request.parser_context['kwargs']['projectid']
+        project_obj = Project.objects.get(id=project_id)
 
         return ProjectCollaborator.objects.filter(project=project_obj)
 
-    def post(self, request, owner, project):
+    def post(self, request, projectid):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         collaborator = User.objects.get(username=request.data['collaborator'])
-        owner_obj = User.objects.get(username=owner)
-        project = Project.objects.get(owner=owner_obj, name=project)
+        project = Project.objects.get(id=projectid)
         serializer.save(collaborator=collaborator, project=project)
 
         try:
@@ -410,12 +399,10 @@ class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectCollaboratorSerializer
 
     def get_object(self):
-        owner = self.request.parser_context['kwargs']['owner']
-        project = self.request.parser_context['kwargs']['project']
+        project_id = self.request.parser_context['kwargs']['projectid']
         collaborator = self.request.parser_context['kwargs']['username']
 
-        owner_obj = User.objects.get(username=owner)
-        project_obj = Project.objects.get(name=project, owner=owner_obj)
+        project_obj = Project.objects.get(id=project_id)
         collaborator_obj = User.objects.get(username=collaborator)
         return ProjectCollaborator.objects.get(
             project=project_obj,

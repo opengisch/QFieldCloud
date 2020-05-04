@@ -131,7 +131,7 @@ class ProjectTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get(
-            '/api/v1/collaborators/user1/project1/')
+            '/api/v1/collaborators/{}/'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
@@ -199,7 +199,7 @@ class ProjectTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.post(
-            '/api/v1/collaborators/user1/project1/',
+            '/api/v1/collaborators/{}/'.format(self.project1.id),
             {
                 'collaborator': 'user2',
                 'role': 'editor',
@@ -230,7 +230,7 @@ class ProjectTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.get(
-            '/api/v1/collaborators/user1/project1/user2/')
+            '/api/v1/collaborators/{}/user2/'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
         json = response.json()
@@ -253,7 +253,7 @@ class ProjectTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.patch(
-            '/api/v1/collaborators/user1/project1/user2/',
+            '/api/v1/collaborators/{}/user2/'.format(self.project1.id),
             {
                 'role': 'admin',
             }
@@ -284,7 +284,7 @@ class ProjectTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
         response = self.client.delete(
-            '/api/v1/collaborators/user1/project1/user2/')
+            '/api/v1/collaborators/{}/user2/'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
 
