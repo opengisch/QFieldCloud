@@ -1,4 +1,6 @@
+import os
 import shutil
+from django.core.files import File as django_file
 from django.contrib.auth import get_user_model
 from django.conf import settings
 
@@ -6,7 +8,8 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 from rest_framework.authtoken.models import Token
 
-from qfieldcloud.apps.model.models import Project, ProjectCollaborator
+from qfieldcloud.apps.model.models import (
+    Project, ProjectCollaborator, File, FileVersion)
 from .utils import testdata_path
 
 User = get_user_model()
@@ -82,3 +85,34 @@ class PermissionTestCase(APITransactionTestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
+
+    def test_pull_without_token(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        f = open(testdata_path('file.txt'))
+        file_obj = File.objects.create(
+            project=self.project1,
+            original_path='foo/bar/file.txt')
+
+        FileVersion.objects.create(
+            file=file_obj,
+            stored_file=django_file(
+                f,
+                name=os.path.join(
+                    'foo/bar',
+                    os.path.basename(f.name))))
+
+        # Pull the file
+        response = self.client.get(
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Remove credentials
+        self.client.credentials()
+
+        # Pull the file
+        response = self.client.get(
+            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
+        self.assertFalse(status.is_success(response.status_code))
+        self.assertEqual(response.status_code, 403)

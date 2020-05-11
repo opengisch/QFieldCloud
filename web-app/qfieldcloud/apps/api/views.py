@@ -11,7 +11,7 @@ from rest_framework.settings import api_settings
 from rest_framework.parsers import MultiPartParser
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -61,7 +61,7 @@ class ListUsersView(generics.ListAPIView):
 class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
     """Get or Update the authenticated user"""
 
-    permission_classes = [UserPermission]
+    permission_classes = [IsAuthenticated, UserPermission]
     serializer_class = CompleteUserSerializer
 
     def get_object(self):
@@ -125,7 +125,7 @@ class ListProjectsView(generics.ListAPIView):
 
 class ListCreateProjectView(generics.GenericAPIView):
 
-    permission_classes = [ProjectPermission]
+    permission_classes = [IsAuthenticated, ProjectPermission]
     serializer_class = ProjectSerializer
 
     @swagger_auto_schema(
@@ -191,7 +191,7 @@ class ListCreateProjectView(generics.GenericAPIView):
         operation_id="Delete a project",))
 class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
 
-    permission_classes = [ProjectPermission]
+    permission_classes = [IsAuthenticated, ProjectPermission]
     serializer_class = ProjectSerializer
 
     def get_object(self):
@@ -207,7 +207,7 @@ class RetrieveUpdateDestroyProjectView(generics.RetrieveUpdateDestroyAPIView):
         operation_id="List project files",))
 class ListFilesView(generics.ListAPIView):
 
-    permission_classes = [FilePermission]
+    permission_classes = [IsAuthenticated, FilePermission]
     serializer_class = ListFileSerializer
 
     def get_queryset(self):
@@ -220,7 +220,7 @@ class ListFilesView(generics.ListAPIView):
 
 class CreateRetrieveDestroyFileView(views.APIView):
 
-    permission_classes = [FilePermission]
+    permission_classes = [IsAuthenticated, FilePermission]
     parser_classes = [MultiPartParser]
 
     @swagger_auto_schema(
@@ -419,7 +419,7 @@ class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
         operation_id="Create member",))
 class ListCreateMembersView(generics.ListCreateAPIView):
 
-    permission_classes = [OrganizationPermission]
+    permission_classes = [IsAuthenticated, OrganizationPermission]
     serializer_class = OrganizationMemberSerializer
 
     def get_queryset(self):
@@ -465,7 +465,7 @@ class ListCreateMembersView(generics.ListCreateAPIView):
         operation_id="Delete member",))
 class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
 
-    permission_classes = [OrganizationPermission]
+    permission_classes = [IsAuthenticated, OrganizationPermission]
     serializer_class = OrganizationMemberSerializer
 
     def get_object(self):
