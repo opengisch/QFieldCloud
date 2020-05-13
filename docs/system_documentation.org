@@ -180,7 +180,7 @@
 ** Use Cases
 *** Hybrid
    *Hybrid editing mode with synchronization on the server*
-   [[./docs/assets/images/hybrid-schema.png]]
+   [[./assets/images/hybrid-schema.png]]
 
     - Alice creates on her desktop a QGIS project with a layer using
       a remote database as datasource
