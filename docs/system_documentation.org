@@ -103,13 +103,13 @@
     A QGIS project is a =.qgs= or =.qgz= file. A Project is created on
     QGIS Desktop and uploaded to QFieldCloud using the QGIS's plugin
     QFieldSync. Before the uploading of the QGIS project, it is
-    necessary to each layer of the QGIS project an "action" that
+    necessary for each layer of the QGIS project an "action" that
     determines how QFieldSync and QField should treat the layer.
 
     This information is saved within the QGS project as layer's
     =customProperty=, with the =QFieldSync/action= key.
 
-    The availables actions are:
+    The available actions are:
     | Action internal name | Name showed in the UI |
     |----------------------+-----------------------|
     | OFFLINE              | Consolidate           |
@@ -130,7 +130,7 @@
     layers:
     | Action    | File based layer                                                  | Not file based layer                                                                           |
     |-----------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------|
-    | OFFLINE   | Send the file to the client on pull, replace last version on push | N/A (it's alway file based at this point)                                                      |
+    | OFFLINE   | Send the file to the client on pull, replace last version on push | N/A (it's always file based at this point)                                                      |
     | NO_ACTION | N/A                                                               | No action on the layer                                                                         |
     | REMOVE    | N/A (the layer is no longer there)                                | N/A (the layer is no longer there)                                                             |
     | HYBRID    | Send the consolidated copy on pull, apply delta file on push      | Create consolidated copy of the data on pull, apply delta file on push to original data source |
@@ -141,7 +141,7 @@
     | OFFLINE   | Edit and push directly the data file | N/A                                    |
     | NO_ACTION | N/A                                  | Edit the online (live) database        |
     | REMOVE    | N/A                                  | N/A                                    |
-    | HYBRID    | Create and push deltafile            | N/A (it's alway file based for QField) |
+    | HYBRID    | Create and push deltafile            | N/A (it's always file based for QField) |
 
     In summary, for with QFieldCloud:
     - =NO_ACTION= is used for online layers that are located on a server
