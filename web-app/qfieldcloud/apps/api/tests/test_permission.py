@@ -110,3 +110,62 @@ class PermissionTestCase(APITransactionTestCase):
             '/api/v1/files/{}/foo/bar/file.txt/?client=qgis'.format(self.project1.id))
         self.assertFalse(status.is_success(response.status_code))
         self.assertEqual(response.status_code, 403)
+
+    def test_project_admin_can_create_collaborator(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
+        self.collaborator1.role = ProjectCollaborator.ROLE_ADMIN
+        self.collaborator1.save()
+
+        # Create a user
+        user3 = User.objects.create_user(
+            username='user3', password='abc123')
+        user3.save()
+
+        # Add the user3 as a collaborator
+        response = self.client.post(
+            '/api/v1/collaborators/{}/'.format(self.project1.id),
+            {
+                'collaborator': 'user3',
+                'role': 'editor',
+            }
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+
+    def test_project_editor_cannot_create_collaborator(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
+        self.collaborator1.role = ProjectCollaborator.ROLE_EDITOR
+        self.collaborator1.save()
+
+        # Create a user
+        user3 = User.objects.create_user(
+            username='user3', password='abc123')
+        user3.save()
+
+        # Add the user3 as a collaborator
+        response = self.client.post(
+            '/api/v1/collaborators/{}/'.format(self.project1.id),
+            {
+                'collaborator': 'user3',
+                'role': 'editor',
+            }
+        )
+
+        self.assertFalse(status.is_success(response.status_code))
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_collaborator_cannot_list_collaborators(self):
+        # Create a user
+        user3 = User.objects.create_user(
+            username='user3', password='abc123')
+        user3.save()
+        token3 = Token.objects.get_or_create(user=user3)[0]
+
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token3.key)
+
+        # List collaborators
+        response = self.client.get(
+            '/api/v1/collaborators/{}/'.format(self.project1.id))
+
+        self.assertFalse(status.is_success(response.status_code))
+        self.assertEqual(response.status_code, 403)

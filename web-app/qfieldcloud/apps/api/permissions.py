@@ -178,3 +178,50 @@ class OrganizationPermission(permissions.BasePermission):
 
         if organization_member.role == organization_member.ROLE_ADMIN:
             return True
+
+
+class CollaboratorPermission(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        if 'projectid' not in request.parser_context['kwargs']:
+            return False
+        else:
+            project_id = request.parser_context['kwargs']['projectid']
+
+        try:
+            project = Project.objects.get(id=project_id)
+        except ObjectDoesNotExist:
+            return False
+
+        # The owner can do anything
+        if request.user == project.owner:
+            return True
+
+        member = None
+        try:
+            member = OrganizationMember.objects.get(
+                organization=project.owner, member=request.user)
+        except ObjectDoesNotExist:
+            pass
+
+        if member == OrganizationMember.ROLE_ADMIN:
+            return True
+
+        collaborator = None
+        try:
+            collaborator = ProjectCollaborator.objects.get(
+                project=project, collaborator=request.user)
+        except ObjectDoesNotExist:
+            return False
+
+        if request.method in permissions.SAFE_METHODS:
+            return collaborator.role in [
+                ProjectCollaborator.ROLE_ADMIN,
+                ProjectCollaborator.ROLE_MANAGER,
+                ProjectCollaborator.ROLE_EDITOR,
+                ProjectCollaborator.ROLE_REPORTER,
+                ProjectCollaborator.ROLE_READER]
+        else:
+            return collaborator.role in [
+                ProjectCollaborator.ROLE_ADMIN,
+                ProjectCollaborator.ROLE_MANAGER]

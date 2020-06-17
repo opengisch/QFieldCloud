@@ -11,6 +11,8 @@ from qfieldcloud.apps.model.models import (
     Project, ProjectCollaborator)
 from qfieldcloud.apps.api.serializers import (
     ProjectCollaboratorSerializer)
+from qfieldcloud.apps.api.permissions import (
+    CollaboratorPermission)
 
 User = get_user_model()
 
@@ -25,7 +27,7 @@ User = get_user_model()
         operation_id="Create collaborator",))
 class ListCreateCollaboratorsView(generics.ListCreateAPIView):
 
-    # TODO: permissions
+    permission_classes = [CollaboratorPermission]
     serializer_class = ProjectCollaboratorSerializer
 
     def get_queryset(self):
@@ -71,8 +73,7 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
         operation_id="Delete collaborator",))
 class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
 
-    # TODO: permissions
-
+    permission_classes = [CollaboratorPermission]
     serializer_class = ProjectCollaboratorSerializer
 
     def get_object(self):
