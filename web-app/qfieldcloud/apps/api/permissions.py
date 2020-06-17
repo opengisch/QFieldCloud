@@ -5,7 +5,7 @@ from rest_framework import permissions
 
 from qfieldcloud.apps.model.models import (
     Project, ProjectCollaborator, OrganizationMember,
-    Organization)
+    Organization, DeltaFile)
 
 User = get_user_model()
 
@@ -58,7 +58,7 @@ class FilePermission(permissions.BasePermission):
             return False
 
 
-class ProjectPermission(permissions.BasePermission):
+class ListCreateProjectPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
         if 'owner' not in request.parser_context['kwargs']:
@@ -78,6 +78,45 @@ class ProjectPermission(permissions.BasePermission):
         try:
             member = OrganizationMember.objects.get(
                 organization=owner, member=request.user)
+        except ObjectDoesNotExist:
+            pass
+
+        if request.method == 'GET':
+            return True
+        elif request.method == 'POST' and member:
+            return member == OrganizationMember.ROLE_ADMIN
+        elif request.method == 'DELETE' and member:
+            return member == OrganizationMember.ROLE_ADMIN
+        else:
+            return False
+
+
+class ProjectPermission(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        if 'projectid' not in request.parser_context['kwargs']:
+            if 'deltafileid' in request.parser_context['kwargs']:
+                deltafile_id = request.parser_context['kwargs']['deltafileid']
+                deltafile = DeltaFile.objects.get(id=deltafile_id)
+                project_id = deltafile.project.id
+            else:
+                return False
+        else:
+            project_id = request.parser_context['kwargs']['projectid']
+
+        try:
+            project = Project.objects.get(id=project_id)
+        except ObjectDoesNotExist:
+            return False
+
+        # The owner can do anything
+        if request.user == project.owner:
+            return True
+
+        member = None
+        try:
+            member = OrganizationMember.objects.get(
+                organization=project.owner, member=request.user)
         except ObjectDoesNotExist:
             pass
 

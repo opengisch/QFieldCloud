@@ -1,0 +1,77 @@
+version: 1.0
+deltaFileId: 766e437a-4ca5-45d3-bb19-acdc16e32e16
+timestamp: 2020-01-01T01:01:01.001Z
+# we assume that one request is for a single layer
+deltas:
+    -
+        # CREATE A FEATURE WITH GEOMETRY AND ATTRIBUTES
+        #################################################################
+        fid: c2fb8087-a72f-4810-80b1-b6d64f20a376
+        layerId: e4c1c938-ebff-4127-b4f8-bce2e0fa32ac_layer1
+        method: create
+        new:
+            geometry: POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))
+            attributes:
+                prop1: new contents
+    -
+        # DELETE A FEATURE
+        #################################################################
+        fid: b938698a-73aa-4f1e-aacc-734cb3754284
+        layerId: 220b14d8-de1a-4557-919b-cc59b1e01355_layer2
+        method: delete
+        # if we already add a custom `fid` column that is `uuid`, it is possible to add another column `updated_at` 
+        # and check the date only instead of the whole feature
+        old:
+            geometry: POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))
+            attributes:
+                prop1: old text
+    -
+        # CHANGE BOTH THE GEOMETRY AND THE ATTRIBUTES
+        #################################################################
+        fid: 7953d4d2-41d9-42fb-a78b-a514cef70714
+        layerId: 703a79c1-f563-489f-beb9-b3666d300e1a_layer3
+        method: patch
+        old:
+            geometry: POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))
+            # only the changed attributes are present
+            attributes:
+                prop1: old text
+        new:
+            # geometry replaces contents
+            geometry: POLYGON ((30 10, 40 40, 20 40, 10 99, 30 10))
+
+            # attributes deep merges the contents
+            attributes:
+                prop1: new contents
+    -
+        # CHANGE ONLY THE ATTRIBUTES
+        #################################################################
+        fid: 412f0f38-9d85-4d79-864c-2b0bc66ef6aa
+        layerId: ae9f4599-d588-4b11-b82d-cab68705a192_layer4
+        method: patch
+        old:
+            attributes:
+                prop1: old text
+        new:
+            attributes:
+                prop1: new contents
+    -
+        # CHANGE ONLY THE GEOMETRY
+        #################################################################
+        fid: a72ff131-c9ab-4d55-9533-9abc8d675c71
+        layerId: 1c211523-fed2-4860-b1f6-f2064f5cee56_layer5
+        method: patch
+        old:
+            geometry: POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))
+        new:
+            geometry: POLYGON ((30 10, 40 40, 20 40, 10 99, 30 10))
+    -
+        # REMOVE THE GEOMETRY
+        #################################################################
+        fid: b8d09fa6-eaaf-4c71-b8e5-152002d15045
+        layerId: acb41234-488d-48a7-97a1-df4c071dde0a_layer6
+        method: patch
+        old:
+            geometry: POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))
+        new:
+            geometry: null

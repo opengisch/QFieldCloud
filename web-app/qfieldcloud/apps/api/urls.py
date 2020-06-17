@@ -1,44 +1,48 @@
 from django.urls import path
 
-from .views import (
-    ListUsersView,
-    RetrieveUpdateUserView,
-    ListProjectsView,
-    ListCreateProjectView,
-    RetrieveUpdateDestroyProjectView,
-    ListFilesView,
-    CreateRetrieveDestroyFileView,
-    ListCreateCollaboratorsView,
-    GetUpdateDestroyCollaboratorView,
-    ListCreateMembersView,
-    GetUpdateDestroyMemberView,
-    APIStatusView,
+from qfieldcloud.apps.api.views import (
+    files_views,
+    deltas_views,
+    status_views,
+    members_views,
+    collaborators_views,
+    projects_views,
+    users_views,
 )
 
 
 urlpatterns = [
-    path('users/', ListUsersView.as_view()),
+    path('users/', users_views.ListUsersView.as_view()),
     path('users/<str:username>/',
-         RetrieveUpdateUserView.as_view()),
+         users_views.RetrieveUpdateUserView.as_view()),
 
-    path('projects/', ListProjectsView.as_view()),
-    path('projects/<str:owner>/', ListCreateProjectView.as_view()),
+    path('projects/',
+         projects_views.ListProjectsView.as_view()),
+    path('projects/<str:owner>/',
+         projects_views.ListCreateProjectView.as_view()),
     path('projects/<uuid:projectid>/',
-         RetrieveUpdateDestroyProjectView.as_view()),
+         projects_views.RetrieveUpdateDestroyProjectView.as_view()),
 
     path('collaborators/<uuid:projectid>/',
-         ListCreateCollaboratorsView.as_view()),
+         collaborators_views.ListCreateCollaboratorsView.as_view()),
     path('collaborators/<uuid:projectid>/<str:username>/',
-         GetUpdateDestroyCollaboratorView.as_view()),
+         collaborators_views.GetUpdateDestroyCollaboratorView.as_view()),
 
-    path('files/<uuid:projectid>/', ListFilesView.as_view()),
+    path('files/<uuid:projectid>/', files_views.ListFilesView.as_view()),
     path('files/<uuid:projectid>/<path:filename>/',
-         CreateRetrieveDestroyFileView.as_view()),
+         files_views.DownloadPushDeleteFileView.as_view()),
 
     path('members/<str:organization>/',
-         ListCreateMembersView.as_view()),
+         members_views.ListCreateMembersView.as_view()),
     path('members/<str:organization>/<str:username>/',
-         GetUpdateDestroyMemberView.as_view()),
+         members_views.GetUpdateDestroyMemberView.as_view()),
 
-    path('status/', APIStatusView.as_view()),
+    path('status/', status_views.APIStatusView.as_view()),
+
+    path('deltas/<uuid:projectid>/',
+         deltas_views.ListCreateDeltaFileView.as_view()),
+
+    path('delta-status/<uuid:deltafileid>/',
+         deltas_views.GetDeltaView.as_view()),
+
 ]

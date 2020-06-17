@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 
 from qfieldcloud.apps.model.models import (
     Project, File, Organization, ProjectCollaborator,
-    FileVersion, OrganizationMember)
+    FileVersion, OrganizationMember, DeltaFile)
 
 User = get_user_model()
 
@@ -107,3 +107,21 @@ class TokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Token
         fields = ('token', 'username')
+
+
+class DeltaFileStatusChoiceField(serializers.ChoiceField):
+    def to_representation(self, obj):
+        return self._choices[obj]
+
+
+class DeltaFileSerializer(serializers.ModelSerializer):
+
+    uploaded_by = serializers.StringRelatedField()
+    status = RoleChoiceField(
+        choices=DeltaFile.STATUS_CHOICES)
+
+    class Meta:
+        model = DeltaFile
+        fields = (
+            'id', 'project', 'uploaded_by', 'status', 'created_at',
+            'updated_at')

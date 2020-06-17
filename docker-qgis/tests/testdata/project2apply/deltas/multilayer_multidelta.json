@@ -1,0 +1,48 @@
+{
+    "deltas": [
+        {
+            "fid": 2,
+            "layerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
+            "method": "patch",
+            "new": {
+                "attributes": {
+                    "dbl": 0.666,
+                    "int": 666,
+                    "str": "str666"
+                }
+            },
+            "old": {
+                "attributes": {
+                    "dbl": 0.2,
+                    "int": 2,
+                    "str": "str2"
+                }
+            }
+        },
+        {
+            "fid": 8,
+            "layerId": "polygons_5096fc7b_b106_4740_90b4_9de822382d71",
+            "method": "patch",
+            "new": {
+                "geometry": "POLYGON ((666 666, 5 2, 5 5, 2 5, 666 666 ))",
+                "attributes": {
+                    "dbl": 0.666,
+                    "int": 666,
+                    "str": "str666"
+                }
+            },
+            "old": {
+                "geometry": "POLYGON ((2 2, 5 2, 5 5, 2 5, 2 2 ))",
+                "attributes": {
+                    "dbl": 0.8,
+                    "int": 8,
+                    "str": "str8"
+                }
+            }
+        }
+    ],
+    "files": [],
+    "id": "b7c17bc6-e5af-4fa7-b905-4b395729d782",
+    "projectId": "504ef91b-43f2-4b2e-a617-ea9f29cd7abc",
+    "version": "1.0"
+}

@@ -27,6 +27,14 @@
     #+begin_src sh
       docker-compose run web python manage.py runserver
     #+end_src
+
+    To lauch the Flask application that acts as orchestrator for the
+    QGIS containers:
+    #+begin_src sh
+      cd orchestrator
+      pipenv shell
+      gunicorn -b 0.0.0.0:5000 "orchestrator:app"
+    #+end_src
 *** Code structure
 **** Django apps
      The Django code is structured in 3 separate apps. One app for the

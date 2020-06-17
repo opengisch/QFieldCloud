@@ -14,9 +14,6 @@ from .utils import testdata_path
 
 User = get_user_model()
 
-# Use a different PRJECT_ROOT for the tests
-settings.PROJECTS_ROOT += '_test'
-
 
 class PermissionTestCase(APITransactionTestCase):
 
@@ -52,16 +49,13 @@ class PermissionTestCase(APITransactionTestCase):
         self.client.credentials()
         Project.objects.all().delete()
 
-        # Remove test's PROJECTS_ROOT
-        shutil.rmtree(settings.PROJECTS_ROOT, ignore_errors=True)
-
     def test_reader_cannot_push(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
 
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/{}/file.txt/'.format(self.project1.id),
+            '/api/v1/files/{}/file.txt/?client=qgis'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -78,7 +72,7 @@ class PermissionTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/{}/file.txt/'.format(self.project1.id),
+            '/api/v1/files/{}/file.txt/?client=qgis'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -104,7 +98,7 @@ class PermissionTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
+            '/api/v1/files/{}/foo/bar/file.txt/?client=qgis'.format(self.project1.id))
 
         self.assertTrue(status.is_success(response.status_code))
 
@@ -113,6 +107,6 @@ class PermissionTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
+            '/api/v1/files/{}/foo/bar/file.txt/?client=qgis'.format(self.project1.id))
         self.assertFalse(status.is_success(response.status_code))
         self.assertEqual(response.status_code, 403)

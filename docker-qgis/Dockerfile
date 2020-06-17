@@ -12,6 +12,8 @@ RUN pip3 install -r /tmp/requirements.txt
 
 COPY ./docker-qgis/entrypoint.sh /
 COPY ./docker-qgis/qgis_caller.py /
+COPY ./docker-qgis/apply_deltas.py /
+COPY ./docker-qgis/schemas/deltafile_01.json /schemas/
 
 COPY ./docker-qgis/qfieldsync /
 ENV PYTHONPATH="/qfieldsync/qfieldsync:${PYTHONPATH}"
