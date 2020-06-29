@@ -371,3 +371,64 @@ class IntegrationTestCase(APITestCase):
 
         self.assertEqual(deltafile_obj.status,
                          DeltaFile.STATUS_APPLIED_WITH_CONFLICTS)
+
+    def test_list_files_for_qfield(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/polygons.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/polygons.geojson/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/project.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/project.qgs/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        response = self.client.get(
+            '/api/v1/files/{}/?client=qfield'.format(self.project1.id))
+        self.assertTrue(status.is_success(response.status_code))
+
+    def test_list_files_for_qfield_incomplete_project(self):
+        # the qgs file is missing
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        response = self.client.get(
+            '/api/v1/files/{}/?client=qfield'.format(self.project1.id))
+        self.assertEqual(response.status_code, 400)

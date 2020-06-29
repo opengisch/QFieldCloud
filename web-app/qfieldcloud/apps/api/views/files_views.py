@@ -72,6 +72,16 @@ class ListFilesView(views.APIView):
             project_directory,
             'export')
 
+        if not os.path.isdir(export_directory):
+            project_file = project_obj.get_qgis_project_file()
+            if project_file is None:
+                return Response(
+                    'The project does not contain a valid qgis project file',
+                    status=status.HTTP_400_BAD_REQUEST)
+
+            qgis_utils.export_project(str(project_obj.id),
+                                      project_file.original_path)
+
         result = []
         for filename in os.listdir(export_directory):
             file = os.path.join(export_directory, filename)
