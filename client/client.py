@@ -38,7 +38,7 @@ def register_user(username, password):
         print('export QFIELDCLOUD_TOKEN="{}"'.format(response.json()['token']))
     except requests.HTTPError:
         print("Error: {}".format(response))
-        print(response.json())
+        print(response.text)
 
 
 @cli.command()
@@ -65,6 +65,7 @@ def login(username, password):
         print('export QFIELDCLOUD_TOKEN="{}"'.format(response.json()['token']))
     except requests.HTTPError:
         print("Error: {}".format(response))
+        print(response.text)
 
 
 @cli.command()
@@ -97,6 +98,7 @@ def create_project(token, name, owner, description, private=True):
         print(response.json()['id'])
     except requests.HTTPError:
         print("Error: {}".format(response))
+        print(response.text)
 
 
 @cli.command()
@@ -120,6 +122,7 @@ def projects(token, include_public):
         print(json.dumps(response.json(), indent=4, sort_keys=True))
     except requests.HTTPError:
         print("Error: {}".format(response))
+        print(response.text)
 
 
 @cli.command()
@@ -145,6 +148,7 @@ def push_file(token, project_id, local_file, remote_file):
         print("File uploaded")
     except requests.HTTPError:
         print("Error: {}".format(response))
+        print(response.text)
 
 
 @cli.command()
@@ -166,6 +170,7 @@ def list_files(token, project_id):
         print(json.dumps(response.json(), indent=4, sort_keys=True))
     except requests.HTTPError:
         print("Error: {}".format(response))
+        print(response.text)
 
 
 @cli.command()
@@ -183,16 +188,17 @@ def pull_file(token, project_id, remote_file, local_file, version=None):
     if version:
         params = {'version': version}
 
-    with requests.get(url, headers=headers, params=params, stream=True) as r:
+    with requests.get(url, headers=headers, params=params, stream=True) as response:
         try:
-            r.raise_for_status()
+            response.raise_for_status()
             with open(local_file, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192):
+                for chunk in response.iter_content(chunk_size=8192):
                     if chunk:  # filter out keep-alive new chunks
                         f.write(chunk)
             print("File downloaded")
         except requests.HTTPError:
-            print("Error: {}".format(r))
+            print("Error: {}".format(response))
+            print(response.text)
 
 
 if __name__ == '__main__':
