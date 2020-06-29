@@ -1,7 +1,10 @@
+import os
 import json
 import requests
 import click
 
+from glob import glob
+from pathlib import Path
 
 BASE_URL = 'https://dev.qfield.cloud/api/v1/'
 # BASE_URL = 'http://localhost:8000/api/v1/'
@@ -146,6 +149,75 @@ def push_file(token, project_id, local_file, remote_file):
     try:
         response.raise_for_status()
         print("File uploaded")
+    except requests.HTTPError:
+        print("Error: {}".format(response))
+        print(response.text)
+
+
+
+@cli.command()
+@click.argument('project_id')
+@click.argument('local_dir', type=click.Path(exists=True, file_okay=False))
+@click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
+@click.option('--filter-glob', default='*', help="Filter files glob")
+@click.option('--recursive/--no-recursive', default=True, help="Recursively upload files")
+def push_files(token, project_id, local_dir, filter_glob, recursive):
+    """Push files"""
+
+    middle = '**' if recursive else ''
+    file_names = glob(os.path.join(local_dir, middle, filter_glob), recursive=recursive)
+    # upload the QGIS project file at the end
+    file_names.sort(key=lambda s: Path(s).suffix in ('.qgs', '.qgz') )
+
+    for file_name in file_names:
+        local_path = Path(file_name)
+
+        if not local_path.is_file():
+            continue
+
+        remote_path = local_path.relative_to(local_dir)
+        url = BASE_URL + 'files/' + project_id + '/' + str(remote_path) + '/'
+        headers = {
+            'Authorization': 'token {}'.format(token),
+        }
+
+        with open(local_path, 'rb')  as local_file:
+            files = {'file': local_file}
+
+            response = requests.post(
+                url,  
+                headers=headers,
+                files=files,
+            )
+
+            try:
+                response.raise_for_status()
+                print("File \"{}\" uploaded".format(remote_path))
+            except requests.HTTPError:
+                print("Error uploading \"{}\": {}".format(remote_path, response))
+                print(response.text)
+
+
+@cli.command()
+@click.argument('project_id')
+@click.argument('remote_file')
+@click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
+def delete_file(token, project_id, remote_file):
+    """Delete file"""
+
+    url = BASE_URL + 'files/' + project_id + '/' + remote_file + '/'
+    headers = {
+        'Authorization': 'token {}'.format(token),
+    }
+    files = {'file': remote_file}
+    response = requests.delete(
+        url,
+        headers=headers,
+        files=files,
+    )
+    try:
+        response.raise_for_status()
+        print("File deleted")
     except requests.HTTPError:
         print("Error: {}".format(response))
         print(response.text)
