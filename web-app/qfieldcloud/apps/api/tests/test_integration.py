@@ -211,13 +211,12 @@ class IntegrationTestCase(APITestCase):
         ])
 
         response = requests.get(url)
-
         self.assertEqual(response.status_code, 500)
 
         # FIXME: why is not working on github actions?
-        # self.assertIn(
-        #     'FileNotFoundError: /io/project/simple_bee_farmingZZ.qgs',
-        #     response.json()['output'])
+        self.assertIn(
+            'FileNotFoundError: /io/project/simple_bee_farmingZZ.qgs',
+            response.json()['output'])
 
     def test_push_apply_delta_file_with_error(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -412,6 +411,8 @@ class IntegrationTestCase(APITestCase):
         response = self.client.get(
             '/api/v1/files/{}/?client=qfield'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
+
+        # TODO: test content of the response
 
     def test_list_files_for_qfield_incomplete_project(self):
         # the qgs file is missing

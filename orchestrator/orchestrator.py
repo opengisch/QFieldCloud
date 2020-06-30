@@ -36,15 +36,16 @@ def export_project():
         './entrypoint.sh export /io/project/{} /io/output/'.format(
             project_file))
 
-    print(output)
     container.stop()
 
-    if not exit_code == 0:
-        response = jsonify({'output': output})
-        response.status_code = 500
-        return response
+    response = jsonify(
+        {'output': output.decode('utf-8'),
+         'exit_code': exit_code}
+    )
 
-    return "Eported to output directory: {}\n".format(output_dir)
+    if not exit_code == 0:
+        response.status_code = 500
+    return response
 
 
 @app.route("/apply-delta/")
@@ -75,7 +76,7 @@ def apply_delta():
             project_file, delta_file))
 
     response = jsonify(
-        {'output': output,
+        {'output': output.decode('utf-8'),
          'exit_code': exit_code}
     )
 

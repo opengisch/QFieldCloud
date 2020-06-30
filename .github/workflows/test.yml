@@ -31,9 +31,9 @@ jobs:
           sudo apt install docker-compose
       - name: Build and run docker containers
         run: docker-compose up -d --build
-      - name: Run orchestrator
-        run: gunicorn -b 0.0.0.0:5000 "orchestrator.orchestrator:app" &
-      - name: Run Django unit, functional and integration tests
-        run: docker-compose run web python manage.py test -v2
+      - name: Run orchestrator and tests
+        run: |
+          gunicorn -b 0.0.0.0:5000 "orchestrator.orchestrator:app" &
+          docker-compose run web python manage.py test -v2
       - name: Run QGIS caller unit tests
         run: nosetests -v docker-qgis/tests
