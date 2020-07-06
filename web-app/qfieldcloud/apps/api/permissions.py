@@ -130,6 +130,21 @@ class ProjectPermission(permissions.BasePermission):
             return False
 
 
+class IsProjectOwnerOrOrganizationMember(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        print('has_permission')
+        print(request.data)
+        print(request.method)
+        print(request.META)
+        print(view.kwargs)
+        return True
+
+
+class IsOrganizationAdmin(permissions.BasePermission):
+    pass
+
+
 class UserPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):

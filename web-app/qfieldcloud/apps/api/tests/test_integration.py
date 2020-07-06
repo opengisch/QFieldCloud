@@ -44,8 +44,12 @@ class IntegrationTestCase(APITestCase):
         self.project1.save()
 
     def tearDown(self):
+        # Remove all projects avoiding bulk delete in order to use
+        # the overrided delete() function in the model
+        for p in Project.objects.all():
+            p.delete()
+
         User.objects.all().delete()
-        Project.objects.all().delete()
 
         # Remove credentials
         self.client.credentials()
@@ -213,7 +217,6 @@ class IntegrationTestCase(APITestCase):
         response = requests.get(url)
         self.assertEqual(response.status_code, 500)
 
-        # FIXME: why is not working on github actions?
         self.assertIn(
             'FileNotFoundError: /io/project/simple_bee_farmingZZ.qgs',
             response.json()['output'])
@@ -269,8 +272,7 @@ class IntegrationTestCase(APITestCase):
             id='6f109cd3-f44c-41db-b134-5f38468b9fda')
         self.assertEqual(deltafile_obj.status, DeltaFile.STATUS_ERROR)
 
-        # FIXME: why is not working on github actions?
-        # self.assertIn("'deltaZZZ' was unexpected", response.json())
+        self.assertIn("'deltaZZZ' was unexpected", deltafile_obj.output)
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

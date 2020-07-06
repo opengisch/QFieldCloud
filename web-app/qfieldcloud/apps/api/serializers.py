@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
 
 from qfieldcloud.apps.model.models import (
     Project, File, Organization, ProjectCollaborator,
@@ -10,13 +11,31 @@ from qfieldcloud.apps.model.models import (
 User = get_user_model()
 
 
+class UserSerializer():
+    class Meta:
+        model = User
+        fields = ('username',)
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
 
+    def to_internal_value(self, data):
+        internal_data = super().to_internal_value(data)
+        owner_username = data.get('owner')
+        try:
+            owner = User.objects.get(username=owner_username)
+        except User.DoesNotExist:
+            raise ValidationError(
+                {'owner': ['Invalid owner username']},
+                code='invalid',
+            )
+        internal_data['owner'] = owner
+        return internal_data
+
     class Meta:
         fields = ('id', 'name', 'owner', 'description', 'private',
-                  'created_at')
-        read_only_fields = ('owner',)
+                  'created_at', 'updated_at')
         model = Project
 
 

@@ -42,10 +42,14 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.project1.save()
 
     def tearDown(self):
+        # Remove all projects avoiding bulk delete in order to use
+        # the overrided delete() function in the model
+        for p in Project.objects.all():
+            p.delete()
+
         User.objects.all().delete()
         # Remove credentials
         self.client.credentials()
-        Project.objects.all().delete()
 
     def test_export_project_files_to_filesystem(self):
 

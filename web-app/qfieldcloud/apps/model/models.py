@@ -155,6 +155,15 @@ class Project(models.Model):
         except File.DoesNotExist:
             return None
 
+    def delete(self):
+        # Delete the project's directory too
+        shutil.rmtree(
+            os.path.join(
+                settings.PROJECTS_ROOT,
+                str(self.id)),
+            ignore_errors=True)
+        return super().delete()
+
 
 class ProjectCollaborator(models.Model):
     ROLE_ADMIN = 1

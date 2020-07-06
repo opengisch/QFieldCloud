@@ -9,13 +9,18 @@ from rest_framework.test import APITestCase
 
 from .utils import testdata_path
 
+from qfieldcloud.apps.model.models import Project
+
 
 class FunctionalTestCase(APITestCase):
     """Functional test using only API calls and not direct django data
     access"""
 
     def tearDown(self):
-        pass
+        # Remove all projects avoiding bulk delete in order to use
+        # the overrided delete() function in the model
+        for p in Project.objects.all():
+            p.delete()
 
     def test_functional(self):
         # Maya registers herself on qfieldcloud
@@ -38,9 +43,10 @@ class FunctionalTestCase(APITestCase):
 
         # She creates a project for her beehives
         response = self.client.post(
-            '/api/v1/projects/maya/',
+            '/api/v1/projects/',
             {
                 'name': 'beehives',
+                'owner': 'maya',
                 'description': 'My beehives in Lavertezzo',
                 'private': True,
             }

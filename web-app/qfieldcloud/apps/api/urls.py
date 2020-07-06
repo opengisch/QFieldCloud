@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 
 from qfieldcloud.apps.api.views import (
     files_views,
@@ -10,18 +10,17 @@ from qfieldcloud.apps.api.views import (
     users_views,
 )
 
+from rest_framework.routers import DefaultRouter
+
+router = DefaultRouter()
+router.register(r'projects', projects_views.ProjectViewSet, basename='project')
 
 urlpatterns = [
     path('users/', users_views.ListUsersView.as_view()),
     path('users/<str:username>/',
          users_views.RetrieveUpdateUserView.as_view()),
 
-    path('projects/',
-         projects_views.ListProjectsView.as_view()),
-    path('projects/<str:owner>/',
-         projects_views.ListCreateProjectView.as_view()),
-    path('projects/<uuid:projectid>/',
-         projects_views.RetrieveUpdateDestroyProjectView.as_view()),
+    path('', include(router.urls)),
 
     path('collaborators/<uuid:projectid>/',
          collaborators_views.ListCreateCollaboratorsView.as_view()),
