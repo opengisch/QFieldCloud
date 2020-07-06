@@ -1,10 +1,15 @@
 import os
 import docker
+import logging
 from pathlib import Path
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-
+logging.basicConfig(
+    filename='orchestrator.log',
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s'
+)
 
 @app.route("/")
 def status():
@@ -13,6 +18,7 @@ def status():
 
 @app.route("/export-project/")
 def export_project():
+    app.logger.info('Processing /export-project/')
     project_dir = request.args.get('project-dir', default='', type=str)
     project_file = request.args.get('project-file', default='', type=str)
 
@@ -24,6 +30,10 @@ def export_project():
         output_dir: {'bind': '/io/output', 'mode': 'rw'},
     }
 
+    app.logger.debug(
+        'Mounted volumes: project_dir: {}, output_dir: {}'.format(
+            project_dir, output_dir))
+
     client = docker.from_env()
     container = client.containers.create(
         'qfieldcloud_qgis',
@@ -32,11 +42,16 @@ def export_project():
 
     container.start()
     container.attach(logs=True)
-    exit_code, output = container.exec_run(
-        './entrypoint.sh export /io/project/{} /io/output/'.format(
-            project_file))
+    container_command = './entrypoint.sh export /io/project/{} /io/output/'.format(
+        project_file)
+
+    exit_code, output = container.exec_run(container_command)
+    app.logger.debug('Container command: {}'.format(container_command))
 
     container.stop()
+    app.logger.debug(
+        'Results from QGIS container: exit_code: {}, output: {}'.format(
+            exit_code, output))
 
     response = jsonify(
         {'output': output.decode('utf-8'),
@@ -50,6 +65,7 @@ def export_project():
 
 @app.route("/apply-delta/")
 def apply_delta():
+    app.logger.info('Processing /apply-delta/')
     project_dir = request.args.get('project-dir', default='', type=str)
     project_file = request.args.get('project-file', default='', type=str)
     delta_file = request.args.get('delta-file', default='', type=str)
@@ -62,6 +78,10 @@ def apply_delta():
         delta_dir: {'bind': '/io/deltas', 'mode': 'rw'},
     }
 
+    app.logger.debug(
+        'Mounted volumes: project_dir: {}, delta_dir: {}'.format(
+            project_dir, delta_dir))
+
     client = docker.from_env()
     container = client.containers.create(
         'qfieldcloud_qgis',
@@ -70,10 +90,11 @@ def apply_delta():
 
     container.start()
     container.attach(logs=True)
+    container_command = './entrypoint.sh apply-delta delta apply /io/project/{} /io/deltas/{}'.format(
+            project_file, delta_file)
+    app.logger.debug('Container command: {}'.format(container_command))
 
-    exit_code, output = container.exec_run(
-        './entrypoint.sh apply-delta delta apply /io/project/{} /io/deltas/{}'.format(
-            project_file, delta_file))
+    exit_code, output = container.exec_run(container_command)
 
     response = jsonify(
         {'output': output.decode('utf-8'),
@@ -81,6 +102,10 @@ def apply_delta():
     )
 
     container.stop()
+
+    app.logger.debug(
+        'Results from QGIS container: exit_code: {}, output: {}'.format(
+            exit_code, output))
 
     if not exit_code == 0:
         response.status_code = 500

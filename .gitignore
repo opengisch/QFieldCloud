@@ -2,3 +2,4 @@ __pycache__/
 /web-app/staticfiles/
 /web-app/user_projects_files/
 /user_projects_files/
+*.log
