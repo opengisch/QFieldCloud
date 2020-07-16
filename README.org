@@ -20,7 +20,7 @@
     #+end_src
 
     It will read =docker-compose.yml= and =.env.dev= and start a
-    django built-in server at http://localhost:8000
+    django built-in server at =http://localhost:8000=
 
     To run django commands on the docker, enter in the docker bash or
     place =docker-compose run web= before the command, e.g.:
@@ -32,8 +32,7 @@
     QGIS containers:
     #+begin_src sh
       cd orchestrator
-      pipenv shell
-      gunicorn -b 0.0.0.0:5000 "orchestrator:app"
+      pipenv run gunicorn -b 0.0.0.0:5000 "orchestrator:app"
     #+end_src
 *** Code structure
 **** Django apps
@@ -62,9 +61,9 @@
       docker-compose run web python manage.py test
     #+end_src
     
-    To run only a test module (e.g. `test_permission.py`)
+    To run only a test module (e.g. =test_permission.py=)
     #+begin_src sh
-      docker-compose run web python manage.py test qfieldcloud.apps.api.test_permission
+      docker-compose run web python manage.py test qfieldcloud.apps.api.tests.test_permission
     #+end_src
 *** Demo data
     Demo data are loaded with:
@@ -90,8 +89,8 @@
     - https://app.qfield.cloud/ This is the production instance. At
       the moment the deploy is done manually.
 
-    On the "dev" server the `docker-compose.dev.yml` is used. On the
-    "app" server, the `docker-compose.prod.yml` is used. On the
+    On the "dev" server the =docker-compose.dev.yml= is used. On the
+    "app" server, the =docker-compose.prod.yml= is used. On the
     servers there are no mounted folders. To apply changes, the docker
     image must be re-build.
 *** Infrastructure
