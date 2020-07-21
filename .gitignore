@@ -3,3 +3,5 @@ __pycache__/
 /web-app/user_projects_files/
 /user_projects_files/
 *.log
+.htmlcov/
+.coverage
