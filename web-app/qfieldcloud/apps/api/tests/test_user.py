@@ -1,37 +1,39 @@
 from django.contrib.auth import get_user_model
 
 from rest_framework import status
-from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
+from rest_framework.test import APITestCase
 
-from qfieldcloud.apps.model.models import (
-    Organization, OrganizationMember)
+from qfieldcloud.apps.model.models import Organization, OrganizationMember
+
 
 User = get_user_model()
 
 
 class UserTestCase(APITestCase):
-
     def setUp(self):
         # Create a user
-        self.user1 = User.objects.create_user(
-            username='user1', password='abc123')
+        self.user1 = User.objects.create_user(username='user1', password='abc123')
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
 
         # Create a second user
-        self.user2 = User.objects.create_user(
-            username='user2', password='abc123')
+        self.user2 = User.objects.create_user(username='user2', password='abc123')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
         # Create an organization
         self.organization1 = Organization.objects.create(
-            username='organization1', password='abc123',
-            user_type=2, organization_owner=self.user1)
+            username='organization1',
+            password='abc123',
+            user_type=2,
+            organization_owner=self.user1,
+        )
 
         # Set user2 as member of organization1
         OrganizationMember.objects.create(
-            organization=self.organization1, member=self.user2,
-            role=OrganizationMember.ROLE_MEMBER).save()
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.ROLE_MEMBER,
+        ).save()
 
     def tearDown(self):
         User.objects.all().delete()
@@ -46,11 +48,22 @@ class UserTestCase(APITestCase):
                 "username": "pippo",
                 "password1": "secure_pass123",
                 "password2": "secure_pass123",
-            }
+            },
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertTrue('token' in response.data)
         self.assertTrue(User.objects.get(username='pippo'))
+
+    def test_register_non_matching_password(self):
+        response = self.client.post(
+            '/api/v1/auth/registration/',
+            {
+                "username": "pippo",
+                "password1": "secure_pass123",
+                "password2": "secure_pass456",
+            },
+        )
+        self.assertFalse(status.is_success(response.status_code))
 
     def test_register_user_reserved_word(self):
         response = self.client.post(
@@ -59,17 +72,13 @@ class UserTestCase(APITestCase):
                 "username": "user",
                 "password1": "secure_pass123",
                 "password2": "secure_pass123",
-            }
+            },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_login(self):
         response = self.client.post(
-            '/api/v1/auth/login/',
-            {
-                "username": "user1",
-                "password": "abc123"
-            }
+            '/api/v1/auth/login/', {"username": "user1", "password": "abc123"}
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['token'], self.token1.key)
@@ -77,11 +86,7 @@ class UserTestCase(APITestCase):
 
     def test_login_wrong_password(self):
         response = self.client.post(
-            '/api/v1/auth/login/',
-            {
-                "username": "user1",
-                "password": "wrong_password"
-            }
+            '/api/v1/auth/login/', {"username": "user1", "password": "wrong_password"}
         )
         self.assertTrue(status.is_client_error(response.status_code))
         self.assertFalse('token' in response.data)
@@ -144,12 +149,14 @@ class UserTestCase(APITestCase):
     def test_update_the_authenticated_user(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        response = self.client.patch('/api/v1/users/user1/',
-                                     {
-                                         'first_name': 'Charles',
-                                         'last_name': 'Darwin',
-                                         'email': 'charles@beagle.uk',
-                                     })
+        response = self.client.patch(
+            '/api/v1/users/user1/',
+            {
+                'first_name': 'Charles',
+                'last_name': 'Darwin',
+                'email': 'charles@beagle.uk',
+            },
+        )
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['username'], 'user1')
@@ -161,12 +168,10 @@ class UserTestCase(APITestCase):
     def test_update_another_user(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        response = self.client.patch('/api/v1/users/user2/',
-                                     {
-                                         'first_name': 'Sasha',
-                                         'last_name': 'Grey',
-                                         'email': 'sasha@grey.org',
-                                     })
+        response = self.client.patch(
+            '/api/v1/users/user2/',
+            {'first_name': 'Sasha', 'last_name': 'Grey', 'email': 'sasha@grey.org'},
+        )
 
         self.assertEqual(response.status_code, 403)
 
@@ -182,11 +187,7 @@ class UserTestCase(APITestCase):
 
     def test_api_token_auth(self):
         response = self.client.post(
-            '/api/v1/auth/token/',
-            {
-                "username": "user1",
-                "password": "abc123"
-            }
+            '/api/v1/auth/token/', {"username": "user1", "password": "abc123"}
         )
 
         self.assertTrue(status.is_success(response.status_code))
@@ -195,11 +196,7 @@ class UserTestCase(APITestCase):
 
     def test_api_token_auth_after_logout(self):
         response = self.client.post(
-            '/api/v1/auth/token/',
-            {
-                "username": "user1",
-                "password": "abc123"
-            }
+            '/api/v1/auth/token/', {"username": "user1", "password": "abc123"}
         )
 
         self.assertTrue(status.is_success(response.status_code))
@@ -214,11 +211,7 @@ class UserTestCase(APITestCase):
         self.client.credentials()
 
         response = self.client.post(
-            '/api/v1/auth/token/',
-            {
-                "username": "user1",
-                "password": "abc123"
-            }
+            '/api/v1/auth/token/', {"username": "user1", "password": "abc123"}
         )
 
         self.assertTrue(status.is_success(response.status_code))
