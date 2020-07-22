@@ -242,8 +242,10 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file._name = relative_path
 
-        if File.objects.filter(original_path=relative_path).exists():
-            file_obj = File.objects.get(original_path=relative_path)
+        if File.objects.filter(
+                original_path=relative_path, project=project_obj).exists():
+            file_obj = File.objects.get(
+                original_path=relative_path, project=project_obj)
 
             # Update the updated_at field
             file_obj.save()

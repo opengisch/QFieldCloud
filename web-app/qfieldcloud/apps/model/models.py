@@ -261,7 +261,7 @@ class FileVersion(models.Model):
         return self.stored_file.size
 
     def __str__(self):
-        return self.stored_file.name + ' ' + self.created_at
+        return self.stored_file.name + ' ' + str(self.created_at)
 
 
 class DeltaFile(models.Model):
