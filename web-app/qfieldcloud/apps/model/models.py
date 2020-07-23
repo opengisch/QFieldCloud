@@ -186,7 +186,7 @@ class ProjectCollaborator(models.Model):
     )
     collaborator = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        limit_choices_to=models.Q(type=User.TYPE_USER))
+        limit_choices_to=models.Q(user_type=User.TYPE_USER))
     role = models.PositiveSmallIntegerField(
         choices=ROLE_CHOICES, default=ROLE_READER)
 
