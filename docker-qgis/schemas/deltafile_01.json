@@ -4,10 +4,10 @@
     "type": "object",
     "title": "Delta File Schema",
     "description": "TODO",
-    "additionalProperties": false,
+    "additionalProperties": true,
     "required": [
         "version",
-        "projectId",
+        "project",
         "id",
         "deltas",
         "files"
@@ -54,7 +54,7 @@
                 "1.0"
             ]
         },
-        "projectId": {
+        "project": {
             "type": "string",
             "format": "uuid",
             "title": "Project ID",
