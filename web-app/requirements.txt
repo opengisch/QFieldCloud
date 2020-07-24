@@ -9,3 +9,4 @@ django-allauth==0.40.0
 pyyaml==5.1.2
 drf-yasg==1.17.1
 coverage==5.2
+django-silk==4.0.1
