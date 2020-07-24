@@ -275,5 +275,27 @@ def pull_file(token, project_id, remote_file, local_file, version=None):
             print(response.text)
 
 
+@cli.command()
+@click.argument('deltafile_id')
+@click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
+def delta_status(token, deltafile_id):
+    """Delta status"""
+
+    url = BASE_URL + 'delta-status/' + deltafile_id + '/'
+    headers = {'Authorization': 'token {}'.format(token)}
+
+    response = requests.get(
+        url,
+        headers=headers,
+    )
+
+    try:
+        response.raise_for_status()
+        print(json.dumps(response.json(), indent=4, sort_keys=True))
+    except requests.HTTPError:
+        print("Error: {}".format(response))
+        print(response.text)
+
+
 if __name__ == '__main__':
     cli()
