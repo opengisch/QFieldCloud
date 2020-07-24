@@ -143,4 +143,4 @@ class DeltaFileSerializer(serializers.ModelSerializer):
         model = DeltaFile
         fields = (
             'id', 'project', 'uploaded_by', 'status', 'created_at',
-            'updated_at')
+            'updated_at', 'output')
