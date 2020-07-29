@@ -8,7 +8,7 @@ import click
 from glob import glob
 from pathlib import Path
 
-BASE_URL = 'https://dev.qfield.cloud/api/v1/'
+BASE_URL = 'http://dev.qfield.cloud/api/v1/'
 # BASE_URL = 'http://localhost:8000/api/v1/'
 
 
@@ -285,6 +285,27 @@ def delta_status(token, deltafile_id):
     headers = {'Authorization': 'token {}'.format(token)}
 
     response = requests.get(
+        url,
+        headers=headers,
+    )
+
+    try:
+        response.raise_for_status()
+        print(json.dumps(response.json(), indent=4, sort_keys=True))
+    except requests.HTTPError:
+        print("Error: {}".format(response))
+        print(response.text)
+
+
+@cli.command()
+@click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
+def logout(token):
+    """Logout and delete the token"""
+
+    url = BASE_URL + 'auth/logout/'
+    headers = {'Authorization': 'token {}'.format(token)}
+
+    response = requests.post(
         url,
         headers=headers,
     )
