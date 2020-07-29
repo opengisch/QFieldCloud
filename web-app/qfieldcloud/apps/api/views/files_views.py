@@ -152,9 +152,9 @@ class DownloadPushDeleteFileView(views.APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return FileResponse(
-            os.path.join(project_directory,
-                         'export',
-                         filename),
+            open(os.path.join(project_directory,
+                              'export',
+                              filename), 'rb'),
             as_attachment=True,
             filename=filename)
 

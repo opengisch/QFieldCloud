@@ -3,6 +3,7 @@ import requests
 import json
 import shutil
 import unittest
+import tempfile
 
 from django.core.files import File as django_file
 from django.conf import settings
@@ -435,3 +436,115 @@ class IntegrationTestCase(APITestCase):
         response = self.client.get(
             '/api/v1/files/{}/?client=qfield'.format(self.project1.id))
         self.assertEqual(response.status_code, 400)
+
+    def test_download_file_for_qfield(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/polygons.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/polygons.geojson/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/project.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/project.qgs/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Download the qgs file
+        response = self.client.get(
+            '/api/v1/files/{}/project_qfield.qgs/?client=qfield'.format(
+                self.project1.id),
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        temp_dir = tempfile.mkdtemp()
+        local_file = os.path.join(temp_dir, 'project.qgs')
+
+        with open(local_file, 'wb') as f:
+            for chunk in response.streaming_content:
+                f.write(chunk)
+
+        with open(local_file, 'r') as f:
+            self.assertEqual(
+                f.readline().strip(),
+                "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
+
+    def test_download_file_for_qgis(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/polygons.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/polygons.geojson/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/project.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/project.qgs/?client=qfield'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Download the qgs file
+        response = self.client.get(
+            '/api/v1/files/{}/project.qgs/?client=qgis'.format(
+                self.project1.id),
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        temp_dir = tempfile.mkdtemp()
+        local_file = os.path.join(temp_dir, 'project.qgs')
+
+        with open(local_file, 'wb') as f:
+            for chunk in response.streaming_content:
+                f.write(chunk)
+
+        with open(local_file, 'r') as f:
+            self.assertEqual(
+                f.readline().strip(),
+                "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
