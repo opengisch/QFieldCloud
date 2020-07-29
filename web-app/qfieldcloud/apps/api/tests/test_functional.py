@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 import filecmp
+import unittest
 
 from django.conf import settings
 
@@ -22,6 +23,7 @@ class FunctionalTestCase(APITestCase):
         for p in Project.objects.all():
             p.delete()
 
+    @unittest.skip('Conflicting with the current silk version https://github.com/jazzband/django-silk/issues/423')
     def test_functional(self):
         # Maya registers herself on qfieldcloud
         response = self.client.post(

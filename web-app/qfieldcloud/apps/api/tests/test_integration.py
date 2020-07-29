@@ -273,7 +273,7 @@ class IntegrationTestCase(APITestCase):
             id='6f109cd3-f44c-41db-b134-5f38468b9fda')
         self.assertEqual(deltafile_obj.status, DeltaFile.STATUS_ERROR)
 
-        self.assertIn("'deltaZZZ' was unexpected", deltafile_obj.output)
+        self.assertIn("'deltas\' is a required property", deltafile_obj.output)
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

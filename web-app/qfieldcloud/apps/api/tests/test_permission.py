@@ -113,7 +113,7 @@ class PermissionTestCase(APITransactionTestCase):
         response = self.client.get(
             '/api/v1/files/{}/foo/bar/file.txt/?client=qgis'.format(self.project1.id))
         self.assertFalse(status.is_success(response.status_code))
-        self.assertTrue(response.status_code.isClientError())
+        self.assertTrue(status.is_client_error(response.status_code))
 
     def test_project_admin_can_create_collaborator(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
