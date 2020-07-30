@@ -55,6 +55,10 @@ class ListCreateDeltaFileView(generics.ListCreateAPIView):
                 'DeltaFile is not a valid json file',
                 status=status.HTTP_400_BAD_REQUEST)
 
+        # Check if deltafile is already present in the database
+        if DeltaFile.objects.filter(id=delta_json['id']).exists():
+            return Response(status=status.HTTP_200_OK)
+
         delta_file_obj = DeltaFile.objects.create(
             id=delta_json['id'],
             project=project_obj,

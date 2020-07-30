@@ -548,3 +548,85 @@ class IntegrationTestCase(APITestCase):
             self.assertEqual(
                 f.readline().strip(),
                 "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
+
+    def test_push_apply_delta_file_twice(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Verify the original geojson file
+        with open(testdata_path('delta/points.geojson')) as f:
+            points_geojson = json.load(f)
+            features = sorted(points_geojson['features'], key=lambda k: k['id'])
+            self.assertEqual(1, features[0]['properties']['int'])
+
+        # Add files to the project
+        with open(testdata_path(
+                'delta/points.geojson')) as f:
+            file_obj = File.objects.create(
+                project=self.project1,
+                original_path='points.geojson')
+
+            FileVersion.objects.create(
+                file=file_obj,
+                stored_file=django_file(f, name=os.path.basename(f.name)))
+
+        with open(testdata_path(
+                'delta/polygons.geojson')) as f:
+            file_obj = File.objects.create(
+                project=self.project1,
+                original_path='polygons.geojson')
+
+            FileVersion.objects.create(
+                file=file_obj,
+                stored_file=django_file(f, name=os.path.basename(f.name)))
+
+        with open(testdata_path(
+                'delta/project.qgs')) as f:
+            file_obj = File.objects.create(
+                project=self.project1,
+                original_path='project.qgs')
+
+            FileVersion.objects.create(
+                file=file_obj,
+                stored_file=django_file(f, name=os.path.basename(f.name)))
+
+        # Push a deltafile
+        delta_file = testdata_path('delta/deltas/singlelayer_singledelta.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        points_geojson_file = os.path.join(
+            settings.PROJECTS_ROOT,
+            str(self.project1.id),
+            'real_files',
+            'points.geojson'
+        )
+
+        # The geojson has been updated with the changes in the delta file
+        with open(points_geojson_file) as f:
+            points_geojson = json.load(f)
+            features = sorted(points_geojson['features'], key=lambda k: k['id'])
+            self.assertEqual(666, features[0]['properties']['int'])
+
+        # The status has been updated
+        deltafile_obj = DeltaFile.objects.get(
+            id='6f109cd3-f44c-41db-b134-5f38468b9fda')
+        self.assertEqual(deltafile_obj.status, DeltaFile.STATUS_APPLIED)
+
+        # Push the same deltafile again
+        delta_file = testdata_path('delta/deltas/singlelayer_singledelta.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
