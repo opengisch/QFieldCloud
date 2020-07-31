@@ -56,7 +56,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProjectSerializer
 
-    # TODO: improve the filters (and add if is a organization member or admin?)
     def get_queryset(self):
         queryset = Project.objects.filter(owner=self.request.user) | \
             Project.objects.filter(
@@ -67,11 +66,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'include-public', default=None)
 
         if include_public and include_public.lower() == 'true':
-            queryset = Project.objects.filter(owner=self.request.user) | \
-                Project.objects.filter(
-                    collaborators__in=ProjectCollaborator.objects.filter(
-                        collaborator=self.request.user)) | \
-                Project.objects.filter(private=False)
+            queryset |= Project.objects.filter(private=False)
 
         return queryset
 
