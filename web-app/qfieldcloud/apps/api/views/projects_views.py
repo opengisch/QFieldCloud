@@ -15,9 +15,7 @@ from qfieldcloud.apps.model.models import (
     Project, ProjectCollaborator)
 from qfieldcloud.apps.api.serializers import (
     ProjectSerializer)
-from qfieldcloud.apps.api.permissions import (
-    ListCreateProjectPermission, ProjectPermission,
-    IsProjectOwnerOrOrganizationMember)
+from qfieldcloud.apps.api import permissions
 
 User = get_user_model()
 
@@ -57,8 +55,8 @@ include_public_param = openapi.Parameter(
 class ProjectViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProjectSerializer
-    # TODO: permissions
 
+    # TODO: improve the filters (and add if is a organization member or admin?)
     def get_queryset(self):
         queryset = Project.objects.filter(owner=self.request.user) | \
             Project.objects.filter(
@@ -77,11 +75,31 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    # def get_permissions(self):
-    #     self.permission_classes = [IsAuthenticated]
+    def get_permissions(self):
 
-    #     if self.action in ['create', 'update', 'partial_update', 'destroy']:
-    #         self.permission_classes = [IsAuthenticated,
-    #                                    IsProjectOwnerOrOrganizationMember]
+        permission_classes = []
 
-    #     return super().get_permissions()
+        if self.action in ['list']:
+            # The queryset is already filtered for what the user can see
+            permission_classes = [IsAuthenticated]
+        elif self.action in ['create']:
+            permission_classes = [
+                permissions.IsProjectOwner
+                | permissions.IsOrganizationAdmin]
+        elif self.action in ['retrieve']:
+            permission_classes = [
+                permissions.IsProjectOwner
+                | permissions.IsOrganizationAdmin
+                | permissions.IsOrganizationMember
+                | permissions.IsProjectCollaboratorAdmin
+                | permissions.IsProjectCollaboratorManager
+                | permissions.IsProjectCollaboratorEditor
+                | permissions.IsProjectCollaboratorReporter
+                | permissions.IsProjectCollaboratorReader]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [
+                permissions.IsProjectOwner
+                | permissions.IsOrganizationAdmin
+                | permissions.IsProjectCollaboratorAdmin]
+
+        return [permission() for permission in permission_classes]

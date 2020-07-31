@@ -130,19 +130,118 @@ class ProjectPermission(permissions.BasePermission):
             return False
 
 
-class IsProjectOwnerOrOrganizationMember(permissions.BasePermission):
+class IsProjectOwner(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        print('has_permission')
-        print(request.data)
-        print(request.method)
-        print(request.META)
-        print(view.kwargs)
-        return True
+
+        # Get the owner specified into the request or use
+        # the user that did the request if the owner is not
+        # specified
+        owner = request.data.get('owner', request.user.username)
+        owner_obj = User.objects.get(username=owner)
+
+        return request.user == owner_obj
+
+    def has_object_permission(self, request, view, obj):
+        owner_obj = obj.owner
+
+        return request.user == owner_obj
 
 
 class IsOrganizationAdmin(permissions.BasePermission):
-    pass
+
+    def has_permission(self, request, view):
+
+        # Get the owner specified into the request or use
+        # the user that did the request if the owner is not
+        # specified
+        owner = request.data.get('owner', request.user.username)
+        owner_obj = User.objects.get(username=owner)
+
+        return OrganizationMember.objects.filter(
+            organization=owner_obj,
+            member=request.user,
+            role=OrganizationMember.ROLE_ADMIN).exists()
+
+    def has_object_permission(self, request, view, obj):
+        owner_obj = obj.owner
+
+        return OrganizationMember.objects.filter(
+            organization=owner_obj,
+            member=request.user,
+            role=OrganizationMember.ROLE_ADMIN).exists()
+
+
+class IsOrganizationMember(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+
+        # Get the owner specified into the request or use
+        # the user that did the request if the owner is not
+        # specified
+        owner = request.data.get('owner', request.user)
+        owner_obj = User.objects.get(username=owner)
+
+        return OrganizationMember.objects.filter(
+            organization=owner_obj,
+            member=request.user,
+            role=OrganizationMember.ROLE_MEMBER).exists()
+
+    def has_object_permission(self, request, view, obj):
+        owner_obj = obj.owner
+
+        if request.user == owner_obj:
+            return True
+
+        return OrganizationMember.objects.filter(
+            organization=owner_obj,
+            member=request.user,
+            role=OrganizationMember.ROLE_ADMIN).exists()
+
+
+class IsProjectCollaboratorAdmin(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        ProjectCollaborator.objects.filter(
+            project=obj,
+            collaborator=request.user,
+            role=ProjectCollaborator.ROLE_ADMIN).exists()
+
+
+class IsProjectCollaboratorManager(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        ProjectCollaborator.objects.filter(
+            project=obj,
+            collaborator=request.user,
+            role=ProjectCollaborator.ROLE_MANAGER).exists()
+
+
+class IsProjectCollaboratorEditor(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        ProjectCollaborator.objects.filter(
+            project=obj,
+            collaborator=request.user,
+            role=ProjectCollaborator.ROLE_EDITOR).exists()
+
+
+class IsProjectCollaboratorReporter(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        ProjectCollaborator.objects.filter(
+            project=obj,
+            collaborator=request.user,
+            role=ProjectCollaborator.ROLE_REPORTER).exists()
+
+
+class IsProjectCollaboratorReader(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        ProjectCollaborator.objects.filter(
+            project=obj,
+            collaborator=request.user,
+            role=ProjectCollaborator.ROLE_READER).exists()
 
 
 class UserPermission(permissions.BasePermission):
