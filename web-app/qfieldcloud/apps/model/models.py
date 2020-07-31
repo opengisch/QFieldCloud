@@ -194,13 +194,6 @@ class ProjectCollaborator(models.Model):
         return self.project.name + ': ' + self.collaborator.username
 
 
-class FileManager(models.Manager):
-
-    def delete(self):
-        for obj in self.get_queryset():
-            obj.delete()
-
-
 class File(models.Model):
     """This represent the original file as seen by the client"""
 
