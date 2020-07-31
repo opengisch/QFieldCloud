@@ -17,6 +17,7 @@ from qfieldcloud.apps.api.permissions import (
     ProjectPermission)
 from qfieldcloud.apps.api.qgis_utils import apply_delta
 from qfieldcloud.apps.api.serializers import DeltaFileSerializer
+from qfieldcloud.apps.api.file_utils import get_sha256
 
 User = get_user_model()
 
@@ -57,7 +58,13 @@ class ListCreateDeltaFileView(generics.ListCreateAPIView):
 
         # Check if deltafile is already present in the database
         if DeltaFile.objects.filter(id=delta_json['id']).exists():
-            return Response(status=status.HTTP_200_OK)
+            df = DeltaFile.objects.get(id=delta_json['id'])
+            if get_sha256(request_file) == get_sha256(df.file):
+                return Response(status=status.HTTP_200_OK)
+            else:
+                return Response(
+                    'A DeltaFile with the same id but different content already exists',
+                    status=status.HTTP_400_BAD_REQUEST)
 
         delta_file_obj = DeltaFile.objects.create(
             id=delta_json['id'],

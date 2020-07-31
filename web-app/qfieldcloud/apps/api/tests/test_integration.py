@@ -621,6 +621,7 @@ class IntegrationTestCase(APITestCase):
 
         # Push the same deltafile again
         delta_file = testdata_path('delta/deltas/singlelayer_singledelta.json')
+
         response = self.client.post(
             '/api/v1/deltas/{}/'.format(self.project1.id),
             {
@@ -630,3 +631,17 @@ class IntegrationTestCase(APITestCase):
         )
 
         self.assertTrue(status.is_success(response.status_code))
+
+        # Push a deltafile with same id but different content
+        delta_file = testdata_path(
+            'delta/deltas/singlelayer_singledelta_diff_content.json')
+
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+
+        self.assertTrue(status.is_client_error(response.status_code))
