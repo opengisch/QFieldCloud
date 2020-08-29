@@ -6,9 +6,10 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-Flask = "==1.1.2"
 docker = "==4.2.0"
-gunicorn = "==20.0.4"
+rq = "==1.5.1"
+supervisor = "==4.2.1"
+flake8 = "==3.8.3"
 
 [requires]
 python_version = "3.8"

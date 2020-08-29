@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'rest_auth',
     'rest_auth.registration',
     'silk',  # Middleware for debug of requests
+    'django_rq',  # Integration with Redis Queue
 
     # Local
     'qfieldcloud.apps.model',
@@ -180,4 +181,18 @@ SWAGGER_SETTINGS = {
 
 REST_AUTH_SERIALIZERS = {
     'TOKEN_SERIALIZER': 'qfieldcloud.apps.api.serializers.TokenSerializer',
+}
+
+
+RQ_QUEUES = {
+    'export': {
+        'HOST': 'docker-host',
+        'PORT': 6379,
+        'DB': 0,
+    },
+    'delta': {
+        'HOST': 'docker-host',
+        'PORT': 6379,
+        'DB': 0,
+    },
 }

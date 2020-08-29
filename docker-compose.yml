@@ -10,6 +10,8 @@ services:
       - POSTGRES_DB=qfieldcloud_dev_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - net
 
   web:
     build: ./web-app
@@ -24,6 +26,8 @@ services:
       - db
     env_file:
       - ./.env.dev
+    networks:
+      - net
 
   qgis:
     build:
@@ -34,5 +38,26 @@ services:
     tty: true
     command: bash -c "echo QGIS builded"
 
+  docker-host:
+    image: qoomon/docker-host:2.4.2
+    restart: unless-stopped
+    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    networks:
+      - net
+
+  # Useful to test if the docker-host can actually communicate with the host
+  # listen on the host with nc -p 2323 -lk
+  #
+  # tcp_message_emitter:
+  #   depends_on: [ docker-host ]
+  #   image: alpine
+  #   command: [ "sh", "-c", "while :; do date; sleep 1; done | nc 'docker-host' 2323 -v"]
+  #   networks:
+  #     - net
+
 volumes:
   postgres_data:
+
+networks:
+  net:
+    # driver: bridge

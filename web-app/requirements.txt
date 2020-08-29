@@ -10,3 +10,4 @@ pyyaml==5.1.2
 drf-yasg==1.17.1
 coverage==5.2
 django-silk==4.0.1
+django-rq==2.3.2

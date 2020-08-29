@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, status
+from rest_framework import generics, status, views
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
@@ -15,7 +15,7 @@ from qfieldcloud.apps.model.models import (
     Project, DeltaFile)
 from qfieldcloud.apps.api.permissions import (
     ProjectPermission)
-from qfieldcloud.apps.api.qgis_utils import apply_delta
+from qfieldcloud.apps.api import qgis_utils
 from qfieldcloud.apps.api.serializers import DeltaFileSerializer
 from qfieldcloud.apps.api.file_utils import get_sha256
 
@@ -80,34 +80,13 @@ class ListCreateDeltaFileView(generics.ListCreateAPIView):
         delta_file_obj.status = DeltaFile.STATUS_BUSY
         delta_file_obj.save()
 
-        # TODO: Make this an asynchronous call
-        response = apply_delta(
+        job = qgis_utils.apply_delta(
             str(project_obj.id),
             project_file,
-            str(delta_file_obj.id))
+            str(delta_file_obj.id),
+            delta_json['id'])
 
-        if response.status_code == 200:
-            delta_file_obj.status = DeltaFile.STATUS_APPLIED
-            delta_file_obj.save()
-        else:
-            try:
-                output = response.json()['output']
-                exit_code = response.json()['exit_code']
-
-                if exit_code == 1:
-                    delta_file_obj.status = DeltaFile.STATUS_APPLIED_WITH_CONFLICTS
-                    delta_file_obj.output = output
-                    delta_file_obj.save()
-                else:
-                    delta_file_obj.status = DeltaFile.STATUS_ERROR
-                    delta_file_obj.output = output
-                    delta_file_obj.save()
-
-            except ValueError:
-                delta_file_obj.status = DeltaFile.STATUS_ERROR
-                delta_file_obj.save()
-
-        return Response(status=status.HTTP_200_OK)
+        return Response({'jobid': job.id})
 
     def get_queryset(self):
 
@@ -121,11 +100,27 @@ class ListCreateDeltaFileView(generics.ListCreateAPIView):
     name='get', decorator=swagger_auto_schema(
         operation_description="Get delta status",
         operation_id="Get delta status",))
-class GetDeltaView(generics.RetrieveAPIView):
+class GetDeltaView(views.APIView):
 
-    permission_classes = [IsAuthenticated, ProjectPermission]
-    serializer_class = DeltaFileSerializer
+    def get(self, request, jobid):
 
-    def get_object(self):
-        deltafile_id = self.request.parser_context['kwargs']['deltafileid']
-        return DeltaFile.objects.get(id=deltafile_id)
+        job = qgis_utils.get_job('delta', str(jobid))
+        job_status = job.get_status()
+
+        if job_status == 'finished':
+            exit_code = job.result[0]
+            output = job.result[1]
+
+            if exit_code == 1:
+                job_status = 'applied_with_conflicts'
+            elif exit_code == 2:
+                job_status = 'not_applied'
+
+            return Response(
+                {'status': job_status,
+                 'output': output}
+            )
+
+        return Response(
+            {'status': job_status}
+        )

@@ -4,6 +4,7 @@ import json
 import shutil
 import unittest
 import tempfile
+import time
 
 from django.core.files import File as django_file
 from django.conf import settings
@@ -23,7 +24,6 @@ User = get_user_model()
 class IntegrationTestCase(APITestCase):
 
     DJANGO_BASE_URL = 'http://localhost:8000/api/v1/'
-    ORCHESTRATOR_URL = 'http://' + qgis_utils.get_default_gateway() + ':5000/'
 
     def setUp(self):
         # Check if orchestrator is running otherwise skip test
@@ -125,12 +125,30 @@ class IntegrationTestCase(APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        # Pull the data file
+        # Request export of project
         response = self.client.get(
-            '/api/v1/files/{}/data.gpkg/'.format(self.project1.id))
+            '/api/v1/qfield-files/{}/'.format(self.project1.id))
 
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.filename, 'data.gpkg')
+        jobid = response.json()['jobid']
+
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/qfield-files/export/{}/'.format(jobid),
+            )
+
+            if response.json()['status'] == 'finished':
+
+                response = self.client.get(
+                    '/api/v1/qfield-files/export/{}/data.gpkg/'.format(jobid),
+                )
+
+                self.assertTrue(status.is_success(response.status_code))
+                self.assertEqual(response.filename, 'data.gpkg')
+                return
+
+        self.fail("Worker didn't finish")
 
     def test_push_apply_delta_file(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -184,6 +202,8 @@ class IntegrationTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
 
+        jobid = response.json()['jobid']
+
         points_geojson_file = os.path.join(
             settings.PROJECTS_ROOT,
             str(self.project1.id),
@@ -191,36 +211,23 @@ class IntegrationTestCase(APITestCase):
             'points.geojson'
         )
 
-        # The geojson has been updated with the changes in the delta file
-        with open(points_geojson_file) as f:
-            points_geojson = json.load(f)
-            features = sorted(points_geojson['features'], key=lambda k: k['id'])
-            self.assertEqual(666, features[0]['properties']['int'])
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/deltas/status/{}/'.format(jobid),
+            )
 
-        # The status has been updated
-        deltafile_obj = DeltaFile.objects.get(
-            id='6f109cd3-f44c-41db-b134-5f38468b9fda')
-        self.assertEqual(deltafile_obj.status, DeltaFile.STATUS_APPLIED)
+            if response.json()['status'] == 'finished':
 
-    def test_orchestrator_export_project_with_error(self):
-        project_directory = testdata_path('simple_bee_farming')
-        project_file = 'simple_bee_farmingZZ.qgs'
+                # The geojson has been updated with the changes in the delta file
+                with open(points_geojson_file) as f:
+                    points_geojson = json.load(f)
+                    features = sorted(points_geojson['features'], key=lambda k: k['id'])
+                    self.assertEqual(666, features[0]['properties']['int'])
+                    return
 
-        url = ''.join([
-            self.ORCHESTRATOR_URL,
-            'export-project',
-            '?project-dir=',
-            project_directory,
-            '&project-file=',
-            project_file,
-        ])
-
-        response = requests.get(url)
-        self.assertEqual(response.status_code, 500)
-
-        self.assertIn(
-            'FileNotFoundError: /io/project/simple_bee_farmingZZ.qgs',
-            response.json()['output'])
+        self.fail("Worker didn't finish")
 
     def test_push_apply_delta_file_with_error(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -268,12 +275,22 @@ class IntegrationTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
 
-        # The status has been updated
-        deltafile_obj = DeltaFile.objects.get(
-            id='6f109cd3-f44c-41db-b134-5f38468b9fda')
-        self.assertEqual(deltafile_obj.status, DeltaFile.STATUS_ERROR)
+        jobid = response.json()['jobid']
 
-        self.assertIn("'deltas\' is a required property", deltafile_obj.output)
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/deltas/status/{}/'.format(jobid),
+            )
+
+            if response.json()['status'] == 'not_applied':
+                self.assertIn(
+                    "'deltas\' is a required property",
+                    response.json()['output'])
+                return
+
+        self.fail("Worker didn't finish")
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -367,12 +384,21 @@ class IntegrationTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # The status has been updated
-        deltafile_obj = DeltaFile.objects.get(
-            id='6f109cd3-f44c-41db-b134-5f38468b9fda')
+        jobid = response.json()['jobid']
 
-        self.assertEqual(deltafile_obj.status,
-                         DeltaFile.STATUS_APPLIED_WITH_CONFLICTS)
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/deltas/status/{}/'.format(jobid),
+            )
+
+            if not response.json()['status'] == 'started':
+                self.assertEquals(
+                    'applied_with_conflicts', response.json()['status'])
+                return
+
+        self.fail("Worker didn't finish")
 
     def test_list_files_for_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -380,7 +406,7 @@ class IntegrationTestCase(APITestCase):
         # Add files to the project
         file = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+            '/api/v1/files/{}/points.geojson/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -391,7 +417,7 @@ class IntegrationTestCase(APITestCase):
 
         file = testdata_path('delta/polygons.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/polygons.geojson/?client=qfield'.format(
+            '/api/v1/files/{}/polygons.geojson/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -402,7 +428,7 @@ class IntegrationTestCase(APITestCase):
 
         file = testdata_path('delta/project.qgs')
         response = self.client.post(
-            '/api/v1/files/{}/project.qgs/?client=qfield'.format(
+            '/api/v1/files/{}/project.qgs/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -412,10 +438,25 @@ class IntegrationTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         response = self.client.get(
-            '/api/v1/files/{}/?client=qfield'.format(self.project1.id))
+            '/api/v1/qfield-files/{}/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
 
-        # TODO: test content of the response
+        jobid = response.json()['jobid']
+
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/qfield-files/export/{}/'.format(jobid),
+            )
+
+            if response.json()['status'] == 'finished':
+                json_resp = response.json()
+                files = sorted(json_resp['files'], key=lambda k: k['name'])
+                self.assertEqual(files[2]['name'], 'project_qfield.qgs')
+                return
+
+        self.fail("Worker didn't finish")
 
     def test_list_files_for_qfield_incomplete_project(self):
         # the qgs file is missing
@@ -424,7 +465,7 @@ class IntegrationTestCase(APITestCase):
         # Add files to the project
         file = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+            '/api/v1/files/{}/points.geojson/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -434,8 +475,11 @@ class IntegrationTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         response = self.client.get(
-            '/api/v1/files/{}/?client=qfield'.format(self.project1.id))
+            '/api/v1/qfield-files/{}/'.format(self.project1.id))
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            'The project does not contain a valid qgis project file')
 
     def test_download_file_for_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -443,7 +487,7 @@ class IntegrationTestCase(APITestCase):
         # Add files to the project
         file = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+            '/api/v1/files/{}/points.geojson/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -454,7 +498,7 @@ class IntegrationTestCase(APITestCase):
 
         file = testdata_path('delta/polygons.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/polygons.geojson/?client=qfield'.format(
+            '/api/v1/files/{}/polygons.geojson/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -465,7 +509,7 @@ class IntegrationTestCase(APITestCase):
 
         file = testdata_path('delta/project.qgs')
         response = self.client.post(
-            '/api/v1/files/{}/project.qgs/?client=qfield'.format(
+            '/api/v1/files/{}/project.qgs/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -474,24 +518,41 @@ class IntegrationTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # Download the qgs file
+        # Start the export to get the jobid
         response = self.client.get(
-            '/api/v1/files/{}/project_qfield.qgs/?client=qfield'.format(
+            '/api/v1/qfield-files/{}/'.format(
                 self.project1.id),
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        temp_dir = tempfile.mkdtemp()
-        local_file = os.path.join(temp_dir, 'project.qgs')
+        jobid = response.json()['jobid']
 
-        with open(local_file, 'wb') as f:
-            for chunk in response.streaming_content:
-                f.write(chunk)
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/qfield-files/export/{}/'.format(jobid),
+            )
 
-        with open(local_file, 'r') as f:
-            self.assertEqual(
-                f.readline().strip(),
-                "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
+            if response.json()['status'] == 'finished':
+                response = self.client.get(
+                    '/api/v1/qfield-files/export/{}/project_qfield.qgs/'.format(
+                        jobid),
+                )
+                temp_dir = tempfile.mkdtemp()
+                local_file = os.path.join(temp_dir, 'project.qgs')
+
+                with open(local_file, 'wb') as f:
+                    for chunk in response.streaming_content:
+                        f.write(chunk)
+
+                with open(local_file, 'r') as f:
+                    self.assertEqual(
+                        f.readline().strip(),
+                        "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
+                return
+
+        self.fail("Worker didn't finish")
 
     def test_download_file_for_qgis(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -499,7 +560,7 @@ class IntegrationTestCase(APITestCase):
         # Add files to the project
         file = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/?client=qfield'.format(
+            '/api/v1/files/{}/points.geojson/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -510,7 +571,7 @@ class IntegrationTestCase(APITestCase):
 
         file = testdata_path('delta/polygons.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/polygons.geojson/?client=qfield'.format(
+            '/api/v1/files/{}/polygons.geojson/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -521,7 +582,7 @@ class IntegrationTestCase(APITestCase):
 
         file = testdata_path('delta/project.qgs')
         response = self.client.post(
-            '/api/v1/files/{}/project.qgs/?client=qfield'.format(
+            '/api/v1/files/{}/project.qgs/'.format(
                 self.project1.id),
             {
                 "file": open(file, 'rb')
@@ -532,7 +593,7 @@ class IntegrationTestCase(APITestCase):
 
         # Download the qgs file
         response = self.client.get(
-            '/api/v1/files/{}/project.qgs/?client=qgis'.format(
+            '/api/v1/files/{}/project.qgs/'.format(
                 self.project1.id),
         )
         self.assertTrue(status.is_success(response.status_code))
@@ -601,6 +662,7 @@ class IntegrationTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
 
+        jobid = response.json()['jobid']
         points_geojson_file = os.path.join(
             settings.PROJECTS_ROOT,
             str(self.project1.id),
@@ -608,16 +670,21 @@ class IntegrationTestCase(APITestCase):
             'points.geojson'
         )
 
-        # The geojson has been updated with the changes in the delta file
-        with open(points_geojson_file) as f:
-            points_geojson = json.load(f)
-            features = sorted(points_geojson['features'], key=lambda k: k['id'])
-            self.assertEqual(666, features[0]['properties']['int'])
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/deltas/status/{}/'.format(jobid),
+            )
 
-        # The status has been updated
-        deltafile_obj = DeltaFile.objects.get(
-            id='6f109cd3-f44c-41db-b134-5f38468b9fda')
-        self.assertEqual(deltafile_obj.status, DeltaFile.STATUS_APPLIED)
+            if response.json()['status'] == 'finished':
+
+                # The geojson has been updated with the changes in the delta file
+                with open(points_geojson_file) as f:
+                    points_geojson = json.load(f)
+                    features = sorted(points_geojson['features'], key=lambda k: k['id'])
+                    self.assertEqual(666, features[0]['properties']['int'])
+                    break
 
         # Push the same deltafile again
         delta_file = testdata_path('delta/deltas/singlelayer_singledelta.json')

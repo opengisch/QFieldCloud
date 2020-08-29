@@ -8,6 +8,7 @@ from qfieldcloud.apps.api.views import (
     collaborators_views,
     projects_views,
     users_views,
+    qfield_files_views,
 )
 
 from rest_framework.routers import DefaultRouter
@@ -31,6 +32,13 @@ urlpatterns = [
     path('files/<uuid:projectid>/<path:filename>/',
          files_views.DownloadPushDeleteFileView.as_view()),
 
+    path('qfield-files/<uuid:projectid>/',
+         qfield_files_views.ExportView.as_view()),
+    path('qfield-files/export/<uuid:jobid>/',
+         qfield_files_views.ListFilesView.as_view()),
+    path('qfield-files/export/<uuid:jobid>/<path:filename>/',
+         qfield_files_views.DownloadFileView.as_view()),
+
     path('members/<str:organization>/',
          members_views.ListCreateMembersView.as_view()),
     path('members/<str:organization>/<str:username>/',
@@ -41,7 +49,7 @@ urlpatterns = [
     path('deltas/<uuid:projectid>/',
          deltas_views.ListCreateDeltaFileView.as_view()),
 
-    path('delta-status/<uuid:deltafileid>/',
+    path('deltas/status/<uuid:jobid>/',
          deltas_views.GetDeltaView.as_view()),
 
 ]

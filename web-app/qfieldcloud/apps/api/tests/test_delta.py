@@ -89,29 +89,3 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertEqual(json_resp[0]['project'], str(deltafile1.project.id))
         self.assertEqual(json_resp[1]['project'], str(deltafile2.project.id))
-
-    def test_get_deltafile(self):
-
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
-
-        # Store a deltafile
-        deltafile1 = DeltaFile.objects.create(
-            project=self.project1,
-            uploaded_by=self.user1,
-            file=django_file(
-                open(testdata_path(
-                    'delta/deltas/singlelayer_singledelta.json')),
-                name='delta.json')
-        )
-
-        response = self.client.get(
-            '/api/v1/delta-status/{}/'.format(deltafile1.id)
-        )
-
-        self.assertTrue(status.is_success(response.status_code))
-        json_resp = response.json()
-
-        self.assertEqual(json_resp['uploaded_by'], 'user1')
-        self.assertEqual(json_resp['status'], 'PENDING')
-        self.assertEqual(json_resp['id'], str(deltafile1.id))
-        self.assertEqual(json_resp['project'], str(deltafile1.project.id))

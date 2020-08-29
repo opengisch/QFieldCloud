@@ -57,5 +57,6 @@ urlpatterns = [
     path('app/', include('qfieldcloud.apps.web.urls')),
     path('', include('qfieldcloud.apps.web.urls')),
 
-    re_path(r'^silk/', include('silk.urls', namespace='silk'))
+    re_path(r'^silk/', include('silk.urls', namespace='silk')),
+    path('django-rq/', include('django_rq.urls'))
 ]
