@@ -14,6 +14,18 @@
    System documentation is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org][here]]
 ** Development
 *** Launch a local instance
+
+    Copy example configuration files and update them to your desire
+    #+begin_src sh
+      cd conf
+      cp .env.app.example .env.app
+      cp .env.db.example .env.db
+      emacs .env.app
+      emacs .env.db
+    #+end_src
+    For a local development instance you don't need =Caddyfile= and
+    =supervisord.conf= configuration files.
+
     To build development images and run the containers:
     #+begin_src sh
       docker-compose up -d --build
@@ -64,12 +76,12 @@
     To run all the unit and functional tests (on a throwaway test
     database and a throwaway test storage directory):
     #+begin_src sh
-      docker-compose run web python manage.py test
+      docker-compose run app python manage.py test
     #+end_src
     
     To run only a test module (e.g. =test_permission.py=)
     #+begin_src sh
-      docker-compose run web python manage.py test qfieldcloud.apps.api.tests.test_permission
+      docker-compose run app python manage.py test qfieldcloud.apps.api.tests.test_permission
     #+end_src
 *** Demo data
     Demo data are loaded with:

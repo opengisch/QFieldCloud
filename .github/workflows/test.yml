@@ -27,9 +27,11 @@ jobs:
       - name: Check code with Flake8
         run: |
           cd orchestrator
-          pipenv run python -m flake8 --ignore=E501,F401,W503 ../web-app
+          pipenv run python -m flake8 --ignore=E501,F401,W503 ../django-app
       - name: Build and run docker containers
         run: |
+          cp .github/workflows/.env.app.test conf/.env.app
+          cp .github/workflows/.env.db.test conf/.env.db
           docker-compose up -d --build
       - name: run RQ workers
         run: |
@@ -39,5 +41,5 @@ jobs:
       - name: Run unit and integration tests
         run: |
           pwd
-          docker-compose run web python manage.py test -v2
+          docker-compose run app python manage.py test -v2
 

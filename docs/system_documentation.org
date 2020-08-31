@@ -1,6 +1,8 @@
 * QFieldCloud System Documentation
   The aim of this document is to provide an overview of the system to
   understand the underlaying logic and technology.
+** Architecture
+   [[./assets/images/architecture.png]]
 ** Data model
 *** User
     Extends Django's AbstracUser

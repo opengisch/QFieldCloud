@@ -11,14 +11,14 @@ ENV PYTHONUNBUFFERED 1
 RUN apt update \
     && apt install -y netcat-openbsd
 RUN pip install --upgrade pip
-COPY ./requirements.txt /usr/src/app/requirements.txt
+COPY ./docker-app/requirements.txt /usr/src/app/requirements.txt
 RUN pip install -r requirements.txt
 
 # copy entrypoint.sh
-COPY ./entrypoint.sh /usr/src/app/entrypoint.sh
+COPY ./docker-app/entrypoint.sh /usr/src/app/entrypoint.sh
 
 # copy project
-COPY . /usr/src/app/
+COPY ./django-app /usr/src/app/
 
 # run entrypoint.sh
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]

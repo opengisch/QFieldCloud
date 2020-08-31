@@ -4,28 +4,28 @@ services:
   db:
     image: postgres:11
     restart: unless-stopped
-    environment:
-      - POSTGRES_USER=qfieldcloud_dev_db_admin
-      - POSTGRES_PASSWORD=zc3muugx
-      - POSTGRES_DB=qfieldcloud_dev_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./conf/.env.db
     networks:
       - net
 
-  web:
-    build: ./web-app
+  app:
+    build:
+      context: .
+      dockerfile: ./docker-app/Dockerfile
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      - ./web-app:/usr/src/app/
+      - ./django-app/qfieldcloud:/usr/src/app/qfieldcloud
       - ./user_projects_files:/usr/src/app/user_projects_files
     command: python3 manage.py runserver 0.0.0.0:8000
     depends_on:
       - db
     env_file:
-      - ./.env.dev
+      - ./conf/.env.app
     networks:
       - net
 
@@ -38,7 +38,7 @@ services:
     tty: true
     command: bash -c "echo QGIS builded"
 
-  docker-host:
+  proxy:
     image: qoomon/docker-host:2.4.2
     restart: unless-stopped
     cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
@@ -49,9 +49,9 @@ services:
   # listen on the host with nc -p 2323 -lk
   #
   # tcp_message_emitter:
-  #   depends_on: [ docker-host ]
+  #   depends_on: [ proxy ]
   #   image: alpine
-  #   command: [ "sh", "-c", "while :; do date; sleep 1; done | nc 'docker-host' 2323 -v"]
+  #   command: [ "sh", "-c", "while :; do date; sleep 1; done | nc 'proxy' 2323 -v"]
   #   networks:
   #     - net
 

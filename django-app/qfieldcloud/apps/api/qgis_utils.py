@@ -51,7 +51,7 @@ def get_default_gateway():
 
 def orchestrator_is_running():
     try:
-        connection = Redis('docker-host', 6379)
+        connection = Redis('proxy', 6379)
         connection.set('foo', 'bar')
     except exceptions.ConnectionError:
         return False

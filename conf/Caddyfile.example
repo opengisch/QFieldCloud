@@ -1,10 +1,10 @@
-#{
-#    # use the staging let's encrypt certs
-#    acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
-#    email info@opengis.ch
-#}
+{
+    # use the staging let's encrypt certs
+    acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    email info@opengis.ch
+}
 
-app.qfield.cloud {
+dev.qfield.cloud {
     root * /home/app/web/
     file_server
 
