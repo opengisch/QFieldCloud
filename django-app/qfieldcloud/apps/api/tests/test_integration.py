@@ -554,6 +554,42 @@ class IntegrationTestCase(APITestCase):
 
         self.fail("Worker didn't finish")
 
+    def test_download_file_for_qfield_broken_file(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path('delta/broken.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/broken.qgs/'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Start the export to get the jobid
+        response = self.client.get(
+            '/api/v1/qfield-files/{}/'.format(
+                self.project1.id),
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        jobid = response.json()['jobid']
+
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/qfield-files/export/{}/'.format(jobid),
+            )
+            if response.json()['status'] == 'qgis_error':
+                self.assertIn('Unable to open file with QGIS', response.json()['output'])
+                return
+
+        self.fail("Worker didn't finish")
+
     def test_download_file_for_qgis(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 

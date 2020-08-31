@@ -58,6 +58,13 @@ class ListFilesView(views.APIView):
         projectid = job.kwargs['projectid']
 
         if job_status == 'finished':
+            exit_code = job.result[0]
+            output = job.result[1]
+
+            if not exit_code == 0:
+                job_status = 'qgis_error'
+                return Response({'status': job_status, 'output': output})
+
             project_directory = os.path.join(
                 settings.PROJECTS_ROOT,
                 projectid)
@@ -93,6 +100,13 @@ class DownloadFileView(views.APIView):
         projectid = job.kwargs['projectid']
 
         if job_status == 'finished':
+            exit_code = job.result[0]
+            output = job.result[1]
+
+            if not exit_code == 0:
+                job_status = 'qgis_errors'
+                return Response({'status': job_status, 'output': output})
+
             project_directory = os.path.join(
                 settings.PROJECTS_ROOT,
                 projectid)

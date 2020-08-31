@@ -12,8 +12,11 @@ start_app()
 
 def export(args):
     project = QgsProject.instance()
-    if not project.read(os.path.join(args.path)):
+    if not os.path.exists(args.path):
         raise FileNotFoundError(args.path)
+
+    if not project.read(os.path.join(args.path)):
+        raise Exception("Unable to open file with QGIS: {}".format(args.path))
 
     # TODO: get extent from the qfieldsync project settings
     extent = QgsRectangle()
