@@ -15,11 +15,6 @@ jobs:
           python-version: 3.8.5
       - name: Install pipenv
         uses: dschep/install-pipenv-action@v1
-      - name: Install Redis
-        uses: zhulik/redis-action@1.1.0
-        with:
-          redis version: '5'
-          number of databases: 100
       - name: Install pipenv dependencies
         run: |
           cd orchestrator
@@ -36,8 +31,7 @@ jobs:
       - name: run RQ workers
         run: |
           cd orchestrator
-          pipenv run rq worker export &
-          pipenv run rq worker delta &
+          pipenv run rq worker export delta &
       - name: Run unit and integration tests
         run: |
           pwd

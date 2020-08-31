@@ -188,12 +188,12 @@ REST_AUTH_SERIALIZERS = {
 
 RQ_QUEUES = {
     'export': {
-        'HOST': 'proxy',
+        'HOST': 'redis',
         'PORT': 6379,
         'DB': 0,
     },
     'delta': {
-        'HOST': 'proxy',
+        'HOST': 'redis',
         'PORT': 6379,
         'DB': 0,
     },

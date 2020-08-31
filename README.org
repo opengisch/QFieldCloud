@@ -40,17 +40,10 @@
       docker-compose run web python manage.py runserver
     #+end_src
 
-    You need to have a redis installation running on your computer or
-    you can start it (after installing it using your package manager) with:
-    #+begin_src sh
-      redis-server --protected-mode no
-    #+end_src
-
     To lauch the RQ (Redis Queue) workers that runs the QGIS containers jobs:
     #+begin_src sh
       cd orchestrator
-      pipenv run rq worker export &
-      pipenv run rq worker delta &
+      pipenv run rq worker export delta
     #+end_src
 *** Code structure
 **** Django apps

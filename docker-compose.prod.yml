@@ -54,10 +54,11 @@ services:
     tty: true
     command: bash -c "echo QGIS builded"
 
-  proxy:
-    image: qoomon/docker-host:2.4.2
+  redis:
+    image: redis:6.0.6
     restart: unless-stopped
-    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    ports:
+      - "6379:6379"
     networks:
       - net
 
