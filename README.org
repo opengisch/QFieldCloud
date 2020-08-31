@@ -35,9 +35,9 @@
     django built-in server at =http://localhost:8000=
 
     To run django commands on the docker, enter in the docker bash or
-    place =docker-compose run web= before the command, e.g.:
+    place =docker-compose run app= before the command, e.g.:
     #+begin_src sh
-      docker-compose run web python manage.py runserver
+      docker-compose run app python manage.py runserver
     #+end_src
 
     To lauch the RQ (Redis Queue) workers that runs the QGIS containers jobs:
