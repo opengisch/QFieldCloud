@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from django.conf import settings
 from django.http import FileResponse
@@ -47,6 +48,11 @@ class ListFilesView(views.APIView):
     def get(self, request, jobid):
         job = qgis_utils.get_job('export', str(jobid))
 
+        if not job:
+            return Response(
+                'The provided job id does not exist.',
+                status=status.HTTP_400_BAD_REQUEST)
+
         job_status = job.get_status()
 
         projectid = job.kwargs['projectid']
@@ -61,12 +67,14 @@ class ListFilesView(views.APIView):
                 'export')
 
             files = []
-            for filename in os.listdir(export_directory):
-                file = os.path.join(export_directory, filename)
-                with open(file, 'rb') as f:
+            for filepath in Path(export_directory).glob('**/*'):
+                if not filepath.is_file():
+                    continue
+
+                with open(filepath, 'rb') as f:
                     files.append({
-                        'name': filename,
-                        'size': os.path.getsize(file),
+                        'name': str(filepath.relative_to(export_directory)),
+                        'size': filepath.stat().st_size,
                         'sha256': file_utils.get_sha256(f),
                     })
 
