@@ -19,7 +19,10 @@ from django.urls import path, re_path, include
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from qfieldcloud.apps.api.views import auth_views
+
+from qfieldcloud.core.views import auth_views
+from qfieldcloud.core.web.views import (
+    IndexView, signup, registered)
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -51,12 +54,17 @@ urlpatterns = [
     path('api/v1/auth/token/', auth_views.AuthTokenView.as_view()),
     path('api/v1/auth/', include('rest_auth.urls')),
 
-    path('api/v1/', include('qfieldcloud.apps.api.urls')),
+    path('api/v1/', include('qfieldcloud.core.urls')),
     path('auth/', include('rest_framework.urls')),
 
-    path('app/', include('qfieldcloud.apps.web.urls')),
-    path('', include('qfieldcloud.apps.web.urls')),
-
     re_path(r'^silk/', include('silk.urls', namespace='silk')),
-    path('django-rq/', include('django_rq.urls'))
+    path('django-rq/', include('django_rq.urls')),
+
+    # Web page
+    path('', IndexView.as_view(), name='index'),
+    path('app/', IndexView.as_view(), name='index'),
+    path('signup/', signup, name='signup'),
+    path('app/signup/', signup, name='signup'),
+    path('registered/', registered, name='registered'),
+    path('app/registered/', registered, name='registered'),
 ]

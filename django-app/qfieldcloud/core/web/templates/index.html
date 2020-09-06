@@ -1,0 +1,24 @@
+{% extends 'base_page.html' %}
+
+{% block title %}QFieldCloud{% endblock title %}
+
+{% block content %}
+<h1>QFieldCloud</h1>
+<p>Welcome on QFieldCloud app.</p>
+<div class="card-deck">
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">Register a new user</h5>
+      <p class="card-text">Register a new QFieldCloud user</p>
+      <a href="/app/signup/" class="btn btn-primary">Signup</a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">Swagger documentation</h5>
+      <p class="card-text">Swagger doc</p>
+      <a href="/swagger/" class="btn btn-primary">Swagger documentation</a>
+    </div>
+  </div>
+</div>
+{% endblock content %}

@@ -14,5 +14,5 @@ dev.qfield.cloud {
         }
     }
 
-    reverse_proxy @notStatic web:8000
+    reverse_proxy @notStatic app:8000
 }

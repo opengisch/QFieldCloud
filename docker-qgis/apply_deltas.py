@@ -199,16 +199,20 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
 
         if has_conflict:
             logger.info('Successfully applied {} deltas with some conflicts'.format(len(deltas.deltas)))
-            exit(1)
+            # exit(1)
+            return 1
         else:
             logger.info('Successfully applied {} deltas'.format(len(deltas.deltas)))
-            exit(0)
+            # exit(0)
+            return 0
     except DeltaException as err:
         logger.exception('Delta exception: {}'.format(str(err)), err)
-        exit(2)
+        # exit(2)
+        return 2
     except Exception as err:
         logger.exception('Unknown exception: {}'.format(str(err)), err)
-        exit(2)
+        # exit(2)
+        return 2
 
 @project_decorator
 def cmd_backup_cleanup(project: QgsProject, opts: BaseOptions):

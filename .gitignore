@@ -9,3 +9,4 @@ __pycache__/
 /conf/.env.app
 /conf/.env.db
 /conf/supervisord.conf
+/postgres_data/

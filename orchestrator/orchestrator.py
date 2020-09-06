@@ -4,67 +4,54 @@ from pathlib import Path
 import docker
 
 
-def host_path(project):
-    """Convert web-app docker path into host path"""
+def load_env_file():
+    """Read env file and return a dict with the variables"""
 
-    basepath = Path(os.path.dirname(os.path.abspath(__file__)))
-    basepath = str(basepath.parent)
+    environment = {}
+    with open('../conf/.env.app') as f:
+        for line in f:
+            splitted = line.rstrip().split('=')
+            environment[splitted[0]] = splitted[1]
 
-    return os.path.join(basepath, 'user_projects_files', project)
+    return environment
 
 
 def export_project(projectid, project_file):
     """Start a QGIS docker container to export the project using QFieldSync """
-    output_dir = os.path.join(host_path(projectid), 'export')
-    project_dir = os.path.join(host_path(projectid), 'real_files')
-
-    volumes = {
-        project_dir: {'bind': '/io/project', 'mode': 'ro'},
-        output_dir: {'bind': '/io/output', 'mode': 'rw'},
-    }
 
     client = docker.from_env()
     container = client.containers.create(
         'qfieldcloud_qgis',
-        volumes=volumes,
+        environment=load_env_file(),
         auto_remove=True)
 
     container.start()
     container.attach(logs=True)
-    container_command = './entrypoint.sh export /io/project/{} /io/output/'.format(
-        project_file)
+    container_command = 'xvfb-run python3 entrypoint.py export {} {}'.format(projectid, project_file)
 
     exit_code, output = container.exec_run(container_command)
-
     container.stop()
 
-    return exit_code, output
+    # TODO: communicate to Django that the work is done...
+    return exit_code, output.decode('utf-8')
 
 
 def apply_delta(projectid, project_file, delta_file):
     """Start a QGIS docker container to apply a deltafile unsing the
     apply-delta script"""
-    delta_dir = os.path.join(host_path(projectid), 'deltas')
-    project_dir = os.path.join(host_path(projectid), 'real_files')
-
-    volumes = {
-        project_dir: {'bind': '/io/project', 'mode': 'rw'},
-        delta_dir: {'bind': '/io/deltas', 'mode': 'rw'},
-    }
 
     client = docker.from_env()
     container = client.containers.create(
         'qfieldcloud_qgis',
-        volumes=volumes,
+        environment=load_env_file(),
         auto_remove=True)
 
     container.start()
     container.attach(logs=True)
-    container_command = './entrypoint.sh apply-delta delta apply /io/project/{} /io/deltas/{}'.format(
-        project_file, delta_file)
+    container_command = 'xvfb-run python3 entrypoint.py apply-delta {} {} {}'.format(
+        projectid, project_file, delta_file)
 
     exit_code, output = container.exec_run(container_command)
-
     container.stop()
 
-    return exit_code, output
+    return exit_code, output.decode('utf-8')

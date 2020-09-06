@@ -52,11 +52,10 @@ INSTALLED_APPS = [
     'rest_auth.registration',
     'silk',  # Middleware for debug of requests
     'django_rq',  # Integration with Redis Queue
+    'storages',  # Integration with AWS S3
 
     # Local
-    'qfieldcloud.apps.model',
-    'qfieldcloud.apps.api',
-    'qfieldcloud.apps.web',
+    'qfieldcloud.core',
 ]
 
 MIDDLEWARE = [
@@ -75,7 +74,9 @@ ROOT_URLCONF = 'qfieldcloud.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'qfieldcloud', 'core', 'web', 'templates')
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -93,13 +94,6 @@ WSGI_APPLICATION = 'qfieldcloud.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
 
 DATABASES = {
     "default": {
@@ -154,12 +148,14 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/mediafiles/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'mediafiles')
 
-# QFieldcloud project management settings
-PROJECTS_ROOT = os.path.join(BASE_DIR, 'user_projects_files')
+# S3 Storage
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME")
+AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")
 
-DEFAULT_FILE_STORAGE = 'qfieldcloud.apps.model.qfield_file_storage.QFieldStorage'
-
-AUTH_USER_MODEL = 'model.User'
+AUTH_USER_MODEL = 'core.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
@@ -182,9 +178,8 @@ SWAGGER_SETTINGS = {
 }
 
 REST_AUTH_SERIALIZERS = {
-    'TOKEN_SERIALIZER': 'qfieldcloud.apps.api.serializers.TokenSerializer',
+    'TOKEN_SERIALIZER': 'qfieldcloud.core.serializers.TokenSerializer',
 }
-
 
 RQ_QUEUES = {
     'export': {

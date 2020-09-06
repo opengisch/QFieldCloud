@@ -12,10 +12,11 @@
    and view and edit projects via web interface.
 
    System documentation is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org][here]]
+
+   Documentation about how QFieldCloud file's storage works is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/storage.org][here]]
 ** Development
 *** Launch a local instance
-
-    Copy example configuration files and update them to your desire
+    Copy the example configuration files and update them to your desire
     #+begin_src sh
       cd conf
       cp .env.app.example .env.app
@@ -31,11 +32,11 @@
       docker-compose up -d --build
     #+end_src
 
-    It will read =docker-compose.yml= and =.env.dev= and start a
-    django built-in server at =http://localhost:8000=
+    It will read =docker-compose.yml= and start a django built-in
+    server at =http://localhost:8000=
 
-    To run django commands on the docker, enter in the docker bash or
-    place =docker-compose run app= before the command, e.g.:
+    To run django commands on the docker, enter in the containers bash
+    shell or place =docker-compose run app= before the command, e.g.:
     #+begin_src sh
       docker-compose run app python manage.py runserver
     #+end_src
@@ -45,26 +46,6 @@
       cd orchestrator
       pipenv run rq worker export delta
     #+end_src
-*** Code structure
-**** Django apps
-     The Django code is structured in 3 separate apps. One app for the
-     REST API views, one for the data model and one for the views and
-     web templates. 
-
-     This structure has been decided to allow, in the future, to
-     logically add other apps (e.g. webgis) that refer to the same
-     data model and easily remove the web app if we decide to
-     implement the web interface externally to Django.
-
-     | Path                         | Description                        |
-     |------------------------------+------------------------------------|
-     | =.=                          | Repository root                    |
-     | =¦-- web-app=                | Root of all the django code        |
-     | =¦   ¦--qfieldcloud=         | Django project                     |
-     | =¦   ¦   ¦--apps/model=      | Django app with the data model     |
-     | =¦   ¦   ¦--apps/api=        | Django app with the REST API views |
-     | =¦   ¦   ¦--apps/web=        | Django app with the web views      |
-     | =¦   ¦--user_projects_files= | Repository of the users files      |
 *** Tests
     To run all the unit and functional tests (on a throwaway test
     database and a throwaway test storage directory):
@@ -74,36 +55,55 @@
     
     To run only a test module (e.g. =test_permission.py=)
     #+begin_src sh
-      docker-compose run app python manage.py test qfieldcloud.apps.api.tests.test_permission
+      docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
     #+end_src
-*** Demo data
-    Demo data are loaded with:
-    #+begin_src sh
-      python manage.py loaddata qfieldcloud/apps/model/fixtures/demo_data.json
-    #+end_src
-
-    Initial demo data:
-    - superuser
-      - username: demo_admin
-      - password: demo_pwd
-    - normal user
-      - username: demo_user
-      - password: demo_pwd
-    - project
-      - project name: demo_project
 ** Deployment
 *** Servers
     QFieldCloud is published on two servers:
     - https://dev.qfield.cloud/ This is a testing instance for new
-      features. Every push into master will be automatically deployed
-      on this server via a Github workflow.
+      features.
     - https://app.qfield.cloud/ This is the production instance. At
       the moment the deploy is done manually.
 
-    On the "dev" server the =docker-compose.dev.yml= is used. On the
-    "app" server, the =docker-compose.prod.yml= is used. On the
-    servers there are no mounted folders. To apply changes, the docker
-    image must be re-build.
+    On the servers, the =docker-compose.prod.yml= is used. There are
+    no mounted folders. To apply changes, the docker image must be
+    re-built.
+*** Launch a server instance
+    Copy the example configuration files and update them to your desire
+    #+begin_src sh
+      cd conf
+      cp .env.app.example .env.app
+      cp .env.db.example .env.db
+      cp Caddyfile.example Caddyfile
+      cp supervisord.conf.example supervisord.conf
+      emacs .env.app
+      emacs .env.db
+      emacs Caddyfile
+      emacs supervisord.conf
+    #+end_src
+
+    Run and build the docker containers
+    #+begin_src sh
+      docker-compose -f docker-compose.prod.yml up -d --build
+    #+end_src
+
+    Prepare and run supervisord with the workers
+    #+begin_src sh
+      apt install python3-pip  # If needed
+      pip3 install pipenv  # If needed
+      # If needed you should upgrade your python version on your host to 3.8.3 or superior
+      cd orchestrator
+      pipenv --python /usr/bin/python3.8 install
+      pipenv run supervisord -c ../conf/supervisord.conf
+    #+end_src
+    
+    You can watch and control the processes managed with supervisor
+    with ~supervisorctl~.
+
+    #+begin_src sh
+      pipenv run supervisorctl -c ../conf/supervisord.conf
+    #+end_src
+    For details see the offical [[http://supervisord.org/running.html#running-supervisorctl][documentation]]
 *** Infrastructure
    Based on this example
    https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/

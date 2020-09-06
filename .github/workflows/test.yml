@@ -22,18 +22,42 @@ jobs:
       - name: Check code with Flake8
         run: |
           cd orchestrator
-          pipenv run python -m flake8 --ignore=E501,F401,W503 ../django-app
+          pipenv run python -m flake8 --ignore=E501,F401,W503 ../django-app/qfieldcloud/
+      - name: Create .env.db file from secret
+        uses: SpicyPizza/create-envfile@v1
+        with:
+          envkey_POSTGRES_USER: "qfieldcloud_test_db_admin"
+          envkey_POSTGRES_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+          envkey_POSTGRES_DB: "qfieldcloud_test_db"
+          file_name: conf/.env.db
+      - name: Create .env.app file from secret
+        uses: SpicyPizza/create-envfile@v1
+        with:
+          envkey_DEBUG: 1
+          envkey_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
+          envkey_SQL_ENGINE: "django.db.backends.postgresql"
+          envkey_SQL_DATABASE: "qfieldcloud_test_db"
+          envkey_SQL_USER: "qfieldcloud_test_db_admin"
+          envkey_SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+          envkey_SQL_HOST: "db"
+          envkey_SQL_PORT: 5432
+          envkey_DATABASE: "postgres"
+          envkey_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          envkey_AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
+          envkey_AWS_STORAGE_BUCKET_NAME: "qfieldcloud-test"
+          envkey_AWS_S3_REGION_NAME: "zrh1"
+          envkey_AWS_S3_ENDPOINT_URL: "https://os.zrh1.flow.swiss"
+          file_name: conf/.env.app
       - name: Build and run docker containers
         run: |
-          cp .github/workflows/.env.app.test conf/.env.app
-          cp .github/workflows/.env.db.test conf/.env.db
           docker-compose up -d --build
-      - name: run RQ workers
+      - name: Run RQ workers
         run: |
           cd orchestrator
           pipenv run rq worker export delta &
       - name: Run unit and integration tests
         run: |
           pwd
-          docker-compose run app python manage.py test -v2
+          docker-compose run app python manage.py test -v2 qfieldcloud
 

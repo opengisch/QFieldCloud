@@ -10,8 +10,7 @@ RUN apt-get update \
 COPY ./docker-qgis/requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt
 
-COPY ./docker-qgis/entrypoint.sh /
-COPY ./docker-qgis/qgis_caller.py /
+COPY ./docker-qgis/entrypoint.py /
 COPY ./docker-qgis/apply_deltas.py /
 COPY ./docker-qgis/schemas/deltafile_01.json /schemas/
 
