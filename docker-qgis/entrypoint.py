@@ -82,6 +82,7 @@ def _download_project_directory(projectid):
         filepath = path.relative_to(*path.parts[:2])
 
         dest_filepath = os.path.join(tmpdir, filepath)
+        os.makedirs(Path(dest_filepath).parent, exist_ok=True)
         bucket.download_file(obj.key, dest_filepath)
 
     return tmpdir
