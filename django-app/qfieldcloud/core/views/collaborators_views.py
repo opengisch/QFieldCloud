@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
@@ -11,10 +11,24 @@ from qfieldcloud.core.models import (
     Project, ProjectCollaborator)
 from qfieldcloud.core.serializers import (
     ProjectCollaboratorSerializer)
-from qfieldcloud.core.permissions import (
-    CollaboratorPermission)
+from qfieldcloud.core import permissions_utils
 
 User = get_user_model()
+
+
+class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        user = request.user
+        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        # TODO: check if exists or catch exception
+        project = Project.objects.get(id=projectid)
+
+        if request.method == 'GET':
+            return permissions_utils.can_list_collaborators(user, project)
+        if request.method == 'POST':
+            return permissions_utils.can_create_collaborators(user, project)
+        return False
 
 
 @method_decorator(
@@ -27,7 +41,7 @@ User = get_user_model()
         operation_id="Create collaborator",))
 class ListCreateCollaboratorsView(generics.ListCreateAPIView):
 
-    permission_classes = [CollaboratorPermission]
+    permission_classes = [ListCreateCollaboratorsViewPermissions]
     serializer_class = ProjectCollaboratorSerializer
 
     def get_queryset(self):
@@ -55,6 +69,26 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
             serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
+class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        user = request.user
+        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        collaborator_name = permissions_utils.get_param_from_request(request, 'username')
+
+        # TODO: check if exists or catch exception
+        project = Project.objects.get(id=projectid)
+        collaborator = User.objects.get(username=collaborator_name)
+
+        if request.method == 'GET':
+            return permissions_utils.can_get_collaborator_role(user, project, collaborator)
+        if request.method in ['PUT', 'PATCH']:
+            return permissions_utils.can_update_collaborator_role(user, project, collaborator)
+        if request.method in ['DELETE']:
+            return permissions_utils.can_delete_collaborator(user, project, collaborator)
+        return False
+
+
 @method_decorator(
     name='get', decorator=swagger_auto_schema(
         operation_description="Get the role of a collaborator",
@@ -73,7 +107,7 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
         operation_id="Delete collaborator",))
 class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
 
-    permission_classes = [CollaboratorPermission]
+    permission_classes = [GetUpdateDestroyCollaboratorViewPermissions]
     serializer_class = ProjectCollaboratorSerializer
 
     def get_object(self):

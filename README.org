@@ -14,6 +14,8 @@
    System documentation is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org][here]]
 
    Documentation about how QFieldCloud file's storage works is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/storage.org][here]]
+
+   Permissions documentation is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/permissions.org][here]]
 ** Development
 *** Launch a local instance
     Copy the example configuration files and update them to your desire

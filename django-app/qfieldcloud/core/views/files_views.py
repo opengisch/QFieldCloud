@@ -4,17 +4,31 @@ from pathlib import Path, PurePath
 from django.core.files.base import ContentFile
 from django.http import FileResponse
 
-from rest_framework import views, status
+from rest_framework import views, status, permissions
 from rest_framework.response import Response
 
 from qfieldcloud.core.models import Project
 from qfieldcloud.core import utils
+from qfieldcloud.core import permissions_utils
+
+
+class ListFilesViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        if 'projectid' not in request.parser_context['kwargs']:
+            return False
+
+        projectid = request.parser_context['kwargs']['projectid']
+        project = Project.objects.get(id=projectid)
+
+        return permissions_utils.can_list_files(request.user, project)
 
 
 class ListFilesView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
-    # TODO: permissions
+
+    permission_classes = [ListFilesViewPermissions]
 
     def get(self, request, projectid):
         try:
@@ -56,8 +70,30 @@ class ListFilesView(views.APIView):
         return Response(result_list)
 
 
+class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        if 'projectid' not in request.parser_context['kwargs']:
+            return False
+
+        projectid = request.parser_context['kwargs']['projectid']
+        # TODO: check if exists or catch exception
+        project = Project.objects.get(id=projectid)
+        user = request.user
+
+        if request.method == 'GET':
+            return permissions_utils.can_download_files(user, project)
+        if request.method == 'DELETE':
+            return permissions_utils.can_delete_files(user, project)
+        if request.method == 'POST':
+            return permissions_utils.can_upload_files(user, project)
+        return False
+
+
 class DownloadPushDeleteFileView(views.APIView):
-    # TODO: permissions
+    # TODO: swagger doc
+    # TODO: docstring
+    permission_classes = [DownloadPushDeleteFileViewPermissions]
 
     def get(self, request, projectid, filename):
         try:

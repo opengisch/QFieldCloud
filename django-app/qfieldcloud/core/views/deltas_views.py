@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
@@ -15,11 +15,24 @@ from drf_yasg.utils import swagger_auto_schema
 
 from qfieldcloud.core.models import (
     Project)
-from qfieldcloud.core.permissions import (
-    ProjectPermission)
-from qfieldcloud.core import utils
+from qfieldcloud.core import utils, permissions_utils
 
 User = get_user_model()
+
+
+class DeltaFilePermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        # TODO: check if exists
+        project = Project.objects.get(id=projectid)
+        user = request.user
+
+        if request.method == 'GET':
+            return permissions_utils.can_list_deltas(user, project)
+        if request.method == 'POST':
+            return permissions_utils.can_upload_deltas(user, project)
+        return False
 
 
 @method_decorator(
@@ -32,8 +45,7 @@ User = get_user_model()
         operation_id="Add deltafile",))
 class ListCreateDeltaFileView(views.APIView):
 
-    permission_classes = [IsAuthenticated, ProjectPermission]
-    # serializer_class = DeltaFileSerializer
+    permission_classes = [DeltaFilePermissions]
 
     def post(self, request, projectid):
 
@@ -120,6 +132,8 @@ class ListCreateDeltaFileView(views.APIView):
         operation_description="Get delta status",
         operation_id="Get delta status",))
 class GetDeltaView(views.APIView):
+
+    permission_classes = [DeltaFilePermissions]
 
     def get(self, request, projectid, deltafileid):
 

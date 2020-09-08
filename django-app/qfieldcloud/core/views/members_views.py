@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.permissions import IsAuthenticated
@@ -12,10 +12,25 @@ from qfieldcloud.core.models import (
     OrganizationMember, Organization)
 from qfieldcloud.core.serializers import (
     OrganizationMemberSerializer)
-from qfieldcloud.core.permissions import (
-    OrganizationPermission)
+from qfieldcloud.core import permissions_utils
 
 User = get_user_model()
+
+
+class ListCreateMembersViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        user = request.user
+        organization_name = permissions_utils.get_param_from_request(request, 'organization')
+
+        # TODO: check if exists or catch exception
+        organization = User.objects.get(username=organization_name)
+
+        if request.method == 'GET':
+            return permissions_utils.can_list_members(user, organization)
+        if request.method == 'POST':
+            return permissions_utils.can_create_members(user, organization)
+        return False
 
 
 @method_decorator(
@@ -28,7 +43,7 @@ User = get_user_model()
         operation_id="Create member",))
 class ListCreateMembersView(generics.ListCreateAPIView):
 
-    permission_classes = [IsAuthenticated, OrganizationPermission]
+    permission_classes = [ListCreateMembersViewPermissions]
     serializer_class = OrganizationMemberSerializer
 
     def get_queryset(self):
@@ -56,6 +71,26 @@ class ListCreateMembersView(generics.ListCreateAPIView):
             serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
+class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        user = request.user
+        organization_name = permissions_utils.get_param_from_request(request, 'organization')
+        member_name = permissions_utils.get_param_from_request(request, 'username')
+
+        # TODO: check if exists or catch exception
+        organization = Organization.objects.get(username=organization_name)
+        member = User.objects.get(username=member_name)
+
+        if request.method == 'GET':
+            return permissions_utils.can_get_member_role(user, organization, member)
+        if request.method in ['PUT', 'PATCH']:
+            return permissions_utils.can_update_member_role(user, organization, member)
+        if request.method in ['DELETE']:
+            return permissions_utils.can_delete_member_role(user, organization, member)
+        return False
+
+
 @method_decorator(
     name='get', decorator=swagger_auto_schema(
         operation_description="Get the role of a member of an organization",
@@ -74,7 +109,7 @@ class ListCreateMembersView(generics.ListCreateAPIView):
         operation_id="Delete member",))
 class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
 
-    permission_classes = [IsAuthenticated, OrganizationPermission]
+    permission_classes = [GetUpdateDestroyMemberViewPermissions]
     serializer_class = OrganizationMemberSerializer
 
     def get_object(self):

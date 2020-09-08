@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
@@ -13,10 +13,15 @@ from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     PublicInfoUserSerializer,
     OrganizationSerializer)
-from qfieldcloud.core.permissions import (
-    UserPermission)
+from qfieldcloud.core import permissions_utils
 
 User = get_user_model()
+
+
+class ListUsersViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        return permissions_utils.can_list_users_organizations(request.user)
 
 
 @method_decorator(
@@ -26,9 +31,26 @@ User = get_user_model()
 class ListUsersView(generics.ListAPIView):
 
     serializer_class = PublicInfoUserSerializer
+    permission_classes = [ListUsersViewPermissions]
 
     def get_queryset(self):
         return User.objects.all()
+
+
+class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+
+        username = permissions_utils.get_param_from_request(request, 'username')
+        # TODO: check if exists or catch exception
+        user = User.objects.get(username=username)
+
+        if request.method == 'GET':
+            # The queryset is already filtered by what the user can see
+            return True
+        if request.method in ['PUT', 'PATCH']:
+            return permissions_utils.can_update_user(request.user, user)
+        return False
 
 
 @method_decorator(
@@ -48,7 +70,7 @@ class ListUsersView(generics.ListAPIView):
 class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
     """Get or Update the authenticated user"""
 
-    permission_classes = [IsAuthenticated, UserPermission]
+    permission_classes = [RetrieveUpdateUserViewPermissions]
     serializer_class = CompleteUserSerializer
 
     def get_object(self):

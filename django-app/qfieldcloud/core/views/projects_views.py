@@ -5,19 +5,51 @@ from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.conf import settings
 
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from rest_framework.permissions import IsAuthenticated
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
+from qfieldcloud.core import permissions_utils
 from qfieldcloud.core.models import (
     Project, ProjectCollaborator)
 from qfieldcloud.core.serializers import (
     ProjectSerializer)
-from qfieldcloud.core import permissions
+
 
 User = get_user_model()
+
+
+class ProjectViewSetPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        if view.action == 'list':
+            # The queryset is already filtered by what the user can see
+            return True
+        user = request.user
+        owner = permissions_utils.get_param_from_request(request, 'owner')
+        if owner:
+            # TODO: check if exists or catch exception
+            owner_obj = User.objects.get(username=owner)
+        else:
+            # If the owner is not in the request, means that the owner
+            # should be the user that made the request
+            owner_obj = user
+
+        if view.action == 'create':
+            return permissions_utils.can_create_project(user, owner_obj)
+
+        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        project = Project.objects.get(id=projectid)
+
+        if view.action in ['update', 'partial_update', 'destroy']:
+            return permissions_utils.can_update_delete_project(user, project)
+        if view.action == 'retrieve':
+            return permissions_utils.can_get_project(user, project)
+
+        return False
+
 
 include_public_param = openapi.Parameter(
     'include-public', openapi.IN_QUERY,
@@ -55,6 +87,8 @@ include_public_param = openapi.Parameter(
 class ProjectViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProjectSerializer
+    lookup_url_kwarg = 'projectid'
+    permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
 
     def get_queryset(self):
         queryset = Project.objects.filter(owner=self.request.user) | \
@@ -69,32 +103,3 @@ class ProjectViewSet(viewsets.ModelViewSet):
             queryset |= Project.objects.filter(private=False)
 
         return queryset
-
-    def get_permissions(self):
-
-        permission_classes = []
-
-        if self.action in ['list']:
-            # The queryset is already filtered for what the user can see
-            permission_classes = [IsAuthenticated]
-        elif self.action in ['create']:
-            permission_classes = [
-                permissions.IsProjectOwner
-                | permissions.IsOrganizationAdmin]
-        elif self.action in ['retrieve']:
-            permission_classes = [
-                permissions.IsProjectOwner
-                | permissions.IsOrganizationAdmin
-                | permissions.IsOrganizationMember
-                | permissions.IsProjectCollaboratorAdmin
-                | permissions.IsProjectCollaboratorManager
-                | permissions.IsProjectCollaboratorEditor
-                | permissions.IsProjectCollaboratorReporter
-                | permissions.IsProjectCollaboratorReader]
-        elif self.action in ['update', 'partial_update', 'destroy']:
-            permission_classes = [
-                permissions.IsProjectOwner
-                | permissions.IsOrganizationAdmin
-                | permissions.IsProjectCollaboratorAdmin]
-
-        return [permission() for permission in permission_classes]

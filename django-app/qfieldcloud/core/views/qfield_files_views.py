@@ -7,18 +7,27 @@ from django.http import FileResponse
 from django.core.files.base import ContentFile
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, views, status
+from rest_framework import generics, views, status, permissions
 from rest_framework.response import Response
 
 from drf_yasg.utils import swagger_auto_schema
 
 from storages.utils import safe_join
 
-from qfieldcloud.core import utils
-from qfieldcloud.core.permissions import FilePermission
+from qfieldcloud.core import utils, permissions_utils
 
 from qfieldcloud.core.models import (
     Project)
+
+
+class ExportViewPermissions(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        # TODO: check if exists
+        project = Project.objects.get(id=projectid)
+        user = request.user
+        return permissions_utils.can_download_files(user, project)
 
 
 @method_decorator(
@@ -27,7 +36,7 @@ from qfieldcloud.core.models import (
         operation_id="Launch qfield export"))
 class ExportView(views.APIView):
 
-    permission_classes = [FilePermission]
+    permission_classes = [ExportViewPermissions]
 
     def get(self, request, projectid):
         # TODO:
@@ -59,6 +68,8 @@ class ExportView(views.APIView):
         operation_description="List QField project files",
         operation_id="List qfield project files"))
 class ListFilesView(views.APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, jobid):
         job = utils.get_job('export', str(jobid))
