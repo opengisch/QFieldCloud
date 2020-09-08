@@ -49,4 +49,25 @@
    | Update user's informations                                                    | 0 | 0 | 1 | - | - | - | - | - | 0 |  0 |  0 |
    | Delete user                                                                   | 0 | 0 | 1 | - | - | - | - | - | 0 |  0 |  0 |
    | Get API status                                                                | 1 | 1 | - | - | - | - | - | - | - |  - |  - |
-  
+** Roles
+*** ProjectCollaborator
+    A collaborator of an normal user project can only be reporter or
+    reader. Editor or manager can only be set to an organization's project.
+**** Roles
+    A higher role always include also the lowest ones
+
+    | Name     | Description                                                                                |
+    |----------+--------------------------------------------------------------------------------------------|
+    | admin    | The owner of a project is always admin of the project. He can add and remove collaborators |
+    | manager  | Can add or remove collaborators                                                            |
+    | editor   | Can edit data                                                                              |
+    | reporter | Can only insert data (no update nor delete). (Don't have to be a collaborator?)            |
+    | reader   | Can read data. (Don't have to be a collaborator?)                                          |
+*** OrganizationMember
+**** Roles
+    A higher role always include also the lowest ones
+
+    | Name    | Description                                                        |
+    |---------+--------------------------------------------------------------------|
+    | admin   | She can add and remove members and create project                  |
+    | member  | (difference compared to an other user is for billing reasons only) |
