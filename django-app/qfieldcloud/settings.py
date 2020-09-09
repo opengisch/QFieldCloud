@@ -193,3 +193,8 @@ RQ_QUEUES = {
         'DB': 0,
     },
 }
+
+LOGIN_URL = 'rest_framework:login'
+
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
