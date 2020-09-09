@@ -41,7 +41,6 @@ def _get_s3_bucket():
     AWS_STORAGE_BUCKET_NAME"""
 
     s3 = _get_s3_resource()
-    print(AWS_STORAGE_BUCKET_NAME)
     bucket = s3.Bucket(AWS_STORAGE_BUCKET_NAME)
     return bucket
 
@@ -100,21 +99,16 @@ def _download_delta_file(projectid, delta_file):
     return '/tmp/deltafile.json'
 
 
-# TODO: make a separate one for origina dir, cause I want to check better what I upload. e.g.
-# to avoid to reupload project.qgs or pictures...
-def _upload_project_directory(projectid, local_dir, storage_dir='export'):
+def _upload_project_directory(projectid, local_dir):
     """Upload the files in the local_dir (export directory) to the
     storage"""
 
     bucket = _get_s3_bucket()
 
-    export_prefix = '/'.join(['projects', projectid, storage_dir])
+    export_prefix = '/'.join(['projects', projectid, 'export'])
 
-    # Remove existing dir only if it is the export dir, not in the
-    # case of the files dir (for apply_delta)
-    if storage_dir == 'export':
-        # Remove existing export directory on the storage
-        bucket.objects.filter(Prefix=export_prefix).delete()
+    # Remove existing export directory on the storage
+    bucket.objects.filter(Prefix=export_prefix).delete()
 
     # Loop recursively in the local export directory
     for elem in Path(local_dir).rglob('*.*'):
@@ -129,6 +123,35 @@ def _upload_project_directory(projectid, local_dir, storage_dir='export'):
         key = '/'.join([export_prefix, str(elem.relative_to(*elem.parts[:4]))])
         metadata = {'sha256sum': sha256sum}
         bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
+
+
+def _upload_delta_modified_files(projectid, local_dir):
+    """Upload the files changed by apply delta to the files/ directory of
+    the storage, qgs project excluded"""
+
+    bucket = _get_s3_bucket()
+
+    files_prefix = '/'.join(['projects', projectid, 'files'])
+
+    # Loop recursively in the local files directory
+    for elem in Path(local_dir).rglob('*.*'):
+        # Don't upload .qgs~ and .qgz~ files
+        if str(elem).endswith('~'):
+            continue
+        if str(elem).endswith('qfieldcloudbackup'):
+            continue
+
+        # Calculate sha256sum
+        with open(elem, 'rb') as e:
+            sha256sum = _get_sha256sum(e)
+
+        # Create the key
+        key = '/'.join([files_prefix, str(elem.relative_to(*elem.parts[:4]))])
+        metadata = {'sha256sum': sha256sum}
+
+        # Check if the file is different on the storage
+        if not bucket.Object(key).metadata.get('Sha256sum', None) == sha256sum:
+            bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
 def _call_qfieldsync_exporter(project_filepath, export_dir):
@@ -197,8 +220,8 @@ def _apply_delta(args):
               'delta_file': deltafile,
               'inverse': False})
 
-    _upload_project_directory(
-        projectid, os.path.join(tmpdir, 'files'), 'files')
+    _upload_delta_modified_files(
+        projectid, os.path.join(tmpdir, 'files'))
 
     if return_code == 0:
         status = 'STATUS_APPLIED'
@@ -239,5 +262,4 @@ if __name__ == '__main__':
     parser_delta.set_defaults(func=_apply_delta)
 
     args = parser.parse_args()
-    print(args)
     args.func(args)
