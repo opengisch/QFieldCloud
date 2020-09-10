@@ -27,8 +27,8 @@ class DeltaTestCase(APITestCase):
 
     def setUp(self):
         # Check if orchestrator is running otherwise skip test
-        if not utils.orchestrator_is_running():
-            self.skipTest('The orchestrator is not running correctly')
+        if not utils.redis_is_running():
+            self.skipTest('Redis is not running correctly')
 
         # Create a user
         self.user1 = User.objects.create_user(

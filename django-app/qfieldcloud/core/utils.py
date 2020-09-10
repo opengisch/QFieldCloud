@@ -2,6 +2,7 @@ import socket
 import struct
 import requests
 import django_rq
+from rq import Queue
 import hashlib
 import boto3
 from botocore.errorfactory import ClientError
@@ -41,6 +42,16 @@ def apply_delta(projectid, project_file, delta_file, jobid):
     return job
 
 
+def check_orchestrator_status():
+    """Call the orchestrator to check if he's able to launch a QGIS
+    container"""
+
+    queue = django_rq.get_queue('export')
+    job = queue.enqueue('orchestrator.check_status')
+
+    return job
+
+
 def get_job(queue, jobid):
     """Get the job from the specified queue or None"""
 
@@ -48,7 +59,7 @@ def get_job(queue, jobid):
     return queue.fetch_job(jobid)
 
 
-def orchestrator_is_running():
+def redis_is_running():
     try:
         connection = Redis('redis', 6379)
         connection.set('foo', 'bar')

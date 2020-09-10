@@ -1,26 +1,14 @@
 import time
-
-from django.utils.decorators import method_decorator
 from django.conf import settings
-
-from rest_framework import views, status
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-
-from drf_yasg.utils import swagger_auto_schema
+from django.core.management.base import BaseCommand
 
 from qfieldcloud.core import utils
 
 
-@method_decorator(
-    name='get', decorator=swagger_auto_schema(
-        operation_description="Get the current status of the APIs",
-        operation_id="Get status",))
-class APIStatusView(views.APIView):
-    permission_classes = [AllowAny]
+class Command(BaseCommand):
+    help = 'Check qfieldcloud status'
 
-    def get(self, request):
-
+    def handle(self, *args, **options):
         results = {}
 
         results['redis'] = 'ok'
@@ -55,6 +43,9 @@ class APIStatusView(views.APIView):
 
         for result in results:
             if not results[result] in ['slow', 'ok']:
-                return Response(results, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                self.stdout.write(self.style.ERROR(
+                    "Something doesn't work correctly: {}".format(results)))
+                return
 
-        return Response(results, status=status.HTTP_200_OK)
+        self.stdout.write(self.style.SUCCESS(
+            "Everything seems to work properly: {}".format(results)))

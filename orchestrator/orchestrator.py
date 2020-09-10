@@ -55,3 +55,27 @@ def apply_delta(projectid, project_file, delta_file):
     container.stop()
 
     return exit_code, output.decode('utf-8')
+
+
+def check_status():
+    """Launch a container to check that everything is working
+    correctly."""
+
+    client = docker.from_env()
+    container = client.containers.create(
+        'qfieldcloud_qgis',
+        environment=load_env_file(),
+        auto_remove=True)
+
+    container.start()
+    container.attach(logs=True)
+
+    # TODO: create an actual command to start qgis and check some features
+    # container_command = 'xvfb-run python3 entrypoint.py apply-delta {} {} {}'.format(
+    #     projectid, project_file, delta_file)
+    container_command = 'echo QGIS container is running'
+
+    exit_code, output = container.exec_run(container_command)
+    container.stop()
+
+    return exit_code, output.decode('utf-8')

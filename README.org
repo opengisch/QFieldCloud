@@ -40,13 +40,19 @@
     To run django commands on the docker, enter in the containers bash
     shell or place =docker-compose run app= before the command, e.g.:
     #+begin_src sh
-      docker-compose run app python manage.py runserver
+      docker-compose exec app python manage.py ...
     #+end_src
 
     To lauch the RQ (Redis Queue) workers that runs the QGIS containers jobs:
     #+begin_src sh
       cd orchestrator
       pipenv run rq worker export delta
+    #+end_src
+
+    You can check if everything seems to work correctly using the
+    =status= command:
+    #+begin_src sh
+      docker-compose exec app python manage.py status
     #+end_src
 *** Tests
     To run all the unit and functional tests (on a throwaway test
