@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-from qfieldcloud.core import permissions_utils
+from qfieldcloud.core import permissions_utils, utils
 from qfieldcloud.core.models import (
     Project, ProjectCollaborator)
 from qfieldcloud.core.serializers import (
@@ -103,3 +103,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
             queryset |= Project.objects.filter(private=False)
 
         return queryset
+
+    def destroy(self, request, projectid):
+        # Delete files from storage
+        bucket = utils.get_s3_bucket()
+        prefix = utils.safe_join('projects/{}/'.format(projectid))
+        bucket.objects.filter(Prefix=prefix).delete()
+
+        return super().destroy(request, projectid)

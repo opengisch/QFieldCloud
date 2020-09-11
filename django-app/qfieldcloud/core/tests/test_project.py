@@ -274,36 +274,18 @@ class ProjectTestCase(APITestCase):
         collaborators = ProjectCollaborator.objects.all()
         self.assertEqual(len(collaborators), 0)
 
-    # def test_delete_project(self):
-    #     # Create a project of user1
-    #     project1 = Project.objects.create(
-    #         name='project11',
-    #         private=True,
-    #         owner=self.user1)
+    def test_delete_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-    #     # Check if the project actually exists
-    #     self.assertTrue(Project.objects.filter(id=project1.id).exists())
+        # Create a project of user1
+        project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
 
-    #     # Add a file to the project
-    #     f = open(testdata_path('file.txt'), 'rb')
-    #     file_obj = File.objects.create(
-    #         project=project1,
-    #         original_path='foo/bar/file.txt')
+        # Delete the project
+        response = self.client.delete('/api/v1/projects/{}/'.format(project1.id))
+        self.assertTrue(status.is_success(response.status_code))
 
-    #     FileVersion.objects.create(
-    #         file=file_obj,
-    #         stored_file=django_file(
-    #             f,
-    #             name=os.path.join(
-    #                 'foo/bar',
-    #                 os.path.basename(f.name))))
-
-    #     # Delete the project
-    #     self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
-    #     response = self.client.delete(
-    #         '/api/v1/projects/{}/'.format(project1.id))
-
-    #     self.assertTrue(status.is_success(response.status_code))
-
-    #     # The project should not exist anymore
-    #     self.assertFalse(Project.objects.filter(id=project1.id).exists())
+        # The project should not exist anymore
+        self.assertFalse(Project.objects.filter(id=project1.id).exists())
