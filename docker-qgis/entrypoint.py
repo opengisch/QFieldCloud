@@ -10,7 +10,8 @@ from pathlib import PurePath, Path
 
 import boto3
 
-from qgis.core import QgsProject, QgsRectangle, QgsOfflineEditing
+from qgis.core import (
+    QgsProject, QgsOfflineEditing, QgsVectorLayer, QgsMapSettings)
 from qgis.testing import start_app
 
 from qfieldsync.core.offline_converter import OfflineConverter
@@ -35,6 +36,7 @@ def _get_s3_resource():
     )
 
     return session.resource('s3', endpoint_url=AWS_S3_ENDPOINT_URL)
+
 
 def _get_s3_bucket():
     """Get S3 Bucket according to the env variable
@@ -151,7 +153,8 @@ def _upload_delta_modified_files(projectid, local_dir):
 
         # Check if the file is different on the storage
         if not bucket.Object(key).metadata.get('Sha256sum', None) == sha256sum:
-            bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
+            bucket.upload_file(
+                str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
 def _call_qfieldsync_exporter(project_filepath, export_dir):
@@ -163,10 +166,25 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
         raise FileNotFoundError(project_filepath)
 
     if not project.read(project_filepath):
-        raise Exception("Unable to open file with QGIS: {}".format(project_filepath))
+        raise Exception(
+            "Unable to open file with QGIS: {}".format(project_filepath))
 
-    # TODO: get extent from the qfieldsync project settings
-    extent = QgsRectangle()
+    # Calculate the project extent
+    project = QgsProject.instance()
+    layers = project.mapLayers()
+    mapsettings = QgsMapSettings()
+
+    # TODO: Check if the extent have been defined in QFieldSync
+    # TODO: Do I need to really exclude all the non-vector layers
+    # from the extent?
+
+    # Only vector layers
+    mapsettings.setLayers(
+        [layers[key] for key in layers if type(layers[key]) == QgsVectorLayer]
+    )
+
+    extent = mapsettings.fullExtent()
+
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project, export_dir, extent, offline_editing)
