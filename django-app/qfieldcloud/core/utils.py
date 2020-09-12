@@ -1,21 +1,15 @@
-import socket
-import struct
-import requests
+
 import django_rq
-from rq import Queue
 import hashlib
 import boto3
 from botocore.errorfactory import ClientError
 import posixpath
-from pathlib import Path, PurePath
+from pathlib import PurePath
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
 from django.conf import settings
 
 from redis import Redis, exceptions
-
-from rest_framework import status
 
 
 def export_project(projectid, project_file):
@@ -190,7 +184,8 @@ def check_s3_key(key):
 
     client = get_s3_client()
     try:
-        head = client.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
+        head = client.head_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
     except ClientError as e:
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
             return None

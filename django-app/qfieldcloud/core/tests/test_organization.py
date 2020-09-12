@@ -1,4 +1,3 @@
-from unittest import skip
 
 from django.contrib.auth import get_user_model
 

@@ -1,18 +1,14 @@
-import os
-import boto3
-from pathlib import Path, PurePath
 
-from django.conf import settings
+from pathlib import PurePath
+
 from django.http import FileResponse
 from django.core.files.base import ContentFile
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, views, status, permissions
+from rest_framework import views, status, permissions
 from rest_framework.response import Response
 
 from drf_yasg.utils import swagger_auto_schema
-
-from storages.utils import safe_join
 
 from qfieldcloud.core import utils, permissions_utils
 
@@ -23,7 +19,8 @@ from qfieldcloud.core.models import (
 class ExportViewPermissions(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        projectid = permissions_utils.get_param_from_request(
+            request, 'projectid')
         # TODO: check if exists
         project = Project.objects.get(id=projectid)
         user = request.user

@@ -1,14 +1,9 @@
-import os
-import shutil
+
 import filecmp
 import tempfile
-import unittest
 import time
 
-from django.core.files import File as django_file
 from django.contrib.auth import get_user_model
-from django.conf import settings
-from django.core.files.storage import default_storage
 
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -172,7 +167,8 @@ class QgisFileTestCase(APITransactionTestCase):
         file_path = testdata_path('file.txt')
         # Push a file
         response = self.client.post(
-            '/api/v1/files/{}/aaa bbb/project qgis 1.2.qgs/'.format(self.project1.id),
+            '/api/v1/files/{}/aaa bbb/project qgis 1.2.qgs/'.format(
+                self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -223,10 +219,12 @@ class QgisFileTestCase(APITransactionTestCase):
             '/api/v1/files/{}/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
 
-        versions = sorted(response.json()[0]['versions'], key=lambda k: k['last_modified'])
+        versions = sorted(
+            response.json()[0]['versions'], key=lambda k: k['last_modified'])
 
         self.assertEqual(len(versions), 2)
-        self.assertNotEqual(versions[0]['last_modified'], versions[1]['last_modified'])
+        self.assertNotEqual(
+            versions[0]['last_modified'], versions[1]['last_modified'])
 
         self.assertEqual(
             versions[0]['sha256'],
@@ -280,15 +278,18 @@ class QgisFileTestCase(APITransactionTestCase):
             for _ in response.streaming_content:
                 f.write(_)
 
-        self.assertFalse(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file2.txt')))
+        self.assertFalse(
+            filecmp.cmp(temp_file.name, testdata_path('file.txt')))
+        self.assertTrue(
+            filecmp.cmp(temp_file.name, testdata_path('file2.txt')))
 
         # List files
         response = self.client.get(
             '/api/v1/files/{}/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
 
-        versions = sorted(response.json()[0]['versions'], key=lambda k: k['last_modified'])
+        versions = sorted(
+            response.json()[0]['versions'], key=lambda k: k['last_modified'])
 
         # Pull the oldest version
         response = self.client.get(
@@ -322,7 +323,8 @@ class QgisFileTestCase(APITransactionTestCase):
             for _ in response.streaming_content:
                 f.write(_)
 
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file2.txt')))
+        self.assertTrue(
+            filecmp.cmp(temp_file.name, testdata_path('file2.txt')))
 
     def test_push_delete_file(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

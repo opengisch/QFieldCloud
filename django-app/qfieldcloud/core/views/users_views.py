@@ -3,7 +3,6 @@ from django.utils.decorators import method_decorator
 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 
 from drf_yasg.utils import swagger_auto_schema
 
@@ -41,7 +40,8 @@ class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
 
     def has_permission(self, request, view):
 
-        username = permissions_utils.get_param_from_request(request, 'username')
+        username = permissions_utils.get_param_from_request(
+            request, 'username')
         # TODO: check if exists or catch exception
         user = User.objects.get(username=username)
 

@@ -4,7 +4,6 @@ from django.utils.decorators import method_decorator
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
-from rest_framework.permissions import IsAuthenticated
 
 from drf_yasg.utils import swagger_auto_schema
 
@@ -21,7 +20,8 @@ class ListCreateMembersViewPermissions(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        organization_name = permissions_utils.get_param_from_request(request, 'organization')
+        organization_name = permissions_utils.get_param_from_request(
+            request, 'organization')
 
         # TODO: check if exists or catch exception
         organization = User.objects.get(username=organization_name)
@@ -75,19 +75,24 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        organization_name = permissions_utils.get_param_from_request(request, 'organization')
-        member_name = permissions_utils.get_param_from_request(request, 'username')
+        organization_name = permissions_utils.get_param_from_request(
+            request, 'organization')
+        member_name = permissions_utils.get_param_from_request(
+            request, 'username')
 
         # TODO: check if exists or catch exception
         organization = Organization.objects.get(username=organization_name)
         member = User.objects.get(username=member_name)
 
         if request.method == 'GET':
-            return permissions_utils.can_get_member_role(user, organization, member)
+            return permissions_utils.can_get_member_role(
+                user, organization, member)
         if request.method in ['PUT', 'PATCH']:
-            return permissions_utils.can_update_member_role(user, organization, member)
+            return permissions_utils.can_update_member_role(
+                user, organization, member)
         if request.method in ['DELETE']:
-            return permissions_utils.can_delete_member_role(user, organization, member)
+            return permissions_utils.can_delete_member_role(
+                user, organization, member)
         return False
 
 

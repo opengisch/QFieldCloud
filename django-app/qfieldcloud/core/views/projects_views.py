@@ -1,12 +1,8 @@
-import os
-import shutil
 
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
-from django.conf import settings
 
 from rest_framework import viewsets, permissions
-from rest_framework.permissions import IsAuthenticated
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -40,7 +36,8 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         if view.action == 'create':
             return permissions_utils.can_create_project(user, owner_obj)
 
-        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        projectid = permissions_utils.get_param_from_request(
+            request, 'projectid')
         project = Project.objects.get(id=projectid)
 
         if view.action in ['update', 'partial_update', 'destroy']:
@@ -88,7 +85,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProjectSerializer
     lookup_url_kwarg = 'projectid'
-    permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
+    permission_classes = [ProjectViewSetPermissions]
 
     def get_queryset(self):
         queryset = Project.objects.filter(owner=self.request.user) | \

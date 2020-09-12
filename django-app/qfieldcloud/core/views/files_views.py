@@ -1,6 +1,5 @@
 
-import datetime
-from pathlib import Path, PurePath
+from pathlib import PurePath
 from django.core.files.base import ContentFile
 from django.http import FileResponse
 
@@ -50,7 +49,8 @@ class ListFilesView(views.APIView):
             head = version.head()
             path = PurePath(version.key)
             filename = str(path.relative_to(*path.parts[:3]))
-            last_modified = version.last_modified.strftime('%d.%m.%Y %H:%M:%S %Z')
+            last_modified = version.last_modified.strftime(
+                '%d.%m.%Y %H:%M:%S %Z')
 
             if version.is_latest:
                 files[version.key]['name'] = filename
@@ -150,7 +150,8 @@ class DownloadPushDeleteFileView(views.APIView):
         key = utils.safe_join('projects/{}/files/'.format(projectid), filename)
         metadata = {'Sha256sum': sha256sum}
 
-        bucket.upload_fileobj(request_file.open(), key, ExtraArgs={"Metadata": metadata})
+        bucket.upload_fileobj(
+            request_file.open(), key, ExtraArgs={"Metadata": metadata})
 
         return Response(status=status.HTTP_201_CREATED)
 

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 
 from qfieldcloud.core.models import (
-    Project, ProjectCollaborator, OrganizationMember,
+    ProjectCollaborator, OrganizationMember,
     Organization)
 
 User = get_user_model()

@@ -13,11 +13,13 @@ User = get_user_model()
 class UserTestCase(APITestCase):
     def setUp(self):
         # Create a user
-        self.user1 = User.objects.create_user(username='user1', password='abc123')
+        self.user1 = User.objects.create_user(
+            username='user1', password='abc123')
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
 
         # Create a second user
-        self.user2 = User.objects.create_user(username='user2', password='abc123')
+        self.user2 = User.objects.create_user(
+            username='user2', password='abc123')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
         # Create an organization
@@ -86,7 +88,8 @@ class UserTestCase(APITestCase):
 
     def test_login_wrong_password(self):
         response = self.client.post(
-            '/api/v1/auth/login/', {"username": "user1", "password": "wrong_password"}
+            '/api/v1/auth/login/',
+            {"username": "user1", "password": "wrong_password"}
         )
         self.assertTrue(status.is_client_error(response.status_code))
         self.assertFalse('token' in response.data)
@@ -170,7 +173,9 @@ class UserTestCase(APITestCase):
 
         response = self.client.patch(
             '/api/v1/users/user2/',
-            {'first_name': 'Sasha', 'last_name': 'Grey', 'email': 'sasha@grey.org'},
+            {'first_name': 'Sasha',
+             'last_name': 'Grey',
+             'email': 'sasha@grey.org'},
         )
 
         self.assertEqual(response.status_code, 403)

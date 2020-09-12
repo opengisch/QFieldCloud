@@ -1,13 +1,8 @@
 import os
-import requests
 import json
-import shutil
-import unittest
 import tempfile
 import time
 
-from django.core.files import File as django_file
-from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from rest_framework import status
@@ -61,7 +56,8 @@ class DeltaTestCase(APITestCase):
         # Verify the original geojson file
         with open(testdata_path('delta/points.geojson')) as f:
             points_geojson = json.load(f)
-            features = sorted(points_geojson['features'], key=lambda k: k['id'])
+            features = sorted(
+                points_geojson['features'], key=lambda k: k['id'])
             self.assertEqual(1, features[0]['properties']['int'])
 
         # Add files to the project
@@ -96,7 +92,8 @@ class DeltaTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Push a deltafile
-        delta_file = testdata_path('delta/deltas/singlelayer_singledelta2.json')
+        delta_file = testdata_path(
+            'delta/deltas/singlelayer_singledelta2.json')
         response = self.client.post(
             '/api/v1/deltas/{}/'.format(self.project1.id),
             {
@@ -132,10 +129,12 @@ class DeltaTestCase(APITestCase):
                     for chunk in response.streaming_content:
                         f.write(chunk)
 
-                # The geojson has been updated with the changes in the delta file
+                # The geojson has been updated with the changes in the
+                # delta file
                 with open(local_file) as f:
                     points_geojson = json.load(f)
-                    features = sorted(points_geojson['features'], key=lambda k: k['id'])
+                    features = sorted(
+                        points_geojson['features'], key=lambda k: k['id'])
                     self.assertEqual(666, features[0]['properties']['int'])
                     return
 
@@ -324,7 +323,8 @@ class DeltaTestCase(APITestCase):
         # Verify the original geojson file
         with open(testdata_path('delta/points.geojson')) as f:
             points_geojson = json.load(f)
-            features = sorted(points_geojson['features'], key=lambda k: k['id'])
+            features = sorted(
+                points_geojson['features'], key=lambda k: k['id'])
             self.assertEqual(1, features[0]['properties']['int'])
 
         # Add files to the project
@@ -394,10 +394,12 @@ class DeltaTestCase(APITestCase):
                     for chunk in response.streaming_content:
                         f.write(chunk)
 
-                # The geojson has been updated with the changes in the delta file
+                # The geojson has been updated with the changes in the
+                # delta file
                 with open(local_file) as f:
                     points_geojson = json.load(f)
-                    features = sorted(points_geojson['features'], key=lambda k: k['id'])
+                    features = sorted(
+                        points_geojson['features'], key=lambda k: k['id'])
                     self.assertEqual(666, features[0]['properties']['int'])
                     return
             elif response.json()['status'] == 'STATUS_NOT_APPLIED':
@@ -457,7 +459,8 @@ class DeltaTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get('/api/v1/deltas/{}/'.format(self.project1.id))
+        response = self.client.get(
+            '/api/v1/deltas/{}/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
         json = response.json()
         json = sorted(json, key=lambda k: k['id'])

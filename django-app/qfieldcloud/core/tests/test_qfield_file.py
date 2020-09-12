@@ -1,24 +1,15 @@
 import os
-import shutil
-import filecmp
 import tempfile
-import requests
-import uuid
-import unittest
 import time
 
-from django.core.files import File as django_file
 from django.contrib.auth import get_user_model
-from django.conf import settings
 
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 from rest_framework.authtoken.models import Token
 
-from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project
 from .utils import testdata_path
-from qfieldcloud.core.utils import export_project
 
 User = get_user_model()
 
@@ -238,7 +229,8 @@ class QfieldFileTestCase(APITransactionTestCase):
                 '/api/v1/qfield-files/export/{}/'.format(jobid),
             )
             if response.json()['status'] == 'qgis_error':
-                self.assertIn('Unable to open file with QGIS', response.json()['output'])
+                self.assertIn(
+                    'Unable to open file with QGIS', response.json()['output'])
                 return
 
         self.fail("Worker didn't finish")

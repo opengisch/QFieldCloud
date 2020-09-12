@@ -1,15 +1,12 @@
-import os
+
 import json
-from pathlib import Path, PurePath
-import uuid
+from pathlib import PurePath
 
 from django.contrib.auth import get_user_model
-from django.conf import settings
 from django.utils.decorators import method_decorator
 
-from rest_framework import generics, status, views, permissions
+from rest_framework import status, views, permissions
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 
 from drf_yasg.utils import swagger_auto_schema
 
@@ -23,7 +20,8 @@ User = get_user_model()
 class DeltaFilePermissions(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        projectid = permissions_utils.get_param_from_request(request, 'projectid')
+        projectid = permissions_utils.get_param_from_request(
+            request, 'projectid')
         # TODO: check if exists
         project = Project.objects.get(id=projectid)
         user = request.user
@@ -70,7 +68,8 @@ class ListCreateDeltaFileView(views.APIView):
 
         deltafileid = delta_json['id']
         sha256sum = utils.get_sha256(request_file)
-        key = utils.safe_join('projects/{}/deltas/'.format(projectid), deltafileid)
+        key = utils.safe_join(
+            'projects/{}/deltas/'.format(projectid), deltafileid)
 
         # Check if deltafile is already present
         on_storage_sha = utils.check_s3_key(key)
@@ -86,7 +85,8 @@ class ListCreateDeltaFileView(views.APIView):
         bucket = utils.get_s3_bucket()
         metadata = {'Sha256sum': sha256sum}
 
-        bucket.upload_fileobj(request_file.open(), key, ExtraArgs={"Metadata": metadata})
+        bucket.upload_fileobj(
+            request_file.open(), key, ExtraArgs={"Metadata": metadata})
 
         project_file = utils.get_qgis_project_file(projectid)
 
@@ -114,7 +114,8 @@ class ListCreateDeltaFileView(views.APIView):
         for delta in bucket.objects.filter(Prefix=prefix):
             path = PurePath(delta.key)
             filename = str(path.relative_to(*path.parts[:3]))
-            last_modified = delta.last_modified.strftime('%d.%m.%Y %H:%M:%S %Z')
+            last_modified = delta.last_modified.strftime(
+                '%d.%m.%Y %H:%M:%S %Z')
             sha256sum = delta.Object().metadata['Sha256sum']
 
             deltas.append({
@@ -138,7 +139,8 @@ class GetDeltaView(views.APIView):
     def get(self, request, projectid, deltafileid):
 
         bucket = utils.get_s3_bucket()
-        key = utils.safe_join('projects/{}/deltas/'.format(projectid), str(deltafileid))
+        key = utils.safe_join(
+            'projects/{}/deltas/'.format(projectid), str(deltafileid))
 
         obj = bucket.Object(key)
         status = obj.metadata.get('Status', None)
@@ -148,8 +150,9 @@ class GetDeltaView(views.APIView):
         last_modified = obj.last_modified.strftime('%d.%m.%Y %H:%M:%S %Z')
         sha256sum = obj.metadata['Sha256sum']
 
-        # If the status is not stored as file's metadata, means that the deltafile
-        # has not been applied yet, so we look at the job queue for the status
+        # If the status is not stored as file's metadata, means that
+        # the deltafile has not been applied yet, so we look at the
+        # job queue for the status
         if status is None:
             job = utils.get_job('delta', str(deltafileid))
             if job is not None:

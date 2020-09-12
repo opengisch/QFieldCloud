@@ -1,16 +1,10 @@
-import os
 
-from unittest import skip
-
-from django.core.files import File as django_file
-from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
 
-from qfieldcloud.core.tests.utils import testdata_path
 from qfieldcloud.core.models import (
     Project, ProjectCollaborator)
 
@@ -284,7 +278,8 @@ class ProjectTestCase(APITestCase):
             owner=self.user1)
 
         # Delete the project
-        response = self.client.delete('/api/v1/projects/{}/'.format(project1.id))
+        response = self.client.delete(
+            '/api/v1/projects/{}/'.format(project1.id))
         self.assertTrue(status.is_success(response.status_code))
 
         # The project should not exist anymore

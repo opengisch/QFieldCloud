@@ -1,4 +1,3 @@
-import unittest
 
 from django.contrib.auth import get_user_model
 
@@ -143,5 +142,6 @@ class PermissionTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2.key)
 
         # List files
-        response = self.client.get('/api/v1/files/{}/'.format(self.project1.id))
+        response = self.client.get(
+            '/api/v1/files/{}/'.format(self.project1.id))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

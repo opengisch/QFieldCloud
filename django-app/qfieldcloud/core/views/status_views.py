@@ -55,6 +55,7 @@ class APIStatusView(views.APIView):
 
         for result in results:
             if not results[result] in ['slow', 'ok']:
-                return Response(results, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                return Response(
+                    results, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         return Response(results, status=status.HTTP_200_OK)
