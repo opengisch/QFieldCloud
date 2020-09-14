@@ -197,6 +197,7 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
         deltas = load_delta_file(opts)
         has_conflict = apply_deltas(project, deltas, inverse=opts['inverse'])
 
+        project.clear()
         if has_conflict:
             logger.info('Successfully applied {} deltas with some conflicts'.format(len(deltas.deltas)))
             # exit(1)

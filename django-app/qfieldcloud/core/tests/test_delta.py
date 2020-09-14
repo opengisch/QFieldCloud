@@ -475,3 +475,79 @@ class DeltaTestCase(APITestCase):
         self.assertEqual(
             json[0]['sha256'],
             'ceb6200060f7e22d278f8e2414a09fd78aae45859db24a5519086147747f64a8')
+
+    def test_apply_delta_gpkg(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file_path = testdata_path('delta/points.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/points.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/polygons.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/polygons.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/project_gpkg.qgz')
+        response = self.client.post(
+            '/api/v1/files/{}/project_gpkg.qgz/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Push a deltafile
+        delta_file = testdata_path(
+            'delta/deltas/singlelayer_singledelta_gpkg.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        jobid = response.json()['jobid']
+
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
+            )
+            if response.json()['status'] == 'STATUS_APPLIED':
+
+                # Download the gpkg file
+                response = self.client.get(
+                    '/api/v1/files/{}/points.gpkg/'.format(
+                        self.project1.id),
+                )
+                self.assertTrue(status.is_success(response.status_code))
+
+                temp_dir = tempfile.mkdtemp()
+                local_file = os.path.join(temp_dir, 'points.gpkg')
+
+                with open(local_file, 'wb') as f:
+                    for chunk in response.streaming_content:
+                        f.write(chunk)
+
+                # TODO: actually check the gpkg content
+                return
+
+        self.fail("Worker didn't finish")
