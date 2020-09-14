@@ -279,7 +279,7 @@ def delta_file_args_loader(args: DeltaOptions) -> Optional[DeltaFile]:
         return None
 
     obj = args['delta_contents']
-    get_json_schema_validator().validate(obj)
+    #get_json_schema_validator().validate(obj)
     delta_file = DeltaFile(obj['id'], obj['project'], obj['version'], obj['deltas'], obj['files'])
 
     return delta_file
@@ -302,7 +302,7 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
 
     with delta_file_path.open('r') as f:
         obj = json.load(f)
-        get_json_schema_validator().validate(obj)
+        #get_json_schema_validator().validate(obj)
         delta_file = DeltaFile(obj['id'], obj['project'], obj['version'], obj['deltas'], obj['files'])
 
     return delta_file
