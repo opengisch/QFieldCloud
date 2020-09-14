@@ -150,6 +150,7 @@ class GetDeltaView(views.APIView):
         last_modified = obj.last_modified.strftime('%d.%m.%Y %H:%M:%S %Z')
         sha256sum = obj.metadata['Sha256sum']
 
+        output = None
         # If the status is not stored as file's metadata, means that
         # the deltafile has not been applied yet, so we look at the
         # job queue for the status
@@ -162,7 +163,8 @@ class GetDeltaView(views.APIView):
                 elif job_status in ['queued', 'deferred']:
                     status = 'STATUS_PENDING'
                 else:
-                    status = 'STATUS_ERROR: {}'.format(job_status)
+                    status = 'STATUS_ERROR'
+                    output = job.result[1]
 
         result = {
             'id': filename,
@@ -171,5 +173,8 @@ class GetDeltaView(views.APIView):
             'sha256': sha256sum,
             'status': status,
         }
+
+        if output:
+            result['output'] = output
 
         return Response(result)
