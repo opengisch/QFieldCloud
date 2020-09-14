@@ -170,7 +170,7 @@ def upload_files(token, project_id, local_dir, filter_glob, recursive):
     middle = '**' if recursive else ''
     file_names = glob(os.path.join(local_dir, middle, filter_glob), recursive=recursive)
     # upload the QGIS project file at the end
-    file_names.sort(key=lambda s: Path(s).suffix in ('.qgs', '.qgz') )
+    file_names.sort(key=lambda s: Path(s).suffix in ('.qgs', '.qgz'))
 
     for file_name in file_names:
         local_path = Path(file_name)
@@ -184,21 +184,20 @@ def upload_files(token, project_id, local_dir, filter_glob, recursive):
             'Authorization': 'token {}'.format(token),
         }
 
-        with open(local_path, 'rb')  as local_file:
-            files = {'file': local_file}
+        files = {'file': file_name}
 
-            response = requests.post(
-                url,  
-                headers=headers,
-                files=files,
-            )
+        response = requests.post(
+            url,
+            headers=headers,
+            files=files,
+        )
 
-            try:
-                response.raise_for_status()
-                print('File "{}" uploaded'.format(remote_path))
-            except requests.HTTPError:
-                print('Error uploading "{}": {}'.format(remote_path, response))
-                print(response.text)
+        try:
+            response.raise_for_status()
+            print('File "{}" uploaded'.format(remote_path))
+        except requests.HTTPError:
+            print('Error uploading "{}": {}'.format(remote_path, response))
+            print(response.text)
 
 
 @cli.command()
