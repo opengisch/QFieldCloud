@@ -457,11 +457,12 @@ def export(token, project_id, local_dir):
 
 @cli.command()
 @click.argument('deltafile_id')
+@click.argument('project_id')
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
-def delta_status(token, deltafile_id):
+def delta_status(token, project_id, deltafile_id):
     """Delta status"""
 
-    url = BASE_URL + 'delta-status/' + deltafile_id + '/'
+    url = BASE_URL + 'deltas/' + project_id + '/' + deltafile_id + '/'
     headers = {'Authorization': 'token {}'.format(token)}
 
     response = requests.get(
