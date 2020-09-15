@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: ./docker-qgis/Dockerfile
       args:
-        QGIS_VERSION: final-3_10_3
+        QGIS_VERSION: latest
     tty: true
     command: bash -c "echo QGIS builded"
 
