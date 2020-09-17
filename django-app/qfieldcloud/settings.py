@@ -198,3 +198,11 @@ LOGIN_URL = 'rest_framework:login'
 
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
+
+
+# Don't intercept request bigger than 1MB
+def silky_intercept(request):
+    return int(request.META.get('CONTENT_LENGTH', 0)) <= 1048576
+
+
+SILKY_INTERCEPT_FUNC = silky_intercept

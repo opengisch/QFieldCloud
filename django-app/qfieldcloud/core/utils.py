@@ -6,7 +6,8 @@ from botocore.errorfactory import ClientError
 import posixpath
 from pathlib import PurePath
 
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import (
+    InMemoryUploadedFile, TemporaryUploadedFile)
 from django.conf import settings
 
 from redis import Redis, exceptions
@@ -100,8 +101,7 @@ def get_s3_client():
 
 def get_sha256(file):
     """Return the sha256 hash of the file"""
-
-    if type(file) is InMemoryUploadedFile:
+    if type(file) in [InMemoryUploadedFile, TemporaryUploadedFile]:
         return _get_sha256_memory_file(file)
     else:
         return _get_sha256_file(file)
@@ -114,6 +114,7 @@ def _get_sha256_memory_file(file):
     for chunk in file.chunks(BLOCKSIZE):
         hasher.update(chunk)
 
+    file.seek(0)
     return hasher.hexdigest()
 
 

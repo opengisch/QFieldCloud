@@ -5,10 +5,10 @@ from django.http import FileResponse
 
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser
 
 from qfieldcloud.core.models import Project
-from qfieldcloud.core import utils
-from qfieldcloud.core import permissions_utils
+from qfieldcloud.core import utils, permissions_utils
 
 
 class ListFilesViewPermissions(permissions.BasePermission):
@@ -93,6 +93,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
 class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
+    parser_classes = [MultiPartParser]
     permission_classes = [DownloadPushDeleteFileViewPermissions]
 
     def get(self, request, projectid, filename):
@@ -101,7 +102,6 @@ class DownloadPushDeleteFileView(views.APIView):
         except Project.DoesNotExist:
             return Response(
                 'Invalid project', status=status.HTTP_400_BAD_REQUEST)
-
         extra_args = {}
         if 'version' in self.request.query_params:
             version = self.request.query_params['version']
@@ -120,8 +120,6 @@ class DownloadPushDeleteFileView(views.APIView):
             filename=filename)
 
     def post(self, request, projectid, filename, format=None):
-        # TODO: why the format parameter?
-
         try:
             Project.objects.get(id=projectid)
         except Project.DoesNotExist:
@@ -142,7 +140,7 @@ class DownloadPushDeleteFileView(views.APIView):
                         'Only one QGIS project per project allowed',
                         status=status.HTTP_400_BAD_REQUEST)
 
-        request_file = request.data['file']
+        request_file = request.FILES.get('file')
 
         sha256sum = utils.get_sha256(request_file)
         bucket = utils.get_s3_bucket()
@@ -151,7 +149,7 @@ class DownloadPushDeleteFileView(views.APIView):
         metadata = {'Sha256sum': sha256sum}
 
         bucket.upload_fileobj(
-            request_file.open(), key, ExtraArgs={"Metadata": metadata})
+            request_file, key, ExtraArgs={"Metadata": metadata})
 
         return Response(status=status.HTTP_201_CREATED)
 

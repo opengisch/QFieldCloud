@@ -412,3 +412,53 @@ class QgisFileTestCase(APITransactionTestCase):
             format='multipart'
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_upload_1mb_file(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        big_file = tempfile.NamedTemporaryFile()
+        with open(big_file.name, "wb") as bf:
+            bf.truncate(1024 * 1024 * 1)
+
+        # Push the file
+        response = self.client.post(
+            '/api/v1/files/{}/bigfile.big/'.format(self.project1.id),
+            data={"file": open(big_file.name, 'rb')},
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # List files
+        response = self.client.get(
+            '/api/v1/files/{}/'.format(self.project1.id))
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual('bigfile.big', response.json()[0]['name'])
+        self.assertGreater(response.json()[0]['size'], 1000000)
+        self.assertLess(response.json()[0]['size'], 1100000)
+
+    def test_upload_10mb_file(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        big_file = tempfile.NamedTemporaryFile()
+        with open(big_file.name, "wb") as bf:
+            bf.truncate(1024 * 1024 * 10)
+
+        # Push the file
+        response = self.client.post(
+            '/api/v1/files/{}/bigfile.big/'.format(self.project1.id),
+            data={"file": open(big_file.name, 'rb')},
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # List files
+        response = self.client.get(
+            '/api/v1/files/{}/'.format(self.project1.id))
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual('bigfile.big', response.json()[0]['name'])
+        self.assertGreater(response.json()[0]['size'], 10000000)
+        self.assertLess(response.json()[0]['size'], 11000000)
