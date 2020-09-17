@@ -88,10 +88,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [ProjectViewSetPermissions]
 
     def get_queryset(self):
-        queryset = (Project.objects.filter(owner=self.request.user) |
-                    Project.objects.filter(
-                        collaborators__in=ProjectCollaborator.objects.filter(
-                            collaborator=self.request.user))).distinct()
+        queryset = (Project.objects.filter(
+            owner=self.request.user) | Project.objects.filter(
+                collaborators__in=ProjectCollaborator.objects.filter(
+                    collaborator=self.request.user))).distinct()
 
         include_public = self.request.query_params.get(
             'include-public', default=None)
