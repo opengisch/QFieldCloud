@@ -44,33 +44,37 @@
     | OFFLINE              | Consolidate           |
     | NO_ACTION            | Live layer            |
     | REMOVE               | Ignore layer          |
-    | HYBRID               | Cloud                 |
+    | COPY                 | Copy                  |
+    | KEEP_EXISTING        | Keep Existing         |
 
-    This is the behavior of QFieldSync Desktop with the different
+    This would be the behavior of QFieldSync Desktop with the different
     layer actions:
-    | Action    | File based layer                                                   | Not file based layer                                      |
-    |-----------+--------------------------------------------------------------------+-----------------------------------------------------------|
-    | OFFLINE   | Create a consolidated copy of the affected data with relative path | Create a consolidated copy of the affected data           |
-    | NO_ACTION | N/A                                                                | No action on the layer                                    |
-    | REMOVE    | Remove the layer from the project                                  | Remove the layer from the project                         |
-    | HYBRID    | Create a consolidated copy of the data                             | No action (consolidated copies are created on the server) |
+    | Action        | File based layer                                                     | Not file based layer                                      |
+    |---------------+----------------------------------------------------------------------+-----------------------------------------------------------|
+    | OFFLINE       | Create a consolidated copy of the data                               | Create a consolidated copy of the data                    |
+    | NO_ACTION     | N/A                                                                  | No action on the layer                                    |
+    | REMOVE        | Remove the layer from the project                                    | Remove the layer from the project                         |
+    | COPY          | Make source path relative and copy the file                          | N/A                                                       |
+    | KEEP_EXISTING | Make source path relative and copy the file if it does not exist     | N/A                                                       |
 
     This is the behavior of QFieldCloud (QFieldSync Server) with the
     layers:
-    | Action    | File based layer                                                  | Not file based layer                                                                           |
-    |-----------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------|
-    | OFFLINE   | Send the file to the client on pull, replace last version on push | N/A (it's always file based at this point)                                                      |
-    | NO_ACTION | N/A                                                               | No action on the layer                                                                         |
-    | REMOVE    | N/A (the layer is no longer there)                                | N/A (the layer is no longer there)                                                             |
-    | HYBRID    | Send the consolidated copy on pull, apply delta file on push      | Create consolidated copy of the data on pull, apply delta file on push to original data source |
+    | Action          | File based layer                                                                                                 | Not file based                                                                                 |
+    |-----------------+------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------|
+    | OFFLINE         | Create consolidated copy of the data on pull, apply delta file on push to original data source                   | Create consolidated copy of the data on pull, apply delta file on push to original data source |
+    | NO_ACTION       | N/A                                                                                                              | No action on the layer                                                                         |
+    | REMOVE          | Remove the layer from the project                                                                                | Remove the layer from the project                                                              |
+    | COPY            | Make source path relative and create copy of the data on pull, apply delta file on push to original data source  | N/A                                                                                            |
+    | KEEP_EXISTING   | Make source path relative and create copy of the data on pull, apply delta file on push to original data source  | N/A                                                                                            |
 
     This is the behavior of QField with the layers:
-    | Action    | File based layer                     | Not file based layer                   |
-    |-----------+--------------------------------------+----------------------------------------|
-    | OFFLINE   | Edit and push directly the data file | N/A                                    |
-    | NO_ACTION | N/A                                  | Edit the online (live) database        |
-    | REMOVE    | N/A                                  | N/A                                    |
-    | HYBRID    | Create and push deltafile            | N/A (it's always file based for QField) |
+    | Action          | File based layer                     | Not file based layer                       |
+    |-----------------+--------------------------------------+--------------------------------------------|
+    | OFFLINE         | Create and push deltafile            | N/A (it's always file based at this point) |
+    | NO_ACTION       | N/A                                  | Edit the online (live) database            |
+    | REMOVE          | N/A (the layer is no longer there)   | N/A (the layer is no longer there)         |
+    | COPY            | Create and push deltafile            | N/A                                        |
+    | KEEP_EXISTING   | Create and push deltafile            | N/A                                        |
 
     In summary, for with QFieldCloud:
     - =NO_ACTION= is used for online layers that are located on a server
