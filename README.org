@@ -18,15 +18,13 @@
    Permissions documentation is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/permissions.org][here]]
 ** Development
 *** Launch a local instance
-    Copy the example configuration files and update them to your desire
+    Copy the =.env.example= into =.env= file and configure it to your
+    desire with a good editor
     #+begin_src sh
-      cd conf
-      cp .env.app.example .env.app
-      cp .env.db.example .env.db
-      emacs .env.app
-      emacs .env.db
+      cp .env.example .env
+      emacs .env
     #+end_src
-    For a local development instance you don't need =Caddyfile= and
+    For a local development instance you don't need to configure
     =supervisord.conf= configuration files.
 
     To build development images and run the containers:
@@ -34,13 +32,12 @@
       docker-compose up -d --build
     #+end_src
 
-    It will read =docker-compose.yml= and start a django built-in
-    server at =http://localhost:8000=
+    It will read =docker-compose.yml= and =docker-compose.override.yml=
+    and start a django built-in server at =http://localhost:8000=
 
-    To run django commands on the docker, enter in the containers bash
-    shell or place =docker-compose run app= before the command, e.g.:
+    Run the django database migrations
     #+begin_src sh
-      docker-compose exec app python manage.py ...
+      docker-compose exec app python manage.py migrate
     #+end_src
 
     To lauch the RQ (Redis Queue) workers that runs the QGIS containers jobs:
@@ -73,33 +70,40 @@
     - https://app.qfield.cloud/ This is the production instance. At
       the moment the deploy is done manually.
 
-    On the servers, the =docker-compose.prod.yml= is used. There are
-    no mounted folders. To apply changes, the docker image must be
-    re-built.
+    On the servers, we need only the =docker-compose.yml= and not the
+    "override" one. There are no mounted folders. To apply changes,
+    the docker image must be re-built.
 *** Launch a server instance
-    Copy the example configuration files and update them to your desire
+    Copy the =.env.example= into =.env= file and configure it to your
+    desire with a good editor
     #+begin_src sh
+      cp .env.example .env
+      emacs .env
+    #+end_src
+
+    Configure the =.env= file to your desire with a good editor
+    #+begin_src emacs-lisp
       cd conf
-      cp .env.app.example .env.app
-      cp .env.db.example .env.db
-      cp Caddyfile.example Caddyfile
       cp supervisord.conf.example supervisord.conf
-      emacs .env.app
-      emacs .env.db
-      emacs Caddyfile
       emacs supervisord.conf
     #+end_src
 
-    Run and build the docker containers
+    Run and build the docker containers (*not the
+    =docker-compose.override.yml= file*)
     #+begin_src sh
-      docker-compose -f docker-compose.prod.yml up -d --build
+      docker-compose -f docker-compose.yml up -d --build
+    #+end_src
+
+    Run the django database migrations
+    #+begin_src sh
+      docker-compose exec app python manage.py migrate
     #+end_src
 
     Prepare and run supervisord with the workers
     #+begin_src sh
       apt install python3-pip  # If needed
       pip3 install pipenv  # If needed
-      # If needed you should upgrade your python version on your host to 3.8.3 or superior
+      # You should upgrade your python version on your host to 3.8.3 or superior
       cd orchestrator
       pipenv --python /usr/bin/python3.8 install
       pipenv run supervisord -c ../conf/supervisord.conf

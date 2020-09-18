@@ -1,33 +1,53 @@
-version: '3.7'
+version: "3.7"
 
 services:
   db:
     image: postgres:11
     restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    env_file:
-      - ./conf/.env.db
-    networks:
-      - net
 
   app:
     build:
-      context: .
-      dockerfile: ./docker-app/Dockerfile
+      context: ./docker-app
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    command: gunicorn qfieldcloud.wsgi:application --bind 0.0.0.0:8000
     volumes:
-      - ./django-app/qfieldcloud:/usr/src/app/qfieldcloud
-      - ./user_projects_files:/usr/src/app/user_projects_files
-    command: python3 manage.py runserver 0.0.0.0:8000
+      - static_volume:/usr/src/app/staticfiles
+      - media_volume:/usr/src/app/mediafiles/
+    environment:
+      DJANGO_ALLOWED_HOSTS: ${QFIELDCLOUD_HOST}
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: 0
+      SQL_DATABASE: ${POSTGRES_DB}
+      SQL_USER: ${POSTGRES_USER}
+      SQL_PASSWORD: ${POSTGRES_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME}
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL}
     depends_on:
       - db
-    env_file:
-      - ./conf/.env.app
-    networks:
-      - net
+
+  web:
+    build:
+      context: ./docker-caddy
+    restart: unless-stopped
+    environment:
+      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
+      ACME_AGREE: "true"
+    volumes:
+      - static_volume:/home/app/web/staticfiles/
+      - media_volume:/home/app/web/mediafiles/
+      - caddy_data:/data
+    ports:
+      - 80:80
+      - 443:443
 
   qgis:
     build:
@@ -43,12 +63,9 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
-    networks:
-      - net
-  
+
 volumes:
   postgres_data:
-
-networks:
-  net:
-    # driver: bridge
+  static_volume:
+  media_volume:
+  caddy_data:

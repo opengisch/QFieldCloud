@@ -4,13 +4,14 @@
     email info@opengis.ch
 }
 
-dev.qfield.cloud {
+{$QFIELDCLOUD_HOST} {
     root * /home/app/web/
     file_server
 
     @notStatic {
         not {
             path /staticfiles/*
+            path /mediafiles/*
         }
     }
 

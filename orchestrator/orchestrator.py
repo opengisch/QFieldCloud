@@ -8,10 +8,11 @@ def load_env_file():
     """Read env file and return a dict with the variables"""
 
     environment = {}
-    with open('../conf/.env.app') as f:
+    with open('../.env') as f:
         for line in f:
-            splitted = line.rstrip().split('=')
-            environment[splitted[0]] = splitted[1]
+            if line.strip():
+                splitted = line.rstrip().split('=', maxsplit=1)
+                environment[splitted[0]] = splitted[1]
 
     return environment
 

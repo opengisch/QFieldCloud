@@ -97,12 +97,12 @@ WSGI_APPLICATION = 'qfieldcloud.wsgi.application'
 
 DATABASES = {
     "default": {
-        "ENGINE": os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": os.environ.get("SQL_DATABASE", os.path.join(BASE_DIR, "db.sqlite3")),
-        "USER": os.environ.get("SQL_USER", "user"),
-        "PASSWORD": os.environ.get("SQL_PASSWORD", "password"),
-        "HOST": os.environ.get("SQL_HOST", "localhost"),
-        "PORT": os.environ.get("SQL_PORT", "5432"),
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("SQL_DATABASE"),
+        "USER": os.environ.get("SQL_USER"),
+        "PASSWORD": os.environ.get("SQL_PASSWORD"),
+        "HOST": "db",
+        "PORT": 5432,
     }
 }
 
@@ -202,7 +202,11 @@ SILKY_AUTHORISATION = True  # User must have permissions
 
 # Don't intercept request bigger than 1MB
 def silky_intercept(request):
-    return int(request.META.get('CONTENT_LENGTH', 0)) <= 1048576
+    try:
+        content_length = int(request.META.get('CONTENT_LENGTH', 0))
+    except ValueError:
+        content_length = 0
+    return content_length <= 1048576
 
 
 SILKY_INTERCEPT_FUNC = silky_intercept

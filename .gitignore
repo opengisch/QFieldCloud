@@ -1,13 +1,7 @@
 __pycache__/
-/django-app/staticfiles/
-/django-app/user_projects_files/
-/user_projects_files/
 *.log
 .htmlcov/
 .coverage
-/conf/Caddyfile
-/conf/.env.app
-/conf/.env.db
 /conf/supervisord.conf
 .vscode
-/postgres_data/
+.env

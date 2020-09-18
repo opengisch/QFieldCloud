@@ -1,4 +1,9 @@
-FROM python:3.8.0-buster
+###########
+# BUILDER #
+###########
+
+# pull official base image
+FROM python:3.8.0-buster as builder
 
 # set work directory
 WORKDIR /usr/src/app
@@ -10,15 +15,27 @@ ENV PYTHONUNBUFFERED 1
 # install dependencies
 RUN apt update \
     && apt install -y netcat-openbsd
-RUN pip install --upgrade pip
-COPY ./docker-app/requirements.txt /usr/src/app/requirements.txt
+
+# install dependencies
+COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 
-# copy entrypoint.sh
-COPY ./docker-app/entrypoint.sh /usr/src/app/entrypoint.sh
-
 # copy project
-COPY ./django-app /usr/src/app/
+COPY . .
 
-# run entrypoint.sh
-ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
+# create the appropriate directories
+RUN mkdir staticfiles
+RUN mkdir mediafiles
+
+# chown all the files to the app user
+RUN addgroup --system app && adduser --system app --ingroup app
+RUN chown -R app:app .
+
+# change to the app user
+USER app
+
+EXPOSE 8000
+
+# run entrypoint.prod.sh
+COPY ./entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
