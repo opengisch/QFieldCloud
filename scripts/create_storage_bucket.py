@@ -8,10 +8,11 @@ def load_env_file():
     """Read env file and return a dict with the variables"""
 
     environment = {}
-    with open('../conf/.env.app') as f:
+    with open('../.env') as f:
         for line in f:
-            splitted = line.rstrip().split('=')
-            environment[splitted[0]] = splitted[1]
+            if line.strip():
+                splitted = line.rstrip().split('=', maxsplit=1)
+                environment[splitted[0]] = splitted[1]
 
     return environment
 
@@ -43,30 +44,37 @@ def _get_s3_client(env):
     )
     return s3_client
 
-def _create_bucket(bucket_name):
-    pass
-# location = {'LocationConstraint': 'zrh1'}
-# s3_client.create_bucket(
-#     Bucket='qfieldcloud-test',
-#     CreateBucketConfiguration=location)
 
-# print(s3_client.put_bucket_versioning(
-#     Bucket='qfieldcloud-test',
-#     VersioningConfiguration={
-#         'Status': 'Enabled'
-#     }))
+def _create_bucket(env, bucket_name):
+    client = _get_s3_client(env)
+
+    client.create_bucket(
+        Bucket=bucket_name,)
+
+    client.put_bucket_versioning(
+        Bucket=bucket_name,
+        VersioningConfiguration={
+            'Status': 'Enabled'
+        })
+    print(client.list_buckets())
+
+
+def _print_access_control_list(env, bucket_name):
+    # Retrieve a bucket's ACL
+    s3 = _get_s3_client(env)
+    result = s3.get_bucket_acl(Bucket=bucket_name)
+    from pprint import pprint
+    pprint(result)
+
 
 env = load_env_file()
-print(env)
-bucket = _get_s3_bucket(env, 'test-bucket')
-client = _get_s3_client(env)
 
+_print_access_control_list(env, 'qfieldcloud-test')
+# _create_bucket(env, 'qfieldcloud-dev')
 
-bucket.objects.all().delete()
-bucket.object_versions.all().delete()
+# bucket.objects.all().delete()
+# bucket.object_versions.all().delete()
 
-client.delete_bucket(
-    Bucket='test-bucket',
-    )
-
-print(client.list_buckets())
+# client.delete_bucket(
+#    Bucket='test-bucket',
+#     )
