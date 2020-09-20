@@ -157,7 +157,6 @@ def upload_file(token, project_id, local_file, remote_file):
         print(response.text)
 
 
-
 @cli.command()
 @click.argument('project_id')
 @click.argument('local_dir', type=click.Path(exists=True, file_okay=False))
@@ -438,7 +437,7 @@ def export(token, project_id, local_dir):
         with requests.get(url, headers=headers, stream=True) as response:
             try:
                 response.raise_for_status()
-                
+
                 local_file = Path(local_dir + '/' + file['name'])
                 local_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -499,11 +498,11 @@ def upload_deltafile(token, project_id, delta_file):
         'Authorization': 'token {}'.format(token),
     }
 
-    with open(delta_file, 'rb')  as local_file:
+    with open(delta_file, 'rb') as local_file:
         files = {'file': local_file}
 
         response = requests.post(
-            url,  
+            url,
             headers=headers,
             files=files,
         )

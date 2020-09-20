@@ -5,7 +5,7 @@ from enum import Enum
 try:
     # 3.8
     from typing import TypedDict
-except:
+except ImportError:
     # 3.7
     from typing_extensions import TypedDict
 
@@ -45,7 +45,7 @@ class CsvFormatter(logging.Formatter):
         self.output = io.StringIO()
         self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'fid', 'attribute', 'conflict', 'method']
         self.writer = csv.DictWriter(self.output, fieldnames=self.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
-        
+
         if not skip_csv_header:
             self.writer.writeheader()
 
@@ -60,7 +60,7 @@ class CsvFormatter(logging.Formatter):
             'lineno': record.lineno,
             'filename': record.filename,
         }
-        
+
         if isinstance(record.args, tuple) and len(record.args) >= 1 and isinstance(record.args[-1], Exception):
             exception = record.args[-1]
 
@@ -71,14 +71,14 @@ class CsvFormatter(logging.Formatter):
                 for conflict in conflicts:
                     self.writer.writerow({
                         **log_data,
-                        'level': record.levelname, 
-                        'e_type': exception.e_type, 
-                        'delta_file_id': exception.delta_file_id, 
-                        'layer_id': exception.layer_id, 
-                        'delta_index': exception.delta_idx, 
-                        'fid': exception.fid, 
-                        'attribute': exception.attr, 
-                        'conflict': conflict, 
+                        'level': record.levelname,
+                        'e_type': exception.e_type,
+                        'delta_file_id': exception.delta_file_id,
+                        'layer_id': exception.layer_id,
+                        'delta_index': exception.delta_idx,
+                        'fid': exception.fid,
+                        'attribute': exception.attr,
+                        'conflict': conflict,
                         'method': exception.method})
             else:
                 self.writer.writerow({
@@ -86,13 +86,14 @@ class CsvFormatter(logging.Formatter):
                     'e_type': DeltaExceptionType.Error})
         else:
             self.writer.writerow(log_data)
-            
+
         log_string = self.output.getvalue()
 
         self.output.truncate(0)
         self.output.seek(0)
 
         return log_string.strip()
+
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -103,6 +104,7 @@ logger = logging.getLogger(__name__)
 WKT = str
 FeatureId = str
 LayerId = str
+
 
 class BaseOptions(TypedDict):
     cmd0: Callable
@@ -120,6 +122,7 @@ class DeltaMethod(Enum):
     PATCH = 'patch'
     DELETE = 'delete'
 
+
 class DeltaExceptionType(Enum):
     def __str__(self):
         return str(self.value)
@@ -127,6 +130,7 @@ class DeltaExceptionType(Enum):
     Error = 'ERROR'
     IO = 'IO'
     Conflict = 'CONFLICT'
+
 
 class DeltaFeature(TypedDict):
     geometry: Optional[WKT]
@@ -158,16 +162,16 @@ class DeltaFile:
 # EXCEPTION DEFINITIONS\
 class DeltaException(Exception):
     def __init__(self,
-            msg: str,
-            e_type: DeltaExceptionType = DeltaExceptionType.Error,
-            delta_file_id: str = None,
-            layer_id: str = None,
-            delta_idx: int = None,
-            fid: str = None,
-            attr: str = None,
-            conflicts: List[str] = None,
-            method: DeltaMethod = None
-        ):
+                 msg: str,
+                 e_type: DeltaExceptionType = DeltaExceptionType.Error,
+                 delta_file_id: str = None,
+                 layer_id: str = None,
+                 delta_idx: int = None,
+                 fid: str = None,
+                 attr: str = None,
+                 conflicts: List[str] = None,
+                 method: DeltaMethod = None
+                 ):
         super(DeltaException, self).__init__(msg)
         self.e_type = e_type
         self.delta_file_id = delta_file_id
@@ -179,6 +183,7 @@ class DeltaException(Exception):
         self.conflicts = conflicts
 # /EXCEPTION DEFINITIONS
 
+
 BACKUP_SUFFIX = '.qfieldcloudbackup'
 
 
@@ -189,7 +194,7 @@ def project_decorator(f):
         project.setAutoTransaction(True)
         project.read(opts['project'])
 
-        return f(project, opts, *args, **kw) # type: ignore
+        return f(project, opts, *args, **kw)  # type: ignore
 
     return wrapper
 
@@ -203,22 +208,19 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
         project.clear()
         if has_conflict:
             logger.info('Successfully applied {} deltas with some conflicts'.format(len(deltas.deltas)))
-            # exit(1)
             return 1
         else:
             logger.info('Successfully applied {} deltas'.format(len(deltas.deltas)))
-            # exit(0)
             return 0
     except DeltaException as err:
         # traceback.print_exc()
         logger.exception('Delta exception: {}'.format(str(err)), err)
-        # exit(2)
         return 2
     except Exception as err:
         # traceback.print_exc()
         logger.exception('Unknown exception: {}'.format(str(err)), err)
-        # exit(2)
         return 2
+
 
 @project_decorator
 def cmd_backup_cleanup(project: QgsProject, opts: BaseOptions):
@@ -255,7 +257,6 @@ def cmd_backup_rollback(project: QgsProject, opts: BaseOptions):
             backup_layer_path.unlink()
 
 
-
 @lru_cache(maxsize=128)
 def get_json_schema_validator() -> jsonschema.Draft7Validator:
     """Creates a JSON schema validator to check whether the provided delta
@@ -285,7 +286,7 @@ def delta_file_args_loader(args: DeltaOptions) -> Optional[DeltaFile]:
         return None
 
     obj = args['delta_contents']
-    #get_json_schema_validator().validate(obj)
+    # get_json_schema_validator().validate(obj)
     delta_file = DeltaFile(obj['id'], obj['project'], obj['version'], obj['deltas'], obj['files'])
 
     return delta_file
@@ -303,12 +304,12 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
     if not isinstance(args.get('delta_file'), str):
         return None
 
-    delta_file_path = Path(args['delta_file']) # type: ignore
+    delta_file_path = Path(args['delta_file'])  # type: ignore
     delta_file: DeltaFile
 
     with delta_file_path.open('r') as f:
         obj = json.load(f)
-        #get_json_schema_validator().validate(obj)
+        # get_json_schema_validator().validate(obj)
         delta_file = DeltaFile(obj['id'], obj['project'], obj['version'], obj['deltas'], obj['files'])
 
     return delta_file
@@ -371,7 +372,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
     for layer_id in project.mapLayers():
         layer = project.mapLayer(layer_id)
         conn_type = layer.providerType()
-        conn_string = QgsDataSourceUri(layer.source()).connectionInfo(False)   
+        conn_string = QgsDataSourceUri(layer.source()).connectionInfo(False)
 
         if len(conn_string) == 0:
             continue
@@ -445,7 +446,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
                     committed_layer_ids.add(layer_id)
             else:
                 raise DeltaException('Failed to commit')
-        except DeltaException as err:
+        except DeltaException:
             # all the modified layers must be rollbacked
             for layer_id in (modified_layer_ids - committed_layer_ids):
                 if not layers_by_id[layer_id].rollBack():
@@ -595,10 +596,10 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
                 raise DeltaException("Cannot rollback layer changes: {}".format(layer.id())) from err
 
             raise DeltaException('An error has been encountered while applying delta',
-                layer_id=layer.id(),
-                delta_idx=idx,
-                method=delta.get('method'),
-                fid=delta.get('fid')) from err
+                                 layer_id=layer.id(),
+                                 delta_idx=idx,
+                                 method=delta.get('method'),
+                                 fid=delta.get('fid')) from err
 
     if should_commit and not layer.commitChanges():
         if not layer.rollBack():
@@ -847,7 +848,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='COMMAND',
         description='',
-        formatter_class=argparse.RawDescriptionHelpFormatter, # type: ignore
+        formatter_class=argparse.RawDescriptionHelpFormatter,  # type: ignore
         epilog=textwrap.dedent('''
             example:
                 # apply deltas on a project
@@ -893,6 +894,6 @@ if __name__ == '__main__':
     logging.root.handlers[0].setFormatter(CsvFormatter(args.skip_csv_header))
 
     if 'func' in args:
-        args.func(vars(args)) # type: ignore
+        args.func(vars(args))  # type: ignore
     else:
         parser.parse_args(['-h'])
