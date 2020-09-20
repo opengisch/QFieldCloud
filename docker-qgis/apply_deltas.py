@@ -20,6 +20,7 @@ from datetime import datetime
 import logging
 import csv
 import io
+import traceback
 
 import jsonschema
 
@@ -32,6 +33,7 @@ from qgis.core import (
     QgsMapLayerType,
     QgsFeature,
     QgsGeometry,
+    QgsDataSourceUri,
     QgsProviderRegistry)
 from qgis.testing import start_app
 
@@ -184,6 +186,7 @@ def project_decorator(f):
     def wrapper(opts: BaseOptions, *args, **kw):
         start_app()
         project = QgsProject.instance()
+        project.setAutoTransaction(True)
         project.read(opts['project'])
 
         return f(project, opts, *args, **kw) # type: ignore
@@ -207,10 +210,12 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
             # exit(0)
             return 0
     except DeltaException as err:
+        # traceback.print_exc()
         logger.exception('Delta exception: {}'.format(str(err)), err)
         # exit(2)
         return 2
     except Exception as err:
+        # traceback.print_exc()
         logger.exception('Unknown exception: {}'.format(str(err)), err)
         # exit(2)
         return 2
@@ -360,6 +365,22 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
     has_conflict = False
     deltas_by_layer: Dict[LayerId, List[Delta]] = {}
     layers_by_id: Dict[LayerId, QgsVectorLayer] = {}
+    transcation_by_layer: Dict[str, str] = {}
+    transaction_open: Dict[str, bool] = {}
+
+    for layer_id in project.mapLayers():
+        layer = project.mapLayer(layer_id)
+        conn_type = layer.providerType()
+        conn_string = QgsDataSourceUri(layer.source()).connectionInfo(False)   
+
+        if len(conn_string) == 0:
+            continue
+
+        # here we use '$$$$$' as a separator, nothing special, can be easily changed to any other string
+        transaction_id = conn_type + '$$$$$' + conn_string
+        transcation_by_layer[layer_id] = transaction_id
+        transaction_open[transaction_id] = transaction_open.get(transaction_id, [])
+        transaction_open[transaction_id].append(layer_id)
 
     # group all individual deltas by layer id
     for d in delta_file.deltas:
@@ -373,6 +394,9 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
 
     # make a backup of the layer data source.
     for layer_id in layers_by_id.keys():
+        if not is_layer_file_based(layers_by_id[layer_id]):
+            continue
+
         layer_path = get_layer_path(layers_by_id[layer_id])
         layer_backup_path = get_backup_path(layer_path)
 
@@ -407,8 +431,18 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
     for layer_id in deltas_by_layer.keys():
         # keep the try/except block inside the loop, so we can have the `layer_id` context
         try:
+            # the layer has already been commited. This might happend if there are multiple layers in the same transaction group.
+            if layer_id in committed_layer_ids:
+                continue
+
             if layers_by_id[layer_id].commitChanges():
-                committed_layer_ids.add(layer_id)
+                transaction_id = transcation_by_layer.get(layer_id)
+
+                if transaction_id in transaction_open:
+                    committed_layer_ids = [*committed_layer_ids, *transaction_open[transaction_id]]
+                    del transaction_open[transaction_id]
+                else:
+                    committed_layer_ids.add(layer_id)
             else:
                 raise DeltaException('Failed to commit')
         except DeltaException as err:
@@ -522,7 +556,7 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
 
     has_conflict = False
 
-    if not layer.startEditing():
+    if not layer.isEditable() and not layer.startEditing():
         raise DeltaException('Cannot start editing')
 
     for idx, d in enumerate(deltas):
@@ -785,6 +819,10 @@ def get_backup_path(path: Path) -> Path:
     return Path(str(path) + BACKUP_SUFFIX)
 
 
+def is_layer_file_based(layer: QgsMapLayer) -> bool:
+    return len(str(get_layer_path(layer))) == 0
+
+
 def inverse_delta(delta: Delta) -> Delta:
     """Returns shallow copy of the delta with reversed `old` and `new` keys
 
@@ -813,10 +851,10 @@ if __name__ == '__main__':
         epilog=textwrap.dedent('''
             example:
                 # apply deltas on a project
-                ./apply_delta.py deltas apply ./path/to/project.qgs ./path/to/delta.json
+                ./apply_delta.py delta apply ./path/to/project.qgs ./path/to/delta.json
 
                 # rollback deltas on a project
-                ./apply_delta.py deltas rollback ./path/to/project.qgs ./path/to/delta.json
+                ./apply_delta.py delta apply --inverse ./path/to/project.qgs ./path/to/delta.json
 
                 # rollback deltas on a project
                 ./apply_delta.py backup cleanup
