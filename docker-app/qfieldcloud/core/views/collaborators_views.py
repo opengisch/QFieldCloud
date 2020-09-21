@@ -42,7 +42,8 @@ class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
         operation_id="Create collaborator",))
 class ListCreateCollaboratorsView(generics.ListCreateAPIView):
 
-    permission_classes = [ListCreateCollaboratorsViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          ListCreateCollaboratorsViewPermissions]
     serializer_class = ProjectCollaboratorSerializer
 
     def get_queryset(self):
@@ -113,7 +114,8 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
         operation_id="Delete collaborator",))
 class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
 
-    permission_classes = [GetUpdateDestroyCollaboratorViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          GetUpdateDestroyCollaboratorViewPermissions]
     serializer_class = ProjectCollaboratorSerializer
 
     def get_object(self):

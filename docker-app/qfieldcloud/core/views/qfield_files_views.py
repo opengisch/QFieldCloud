@@ -33,7 +33,8 @@ class ExportViewPermissions(permissions.BasePermission):
         operation_id="Launch qfield export"))
 class ExportView(views.APIView):
 
-    permission_classes = [ExportViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          ExportViewPermissions]
 
     def get(self, request, projectid):
         # TODO:
@@ -66,7 +67,8 @@ class ExportView(views.APIView):
         operation_id="List qfield project files"))
 class ListFilesView(views.APIView):
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,
+                          permissions.IsAuthenticated]
 
     def get(self, request, jobid):
         job = utils.get_job('export', str(jobid))

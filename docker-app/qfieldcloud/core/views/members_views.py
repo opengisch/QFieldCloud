@@ -43,7 +43,8 @@ class ListCreateMembersViewPermissions(permissions.BasePermission):
         operation_id="Create member",))
 class ListCreateMembersView(generics.ListCreateAPIView):
 
-    permission_classes = [ListCreateMembersViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          ListCreateMembersViewPermissions]
     serializer_class = OrganizationMemberSerializer
 
     def get_queryset(self):
@@ -114,7 +115,8 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
         operation_id="Delete member",))
 class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
 
-    permission_classes = [GetUpdateDestroyMemberViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          GetUpdateDestroyMemberViewPermissions]
     serializer_class = OrganizationMemberSerializer
 
     def get_object(self):

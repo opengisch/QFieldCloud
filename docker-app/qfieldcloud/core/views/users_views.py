@@ -30,7 +30,8 @@ class ListUsersViewPermissions(permissions.BasePermission):
 class ListUsersView(generics.ListAPIView):
 
     serializer_class = PublicInfoUserSerializer
-    permission_classes = [ListUsersViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          ListUsersViewPermissions]
 
     def get_queryset(self):
         return User.objects.all()
@@ -70,7 +71,8 @@ class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
 class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
     """Get or Update the authenticated user"""
 
-    permission_classes = [RetrieveUpdateUserViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          RetrieveUpdateUserViewPermissions]
     serializer_class = CompleteUserSerializer
 
     def get_object(self):

@@ -43,7 +43,8 @@ class DeltaFilePermissions(permissions.BasePermission):
         operation_id="Add deltafile",))
 class ListCreateDeltaFileView(views.APIView):
 
-    permission_classes = [DeltaFilePermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          DeltaFilePermissions]
 
     def post(self, request, projectid):
 
@@ -134,7 +135,8 @@ class ListCreateDeltaFileView(views.APIView):
         operation_id="Get delta status",))
 class GetDeltaView(views.APIView):
 
-    permission_classes = [DeltaFilePermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          DeltaFilePermissions]
 
     def get(self, request, projectid, deltafileid):
 

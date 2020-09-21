@@ -85,7 +85,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProjectSerializer
     lookup_url_kwarg = 'projectid'
-    permission_classes = [ProjectViewSetPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          ProjectViewSetPermissions]
 
     def get_queryset(self):
         queryset = (Project.objects.filter(

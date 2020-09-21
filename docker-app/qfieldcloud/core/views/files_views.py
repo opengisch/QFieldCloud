@@ -27,7 +27,8 @@ class ListFilesView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
 
-    permission_classes = [ListFilesViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          ListFilesViewPermissions]
 
     def get(self, request, projectid):
         try:
@@ -94,7 +95,8 @@ class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
     parser_classes = [MultiPartParser]
-    permission_classes = [DownloadPushDeleteFileViewPermissions]
+    permission_classes = [permissions.IsAuthenticated,
+                          DownloadPushDeleteFileViewPermissions]
 
     def get(self, request, projectid, filename):
         try:
