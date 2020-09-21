@@ -15,7 +15,7 @@ services:
     build:
       context: ./docker-app
     restart: unless-stopped
-    command: gunicorn qfieldcloud.wsgi:application --bind 0.0.0.0:8000
+    command: gunicorn qfieldcloud.wsgi:application --bind 0.0.0.0:8000 -t 300
     volumes:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
