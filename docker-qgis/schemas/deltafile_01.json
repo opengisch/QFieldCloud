@@ -88,13 +88,14 @@
                     "method"
                 ],
                 "properties": {
-                    "fid_NOT_ENABLED_UNTIL_FID_IS_UUID": {
+                    "fid": {
                         "type": "string",
-                        "title": "Feature ID Schema",
-                        "description": "To be able to unique identify features in the layers, we assign UUID as feature ID. We use UUID instead of sequential integer, so we can assign the value on QField, before sending it back to the server.",
-                        "format": "uuid",
+                        "title": "Feature ID",
+                        "description": "To be able to unique identify features in the layers, we use the first primary key column, or a column named \"fid\" if no primary keys are set.",
                         "examples": [
-                            "ddc41fa4-3961-4127-80f6-7d3e3f3f985b"
+                            "ddc41fa4-3961-4127-80f6-7d3e3f3f985b",
+                            "unique_string",
+                            "123"
                         ]
                     },
                     "layerId": {

@@ -1,7 +1,7 @@
 {
     "deltas": [
         {
-            "fid": 1,
+            "fid": "1",
             "layerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
             "method": "patch",
             "new": {

@@ -34,6 +34,8 @@ from qgis.core import (
     QgsFeature,
     QgsGeometry,
     QgsDataSourceUri,
+    QgsExpression,
+    QgsFeatureRequest,
     QgsProviderRegistry)
 from qgis.testing import start_app
 
@@ -187,6 +189,29 @@ class DeltaException(Exception):
 BACKUP_SUFFIX = '.qfieldcloudbackup'
 
 
+def _find_pk_attr(layer):
+    idx = [*layer.primaryKeyAttributes(), -1][0]
+
+    if not idx == -1:
+        key_field = layer.fields()[idx].name()
+    else:
+        key_field = 'fid'
+
+    # TODO: assert that the field actually exists
+    return key_field
+
+
+def _find_feature(layer: QgsVectorLayer, delta: Delta) -> QgsFeature:
+    pk_attr = _find_pk_attr(layer)
+    expr = QgsExpression(" {} = {} ".format(QgsExpression.quotedColumnRef(pk_attr), QgsExpression.quotedValue(delta['fid'])))
+
+    features = [f for f in layer.getFeatures(QgsFeatureRequest(expr))]
+
+    assert len(features) == 1
+
+    return features[0]
+
+
 def project_decorator(f):
     def wrapper(opts: BaseOptions, *args, **kw):
         start_app()
@@ -286,7 +311,7 @@ def delta_file_args_loader(args: DeltaOptions) -> Optional[DeltaFile]:
         return None
 
     obj = args['delta_contents']
-    # get_json_schema_validator().validate(obj)
+    get_json_schema_validator().validate(obj)
     delta_file = DeltaFile(obj['id'], obj['project'], obj['version'], obj['deltas'], obj['files'])
 
     return delta_file
@@ -309,7 +334,7 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
 
     with delta_file_path.open('r') as f:
         obj = json.load(f)
-        # get_json_schema_validator().validate(obj)
+        get_json_schema_validator().validate(obj)
         delta_file = DeltaFile(obj['id'], obj['project'], obj['version'], obj['deltas'], obj['files'])
 
     return delta_file
@@ -595,7 +620,9 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
                 # So unfortunate situation, that the only safe thing to do is to cancel the whole script
                 raise DeltaException("Cannot rollback layer changes: {}".format(layer.id())) from err
 
-            raise DeltaException('An error has been encountered while applying delta',
+            traceback.print_exc()
+
+            raise DeltaException('An error has been encountered while applying delta:' + str(err).replace('\n', ''),
                                  layer_id=layer.id(),
                                  delta_idx=idx,
                                  method=delta.get('method'),
@@ -623,7 +650,7 @@ def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
     """
     fields = layer.fields()
     new_feat_delta = delta['new']
-    new_feat = QgsFeature(fields, delta['fid'])
+    new_feat = QgsFeature(fields)
 
     if layer.isSpatial():
         if not isinstance(new_feat_delta['geometry'], str):
@@ -668,7 +695,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
     """
     new_feature_delta = delta['new']
     old_feature_delta = delta['old']
-    old_feature = layer.getFeature(delta['fid'])
+    old_feature = _find_feature(layer, delta)
 
     if not old_feature.isValid():
         raise DeltaException('Unable to find feature')
@@ -693,7 +720,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
         if geometry.type() != old_feature.geometry().type():
             raise DeltaException('The provided geometry type differs from the layer geometry type')
 
-        if not layer.changeGeometry(delta['fid'], geometry, True):
+        if not layer.changeGeometry(old_feature.id(), geometry, True):
             raise DeltaException('Unable to change geometry')
     else:
         if new_feature_delta.get('geometry'):
@@ -711,7 +738,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
             logger.warning('The delta has features with the same value in both old and new values')
             continue
 
-        if not layer.changeAttributeValue(delta['fid'], fields.indexOf(attr_name), new_attr_value, old_attrs[attr_name], True):
+        if not layer.changeAttributeValue(old_feature.id(), fields.indexOf(attr_name), new_attr_value, old_attrs[attr_name], True):
             raise DeltaException('Unable to change attribute', attr=attr_name)
 
 
@@ -725,11 +752,8 @@ def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
     Raises:
         DeltaException: whenever the feature cannot be deleted
     """
-    fields = layer.fields()
-    new_feature_delta = delta['new']
     old_feature_delta = delta['old']
-    new_feature = QgsFeature(fields, delta['fid'])
-    old_feature = layer.getFeature(delta['fid'])
+    old_feature = _find_feature(layer, old_feature_delta)
 
     if not old_feature.isValid():
         raise DeltaException('Unable to find feature')
@@ -739,10 +763,7 @@ def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
     if len(conflicts) != 0:
         raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.IO)
 
-    if not layer.isSpatial() and new_feature_delta['geometry']:
-        logger.warning('The layer is not spatial, but geometry has been provided')
-
-    if not layer.deleteFeature(new_feature):
+    if not layer.deleteFeature(old_feature.id()):
         raise DeltaException('Unable delete feature')
 
 

@@ -466,15 +466,15 @@ class DeltaTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['id'])
 
         self.assertEqual(json[1]['id'], 'ab3e55a2-98cc-4c03-8069-8266fefd8124')
-        self.assertEqual(json[1]['size'], 544)
+        self.assertEqual(json[1]['size'], 546)
         self.assertEqual(json[0]['id'], '4d027a9d-d31a-4e8f-acad-2f2d59caa48c')
-        self.assertEqual(json[0]['size'], 544)
+        self.assertEqual(json[0]['size'], 546)
         self.assertEqual(
             json[1]['sha256'],
-            'f1125ec28f8f2fe036b57c7eaa1b9d9b71204fcbb4c7a5d1fa1753dea9909474')
+            'ccf1a0726d760510bb50b740c13e6a140aeadb832e5dd8152be4bd8b62b7ccac')
         self.assertEqual(
             json[0]['sha256'],
-            'ceb6200060f7e22d278f8e2414a09fd78aae45859db24a5519086147747f64a8')
+            '1690fb4ad6f4747e166c15f8a64dd500b16279a9e0ca9f70bba5e13a13547e36')
 
     def test_apply_delta_gpkg(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

@@ -3,8 +3,8 @@
 "name": "points",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
-{ "type": "Feature", "id": 1, "properties": { "int": 1, "dbl": 0.1, "str": "str1" }, "geometry": { "type": "Point", "coordinates": [ 1.0, 0.0 ] } },
-{ "type": "Feature", "id": 2, "properties": { "int": 2, "dbl": 0.2, "str": "str2" }, "geometry": { "type": "Point", "coordinates": [ 5.0, 0.0 ] } },
-{ "type": "Feature", "id": 3, "properties": { "int": 3, "dbl": 0.3, "str": "str3" }, "geometry": { "type": "Point", "coordinates": [ 9.0, 0.0 ] } }
+{ "type": "Feature", "id": 1, "properties": { "fid": 1, "int": 1, "dbl": 0.1, "str": "str1" }, "geometry": { "type": "Point", "coordinates": [ 1.0, 0.0 ] } },
+{ "type": "Feature", "id": 2, "properties": { "fid": 2, "int": 2, "dbl": 0.2, "str": "str2" }, "geometry": { "type": "Point", "coordinates": [ 5.0, 0.0 ] } },
+{ "type": "Feature", "id": 3, "properties": { "fid": 3, "int": 3, "dbl": 0.3, "str": "str3" }, "geometry": { "type": "Point", "coordinates": [ 9.0, 0.0 ] } }
 ]
 }
