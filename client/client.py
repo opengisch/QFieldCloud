@@ -9,7 +9,7 @@ from glob import glob
 from pathlib import Path
 
 # BASE_URL = 'http://dev.qfield.cloud/api/v1/'
-BASE_URL = 'http://localhost/api/v1/'
+BASE_URL = 'http://localhost:8000/api/v1/'
 
 
 @click.group()
@@ -183,20 +183,21 @@ def upload_files(token, project_id, local_dir, filter_glob, recursive):
             'Authorization': 'token {}'.format(token),
         }
 
-        files = {'file': file_name}
+        with open(file_name, 'rb')  as local_file:
+            files = {'file': local_file}
 
-        response = requests.post(
-            url,
-            headers=headers,
-            files=files,
-        )
+            response = requests.post(
+                url,
+                headers=headers,
+                files=files,
+            )
 
-        try:
-            response.raise_for_status()
-            print('File "{}" uploaded'.format(remote_path))
-        except requests.HTTPError:
-            print('Error uploading "{}": {}'.format(remote_path, response))
-            print(response.text)
+            try:
+                response.raise_for_status()
+                print('File "{}" uploaded'.format(remote_path))
+            except requests.HTTPError:
+                print('Error uploading "{}": {}'.format(remote_path, response))
+                print(response.text)
 
 
 @cli.command()
@@ -424,6 +425,10 @@ def export(token, project_id, local_dir):
 
                 if status == 'finished':
                     files = payload['files']
+                    break
+
+                if status == 'qgis_error':
+                    print(payload)
                     break
             except requests.HTTPError:
                 print('Error: {}'.format(response))
