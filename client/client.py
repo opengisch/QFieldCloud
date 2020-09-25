@@ -8,7 +8,8 @@ import click
 from glob import glob
 from pathlib import Path
 
-# BASE_URL = 'http://dev.qfield.cloud/api/v1/'
+# BASE_URL = 'https://dev.qfield.cloud/api/v1/'
+# BASE_URL = 'https://app.qfield.cloud/api/v1/'
 BASE_URL = 'http://localhost:8000/api/v1/'
 
 
