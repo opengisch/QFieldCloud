@@ -32,6 +32,7 @@ services:
       AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
       AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL}
       SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_SERVER_NAME: ${QFIELDCLOUD_HOST}
     depends_on:
       - db
 

@@ -202,8 +202,9 @@ LOGIN_URL = 'rest_framework:login'
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", ""),
     integrations=[DjangoIntegration()],
-    traces_sample_rate=1.0,
-    environment=os.environ.get("QFIELDCLOUD_HOST"),
+    # Define how many random events are sent for performance monitoring
+    sample_rate=0.05,
+    server_name=os.environ.get("SENTRY_SERVER_NAME"),
     # If you wish to associate users to errors (assuming you are using
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii=True

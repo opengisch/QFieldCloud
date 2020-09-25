@@ -23,7 +23,7 @@ def env():
 sentry_sdk.init(
     dsn=env().get('SENTRY_DSN', ''),
     integrations=[RqIntegration()],
-    environment=env().get('QFIELDCLOUD_HOST'),
+    server_name=env().get('QFIELDCLOUD_HOST'),
     attach_stacktrace='on',
 )
 
