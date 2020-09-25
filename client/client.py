@@ -184,7 +184,7 @@ def upload_files(token, project_id, local_dir, filter_glob, recursive):
             'Authorization': 'token {}'.format(token),
         }
 
-        with open(file_name, 'rb')  as local_file:
+        with open(file_name, 'rb') as local_file:
             files = {'file': local_file}
 
             response = requests.post(
