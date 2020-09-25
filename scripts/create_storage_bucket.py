@@ -51,12 +51,15 @@ def _create_bucket(env, bucket_name):
     client.create_bucket(
         Bucket=bucket_name,)
 
+
+def _enable_versioning(env, bucket_name):
+    client = _get_s3_client(env)
+
     client.put_bucket_versioning(
         Bucket=bucket_name,
         VersioningConfiguration={
             'Status': 'Enabled'
         })
-    print(client.list_buckets())
 
 
 def _print_access_control_list(env, bucket_name):
@@ -69,7 +72,7 @@ def _print_access_control_list(env, bucket_name):
 
 env = load_env_file()
 
-_print_access_control_list(env, 'qfieldcloud-test')
+# _print_access_control_list(env, 'qfieldcloud-test')
 # _create_bucket(env, 'qfieldcloud-dev')
 
 # bucket.objects.all().delete()
