@@ -18,7 +18,10 @@ class ListFilesViewPermissions(permissions.BasePermission):
             return False
 
         projectid = request.parser_context['kwargs']['projectid']
-        project = Project.objects.get(id=projectid)
+        try:
+            project = Project.objects.get(id=projectid)
+        except Project.DoesNotExist:
+            return False
 
         return permissions_utils.can_list_files(request.user, project)
 
