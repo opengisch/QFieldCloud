@@ -43,7 +43,7 @@
     To lauch the RQ (Redis Queue) workers that runs the QGIS containers jobs:
     #+begin_src sh
       cd orchestrator
-      pipenv run rq worker export delta
+      pipenv run python worker.py
     #+end_src
 
     You can check if everything seems to work correctly using the

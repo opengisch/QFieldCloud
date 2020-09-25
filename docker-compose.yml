@@ -33,6 +33,7 @@ services:
       AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL}
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_SERVER_NAME: ${QFIELDCLOUD_HOST}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       - db
 
@@ -61,7 +62,10 @@ services:
     command: bash -c "echo QGIS builded"
 
   redis:
-    image: redis:6.0.6
+    build:
+      context: ./docker-redis
+      args:
+        REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
     ports:
       - "6379:6379"

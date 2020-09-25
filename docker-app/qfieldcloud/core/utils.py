@@ -1,4 +1,4 @@
-
+import os
 import django_rq
 import hashlib
 import boto3
@@ -56,7 +56,10 @@ def get_job(queue, jobid):
 
 def redis_is_running():
     try:
-        connection = Redis('redis', 6379)
+        connection = Redis(
+            'redis',
+            password=os.environ.get("REDIS_PASSWORD")
+        )
         connection.set('foo', 'bar')
     except exceptions.ConnectionError:
         return False

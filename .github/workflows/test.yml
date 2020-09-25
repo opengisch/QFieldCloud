@@ -37,6 +37,7 @@ jobs:
           envkey_AWS_STORAGE_BUCKET_NAME: "qfieldcloud-test"
           envkey_AWS_S3_REGION_NAME: "zrh1"
           envkey_AWS_S3_ENDPOINT_URL: "https://os.zrh1.flow.swiss"
+          envkey_REDIS_PASSWORD: "reeeeeedissssssss"
           file_name: .env
       - name: Build and run docker containers
         run: |
@@ -44,7 +45,7 @@ jobs:
       - name: Run RQ workers
         run: |
           cd orchestrator
-          pipenv run rq worker delta export &
+          pipenv run python worker.py &
       - name: Run unit and integration tests
         run: |
           pwd

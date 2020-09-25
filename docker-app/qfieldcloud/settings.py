@@ -188,12 +188,14 @@ RQ_QUEUES = {
         'PORT': 6379,
         'DB': 0,
         'DEFAULT_TIMEOUT': 600,
+        'PASSWORD': os.environ.get("REDIS_PASSWORD"),
     },
     'delta': {
         'HOST': 'redis',
         'PORT': 6379,
         'DB': 0,
         'DEFAULT_TIMEOUT': 600,
+        'PASSWORD': os.environ.get("REDIS_PASSWORD"),
     },
 }
 

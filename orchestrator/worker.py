@@ -1,3 +1,4 @@
+import os
 import logging
 from logging import handlers
 
@@ -5,6 +6,7 @@ import sentry_sdk
 from sentry_sdk.integrations.rq import RqIntegration
 
 from rq import Connection, Worker
+from redis import Redis
 
 
 def env():
@@ -27,8 +29,11 @@ sentry_sdk.init(
     attach_stacktrace='on',
 )
 
+
 rotating_file_handler = handlers.RotatingFileHandler(
-    filename='/var/local/qfieldcloud/orchestrator.log',
+    filename=os.path.join(
+        env().get('LOG_DIRECTORY', ''),
+        'orchestrator.log'),
     mode='a',
     maxBytes=5 * 1024 * 1024,
     backupCount=2,
@@ -43,7 +48,11 @@ logging.basicConfig(
 )
 
 with Connection():
+    redis = Redis(
+        password=env().get('REDIS_PASSWORD'),
+    )
+
     qs = ['delta', 'export']
 
-    w = Worker(qs)
+    w = Worker(qs, connection=redis)
     w.work()
