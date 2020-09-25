@@ -81,8 +81,13 @@
       emacs .env
     #+end_src
 
+    Create the directory for qfieldcloud logs and supervisor socket file
+    #+begin_src sh
+      mkdir /var/local/qfieldcloud
+    #+end_src
+
     Configure the =.env= file to your desire with a good editor
-    #+begin_src emacs-lisp
+    #+begin_src sh
       cd conf
       cp supervisord.conf.example supervisord.conf
       emacs supervisord.conf
@@ -96,7 +101,7 @@
 
     Run the django database migrations
     #+begin_src sh
-      docker-compose exec app python manage.py migrate
+      docker-compose -f docker-compose.yml exec app python manage.py migrate
     #+end_src
 
     Prepare and run supervisord with the workers
@@ -117,8 +122,15 @@
     #+end_src
     For details see the offical [[http://supervisord.org/running.html#running-supervisorctl][documentation]]
 *** Infrastructure
-   Based on this example
-   https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/
+    Based on this example
+    https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/
+*** Logs
+    Docker logs are managed by docker in the default way. To read the logs:
+    #+begin_src sh
+      docker-compose -f docker-compose.yml logs
+    #+end_src
+ 
+    Orchestrator logs are stored in the ~/var/local/qfieldcloud/~ directory
 ** Resources
    - [[https://qfield.cloud][QField Cloud "marketing" page]]
    - [[https://app.qfield.cloud/swagger/][API Swagger doc]]

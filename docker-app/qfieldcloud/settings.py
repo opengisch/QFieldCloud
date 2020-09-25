@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,7 +53,6 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'rest_auth',
     'rest_auth.registration',
-    'silk',  # Middleware for debug of requests
     'django_rq',  # Integration with Redis Queue
     'storages',  # Integration with AWS S3
 
@@ -59,7 +61,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'silk.middleware.SilkyMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -186,27 +187,24 @@ RQ_QUEUES = {
         'HOST': 'redis',
         'PORT': 6379,
         'DB': 0,
+        'DEFAULT_TIMEOUT': 600,
     },
     'delta': {
         'HOST': 'redis',
         'PORT': 6379,
         'DB': 0,
+        'DEFAULT_TIMEOUT': 600,
     },
 }
 
 LOGIN_URL = 'rest_framework:login'
 
-SILKY_AUTHENTICATION = True  # User must login
-SILKY_AUTHORISATION = True  # User must have permissions
-
-
-# Don't intercept request bigger than 1MB
-def silky_intercept(request):
-    try:
-        content_length = int(request.META.get('CONTENT_LENGTH', 0))
-    except ValueError:
-        content_length = 0
-    return content_length <= 1048576
-
-
-SILKY_INTERCEPT_FUNC = silky_intercept
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN", ""),
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+    environment=os.environ.get("QFIELDCLOUD_HOST"),
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii=True
+)

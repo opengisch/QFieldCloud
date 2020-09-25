@@ -128,7 +128,7 @@ class DownloadFileView(views.APIView):
             output = job.result[1]
 
             if not exit_code == 0:
-                job_status = 'qgis_errors'
+                job_status = 'qgis_error'
                 return Response({'status': job_status, 'output': output})
 
             # Obtain the bucket object

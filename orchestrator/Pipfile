@@ -10,6 +10,7 @@ docker = "==4.2.0"
 rq = "==1.5.1"
 supervisor = "==4.2.1"
 flake8 = "==3.8.3"
+sentry-sdk = "*"
 
 [requires]
 python_version = "3.8"

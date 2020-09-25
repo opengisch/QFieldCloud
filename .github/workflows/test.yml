@@ -44,7 +44,7 @@ jobs:
       - name: Run RQ workers
         run: |
           cd orchestrator
-          pipenv run rq worker export delta &
+          pipenv run rq worker delta export &
       - name: Run unit and integration tests
         run: |
           pwd

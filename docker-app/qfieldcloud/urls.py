@@ -57,9 +57,6 @@ urlpatterns = [
     path('api/v1/', include('qfieldcloud.core.urls')),
     path('auth/', include('rest_framework.urls')),
 
-    re_path(r'^silk/', include('silk.urls', namespace='silk')),
-    path('django-rq/', include('django_rq.urls')),
-
     # Web page
     path('', IndexView.as_view(), name='index'),
     path('app/', IndexView.as_view(), name='index'),

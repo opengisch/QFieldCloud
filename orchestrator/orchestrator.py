@@ -1,7 +1,16 @@
 import os
+import logging
 from pathlib import Path
 
 import docker
+
+
+class QgisException(Exception):
+    pass
+
+
+class ApplyDeltaScriptException(Exception):
+    pass
 
 
 def load_env_file():
@@ -33,7 +42,12 @@ def export_project(projectid, project_file):
     exit_code, output = container.exec_run(container_command)
     container.stop()
 
-    # TODO: communicate to Django that the work is done...
+    logging.info(
+        'export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}'.format(
+            projectid, project_file, exit_code, output.decode('utf-8')))
+
+    if not exit_code == 0:
+        raise QgisException(output)
     return exit_code, output.decode('utf-8')
 
 
@@ -55,6 +69,12 @@ def apply_delta(projectid, project_file, delta_file):
     exit_code, output = container.exec_run(container_command)
     container.stop()
 
+    logging.info(
+        'export_project, projectid: {}, project_file: {}, delta_file: {}, exit_code: {}, output:\n\n{}'.format(
+            projectid, project_file, delta_file, exit_code, output.decode('utf-8')))
+
+    if exit_code not in [0, 1]:
+        raise ApplyDeltaScriptException(output)
     return exit_code, output.decode('utf-8')
 
 
@@ -71,12 +91,16 @@ def check_status():
     container.start()
     container.attach(logs=True)
 
-    # TODO: create an actual command to start qgis and check some features
-    # container_command = 'xvfb-run python3 entrypoint.py apply-delta {} {} {}'.format(
-    #     projectid, project_file, delta_file)
+    # TODO: create a command to actually start qgis and check some features
     container_command = 'echo QGIS container is running'
 
     exit_code, output = container.exec_run(container_command)
     container.stop()
 
+    logging.info(
+        'check_status, exit_code: {}, output:\n\n{}'.format(
+            exit_code, output.decode('utf-8')))
+
+    if not exit_code == 0:
+        raise QgisException(output)
     return exit_code, output.decode('utf-8')
