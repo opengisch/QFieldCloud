@@ -547,7 +547,13 @@ class DeltaTestCase(APITestCase):
                     for chunk in response.streaming_content:
                         f.write(chunk)
 
-                # TODO: actually check the gpkg content
+                import sqlite3
+                conn = sqlite3.connect(local_file)
+                c = conn.cursor()
+                c.execute("SELECT int FROM points WHERE fid = '1'")
+                self.assertEqual(c.fetchone()[0], 6969)
+
+                conn.close()
                 return
 
         self.fail("Worker didn't finish")

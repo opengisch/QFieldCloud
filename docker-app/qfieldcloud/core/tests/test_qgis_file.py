@@ -59,7 +59,6 @@ class QgisFileTestCase(APITransactionTestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
-        # TODO: check if file is actually uploaded
 
     def test_push_download_file(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
