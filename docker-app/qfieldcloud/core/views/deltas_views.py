@@ -4,6 +4,7 @@ from pathlib import PurePath
 
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import status, views, permissions
 from rest_framework.response import Response
@@ -22,8 +23,10 @@ class DeltaFilePermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         projectid = permissions_utils.get_param_from_request(
             request, 'projectid')
-        # TODO: check if exists
-        project = Project.objects.get(id=projectid)
+        try:
+            project = Project.objects.get(id=projectid)
+        except ObjectDoesNotExist:
+            return False
         user = request.user
 
         if request.method == 'GET':

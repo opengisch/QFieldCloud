@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
@@ -23,8 +24,10 @@ class ListCreateMembersViewPermissions(permissions.BasePermission):
         organization_name = permissions_utils.get_param_from_request(
             request, 'organization')
 
-        # TODO: check if exists or catch exception
-        organization = User.objects.get(username=organization_name)
+        try:
+            organization = User.objects.get(username=organization_name)
+        except ObjectDoesNotExist:
+            return False
 
         if request.method == 'GET':
             return permissions_utils.can_list_members(user, organization)
@@ -81,9 +84,11 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
         member_name = permissions_utils.get_param_from_request(
             request, 'username')
 
-        # TODO: check if exists or catch exception
-        organization = Organization.objects.get(username=organization_name)
-        member = User.objects.get(username=member_name)
+        try:
+            organization = Organization.objects.get(username=organization_name)
+            member = User.objects.get(username=member_name)
+        except ObjectDoesNotExist:
+            return False
 
         if request.method == 'GET':
             return permissions_utils.can_get_member_role(

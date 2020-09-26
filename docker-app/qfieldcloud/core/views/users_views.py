@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
@@ -43,8 +44,11 @@ class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
 
         username = permissions_utils.get_param_from_request(
             request, 'username')
-        # TODO: check if exists or catch exception
-        user = User.objects.get(username=username)
+
+        try:
+            user = User.objects.get(username=username)
+        except ObjectDoesNotExist:
+            return False
 
         if request.method == 'GET':
             # The queryset is already filtered by what the user can see

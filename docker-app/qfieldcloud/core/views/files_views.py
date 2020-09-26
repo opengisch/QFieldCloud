@@ -2,6 +2,7 @@
 from pathlib import PurePath
 from django.core.files.base import ContentFile
 from django.http import FileResponse
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
@@ -20,7 +21,7 @@ class ListFilesViewPermissions(permissions.BasePermission):
         projectid = request.parser_context['kwargs']['projectid']
         try:
             project = Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
+        except ObjectDoesNotExist:
             return False
 
         return permissions_utils.can_list_files(request.user, project)
@@ -34,11 +35,8 @@ class ListFilesView(views.APIView):
                           ListFilesViewPermissions]
 
     def get(self, request, projectid):
-        try:
-            Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
+
+        Project.objects.get(id=projectid)
 
         bucket = utils.get_s3_bucket()
 
@@ -81,8 +79,10 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
             return False
 
         projectid = request.parser_context['kwargs']['projectid']
-        # TODO: check if exists or catch exception
-        project = Project.objects.get(id=projectid)
+        try:
+            project = Project.objects.get(id=projectid)
+        except ObjectDoesNotExist:
+            return False
         user = request.user
 
         if request.method == 'GET':
@@ -102,11 +102,8 @@ class DownloadPushDeleteFileView(views.APIView):
                           DownloadPushDeleteFileViewPermissions]
 
     def get(self, request, projectid, filename):
-        try:
-            Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
+        Project.objects.get(id=projectid)
+
         extra_args = {}
         if 'version' in self.request.query_params:
             version = self.request.query_params['version']
@@ -125,11 +122,8 @@ class DownloadPushDeleteFileView(views.APIView):
             filename=filename)
 
     def post(self, request, projectid, filename, format=None):
-        try:
-            Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
+
+        Project.objects.get(id=projectid)
 
         if 'file' not in request.data:
             return Response(
@@ -160,11 +154,7 @@ class DownloadPushDeleteFileView(views.APIView):
 
     def delete(self, request, projectid, filename):
 
-        try:
-            Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
+        Project.objects.get(id=projectid)
 
         key = utils.safe_join('projects/{}/files/'.format(projectid), filename)
         bucket = utils.get_s3_bucket()

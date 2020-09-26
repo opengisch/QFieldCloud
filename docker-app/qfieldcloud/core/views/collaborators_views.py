@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
@@ -22,8 +23,10 @@ class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
         user = request.user
         projectid = permissions_utils.get_param_from_request(
             request, 'projectid')
-        # TODO: check if exists or catch exception
-        project = Project.objects.get(id=projectid)
+        try:
+            project = Project.objects.get(id=projectid)
+        except ObjectDoesNotExist:
+            return False
 
         if request.method == 'GET':
             return permissions_utils.can_list_collaborators(user, project)
@@ -80,9 +83,11 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
         collaborator_name = permissions_utils.get_param_from_request(
             request, 'username')
 
-        # TODO: check if exists or catch exception
-        project = Project.objects.get(id=projectid)
-        collaborator = User.objects.get(username=collaborator_name)
+        try:
+            project = Project.objects.get(id=projectid)
+            collaborator = User.objects.get(username=collaborator_name)
+        except ObjectDoesNotExist:
+            return False
 
         if request.method == 'GET':
             return permissions_utils.can_get_collaborator_role(

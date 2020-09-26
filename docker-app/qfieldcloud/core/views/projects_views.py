@@ -1,6 +1,7 @@
 
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import viewsets, permissions
 
@@ -26,8 +27,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         user = request.user
         owner = permissions_utils.get_param_from_request(request, 'owner')
         if owner:
-            # TODO: check if exists or catch exception
-            owner_obj = User.objects.get(username=owner)
+            try:
+                owner_obj = User.objects.get(username=owner)
+            except ObjectDoesNotExist:
+                return False
         else:
             # If the owner is not in the request, means that the owner
             # should be the user that made the request

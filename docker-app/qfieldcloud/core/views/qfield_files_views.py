@@ -4,6 +4,7 @@ from pathlib import PurePath
 from django.http import FileResponse
 from django.core.files.base import ContentFile
 from django.utils.decorators import method_decorator
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
@@ -21,8 +22,10 @@ class ExportViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         projectid = permissions_utils.get_param_from_request(
             request, 'projectid')
-        # TODO: check if exists
-        project = Project.objects.get(id=projectid)
+        try:
+            project = Project.objects.get(id=projectid)
+        except ObjectDoesNotExist:
+            return False
         user = request.user
         return permissions_utils.can_download_files(user, project)
 
@@ -67,8 +70,8 @@ class ExportView(views.APIView):
         operation_id="List qfield project files"))
 class ListFilesView(views.APIView):
 
-    permission_classes = [permissions.IsAuthenticated,
-                          permissions.IsAuthenticated]
+    # TODO: check actual permissions on the project of this job
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, jobid):
         job = utils.get_job('export', str(jobid))
