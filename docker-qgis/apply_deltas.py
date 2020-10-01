@@ -134,6 +134,12 @@ class DeltaExceptionType(Enum):
     Conflict = 'CONFLICT'
 
 
+class DeltaAcceptedState(Enum):
+    APPLIED = 'applied'
+    CONFLICTS = 'conflicts'
+    ERRORS = 'errors'
+
+
 class DeltaFeature(TypedDict):
     geometry: Optional[WKT]
     attributes: Optional[Dict[str, Any]]
@@ -216,7 +222,7 @@ def project_decorator(f):
     def wrapper(opts: BaseOptions, *args, **kw):
         start_app()
         project = QgsProject.instance()
-        project.setAutoTransaction(True)
+        project.setAutoTransaction(opts['transaction'])
         project.read(opts['project'])
 
         return f(project, opts, *args, **kw)  # type: ignore
@@ -228,17 +234,27 @@ def project_decorator(f):
 def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
     try:
         deltas = load_delta_file(opts)
-        has_conflict = apply_deltas(project, deltas, inverse=opts['inverse'])
+
+        if opts['transaction']:
+            accepted_state = apply_deltas(project, deltas, inverse=opts['inverse'])
+        else:
+            accepted_state = apply_deltas_without_transaction(project, deltas, inverse=opts['inverse'])
 
         project.clear()
-        if has_conflict:
-            logger.info('Successfully applied {} deltas with some conflicts'.format(len(deltas.deltas)))
+        if accepted_state == DeltaAcceptedState.CONFLICTS:
+            logger.info('Accepted {} deltas with some conflicts'.format(len(deltas.deltas)))
             return 1
-        else:
-            logger.info('Successfully applied {} deltas'.format(len(deltas.deltas)))
+        elif accepted_state == DeltaAcceptedState.ERRORS:
+            logger.info('Accepted {} deltas with some errors'.format(len(deltas.deltas)))
+            return 2  # TODO change the error code
+        elif accepted_state == DeltaAcceptedState.APPLIED:
+            logger.info('Accepted {} deltas with no errors and conflicts'.format(len(deltas.deltas)))
             return 0
+        else:
+            logger.info('Accepted {} deltas, but unknown state'.format(len(deltas.deltas)))
+            return 2  # TODO change the error code
     except DeltaException as err:
-        # traceback.print_exc()
+        traceback.print_exc()
         logger.exception('Delta exception: {}'.format(str(err)), err)
         return 2
     except Exception as err:
@@ -367,7 +383,61 @@ def load_delta_file(args: DeltaOptions) -> DeltaFile:
     return deltas
 
 
-def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> bool:
+def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> DeltaAcceptedState:
+    accepted_state = DeltaAcceptedState.APPLIED
+
+    # apply deltas on each individual layer
+    for idx, delta in enumerate(delta_file.deltas):
+        layer_id: str = delta.get('layerId')
+        layer: QgsVectorLayer = project.mapLayer(layer_id)
+
+        try:
+            if not isinstance(layer, QgsVectorLayer):
+                raise DeltaException('No layer with id "{}"'.format(layer_id))
+
+            if not layer.isEditable() and not layer.startEditing():
+                raise DeltaException('Cannot start editing layer "{}"')
+
+            delta = inverse_delta(delta) if inverse else delta
+
+            if delta['method'] == DeltaMethod.CREATE.value:
+                create_feature(layer, delta)
+            elif delta['method'] == DeltaMethod.PATCH.value:
+                patch_feature(layer, delta)
+            elif delta['method'] == DeltaMethod.DELETE.value:
+                delete_feature(layer, delta)
+            else:
+                raise DeltaException('Unknown delta method')
+
+            if not layer.commitChanges():
+                raise DeltaException('Failed to commit changes')
+
+        except DeltaException as err:
+            err.layer_id = err.layer_id or layer_id
+            err.delta_idx = err.delta_idx or idx
+            err.fid = err.fid or delta.get('fid')
+            err.method = err.method or delta.get('method')
+
+            if err.e_type == DeltaExceptionType.Conflict:
+                accepted_state = DeltaAcceptedState.CONFLICTS
+                logger.warning('Conflicts while applying a single delta: {}'.format(str(err)), err)
+            else:
+                accepted_state = DeltaAcceptedState.ERRORS
+                logger.warning('Error while applying a single delta: {}'.format(str(err)), err)
+
+            if layer is not None and not layer.rollBack():
+                logger.error('Failed to rollback layer "{}": {}'.format(layer_id, str(err)), err)
+        except Exception as err:
+            raise DeltaException('An error has been encountered while applying delta:' + str(err).replace('\n', ''),
+                                 layer_id=layer.id(),
+                                 delta_idx=idx,
+                                 method=delta.get('method'),
+                                 fid=delta.get('fid')) from err
+
+    return accepted_state
+
+
+def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> DeltaAcceptedState:
     """Applies the deltas from a loaded delta file on the layers in a project.
 
     The general algorithm is as follows:
@@ -482,7 +552,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
     if not cleanup_backups(set(layers_by_id.keys())):
         logger.warning('Failed to cleanup backups, other than that - success')
 
-    return has_conflict
+    return DeltaAcceptedState.CONFLICTS if has_conflict else DeltaAcceptedState.APPLIED
 
 
 def rollback_deltas(layers_by_id: Dict[LayerId, QgsVectorLayer], committed_layer_ids: Set[LayerId] = set()) -> bool:
@@ -894,6 +964,7 @@ if __name__ == '__main__':
     parser_delta_apply.add_argument('project', type=str, help='Path to QGIS project')
     parser_delta_apply.add_argument('delta_file', type=str, help='Path to delta file')
     parser_delta_apply.add_argument('--inverse', action='store_true', help='Inverses the direction of the deltas. Makes the delta `old` to `new` and `new` to `old`. Mainly used to rollback the applied changes using the same delta file..')
+    parser_delta_apply.add_argument('--transaction', action='store_true', help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled')
     parser_delta_apply.set_defaults(func=cmd_delta_apply)
     # /deltas
 
@@ -903,10 +974,12 @@ if __name__ == '__main__':
 
     parser_backup_cleanup = backup_subparsers.add_parser('cleanup', help='rollback a delta file on a project')
     parser_backup_cleanup.add_argument('project', type=str, help='Path to QGIS project')
+    parser_backup_cleanup.add_argument('--transaction', action='store_true', help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled')
     parser_backup_cleanup.set_defaults(func=cmd_backup_cleanup)
 
     parser_backup_rollback = backup_subparsers.add_parser('rollback', help='rollback a delta file on a project')
     parser_backup_rollback.add_argument('project', type=str, help='Path to QGIS project')
+    parser_backup_rollback.add_argument('--transaction', action='store_true', help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled')
     parser_backup_rollback.set_defaults(func=cmd_backup_rollback)
     # /backup
 
