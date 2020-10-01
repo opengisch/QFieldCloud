@@ -12,7 +12,7 @@ import boto3
 
 from qgis.core import (
     QgsProject, QgsOfflineEditing, QgsVectorLayer, QgsMapSettings)
-from qgis.testing import start_app
+from qgis.testing import start_app, mocked
 
 from qfieldsync.core.offline_converter import OfflineConverter
 
@@ -161,6 +161,13 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     """Call the function of QFieldSync to export a project for QField"""
     start_app()
 
+    # Set the canvas object name to the
+    # exported project because qfieldsync running
+    # headless on the server doesn't do that
+    iface = mocked.get_iface()
+    canvas = iface.mapCanvas()
+    canvas.setObjectName("theMapCanvas")
+
     project = QgsProject.instance()
     if not os.path.exists(project_filepath):
         raise FileNotFoundError(project_filepath)
@@ -169,8 +176,11 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
         raise Exception(
             "Unable to open file with QGIS: {}".format(project_filepath))
 
+    # Set the crs from the original project to the canvas
+    # so it will be present in the exported project
+    canvas.setDestinationCrs(project.crs())
+
     # Calculate the project extent
-    project = QgsProject.instance()
     layers = project.mapLayers()
     mapsettings = QgsMapSettings()
 

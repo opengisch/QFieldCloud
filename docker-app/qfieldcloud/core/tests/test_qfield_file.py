@@ -234,3 +234,75 @@ class QfieldFileTestCase(APITransactionTestCase):
                 return
 
         self.fail("Worker didn't finish")
+
+    def test_downloaded_file_has_canvas_name(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/points.geojson/'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/polygons.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/polygons.geojson/'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/project.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/project.qgs/'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Start the export to get the jobid
+        response = self.client.get(
+            '/api/v1/qfield-files/{}/'.format(
+                self.project1.id),
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        jobid = response.json()['jobid']
+
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/qfield-files/export/{}/'.format(jobid),
+            )
+
+            if response.json()['status'] == 'finished':
+                response = self.client.get(
+                    '/api/v1/qfield-files/export/{}/project_qfield.qgs/'.format(
+                        jobid),
+                )
+                temp_dir = tempfile.mkdtemp()
+                local_file = os.path.join(temp_dir, 'project.qgs')
+
+                with open(local_file, 'wb') as f:
+                    for chunk in response.streaming_content:
+                        f.write(chunk)
+
+                with open(local_file, 'r') as f:
+                    for line in f:
+                        if 'name="theMapCanvas"' in line:
+                            return
+
+        self.fail("Worker didn't finish or there was an error")
