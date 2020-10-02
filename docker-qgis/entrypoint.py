@@ -246,7 +246,8 @@ def _apply_delta(args):
     return_code = apply_deltas.cmd_delta_apply(
         opts={'project': project_filepath,
               'delta_file': deltafile,
-              'inverse': False})
+              'inverse': False,
+              'transaction': False})
 
     _upload_delta_modified_files(
         projectid, os.path.join(tmpdir, 'files'))
