@@ -29,5 +29,5 @@ class StatusTestCase(APITransactionTestCase):
         self.client.get('/api/v1/status/')
         tac = time.perf_counter()
 
-        self.assertGreater(toc - tic, 5)
+        self.assertGreater(toc - tic, 1)
         self.assertLess(tac - toc, 1)

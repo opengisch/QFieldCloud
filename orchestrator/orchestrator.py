@@ -40,7 +40,7 @@ def export_project(projectid, project_file):
     container_command = 'xvfb-run python3 entrypoint.py export {} {}'.format(projectid, project_file)
 
     exit_code, output = container.exec_run(container_command)
-    container.stop()
+    container.kill()
 
     logging.info(
         'export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}'.format(
@@ -67,7 +67,7 @@ def apply_delta(projectid, project_file, delta_file):
         projectid, project_file, delta_file)
 
     exit_code, output = container.exec_run(container_command)
-    container.stop()
+    container.kill()
 
     logging.info(
         'export_project, projectid: {}, project_file: {}, delta_file: {}, exit_code: {}, output:\n\n{}'.format(
@@ -95,7 +95,7 @@ def check_status():
     container_command = 'echo QGIS container is running'
 
     exit_code, output = container.exec_run(container_command)
-    container.stop()
+    container.kill()
 
     logging.info(
         'check_status, exit_code: {}, output:\n\n{}'.format(
