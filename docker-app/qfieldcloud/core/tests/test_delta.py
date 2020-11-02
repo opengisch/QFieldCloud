@@ -285,7 +285,7 @@ class DeltaTestCase(APITestCase):
 
         self.assertFalse(status.is_success(response.status_code))
 
-    def disable_test_push_apply_delta_file_with_conflicts(self):
+    def test_push_apply_delta_file_with_conflicts(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         # Add files to the project
@@ -478,7 +478,7 @@ class DeltaTestCase(APITestCase):
 
         self.assertTrue(status.is_client_error(response.status_code))
 
-    def disable_test_push_list_deltas(self):
+    def test_push_list_deltas(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         # Push a deltafile
@@ -512,12 +512,12 @@ class DeltaTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['id'])
 
         self.assertEqual(json[1]['id'], 'ab3e55a2-98cc-4c03-8069-8266fefd8124')
-        self.assertEqual(json[1]['size'], 546)
+        self.assertEqual(json[1]['size'], 660)
         self.assertEqual(json[0]['id'], '4d027a9d-d31a-4e8f-acad-2f2d59caa48c')
-        self.assertEqual(json[0]['size'], 546)
+        self.assertEqual(json[0]['size'], 660)
         self.assertEqual(
             json[1]['sha256'],
-            'ccf1a0726d760510bb50b740c13e6a140aeadb832e5dd8152be4bd8b62b7ccac')
+            '1bcd577d0a637a19d15766e0ab6a449f532a34c3de5b4d60a55cd32014a2b7ad')
         self.assertEqual(
             json[0]['sha256'],
-            '1690fb4ad6f4747e166c15f8a64dd500b16279a9e0ca9f70bba5e13a13547e36')
+            'b689f07c89fd1111c560f94ed251c8131eea61a9fdcad56f54781d45fc627f71')
