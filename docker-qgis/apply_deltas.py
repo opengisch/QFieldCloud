@@ -47,7 +47,7 @@ class CsvFormatter(logging.Formatter):
     def __init__(self, skip_csv_header: bool = False):
         super().__init__()
         self.output = io.StringIO()
-        self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'delta_id', 'feature_pk', 'attribute', 'conflict', 'method']
+        self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'delta_id', 'feature_pk', 'attribute', 'conflict', 'exception', 'method']
         self.writer = csv.DictWriter(self.output, fieldnames=self.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
 
         if not skip_csv_header:
@@ -80,9 +80,10 @@ class CsvFormatter(logging.Formatter):
                         'delta_file_id': exception.delta_file_id,
                         'layer_id': exception.layer_id,
                         'delta_index': exception.delta_idx,
-                        'feature_pk': exception.feature_pk, 
+                        'feature_pk': exception.feature_pk,
                         'attribute': exception.attr,
                         'conflict': conflict,
+                        'exception': exception.descr,
                         'method': exception.method})
             else:
                 self.writer.writerow({
@@ -728,7 +729,7 @@ def find_layer_pk(layer: QgsVectorLayer) -> Tuple[int, str]:
 
     if pk_attr_idx == -1:
         return (-1, '')
-  
+
     pk_attr_name = fields.at( pk_attr_idx ).name()
 
     return (pk_attr_idx, pk_attr_name)
@@ -740,7 +741,7 @@ def get_feature(layer: QgsVectorLayer, feature_pk: FeaturePk) -> QgsFeature:
     assert pk_attr_name
 
     expr = ' {} = {} '.format(QgsExpression.quotedColumnRef(pk_attr_name), QgsExpression.quotedValue(feature_pk))
-    
+
     for f in layer.getFeatures(expr):
         return f
 
