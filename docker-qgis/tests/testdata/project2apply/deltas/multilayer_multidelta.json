@@ -1,8 +1,10 @@
 {
     "deltas": [
         {
-            "fid": "2",
-            "layerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
+            "localPk": "2",
+            "sourcePk": "2",
+            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "attributes": {
@@ -20,8 +22,10 @@
             }
         },
         {
-            "fid": "8",
-            "layerId": "polygons_5096fc7b_b106_4740_90b4_9de822382d71",
+            "localPk": "1",
+            "sourcePk": "1",
+            "localLayerId": "polygons_f18b6046_8e46_4206_a698_641c58e5ac73",
+            "sourceLayerId": "polygons_f18b6046_8e46_4206_a698_641c58e5ac73",
             "method": "patch",
             "new": {
                 "geometry": "POLYGON ((666 666, 5 2, 5 5, 2 5, 666 666 ))",

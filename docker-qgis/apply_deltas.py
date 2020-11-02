@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from typing import (cast, Optional, List, Dict, Union, Set, Any, Callable)
+from typing import (Tuple, cast, Optional, List, Dict, Union, Set, Any, Callable)
 from enum import Enum
+
 try:
     # 3.8
     from typing import TypedDict
@@ -33,6 +34,7 @@ from qgis.core import (
     QgsMapLayerType,
     QgsFeature,
     QgsGeometry,
+    QgsExpression,
     QgsDataSourceUri,
     QgsExpression,
     QgsFeatureRequest,
@@ -45,7 +47,7 @@ class CsvFormatter(logging.Formatter):
     def __init__(self, skip_csv_header: bool = False):
         super().__init__()
         self.output = io.StringIO()
-        self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'fid', 'attribute', 'conflict', 'method']
+        self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'delta_id', 'feature_pk', 'attribute', 'conflict', 'method']
         self.writer = csv.DictWriter(self.output, fieldnames=self.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
 
         if not skip_csv_header:
@@ -78,7 +80,7 @@ class CsvFormatter(logging.Formatter):
                         'delta_file_id': exception.delta_file_id,
                         'layer_id': exception.layer_id,
                         'delta_index': exception.delta_idx,
-                        'fid': exception.fid,
+                        'feature_pk': exception.feature_pk, 
                         'attribute': exception.attr,
                         'conflict': conflict,
                         'method': exception.method})
@@ -104,7 +106,8 @@ logger = logging.getLogger(__name__)
 
 # TYPE DEFINITIONS
 WKT = str
-FeatureId = str
+Uuid = str
+FeaturePk = str
 LayerId = str
 
 
@@ -147,8 +150,11 @@ class DeltaFeature(TypedDict):
 
 
 class Delta(TypedDict):
-    fid: FeatureId
-    layerId: LayerId
+    id: Uuid
+    localFk: FeaturePk
+    sourceFk: FeaturePk
+    localLayerId: LayerId
+    sourceLayerId: LayerId
     method: DeltaMethod
     old: DeltaFeature
     new: DeltaFeature
@@ -175,20 +181,24 @@ class DeltaException(Exception):
                  delta_file_id: str = None,
                  layer_id: str = None,
                  delta_idx: int = None,
-                 fid: str = None,
+                 delta_id: str = None,
+                 feature_pk: str = None,
                  attr: str = None,
                  conflicts: List[str] = None,
-                 method: DeltaMethod = None
+                 method: DeltaMethod = None,
+                 descr: str = None
                  ):
         super(DeltaException, self).__init__(msg)
         self.e_type = e_type
         self.delta_file_id = delta_file_id
         self.layer_id = layer_id
         self.delta_idx = delta_idx
-        self.fid = fid
+        self.delta_id = delta_id
+        self.feature_pk = feature_pk
         self.attr = attr
         self.method = method
         self.conflicts = conflicts
+        self.descr = descr
 # /EXCEPTION DEFINITIONS
 
 
@@ -254,12 +264,13 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
             logger.info('Accepted {} deltas, but unknown state'.format(len(deltas.deltas)))
             return 2  # TODO change the error code
     except DeltaException as err:
-        traceback.print_exc()
-        logger.exception('Delta exception: {}'.format(str(err)), err)
+        exception_str = traceback.format_exc()
+        err.descr = exception_str
+        logger.exception('Delta exception: {}'.format(exception_str), err)
         return 2
     except Exception as err:
-        # traceback.print_exc()
-        logger.exception('Unknown exception: {}'.format(str(err)), err)
+        exception_str = traceback.format_exc()
+        logger.exception('Unknown exception: {}'.format(exception_str), err)
         return 2
 
 
@@ -415,7 +426,7 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
         except DeltaException as err:
             err.layer_id = err.layer_id or layer_id
             err.delta_idx = err.delta_idx or idx
-            err.fid = err.fid or delta.get('fid')
+            err.feature_pk = err.feature_pk or delta.get('sourcePk')
             err.method = err.method or delta.get('method')
 
             if err.e_type == DeltaExceptionType.Conflict:
@@ -432,7 +443,7 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
                                  layer_id=layer.id(),
                                  delta_idx=idx,
                                  method=delta.get('method'),
-                                 fid=delta.get('fid')) from err
+                                 feature_pk=delta.get('sourcePk')) from err
 
     return accepted_state
 
@@ -480,7 +491,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
 
     # group all individual deltas by layer id
     for d in delta_file.deltas:
-        layer_id = d['layerId']
+        layer_id = d['sourceLayerId']
         deltas_by_layer[layer_id] = deltas_by_layer.get(layer_id, [])
         deltas_by_layer[layer_id].append(d)
         layers_by_id[layer_id] = project.mapLayer(layer_id)
@@ -656,7 +667,7 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
         raise DeltaException('Cannot start editing')
 
     for idx, d in enumerate(deltas):
-        assert d['layerId'] == layer.id()
+        assert d['sourceLayerId'] == layer.id()
 
         delta = inverse_delta(d) if inverse else d
 
@@ -673,8 +684,9 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
             # TODO I am lazy now and all these properties are set only here, but should be moved in depth
             err.layer_id = err.layer_id or layer.id()
             err.delta_idx = err.delta_idx or idx
-            err.fid = err.fid or delta.get('fid')
+            err.delta_id = err.delta_id or delta.get('id')
             err.method = err.method or delta.get('method')
+            err.feature_pk = err.feature_pk or delta.get('sourcePk')
 
             if err.e_type == DeltaExceptionType.Conflict:
                 has_conflict = True
@@ -690,13 +702,13 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
                 # So unfortunate situation, that the only safe thing to do is to cancel the whole script
                 raise DeltaException("Cannot rollback layer changes: {}".format(layer.id())) from err
 
-            traceback.print_exc()
-
             raise DeltaException('An error has been encountered while applying delta:' + str(err).replace('\n', ''),
                                  layer_id=layer.id(),
                                  delta_idx=idx,
+                                 delta_id=delta.get('id'),
                                  method=delta.get('method'),
-                                 fid=delta.get('fid')) from err
+                                 descr=traceback.format_exc(),
+                                 feature_pk=delta.get('sourcePk')) from err
 
     if should_commit and not layer.commitChanges():
         if not layer.rollBack():
@@ -706,6 +718,33 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
         raise DeltaException('Cannot commit changes')
 
     return has_conflict
+
+
+def find_layer_pk(layer: QgsVectorLayer) -> Tuple[int, str]:
+    fields = layer.fields()
+    pk_attrs = [*layer.primaryKeyAttributes(), fields.indexFromName('fid')]
+    # we assume the first index to be the primary key index... kinda stupid, but memory layers don't have primary key at all, but we use it on geopackages, but... snap!
+    pk_attr_idx = pk_attrs[0]
+
+    if pk_attr_idx == -1:
+        return (-1, '')
+  
+    pk_attr_name = fields.at( pk_attr_idx ).name()
+
+    return (pk_attr_idx, pk_attr_name)
+
+
+def get_feature(layer: QgsVectorLayer, feature_pk: FeaturePk) -> QgsFeature:
+    _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
+
+    assert pk_attr_name
+
+    expr = ' {} = {} '.format(QgsExpression.quotedColumnRef(pk_attr_name), QgsExpression.quotedValue(feature_pk))
+    
+    for f in layer.getFeatures(expr):
+        return f
+
+    return QgsFeature()
 
 
 def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
@@ -770,7 +809,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
     """
     new_feature_delta = delta['new']
     old_feature_delta = delta['old']
-    old_feature = _find_feature(layer, delta)
+    old_feature = get_feature(layer, delta['sourcePk'])
 
     if not old_feature.isValid():
         raise DeltaException('Unable to find feature')
@@ -828,7 +867,7 @@ def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
         DeltaException: whenever the feature cannot be deleted
     """
     old_feature_delta = delta['old']
-    old_feature = _find_feature(layer, old_feature_delta)
+    old_feature = get_feature(layer, delta['sourcePk'])
 
     if not old_feature.isValid():
         raise DeltaException('Unable to find feature')
