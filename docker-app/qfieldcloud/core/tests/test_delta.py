@@ -123,30 +123,33 @@ class DeltaTestCase(APITestCase):
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
 
-            if response.json()['status'] == 'STATUS_APPLIED':
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
 
-                # Download the geojson file
-                response = self.client.get(
-                    '/api/v1/files/{}/testdata.gpkg/'.format(
-                        self.project1.id),
-                )
-                self.assertTrue(status.is_success(response.status_code))
+            self.assertEqual('STATUS_APPLIED', response.json()['status'])
 
-                temp_dir = tempfile.mkdtemp()
-                local_file = os.path.join(temp_dir, 'testdata.gpkg')
+            # Download the geojson file
+            response = self.client.get(
+                '/api/v1/files/{}/testdata.gpkg/'.format(
+                    self.project1.id),
+            )
+            self.assertTrue(status.is_success(response.status_code))
 
-                with open(local_file, 'wb') as f:
-                    for chunk in response.streaming_content:
-                        f.write(chunk)
+            temp_dir = tempfile.mkdtemp()
+            local_file = os.path.join(temp_dir, 'testdata.gpkg')
 
-                conn = sqlite3.connect(local_file)
-                conn.row_factory = sqlite3.Row
-                c = conn.cursor()
-                c.execute('''SELECT * FROM points WHERE fid = 1''')
-                f = c.fetchone()
+            with open(local_file, 'wb') as f:
+                for chunk in response.streaming_content:
+                    f.write(chunk)
 
-                self.assertEqual(666, f['int'])
-                return
+            conn = sqlite3.connect(local_file)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute('''SELECT * FROM points WHERE fid = 1''')
+            f = c.fetchone()
+
+            self.assertEqual(666, f['int'])
+            return
 
         self.fail("Worker didn't finish")
 
@@ -353,12 +356,15 @@ class DeltaTestCase(APITestCase):
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
 
-            if response.json()['status'] == 'STATUS_APPLIED_WITH_CONFLICTS':
-                return
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
+
+            self.assertEqual('STATUS_APPLIED_WITH_CONFLICTS', response.json()['status'])
+            return
 
         self.fail("Worker didn't finish")
 
-    def disable_test_push_apply_delta_file_twice(self):
+    def test_push_apply_delta_file_twice(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         # Verify the original geojson file
@@ -428,32 +434,34 @@ class DeltaTestCase(APITestCase):
             response = self.client.get(
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
-            if response.json()['status'] == 'STATUS_APPLIED':
 
-                # Download the geojson file
-                response = self.client.get(
-                    '/api/v1/files/{}/testdata.gpkg/'.format(
-                        self.project1.id),
-                )
-                self.assertTrue(status.is_success(response.status_code))
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
 
-                temp_dir = tempfile.mkdtemp()
-                local_file = os.path.join(temp_dir, 'testdata.gpkg')
+            self.assertEqual('STATUS_APPLIED', response.json()['status'])
 
-                with open(local_file, 'wb') as f:
-                    for chunk in response.streaming_content:
-                        f.write(chunk)
+            # Download the geojson file
+            response = self.client.get(
+                '/api/v1/files/{}/testdata.gpkg/'.format(
+                    self.project1.id),
+            )
+            self.assertTrue(status.is_success(response.status_code))
 
-                conn = sqlite3.connect(local_file)
-                conn.row_factory = sqlite3.Row
-                c = conn.cursor()
-                c.execute('''SELECT * FROM points WHERE fid = 1''')
-                f = c.fetchone()
+            temp_dir = tempfile.mkdtemp()
+            local_file = os.path.join(temp_dir, 'testdata.gpkg')
 
-                self.assertEqual(666, f['int'])
-                return
-            elif response.json()['status'] == 'STATUS_NOT_APPLIED':
-                self.fail("Delta not applied")
+            with open(local_file, 'wb') as f:
+                for chunk in response.streaming_content:
+                    f.write(chunk)
+
+            conn = sqlite3.connect(local_file)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute('''SELECT * FROM points WHERE fid = 1''')
+            f = c.fetchone()
+
+            self.assertEqual(666, f['int'])
+            return
 
         # Push the same deltafile again
         delta_file = testdata_path('delta/deltas/singlelayer_singledelta.json')
