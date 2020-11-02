@@ -206,29 +206,6 @@ class DeltaException(Exception):
 BACKUP_SUFFIX = '.qfieldcloudbackup'
 
 
-def _find_pk_attr(layer):
-    idx = [*layer.primaryKeyAttributes(), -1][0]
-
-    if not idx == -1:
-        key_field = layer.fields()[idx].name()
-    else:
-        key_field = 'fid'
-
-    # TODO: assert that the field actually exists
-    return key_field
-
-
-def _find_feature(layer: QgsVectorLayer, delta: Delta) -> QgsFeature:
-    pk_attr = _find_pk_attr(layer)
-    expr = QgsExpression(" {} = {} ".format(QgsExpression.quotedColumnRef(pk_attr), QgsExpression.quotedValue(delta['fid'])))
-
-    features = [f for f in layer.getFeatures(QgsFeatureRequest(expr))]
-
-    assert len(features) == 1
-
-    return features[0]
-
-
 def project_decorator(f):
     def wrapper(opts: BaseOptions, *args, **kw):
         start_app()
