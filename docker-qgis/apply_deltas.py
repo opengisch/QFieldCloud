@@ -36,8 +36,6 @@ from qgis.core import (
     QgsGeometry,
     QgsExpression,
     QgsDataSourceUri,
-    QgsExpression,
-    QgsFeatureRequest,
     QgsProviderRegistry)
 from qgis.testing import start_app
 
@@ -707,7 +705,7 @@ def find_layer_pk(layer: QgsVectorLayer) -> Tuple[int, str]:
     if pk_attr_idx == -1:
         return (-1, '')
 
-    pk_attr_name = fields.at( pk_attr_idx ).name()
+    pk_attr_name = fields.at(pk_attr_idx).name()
 
     return (pk_attr_idx, pk_attr_name)
 
