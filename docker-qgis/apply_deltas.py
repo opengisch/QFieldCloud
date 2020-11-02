@@ -400,7 +400,7 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
 
     # apply deltas on each individual layer
     for idx, delta in enumerate(delta_file.deltas):
-        layer_id: str = delta.get('layerId')
+        layer_id: str = delta.get('sourceLayerId')
         layer: QgsVectorLayer = project.mapLayer(layer_id)
 
         try:
