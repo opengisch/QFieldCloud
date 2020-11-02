@@ -213,8 +213,12 @@ class DeltaTestCase(APITestCase):
             response = self.client.get(
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
-            if response.json()['status'] == 'STATUS_NOT_APPLIED':
-                return
+
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
+
+            self.assertEqual('STATUS_ERROR', response.json()['status'])
+            return
 
         self.fail("Worker didn't finish")
 
