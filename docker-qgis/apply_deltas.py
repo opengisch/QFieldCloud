@@ -462,7 +462,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
     deltas_by_layer: Dict[LayerId, List[Delta]] = {}
     layers_by_id: Dict[LayerId, QgsVectorLayer] = {}
     transcation_by_layer: Dict[str, str] = {}
-    transaction_open: Dict[str, bool] = {}
+    opened_transactions: Dict[str, List[LayerId]] = {}
 
     for layer_id in project.mapLayers():
         layer = project.mapLayer(layer_id)
@@ -475,8 +475,8 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
         # here we use '$$$$$' as a separator, nothing special, can be easily changed to any other string
         transaction_id = conn_type + '$$$$$' + conn_string
         transcation_by_layer[layer_id] = transaction_id
-        transaction_open[transaction_id] = transaction_open.get(transaction_id, [])
-        transaction_open[transaction_id].append(layer_id)
+        opened_transactions[transaction_id] = opened_transactions.get(transaction_id, [])
+        opened_transactions[transaction_id].append(layer_id)
 
     # group all individual deltas by layer id
     for d in delta_file.deltas:
@@ -534,9 +534,9 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
             if layers_by_id[layer_id].commitChanges():
                 transaction_id = transcation_by_layer.get(layer_id)
 
-                if transaction_id in transaction_open:
-                    committed_layer_ids = [*committed_layer_ids, *transaction_open[transaction_id]]
-                    del transaction_open[transaction_id]
+                if transaction_id and transaction_id in opened_transactions:
+                    committed_layer_ids = set([*committed_layer_ids, *opened_transactions[transaction_id]])
+                    del opened_transactions[transaction_id]
                 else:
                     committed_layer_ids.add(layer_id)
             else:
