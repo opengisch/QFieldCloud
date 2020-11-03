@@ -1,8 +1,10 @@
 {
     "deltas": [
         {
-            "fid": "1",
-            "layerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
+            "localPk": "1",
+            "sourcePk": "1",
+            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "geometry": "POINT (666 0)"
@@ -12,8 +14,10 @@
             }
         },
         {
-            "fid": 2,
-            "layerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
+            "localPk": "2",
+            "sourcePk": "2",
+            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "attributes": {
@@ -31,8 +35,10 @@
             }
         },
         {
-            "fid": "3",
-            "layerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
+            "localPk": "3",
+            "sourcePk": "3",
+            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "geometry": "POINT (666 0)",

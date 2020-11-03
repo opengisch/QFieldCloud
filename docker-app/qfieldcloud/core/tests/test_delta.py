@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 import time
+import sqlite3
 
 from django.contrib.auth import get_user_model
 
@@ -63,7 +64,7 @@ class DeltaTestCase(APITestCase):
         # Add files to the project
         file_path = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/'.format(self.project1.id),
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -80,6 +81,15 @@ class DeltaTestCase(APITestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/testdata.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
 
         file_path = testdata_path('delta/project.qgs')
         response = self.client.post(
@@ -113,30 +123,33 @@ class DeltaTestCase(APITestCase):
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
 
-            if response.json()['status'] == 'STATUS_APPLIED':
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
 
-                # Download the geojson file
-                response = self.client.get(
-                    '/api/v1/files/{}/points.geojson/'.format(
-                        self.project1.id),
-                )
-                self.assertTrue(status.is_success(response.status_code))
+            self.assertEqual('STATUS_APPLIED', response.json()['status'])
 
-                temp_dir = tempfile.mkdtemp()
-                local_file = os.path.join(temp_dir, 'points.geojson')
+            # Download the geojson file
+            response = self.client.get(
+                '/api/v1/files/{}/testdata.gpkg/'.format(
+                    self.project1.id),
+            )
+            self.assertTrue(status.is_success(response.status_code))
 
-                with open(local_file, 'wb') as f:
-                    for chunk in response.streaming_content:
-                        f.write(chunk)
+            temp_dir = tempfile.mkdtemp()
+            local_file = os.path.join(temp_dir, 'testdata.gpkg')
 
-                # The geojson has been updated with the changes in the
-                # delta file
-                with open(local_file) as f:
-                    points_geojson = json.load(f)
-                    features = sorted(
-                        points_geojson['features'], key=lambda k: k['id'])
-                    self.assertEqual(666, features[0]['properties']['int'])
-                    return
+            with open(local_file, 'wb') as f:
+                for chunk in response.streaming_content:
+                    f.write(chunk)
+
+            conn = sqlite3.connect(local_file)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute('''SELECT * FROM points WHERE fid = 1''')
+            f = c.fetchone()
+
+            self.assertEqual(666, f['int'])
+            return
 
         self.fail("Worker didn't finish")
 
@@ -146,7 +159,7 @@ class DeltaTestCase(APITestCase):
         # Add files to the project
         file_path = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/'.format(self.project1.id),
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -163,6 +176,15 @@ class DeltaTestCase(APITestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/testdata.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
 
         file_path = testdata_path('delta/project.qgs')
         response = self.client.post(
@@ -194,8 +216,12 @@ class DeltaTestCase(APITestCase):
             response = self.client.get(
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
-            if response.json()['status'] == 'STATUS_NOT_APPLIED':
-                return
+
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
+
+            self.assertEqual('STATUS_ERROR', response.json()['status'])
+            return
 
         self.fail("Worker didn't finish")
 
@@ -205,7 +231,7 @@ class DeltaTestCase(APITestCase):
         # Add files to the project
         file_path = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/'.format(self.project1.id),
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -222,6 +248,15 @@ class DeltaTestCase(APITestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/testdata.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
 
         file_path = testdata_path('delta/project.qgs')
         response = self.client.post(
@@ -263,7 +298,7 @@ class DeltaTestCase(APITestCase):
         # Add files to the project
         file_path = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/'.format(self.project1.id),
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -280,6 +315,15 @@ class DeltaTestCase(APITestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/testdata.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
 
         file_path = testdata_path('delta/project.qgs')
         response = self.client.post(
@@ -312,8 +356,11 @@ class DeltaTestCase(APITestCase):
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
 
-            if response.json()['status'] == 'STATUS_APPLIED_WITH_CONFLICTS':
-                return
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
+
+            self.assertEqual('STATUS_APPLIED_WITH_CONFLICTS', response.json()['status'])
+            return
 
         self.fail("Worker didn't finish")
 
@@ -330,7 +377,7 @@ class DeltaTestCase(APITestCase):
         # Add files to the project
         file_path = testdata_path('delta/points.geojson')
         response = self.client.post(
-            '/api/v1/files/{}/points.geojson/'.format(self.project1.id),
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
             {
                 "file": open(file_path, 'rb')
             },
@@ -347,6 +394,15 @@ class DeltaTestCase(APITestCase):
             format='multipart'
         )
         self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/testdata.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
 
         file_path = testdata_path('delta/project.qgs')
         response = self.client.post(
@@ -378,32 +434,34 @@ class DeltaTestCase(APITestCase):
             response = self.client.get(
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
-            if response.json()['status'] == 'STATUS_APPLIED':
 
-                # Download the geojson file
-                response = self.client.get(
-                    '/api/v1/files/{}/points.geojson/'.format(
-                        self.project1.id),
-                )
-                self.assertTrue(status.is_success(response.status_code))
+            if response.json()['status'] == 'STATUS_BUSY':
+                continue
 
-                temp_dir = tempfile.mkdtemp()
-                local_file = os.path.join(temp_dir, 'points.geojson')
+            self.assertEqual('STATUS_APPLIED', response.json()['status'])
 
-                with open(local_file, 'wb') as f:
-                    for chunk in response.streaming_content:
-                        f.write(chunk)
+            # Download the geojson file
+            response = self.client.get(
+                '/api/v1/files/{}/testdata.gpkg/'.format(
+                    self.project1.id),
+            )
+            self.assertTrue(status.is_success(response.status_code))
 
-                # The geojson has been updated with the changes in the
-                # delta file
-                with open(local_file) as f:
-                    points_geojson = json.load(f)
-                    features = sorted(
-                        points_geojson['features'], key=lambda k: k['id'])
-                    self.assertEqual(666, features[0]['properties']['int'])
-                    return
-            elif response.json()['status'] == 'STATUS_NOT_APPLIED':
-                self.fail("Delta not applied")
+            temp_dir = tempfile.mkdtemp()
+            local_file = os.path.join(temp_dir, 'testdata.gpkg')
+
+            with open(local_file, 'wb') as f:
+                for chunk in response.streaming_content:
+                    f.write(chunk)
+
+            conn = sqlite3.connect(local_file)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute('''SELECT * FROM points WHERE fid = 1''')
+            f = c.fetchone()
+
+            self.assertEqual(666, f['int'])
+            return
 
         # Push the same deltafile again
         delta_file = testdata_path('delta/deltas/singlelayer_singledelta.json')
@@ -466,94 +524,12 @@ class DeltaTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['id'])
 
         self.assertEqual(json[1]['id'], 'ab3e55a2-98cc-4c03-8069-8266fefd8124')
-        self.assertEqual(json[1]['size'], 546)
+        self.assertEqual(json[1]['size'], 660)
         self.assertEqual(json[0]['id'], '4d027a9d-d31a-4e8f-acad-2f2d59caa48c')
-        self.assertEqual(json[0]['size'], 546)
+        self.assertEqual(json[0]['size'], 660)
         self.assertEqual(
             json[1]['sha256'],
-            'ccf1a0726d760510bb50b740c13e6a140aeadb832e5dd8152be4bd8b62b7ccac')
+            '1bcd577d0a637a19d15766e0ab6a449f532a34c3de5b4d60a55cd32014a2b7ad')
         self.assertEqual(
             json[0]['sha256'],
-            '1690fb4ad6f4747e166c15f8a64dd500b16279a9e0ca9f70bba5e13a13547e36')
-
-    def test_apply_delta_gpkg(self):
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
-
-        # Add files to the project
-        file_path = testdata_path('delta/points.gpkg')
-        response = self.client.post(
-            '/api/v1/files/{}/points.gpkg/'.format(self.project1.id),
-            {
-                "file": open(file_path, 'rb')
-            },
-            format='multipart'
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        file_path = testdata_path('delta/polygons.gpkg')
-        response = self.client.post(
-            '/api/v1/files/{}/polygons.gpkg/'.format(self.project1.id),
-            {
-                "file": open(file_path, 'rb')
-            },
-            format='multipart'
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        file_path = testdata_path('delta/project_gpkg.qgz')
-        response = self.client.post(
-            '/api/v1/files/{}/project_gpkg.qgz/'.format(self.project1.id),
-            {
-                "file": open(file_path, 'rb')
-            },
-            format='multipart'
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Push a deltafile
-        delta_file = testdata_path(
-            'delta/deltas/singlelayer_singledelta_gpkg.json')
-        response = self.client.post(
-            '/api/v1/deltas/{}/'.format(self.project1.id),
-            {
-                "file": open(delta_file, 'rb')
-            },
-            format='multipart'
-        )
-
-        self.assertTrue(status.is_success(response.status_code))
-
-        jobid = response.json()['jobid']
-
-        # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
-            response = self.client.get(
-                '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
-            )
-            if response.json()['status'] == 'STATUS_APPLIED':
-
-                # Download the gpkg file
-                response = self.client.get(
-                    '/api/v1/files/{}/points.gpkg/'.format(
-                        self.project1.id),
-                )
-                self.assertTrue(status.is_success(response.status_code))
-
-                temp_dir = tempfile.mkdtemp()
-                local_file = os.path.join(temp_dir, 'points.gpkg')
-
-                with open(local_file, 'wb') as f:
-                    for chunk in response.streaming_content:
-                        f.write(chunk)
-
-                import sqlite3
-                conn = sqlite3.connect(local_file)
-                c = conn.cursor()
-                c.execute("SELECT int FROM points WHERE fid = '1'")
-                self.assertEqual(c.fetchone()[0], 6969)
-
-                conn.close()
-                return
-
-        self.fail("Worker didn't finish")
+            'b689f07c89fd1111c560f94ed251c8131eea61a9fdcad56f54781d45fc627f71')
