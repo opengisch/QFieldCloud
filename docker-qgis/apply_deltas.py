@@ -851,7 +851,7 @@ def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
     conflicts = compare_feature(old_feature, old_feature_delta)
 
     if len(conflicts) != 0:
-        raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.IO)
+        raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.Conflict)
 
     if not layer.deleteFeature(old_feature.id()):
         raise DeltaException('Unable delete feature')
