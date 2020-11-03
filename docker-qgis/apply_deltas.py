@@ -947,7 +947,7 @@ def inverse_delta(delta: Delta) -> Delta:
         [type] -- reversed delta
     """
     copy: Dict[str, Any] = {**delta}
-    copy['old'], copy['new'] = delta['new'], delta['old']
+    copy['old'], copy['new'] = delta.get('new'), delta.get('old')
 
     if copy['method'] == DeltaMethod.CREATE.name:
         copy['method'] = DeltaMethod.DELETE.name
