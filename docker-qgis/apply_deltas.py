@@ -851,7 +851,7 @@ def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
     conflicts = compare_feature(old_feature, old_feature_delta)
 
     if len(conflicts) != 0:
-        raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.IO)
+        raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.Conflict)
 
     if not layer.deleteFeature(old_feature.id()):
         raise DeltaException('Unable delete feature')
@@ -888,14 +888,16 @@ def compare_feature(feature: QgsFeature, delta_feature: DeltaFeature, is_delta_s
         delta_feature_attr_names = delta_feature_attrs.keys()
         feature_attr_names = feature.fields().names()
 
-        if not is_delta_subset:
-            for attr in feature_attr_names:
-                if attr not in delta_feature_attr_names:
-                    conflicts.append('There is an attribute in the original feature that is not available in the delta: {}'.format(attr))
+        # TODO reenable this, when it is clear what we do when there is property mismatch
+        # if not is_delta_subset:
+        #     for attr in feature_attr_names:
+        #         if attr not in delta_feature_attr_names:
+        #             conflicts.append('There is an attribute in the original feature that is not available in the delta: {}'.format(attr))
 
         for attr in delta_feature_attr_names:
             if attr not in feature_attr_names:
-                conflicts.append('There is an attribute in the delta that is not available in the original feature: {}'.format(attr))
+                # TODO reenable this, when it is clear what we do when there is property mismatch
+                # conflicts.append('There is an attribute in the delta that is not available in the original feature: {}'.format(attr))
                 continue
 
             if feature.attribute(attr) != delta_feature_attrs[attr]:
@@ -945,7 +947,7 @@ def inverse_delta(delta: Delta) -> Delta:
         [type] -- reversed delta
     """
     copy: Dict[str, Any] = {**delta}
-    copy['old'], copy['new'] = delta['new'], delta['old']
+    copy['old'], copy['new'] = delta.get('new'), delta.get('old')
 
     if copy['method'] == DeltaMethod.CREATE.name:
         copy['method'] = DeltaMethod.DELETE.name
