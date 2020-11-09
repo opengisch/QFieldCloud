@@ -45,7 +45,7 @@ class CsvFormatter(logging.Formatter):
     def __init__(self, skip_csv_header: bool = False):
         super().__init__()
         self.output = io.StringIO()
-        self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'delta_id', 'feature_pk', 'attribute', 'conflict', 'exception', 'method']
+        self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'delta_id', 'feature_pk', 'attribute', 'conflict', 'provider_errors', 'exception', 'method']
         self.writer = csv.DictWriter(self.output, fieldnames=self.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
 
         if not skip_csv_header:
@@ -81,6 +81,7 @@ class CsvFormatter(logging.Formatter):
                         'feature_pk': exception.feature_pk,
                         'attribute': exception.attr,
                         'conflict': conflict,
+                        'provider_errors': exception.provider_errors,
                         'exception': exception.descr,
                         'method': exception.method})
             else:
@@ -185,6 +186,7 @@ class DeltaException(Exception):
                  attr: str = None,
                  conflicts: List[str] = None,
                  method: DeltaMethod = None,
+                 provider_errors: str = None,
                  descr: str = None
                  ):
         super(DeltaException, self).__init__(msg)
@@ -197,6 +199,7 @@ class DeltaException(Exception):
         self.attr = attr
         self.method = method
         self.conflicts = conflicts
+        self.provider_errors = provider_errors
         self.descr = descr
 # /EXCEPTION DEFINITIONS
 
@@ -663,6 +666,7 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
             err.delta_id = err.delta_id or delta.get('id')
             err.method = err.method or delta.get('method')
             err.feature_pk = err.feature_pk or delta.get('sourcePk')
+            err.provider_errors = err.provider_errors or layer.dataProvider().errors()
 
             if err.e_type == DeltaExceptionType.Conflict:
                 has_conflict = True
@@ -770,7 +774,7 @@ def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
                     new_feat[attr_name] = attr_value
 
     if not layer.addFeature(new_feat):
-        raise DeltaException('Unable add new feature')
+        raise DeltaException('Unable to add new feature', provider_errors=layer.dataProvider().errors())
 
 
 def patch_feature(layer: QgsVectorLayer, delta: Delta):
@@ -811,7 +815,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
             raise DeltaException('The provided geometry type differs from the layer geometry type')
 
         if not layer.changeGeometry(old_feature.id(), geometry, True):
-            raise DeltaException('Unable to change geometry')
+            raise DeltaException('Unable to change geometry', provider_errors=layer.dataProvider().errors())
     else:
         if new_feature_delta.get('geometry'):
             logger.warning('The layer is not spatial, but geometry has been provided')
@@ -829,7 +833,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
             continue
 
         if not layer.changeAttributeValue(old_feature.id(), fields.indexOf(attr_name), new_attr_value, old_attrs[attr_name], True):
-            raise DeltaException('Unable to change attribute', attr=attr_name)
+            raise DeltaException('Unable to change attribute', attr=attr_name, provider_errors=layer.dataProvider().errors())
 
 
 def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
