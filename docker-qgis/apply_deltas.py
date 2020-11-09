@@ -36,6 +36,7 @@ from qgis.core import (
     QgsGeometry,
     QgsExpression,
     QgsDataSourceUri,
+    QgsVectorLayerUtils,
     QgsProviderRegistry)
 from qgis.testing import start_app
 
@@ -739,7 +740,7 @@ def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
     """
     fields = layer.fields()
     new_feat_delta = delta['new']
-    new_feat = QgsFeature(fields)
+    geometry = QgsGeometry()
 
     if layer.isSpatial():
         if not isinstance(new_feat_delta['geometry'], str):
@@ -749,16 +750,12 @@ def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
 
         if geometry.isNull():
             raise DeltaException('The layer is spatial, but the geometry is invalid')
-
-        new_feat.setGeometry(geometry)
     else:
         if new_feat_delta['geometry']:
             logger.warning('The layer is not spatial, but geometry has been provided')
 
-    if not new_feat.isValid():
-        raise DeltaException('Unable to create a valid feature')
-
-    new_feat_attrs = new_feat_delta.get('attributes')
+    new_feat_attrs = new_feat_delta.get('attributes', {})
+    feat_attrs = {}
 
     if new_feat_attrs:
         # `fid` is an extra field created during conversion to gpkg and makes this assert to fail.
@@ -771,7 +768,17 @@ def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
 
                 if attr_name in new_feat_attrs:
                     attr_value = new_feat_attrs[attr_name]
-                    new_feat[attr_name] = attr_value
+                    attr_index = fields.indexFromName(attr_name)
+                    feat_attrs[attr_index] = attr_value
+
+    new_feat = QgsVectorLayerUtils.createFeature(
+        layer,
+        geometry,
+        feat_attrs
+    )
+
+    if not new_feat.isValid():
+        raise DeltaException('Unable to create a valid feature')
 
     if not layer.addFeature(new_feat):
         raise DeltaException('Unable to add new feature', provider_errors=layer.dataProvider().errors())
