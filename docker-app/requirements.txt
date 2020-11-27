@@ -13,3 +13,4 @@ django-rq==2.3.2
 boto3==1.14.51
 django-storages==1.9.1
 sentry-sdk
+jsonschema==3.2.0

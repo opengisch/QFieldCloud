@@ -1,0 +1,25 @@
+{
+    "no-deltas-here": [
+        {
+            "localPk": "1",
+            "sourcePk": "1",
+            "localLayerId": "pippo",
+            "sourceLayerId": "pluto",
+            "method": "patch",
+            "new": {
+                "attributes": {
+                    "int": 666
+                }
+            },
+            "old": {
+                "attributes": {
+                    "int": 1
+                }
+            }
+        }
+    ],
+    "files": [],
+    "id": "7c77388e-f902-43b9-8016-4e44c5394f66",
+    "project": "e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
+    "version": "1.0"
+}

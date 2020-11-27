@@ -1,0 +1,157 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "http://opengis.ch/schemas/deltafile.json",
+    "type": "object",
+    "title": "Delta File Schema",
+    "description": "TODO",
+    "additionalProperties": true,
+    "required": [
+        "version",
+        "project",
+        "id",
+        "deltas",
+        "files"
+    ],
+    "definitions": {
+        "delta_method_descr": {
+            "type": "object",
+            "title": "Delta Method Description",
+            "description": "The actual changes to be applied to the feature. If 'geometry' is provided, it completely replaces the old one. If 'attributes' provided, it merges the contents with the already existing feature using https://tools.ietf.org/html/rfc7386",
+            "additionalProperties": false,
+            "properties": {
+                "geometry": {
+                    "type": "string",
+                    "title": "Geometry",
+                    "description": "Feature's geometry serialized in WKT. GeoJSON has a number of limitations so it was reconsidered.",
+                    "format": "wkt",
+                    "examples": [
+                        "POINT (30 10)",
+                        "LINESTRING (30 10, 10 30, 40 40)",
+                        "POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))",
+                        "MULTIPOINT ((10 40), (40 30), (20 20), (30 10))"
+                    ]
+                },
+                "attributes": {
+                    "type": "object",
+                    "title": "Attributes",
+                    "description": "Feature's attributes to be changed. The rest of the properties are ignored.",
+                    "examples": [
+                        {
+                            "prop1": "new contents"
+                        }
+                    ],
+                    "additionalProperties": true
+                }
+            }
+        }
+    },
+    "properties": {
+        "version": {
+            "type": "string",
+            "title": "The Deltas File Format Version",
+            "description": "Currently the only allowed value is 1.0, but in the future there might be newer minor or major versions.",
+            "enum": [
+                "1.0"
+            ]
+        },
+        "project": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project ID",
+            "description": "The project ID that is current open on QField.",
+            "examples": [
+                "bbdc0a1b-ade9-4c3d-ad28-59d8f0347689"
+            ]
+        },
+        "id": {
+            "type": "string",
+            "title": "Delta File ID",
+            "description": "The delta file ID generated on the client to distinguish requests.",
+            "format": "uuid",
+            "examples": [
+                "73544c91-6a55-483c-b0af-944c4846c49f"
+            ]
+        },
+        "deltas": {
+            "type": "array",
+            "title": "Deltas",
+            "description": "A list of the deltas to be applied sent to the server.",
+            "additionalItems": true,
+            "items": {
+                "type": "object",
+                "title": "A Single Delta",
+                "description": "Describes the changes to be applied to a single feature.",
+                "additionalProperties": true,
+                "required": [
+                    "localPk",
+                    "sourcePk",
+                    "localLayerId",
+                    "sourceLayerId",
+                    "method"
+                ],
+                "properties": {
+                    "localPk": {
+                        "type": "string",
+                        "title": "Feature ID",
+                        "description": "To be able to unique identify features in the layers, we use the first primary key column, or a column named \"fid\" if no primary keys are set. This is the primary key value in the exported project.",
+                        "examples": [
+                            "ddc41fa4-3961-4127-80f6-7d3e3f3f985b",
+                            "unique_string",
+                            "123"
+                        ]
+                    },
+                    "sourcePk": {
+                        "type": "string",
+                        "title": "Feature ID",
+                        "description": "To be able to unique identify features in the layers, we use the first primary key column, or a column named \"fid\" if no primary keys are set. This is the primary key value in the original project.",
+                        "examples": [
+                            "ddc41fa4-3961-4127-80f6-7d3e3f3f985b",
+                            "unique_string",
+                            "123"
+                        ]
+                    },
+                    "localLayerId": {
+                        "type": "string",
+                        "title": "Local Layer ID",
+                        "description": "The layer ID is the same as in the exported QGIS project file. Each delta file is responsible for a single layer. This is the layer id in the exported project.",
+                        "examples": [
+                            "e933b5aa-6ccb-416f-83e7-5a2ece85cf1a_LayerName"
+                        ]
+                    },
+                    "sourceLayerId": {
+                        "type": "string",
+                        "title": "Source Layer ID",
+                        "description": "The layer ID is the same as in the QGIS project file. Each delta file is responsible for a single layer. This is the original layer id.",
+                        "examples": [
+                            "e933b5aa-6ccb-416f-83e7-5a2ece85cf1a_LayerName"
+                        ]
+                    },
+                    "method": {
+                        "type": "string",
+                        "title": "Method",
+                        "description": "What type of operation to be applied to the feature.\n'create' - creates new feature\n'patch' - modifies certain values in an existing feature\n'delete' - deletes an existing feature",
+                        "enum": ["create", "patch", "delete"]
+                    },
+                    "old": {
+                        "$ref": "#/definitions/delta_method_descr"
+                    },
+                    "new": {
+                        "$ref": "#/definitions/delta_method_descr"
+                    }
+                }
+            }
+        },
+        "files": {
+            "type": "array",
+            "title": "Files",
+            "description": "A list of the files to be uploaded to the server.",
+            "uniqueItems": true,
+            "items": {
+                "type": "string",
+                "title": "Filename",
+                "description": "Filename with path relative to project root",
+                "example": "DCIM/photo1.jpg"
+            }
+        }
+    }
+}

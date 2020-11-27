@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError
 
 from qfieldcloud.core.models import (
     Project, Organization, ProjectCollaborator,
-    OrganizationMember)
+    OrganizationMember, Deltafile)
 
 User = get_user_model()
 
@@ -100,3 +100,25 @@ class TokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Token
         fields = ('token', 'username')
+
+
+class StatusChoiceField(serializers.ChoiceField):
+    def to_representation(self, obj):
+        return self._choices[obj]
+
+    def to_internal_value(self, data):
+        for i in self._choices:
+            if self._choices[i] == data:
+                return i
+        raise serializers.ValidationError(
+            "Invalid status. Acceptable values are {0}.".format(
+                list(self._choices.values())))
+
+
+class DeltafileSerializer(serializers.ModelSerializer):
+    status = StatusChoiceField(
+        choices=Deltafile.STATUS_CHOICES)
+
+    class Meta:
+        model = Deltafile
+        fields = ('id', 'updated_at', 'status', 'output')

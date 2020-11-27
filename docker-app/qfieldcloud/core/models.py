@@ -2,6 +2,7 @@ import uuid
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.postgres.fields import JSONField
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 
@@ -143,3 +144,35 @@ class ProjectCollaborator(models.Model):
 
     def __str__(self):
         return self.project.name + ': ' + self.collaborator.username
+
+
+class Deltafile(models.Model):
+
+    STATUS_PENDING = 1  # deltafile has been received, but have not started application
+    STATUS_BUSY = 2  # currently being applied
+    STATUS_APPLIED = 3  # applied correctly
+    STATUS_APPLIED_WITH_CONFLICTS = 4  # applied but needs conflict resolution
+    STATUS_NOT_APPLIED = 5
+    STATUS_ERROR = 6  # was not possible to apply the deltafile
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, 'STATUS_PENDING'),
+        (STATUS_BUSY, 'STATUS_BUSY'),
+        (STATUS_APPLIED, 'STATUS_APPLIED'),
+        (STATUS_APPLIED_WITH_CONFLICTS, 'STATUS_APPLIED_WITH_CONFLICTS'),
+        (STATUS_NOT_APPLIED, 'STATUS_NOT_APPLIED'),
+        (STATUS_ERROR, 'STATUS_ERROR'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE,
+        related_name='deltas',
+    )
+    content = JSONField()
+    status = models.PositiveSmallIntegerField(
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING)
+    output = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

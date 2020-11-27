@@ -7,7 +7,7 @@ import sqlite3
 from django.contrib.auth import get_user_model
 
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 from rest_framework.authtoken.models import Token
 
 from qfieldcloud.core import utils
@@ -17,7 +17,7 @@ from .utils import testdata_path
 User = get_user_model()
 
 
-class DeltaTestCase(APITestCase):
+class DeltaTestCase(APITransactionTestCase):
 
     DJANGO_BASE_URL = 'http://localhost:8000/api/v1/'
 
@@ -123,7 +123,7 @@ class DeltaTestCase(APITestCase):
                 '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
             )
 
-            if response.json()['status'] == 'STATUS_BUSY':
+            if response.json()['status'] in ['STATUS_BUSY', 'STATUS_PENDING']:
                 continue
 
             self.assertEqual('STATUS_APPLIED', response.json()['status'])
@@ -197,7 +197,7 @@ class DeltaTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Push a deltafile
-        delta_file = testdata_path('delta/deltas/wrong.json')
+        delta_file = testdata_path('delta/deltas/with_errors.json')
         response = self.client.post(
             '/api/v1/deltas/{}/'.format(self.project1.id),
             {
@@ -220,10 +220,65 @@ class DeltaTestCase(APITestCase):
             if response.json()['status'] == 'STATUS_BUSY':
                 continue
 
-            self.assertEqual('STATUS_ERROR', response.json()['status'])
+            self.assertEqual('STATUS_NOT_APPLIED', response.json()['status'])
             return
 
         self.fail("Worker didn't finish")
+
+    def test_push_apply_delta_file_invalid_json_schema(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file_path = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/polygons.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/polygons.geojson/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/testdata.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+
+        file_path = testdata_path('delta/project.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/project.qgs/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Push a deltafile
+        delta_file = testdata_path('delta/deltas/not_schema_valid.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+
+        self.assertFalse(status.is_success(response.status_code))
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -268,18 +323,6 @@ class DeltaTestCase(APITestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # Push a deltafile
-        delta_file = testdata_path('delta/deltas/wrong.json')
-        response = self.client.post(
-            '/api/v1/deltas/{}/'.format(self.project1.id),
-            {
-                "file": open(delta_file, 'rb')
-            },
-            format='multipart'
-        )
-
-        self.assertTrue(status.is_success(response.status_code))
-
         # Push a wrong deltafile
         delta_file = testdata_path('file.txt')
         response = self.client.post(
@@ -289,7 +332,6 @@ class DeltaTestCase(APITestCase):
             },
             format='multipart'
         )
-
         self.assertFalse(status.is_success(response.status_code))
 
     def test_push_apply_delta_file_with_conflicts(self):
@@ -524,12 +566,4 @@ class DeltaTestCase(APITestCase):
         json = sorted(json, key=lambda k: k['id'])
 
         self.assertEqual(json[1]['id'], 'ab3e55a2-98cc-4c03-8069-8266fefd8124')
-        self.assertEqual(json[1]['size'], 660)
         self.assertEqual(json[0]['id'], '4d027a9d-d31a-4e8f-acad-2f2d59caa48c')
-        self.assertEqual(json[0]['size'], 660)
-        self.assertEqual(
-            json[1]['sha256'],
-            '1bcd577d0a637a19d15766e0ab6a449f532a34c3de5b4d60a55cd32014a2b7ad')
-        self.assertEqual(
-            json[0]['sha256'],
-            'b689f07c89fd1111c560f94ed251c8131eea61a9fdcad56f54781d45fc627f71')

@@ -27,6 +27,7 @@ jobs:
         uses: SpicyPizza/create-envfile@v1
         with:
           envkey_DEBUG: 1
+          envkey_QFIELDCLOUD_HOST: "localhost"
           envkey_SECRET_KEY: ${{ secrets.SECRET_KEY }}
           envkey_POSTGRES_USER: "qfieldcloud_test_db_admin"
           envkey_POSTGRES_PASSWORD: ${{ secrets.SQL_PASSWORD }}

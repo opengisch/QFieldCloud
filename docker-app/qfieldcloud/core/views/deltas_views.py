@@ -1,19 +1,21 @@
 
 import json
+import jsonschema
 from pathlib import PurePath
 
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ObjectDoesNotExist
 
-from rest_framework import status, views, permissions
+from rest_framework import status, views, permissions, generics
 from rest_framework.response import Response
 
 from drf_yasg.utils import swagger_auto_schema
 
 from qfieldcloud.core.models import (
-    Project)
+    Project, Deltafile)
 from qfieldcloud.core import utils, permissions_utils
+from qfieldcloud.core.serializers import DeltafileSerializer
 
 User = get_user_model()
 
@@ -44,12 +46,16 @@ class DeltaFilePermissions(permissions.BasePermission):
     name='post', decorator=swagger_auto_schema(
         operation_description="Add a deltafile to a project",
         operation_id="Add deltafile",))
-class ListCreateDeltaFileView(views.APIView):
+class ListCreateDeltaFileView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated,
                           DeltaFilePermissions]
+    serializer_class = DeltafileSerializer
 
     def post(self, request, projectid):
+
+        # TODO: check if projectid in the deltafile is the same as the
+        # one of the request
 
         try:
             project_obj = Project.objects.get(id=projectid)
@@ -65,12 +71,19 @@ class ListCreateDeltaFileView(views.APIView):
 
         try:
             delta_json = json.load(request_file)
-        except ValueError:
+            utils.get_deltafile_schema_validator().validate(delta_json)
+        except (ValueError, jsonschema.exceptions.ValidationError) as e:
             return Response(
-                'DeltaFile is not a valid json file',
+                'Not a valid deltafile: {}'.format(e),
                 status=status.HTTP_400_BAD_REQUEST)
 
         deltafileid = delta_json['id']
+
+        Deltafile.objects.create(
+            id=deltafileid,
+            project=project_obj,
+            content=delta_json)
+
         sha256sum = utils.get_sha256(request_file)
         key = utils.safe_join(
             'projects/{}/deltas/'.format(projectid), deltafileid)
@@ -102,79 +115,26 @@ class ListCreateDeltaFileView(views.APIView):
 
         return Response({'jobid': job.id})
 
-    def get(self, request, projectid):
-
-        try:
-            Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
-
-        bucket = utils.get_s3_bucket()
-
-        prefix = 'projects/{}/deltas/'.format(projectid)
-
-        deltas = []
-        for delta in bucket.objects.filter(Prefix=prefix):
-            path = PurePath(delta.key)
-            filename = str(path.relative_to(*path.parts[:3]))
-            last_modified = delta.last_modified.strftime(
-                '%d.%m.%Y %H:%M:%S %Z')
-            sha256sum = delta.Object().metadata['Sha256sum']
-
-            deltas.append({
-                'id': filename,
-                'last_modified': last_modified,
-                'size': delta.size,
-                'sha256': sha256sum,
-            })
-
-        return Response(deltas)
+    def get_queryset(self):
+        project_id = self.request.parser_context['kwargs']['projectid']
+        project_obj = Project.objects.get(id=project_id)
+        return Deltafile.objects.filter(project=project_obj)
 
 
 @method_decorator(
     name='get', decorator=swagger_auto_schema(
         operation_description="Get delta status",
         operation_id="Get delta status",))
-class GetDeltaView(views.APIView):
+class GetDeltaView(generics.RetrieveAPIView):
 
     permission_classes = [permissions.IsAuthenticated,
                           DeltaFilePermissions]
+    serializer_class = DeltafileSerializer
 
-    def get(self, request, projectid, deltafileid):
+    def get_object(self):
 
-        bucket = utils.get_s3_bucket()
-        key = utils.safe_join(
-            'projects/{}/deltas/'.format(projectid), str(deltafileid))
+        project_id = self.request.parser_context['kwargs']['projectid']
+        project_obj = Project.objects.get(id=project_id)
+        deltafile_id = self.request.parser_context['kwargs']['deltafileid']
 
-        obj = bucket.Object(key)
-        status = obj.metadata.get('Status', None)
-
-        path = PurePath(obj.key)
-        filename = str(path.relative_to(*path.parts[:3]))
-        last_modified = obj.last_modified.strftime('%d.%m.%Y %H:%M:%S %Z')
-        sha256sum = obj.metadata['Sha256sum']
-
-        # If the status is not stored as file's metadata, means that
-        # the deltafile has not been applied yet, so we look at the
-        # job queue for the status
-        if status is None:
-            job = utils.get_job('delta', str(deltafileid))
-            if job is not None:
-                job_status = job.get_status()
-                if job_status == 'started':
-                    status = 'STATUS_BUSY'
-                elif job_status in ['queued', 'deferred']:
-                    status = 'STATUS_PENDING'
-                else:
-                    status = 'STATUS_ERROR'
-
-        result = {
-            'id': filename,
-            'last_modified': last_modified,
-            'size': obj.content_length,
-            'sha256': sha256sum,
-            'status': status,
-        }
-
-        return Response(result)
+        return Deltafile.objects.get(id=deltafile_id, project=project_obj)

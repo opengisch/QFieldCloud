@@ -5,6 +5,8 @@ import boto3
 from botocore.errorfactory import ClientError
 import posixpath
 from pathlib import PurePath
+import json
+import jsonschema
 
 from django.core.files.uploadedfile import (
     InMemoryUploadedFile, TemporaryUploadedFile)
@@ -197,3 +199,21 @@ def check_s3_key(key):
             raise e
 
     return head['Metadata']['Sha256sum']
+
+
+def get_deltafile_schema_validator():
+    """Creates a JSON schema validator to check whether the provided delta
+    file is valid.
+    Returns:
+        jsonschema.Draft7Validator -- JSON Schema validator
+    """
+    schema_file = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'deltafile_01.json')
+
+    with open(schema_file) as f:
+        schema_dict = json.load(f)
+
+    jsonschema.Draft7Validator.check_schema(schema_dict)
+
+    return jsonschema.Draft7Validator(schema_dict)
