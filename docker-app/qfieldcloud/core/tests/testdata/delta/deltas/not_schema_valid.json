@@ -1,6 +1,7 @@
 {
     "no-deltas-here": [
         {
+            "uuid": "cfed67a6-326c-4807-897b-57da7af7d33b",
             "localPk": "1",
             "sourcePk": "1",
             "localLayerId": "pippo",

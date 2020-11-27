@@ -1,6 +1,7 @@
 {
     "deltas": [
         {
+            "uuid": "65b605b4-9832-4de0-9055-92e1dd94ebec",
             "localPk": "1",
             "sourcePk": "1",
             "localLayerId": "pippo",

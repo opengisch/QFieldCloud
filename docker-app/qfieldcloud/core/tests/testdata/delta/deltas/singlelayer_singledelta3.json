@@ -1,6 +1,7 @@
 {
     "deltas": [
         {
+            "uuid": "e4546ec2-6e01-43a1-ab30-a52db9469afd",
             "localPk": "1",
             "sourcePk": "1",
             "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",

@@ -83,6 +83,7 @@
                 "description": "Describes the changes to be applied to a single feature.",
                 "additionalProperties": true,
                 "required": [
+                    "uuid",
                     "localPk",
                     "sourcePk",
                     "localLayerId",
@@ -90,9 +91,18 @@
                     "method"
                 ],
                 "properties": {
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Delta ID",
+                        "description": "A unique identifier of the delta.",
+                        "examples": [
+                            "ddc41fa4-3961-4127-80f6-7d3e3f3f985b"
+                        ]
+                    },
                     "localPk": {
                         "type": "string",
-                        "title": "Feature ID",
+                        "title": "Local Feature ID",
                         "description": "To be able to unique identify features in the layers, we use the first primary key column, or a column named \"fid\" if no primary keys are set. This is the primary key value in the exported project.",
                         "examples": [
                             "ddc41fa4-3961-4127-80f6-7d3e3f3f985b",
@@ -102,7 +112,7 @@
                     },
                     "sourcePk": {
                         "type": "string",
-                        "title": "Feature ID",
+                        "title": "Source Feature ID",
                         "description": "To be able to unique identify features in the layers, we use the first primary key column, or a column named \"fid\" if no primary keys are set. This is the primary key value in the original project.",
                         "examples": [
                             "ddc41fa4-3961-4127-80f6-7d3e3f3f985b",
