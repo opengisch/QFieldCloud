@@ -4,7 +4,8 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from qfieldcloud.core.models import Organization, OrganizationMember
+from qfieldcloud.core.models import (
+    Organization, OrganizationMember, UserAccount)
 
 
 User = get_user_model()
@@ -223,3 +224,7 @@ class UserTestCase(APITestCase):
         # The token should be different from before
         self.assertNotEqual(response.data['token'], self.token1.key)
         self.assertEqual(response.data['username'], 'user1')
+
+    def test_user_account_is_created_for_each_user(self):
+        self.assertTrue(UserAccount.objects.filter(user=self.user1).exists())
+        self.assertTrue(UserAccount.objects.filter(user=self.user2).exists())

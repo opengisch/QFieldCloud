@@ -4,7 +4,11 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
 from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from qfieldcloud.core import utils
 
 
 def reserved_words_validator(value):
@@ -37,6 +41,36 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+# Automatically create a UserAccount instance when a user is created.
+@receiver(post_save, sender=User)
+def create_account(sender, instance, created, **kwargs):
+    if created:
+        UserAccount.objects.create(user=instance)
+
+
+class UserAccount(models.Model):
+    TYPE_COMMUNITY = 1
+    TYPE_PRO = 2
+
+    TYPE_CHOICES = (
+        (TYPE_COMMUNITY, 'community'),
+        (TYPE_PRO, 'pro'),
+    )
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        primary_key=True)
+    account_type = models.PositiveSmallIntegerField(
+        choices=TYPE_CHOICES, default=TYPE_COMMUNITY)
+    storage_limit_mb = models.PositiveIntegerField(default=100)
+    db_limit_mb = models.PositiveIntegerField(default=25)
+    synchronizations_per_months = models.PositiveIntegerField(default=30)
+
+    def __str__(self):
+        return self.TYPE_CHOICES[self.account_type][1]
 
 
 class Organization(User):
@@ -114,7 +148,10 @@ class Project(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.name + ' (' + str(self.id) + ')'
+        return self.name + ' (' + str(self.id) + ')' + ' owner: ' + self.owner.username
+
+    def storage_size(self):
+        return utils.get_s3_project_size(self.id)
 
 
 class ProjectCollaborator(models.Model):

@@ -217,3 +217,18 @@ def get_deltafile_schema_validator():
     jsonschema.Draft7Validator.check_schema(schema_dict)
 
     return jsonschema.Draft7Validator(schema_dict)
+
+
+def get_s3_project_size(projectid):
+    """Return the size in MiB of the project on the storage, included the
+    exported files"""
+
+    bucket = get_s3_bucket()
+
+    prefix = 'projects/{}/'.format(projectid)
+    total_size = 0
+
+    for obj in bucket.objects.filter(Prefix=prefix):
+        total_size += obj.size
+
+    return round(total_size / (1024 * 1024), 3)
