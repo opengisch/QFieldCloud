@@ -41,65 +41,6 @@ from qgis.core import (
 from qgis.testing import start_app
 
 
-# LOGGER
-class CsvFormatter(logging.Formatter):
-    def __init__(self, skip_csv_header: bool = False):
-        super().__init__()
-        self.output = io.StringIO()
-        self.fieldnames = ['asctime', 'elapsed', 'level', 'message', 'filename', 'lineno', 'e_type', 'delta_file_id', 'layer_id', 'delta_index', 'delta_id', 'feature_pk', 'attribute', 'conflict', 'provider_errors', 'exception', 'method']
-        self.writer = csv.DictWriter(self.output, fieldnames=self.fieldnames, quoting=csv.QUOTE_NONNUMERIC)
-
-        if not skip_csv_header:
-            self.writer.writeheader()
-
-    def format(self, record: logging.LogRecord) -> str:
-        exception: Optional[Exception] = None
-        log_string = ''
-        log_data = {
-            'asctime': datetime.fromtimestamp(record.created).isoformat(),
-            'elapsed': record.relativeCreated,
-            'level': record.levelname,
-            'message': record.msg,
-            'lineno': record.lineno,
-            'filename': record.filename,
-        }
-
-        if isinstance(record.args, tuple) and len(record.args) >= 1 and isinstance(record.args[-1], Exception):
-            exception = record.args[-1]
-
-        if exception:
-            if isinstance(exception, DeltaException):
-                conflicts = exception.conflicts if exception.conflicts else [None]
-
-                for conflict in conflicts:
-                    self.writer.writerow({
-                        **log_data,
-                        'level': record.levelname,
-                        'e_type': exception.e_type,
-                        'delta_file_id': exception.delta_file_id,
-                        'layer_id': exception.layer_id,
-                        'delta_index': exception.delta_idx,
-                        'feature_pk': exception.feature_pk,
-                        'attribute': exception.attr,
-                        'conflict': conflict,
-                        'provider_errors': exception.provider_errors,
-                        'exception': exception.descr,
-                        'method': exception.method})
-            else:
-                self.writer.writerow({
-                    **log_data,
-                    'e_type': DeltaExceptionType.Error})
-        else:
-            self.writer.writerow(log_data)
-
-        log_string = self.output.getvalue()
-
-        self.output.truncate(0)
-        self.output.seek(0)
-
-        return log_string.strip()
-
-
 logging.basicConfig(level=logging.DEBUG)
 
 logger = logging.getLogger(__name__)
@@ -120,6 +61,7 @@ class BaseOptions(TypedDict):
 class DeltaOptions(BaseOptions):
     delta_file: Optional[str]
     delta_contents: Optional[Dict]
+    delta_log: Optional[str]
     inverse: bool
 
 
@@ -142,6 +84,7 @@ class DeltaAcceptedState(Enum):
     APPLIED = 'applied'
     CONFLICTS = 'conflicts'
     ERRORS = 'errors'
+    UNKNOWN_ERRORS = 'unknown_error'
 
 
 class DeltaFeature(TypedDict):
@@ -184,7 +127,6 @@ class DeltaException(Exception):
                  delta_idx: int = None,
                  delta_id: str = None,
                  feature_pk: str = None,
-                 attr: str = None,
                  conflicts: List[str] = None,
                  method: DeltaMethod = None,
                  provider_errors: str = None,
@@ -197,7 +139,6 @@ class DeltaException(Exception):
         self.delta_idx = delta_idx
         self.delta_id = delta_id
         self.feature_pk = feature_pk
-        self.attr = attr
         self.method = method
         self.conflicts = conflicts
         self.provider_errors = provider_errors
@@ -206,6 +147,7 @@ class DeltaException(Exception):
 
 
 BACKUP_SUFFIX = '.qfieldcloudbackup'
+delta_log = []
 
 
 def project_decorator(f):
@@ -230,12 +172,26 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
         else:
             accepted_state = apply_deltas_without_transaction(project, deltas, inverse=opts['inverse'])
 
+        print('Delta log file contents:')
+        print('========================')
+        print(json.dumps(delta_log, indent=2, sort_keys=True))
+        print('========================')
+
+        if opts.get('delta_log'):
+            with open(opts['delta_log'], 'w') as f:
+                json.dump(delta_log, f, indent=2, sort_keys=True)
+
+            print('Delta log file saved to "{}"'.format(opts['delta_log']))
+
         project.clear()
         if accepted_state == DeltaAcceptedState.CONFLICTS:
             logger.info('Accepted {} deltas with some conflicts'.format(len(deltas.deltas)))
             return 1
         elif accepted_state == DeltaAcceptedState.ERRORS:
             logger.info('Accepted {} deltas with some errors'.format(len(deltas.deltas)))
+            return 2  # TODO change the error code
+        elif accepted_state == DeltaAcceptedState.UNKNOWN_ERRORS:
+            logger.info('Accepted {} deltas with some unknown errors'.format(len(deltas.deltas)))
             return 2  # TODO change the error code
         elif accepted_state == DeltaAcceptedState.APPLIED:
             logger.info('Accepted {} deltas with no errors and conflicts'.format(len(deltas.deltas)))
@@ -386,8 +342,11 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
             if not isinstance(layer, QgsVectorLayer):
                 raise DeltaException('No layer with id "{}"'.format(layer_id))
 
+            if not layer.isValid():
+                raise DeltaException('Invalid layer "{}"'.format(layer_id))
+
             if not layer.isEditable() and not layer.startEditing():
-                raise DeltaException('Cannot start editing layer "{}"')
+                raise DeltaException('Cannot start editing layer "{}"'.format(layer_id))
 
             delta = inverse_delta(delta) if inverse else delta
 
@@ -403,22 +362,69 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
             if not layer.commitChanges():
                 raise DeltaException('Failed to commit changes')
 
+            logger.info('Applied delta {}'.format(layer_id))
+
+            delta_log.append({
+                'msg': 'Successfully applied delta!',
+                'status': accepted_state.value,
+                'e_type': None,
+                'delta_file_id': delta_file.id,
+                'layer_id': layer_id,
+                'delta_index': idx,
+                'delta_id': delta['uuid'],
+                'feature_pk': None,
+                'conflicts': None,
+                'provider_errors': None,
+                'method': delta['method'],
+            })
+
         except DeltaException as err:
             err.layer_id = err.layer_id or layer_id
+            err.delta_file_id = err.delta_file_id or delta_file.id
             err.delta_idx = err.delta_idx or idx
+            err.delta_id = err.delta_id or delta['uuid']
             err.feature_pk = err.feature_pk or delta.get('sourcePk')
             err.method = err.method or delta.get('method')
 
             if err.e_type == DeltaExceptionType.Conflict:
                 accepted_state = DeltaAcceptedState.CONFLICTS
-                logger.warning('Conflicts while applying a single delta: {}'.format(str(err)), err)
+                logger.warning('Conflicts while applying a single delta: {}'.format(str(err)))
             else:
                 accepted_state = DeltaAcceptedState.ERRORS
-                logger.warning('Error while applying a single delta: {}'.format(str(err)), err)
+                logger.warning('Error while applying a single delta: {}'.format(str(err)))
 
             if layer is not None and not layer.rollBack():
-                logger.error('Failed to rollback layer "{}": {}'.format(layer_id, str(err)), err)
+                logger.error('Failed to rollback layer "{}": {}'.format(layer_id, str(err)))
+
+            delta_log.append({
+                'msg': str(err),
+                'status': accepted_state.value,
+                'e_type': err.e_type.value,
+                'delta_file_id': err.delta_file_id,
+                'layer_id': err.layer_id,
+                'delta_index': err.delta_idx,
+                'delta_id': err.delta_id,
+                'feature_pk': err.feature_pk,
+                'conflicts': err.conflicts,
+                'provider_errors': err.provider_errors,
+                'method': err.method
+            })
         except Exception as err:
+            accepted_state = DeltaAcceptedState.UNKNOWN_ERRORS
+            delta_log.append({
+                'msg': str(err),
+                'status': accepted_state.value,
+                'e_type': None,
+                'delta_file_id': delta_file.id,
+                'layer_id': layer_id,
+                'delta_index': idx,
+                'delta_id': delta.get('uuid'),
+                'feature_pk': None,
+                'conflicts': None,
+                'provider_errors': None,
+                'method': delta.get('method'),
+            })
+
             raise DeltaException('An error has been encountered while applying delta:' + str(err).replace('\n', ''),
                                  layer_id=layer.id(),
                                  delta_idx=idx,
@@ -840,7 +846,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
             continue
 
         if not layer.changeAttributeValue(old_feature.id(), fields.indexOf(attr_name), new_attr_value, old_attrs[attr_name], True):
-            raise DeltaException('Unable to change attribute', attr=attr_name, provider_errors=layer.dataProvider().errors())
+            raise DeltaException('Unable to change attribute "{}"'.format(attr_name), provider_errors=layer.dataProvider().errors())
 
 
 def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
@@ -903,16 +909,16 @@ def compare_feature(feature: QgsFeature, delta_feature: DeltaFeature, is_delta_s
         # if not is_delta_subset:
         #     for attr in feature_attr_names:
         #         if attr not in delta_feature_attr_names:
-        #             conflicts.append('There is an attribute in the original feature that is not available in the delta: {}'.format(attr))
+        #             conflicts.append(f'The attribute "{attr}" in the original feature is not available in the delta')
 
         for attr in delta_feature_attr_names:
             if attr not in feature_attr_names:
                 # TODO reenable this, when it is clear what we do when there is property mismatch
-                # conflicts.append('There is an attribute in the delta that is not available in the original feature: {}'.format(attr))
+                # conflicts.append(f'The attribute "{attr}" in the delta is not available in the original feature')
                 continue
 
             if feature.attribute(attr) != delta_feature_attrs[attr]:
-                conflicts.append('There is an attribute that has different value: {}'.format(attr))
+                conflicts.append(f'The attribute "{attr}" that has a conflict:\n-{delta_feature_attrs[attr]}\n+{feature.attribute(attr)}')
 
     return conflicts
 
@@ -996,6 +1002,7 @@ if __name__ == '__main__':
     parser_delta_apply = delta_subparsers.add_parser('apply', help='apply a delta file on a project')
     parser_delta_apply.add_argument('project', type=str, help='Path to QGIS project')
     parser_delta_apply.add_argument('delta_file', type=str, help='Path to delta file')
+    parser_delta_apply.add_argument('--delta-log', type=str, help='Path to delta log file')
     parser_delta_apply.add_argument('--inverse', action='store_true', help='Inverses the direction of the deltas. Makes the delta `old` to `new` and `new` to `old`. Mainly used to rollback the applied changes using the same delta file..')
     parser_delta_apply.add_argument('--transaction', action='store_true', help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled')
     parser_delta_apply.set_defaults(func=cmd_delta_apply)
@@ -1017,8 +1024,6 @@ if __name__ == '__main__':
     # /backup
 
     args = parser.parse_args()
-
-    logging.root.handlers[0].setFormatter(CsvFormatter(args.skip_csv_header))
 
     if 'func' in args:
         args.func(vars(args))  # type: ignore

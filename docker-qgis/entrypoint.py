@@ -246,6 +246,7 @@ def _apply_delta(args):
     return_code = apply_deltas.cmd_delta_apply(
         opts={'project': project_filepath,
               'delta_file': deltafile,
+              'delta_log': '/tmp/deltalog.json',
               'inverse': False,
               'transaction': False})
 
