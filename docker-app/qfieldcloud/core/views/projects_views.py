@@ -8,12 +8,11 @@ from rest_framework import viewsets, permissions
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-from qfieldcloud.core import permissions_utils, utils
+from qfieldcloud.core import permissions_utils, utils, querysets_utils
 from qfieldcloud.core.models import (
     Project, ProjectCollaborator)
 from qfieldcloud.core.serializers import (
     ProjectSerializer)
-
 
 User = get_user_model()
 
@@ -92,18 +91,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
                           ProjectViewSetPermissions]
 
     def get_queryset(self):
-        queryset = (Project.objects.filter(
-            owner=self.request.user) | Project.objects.filter(
-                collaborators__in=ProjectCollaborator.objects.filter(
-                    collaborator=self.request.user))).distinct()
-
-        include_public = self.request.query_params.get(
+        include_public = False
+        include_public_param = self.request.query_params.get(
             'include-public', default=None)
+        if include_public_param and include_public_param.lower() == 'true':
+            include_public = True
 
-        if include_public and include_public.lower() == 'true':
-            queryset |= Project.objects.filter(private=False).distinct()
-
-        return queryset
+        return querysets_utils.get_available_projects(
+            self.request.user, include_public)
 
     def destroy(self, request, projectid):
         # Delete files from storage
