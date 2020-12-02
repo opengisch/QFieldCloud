@@ -1,19 +1,21 @@
-ARG QGIS_VERSION=latest
-FROM qgis/qgis:${QGIS_VERSION}
-MAINTAINER Mario Baranzini <mario@opengis.ch>
+FROM ubuntu:20.04
 
-# Temporary fix because current qgis image doesn't have supervisor installed
-# So I rename the suprevisor, config, I install supervisor and I replace the
-# original conf file
-#RUN mv /etc/supervisor/supervisord.conf /etc/supervisor/supervisord.conf.my
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y install wget gpg && \
+    wget -O - https://qgis.org/downloads/qgis-2020.gpg.key | gpg --import && \
+    gpg --export --armor F7E06F06199EF2F2 | apt-key add - && \
+    echo 'deb http://qgis.org/ubuntu focal main' > /etc/apt/sources.list.d/ubuntu-qgis.list
 
-RUN apt-get update \
-    && apt-get install -y \
-         python3-pip \
-#         supervisor \
-    && rm -rf /var/lib/apt/lists/*
 
-#RUN mv /etc/supervisor/supervisord.conf.my /etc/supervisor/supervisord.conf
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    qgis \
+    python3-qgis \
+    python3-qgis-common \
+    python3-pip \
+    supervisor \
+    xvfb \
+    && apt-get clean
 
 COPY ./docker-qgis/requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt
@@ -25,9 +27,12 @@ COPY ./docker-qgis/schemas/deltafile_01.json /schemas/
 COPY ./docker-qgis/qfieldsync /
 ENV PYTHONPATH="/qfieldsync/qfieldsync:${PYTHONPATH}"
 
+# Add supervisor service configuration script
+COPY ./docker-qgis/supervisord.conf /etc/supervisor/
+
 ENV LANG=C.UTF-8
 
 WORKDIR /
 
 # Run supervisor
-# CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
