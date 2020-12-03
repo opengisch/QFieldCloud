@@ -183,14 +183,14 @@ class ProjectCollaborator(models.Model):
         return self.project.name + ': ' + self.collaborator.username
 
 
-class Deltafile(models.Model):
+class Delta(models.Model):
 
-    STATUS_PENDING = 1  # deltafile has been received, but have not started application
+    STATUS_PENDING = 1  # delta has been received, but have not started application
     STATUS_BUSY = 2  # currently being applied
     STATUS_APPLIED = 3  # applied correctly
     STATUS_APPLIED_WITH_CONFLICTS = 4  # applied but needs conflict resolution
     STATUS_NOT_APPLIED = 5
-    STATUS_ERROR = 6  # was not possible to apply the deltafile
+    STATUS_ERROR = 6  # was not possible to apply the delta
 
     STATUS_CHOICES = (
         (STATUS_PENDING, 'STATUS_PENDING'),
@@ -202,6 +202,7 @@ class Deltafile(models.Model):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    deltafile_id = models.UUIDField()
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE,
         related_name='deltas',
@@ -213,3 +214,6 @@ class Deltafile(models.Model):
     output = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.id) + ', project: ' + str(self.project.id)

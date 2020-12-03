@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError
 
 from qfieldcloud.core.models import (
     Project, Organization, ProjectCollaborator,
-    OrganizationMember, Deltafile)
+    OrganizationMember, Delta)
 
 User = get_user_model()
 
@@ -115,10 +115,10 @@ class StatusChoiceField(serializers.ChoiceField):
                 list(self._choices.values())))
 
 
-class DeltafileSerializer(serializers.ModelSerializer):
+class DeltaSerializer(serializers.ModelSerializer):
     status = StatusChoiceField(
-        choices=Deltafile.STATUS_CHOICES)
+        choices=Delta.STATUS_CHOICES)
 
     class Meta:
-        model = Deltafile
-        fields = ('id', 'updated_at', 'status', 'output')
+        model = Delta
+        fields = ('id', 'deltafile_id', 'updated_at', 'status', 'output')

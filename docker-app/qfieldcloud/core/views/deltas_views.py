@@ -13,9 +13,9 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 
 from qfieldcloud.core.models import (
-    Project, Deltafile)
+    Project, Delta)
 from qfieldcloud.core import utils, permissions_utils
-from qfieldcloud.core.serializers import DeltafileSerializer
+from qfieldcloud.core.serializers import DeltaSerializer
 
 User = get_user_model()
 
@@ -50,7 +50,7 @@ class ListCreateDeltaFileView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated,
                           DeltaFilePermissions]
-    serializer_class = DeltafileSerializer
+    serializer_class = DeltaSerializer
 
     def post(self, request, projectid):
 
@@ -70,71 +70,33 @@ class ListCreateDeltaFileView(generics.ListCreateAPIView):
         request_file = request.data['file']
 
         try:
-            delta_json = json.load(request_file)
-            utils.get_deltafile_schema_validator().validate(delta_json)
+            deltafile_json = json.load(request_file)
+            utils.get_deltafile_schema_validator().validate(deltafile_json)
         except (ValueError, jsonschema.exceptions.ValidationError) as e:
             return Response(
                 'Not a valid deltafile: {}'.format(e),
                 status=status.HTTP_400_BAD_REQUEST)
 
-        deltafileid = delta_json['id']
+        deltafile_id = deltafile_json['id']
 
-        Deltafile.objects.create(
-            id=deltafileid,
-            project=project_obj,
-            content=delta_json)
-
-        sha256sum = utils.get_sha256(request_file)
-        key = utils.safe_join(
-            'projects/{}/deltas/'.format(projectid), deltafileid)
-
-        # Check if deltafile is already present
-        on_storage_sha = utils.check_s3_key(key)
-        if on_storage_sha:
-            if on_storage_sha == sha256sum:
-                # TODO: Return status of the already applied deltafile
-                return Response(status=status.HTTP_200_OK)
-            else:
-                return Response(
-                    'A DeltaFile with the same id but different content already exists',
-                    status=status.HTTP_400_BAD_REQUEST)
-
-        bucket = utils.get_s3_bucket()
-        metadata = {'Sha256sum': sha256sum}
-
-        bucket.upload_fileobj(
-            request_file.open(), key, ExtraArgs={"Metadata": metadata})
+        deltas = deltafile_json.get('deltas', [])
+        for delta in deltas:
+            Delta.objects.create(
+                id=delta['uuid'],
+                deltafile_id=deltafile_id,
+                project=project_obj,
+                content=delta,
+            )
 
         project_file = utils.get_qgis_project_file(projectid)
 
-        job = utils.apply_delta(
+        utils.apply_deltas(
             str(project_obj.id),
-            project_file,
-            deltafileid,
-            delta_json['id'])
+            project_file)
 
-        return Response({'jobid': job.id})
+        return Response()
 
     def get_queryset(self):
         project_id = self.request.parser_context['kwargs']['projectid']
         project_obj = Project.objects.get(id=project_id)
-        return Deltafile.objects.filter(project=project_obj)
-
-
-@method_decorator(
-    name='get', decorator=swagger_auto_schema(
-        operation_description="Get delta status",
-        operation_id="Get delta status",))
-class GetDeltaView(generics.RetrieveAPIView):
-
-    permission_classes = [permissions.IsAuthenticated,
-                          DeltaFilePermissions]
-    serializer_class = DeltafileSerializer
-
-    def get_object(self):
-
-        project_id = self.request.parser_context['kwargs']['projectid']
-        project_obj = Project.objects.get(id=project_id)
-        deltafile_id = self.request.parser_context['kwargs']['deltafileid']
-
-        return Deltafile.objects.get(id=deltafile_id, project=project_obj)
+        return Delta.objects.filter(project=project_obj)

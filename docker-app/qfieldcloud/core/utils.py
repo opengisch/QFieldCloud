@@ -26,17 +26,13 @@ def export_project(projectid, project_file):
     return job
 
 
-def apply_delta(projectid, project_file, delta_file, jobid):
+def apply_deltas(projectid, project_file):
     """Call the orchestrator API to apply a delta file"""
 
     queue = django_rq.get_queue('delta')
-    job = queue.enqueue('orchestrator.apply_delta',
-                        job_id=jobid,
-                        projectid=projectid,
-                        project_file=str(project_file),
-                        delta_file=delta_file)
-
-    return job
+    queue.enqueue('orchestrator.apply_deltas',
+                  projectid=projectid,
+                  project_file=str(project_file))
 
 
 def check_orchestrator_status():

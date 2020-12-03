@@ -89,18 +89,6 @@ def _download_project_directory(projectid):
     return tmpdir
 
 
-def _download_delta_file(projectid, delta_file):
-    """Download a delta file from the storage"""
-
-    bucket = _get_s3_bucket()
-
-    # Prefix of the working directory on the Storages
-    deltafile_key = '/'.join(['projects', projectid, 'deltas', delta_file])
-
-    bucket.download_file(deltafile_key, '/tmp/deltafile.json')
-    return '/tmp/deltafile.json'
-
-
 def _upload_project_directory(projectid, local_dir):
     """Upload the files in the local_dir (export directory) to the
     storage"""
@@ -220,48 +208,27 @@ def _export_project(args):
     _upload_project_directory(projectid, export_dir)
 
 
-def _store_deltafile_status(projectid, delta_file, status):
-    """Update the "status" metadata of the deltafile on the storage"""
-    s3 = _get_s3_resource()
-    deltafile_key = '/'.join(['projects', projectid, 'deltas', delta_file])
-    obj = s3.Object(AWS_STORAGE_BUCKET_NAME, deltafile_key)
-
-    obj.metadata.update({'status': status})
-    obj.copy_from(
-        CopySource={'Bucket': AWS_STORAGE_BUCKET_NAME, 'Key': deltafile_key},
-        Metadata=obj.metadata, MetadataDirective='REPLACE')
-
-
 def _apply_delta(args):
     projectid = args.projectid
     project_file = args.project_file
-    deltafile_name = args.delta_file
 
     tmpdir = _download_project_directory(projectid)
-    deltafile = _download_delta_file(projectid, deltafile_name)
+    deltafile = '/io/deltafile.json'
 
     project_filepath = os.path.join(
         tmpdir, 'files', project_file)
 
-    return_code = apply_deltas.cmd_delta_apply(
+    has_errors = apply_deltas.cmd_delta_apply(
         opts={'project': project_filepath,
               'delta_file': deltafile,
-              'delta_log': '/tmp/deltalog.json',
+              'delta_log': '/io/deltalog.json',
               'inverse': False,
               'transaction': False})
 
     _upload_delta_modified_files(
         projectid, os.path.join(tmpdir, 'files'))
 
-    if return_code == 0:
-        status = 'STATUS_APPLIED'
-    elif return_code == 1:
-        status = 'STATUS_APPLIED_WITH_CONFLICTS'
-    else:
-        status = 'STATUS_NOT_APPLIED'
-
-    _store_deltafile_status(projectid, deltafile_name, status)
-    exit(return_code)
+    exit(has_errors)
 
 
 if __name__ == '__main__':
@@ -288,7 +255,6 @@ if __name__ == '__main__':
     parser_delta.add_argument('projectid', type=str, help='projectid')
     parser_delta.add_argument(
         'project_file', type=str, help='QGIS project file path')
-    parser_delta.add_argument('delta_file', type=str, help='Delta file path')
     parser_delta.set_defaults(func=_apply_delta)
 
     args = parser.parse_args()

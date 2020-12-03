@@ -48,7 +48,4 @@ urlpatterns = [
 
     path('deltas/<uuid:projectid>/',
          deltas_views.ListCreateDeltaFileView.as_view()),
-
-    path('deltas/<uuid:projectid>/<uuid:deltafileid>/',
-         deltas_views.GetDeltaView.as_view()),
 ]

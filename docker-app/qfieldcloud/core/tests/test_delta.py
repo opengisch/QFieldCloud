@@ -114,19 +114,17 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertTrue(status.is_success(response.status_code))
 
-        jobid = response.json()['jobid']
-
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
+                '/api/v1/deltas/{}/'.format(self.project1.id),
             )
 
-            if response.json()['status'] in ['STATUS_BUSY', 'STATUS_PENDING']:
+            if response.json()[0]['status'] in ['STATUS_BUSY', 'STATUS_PENDING']:
                 continue
 
-            self.assertEqual('STATUS_APPLIED', response.json()['status'])
+            self.assertEqual('STATUS_APPLIED', response.json()[0]['status'])
 
             # Download the geojson file
             response = self.client.get(
@@ -208,19 +206,17 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertTrue(status.is_success(response.status_code))
 
-        jobid = response.json()['jobid']
-
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
+                '/api/v1/deltas/{}/'.format(self.project1.id),
             )
 
-            if response.json()['status'] == 'STATUS_BUSY':
+            if response.json()[0]['status'] == 'STATUS_BUSY':
                 continue
 
-            self.assertEqual('STATUS_NOT_APPLIED', response.json()['status'])
+            self.assertEqual('STATUS_NOT_APPLIED', response.json()[0]['status'])
             return
 
         self.fail("Worker didn't finish")
@@ -389,19 +385,17 @@ class DeltaTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        jobid = response.json()['jobid']
-
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
+                '/api/v1/deltas/{}/'.format(self.project1.id),
             )
 
-            if response.json()['status'] == 'STATUS_BUSY':
+            if response.json()[0]['status'] == 'STATUS_BUSY':
                 continue
 
-            self.assertEqual('STATUS_APPLIED_WITH_CONFLICTS', response.json()['status'])
+            self.assertEqual('STATUS_APPLIED_WITH_CONFLICTS', response.json()[0]['status'])
             return
 
         self.fail("Worker didn't finish")
@@ -468,19 +462,17 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertTrue(status.is_success(response.status_code))
 
-        jobid = response.json()['jobid']
-
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/deltas/{}/{}/'.format(self.project1.id, jobid),
+                '/api/v1/deltas/{}/'.format(self.project1.id),
             )
 
-            if response.json()['status'] == 'STATUS_BUSY':
+            if response.json()[0]['status'] == 'STATUS_BUSY':
                 continue
 
-            self.assertEqual('STATUS_APPLIED', response.json()['status'])
+            self.assertEqual('STATUS_APPLIED', response.json()[0]['status'])
 
             # Download the geojson file
             response = self.client.get(
@@ -565,5 +557,32 @@ class DeltaTestCase(APITransactionTestCase):
         json = response.json()
         json = sorted(json, key=lambda k: k['id'])
 
-        self.assertEqual(json[1]['id'], 'ab3e55a2-98cc-4c03-8069-8266fefd8124')
-        self.assertEqual(json[0]['id'], '4d027a9d-d31a-4e8f-acad-2f2d59caa48c')
+        self.assertEqual(json[1]['id'], 'e4546ec2-6e01-43a1-ab30-a52db9469afd')
+        self.assertEqual(json[0]['id'], '802ae2ef-f360-440e-a816-8990d6a06667')
+
+    def test_push_list_multidelta(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Push a deltafile
+        delta_file = testdata_path(
+            'delta/deltas/singlelayer_multidelta.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        response = self.client.get(
+            '/api/v1/deltas/{}/'.format(self.project1.id))
+        self.assertTrue(status.is_success(response.status_code))
+        json = response.json()
+        json = sorted(json, key=lambda k: k['id'])
+
+        self.assertEqual(json[0]['id'], '736bf2c2-646a-41a2-8c55-28c26aecd68d')
+        self.assertEqual(json[1]['id'], '8adac0df-e1d3-473e-b150-f8c4a91b4781')
+        self.assertEqual(json[2]['id'], 'c6c88e78-172c-4f77-b2fd-2ff41f5aa854')
+
+        time.sleep(10)

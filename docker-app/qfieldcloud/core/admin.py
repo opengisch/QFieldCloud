@@ -3,7 +3,7 @@ from django.contrib.sites.models import Site
 from django.contrib.auth.models import Group
 from qfieldcloud.core.models import (
     User, Organization, OrganizationMember, Project, ProjectCollaborator,
-    UserAccount, Deltafile)
+    UserAccount, Delta)
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 
 
@@ -27,7 +27,7 @@ class ProjectAdmin(admin.ModelAdmin):
     readonly_fields = ('storage_size',)
 
 
-class DeltafileAdmin(admin.ModelAdmin):
+class DeltaAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'project', 'status', 'created_at', 'updated_at')
     list_filter = (
@@ -53,7 +53,7 @@ class UserAccountAdmin(admin.ModelAdmin):
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Project, ProjectAdmin)
-admin.site.register(Deltafile, DeltafileAdmin)
+admin.site.register(Delta, DeltaAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
 
 admin.site.register(Organization)

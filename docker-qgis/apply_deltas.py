@@ -66,6 +66,9 @@ class DeltaOptions(BaseOptions):
 
 
 class DeltaMethod(Enum):
+    def __str__(self):
+        return str(self.value)
+
     CREATE = 'create'
     PATCH = 'patch'
     DELETE = 'delete'
@@ -80,11 +83,14 @@ class DeltaExceptionType(Enum):
     Conflict = 'CONFLICT'
 
 
-class DeltaAcceptedState(Enum):
-    APPLIED = 'applied'
-    CONFLICTS = 'conflicts'
-    ERRORS = 'errors'
-    UNKNOWN_ERRORS = 'unknown_error'
+class DeltaStatus(Enum):
+    def __str__(self):
+        return str(self.value)
+
+    Applied = 'status_applied'
+    Conflict = 'status_conflict'
+    ApplyFailed = 'status_apply_failed'
+    UnknownError = 'status_unknown_error'
 
 
 class DeltaFeature(TypedDict):
@@ -163,51 +169,50 @@ def project_decorator(f):
 
 
 @project_decorator
-def cmd_delta_apply(project: QgsProject, opts: DeltaOptions):
+def cmd_delta_apply(project: QgsProject, opts: DeltaOptions) -> bool:
+    accepted_state = None
+    deltas = None
+    has_uncaught_errors = False
+
     try:
+        del delta_log[:]
         deltas = load_delta_file(opts)
 
         if opts['transaction']:
-            accepted_state = apply_deltas(project, deltas, inverse=opts['inverse'])
+            raise NotImplementedError('Please check apply_deltas(project, deltas) and upgrade it, if needed')
+            # accepted_state = apply_deltas(project, deltas, inverse=opts['inverse'])
         else:
             accepted_state = apply_deltas_without_transaction(project, deltas, inverse=opts['inverse'])
 
-        print('Delta log file contents:')
-        print('========================')
-        print(json.dumps(delta_log, indent=2, sort_keys=True))
-        print('========================')
-
-        if opts.get('delta_log'):
-            with open(opts['delta_log'], 'w') as f:
-                json.dump(delta_log, f, indent=2, sort_keys=True)
-
-            print('Delta log file saved to "{}"'.format(opts['delta_log']))
-
         project.clear()
-        if accepted_state == DeltaAcceptedState.CONFLICTS:
-            logger.info('Accepted {} deltas with some conflicts'.format(len(deltas.deltas)))
-            return 1
-        elif accepted_state == DeltaAcceptedState.ERRORS:
-            logger.info('Accepted {} deltas with some errors'.format(len(deltas.deltas)))
-            return 2  # TODO change the error code
-        elif accepted_state == DeltaAcceptedState.UNKNOWN_ERRORS:
-            logger.info('Accepted {} deltas with some unknown errors'.format(len(deltas.deltas)))
-            return 2  # TODO change the error code
-        elif accepted_state == DeltaAcceptedState.APPLIED:
-            logger.info('Accepted {} deltas with no errors and conflicts'.format(len(deltas.deltas)))
-            return 0
-        else:
-            logger.info('Accepted {} deltas, but unknown state'.format(len(deltas.deltas)))
-            return 2  # TODO change the error code
-    except DeltaException as err:
+
+    except Exception:
         exception_str = traceback.format_exc()
-        err.descr = exception_str
-        logger.exception('Delta exception: {}'.format(exception_str), err)
-        return 2
-    except Exception as err:
-        exception_str = traceback.format_exc()
-        logger.exception('Unknown exception: {}'.format(exception_str), err)
-        return 2
+        logger.error('An unknown exception has occurred, check the deltalog carefully')
+        logger.exception(exception_str)
+
+        has_uncaught_errors = True
+
+    deltas_count = len(deltas.deltas) if deltas is not None else '?'
+
+    if accepted_state is None:
+        logger.info(f'Uncaught exception occurred while trying to apply {deltas_count} deltas. '
+                    'Check the delta log if they have been processed and what is their status')
+    elif accepted_state:
+        logger.info(f'All {deltas_count} deltas have been applied successfully')
+    else:
+        logger.info(f'Some of the {deltas_count} deltas have not been applied. '
+                    'Check the delta log if they have been processed and what is their status')
+    print('Delta log file contents:')
+    print('========================')
+    print(json.dumps(delta_log, indent=2, sort_keys=True, default=str))
+    print('========================')
+
+    if opts.get('delta_log'):
+        with open(opts['delta_log'], 'w') as f:
+            json.dump(delta_log, f, indent=2, sort_keys=True, default=str)
+
+    return has_uncaught_errors
 
 
 @project_decorator
@@ -330,31 +335,32 @@ def load_delta_file(args: DeltaOptions) -> DeltaFile:
     return deltas
 
 
-def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> DeltaAcceptedState:
-    accepted_state = DeltaAcceptedState.APPLIED
+def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> bool:
+    has_applied_all_deltas = True
 
     # apply deltas on each individual layer
     for idx, delta in enumerate(delta_file.deltas):
+        delta_status = DeltaStatus.Applied
         layer_id: str = delta.get('sourceLayerId')
         layer: QgsVectorLayer = project.mapLayer(layer_id)
 
         try:
             if not isinstance(layer, QgsVectorLayer):
-                raise DeltaException('No layer with id "{}"'.format(layer_id))
+                raise DeltaException(f'No layer with id "{layer_id}"')
 
             if not layer.isValid():
-                raise DeltaException('Invalid layer "{}"'.format(layer_id))
+                raise DeltaException(f'Invalid layer "{layer_id}"')
 
             if not layer.isEditable() and not layer.startEditing():
-                raise DeltaException('Cannot start editing layer "{}"'.format(layer_id))
+                raise DeltaException(f'Cannot start editing layer "{layer_id}"')
 
             delta = inverse_delta(delta) if inverse else delta
 
-            if delta['method'] == DeltaMethod.CREATE.value:
+            if delta['method'] == str(DeltaMethod.CREATE):
                 create_feature(layer, delta)
-            elif delta['method'] == DeltaMethod.PATCH.value:
+            elif delta['method'] == str(DeltaMethod.PATCH):
                 patch_feature(layer, delta)
-            elif delta['method'] == DeltaMethod.DELETE.value:
+            elif delta['method'] == str(DeltaMethod.DELETE):
                 delete_feature(layer, delta)
             else:
                 raise DeltaException('Unknown delta method')
@@ -362,17 +368,17 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
             if not layer.commitChanges():
                 raise DeltaException('Failed to commit changes')
 
-            logger.info('Applied delta {}'.format(layer_id))
+            logger.info(f'Successfully applied delta on layer "{layer_id}"')
 
             delta_log.append({
                 'msg': 'Successfully applied delta!',
-                'status': accepted_state.value,
+                'status': delta_status,
                 'e_type': None,
                 'delta_file_id': delta_file.id,
                 'layer_id': layer_id,
                 'delta_index': idx,
                 'delta_id': delta['uuid'],
-                'feature_pk': None,
+                'feature_pk': delta.get('sourcePk'),
                 'conflicts': None,
                 'provider_errors': None,
                 'method': delta['method'],
@@ -387,19 +393,20 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
             err.method = err.method or delta.get('method')
 
             if err.e_type == DeltaExceptionType.Conflict:
-                accepted_state = DeltaAcceptedState.CONFLICTS
-                logger.warning('Conflicts while applying a single delta: {}'.format(str(err)))
+                delta_status = DeltaStatus.Conflict
+                logger.warning(f'Conflicts while applying a single delta: {err}')
             else:
-                accepted_state = DeltaAcceptedState.ERRORS
-                logger.warning('Error while applying a single delta: {}'.format(str(err)))
+                delta_status = DeltaStatus.ApplyFailed
+                logger.warning(f'Error while applying a single delta: {err}')
 
             if layer is not None and not layer.rollBack():
-                logger.error('Failed to rollback layer "{}": {}'.format(layer_id, str(err)))
+                logger.error(f'Failed to rollback layer "{layer_id}": {err}')
 
+            has_applied_all_deltas = False
             delta_log.append({
                 'msg': str(err),
-                'status': accepted_state.value,
-                'e_type': err.e_type.value,
+                'status': delta_status,
+                'e_type': err.e_type,
                 'delta_file_id': err.delta_file_id,
                 'layer_id': err.layer_id,
                 'delta_index': err.delta_idx,
@@ -410,10 +417,10 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
                 'method': err.method
             })
         except Exception as err:
-            accepted_state = DeltaAcceptedState.UNKNOWN_ERRORS
+            delta_status = DeltaStatus.UnknownError
             delta_log.append({
                 'msg': str(err),
-                'status': accepted_state.value,
+                'status': delta_status,
                 'e_type': None,
                 'delta_file_id': delta_file.id,
                 'layer_id': layer_id,
@@ -425,16 +432,14 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
                 'method': delta.get('method'),
             })
 
-            raise DeltaException('An error has been encountered while applying delta:' + str(err).replace('\n', ''),
-                                 layer_id=layer.id(),
-                                 delta_idx=idx,
-                                 method=delta.get('method'),
-                                 feature_pk=delta.get('sourcePk')) from err
+            logger.error(f'An unknown error has been encountered while applying delta: {err}')
 
-    return accepted_state
+            raise Exception(f'An unknown error has been encountered while applying delta: {err}') from err
+
+    return has_applied_all_deltas
 
 
-def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> DeltaAcceptedState:
+def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> DeltaStatus:
     """Applies the deltas from a loaded delta file on the layers in a project.
 
     The general algorithm is as follows:
@@ -549,7 +554,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
     if not cleanup_backups(set(layers_by_id.keys())):
         logger.warning('Failed to cleanup backups, other than that - success')
 
-    return DeltaAcceptedState.CONFLICTS if has_conflict else DeltaAcceptedState.APPLIED
+    return DeltaStatus.Conflict if has_conflict else DeltaStatus.Applied
 
 
 def rollback_deltas(layers_by_id: Dict[LayerId, QgsVectorLayer], committed_layer_ids: Set[LayerId] = set()) -> bool:
@@ -658,11 +663,11 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
         delta = inverse_delta(d) if inverse else d
 
         try:
-            if delta['method'] == DeltaMethod.CREATE.value:
+            if delta['method'] == str(DeltaMethod.CREATE):
                 create_feature(layer, delta)
-            elif delta['method'] == DeltaMethod.PATCH.value:
+            elif delta['method'] == str(DeltaMethod.PATCH):
                 patch_feature(layer, delta)
-            elif delta['method'] == DeltaMethod.DELETE.value:
+            elif delta['method'] == str(DeltaMethod.DELETE):
                 delete_feature(layer, delta)
             else:
                 raise DeltaException('Unknown delta method')
