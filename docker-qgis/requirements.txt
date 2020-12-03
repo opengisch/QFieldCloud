@@ -1,5 +1,5 @@
-jsonschema==3.2.0
-typing-extensions==3.7.4.2
-boto3==1.14.51
+jsonschema>=3.2.0,<3.3
+typing-extensions>=3.7.4.3,<3.7.5
+boto3>=1.16.28,<1.17
 sentry-sdk
-mock==4.0.2
+mock>=4.0.2,<4.1
