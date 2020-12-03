@@ -223,6 +223,7 @@ def _apply_delta(args):
               'delta_file': deltafile,
               'delta_log': '/io/deltalog.json',
               'inverse': False,
+              'overwrite_conflicts': True,
               'transaction': False})
 
     _upload_delta_modified_files(
