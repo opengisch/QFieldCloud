@@ -13,7 +13,7 @@ import docker
 STATUS_PENDING = 1  # deltafile has been received, but have not started application
 STATUS_BUSY = 2  # currently being applied
 STATUS_APPLIED = 3  # applied correctly
-STATUS_APPLIED_WITH_CONFLICTS = 4  # applied but needs conflict resolution
+STATUS_CONFLICT = 4  # needs conflict resolution
 STATUS_NOT_APPLIED = 5
 STATUS_ERROR = 6  # was not possible to apply the deltafile
 
@@ -173,7 +173,7 @@ def apply_deltas(projectid, project_file):
             if status == 'status_applied':
                 status = STATUS_APPLIED
             elif status == 'status_conflict':
-                status = STATUS_APPLIED_WITH_CONFLICTS
+                status = STATUS_CONFLICT
             elif status == 'status_apply_failed':
                 status = STATUS_NOT_APPLIED
             else:

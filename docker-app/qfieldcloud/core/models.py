@@ -188,7 +188,7 @@ class Delta(models.Model):
     STATUS_PENDING = 1  # delta has been received, but have not started application
     STATUS_BUSY = 2  # currently being applied
     STATUS_APPLIED = 3  # applied correctly
-    STATUS_APPLIED_WITH_CONFLICTS = 4  # applied but needs conflict resolution
+    STATUS_CONFLICT = 4  # needs conflict resolution
     STATUS_NOT_APPLIED = 5
     STATUS_ERROR = 6  # was not possible to apply the delta
 
@@ -196,7 +196,7 @@ class Delta(models.Model):
         (STATUS_PENDING, 'STATUS_PENDING'),
         (STATUS_BUSY, 'STATUS_BUSY'),
         (STATUS_APPLIED, 'STATUS_APPLIED'),
-        (STATUS_APPLIED_WITH_CONFLICTS, 'STATUS_APPLIED_WITH_CONFLICTS'),
+        (STATUS_CONFLICT, 'STATUS_CONFLICT'),
         (STATUS_NOT_APPLIED, 'STATUS_NOT_APPLIED'),
         (STATUS_ERROR, 'STATUS_ERROR'),
     )

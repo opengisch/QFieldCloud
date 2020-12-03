@@ -395,7 +395,7 @@ class DeltaTestCase(APITransactionTestCase):
             if response.json()[0]['status'] == 'STATUS_BUSY':
                 continue
 
-            self.assertEqual('STATUS_APPLIED_WITH_CONFLICTS', response.json()[0]['status'])
+            self.assertEqual('STATUS_CONFLICT', response.json()[0]['status'])
             return
 
         self.fail("Worker didn't finish")

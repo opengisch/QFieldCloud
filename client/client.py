@@ -533,10 +533,12 @@ def upload_deltafile(token, project_id, delta_file):
         try:
             response.raise_for_status()
             payload = response.json()
+            statuses = set()
+            for delta in payload:
+                statuses.add(delta['status'].upper())
+            print('Delta statuses: {}'.format(statuses))
 
-            print('Delta status: {}'.format(payload['status']))
-
-            if payload['status'].upper() in ('STATUS_APPLIED', 'STATUS_APPLIED_WITH_CONFLICTS', 'STATUS_ERROR'):
+            if statuses.issubset({'STATUS_APPLIED', 'STATUS_CONFLICT', 'STATUS_ERROR'}):
                 return
 
         except requests.HTTPError:
