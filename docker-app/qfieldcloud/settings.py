@@ -44,7 +44,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
 
+
     # 3rd-party apps
+
+    # if django_filters defined after [rest_framework] caused '... _frozen_importlib._DeadlockError ...'
+    # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
+    'django_tables2',
+    'django_filters',
+
+    # style
+    'bootstrap4',
+
     'rest_framework',
     'rest_framework.authtoken',
     'drf_yasg',
@@ -63,6 +73,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -80,6 +91,13 @@ TEMPLATES = [
         ],
         'APP_DIRS': True,
         'OPTIONS': {
+            'builtins': [
+                'qfieldcloud.core.web.templatetags.custom_tags',
+            ],
+            # or  put them in `libraries` (need load as {% custom_tags %})
+            # 'libraries': {
+            #    'custom_tags': 'qfieldcloud.core.web.templatetags.custom_tags',
+            # },
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -145,6 +163,10 @@ USE_TZ = True
 
 STATIC_URL = '/staticfiles/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'qfieldcloud', 'core', 'web', 'staticfiles'),
+]
+
 
 MEDIA_URL = '/mediafiles/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'mediafiles')
@@ -200,6 +222,8 @@ RQ_QUEUES = {
 }
 
 LOGIN_URL = 'rest_framework:login'
+
+LOGIN_REDIRECT_URL = 'index'
 
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", ""),

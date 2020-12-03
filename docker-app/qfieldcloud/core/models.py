@@ -6,6 +6,7 @@ from django.contrib.postgres.fields import JSONField
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models.signals import post_save
+from django.urls import reverse
 from django.dispatch import receiver
 
 from qfieldcloud.core import utils
@@ -41,6 +42,11 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def get_absolute_url(self):
+        return reverse('user_overview', kwargs={
+            'content_owner': self.username,
+            'pk': self.pk})
 
 
 # Automatically create a UserAccount instance when a user is created.
@@ -81,11 +87,19 @@ class Organization(User):
         related_name='owner',
         limit_choices_to=models.Q(user_type=User.TYPE_USER))
 
-    # TODO: add a post_save to set automatically the user_type
-
     class Meta:
         verbose_name = 'organization'
         verbose_name_plural = 'organizations'
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.user_type = self.TYPE_ORGANIZATION
+        return super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse('organization_overview', kwargs={
+            'content_owner': self.username,
+            'pk': self.pk})
 
 
 class OrganizationMember(models.Model):
@@ -152,6 +166,12 @@ class Project(models.Model):
 
     def storage_size(self):
         return utils.get_s3_project_size(self.id)
+
+    def get_absolute_url(self):
+        return reverse('project_overview',
+                       kwargs={'content_owner': self.owner.username,
+                               'project': self.name,
+                               'pk': self.pk})
 
 
 class ProjectCollaborator(models.Model):

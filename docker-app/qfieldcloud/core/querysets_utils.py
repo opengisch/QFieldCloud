@@ -52,3 +52,8 @@ def get_projects_of_owner(user, owner):
     queryset |= Project.objects.filter(owner=owner, private=False).distinct()
 
     return queryset
+
+
+def get_all_public_projects():
+    """Return all public projects."""
+    return Project.objects.filter(private=False)
