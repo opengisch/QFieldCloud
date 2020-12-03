@@ -8,7 +8,8 @@ from rest_framework.test import APITestCase
 from qfieldcloud.core.models import (
     Organization,
     Project,
-    ProjectCollaborator
+    ProjectCollaborator,
+    OrganizationMember
 )
 from qfieldcloud.core import querysets_utils
 
@@ -88,6 +89,30 @@ class QuerysetTestCase(APITestCase):
         self.assertTrue(self.project1 in queryset)
         self.assertTrue(self.project2 in queryset)
 
+    def test_available_projects_with_organization_admin(self):
+
+        queryset = querysets_utils.get_available_projects(
+            self.user1, include_public=False)
+
+        self.assertEqual(len(queryset), 2)
+        self.assertTrue(self.project1 in queryset)
+        self.assertTrue(self.project2 in queryset)
+
+        # Add user1 as member with role admin of organization1
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user1,
+            role=OrganizationMember.ROLE_ADMIN)
+
+        queryset = querysets_utils.get_available_projects(
+            self.user1, include_public=False)
+
+        self.assertEqual(len(queryset), 4)
+        self.assertTrue(self.project1 in queryset)
+        self.assertTrue(self.project2 in queryset)
+        self.assertTrue(self.project4 in queryset)
+        self.assertTrue(self.project5 in queryset)
+
     def test_available_and_public_projects(self):
 
         queryset = querysets_utils.get_available_projects(
@@ -133,6 +158,29 @@ class QuerysetTestCase(APITestCase):
             project=self.project5,
             collaborator=self.user1,
             role=ProjectCollaborator.ROLE_MANAGER)
+
+        queryset = querysets_utils.get_projects_of_owner(
+            self.user1, self.organization1)
+
+        self.assertEqual(len(queryset), 2)
+        self.assertTrue(self.project4 in queryset)
+        self.assertTrue(self.project5 in queryset)
+
+    def test_projects_of_owner_organization_for_admin_member(self):
+
+        queryset = querysets_utils.get_projects_of_owner(
+            self.user1, self.organization1)
+
+        # user1 is not member of the organization so only
+        # public projects should be available
+        self.assertEqual(len(queryset), 1)
+        self.assertTrue(self.project4 in queryset)
+
+        # Add user1 as member with role admin
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user1,
+            role=OrganizationMember.ROLE_ADMIN)
 
         queryset = querysets_utils.get_projects_of_owner(
             self.user1, self.organization1)
