@@ -1,0 +1,26 @@
+{
+    "deltas": [
+        {
+            "uuid": "ad98634e-509f-4dff-9000-de79b09c5359",
+            "localPk": "1",
+            "sourcePk": "1",
+            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "method": "patch",
+            "new": {
+                "attributes": {
+                    "int": 666
+                }
+            },
+            "old": {
+                "attributes": {
+                    "int": 1
+                }
+            }
+        }
+    ],
+    "files": [],
+    "id": "3aab7e58-ea27-4b7c-9bca-c772b6d94820",
+    "project": "e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
+    "version": "1.0"
+}

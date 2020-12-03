@@ -586,3 +586,53 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertEqual(json[2]['id'], 'c6c88e78-172c-4f77-b2fd-2ff41f5aa854')
 
         time.sleep(10)
+
+    def test_push_list_deltas_of_deltafile(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Push a deltafile
+        delta_file = testdata_path(
+            'delta/deltas/singlelayer_singledelta5.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Push another deltafile
+        delta_file = testdata_path(
+            'delta/deltas/singlelayer_singledelta6.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Get all deltas
+        response = self.client.get(
+            '/api/v1/deltas/{}/'.format(self.project1.id))
+        self.assertTrue(status.is_success(response.status_code))
+        json = response.json()
+        self.assertEqual(len(json), 2)
+        json = sorted(json, key=lambda k: k['id'])
+
+        self.assertEqual(json[0]['id'], 'ad98634e-509f-4dff-9000-de79b09c5359')
+        self.assertEqual(json[1]['id'], 'df6a19eb-7d61-4c64-9e3b-29bce0a8dfab')
+
+        # Get only deltas of one deltafile
+        response = self.client.get(
+            '/api/v1/deltas/{}/{}/'.format(
+                self.project1.id,
+                '3aab7e58-ea27-4b7c-9bca-c772b6d94820'
+            ))
+        self.assertTrue(status.is_success(response.status_code))
+
+        json = response.json()
+        self.assertEqual(len(json), 1)
+        self.assertEqual(json[0]['id'], 'ad98634e-509f-4dff-9000-de79b09c5359')

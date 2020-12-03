@@ -40,13 +40,13 @@ class DeltaFilePermissions(permissions.BasePermission):
 
 @method_decorator(
     name='get', decorator=swagger_auto_schema(
-        operation_description="List deltafiles of a project",
-        operation_id="List deltafiles",))
+        operation_description="List all deltas of a project",
+        operation_id="List deltas",))
 @method_decorator(
     name='post', decorator=swagger_auto_schema(
         operation_description="Add a deltafile to a project",
         operation_id="Add deltafile",))
-class ListCreateDeltaFileView(generics.ListCreateAPIView):
+class ListCreateDeltasView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated,
                           DeltaFilePermissions]
@@ -100,3 +100,21 @@ class ListCreateDeltaFileView(generics.ListCreateAPIView):
         project_id = self.request.parser_context['kwargs']['projectid']
         project_obj = Project.objects.get(id=project_id)
         return Delta.objects.filter(project=project_obj)
+
+
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="List deltas of a deltafile",
+        operation_id="List deltas of deltafile",))
+class ListDeltasByDeltafileView(generics.ListAPIView):
+
+    permission_classes = [permissions.IsAuthenticated,
+                          DeltaFilePermissions]
+    serializer_class = DeltaSerializer
+
+    def get_queryset(self):
+        project_id = self.request.parser_context['kwargs']['projectid']
+        project_obj = Project.objects.get(id=project_id)
+        deltafile_id = self.request.parser_context['kwargs']['deltafileid']
+        return Delta.objects.filter(
+            project=project_obj, deltafile_id=deltafile_id)

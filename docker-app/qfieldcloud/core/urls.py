@@ -47,5 +47,9 @@ urlpatterns = [
     path('status/', status_views.APIStatusView.as_view()),
 
     path('deltas/<uuid:projectid>/',
-         deltas_views.ListCreateDeltaFileView.as_view()),
+         deltas_views.ListCreateDeltasView.as_view()),
+
+    path('deltas/<uuid:projectid>/<uuid:deltafileid>/',
+         deltas_views.ListDeltasByDeltafileView.as_view()),
+
 ]
