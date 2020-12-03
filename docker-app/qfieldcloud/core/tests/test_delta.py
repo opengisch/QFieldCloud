@@ -584,7 +584,6 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertEqual(json[0]['id'], '736bf2c2-646a-41a2-8c55-28c26aecd68d')
         self.assertEqual(json[1]['id'], '8adac0df-e1d3-473e-b150-f8c4a91b4781')
         self.assertEqual(json[2]['id'], 'c6c88e78-172c-4f77-b2fd-2ff41f5aa854')
-
         time.sleep(10)
 
     def test_push_list_deltas_of_deltafile(self):

@@ -121,4 +121,5 @@ class DeltaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Delta
-        fields = ('id', 'deltafile_id', 'updated_at', 'status', 'output')
+        fields = ('id', 'deltafile_id', 'created_at', 'updated_at',
+                  'status', 'output')
