@@ -228,7 +228,7 @@ def _apply_delta(args):
     _upload_delta_modified_files(
         projectid, os.path.join(tmpdir, 'files'))
 
-    exit(has_errors)
+    exit(int(has_errors))
 
 
 if __name__ == '__main__':
