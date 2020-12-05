@@ -88,6 +88,7 @@ class ListFilesView(views.APIView):
         if job_status == 'finished':
             exit_code = job.result[0]
             output = job.result[1]
+            exportlog = job.result[2]
 
             if not exit_code == 0:
                 job_status = 'qgis_error'
@@ -108,7 +109,8 @@ class ListFilesView(views.APIView):
                     'sha256': obj.Object().metadata['Sha256sum'],
                 })
 
-            return Response({'status': job_status, 'files': files})
+            return Response({
+                'status': job_status, 'files': files, 'layers': exportlog})
 
         return Response({'status': job_status})
 

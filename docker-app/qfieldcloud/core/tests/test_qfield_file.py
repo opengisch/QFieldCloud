@@ -306,3 +306,54 @@ class QfieldFileTestCase(APITransactionTestCase):
                             return
 
         self.fail("Worker didn't finish or there was an error")
+
+    def test_download_project_with_broken_layer_datasources(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/points.geojson/'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path('delta/project_broken_datasource.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/project.qgs/'.format(
+                self.project1.id),
+            {
+                "file": open(file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Start the export to get the jobid
+        response = self.client.get(
+            '/api/v1/qfield-files/{}/'.format(
+                self.project1.id),
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        jobid = response.json()['jobid']
+
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/qfield-files/export/{}/'.format(jobid),
+            )
+            if response.json()['status'] == 'finished':
+
+                self.assertTrue(
+                    response.json()['layers']['points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c']['valid'])
+                self.assertFalse(
+                    response.json()['layers']['surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16']['valid'])
+                return
+
+        self.fail("Worker didn't finish")

@@ -42,11 +42,18 @@ def load_env_file():
 def export_project(projectid, project_file):
     """Start a QGIS docker container to export the project using QFieldSync """
 
+    tempdir = tempfile.mkdtemp()
+    volumes = {
+        tempdir: {'bind': '/io/', 'mode': 'rw'}
+    }
+
     client = docker.from_env()
     container = client.containers.create(
         'qfieldcloud_qgis',
         environment=load_env_file(),
-        auto_remove=True)
+        auto_remove=True,
+        volumes=volumes,
+    )
 
     container.start()
     container.attach(logs=True)
@@ -61,7 +68,12 @@ def export_project(projectid, project_file):
 
     if not exit_code == 0:
         raise QgisException(output)
-    return exit_code, output.decode('utf-8')
+
+    exportlog_file = os.path.join(tempdir, 'exportlog.json')
+    with open(exportlog_file, 'r') as f:
+        exportlog = json.load(f)
+
+    return exit_code, output.decode('utf-8'), exportlog
 
 
 def get_django_db_connection(is_test_db=False):
