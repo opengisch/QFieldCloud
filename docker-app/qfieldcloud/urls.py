@@ -69,7 +69,7 @@ urlpatterns = [
     path('<str:content_owner>/',
          web_views.ProjectFilterListView.as_view(),
          name='home'),
-    path('<str:content_owner>/<str:project_preferences>',  # special set of projects
+    path('<str:content_owner>/<str:project_preferences>/projects',  # special set of projects
          web_views.ProjectFilterListView.as_view(),
          name='projects_list'),
 
