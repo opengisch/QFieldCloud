@@ -35,6 +35,10 @@ def get_projects_of_owner(user, owner):
     if owner == user:
         return Project.objects.filter(owner=owner)
 
+    # If the user is owner of the organitazion return all projects
+    if type(owner) == Organization and owner.organization_owner == user:
+        return Project.objects.filter(owner=owner)
+
     # If the user is an admin of the organization return all projects
     if OrganizationMember.objects.filter(
             organization=owner,

@@ -146,21 +146,21 @@ class QuerysetTestCase(APITestCase):
     def test_projects_of_owner_organization(self):
 
         queryset = querysets_utils.get_projects_of_owner(
-            self.user1, self.organization1)
+            self.user2, self.organization1)
 
-        # user1 is not a collaborator of any projects so only
+        # user2 is not a collaborator of any projects so only
         # public projects should be available
         self.assertEqual(len(queryset), 1)
         self.assertTrue(self.project4 in queryset)
 
-        # Add user1 as collaborator
+        # Add user2 as collaborator
         ProjectCollaborator.objects.create(
             project=self.project5,
-            collaborator=self.user1,
+            collaborator=self.user2,
             role=ProjectCollaborator.ROLE_MANAGER)
 
         queryset = querysets_utils.get_projects_of_owner(
-            self.user1, self.organization1)
+            self.user2, self.organization1)
 
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.project4 in queryset)
@@ -169,21 +169,33 @@ class QuerysetTestCase(APITestCase):
     def test_projects_of_owner_organization_for_admin_member(self):
 
         queryset = querysets_utils.get_projects_of_owner(
-            self.user1, self.organization1)
+            self.user2, self.organization1)
 
-        # user1 is not member of the organization so only
+        # user2 is not member of the organization so only
         # public projects should be available
         self.assertEqual(len(queryset), 1)
         self.assertTrue(self.project4 in queryset)
 
-        # Add user1 as member with role admin
+        # Add user2 as member with role admin
         OrganizationMember.objects.create(
             organization=self.organization1,
-            member=self.user1,
+            member=self.user2,
             role=OrganizationMember.ROLE_ADMIN)
 
         queryset = querysets_utils.get_projects_of_owner(
+            self.user2, self.organization1)
+
+        self.assertEqual(len(queryset), 2)
+        self.assertTrue(self.project4 in queryset)
+        self.assertTrue(self.project5 in queryset)
+
+    def test_projects_of_owner_for_organization_owner(self):
+
+        queryset = querysets_utils.get_projects_of_owner(
             self.user1, self.organization1)
+
+        # user1 is owner of the organization so it should see
+        # all the projects of the organization
 
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.project4 in queryset)
