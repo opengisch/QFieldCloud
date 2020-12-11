@@ -198,6 +198,10 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project, export_dir, extent, offline_editing)
+
+    # Disable the basemap generation because it needs the processing
+    # plugin to be installed
+    offline_converter.project_configuration.create_base_map = False
     offline_converter.convert()
 
 
