@@ -70,8 +70,11 @@ def export_project(projectid, project_file):
         raise QgisException(output)
 
     exportlog_file = os.path.join(tempdir, 'exportlog.json')
-    with open(exportlog_file, 'r') as f:
-        exportlog = json.load(f)
+    try:
+        with open(exportlog_file, 'r') as f:
+            exportlog = json.load(f)
+    except FileNotFoundError:
+        exportlog = 'Export log not available'
 
     return exit_code, output.decode('utf-8'), exportlog
 
