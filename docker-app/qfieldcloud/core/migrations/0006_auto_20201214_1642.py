@@ -4,11 +4,12 @@ import json
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations
 
+
 def jsonify_output_field(apps, schema_editor):
     # Old values in output field of delta table where string instead of json
     Delta = apps.get_model('core', 'Delta')
     for delta in Delta.objects.all():
-        delta.output = json.dumps([{"msg":delta.output}])
+        delta.output = json.dumps([{"msg": delta.output}])
         delta.save()
 
 
