@@ -634,3 +634,4 @@ class DeltaTestCase(APITransactionTestCase):
         json = response.json()
         self.assertEqual(len(json), 1)
         self.assertEqual(json[0]['id'], 'ad98634e-509f-4dff-9000-de79b09c5359')
+        self.assertIn('output', json[0])

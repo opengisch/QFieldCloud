@@ -102,7 +102,7 @@ def get_django_db_connection(is_test_db=False):
     return conn
 
 
-def set_delta_status_and_output(projectid, delta_id, status, output=''):
+def set_delta_status_and_output(projectid, delta_id, status, output={}):
     """Set the deltafile status and output into the database record """
 
     conn = get_django_db_connection(True)
@@ -111,7 +111,7 @@ def set_delta_status_and_output(projectid, delta_id, status, output=''):
 
     cur = conn.cursor()
     cur.execute("UPDATE core_delta SET status = %s, updated_at = now(), output = %s WHERE id = %s AND project_id = %s",
-                (status, output, delta_id, projectid))
+                (status, json.dumps(output), delta_id, projectid))
     conn.commit()
 
     cur.close()
@@ -193,7 +193,7 @@ def apply_deltas(projectid, project_file):
                 status = STATUS_NOT_APPLIED
             else:
                 status = STATUS_ERROR
-            msg = log['msg']
+            msg = log
 
             set_delta_status_and_output(projectid, delta_id, status, msg)
 
