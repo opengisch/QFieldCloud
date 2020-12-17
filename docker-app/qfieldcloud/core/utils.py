@@ -56,7 +56,8 @@ def redis_is_running():
     try:
         connection = Redis(
             'redis',
-            password=os.environ.get("REDIS_PASSWORD")
+            password=os.environ.get("REDIS_PASSWORD"),
+            port=os.environ.get("REDIS_PORT")
         )
         connection.set('foo', 'bar')
     except exceptions.ConnectionError:

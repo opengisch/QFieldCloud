@@ -29,9 +29,12 @@ jobs:
           envkey_DEBUG: 1
           envkey_QFIELDCLOUD_HOST: "localhost"
           envkey_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          envkey_WEB_HTTP_PORT: 80
+          envkey_WEB_HTTPS_PORT: 443
           envkey_POSTGRES_USER: "qfieldcloud_test_db_admin"
           envkey_POSTGRES_PASSWORD: ${{ secrets.SQL_PASSWORD }}
           envkey_POSTGRES_DB: "qfieldcloud_test_db"
+          envkey_HOST_POSTGRES_PORT: 5432
           envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
           envkey_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           envkey_AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
@@ -39,6 +42,7 @@ jobs:
           envkey_AWS_S3_REGION_NAME: "zrh1"
           envkey_AWS_S3_ENDPOINT_URL: "https://os.zrh1.flow.swiss"
           envkey_REDIS_PASSWORD: "reeeeeedissssssss"
+          envkey_REDIS_PORT: 6379
           file_name: .env
       - name: Build and run docker containers
         run: |
