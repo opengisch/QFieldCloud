@@ -94,7 +94,8 @@ def get_django_db_connection(is_test_db=False):
             dbname=dbname,
             user=env.get('POSTGRES_USER'),
             password=env.get('POSTGRES_PASSWORD'),
-            host=env.get('QFIELDCLOUD_HOST')
+            host=env.get('QFIELDCLOUD_HOST'),
+            port=env.get('HOST_POSTGRES_PORT'),
         )
     except psycopg2.OperationalError:
         return None

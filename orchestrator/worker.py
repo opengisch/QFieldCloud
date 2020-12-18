@@ -50,6 +50,7 @@ logging.basicConfig(
 with Connection():
     redis = Redis(
         password=env().get('REDIS_PASSWORD'),
+        port=env().get('REDIS_PORT')
     )
 
     qs = ['delta', 'export']
