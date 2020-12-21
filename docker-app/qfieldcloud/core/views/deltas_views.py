@@ -92,7 +92,9 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
         utils.apply_deltas(
             str(project_obj.id),
-            project_file)
+            project_file,
+            project_obj.overwrite_conflicts
+        )
 
         return Response()
 

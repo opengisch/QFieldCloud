@@ -26,14 +26,14 @@ def export_project(projectid, project_file):
     return job
 
 
-def apply_deltas(projectid, project_file):
+def apply_deltas(projectid, project_file, overwrite_conflicts):
     """Call the orchestrator API to apply a delta file"""
 
     queue = django_rq.get_queue('delta')
     queue.enqueue('orchestrator.apply_deltas',
                   projectid=projectid,
                   project_file=str(project_file),
-                  overwrite_conflicts=True,
+                  overwrite_conflicts=overwrite_conflicts,
                   )
 
 
