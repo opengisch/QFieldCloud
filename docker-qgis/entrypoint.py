@@ -5,6 +5,7 @@ import os
 import tempfile
 import hashlib
 import logging
+import json
 
 from pathlib import PurePath, Path
 
@@ -168,8 +169,19 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     # so it will be present in the exported project
     canvas.setDestinationCrs(project.crs())
 
-    # Calculate the project extent
     layers = project.mapLayers()
+    # Check if the layers are valid (i.e. if the datasources are available)
+    layers_check = {}
+    for layer in layers.values():
+        layers_check[layer.id()] = {
+            'name': layer.name(),
+            'valid': layer.dataProvider().isValid()
+        }
+
+    with open('/io/exportlog.json', 'w') as f:
+        f.write(json.dumps(layers_check))
+
+    # Calculate the project extent
     mapsettings = QgsMapSettings()
 
     # TODO: Check if the extent have been defined in QFieldSync
@@ -186,6 +198,10 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project, export_dir, extent, offline_editing)
+
+    # Disable the basemap generation because it needs the processing
+    # plugin to be installed
+    offline_converter.project_configuration.create_base_map = False
     offline_converter.convert()
 
 

@@ -42,11 +42,18 @@ def load_env_file():
 def export_project(projectid, project_file):
     """Start a QGIS docker container to export the project using QFieldSync """
 
+    tempdir = tempfile.mkdtemp()
+    volumes = {
+        tempdir: {'bind': '/io/', 'mode': 'rw'}
+    }
+
     client = docker.from_env()
     container = client.containers.create(
         'qfieldcloud_qgis',
         environment=load_env_file(),
-        auto_remove=True)
+        auto_remove=True,
+        volumes=volumes,
+    )
 
     container.start()
     container.attach(logs=True)
@@ -61,7 +68,15 @@ def export_project(projectid, project_file):
 
     if not exit_code == 0:
         raise QgisException(output)
-    return exit_code, output.decode('utf-8')
+
+    exportlog_file = os.path.join(tempdir, 'exportlog.json')
+    try:
+        with open(exportlog_file, 'r') as f:
+            exportlog = json.load(f)
+    except FileNotFoundError:
+        exportlog = 'Export log not available'
+
+    return exit_code, output.decode('utf-8'), exportlog
 
 
 def get_django_db_connection(is_test_db=False):
@@ -79,7 +94,8 @@ def get_django_db_connection(is_test_db=False):
             dbname=dbname,
             user=env.get('POSTGRES_USER'),
             password=env.get('POSTGRES_PASSWORD'),
-            host=env.get('QFIELDCLOUD_HOST')
+            host=env.get('QFIELDCLOUD_HOST'),
+            port=env.get('HOST_POSTGRES_PORT'),
         )
     except psycopg2.OperationalError:
         return None
@@ -87,7 +103,7 @@ def get_django_db_connection(is_test_db=False):
     return conn
 
 
-def set_delta_status_and_output(projectid, delta_id, status, output=''):
+def set_delta_status_and_output(projectid, delta_id, status, output={}):
     """Set the deltafile status and output into the database record """
 
     conn = get_django_db_connection(True)
@@ -96,7 +112,7 @@ def set_delta_status_and_output(projectid, delta_id, status, output=''):
 
     cur = conn.cursor()
     cur.execute("UPDATE core_delta SET status = %s, updated_at = now(), output = %s WHERE id = %s AND project_id = %s",
-                (status, output, delta_id, projectid))
+                (status, json.dumps(output), delta_id, projectid))
     conn.commit()
 
     cur.close()
@@ -178,7 +194,7 @@ def apply_deltas(projectid, project_file):
                 status = STATUS_NOT_APPLIED
             else:
                 status = STATUS_ERROR
-            msg = log['msg']
+            msg = log
 
             set_delta_status_and_output(projectid, delta_id, status, msg)
 

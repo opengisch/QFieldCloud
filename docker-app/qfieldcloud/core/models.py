@@ -231,7 +231,7 @@ class Delta(models.Model):
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
         default=STATUS_PENDING)
-    output = models.TextField(blank=True)
+    output = JSONField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
