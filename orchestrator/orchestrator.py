@@ -171,7 +171,7 @@ def apply_deltas(projectid, project_file, overwrite_conflicts):
         auto_remove=True,
         volumes=volumes)
 
-    overwrite_conflicts_cmd = '--no-overwrite-conflicts'
+    overwrite_conflicts_cmd = ''
     if overwrite_conflicts:
         overwrite_conflicts_cmd = '--overwrite-conflicts'
 

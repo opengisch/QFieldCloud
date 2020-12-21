@@ -276,13 +276,8 @@ if __name__ == '__main__':
         '--overwrite-conflicts',
         dest='overwrite_conflicts',
         action='store_true')
-    parser_delta.add_argument(
-        '--no-overwrite-conflicts',
-        dest='overwrite_conflicts',
-        action='store_false')
     parser_delta.set_defaults(
-        func=_apply_delta,
-        overwrite_conflicts=True)
+        func=_apply_delta)
 
     args = parser.parse_args()
     args.func(args)
