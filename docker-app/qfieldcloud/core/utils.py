@@ -32,7 +32,9 @@ def apply_deltas(projectid, project_file):
     queue = django_rq.get_queue('delta')
     queue.enqueue('orchestrator.apply_deltas',
                   projectid=projectid,
-                  project_file=str(project_file))
+                  project_file=str(project_file),
+                  overwrite_conflicts=True,
+                  )
 
 
 def check_orchestrator_status():

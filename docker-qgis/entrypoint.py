@@ -239,7 +239,7 @@ def _apply_delta(args):
               'delta_file': deltafile,
               'delta_log': '/io/deltalog.json',
               'inverse': False,
-              'overwrite_conflicts': True,
+              'overwrite_conflicts': args.overwrite_conflicts,
               'transaction': False})
 
     _upload_delta_modified_files(
@@ -272,7 +272,17 @@ if __name__ == '__main__':
     parser_delta.add_argument('projectid', type=str, help='projectid')
     parser_delta.add_argument(
         'project_file', type=str, help='QGIS project file path')
-    parser_delta.set_defaults(func=_apply_delta)
+    parser_delta.add_argument(
+        '--overwrite-conflicts',
+        dest='overwrite_conflicts',
+        action='store_true')
+    parser_delta.add_argument(
+        '--no-overwrite-conflicts',
+        dest='overwrite_conflicts',
+        action='store_false')
+    parser_delta.set_defaults(
+        func=_apply_delta,
+        overwrite_conflicts=True)
 
     args = parser.parse_args()
     args.func(args)
