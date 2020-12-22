@@ -330,7 +330,7 @@ class DeltaTestCase(APITransactionTestCase):
         )
         self.assertFalse(status.is_success(response.status_code))
 
-    def test_push_apply_delta_file_with_conflicts(self):
+    def test_push_apply_delta_file_conflicts_overwrite_true(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         # Add files to the project
@@ -395,7 +395,7 @@ class DeltaTestCase(APITransactionTestCase):
             if response.json()[0]['status'] == 'STATUS_BUSY':
                 continue
 
-            self.assertEqual('STATUS_CONFLICT', response.json()[0]['status'])
+            self.assertEqual('STATUS_APPLIED', response.json()[0]['status'])
             return
 
         self.fail("Worker didn't finish")
@@ -635,3 +635,77 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertEqual(len(json), 1)
         self.assertEqual(json[0]['id'], 'ad98634e-509f-4dff-9000-de79b09c5359')
         self.assertIn('output', json[0])
+
+    def test_push_apply_delta_file_conflicts_overwrite_false(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Add files to the project
+        file_path = testdata_path('delta/points.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/polygons.geojson')
+        response = self.client.post(
+            '/api/v1/files/{}/polygons.geojson/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file_path = testdata_path('delta/testdata.gpkg')
+        response = self.client.post(
+            '/api/v1/files/{}/testdata.gpkg/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+
+        file_path = testdata_path('delta/project.qgs')
+        response = self.client.post(
+            '/api/v1/files/{}/project.qgs/'.format(self.project1.id),
+            {
+                "file": open(file_path, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Set the overwrite_conflicts flag to False
+        self.project1.overwrite_conflicts = False
+        self.project1.save()
+
+        # Push a deltafile
+        delta_file = testdata_path(
+            'delta/deltas/singlelayer_singledelta_conflict2.json')
+        response = self.client.post(
+            '/api/v1/deltas/{}/'.format(self.project1.id),
+            {
+                "file": open(delta_file, 'rb')
+            },
+            format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Wait for the worker to finish
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(
+                '/api/v1/deltas/{}/'.format(self.project1.id),
+            )
+
+            if response.json()[0]['status'] == 'STATUS_BUSY':
+                continue
+
+            self.assertEqual('STATUS_CONFLICT', response.json()[0]['status'])
+            return
+
+        self.fail("Worker didn't finish")

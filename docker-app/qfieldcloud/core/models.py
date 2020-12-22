@@ -160,6 +160,7 @@ class Project(models.Model):
         User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    overwrite_conflicts = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name + ' (' + str(self.id) + ')' + ' owner: ' + self.owner.username

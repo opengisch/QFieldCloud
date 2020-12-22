@@ -154,7 +154,7 @@ def create_deltafile_with_pending_deltas(projectid, tempdir):
     return deltafile
 
 
-def apply_deltas(projectid, project_file):
+def apply_deltas(projectid, project_file, overwrite_conflicts):
     """Start a QGIS docker container to apply a deltafile unsing the
     apply-delta script"""
 
@@ -171,10 +171,14 @@ def apply_deltas(projectid, project_file):
         auto_remove=True,
         volumes=volumes)
 
+    overwrite_conflicts_cmd = ''
+    if overwrite_conflicts:
+        overwrite_conflicts_cmd = '--overwrite-conflicts'
+
     container.start()
     container.attach(logs=True)
-    container_command = 'xvfb-run python3 entrypoint.py apply-delta {} {}'.format(
-        projectid, project_file)
+    container_command = 'xvfb-run python3 entrypoint.py apply-delta {} {} {}'.format(
+        projectid, project_file, overwrite_conflicts_cmd)
 
     exit_code, output = container.exec_run(container_command)
     container.kill()

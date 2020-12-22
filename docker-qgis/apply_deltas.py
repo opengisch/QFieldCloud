@@ -62,7 +62,9 @@ class DeltaOptions(BaseOptions):
     delta_file: Optional[str]
     delta_contents: Optional[Dict]
     delta_log: Optional[str]
+    overwrite_conflicts: bool
     inverse: bool
+    transaction: bool
 
 
 class DeltaMethod(Enum):
@@ -180,9 +182,9 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions) -> bool:
 
         if opts['transaction']:
             raise NotImplementedError('Please check apply_deltas(project, deltas) and upgrade it, if needed')
-            # accepted_state = apply_deltas(project, deltas, inverse=opts['inverse'])
+            # accepted_state = apply_deltas(project, deltas, inverse=opts['inverse'], overwrite_conflicts=opts['overwrite_conflicts'])
         else:
-            accepted_state = apply_deltas_without_transaction(project, deltas, inverse=opts['inverse'])
+            accepted_state = apply_deltas_without_transaction(project, deltas, inverse=opts['inverse'], overwrite_conflicts=opts['overwrite_conflicts'])
 
         project.clear()
 
@@ -335,7 +337,7 @@ def load_delta_file(args: DeltaOptions) -> DeltaFile:
     return deltas
 
 
-def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> bool:
+def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile, inverse: bool = False, overwrite_conflicts: bool = False) -> bool:
     has_applied_all_deltas = True
 
     # apply deltas on each individual layer
@@ -357,11 +359,11 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
             delta = inverse_delta(delta) if inverse else delta
 
             if delta['method'] == str(DeltaMethod.CREATE):
-                create_feature(layer, delta)
+                create_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             elif delta['method'] == str(DeltaMethod.PATCH):
-                patch_feature(layer, delta)
+                patch_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             elif delta['method'] == str(DeltaMethod.DELETE):
-                delete_feature(layer, delta)
+                delete_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             else:
                 raise DeltaException('Unknown delta method')
 
@@ -439,7 +441,7 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
     return has_applied_all_deltas
 
 
-def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = False) -> DeltaStatus:
+def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = False, overwrite_conflicts: bool = False) -> DeltaStatus:
     """Applies the deltas from a loaded delta file on the layers in a project.
 
     The general algorithm is as follows:
@@ -456,6 +458,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
         inverse {bool} -- inverses the direction of the deltas. Makes the
         delta `old` to `new` and `new` to `old`. Mainly used to rollback the
         applied changes using the same delta file.
+        overwrite_conflicts {bool} -- whether the conflicts are ignored
 
     Returns:
         bool -- indicates whether a conflict occurred
@@ -511,7 +514,7 @@ def apply_deltas(project: QgsProject, delta_file: DeltaFile, inverse: bool = Fal
     for layer_id in deltas_by_layer.keys():
         # keep the try/except block inside the loop, so we can have the `layer_id` context
         try:
-            if apply_deltas_on_layer(layers_by_id[layer_id], deltas_by_layer[layer_id], inverse):
+            if apply_deltas_on_layer(layers_by_id[layer_id], deltas_by_layer[layer_id], inverse, overwrite_conflicts=overwrite_conflicts):
                 has_conflict = True
 
             modified_layer_ids.add(layer_id)
@@ -629,7 +632,7 @@ def cleanup_backups(layer_paths: Set[str]) -> bool:
     return is_success
 
 
-def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: bool, should_commit: bool = False) -> bool:
+def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: bool, should_commit: bool = False, overwrite_conflicts: bool = False) -> bool:
     """Applies the deltas on the layer provided.
 
     Arguments:
@@ -642,6 +645,7 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
     Keyword Arguments:
         should_commit {bool} -- whether the changes should be committed
         (default: {False})
+        overwrite_conflicts {bool} -- whether the conflicts are ignored
 
     Raises:
         DeltaException: whenever the changes cannot be applied
@@ -664,11 +668,11 @@ def apply_deltas_on_layer(layer: QgsVectorLayer, deltas: List[Delta], inverse: b
 
         try:
             if delta['method'] == str(DeltaMethod.CREATE):
-                create_feature(layer, delta)
+                create_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             elif delta['method'] == str(DeltaMethod.PATCH):
-                patch_feature(layer, delta)
+                patch_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             elif delta['method'] == str(DeltaMethod.DELETE):
-                delete_feature(layer, delta)
+                delete_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             else:
                 raise DeltaException('Unknown delta method')
         except DeltaException as err:
@@ -739,12 +743,13 @@ def get_feature(layer: QgsVectorLayer, feature_pk: FeaturePk) -> QgsFeature:
     return QgsFeature()
 
 
-def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
+def create_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool) -> None:
     """Creates new feature in layer
 
     Arguments:
         layer {QgsVectorLayer} -- target layer. Must be in editing mode!
         delta {Delta} -- delta describing the created feature
+        overwrite_conflicts {bool} -- if there are conflicts with an existing feature, ignore them
 
     Raises:
         DeltaException: whenever the feature cannot be created
@@ -795,12 +800,13 @@ def create_feature(layer: QgsVectorLayer, delta: Delta) -> None:
         raise DeltaException('Unable to add new feature', provider_errors=layer.dataProvider().errors())
 
 
-def patch_feature(layer: QgsVectorLayer, delta: Delta):
+def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool):
     """Patches a feature in layer
 
     Arguments:
         layer {QgsVectorLayer} -- target layer. Must be in edit mode!
         delta {Delta} -- delta describing the patch
+        overwrite_conflicts {bool} -- if there are conflicts with an existing feature, ignore them
 
     Raises:
         DeltaException: whenever the feature cannot be patched
@@ -815,7 +821,10 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
     conflicts = compare_feature(old_feature, old_feature_delta, True)
 
     if len(conflicts) != 0:
-        raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.Conflict)
+        if overwrite_conflicts:
+            logger.warning(f'Conflicts while applying delta "{delta["uuid"]}". Ignoring since `overwrite_conflicts` flag set to `True`.\nConflicts:\n{conflicts}')
+        else:
+            raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.Conflict)
 
     if layer.isSpatial() and new_feature_delta.get('geometry') is not None:
         if not isinstance(new_feature_delta['geometry'], str):
@@ -854,12 +863,13 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta):
             raise DeltaException('Unable to change attribute "{}"'.format(attr_name), provider_errors=layer.dataProvider().errors())
 
 
-def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
+def delete_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool) -> None:
     """Deletes a feature from layer
 
     Arguments:
         layer {QgsVectorLayer} -- target layer. Must be in edit mode!
         delta {Delta} -- delta describing the deleted feature
+        overwrite_conflicts {bool} -- if there are conflicts with an existing feature, ignore them
 
     Raises:
         DeltaException: whenever the feature cannot be deleted
@@ -873,7 +883,10 @@ def delete_feature(layer: QgsVectorLayer, delta: Delta) -> None:
     conflicts = compare_feature(old_feature, old_feature_delta)
 
     if len(conflicts) != 0:
-        raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.Conflict)
+        if overwrite_conflicts:
+            logger.warning(f'Conflicts while applying delta "{delta["uuid"]}". Ignoring since `overwrite_conflicts` flag set to `True`.\nConflicts:\n{conflicts}')
+        else:
+            raise DeltaException('There are conflicts with the already existing feature!', conflicts=conflicts, e_type=DeltaExceptionType.Conflict)
 
     if not layer.deleteFeature(old_feature.id()):
         raise DeltaException('Unable delete feature')
@@ -1008,6 +1021,7 @@ if __name__ == '__main__':
     parser_delta_apply.add_argument('project', type=str, help='Path to QGIS project')
     parser_delta_apply.add_argument('delta_file', type=str, help='Path to delta file')
     parser_delta_apply.add_argument('--delta-log', type=str, help='Path to delta log file')
+    parser_delta_apply.add_argument('--overwrite-conflicts', action='store_true', help='Apply deltas even if there are conflicts.')
     parser_delta_apply.add_argument('--inverse', action='store_true', help='Inverses the direction of the deltas. Makes the delta `old` to `new` and `new` to `old`. Mainly used to rollback the applied changes using the same delta file..')
     parser_delta_apply.add_argument('--transaction', action='store_true', help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled')
     parser_delta_apply.set_defaults(func=cmd_delta_apply)
