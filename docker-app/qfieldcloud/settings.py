@@ -92,12 +92,10 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'builtins': [
-                'qfieldcloud.core.web.templatetags.custom_tags',
+                'qfieldcloud.core.web.templatetags.navigation',
+                'qfieldcloud.core.web.templatetags.buttons',
+                'qfieldcloud.core.web.templatetags.filters',
             ],
-            # or  put them in `libraries` (need load as {% custom_tags %})
-            # 'libraries': {
-            #    'custom_tags': 'qfieldcloud.core.web.templatetags.custom_tags',
-            # },
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -221,7 +219,7 @@ RQ_QUEUES = {
     },
 }
 
-LOGIN_URL = 'rest_framework:login'
+LOGIN_URL = 'account_login'
 
 LOGIN_REDIRECT_URL = 'index'
 

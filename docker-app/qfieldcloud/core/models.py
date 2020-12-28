@@ -124,6 +124,12 @@ class OrganizationMember(models.Model):
     def __str__(self):
         return self.organization.username + ': ' + self.member.username
 
+    def get_absolute_url(self):
+        return reverse('member_details',
+                       kwargs={'content_owner': self.organization,
+                               'member': self.member.username,
+                               'pk': self.pk})
+
 
 class Project(models.Model):
     """Represent a QFieldcloud project.
@@ -202,6 +208,14 @@ class ProjectCollaborator(models.Model):
 
     def __str__(self):
         return self.project.name + ': ' + self.collaborator.username
+
+    def get_absolute_url(self):
+        return reverse('collaborator_details',
+                       kwargs={'content_owner': self.project.owner.username,
+                               'project': self.project.name,
+                               'collaborator': self.collaborator.username,
+                               'pk': self.pk,
+                               'project_pk': self.project.pk})
 
 
 class Delta(models.Model):

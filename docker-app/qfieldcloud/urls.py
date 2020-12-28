@@ -22,7 +22,16 @@ from drf_yasg import openapi
 
 from qfieldcloud.core.views import auth_views
 
-from qfieldcloud.core.web import views as web_views
+from qfieldcloud.core.web.views import (async_json_views,
+                                        projects_views,
+                                        users_views,
+                                        collaborators_views,
+                                        deltas_views,
+                                        members_views,
+                                        pages_views)
+
+from qfieldcloud.core.web.views.permissions_mixins import (PermissionsContextMixin,
+                                                           ProjectPermissionsContextMixin)
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -56,85 +65,105 @@ urlpatterns = [
     path('api/v1/', include('qfieldcloud.core.urls')),
     path('auth/', include('rest_framework.urls')),
 
-    # Web pages
-    path('', web_views.index, name='index'),
-    # index is used to get rootUrl in js files. Do NOT change this ^^.
-
-    # public / not logged_in
-    # path('public/projects/',
-    #      web_views.ProjectFilterListViewPublic.as_view(),
-    #      name='home_public'),
     path('accounts/', include('allauth.urls')),
 
-    path('<str:content_owner>/',
-         web_views.ProjectFilterListView.as_view(),
+    path('', pages_views.index, name='index'),
+    path('<str:unpermitted_action>/unpermitted',
+         pages_views.unpermitted, name='unpermitted'),
+
+    # The string variables are the parameters used
+    # to derive permissions of the user that makes the request.
+    path('async/my_organizations/',
+         async_json_views.async_my_organizations,
+         name='async_my_organizations'),
+    path(f'async/possible_collaborators_for_project/{ProjectPermissionsContextMixin.url_project_pk}/',
+         async_json_views.async_possible_collaborators,
+         name='async_possible_collaborators'),
+    path(f'async/possible_members_for_organization/{PermissionsContextMixin.url_content_owner}/',
+         async_json_views.async_possible_members,
+         name='async_possible_members'),
+    path('async/public_projects/',
+         async_json_views.async_public_projects,
+         name='async_public_projects'),
+    # path('async/project/{ProjectPermissionsContextMixin.url_project_pk}/create_collaborator/<str:username>/',
+    # maybe need js once using inviation emails
+    #      async_json_views.async_create_collaborator,
+    #      name='async_create_collaborator'),
+
+    path(*(lambda v: [f'{v.url_content_owner}/',
+                      v.as_view()])(projects_views.ProjectFilterListView),
          name='home'),
-    path('<str:content_owner>/<str:project_preferences>/projects',  # special set of projects
-         web_views.ProjectFilterListView.as_view(),
+    # path('public/projects/',
+    #      projects_views.ProjectFilterListViewPublic.as_view(),
+    #      name='home_public'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project_preferences>/projects',
+                      v.as_view()])(projects_views.ProjectFilterListView),
+         # special set of projects
          name='projects_list'),
 
-    path('status/', web_views.status, name='status'),
-    path('async_conflicts/<uuid:pk>/',  # TODO only one way
-         web_views.async_conflicts,
-         name='async_conflicts'),
-
-    # async views
-    path('async/my_organizations/',
-         web_views.async_my_organizations,
-         name='async_my_organizations'),
-    path('async/async_possible_collaborators/',  # TODO add project_pk to filter out existing collabs
-         web_views.async_possible_collaborators,
-         name='async_possible_collaborators'),
-    path('async/project/<uuid:proj_pk>/invite_collaborator/<int:user_pk>/',
-         web_views.async_invite_project_collaborator,
-         name='async_possible_collaborators'),
-    path('async/public_projects/',
-         web_views.async_public_projects,
-         name='async_public_projects'),
-    # path('/<uuid:project_pk>/<uuid:collab_pk>/<int:role>',
-    #     async_add_project_collaborator,
-    #     name='project_delete_confirm'),
-
-    # normal django views
-    path('user/profile/<str:content_owner>/<int:pk>/',
-         web_views.UserOverview.as_view(),
-         name='user_overview'),
-    path('<str:content_owner>/settings/<int:pk>/',
-         web_views.OrganizationOverview.as_view(),
-         name='organization_overview'),
-    path('<str:content_owner>/settings/tab=dangerzone/<int:pk>/',
-         web_views.OrganizationDangerzone.as_view(),
-         name='organization_dangerzone'),
-    path('<str:user>/delete/<str:content_owner>/<int:pk>/',
-         web_views.OrganizationDeleteView.as_view(),
-         name='organization_confirm_delete'),
-
-    path('create_organization_for/<str:content_owner>/',
-         web_views.OrganizationCreate.as_view(),
-         name='organization_create'),
-
-    path('<str:content_owner>/<str:project>/tab=collaborators/<uuid:pk>/',
-         web_views.ProjectCollaboratorFilterListView.as_view(),
-         name='project_collaborators'),
-    path('<str:content_owner>/<str:project>/<uuid:pk>/',
-         web_views.ProjectOverview.as_view(),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/<uuid:pk>/',
+                      v.as_view()])(projects_views.ProjectOverview),
          name='project_overview'),
-    path('<str:content_owner>/<str:project>/tab=conflicts/<uuid:pk>/',
-         web_views.conflicts,
-         name='project_conflicts'),
-    path('<str:content_owner>/<str:project>/tab=dangerzone/<uuid:pk>/',
-         web_views.ProjectDangerzone.as_view(),
+    path(*(lambda v: [f'create_project_for/{v.url_content_owner}/',
+                      v.as_view()])(projects_views.ProjectCreateView),
+         name='project_create'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/tab=dangerzone/<uuid:pk>/',
+                      v.as_view()])(projects_views.ProjectDangerzone),
          name='project_dangerzone'),
-    path('<str:content_owner>/<str:project>/delete/<uuid:pk>/',
-         web_views.ProjectDeleteView.as_view(),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/delete/<uuid:pk>/',
+                      v.as_view()])(projects_views.ProjectDeleteView),
          name='project_confirm_delete'),
 
-    path('create_project_for/<str:content_owner>/',
-         web_views.ProjectCreateView.as_view(),
-         name='project_create'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/tab=collaborators/{v.url_project_pk}/',
+                      v.as_view()])(collaborators_views.CollaboratorsOfProjectFilterListView),
+         name='project_collaborators'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/tab=collaborators/<str:collaborator>/<int:pk>/{v.url_project_pk}/',
+                      v.as_view()])(collaborators_views.CollaboratorUpdateView),
+         name='collaborator_details'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/tab=collaborators/create/<str:candidate>/{v.url_project_pk}/',
+                      v.as_view()])(collaborators_views.CollaboratorCreateView),
+         name='collaborator_create'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/tab=collaborators/delete/<str:collaborator>/<int:pk>/{v.url_project_pk}/',
+                      v.as_view()])(collaborators_views.CollaboratorDeleteView),
+         name='collaborator_confirm_delete'),
 
-    path('user_language/<str:lang>/',
-         web_views.user_language,
-         name='user_language'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/tab=deltas/{v.url_project_pk}/',
+                      v.as_view()])(deltas_views.DeltasOfProjectFilterListView),
+         name='project_deltas'),
+    path(*(lambda v: [f'{v.url_content_owner}/<str:project>/tab=deltas/<str:deltafile_id>/<uuid:pk>/{v.url_project_pk}/',
+                      v.as_view()])(deltas_views.DeltaDetailView),
+         name='delta_details'),
 
+    path(*(lambda v: [f'user/profile/{v.url_content_owner}/<int:pk>/',
+                      v.as_view()])(users_views.UserOverview),
+         name='user_overview'),
+
+    path(*(lambda v: [f'{v.url_content_owner}/settings/<int:pk>/',
+                      v.as_view()])(users_views.OrganizationOverview),
+         name='organization_overview'),
+    path(*(lambda v: [f'{v.url_content_owner}/create_organization/',
+                      v.as_view()])(users_views.OrganizationCreate),
+         name='organization_create'),
+    path(*(lambda v: [f'{v.url_content_owner}/settings/tab=dangerzone/<int:pk>/',
+                      v.as_view()])(users_views.OrganizationDangerzone),
+         name='organization_dangerzone'),
+    path(*(lambda v: [f'<str:user>/delete/{v.url_content_owner}/<int:pk>/',
+                      v.as_view()])(users_views.OrganizationDeleteView),
+         name='organization_confirm_delete'),
+    path(*(lambda v: [f'{v.url_content_owner}/settings/tab=members/',
+                      v.as_view()])(members_views.MembersOfOrganizationFilterListView),
+         name='organization_members'),
+    path(*(lambda v: [f'{v.url_content_owner}/settings/tab=members/<str:member>/<int:pk>/',
+                      v.as_view()])(members_views.MemberUpdateView),
+         name='member_details'),
+    path(*(lambda v: [f'{v.url_content_owner}/settings/tab=members/create/<str:candidate>/',
+                      v.as_view()])(members_views.MemberCreateView),
+         name='member_create'),
+    path(*(lambda v: [f'{v.url_content_owner}/settings/tab=members/delete/<str:member>/<int:pk>/',
+                      v.as_view()])(members_views.MemberDeleteView),
+         name='member_confirm_delete'),
+
+    # path('user_language/<str:lang>/',
+    #      users_views.user_language,
+    #      name='user_language'),
 ]
