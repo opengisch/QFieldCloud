@@ -59,7 +59,7 @@ def redis_is_running():
         connection = Redis(
             'redis',
             password=os.environ.get("REDIS_PASSWORD"),
-            port=os.environ.get("REDIS_PORT")
+            port=6379
         )
         connection.set('foo', 'bar')
     except exceptions.ConnectionError:

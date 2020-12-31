@@ -205,14 +205,14 @@ REST_AUTH_SERIALIZERS = {
 RQ_QUEUES = {
     'export': {
         'HOST': 'redis',
-        'PORT': os.environ.get("REDIS_PORT"),
+        'PORT': 6379,
         'DB': 0,
         'DEFAULT_TIMEOUT': 600,
         'PASSWORD': os.environ.get("REDIS_PASSWORD"),
     },
     'delta': {
         'HOST': 'redis',
-        'PORT': os.environ.get("REDIS_PORT"),
+        'PORT': 6379,
         'DB': 0,
         'DEFAULT_TIMEOUT': 600,
         'PASSWORD': os.environ.get("REDIS_PASSWORD"),
