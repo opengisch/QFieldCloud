@@ -34,7 +34,7 @@ jobs:
           envkey_POSTGRES_USER: "qfieldcloud_test_db_admin"
           envkey_POSTGRES_PASSWORD: ${{ secrets.SQL_PASSWORD }}
           envkey_POSTGRES_DB: "qfieldcloud_test_db"
-          envkey_HOST_POSTGRES_PORT: 5432
+          envkey_HOST_POSTGRES_PORT: 5433
           envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
           envkey_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           envkey_AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
@@ -47,7 +47,7 @@ jobs:
           envkey_GEODB_USER: postgres
           envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
           envkey_GEODB_DB: postgres
-          envkey_GEODB_PORT: 5433
+          envkey_GEODB_PORT: 5432
           file_name: .env
       - name: Build and run docker containers
         run: |
