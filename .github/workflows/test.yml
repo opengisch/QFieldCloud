@@ -46,7 +46,7 @@ jobs:
           envkey_GEODB_HOST: localhost
           envkey_GEODB_USER: postgres
           envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
-          envkey_GEODB_DB: user-data
+          envkey_GEODB_DB: postgres
           envkey_GEODB_PORT: 5433
           file_name: .env
       - name: Build and run docker containers
