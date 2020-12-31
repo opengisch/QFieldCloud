@@ -21,6 +21,7 @@ class StatusTestCase(APITransactionTestCase):
         self.assertIn(response.json()['orchestrator'], ['ok', 'slow'])
         self.assertEqual(response.json()['redis'], 'ok')
         self.assertEqual(response.json()['storage'], 'ok')
+        self.assertEqual(response.json()['geodb'], 'ok')
 
     def test_api_status_cache(self):
         tic = time.perf_counter()

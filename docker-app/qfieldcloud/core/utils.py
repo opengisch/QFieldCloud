@@ -7,6 +7,7 @@ import posixpath
 from pathlib import PurePath
 import json
 import jsonschema
+import psycopg2
 
 from django.core.files.uploadedfile import (
     InMemoryUploadedFile, TemporaryUploadedFile)
@@ -231,3 +232,29 @@ def get_s3_project_size(projectid):
         total_size += obj.size
 
     return round(total_size / (1024 * 1024), 3)
+
+
+def geodb_is_running():
+    """Check the connection to the geodb"""
+
+    host = os.environ.get('GEODB_HOST')
+    port = os.environ.get('GEODB_PORT')
+
+    # If geodb is running on the same machine we connect trough
+    # the internal docker net
+    if host == 'localhost':
+        host = 'geodb'
+        port = 5432
+
+    try:
+        psycopg2.connect(
+            dbname=os.environ.get('GEODB_DB'),
+            user=os.environ.get('GEODB_USER'),
+            password=os.environ.get('GEODB_PASSWORD'),
+            host=host,
+            port=port
+        )
+    except psycopg2.Error:
+        return False
+
+    return True

@@ -43,6 +43,11 @@ jobs:
           envkey_AWS_S3_ENDPOINT_URL: "https://os.zrh1.flow.swiss"
           envkey_REDIS_PASSWORD: "reeeeeedissssssss"
           envkey_REDIS_PORT: 6379
+          envkey_GEODB_HOST: localhost
+          envkey_GEODB_USER: postgres
+          envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
+          envkey_GEODB_DB: user-data
+          envkey_GEODB_PORT: 5433
           file_name: .env
       - name: Build and run docker containers
         run: |

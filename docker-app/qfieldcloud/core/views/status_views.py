@@ -31,6 +31,11 @@ class APIStatusView(views.APIView):
             if not utils.redis_is_running():
                 results['redis'] = 'error'
 
+            results['geodb'] = 'ok'
+            # Check geodb
+            if not utils.geodb_is_running():
+                results['geodb'] = 'error'
+
             results['storage'] = 'ok'
             # Check if bucket exists (i.e. the connection works)
             try:

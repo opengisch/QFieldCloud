@@ -37,6 +37,11 @@ services:
       SENTRY_SERVER_NAME: ${QFIELDCLOUD_HOST}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_PORT: ${REDIS_PORT}
+      GEODB_HOST: ${GEODB_HOST}
+      GEODB_PORT: ${GEODB_PORT}
+      GEODB_USER: ${GEODB_USER}
+      GEODB_PASSWORD: ${GEODB_PASSWORD}
+      GEODB_DB: ${GEODB_DB}
     depends_on:
       - db
 
@@ -62,6 +67,18 @@ services:
     tty: true
     command: bash -c "echo QGIS builded"
 
+  geodb:
+    image: postgis/postgis:12-3.0
+    restart: unless-stopped
+    volumes:
+      - geodb_data:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: ${GEODB_DB}
+      POSTGRES_USER: ${GEODB_USER}
+      POSTGRES_PASSWORD: ${GEODB_PASSWORD}
+    ports:
+      - ${GEODB_PORT}:5432
+
   redis:
     build:
       context: ./docker-redis
@@ -72,6 +89,7 @@ services:
       - "${REDIS_PORT}:6379"
 
 volumes:
+  geodb_data:
   postgres_data:
   static_volume:
   media_volume:
