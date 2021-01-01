@@ -16,3 +16,4 @@ sentry-sdk
 jsonschema>=3.2.0,<3.3
 django-tables2>=2.3.2,<2.4
 django-bootstrap4>=2.3.1,<2.4
+django-invitations>=1.9.3,<1.10

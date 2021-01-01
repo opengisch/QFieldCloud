@@ -48,6 +48,12 @@ jobs:
           envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
           envkey_GEODB_DB: postgres
           envkey_GEODB_PORT: 5432
+          envkey_ACCOUNT_EMAIL_VERIFICATION: "optional"
+          envkey_EMAIL_HOST: "smtp4dev"
+          envkey_EMAIL_USE_TLS: False
+          envkey_EMAIL_PORT: 25
+          envkey_EMAIL_HOST_USER: ''
+          envkey_EMAIL_HOST_PASSWORD: ''
           file_name: .env
       - name: Build and run docker containers
         run: |

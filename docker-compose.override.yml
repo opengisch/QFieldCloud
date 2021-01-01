@@ -13,3 +13,22 @@ services:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
     command: python3 manage.py runserver 0.0.0.0:8000
+
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
+    restart: always
+    ports:
+      # Web interface
+      - '5000:80'
+      # SMTP server
+      - '25:25'
+      # IMAP
+      - '143:143'
+    volumes:
+        - smtp4dev_data:/smtp4dev
+    environment:
+      # Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
+      - ServerOptions__HostName=smtp4dev
+
+volumes:
+  smtp4dev_data:

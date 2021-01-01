@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'rest_auth.registration',
     'django_rq',  # Integration with Redis Queue
     'storages',  # Integration with AWS S3
+    'invitations',
 
     # Local
     'qfieldcloud.core',
@@ -233,3 +234,35 @@ sentry_sdk.init(
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii=True
 )
+
+
+# Django allauth configurations
+# https://django-allauth.readthedocs.io/en/latest/configuration.html
+ACCOUNT_AUTHENTICATION_METHOD = 'username'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+
+# Choose one of "mandatory", "optional", or "none".
+# For local development and test use "optional" or "none"
+ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+ACCOUNT_PRESERVE_USERNAME_CASING = False
+ACCOUNT_USERNAME_MIN_LENGTH = 4
+ACCOUNT_USERNAME_REQUIRED = True
+# TODO: ACCOUNT_USERNAME_VALIDATORS (=None)
+ACCOUNT_ADAPTER = 'invitations.models.InvitationsAdapter'
+
+
+# Django email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+
+
+# Django invitations configurations
+# https://github.com/bee-keeper/django-invitations#additional-configuration
+INVITATIONS_INVITATION_EXPIRY = 7  # Days
+INVITATIONS_INVITATION_ONLY = True
+INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True

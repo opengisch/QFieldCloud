@@ -49,6 +49,7 @@ class UserTestCase(APITestCase):
             '/api/v1/auth/registration/',
             {
                 "username": "pippo",
+                "email": "pippo@topolinia.to",
                 "password1": "secure_pass123",
                 "password2": "secure_pass123",
             },
@@ -62,6 +63,7 @@ class UserTestCase(APITestCase):
             '/api/v1/auth/registration/',
             {
                 "username": "pippo",
+                "email": "pippo@topolinia.to",
                 "password1": "secure_pass123",
                 "password2": "secure_pass456",
             },
@@ -73,6 +75,7 @@ class UserTestCase(APITestCase):
             '/api/v1/auth/registration/',
             {
                 "username": "user",
+                "email": "pippo@topolinia.to",
                 "password1": "secure_pass123",
                 "password2": "secure_pass123",
             },

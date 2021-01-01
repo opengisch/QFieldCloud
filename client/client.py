@@ -21,7 +21,8 @@ def cli():
 @cli.command()
 @click.argument('username')
 @click.argument('password')
-def register_user(username, password):
+@click.argument('email')
+def register_user(username, password, email):
     """Register new user and return the token"""
 
     url = BASE_URL + 'auth/registration/'
@@ -29,6 +30,7 @@ def register_user(username, password):
         'username': username,
         'password1': password,
         'password2': password,
+        'email': email,
     }
 
     response = requests.post(

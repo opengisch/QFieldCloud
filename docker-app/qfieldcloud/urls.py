@@ -66,6 +66,8 @@ urlpatterns = [
     path('auth/', include('rest_framework.urls')),
 
     path('accounts/', include('allauth.urls')),
+    re_path(r'^invitations/',
+            include('invitations.urls', namespace='invitations')),
 
     path('', pages_views.index, name='index'),
     path('<str:unpermitted_action>/unpermitted',
