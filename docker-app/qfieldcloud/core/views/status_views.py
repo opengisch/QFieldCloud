@@ -10,7 +10,7 @@ from rest_framework.permissions import AllowAny
 
 from drf_yasg.utils import swagger_auto_schema
 
-from qfieldcloud.core import utils
+from qfieldcloud.core import utils, exceptions
 
 
 @method_decorator(
@@ -66,7 +66,6 @@ class APIStatusView(views.APIView):
 
         for result in results:
             if not results[result] in ['slow', 'ok']:
-                return Response(
-                    results, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                raise exceptions.StatusNotOkError(message=result)
 
         return Response(results, status=status.HTTP_200_OK)

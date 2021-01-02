@@ -284,3 +284,32 @@ class ProjectTestCase(APITestCase):
 
         # The project should not exist anymore
         self.assertFalse(Project.objects.filter(id=project1.id).exists())
+
+    def test_error_responses(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        # Create a project of user1
+        project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user2)
+
+        # Get the project without permissions
+        response = self.client.get(
+            '/api/v1/projects/{}/'.format(project1.id))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['message'], "You do not have permission to perform this action.")
+
+        # Get an unexisting project id
+        response = self.client.get(
+            '/api/v1/projects/{}/'.format('a258db08-b1cb-4c34-a0cc-1e0e2a464f87'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['message'], "Project matching query does not exist.")
+
+        # Get a project without a valid project id
+        response = self.client.get(
+            '/api/v1/projects/{}/'.format('pizza'))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['message'], "[\"'pizza' is not a valid UUID.\"]")

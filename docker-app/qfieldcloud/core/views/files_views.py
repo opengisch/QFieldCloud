@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 
 from qfieldcloud.core.models import Project
-from qfieldcloud.core import utils, permissions_utils
+from qfieldcloud.core import utils, permissions_utils, exceptions
 
 
 class ListFilesViewPermissions(permissions.BasePermission):
@@ -19,10 +19,7 @@ class ListFilesViewPermissions(permissions.BasePermission):
             return False
 
         projectid = request.parser_context['kwargs']['projectid']
-        try:
-            project = Project.objects.get(id=projectid)
-        except ObjectDoesNotExist:
-            return False
+        project = Project.objects.get(id=projectid)
 
         return permissions_utils.can_list_files(request.user, project)
 
@@ -79,10 +76,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
             return False
 
         projectid = request.parser_context['kwargs']['projectid']
-        try:
-            project = Project.objects.get(id=projectid)
-        except ObjectDoesNotExist:
-            return False
+        project = Project.objects.get(id=projectid)
         user = request.user
 
         if request.method == 'GET':
@@ -126,8 +120,7 @@ class DownloadPushDeleteFileView(views.APIView):
         Project.objects.get(id=projectid)
 
         if 'file' not in request.data:
-            return Response(
-                'Empty content', status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.EmptyContentError()
 
         # check only one qgs/qgz file per project
         if filename.lower().endswith('.qgs') or filename.lower().endswith('.qgz'):
@@ -135,9 +128,8 @@ class DownloadPushDeleteFileView(views.APIView):
             if current_project_file is not None:
                 # Allowed only to push the a new version of the same file
                 if not PurePath(filename) == PurePath(current_project_file):
-                    return Response(
-                        'Only one QGIS project per project allowed',
-                        status=status.HTTP_400_BAD_REQUEST)
+                    raise exceptions.MultipleProjectsError(
+                        'Only one QGIS project per project allowed')
 
         request_file = request.FILES.get('file')
 

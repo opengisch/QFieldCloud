@@ -85,11 +85,7 @@ class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
 
     def get(self, request, username):
 
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            return Response(
-                'Invalid user', status=status.HTTP_400_BAD_REQUEST)
+        user = User.objects.get(username=username)
 
         if user.user_type == User.TYPE_ORGANIZATION:
             organization = Organization.objects.get(username=username)

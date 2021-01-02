@@ -6,12 +6,12 @@ from django.core.files.base import ContentFile
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ObjectDoesNotExist
 
-from rest_framework import views, status, permissions
+from rest_framework import views, permissions
 from rest_framework.response import Response
 
 from drf_yasg.utils import swagger_auto_schema
 
-from qfieldcloud.core import utils, permissions_utils
+from qfieldcloud.core import utils, permissions_utils, exceptions
 
 from qfieldcloud.core.models import (
     Project)
@@ -45,17 +45,11 @@ class ExportView(views.APIView):
         # - Is it possible to see if an export job already exists for this project to avoid duplicating?
 
         project_obj = None
-        try:
-            project_obj = Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
+        project_obj = Project.objects.get(id=projectid)
 
         project_file = utils.get_qgis_project_file(projectid)
         if project_file is None:
-            return Response(
-                'The project does not contain a valid qgis project file',
-                status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.NoQGISProjectError()
 
         job = utils.export_project(
             str(project_obj.id),
@@ -77,9 +71,9 @@ class ListFilesView(views.APIView):
         job = utils.get_job('export', str(jobid))
 
         if not job:
-            return Response(
-                'The provided job id does not exist.',
-                status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.InvalidJobError(
+                'The provided job id does not exist.'
+            )
 
         job_status = job.get_status()
 
@@ -91,8 +85,7 @@ class ListFilesView(views.APIView):
             exportlog = job.result[2]
 
             if not exit_code == 0:
-                job_status = 'qgis_error'
-                return Response({'status': job_status, 'output': output})
+                raise exceptions.QGISExportError(output)
 
             # Obtain the bucket object
             bucket = utils.get_s3_bucket()
@@ -111,6 +104,9 @@ class ListFilesView(views.APIView):
 
             return Response({
                 'status': job_status, 'files': files, 'layers': exportlog})
+
+        elif job_status == 'failed':
+            raise exceptions.QGISExportError(job.exc_info)
 
         return Response({'status': job_status})
 
@@ -131,10 +127,10 @@ class DownloadFileView(views.APIView):
         if job_status == 'finished':
             exit_code = job.result[0]
             output = job.result[1]
+            # exportlog = job.result[2]
 
             if not exit_code == 0:
-                job_status = 'qgis_error'
-                return Response({'status': job_status, 'output': output})
+                raise exceptions.QGISExportError(output)
 
             # Obtain the bucket object
             bucket = utils.get_s3_bucket()
@@ -149,5 +145,8 @@ class DownloadFileView(views.APIView):
                 return_file.open(),
                 as_attachment=True,
                 filename=filename)
+
+        elif job_status == 'failed':
+            raise exceptions.QGISExportError(job.exc_info)
 
         return Response({'status': job_status})

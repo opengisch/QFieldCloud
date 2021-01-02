@@ -14,7 +14,7 @@ from drf_yasg.utils import swagger_auto_schema
 
 from qfieldcloud.core.models import (
     Project, Delta)
-from qfieldcloud.core import utils, permissions_utils
+from qfieldcloud.core import utils, permissions_utils, exceptions
 from qfieldcloud.core.serializers import DeltaSerializer
 
 User = get_user_model()
@@ -25,10 +25,7 @@ class DeltaFilePermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         projectid = permissions_utils.get_param_from_request(
             request, 'projectid')
-        try:
-            project = Project.objects.get(id=projectid)
-        except ObjectDoesNotExist:
-            return False
+        project = Project.objects.get(id=projectid)
         user = request.user
 
         if request.method == 'GET':
@@ -57,25 +54,18 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         # TODO: check if projectid in the deltafile is the same as the
         # one of the request
 
-        try:
-            project_obj = Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return Response(
-                'Invalid project', status=status.HTTP_400_BAD_REQUEST)
+        project_obj = Project.objects.get(id=projectid)
 
         if 'file' not in request.data:
-            return Response(
-                'Empty content', status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.EmptyContentError()
 
         request_file = request.data['file']
 
         try:
             deltafile_json = json.load(request_file)
             utils.get_deltafile_schema_validator().validate(deltafile_json)
-        except (ValueError, jsonschema.exceptions.ValidationError) as e:
-            return Response(
-                'Not a valid deltafile: {}'.format(e),
-                status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, jsonschema.exceptions.ValidationError):
+            raise exceptions.DeltafileValidationError()
 
         deltafile_id = deltafile_json['id']
 

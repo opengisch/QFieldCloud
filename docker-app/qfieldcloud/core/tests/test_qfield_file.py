@@ -122,8 +122,8 @@ class QfieldFileTestCase(APITransactionTestCase):
             '/api/v1/qfield-files/{}/'.format(self.project1.id))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.json(),
-            'The project does not contain a valid qgis project file')
+            response.json()['code'],
+            'no_qgis_project')
 
     def test_download_file_for_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
@@ -198,7 +198,7 @@ class QfieldFileTestCase(APITransactionTestCase):
 
         self.fail("Worker didn't finish")
 
-    def test_download_file_for_qfield_broken_file(self):
+    def test_list_files_for_qfield_broken_file(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
         # Add files to the project
@@ -228,9 +228,9 @@ class QfieldFileTestCase(APITransactionTestCase):
             response = self.client.get(
                 '/api/v1/qfield-files/export/{}/'.format(jobid),
             )
-            if response.json()['status'] == 'failed':
-                # self.assertIn(
-                #     'Unable to open file with QGIS', response.json()['output'])
+            if not response.status_code == 200:
+                self.assertEqual(
+                    'qgis_export_error', response.json()['code'])
                 return
 
         self.fail("Worker didn't finish")

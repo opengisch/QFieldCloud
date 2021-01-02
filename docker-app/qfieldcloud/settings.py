@@ -188,6 +188,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'qfieldcloud.core.rest_utils.exception_handler',
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
