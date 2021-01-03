@@ -709,3 +709,12 @@ class DeltaTestCase(APITransactionTestCase):
             return
 
         self.fail("Worker didn't finish")
+
+    def test_list_deltas_unexisting_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.get(
+            '/api/v1/deltas/{}/'.format('7199612e-7641-48fc-8c11-c25176a9761b'))
+        self.assertFalse(status.is_success(response.status_code))
+        json = response.json()
+        self.assertEqual(json['code'], 'object_not_found')
