@@ -1,0 +1,122 @@
+import os
+import psycopg2
+
+from psycopg2 import sql
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+
+class GeodbConnection(object):
+    def __init__(self):
+        pass
+
+    def __enter__(self):
+        host = os.environ.get('GEODB_HOST')
+        port = os.environ.get('GEODB_PORT')
+
+        # If geodb is running on the same machine we connect trough
+        # the internal docker net
+        if host == 'localhost':
+            host = 'geodb'
+            port = 5432
+
+        self.connection = psycopg2.connect(
+            dbname=os.environ.get('GEODB_DB'),
+            user=os.environ.get('GEODB_USER'),
+            password=os.environ.get('GEODB_PASSWORD'),
+            host=host,
+            port=port)
+
+        return self.connection
+
+    def __exit__(self, type, value, traceback):
+        self.connection.close()
+
+
+def geodb_is_running():
+    """Check the connection to the geodb"""
+
+    try:
+        with GeodbConnection():
+            pass
+    except psycopg2.Error:
+        return False
+
+    return True
+
+
+def create_role_and_db(geodb):
+    """ Create role and db.
+    This function is automatically called when a Geodb object is created
+    """
+
+    with GeodbConnection() as conn:
+
+        # CREATE DATABASE cannot run inside a transaction block
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+
+        cur = conn.cursor()
+
+        cur.execute(sql.SQL(
+            """
+            CREATE ROLE {} WITH
+            LOGIN
+            NOSUPERUSER
+            NOCREATEDB
+            NOCREATEROLE
+            INHERIT
+            NOREPLICATION
+            CONNECTION LIMIT 5
+            PASSWORD %s;
+            """).format(sql.Identifier(geodb.username)),
+            (geodb.password,)
+        )
+
+        cur.execute(sql.SQL(
+            """
+            CREATE DATABASE {}
+            WITH
+            OWNER = %s
+            TEMPLATE = template_postgis
+            ENCODING = 'UTF8'
+            CONNECTION LIMIT = 5;
+            """).format(sql.Identifier(geodb.dbname)),
+            (geodb.username,)
+        )
+
+    result = {
+        'hostname': geodb.hostname,
+        'port': geodb.port,
+        'username': geodb.username,
+        'dbname': geodb.dbname,
+        'password': geodb.password,
+    }
+    return result
+
+
+def delete_db_and_role(geodb):
+    with GeodbConnection() as conn:
+        # DROP DATABASE cannot be executed inside a transaction block
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+
+        cur = conn.cursor()
+
+        cur.execute(sql.SQL(
+            """
+            DROP DATABASE IF EXISTS {};
+            """).format(sql.Identifier(geodb.dbname))
+        )
+
+        cur.execute(sql.SQL(
+            """
+            DROP ROLE IF EXISTS {};
+            """).format(sql.Identifier(geodb.username))
+        )
+
+
+def get_db_size(geodb):
+    """ Return the size of the database in bytes"""
+
+    with GeodbConnection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT pg_database_size(%s);", (geodb.dbname,))
+        return cur.fetchone()[0]

@@ -10,7 +10,7 @@ from rest_framework.permissions import AllowAny
 
 from drf_yasg.utils import swagger_auto_schema
 
-from qfieldcloud.core import utils, exceptions
+from qfieldcloud.core import utils, geodb_utils, exceptions
 
 
 @method_decorator(
@@ -33,7 +33,7 @@ class APIStatusView(views.APIView):
 
             results['geodb'] = 'ok'
             # Check geodb
-            if not utils.geodb_is_running():
+            if not geodb_utils.geodb_is_running():
                 results['geodb'] = 'error'
 
             results['storage'] = 'ok'

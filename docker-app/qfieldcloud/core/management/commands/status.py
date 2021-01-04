@@ -2,7 +2,7 @@ import time
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from qfieldcloud.core import utils
+from qfieldcloud.core import utils, geodb_utils
 
 
 class Command(BaseCommand):
@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
         results['geodb'] = 'ok'
         # Check geodb
-        if not utils.geodb_is_running():
+        if not geodb_utils.geodb_is_running():
             results['geodb'] = 'error'
 
         results['storage'] = 'ok'

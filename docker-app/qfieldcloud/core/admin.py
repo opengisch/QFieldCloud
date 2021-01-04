@@ -1,9 +1,10 @@
 from django.contrib import admin
+from django.contrib import messages
 from django.contrib.sites.models import Site
 from django.contrib.auth.models import Group
 from qfieldcloud.core.models import (
     User, Organization, OrganizationMember, Project, ProjectCollaborator,
-    UserAccount, Delta)
+    UserAccount, Delta, Geodb)
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 
 
@@ -51,10 +52,29 @@ class UserAccountAdmin(admin.ModelAdmin):
         'account_type',)
 
 
+class GeodbAdmin(admin.ModelAdmin):
+    list_display = (
+        'user', 'username', 'dbname', 'hostname', 'port', 'created_at', 'size')
+
+    fields = (
+        'user', 'username', 'dbname', 'hostname', 'port', 'created_at', 'size')
+
+    readonly_fields = ('size', 'created_at')
+
+    def save_model(self, request, obj, form, change):
+        # Only on creation
+        if not change:
+            messages.add_message(
+                request, messages.WARNING,
+                'The password is (shown only once): {}'.format(obj.password))
+        super().save_model(request, obj, form, change)
+
+
 admin.site.register(User, UserAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
+admin.site.register(Geodb, GeodbAdmin)
 
 admin.site.register(Organization)
 admin.site.register(OrganizationMember)

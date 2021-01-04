@@ -1,15 +1,18 @@
 import uuid
+import secrets
+import string
+import os
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
 from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models.signals import post_save
+from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save, post_delete
 from django.urls import reverse
 from django.dispatch import receiver
 
-from qfieldcloud.core import utils
+from qfieldcloud.core import utils, geodb_utils
 
 
 def reserved_words_validator(value):
@@ -79,8 +82,77 @@ class UserAccount(models.Model):
         return self.TYPE_CHOICES[self.account_type][1]
 
 
+class Geodb(models.Model):
+
+    def random_string():
+        """ Generate random sting starting with a lowercase letter and then
+        lowercase letters and digits"""
+
+        first_letter = secrets.choice(string.ascii_lowercase)
+        letters_and_digits = string.ascii_lowercase + string.digits
+        secure_str = first_letter + ''.join(
+            (secrets.choice(letters_and_digits) for i in range(15)))
+        return secure_str
+
+    def random_password():
+        """ Generate secure random password composed of
+        letters, digits and special characters"""
+
+        password_characters = string.ascii_letters + string.digits + '!#$%&()*+,-.:;<=>?@[]_{}~'
+        secure_str = ''.join(
+            (secrets.choice(password_characters) for i in range(16)))
+        return secure_str
+
+    def default_hostname():
+        # If geodb is running on the same machine we connect trough
+        # the internal docker net
+        if os.environ.get('GEODB_HOST') == 'localhost':
+            return 'geodb'
+
+    def default_port():
+        # If geodb is running on the same machine we connect trough
+        # the internal docker net
+        if os.environ.get('GEODB_HOST') == 'localhost':
+            return 5432
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        primary_key=True)
+
+    username = models.CharField(
+        blank=False, max_length=255, default=random_string)
+    dbname = models.CharField(
+        blank=False, max_length=255, default=random_string)
+    hostname = models.CharField(
+        blank=False, max_length=255, default=default_hostname)
+    port = models.PositiveIntegerField(default=default_port)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # The password is generated but not stored into the db
+    password = random_password()
+
+    def size(self):
+        return geodb_utils.get_db_size(self)
+
+    def __str__(self):
+        return '{}\'s db account, dbname: {}, username: {}'.format(
+            self.user.username, self.dbname, self.username)
+
+
+# Automatically create a role and database when a Geodb object is created.
+@receiver(post_save, sender=Geodb)
+def create_geodb(sender, instance, created, **kwargs):
+    if created:
+        geodb_utils.create_role_and_db(instance)
+
+
+@receiver(post_delete, sender=Geodb)
+def delete_geodb(sender, instance, **kwargs):
+    geodb_utils.delete_db_and_role(instance)
+
+
 class Organization(User):
-    # TODO: add extra specific organization fields, like website url etc
 
     organization_owner = models.ForeignKey(
         User, on_delete=models.CASCADE,
