@@ -43,6 +43,7 @@
     To lauch the RQ (Redis Queue) workers that runs the QGIS containers jobs:
     #+begin_src sh
       cd orchestrator
+      pipenv install
       pipenv run python worker.py
     #+end_src
 
