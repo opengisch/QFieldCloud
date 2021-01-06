@@ -94,9 +94,12 @@
       emacs supervisord.conf
     #+end_src
 
-    Run and build the docker containers (*not the
-    =docker-compose.override.yml= file*)
+    Run and build the docker containers
     #+begin_src sh
+      # dev server:
+      docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
+
+      # prod server
       docker-compose -f docker-compose.yml up -d --build
     #+end_src
 

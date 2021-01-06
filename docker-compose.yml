@@ -75,18 +75,6 @@ services:
     tty: true
     command: bash -c "echo QGIS builded"
 
-  geodb:
-    image: postgis/postgis:12-3.0
-    restart: unless-stopped
-    volumes:
-      - geodb_data:/var/lib/postgresql
-    environment:
-      POSTGRES_DB: ${GEODB_DB}
-      POSTGRES_USER: ${GEODB_USER}
-      POSTGRES_PASSWORD: ${GEODB_PASSWORD}
-    ports:
-      - ${GEODB_PORT}:5432
-
   redis:
     build:
       context: ./docker-redis
@@ -97,7 +85,6 @@ services:
       - "${REDIS_PORT}:6379"
 
 volumes:
-  geodb_data:
   postgres_data:
   static_volume:
   media_volume:

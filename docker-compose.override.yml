@@ -30,5 +30,18 @@ services:
       # Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
       - ServerOptions__HostName=smtp4dev
 
+  geodb:
+    image: postgis/postgis:12-3.0
+    restart: unless-stopped
+    volumes:
+      - geodb_data:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: ${GEODB_DB}
+      POSTGRES_USER: ${GEODB_USER}
+      POSTGRES_PASSWORD: ${GEODB_PASSWORD}
+    ports:
+      - ${GEODB_PORT}:5432
+
 volumes:
+  geodb_data:
   smtp4dev_data:
