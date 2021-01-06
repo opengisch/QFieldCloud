@@ -58,7 +58,7 @@
     #+begin_src sh
       docker-compose run app python manage.py test
     #+end_src
-    
+
     To run only a test module (e.g. =test_permission.py=)
     #+begin_src sh
       docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
@@ -114,7 +114,7 @@
       pipenv --python /usr/bin/python3.8 install
       pipenv run supervisord -c ../conf/supervisord.conf
     #+end_src
-    
+
     You can watch and control the processes managed with supervisor
     with ~supervisorctl~.
 
@@ -130,8 +130,22 @@
     #+begin_src sh
       docker-compose -f docker-compose.yml logs
     #+end_src
- 
+
     Orchestrator logs are stored in the ~/var/local/qfieldcloud/~ directory
+*** Geodb
+    The geodb (database for the users projects data) is installed on
+    separated machines (db1.qfield.cloud, db2.qfield.cloud, db3...)
+    and they are load balanced and available through the
+    db.qfield.cloud address.
+
+    There is a template database called
+    =template_postgis= that is used to create the databases for the
+    users. The template db has the following extensions installed:
+    - fuzzystrmatch
+    - plpgsql
+    - postgis
+    - postgis_tiger_geocoder
+    - postgis_topology
 ** Resources
    - [[https://qfield.cloud][QField Cloud "marketing" page]]
    - [[https://app.qfield.cloud/swagger/][API Swagger doc]]
