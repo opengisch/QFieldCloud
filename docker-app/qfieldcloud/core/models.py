@@ -6,22 +6,11 @@ import os
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
-from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save, post_delete
 from django.urls import reverse
 from django.dispatch import receiver
 
-from qfieldcloud.core import utils, geodb_utils
-
-
-def reserved_words_validator(value):
-    reserved_words = ['user', 'users', 'project', 'projects', 'owner', 'push',
-                      'file', 'files', 'collaborator', 'collaborators',
-                      'member', 'organization', 'qfield', 'qfieldcloud',
-                      'history', 'version']
-    if value.lower() in reserved_words:
-        raise ValidationError('"{}" is a reserved word!'.format(value))
+from qfieldcloud.core import utils, geodb_utils, validators
 
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -41,7 +30,13 @@ class User(AbstractUser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.get_field('username').validators.append(
-            reserved_words_validator)
+            validators.reserved_words_validator)
+        self._meta.get_field('username').validators.append(
+            validators.allowed_symbols_validator)
+        self._meta.get_field('username').validators.append(
+            validators.min_lenght_validator)
+        self._meta.get_field('username').validators.append(
+            validators.first_symbol_validator)
 
     def __str__(self):
         return self.username
@@ -210,25 +205,13 @@ class Project(models.Model):
     The owner of a project is an Organization.
     """
 
-    allowed_symbols_validator = RegexValidator(
-        r'^[-a-zA-Z0-9_]*$',
-        'Only letters, numbers, underscores or hyphens are allowed.')
-
-    min_lenght_validator = RegexValidator(
-        r'^.{3,}$',
-        'The project name must be at least 3 characters long.')
-
-    first_sybol_validator = RegexValidator(
-        r'^[a-zA-Z].*$',
-        'The project name must begin with a letter.')
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
         max_length=255,
-        validators=[allowed_symbols_validator,
-                    min_lenght_validator,
-                    first_sybol_validator,
-                    reserved_words_validator],
+        validators=[validators.allowed_symbols_validator,
+                    validators.min_lenght_validator,
+                    validators.first_symbol_validator,
+                    validators.reserved_words_validator],
         help_text='Project name'
     )
 

@@ -15,12 +15,12 @@ class UserTestCase(APITestCase):
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(
-            username='user1', password='abc123')
+            username='user1', password='abc123', email='user1@example.com')
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
 
         # Create a second user
         self.user2 = User.objects.create_user(
-            username='user2', password='abc123')
+            username='user2', password='abc123', email='user2@example.com')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
         # Create an organization
@@ -58,6 +58,18 @@ class UserTestCase(APITestCase):
         self.assertTrue('token' in response.data)
         self.assertTrue(User.objects.get(username='pippo'))
 
+    def test_register_user_invalid_username(self):
+        response = self.client.post(
+            '/api/v1/auth/registration/',
+            {
+                "username": "pippo@topolinia.to",
+                "email": "pippo@topolinia.to",
+                "password1": "secure_pass123",
+                "password2": "secure_pass123",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_register_non_matching_password(self):
         response = self.client.post(
             '/api/v1/auth/registration/',
@@ -85,6 +97,15 @@ class UserTestCase(APITestCase):
     def test_login(self):
         response = self.client.post(
             '/api/v1/auth/login/', {"username": "user1", "password": "abc123"}
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.data['token'], self.token1.key)
+        self.assertEqual(response.data['username'], 'user1')
+
+    def test_login_with_email(self):
+        response = self.client.post(
+            '/api/v1/auth/login/',
+            {"email": "user1@example.com", "password": "abc123"}
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data['token'], self.token1.key)

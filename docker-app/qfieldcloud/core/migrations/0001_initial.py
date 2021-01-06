@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
             name='Project',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(help_text='Project name', max_length=255, validators=[django.core.validators.RegexValidator('^[-a-zA-Z0-9_]*$', 'Only letters, numbers, underscores or hyphens are allowed.'), django.core.validators.RegexValidator('^.{3,}$', 'The project name must be at least 3 characters long.'), django.core.validators.RegexValidator('^[a-zA-Z].*$', 'The project name must begin with a letter.'), qfieldcloud.core.models.reserved_words_validator])),
+                ('name', models.CharField(help_text='Project name', max_length=255)),
                 ('description', models.TextField(blank=True)),
                 ('private', models.BooleanField(default=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
