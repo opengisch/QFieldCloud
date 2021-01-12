@@ -82,19 +82,21 @@ class QfieldFileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get(
-            '/api/v1/qfield-files/{}/'.format(self.project1.id))
+        response = self.client.post(
+            '/api/v1/qfield-files/export/{}/'.format(self.project1.id))
         self.assertTrue(status.is_success(response.status_code))
-
-        jobid = response.json()['jobid']
 
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/qfield-files/export/{}/'.format(jobid),
+                '/api/v1/qfield-files/export/{}/'.format(self.project1.id),
             )
-            if response.json()['status'] == 'finished':
+            if response.json()['status'] == 'STATUS_EXPORTED':
+                response = self.client.get(
+                    '/api/v1/qfield-files/{}/'.format(
+                        self.project1.id),
+                )
                 json_resp = response.json()
                 files = sorted(json_resp['files'], key=lambda k: k['name'])
                 self.assertEqual(files[2]['name'], 'project_qfield.qgs')
@@ -118,8 +120,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get(
-            '/api/v1/qfield-files/{}/'.format(self.project1.id))
+        response = self.client.post(
+            '/api/v1/qfield-files/export/{}/'.format(self.project1.id))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()['code'],
@@ -162,26 +164,23 @@ class QfieldFileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # Start the export to get the jobid
-        response = self.client.get(
-            '/api/v1/qfield-files/{}/'.format(
+        # Launch the export
+        response = self.client.post(
+            '/api/v1/qfield-files/export/{}/'.format(
                 self.project1.id),
         )
         self.assertTrue(status.is_success(response.status_code))
-
-        jobid = response.json()['jobid']
 
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/qfield-files/export/{}/'.format(jobid),
+                '/api/v1/qfield-files/export/{}/'.format(self.project1.id),
             )
-
-            if response.json()['status'] == 'finished':
+            if response.json()['status'] == 'STATUS_EXPORTED':
                 response = self.client.get(
-                    '/api/v1/qfield-files/export/{}/project_qfield.qgs/'.format(
-                        jobid),
+                    '/api/v1/qfield-files/{}/project_qfield.qgs/'.format(
+                        self.project1.id),
                 )
                 temp_dir = tempfile.mkdtemp()
                 local_file = os.path.join(temp_dir, 'project.qgs')
@@ -213,24 +212,20 @@ class QfieldFileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # Start the export to get the jobid
-        response = self.client.get(
-            '/api/v1/qfield-files/{}/'.format(
+        # Launch the export
+        response = self.client.post(
+            '/api/v1/qfield-files/export/{}/'.format(
                 self.project1.id),
         )
         self.assertTrue(status.is_success(response.status_code))
-
-        jobid = response.json()['jobid']
 
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/qfield-files/export/{}/'.format(jobid),
+                '/api/v1/qfield-files/export/{}/'.format(self.project1.id),
             )
-            if not response.status_code == 200:
-                self.assertEqual(
-                    'qgis_export_error', response.json()['code'])
+            if response.json()['status'] == 'STATUS_ERROR':
                 return
 
         self.fail("Worker didn't finish")
@@ -272,26 +267,24 @@ class QfieldFileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # Start the export to get the jobid
-        response = self.client.get(
-            '/api/v1/qfield-files/{}/'.format(
+        # Launch the export
+        response = self.client.post(
+            '/api/v1/qfield-files/export/{}/'.format(
                 self.project1.id),
         )
         self.assertTrue(status.is_success(response.status_code))
-
-        jobid = response.json()['jobid']
 
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/qfield-files/export/{}/'.format(jobid),
+                '/api/v1/qfield-files/export/{}/'.format(self.project1.id),
             )
 
-            if response.json()['status'] == 'finished':
+            if response.json()['status'] == 'STATUS_EXPORTED':
                 response = self.client.get(
-                    '/api/v1/qfield-files/export/{}/project_qfield.qgs/'.format(
-                        jobid),
+                    '/api/v1/qfield-files/{}/project_qfield.qgs/'.format(
+                        self.project1.id),
                 )
                 temp_dir = tempfile.mkdtemp()
                 local_file = os.path.join(temp_dir, 'project.qgs')
@@ -333,22 +326,24 @@ class QfieldFileTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # Start the export to get the jobid
-        response = self.client.get(
-            '/api/v1/qfield-files/{}/'.format(
+        # Launch the export
+        response = self.client.post(
+            '/api/v1/qfield-files/export/{}/'.format(
                 self.project1.id),
         )
         self.assertTrue(status.is_success(response.status_code))
-
-        jobid = response.json()['jobid']
 
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
             response = self.client.get(
-                '/api/v1/qfield-files/export/{}/'.format(jobid),
+                '/api/v1/qfield-files/export/{}/'.format(self.project1.id),
             )
-            if response.json()['status'] == 'finished':
+            if response.json()['status'] == 'STATUS_EXPORTED':
+
+                response = self.client.get(
+                    '/api/v1/qfield-files/{}/'.format(self.project1.id),
+                )
 
                 self.assertTrue(
                     response.json()['layers']['points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c']['valid'])

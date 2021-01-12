@@ -33,11 +33,11 @@ urlpatterns = [
          files_views.DownloadPushDeleteFileView.as_view()),
 
     path('qfield-files/<uuid:projectid>/',
-         qfield_files_views.ExportView.as_view()),
-    path('qfield-files/export/<uuid:jobid>/',
          qfield_files_views.ListFilesView.as_view()),
-    path('qfield-files/export/<uuid:jobid>/<path:filename>/',
+    path('qfield-files/<uuid:projectid>/<path:filename>/',
          qfield_files_views.DownloadFileView.as_view()),
+    path('qfield-files/export/<uuid:projectid>/',
+         qfield_files_views.ExportView.as_view()),
 
     path('members/<str:organization>/',
          members_views.ListCreateMembersView.as_view()),
@@ -48,8 +48,9 @@ urlpatterns = [
 
     path('deltas/<uuid:projectid>/',
          deltas_views.ListCreateDeltasView.as_view()),
-
     path('deltas/<uuid:projectid>/<uuid:deltafileid>/',
          deltas_views.ListDeltasByDeltafileView.as_view()),
+    path('deltas/apply/<uuid:projectid>/',
+         deltas_views.ApplyView.as_view()),
 
 ]

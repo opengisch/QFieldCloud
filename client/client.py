@@ -333,26 +333,26 @@ def download_files(token, project_id, local_dir):
 def export_files(token, project_id):
     """Export files for qfield"""
 
-    url = BASE_URL + 'qfield-files/' + project_id + '/'
+    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
     headers = {'Authorization': 'token {}'.format(token)}
     params = {}
 
-    with requests.get(url, headers=headers, params=params, stream=True) as response:
+    with requests.post(url, headers=headers, params=params, stream=True) as response:
         try:
             response.raise_for_status()
-            print('Job id: {}'.format(response.json()['jobid']))
+            print('Status: {}'.format(response.json()['status']))
         except requests.HTTPError:
             print('Error: {}'.format(response))
             print(response.text)
 
 
 @cli.command()
-@click.argument('export_id')
+@click.argument('project_id')
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
-def export_files_status(token, export_id):
+def export_files_status(token, project_id):
     """Check exported files status"""
 
-    url = BASE_URL + 'qfield-files/export/' + export_id + '/'
+    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
     headers = {'Authorization': 'token {}'.format(token)}
     params = {}
 
@@ -366,14 +366,14 @@ def export_files_status(token, export_id):
 
 
 @cli.command()
-@click.argument('export_id')
+@click.argument('project_id')
 @click.argument('remote_file')
 @click.argument('local_file')
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
-def export_files_download(token, export_id, remote_file, local_file):
+def export_files_download(token, project_id, remote_file, local_file):
     """Download exported file"""
 
-    url = BASE_URL + 'qfield-files/export/' + export_id + '/' + remote_file + '/'
+    url = BASE_URL + 'qfield-files/' + project_id + '/' + remote_file + '/'
     headers = {'Authorization': 'token {}'.format(token)}
 
     with requests.get(url, headers=headers, stream=True) as response:
@@ -396,23 +396,18 @@ def export_files_download(token, export_id, remote_file, local_file):
 def export(token, project_id, local_dir):
     """Export and downloads files for qfield"""
 
-    url = BASE_URL + 'qfield-files/' + project_id + '/'
+    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
     headers = {'Authorization': 'token {}'.format(token)}
-    export_id = None
 
-    with requests.get(url, headers=headers, stream=True) as response:
+    with requests.post(url, headers=headers, stream=True) as response:
         try:
             response.raise_for_status()
-            export_id = response.json()['jobid']
-            print('Job id: {}'.format(export_id))
         except requests.HTTPError:
             print('Error: {}'.format(response))
             print(response.text)
             return
 
-    assert export_id
-
-    url = BASE_URL + 'qfield-files/export/' + export_id + '/'
+    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
     headers = {'Authorization': 'token {}'.format(token)}
     status = None
     files = None
@@ -426,20 +421,34 @@ def export(token, project_id, local_dir):
 
                 print('Status updated: {}'.format(status))
 
-                if status == 'finished':
-                    files = payload['files']
+                if status == 'STATUS_EXPORTED':
                     break
 
-                if status == 'qgis_error':
+                if status == 'STATUS_ERROR':
                     print(payload)
-                    break
+                    return
+
             except requests.HTTPError:
                 print('Error: {}'.format(response))
                 print(response.text)
                 return
 
+    url = BASE_URL + 'qfield-files/' + project_id + '/'
+    headers = {'Authorization': 'token {}'.format(token)}
+    status = None
+    files = None
+    with requests.get(url, headers=headers, stream=True) as response:
+        try:
+            payload = response.json()
+            files = payload['files']
+
+        except requests.HTTPError:
+            print('Error: {}'.format(response))
+            print(response.text)
+            return
+
     for file in files:
-        url = BASE_URL + 'qfield-files/export/' + export_id + '/' + file['name'] + '/'
+        url = BASE_URL + 'qfield-files/' + project_id + '/' + file['name'] + '/'
         headers = {'Authorization': 'token {}'.format(token)}
 
         with requests.get(url, headers=headers, stream=True) as response:
@@ -524,6 +533,29 @@ def upload_deltafile(token, project_id, delta_file):
             print('Deltafile "{}" uploaded'.format(delta_file))
         except requests.HTTPError:
             print('Error uploading deltafile"{}": {}'.format(delta_file, response))
+            print(response.text)
+            return
+
+    # Trigger deltafile apply
+    url = BASE_URL + 'deltas/apply/' + project_id + '/'
+    headers = {
+        'Authorization': 'token {}'.format(token),
+    }
+
+    with open(delta_file, 'rb') as local_file:
+        files = {'file': local_file}
+
+        response = requests.post(
+            url,
+            headers=headers,
+            files=files,
+        )
+
+        try:
+            response.raise_for_status()
+            print('Deltafile application triggered')
+        except requests.HTTPError:
+            print('Error triggering application: {}'.format(response))
             print(response.text)
             return
 

@@ -111,7 +111,12 @@ class DeltaTestCase(APITransactionTestCase):
             },
             format='multipart'
         )
+        self.assertTrue(status.is_success(response.status_code))
 
+        # Trigger delta application
+        response = self.client.post(
+            '/api/v1/deltas/apply/{}/'.format(self.project1.id),
+        )
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
@@ -203,7 +208,12 @@ class DeltaTestCase(APITransactionTestCase):
             },
             format='multipart'
         )
+        self.assertTrue(status.is_success(response.status_code))
 
+        # Trigger delta application
+        response = self.client.post(
+            '/api/v1/deltas/apply/{}/'.format(self.project1.id),
+        )
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
@@ -273,7 +283,6 @@ class DeltaTestCase(APITransactionTestCase):
             },
             format='multipart'
         )
-
         self.assertFalse(status.is_success(response.status_code))
 
     def test_push_apply_delta_file_not_json(self):
@@ -385,6 +394,12 @@ class DeltaTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
+        # Trigger delta application
+        response = self.client.post(
+            '/api/v1/deltas/apply/{}/'.format(self.project1.id),
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
         # Wait for the worker to finish
         for _ in range(30):
             time.sleep(2)
@@ -459,7 +474,12 @@ class DeltaTestCase(APITransactionTestCase):
             },
             format='multipart'
         )
+        self.assertTrue(status.is_success(response.status_code))
 
+        # Trigger delta application
+        response = self.client.post(
+            '/api/v1/deltas/apply/{}/'.format(self.project1.id),
+        )
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
@@ -507,7 +527,6 @@ class DeltaTestCase(APITransactionTestCase):
             },
             format='multipart'
         )
-
         self.assertTrue(status.is_success(response.status_code))
 
         # Push a deltafile with same id but different content
@@ -521,7 +540,6 @@ class DeltaTestCase(APITransactionTestCase):
             },
             format='multipart'
         )
-
         self.assertTrue(status.is_client_error(response.status_code))
 
     def test_push_list_deltas(self):
@@ -692,6 +710,12 @@ class DeltaTestCase(APITransactionTestCase):
                 "file": open(delta_file, 'rb')
             },
             format='multipart'
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Trigger delta application
+        response = self.client.post(
+            '/api/v1/deltas/apply/{}/'.format(self.project1.id),
         )
         self.assertTrue(status.is_success(response.status_code))
 

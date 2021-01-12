@@ -307,3 +307,30 @@ class Delta(models.Model):
 
     def __str__(self):
         return str(self.id) + ', project: ' + str(self.project.id)
+
+
+class Exportation(models.Model):
+    STATUS_PENDING = 1  # Export has been requested, but not yet started
+    STATUS_BUSY = 2  # Currently being exported
+    STATUS_EXPORTED = 3  # Export finished
+    STATUS_ERROR = 4  # was not possible to export the project
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, 'STATUS_PENDING'),
+        (STATUS_BUSY, 'STATUS_BUSY'),
+        (STATUS_EXPORTED, 'STATUS_EXPORTED'),
+        (STATUS_ERROR, 'STATUS_ERROR'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE,
+        related_name='exports',
+    )
+
+    status = models.PositiveSmallIntegerField(
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING)
+    exportlog = JSONField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

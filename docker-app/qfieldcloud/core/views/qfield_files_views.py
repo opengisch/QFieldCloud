@@ -1,6 +1,7 @@
 
 from pathlib import PurePath
 
+from django.db.models import Q
 from django.http import FileResponse
 from django.core.files.base import ContentFile
 from django.utils.decorators import method_decorator
@@ -11,10 +12,11 @@ from rest_framework.response import Response
 
 from drf_yasg.utils import swagger_auto_schema
 
-from qfieldcloud.core import utils, permissions_utils, exceptions
+from qfieldcloud.core import (
+    utils, permissions_utils, exceptions, serializers)
 
 from qfieldcloud.core.models import (
-    Project)
+    Project, Exportation)
 
 
 class ExportViewPermissions(permissions.BasePermission):
@@ -31,31 +33,54 @@ class ExportViewPermissions(permissions.BasePermission):
 
 
 @method_decorator(
-    name='get', decorator=swagger_auto_schema(
+    name='post', decorator=swagger_auto_schema(
         operation_description="Launch QField export project",
         operation_id="Launch qfield export"))
+@method_decorator(
+    name='get', decorator=swagger_auto_schema(
+        operation_description="Get QField export status",
+        operation_id="Get qfield export status"))
 class ExportView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated,
                           ExportViewPermissions]
 
-    def get(self, request, projectid):
-        # TODO:
-        # - If an apply delta job already exists for this project, defer it
-        # - Is it possible to see if an export job already exists for this project to avoid duplicating?
+    def post(self, request, projectid):
 
-        project_obj = None
         project_obj = Project.objects.get(id=projectid)
 
         project_file = utils.get_qgis_project_file(projectid)
         if project_file is None:
             raise exceptions.NoQGISProjectError()
 
-        job = utils.export_project(
+        # Check if active exportation already exists
+        # TODO: cache results for some minutes
+        query = (Q(project=project_obj) & (Q(status=Exportation.STATUS_PENDING) | Q(status=Exportation.STATUS_BUSY)))
+        if Exportation.objects.filter(query).exists():
+            serializer = serializers.ExportationSerializer(
+                Exportation.objects.get(query))
+            return Response(serializer.data)
+
+        utils.export_project(
             str(project_obj.id),
             project_file)
 
-        return Response({'jobid': job.id})
+        exportation = Exportation.objects.create(
+            project=project_obj)
+
+        # TODO: check if user is allowed otherwise ERROR 403
+        serializer = serializers.ExportationSerializer(
+            exportation)
+        return Response(serializer.data)
+
+    def get(self, request, projectid):
+        project_obj = Project.objects.get(id=projectid)
+
+        exportation = Exportation.objects.filter(
+            project=project_obj).order_by('updated_at').last()
+
+        serializer = serializers.ExportationSerializer(exportation)
+        return Response(serializer.data)
 
 
 @method_decorator(
@@ -64,51 +89,41 @@ class ExportView(views.APIView):
         operation_id="List qfield project files"))
 class ListFilesView(views.APIView):
 
-    # TODO: check actual permissions on the project of this job
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,
+                          ExportViewPermissions]
 
-    def get(self, request, jobid):
-        job = utils.get_job('export', str(jobid))
+    def get(self, request, projectid):
 
-        if not job:
+        project_obj = Project.objects.get(id=projectid)
+
+        # Check if the project was exported at least once
+        if not Exportation.objects.filter(
+                project=project_obj, status=Exportation.STATUS_EXPORTED):
             raise exceptions.InvalidJobError(
-                'The provided job id does not exist.'
-            )
+                'Project files have not been exported for the provided project id')
 
-        job_status = job.get_status()
+        exportation = Exportation.objects.filter(
+            project=project_obj,
+            status=Exportation.STATUS_EXPORTED).order_by('updated_at').last()
 
-        projectid = job.kwargs['projectid']
+        # Obtain the bucket object
+        bucket = utils.get_s3_bucket()
 
-        if job_status == 'finished':
-            exit_code = job.result[0]
-            output = job.result[1]
-            exportlog = job.result[2]
+        export_prefix = 'projects/{}/export/'.format(projectid)
 
-            if not exit_code == 0:
-                raise exceptions.QGISExportError(output)
+        files = []
+        for obj in bucket.objects.filter(Prefix=export_prefix):
+            path = PurePath(obj.key)
+            files.append({
+                # Get the path of the file relative to the export directory
+                'name': str(path.relative_to(*path.parts[:3])),
+                'size': obj.size,
+                'sha256': obj.Object().metadata['Sha256sum'],
+            })
 
-            # Obtain the bucket object
-            bucket = utils.get_s3_bucket()
-
-            export_prefix = 'projects/{}/export/'.format(projectid)
-
-            files = []
-            for obj in bucket.objects.filter(Prefix=export_prefix):
-                path = PurePath(obj.key)
-                files.append({
-                    # Get the path of the file relative to the export directory
-                    'name': str(path.relative_to(*path.parts[:3])),
-                    'size': obj.size,
-                    'sha256': obj.Object().metadata['Sha256sum'],
-                })
-
-            return Response({
-                'status': job_status, 'files': files, 'layers': exportlog})
-
-        elif job_status == 'failed':
-            raise exceptions.QGISExportError(job.exc_info)
-
-        return Response({'status': job_status})
+        return Response({'files': files,
+                         'layers': exportation.exportlog,
+                         'exported_at': exportation.updated_at})
 
 
 @method_decorator(
@@ -117,36 +132,29 @@ class ListFilesView(views.APIView):
         operation_id="Download qfield file"))
 class DownloadFileView(views.APIView):
 
-    def get(self, request, jobid, filename):
-        job = utils.get_job('export', str(jobid))
+    permission_classes = [permissions.IsAuthenticated,
+                          ExportViewPermissions]
 
-        job_status = job.get_status()
+    def get(self, request, projectid, filename):
 
-        projectid = job.kwargs['projectid']
+        project_obj = Project.objects.get(id=projectid)
 
-        if job_status == 'finished':
-            exit_code = job.result[0]
-            output = job.result[1]
-            # exportlog = job.result[2]
+        # Check if the project was exported at least once
+        if not Exportation.objects.filter(
+                project=project_obj, status=Exportation.STATUS_EXPORTED):
+            raise exceptions.InvalidJobError(
+                'Project files have not been exported for the provided project id')
 
-            if not exit_code == 0:
-                raise exceptions.QGISExportError(output)
+        # Obtain the bucket object
+        bucket = utils.get_s3_bucket()
 
-            # Obtain the bucket object
-            bucket = utils.get_s3_bucket()
+        filekey = utils.safe_join(
+            'projects/{}/export/'.format(projectid), filename)
 
-            filekey = utils.safe_join(
-                'projects/{}/export/'.format(projectid), filename)
+        return_file = ContentFile(b'')
+        bucket.download_fileobj(filekey, return_file)
 
-            return_file = ContentFile(b'')
-            bucket.download_fileobj(filekey, return_file)
-
-            return FileResponse(
-                return_file.open(),
-                as_attachment=True,
-                filename=filename)
-
-        elif job_status == 'failed':
-            raise exceptions.QGISExportError(job.exc_info)
-
-        return Response({'status': job_status})
+        return FileResponse(
+            return_file.open(),
+            as_attachment=True,
+            filename=filename)

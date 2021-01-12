@@ -10,12 +10,17 @@ from pathlib import Path
 import docker
 
 
-STATUS_PENDING = 1  # deltafile has been received, but have not started application
-STATUS_BUSY = 2  # currently being applied
-STATUS_APPLIED = 3  # applied correctly
-STATUS_CONFLICT = 4  # needs conflict resolution
-STATUS_NOT_APPLIED = 5
-STATUS_ERROR = 6  # was not possible to apply the deltafile
+DELTA_STATUS_PENDING = 1  # deltafile has been received, but have not started application
+DELTA_STATUS_BUSY = 2  # currently being applied
+DELTA_STATUS_APPLIED = 3  # applied correctly
+DELTA_STATUS_CONFLICT = 4  # needs conflict resolution
+DELTA_STATUS_NOT_APPLIED = 5
+DELTA_STATUS_ERROR = 6  # was not possible to apply the deltafile
+
+EXPORTATION_STATUS_PENDING = 1  # Export has been requested, but not yet started
+EXPORTATION_STATUS_BUSY = 2  # Currently being exported
+EXPORTATION_STATUS_EXPORTED = 3  # Export finished
+EXPORTATION_STATUS_ERROR = 4  # was not possible to export the project
 
 
 class QgisException(Exception):
@@ -37,46 +42,6 @@ def load_env_file():
                 environment[splitted[0]] = splitted[1]
 
     return environment
-
-
-def export_project(projectid, project_file):
-    """Start a QGIS docker container to export the project using QFieldSync """
-
-    tempdir = tempfile.mkdtemp()
-    volumes = {
-        tempdir: {'bind': '/io/', 'mode': 'rw'}
-    }
-
-    client = docker.from_env()
-    container = client.containers.create(
-        'qfieldcloud_qgis',
-        environment=load_env_file(),
-        auto_remove=True,
-        volumes=volumes,
-    )
-
-    container.start()
-    container.attach(logs=True)
-    container_command = 'xvfb-run python3 entrypoint.py export {} {}'.format(projectid, project_file)
-
-    exit_code, output = container.exec_run(container_command)
-    container.kill()
-
-    logging.info(
-        'export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}'.format(
-            projectid, project_file, exit_code, output.decode('utf-8')))
-
-    if not exit_code == 0:
-        raise QgisException(output)
-
-    exportlog_file = os.path.join(tempdir, 'exportlog.json')
-    try:
-        with open(exportlog_file, 'r') as f:
-            exportlog = json.load(f)
-    except FileNotFoundError:
-        exportlog = 'Export log not available'
-
-    return exit_code, output.decode('utf-8'), exportlog
 
 
 def get_django_db_connection(is_test_db=False):
@@ -101,6 +66,72 @@ def get_django_db_connection(is_test_db=False):
         return None
 
     return conn
+
+
+def set_exportation_status_and_log(projectid, old_status, new_status, exportlog={}):
+    """Set the deltafile status and output into the database record """
+
+    conn = get_django_db_connection(True)
+    if not conn:
+        conn = get_django_db_connection(False)
+
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE core_exportation SET status = %s, updated_at = now(), exportlog = %s WHERE project_id = %s AND status = %s",
+        (new_status, json.dumps(exportlog), projectid, old_status))
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+
+def export_project(projectid, project_file):
+    """Start a QGIS docker container to export the project using QFieldSync """
+
+    tempdir = tempfile.mkdtemp()
+    volumes = {
+        tempdir: {'bind': '/io/', 'mode': 'rw'}
+    }
+
+    client = docker.from_env()
+    container = client.containers.create(
+        'qfieldcloud_qgis',
+        environment=load_env_file(),
+        auto_remove=True,
+        volumes=volumes,
+    )
+
+    container.start()
+    container.attach(logs=True)
+    container_command = 'xvfb-run python3 entrypoint.py export {} {}'.format(projectid, project_file)
+
+    set_exportation_status_and_log(
+        projectid, EXPORTATION_STATUS_PENDING, EXPORTATION_STATUS_BUSY)
+    exit_code, output = container.exec_run(container_command)
+    container.kill()
+
+    logging.info(
+        'export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}'.format(
+            projectid, project_file, exit_code, output.decode('utf-8')))
+
+    if not exit_code == 0:
+        set_exportation_status_and_log(
+            projectid, EXPORTATION_STATUS_BUSY, EXPORTATION_STATUS_ERROR)
+        raise QgisException(output)
+
+    exportlog_file = os.path.join(tempdir, 'exportlog.json')
+    try:
+        with open(exportlog_file, 'r') as f:
+            exportlog = json.load(f)
+    except FileNotFoundError:
+        exportlog = 'Export log not available'
+
+    set_exportation_status_and_log(
+        projectid,
+        EXPORTATION_STATUS_BUSY,
+        EXPORTATION_STATUS_EXPORTED,
+        exportlog=exportlog)
+    return exit_code, output.decode('utf-8'), exportlog
 
 
 def set_delta_status_and_output(projectid, delta_id, status, output={}):
@@ -129,7 +160,7 @@ def create_deltafile_with_pending_deltas(projectid, tempdir):
 
     cur = conn.cursor()
     cur.execute("SELECT id, deltafile_id, content FROM core_delta WHERE project_id = %s AND status = %s;",
-                (projectid, STATUS_PENDING))
+                (projectid, DELTA_STATUS_PENDING))
 
     json_content = {
         "deltas": [],
@@ -145,7 +176,7 @@ def create_deltafile_with_pending_deltas(projectid, tempdir):
 
     for delta in deltas:
         json_content["deltas"].append(delta[2])
-        set_delta_status_and_output(projectid, delta[0], STATUS_BUSY)
+        set_delta_status_and_output(projectid, delta[0], DELTA_STATUS_BUSY)
 
     deltafile = os.path.join(tempdir, 'deltafile.json')
     with open(deltafile, 'w') as f:
@@ -191,13 +222,13 @@ def apply_deltas(projectid, project_file, overwrite_conflicts):
             delta_id = log['delta_id']
             status = log['status']
             if status == 'status_applied':
-                status = STATUS_APPLIED
+                status = DELTA_STATUS_APPLIED
             elif status == 'status_conflict':
-                status = STATUS_CONFLICT
+                status = DELTA_STATUS_CONFLICT
             elif status == 'status_apply_failed':
-                status = STATUS_NOT_APPLIED
+                status = DELTA_STATUS_NOT_APPLIED
             else:
-                status = STATUS_ERROR
+                status = DELTA_STATUS_ERROR
             msg = log
 
             set_delta_status_and_output(projectid, delta_id, status, msg)

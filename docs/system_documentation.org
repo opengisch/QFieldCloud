@@ -5,6 +5,24 @@
    [[./assets/images/architecture.png]]
 ** Data model
    [[./assets/images/db_model.png]]
+** Statuses
+   Returned statuses
+*** /deltas/ API
+    | Status             | Db value | Meaning                                                   |
+    |--------------------+----------+-----------------------------------------------------------|
+    | STATUS_PENDING     |        1 | delta has been received, but have not started application |
+    | STATUS_BUSY        |        2 | currently being applied                                   |
+    | STATUS_APPLIED     |        3 | applied correctly                                         |
+    | STATUS_CONFLICT    |        4 | needs conflict resolution                                 |
+    | STATUS_NOT_APPLIED |        5 | not applied                                               |
+    | STATUS_ERROR       |        6 | unexpected error                                          |
+*** /qfield-files/ API
+    | Status          | Db value | Meaning                                        |
+    |-----------------+----------+------------------------------------------------|
+    | STATUS_PENDING  |        1 | Export has been requested, but not yet started |
+    | STATUS_BUSY     |        2 | Currently being exported                       |
+    | STATUS_EXPORTED |        3 | Export finished                                |
+    | STATUS_ERROR    |        4 | was not possible to export the project         |
 ** Actors
 *** Client (QField or other clients)
     The features are:
