@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time
+import psycopg2
 
 from django.contrib.auth import get_user_model
 
@@ -8,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 from rest_framework.authtoken.models import Token
 
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import Project, Geodb
 from .utils import testdata_path
 
 User = get_user_model()
@@ -20,11 +21,9 @@ class QfieldFileTestCase(APITransactionTestCase):
         # Create a user
         self.user1 = User.objects.create_user(
             username='user1', password='abc123')
-        self.user1.save()
 
         self.user2 = User.objects.create_user(
             username='user2', password='abc123')
-        self.user2.save()
 
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
 
@@ -33,9 +32,24 @@ class QfieldFileTestCase(APITransactionTestCase):
             name='project1',
             private=True,
             owner=self.user1)
-        self.project1.save()
+
+        self.geodb = Geodb.objects.create(
+            user=self.user1,
+            dbname='test',
+            hostname='geodb',
+            port=5432,
+        )
+
+        self.conn = psycopg2.connect(
+            dbname='test',
+            user=os.environ.get('GEODB_USER'),
+            password=os.environ.get('GEODB_PASSWORD'),
+            host='geodb',
+            port=5432)
 
     def tearDown(self):
+        self.conn.close()
+
         # Remove all projects avoiding bulk delete in order to use
         # the overrided delete() function in the model
         for p in Project.objects.all():
@@ -48,30 +62,29 @@ class QfieldFileTestCase(APITransactionTestCase):
     def test_list_files_for_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
 
-        # Add files to the project
-        file = testdata_path('delta/points.geojson')
-        response = self.client.post(
-            '/api/v1/files/{}/points.geojson/'.format(
-                self.project1.id),
-            {
-                "file": open(file, 'rb')
-            },
-            format='multipart'
-        )
-        self.assertTrue(status.is_success(response.status_code))
+        cur = self.conn.cursor()
 
-        file = testdata_path('delta/polygons.geojson')
-        response = self.client.post(
-            '/api/v1/files/{}/polygons.geojson/'.format(
-                self.project1.id),
-            {
-                "file": open(file, 'rb')
-            },
-            format='multipart'
+        cur.execute(
+            """
+            CREATE TABLE point (
+                id          integer,
+                geometry   geometry(point, 2056)
+            );
+            """
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        file = testdata_path('delta/project.qgs')
+        self.conn.commit()
+
+        cur.execute(
+            """
+            INSERT INTO point(id, geometry)
+            VALUES(1, ST_GeomFromText('POINT(2725505 1121435)', 2056));
+            """
+        )
+        self.conn.commit()
+
+        # Add the qgis project
+        file = testdata_path('delta/project2.qgs')
         response = self.client.post(
             '/api/v1/files/{}/project.qgs/'.format(
                 self.project1.id),
@@ -99,7 +112,8 @@ class QfieldFileTestCase(APITransactionTestCase):
                 )
                 json_resp = response.json()
                 files = sorted(json_resp['files'], key=lambda k: k['name'])
-                self.assertEqual(files[2]['name'], 'project_qfield.qgs')
+                self.assertEqual(files[0]['name'], 'data.gpkg')
+                self.assertEqual(files[1]['name'], 'project_qfield.qgs')
                 return
 
         self.fail("Worker didn't finish")

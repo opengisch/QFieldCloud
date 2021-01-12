@@ -29,13 +29,13 @@
     - Download QFieldCloud project
     - Edit QFieldCloud project's data
     - Synchronize data with QFieldCloud
-*** Desktop (QGIS + QFieldSync Desktop)
+*** Desktop (QGIS + QFieldSync)
     Features:
     - Create QGIS project
     - Configure layer actions
     - Upload QGIS project and related files
     - Edit QGIS project
-*** Server (QFieldCloud + QGIS + QFieldSync Server)
+*** Server (QFieldCloud + QGIS + `libqfieldsync`)
     Features:
     - Create QFieldCloud project
     - Create QFieldCloud users and organizations
@@ -52,6 +52,8 @@
     QFieldSync. Before the uploading of the QGIS project, it is
     necessary for each layer of the QGIS project an "action" that
     determines how QFieldSync and QField should treat the layer.
+    There are the two types of actions that can be setup - one for
+    QFieldCloud and one for the traditional cable export.
 
     This information is saved within the QGS project as layer's
     =customProperty=, with the =QFieldSync/action= key.
@@ -65,7 +67,7 @@
     | COPY                 | Copy                  |
     | KEEP_EXISTING        | Keep Existing         |
 
-    This would be the behavior of QFieldSync Desktop with the different
+    This would be the behavior of QFieldSync with the different
     layer actions:
     | Action        | File based layer                                                     | Not file based layer                                      |
     |---------------+----------------------------------------------------------------------+-----------------------------------------------------------|
@@ -75,7 +77,7 @@
     | COPY          | Make source path relative and copy the file                          | N/A                                                       |
     | KEEP_EXISTING | Make source path relative and copy the file if it does not exist     | N/A                                                       |
 
-    This is the behavior of QFieldCloud (QFieldSync Server) with the
+    This is the behavior of QFieldCloud (`libqfieldsync`) with the
     layers:
     | Action          | File based layer                                                                                                 | Not file based                                                                                 |
     |-----------------+------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------|
@@ -153,10 +155,10 @@
         =GET ​/files​/{projectid}​/= and downloads all the files
         one after the other with the API =GET
         /files​/{projectid}​/{filename}​/=
-      - QFieldCloud uses QFieldSync Server to parse the QGIS project
+      - QFieldCloud uses `libqfieldsync` to parse the QGIS project
         and generate any needed data file (i.e. consolidated data of
         the hybrid layer based on a remote server)
-        - [ ] To do this QFieldSync Server needs to know the
+        - [ ] To do this `libqfieldsync` needs to know the
           credential of the user to connect to the db, so we need to
           pass them in the API call for each concerned layer and
           probably we also need an API to list the layers and the
@@ -170,7 +172,7 @@
       button to synchronize the project on the server.
       - QField will send the deltafile to QFieldCloud
         - [ ] API?
-        - QFieldCloud using QFieldSync server will apply the deltafile
+        - QFieldCloud using `libqfieldsync` will apply the deltafile
           to the original datasource
         - QField downloads a fresh version of the data geopackage with
           the deltafile applied.

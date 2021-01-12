@@ -6,16 +6,19 @@ import tempfile
 import hashlib
 import logging
 import json
+import mock
+import boto3
 
 from pathlib import PurePath, Path
 
-import boto3
-
 from qgis.core import (
-    QgsProject, QgsOfflineEditing, QgsVectorLayer, QgsMapSettings)
-from qgis.testing import start_app, mocked
+    QgsProject, QgsOfflineEditing, QgsVectorLayer, QgsMapSettings,
+    QgsApplication)
+from qgis.gui import QgisInterface, QgsMapCanvas
+from qgis.PyQt.QtWidgets import QMainWindow
+from qgis.PyQt.QtCore import QSize
 
-from qfieldsync.core.offline_converter import OfflineConverter
+from libqfieldsync.offline_converter import ExportType, OfflineConverter
 
 import apply_deltas
 
@@ -148,13 +151,20 @@ def _upload_delta_modified_files(projectid, local_dir):
 
 def _call_qfieldsync_exporter(project_filepath, export_dir):
     """Call the function of QFieldSync to export a project for QField"""
-    start_app()
+
+    argvb = list(map(os.fsencode, ['']))
+    qgis_app = QgsApplication(argvb, True)
+    qgis_app.initQgis()
+
+    iface = mock.Mock(spec=QgisInterface)
+    iface.mainWindow.return_value = QMainWindow()
+
+    canvas = QgsMapCanvas(iface.mainWindow())
+    canvas.resize(QSize(400, 400))
 
     # Set the canvas object name to the
     # exported project because qfieldsync running
     # headless on the server doesn't do that
-    iface = mocked.get_iface()
-    canvas = iface.mapCanvas()
     canvas.setObjectName("theMapCanvas")
 
     project = QgsProject.instance()
@@ -197,12 +207,14 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
 
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
-        project, export_dir, extent, offline_editing)
+        project, export_dir, extent, offline_editing, export_type=ExportType.Cloud)
 
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
     offline_converter.project_configuration.create_base_map = False
     offline_converter.convert()
+
+    qgis_app.exitQgis()
 
 
 def _export_project(args):

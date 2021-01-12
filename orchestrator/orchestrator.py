@@ -86,12 +86,19 @@ def set_exportation_status_and_log(projectid, old_status, new_status, exportlog=
 
 
 def export_project(projectid, project_file):
-    """Start a QGIS docker container to export the project using QFieldSync """
+    """Start a QGIS docker container to export the project using libqfieldsync """
 
     tempdir = tempfile.mkdtemp()
     volumes = {
         tempdir: {'bind': '/io/', 'mode': 'rw'}
     }
+
+    # If we are on local dev environment, use host network to connect
+    # to the local geodb
+    env = load_env_file()
+    network_mode = 'none'
+    if env.get('QFIELDCLOUD_HOST') == 'localhost':
+        network_mode = 'host'
 
     client = docker.from_env()
     container = client.containers.create(
@@ -99,6 +106,7 @@ def export_project(projectid, project_file):
         environment=load_env_file(),
         auto_remove=True,
         volumes=volumes,
+        network_mode=network_mode,
     )
 
     container.start()

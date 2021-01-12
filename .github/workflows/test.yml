@@ -22,7 +22,7 @@ jobs:
       - name: Check code with Flake8
         run: |
           cd orchestrator
-          pipenv run python -m flake8 --ignore=E501,F401,W503 --exclude "../.git/,../docker-qgis/qfieldsync/" ../
+          pipenv run python -m flake8 --ignore=E501,F401,W503 --exclude "../.git/,../docker-qgis/libqfieldsync/" ../
       - name: Create .env file from secret
         uses: SpicyPizza/create-envfile@v1
         with:

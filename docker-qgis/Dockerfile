@@ -24,8 +24,8 @@ COPY ./docker-qgis/entrypoint.py /
 COPY ./docker-qgis/apply_deltas.py /
 COPY ./docker-qgis/schemas/deltafile_01.json /schemas/
 
-COPY ./docker-qgis/qfieldsync /
-ENV PYTHONPATH="/qfieldsync/qfieldsync:${PYTHONPATH}"
+COPY ./docker-qgis/libqfieldsync /libqfieldsync
+ENV PYTHONPATH="/libqfieldsync:${PYTHONPATH}"
 
 # Add supervisor service configuration script
 COPY ./docker-qgis/supervisord.conf /etc/supervisor/
