@@ -9,7 +9,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0009_geodb'),
+        ('core', '0010_auto_20210106_1543'),
     ]
 
     operations = [
