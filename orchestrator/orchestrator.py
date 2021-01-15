@@ -96,7 +96,7 @@ def export_project(projectid, project_file):
     # If we are on local dev environment, use host network to connect
     # to the local geodb
     env = load_env_file()
-    network_mode = 'none'
+    network_mode = 'bridge'
     if env.get('QFIELDCLOUD_HOST') == 'localhost':
         network_mode = 'host'
 
