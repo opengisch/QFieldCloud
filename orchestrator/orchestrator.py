@@ -222,6 +222,10 @@ def apply_deltas(projectid, project_file, overwrite_conflicts):
     exit_code, output = container.exec_run(container_command)
     container.kill()
 
+    logging.info(
+        'apply_delta, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}'.format(
+            projectid, project_file, exit_code, output.decode('utf-8')))
+
     deltalog_file = os.path.join(tempdir, 'deltalog.json')
     with open(deltalog_file, 'r') as f:
         deltalog = json.load(f)
@@ -240,10 +244,6 @@ def apply_deltas(projectid, project_file, overwrite_conflicts):
             msg = log
 
             set_delta_status_and_output(projectid, delta_id, status, msg)
-
-    logging.info(
-        'apply_delta, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}'.format(
-            projectid, project_file, exit_code, output.decode('utf-8')))
 
     # if exit_code not in [0, 1]:
     #     raise ApplyDeltaScriptException(output)
