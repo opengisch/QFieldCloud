@@ -68,7 +68,8 @@ def get_django_db_connection(is_test_db=False):
     return conn
 
 
-def set_exportation_status_and_log(projectid, old_status, new_status, exportlog={}):
+def set_exportation_status_and_log(
+        projectid, old_status, new_status, exportlog={}, output=""):
     """Set the deltafile status and output into the database record """
 
     conn = get_django_db_connection(True)
@@ -77,8 +78,14 @@ def set_exportation_status_and_log(projectid, old_status, new_status, exportlog=
 
     cur = conn.cursor()
     cur.execute(
-        "UPDATE core_exportation SET status = %s, updated_at = now(), exportlog = %s WHERE project_id = %s AND status = %s",
-        (new_status, json.dumps(exportlog), projectid, old_status))
+        """
+        UPDATE core_exportation SET
+              status = %s,
+              updated_at = now(),
+              exportlog = %s,
+              output = %s
+              WHERE project_id = %s AND status = %s""",
+        (new_status, json.dumps(exportlog), output, projectid, old_status))
     conn.commit()
 
     cur.close()
@@ -124,7 +131,10 @@ def export_project(projectid, project_file):
 
     if not exit_code == 0:
         set_exportation_status_and_log(
-            projectid, EXPORTATION_STATUS_BUSY, EXPORTATION_STATUS_ERROR)
+            projectid,
+            EXPORTATION_STATUS_BUSY,
+            EXPORTATION_STATUS_ERROR,
+            output=output.decode('utf-8'))
         raise QgisException(output)
 
     exportlog_file = os.path.join(tempdir, 'exportlog.json')
@@ -138,7 +148,8 @@ def export_project(projectid, project_file):
         projectid,
         EXPORTATION_STATUS_BUSY,
         EXPORTATION_STATUS_EXPORTED,
-        exportlog=exportlog)
+        exportlog=exportlog,
+        output=output.decode('utf-8'))
     return exit_code, output.decode('utf-8'), exportlog
 
 

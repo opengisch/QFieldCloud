@@ -131,4 +131,4 @@ class ExportationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Exportation
-        fields = ('status',)
+        fields = ('status', 'exportlog', 'output')
