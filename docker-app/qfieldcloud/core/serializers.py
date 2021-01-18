@@ -128,7 +128,8 @@ class DeltaSerializer(serializers.ModelSerializer):
 class ExportationSerializer(serializers.ModelSerializer):
     status = StatusChoiceField(
         choices=Exportation.STATUS_CHOICES)
+    layers = serializers.JSONField(source='exportlog')
 
     class Meta:
         model = Exportation
-        fields = ('status', 'exportlog', 'output')
+        fields = ('status', 'layers', 'output')
