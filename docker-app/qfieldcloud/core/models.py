@@ -275,21 +275,13 @@ class ProjectCollaborator(models.Model):
 
 class Delta(models.Model):
 
-    STATUS_PENDING = 1  # delta has been received, but have not started application
-    STATUS_BUSY = 2  # currently being applied
-    STATUS_APPLIED = 3  # applied correctly
-    STATUS_CONFLICT = 4  # needs conflict resolution
-    STATUS_NOT_APPLIED = 5
-    STATUS_ERROR = 6  # was not possible to apply the delta
-
-    STATUS_CHOICES = (
-        (STATUS_PENDING, 'STATUS_PENDING'),
-        (STATUS_BUSY, 'STATUS_BUSY'),
-        (STATUS_APPLIED, 'STATUS_APPLIED'),
-        (STATUS_CONFLICT, 'STATUS_CONFLICT'),
-        (STATUS_NOT_APPLIED, 'STATUS_NOT_APPLIED'),
-        (STATUS_ERROR, 'STATUS_ERROR'),
-    )
+    class Status(models.IntegerChoices):
+        STATUS_PENDING = (1, 'STATUS_PENDING'),  # delta has been received, but have not started application
+        STATUS_BUSY = (2, 'STATUS_BUSY'),  # currently being applied
+        STATUS_APPLIED = (3, 'STATUS_APPLIED'),  # applied correctly
+        STATUS_CONFLICT = (4, 'STATUS_CONFLICT'),  # needs conflict resolution
+        STATUS_NOT_APPLIED = (5, 'STATUS_NOT_APPLIED'),
+        STATUS_ERROR = (6, 'STATUS_ERROR'),  # was not possible to apply the delta
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deltafile_id = models.UUIDField()
@@ -299,8 +291,8 @@ class Delta(models.Model):
     )
     content = JSONField()
     status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING)
+        choices=Status.choices,
+        default=Status.STATUS_PENDING)
     output = JSONField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -310,17 +302,12 @@ class Delta(models.Model):
 
 
 class Exportation(models.Model):
-    STATUS_PENDING = 1  # Export has been requested, but not yet started
-    STATUS_BUSY = 2  # Currently being exported
-    STATUS_EXPORTED = 3  # Export finished
-    STATUS_ERROR = 4  # was not possible to export the project
 
-    STATUS_CHOICES = (
-        (STATUS_PENDING, 'STATUS_PENDING'),
-        (STATUS_BUSY, 'STATUS_BUSY'),
-        (STATUS_EXPORTED, 'STATUS_EXPORTED'),
-        (STATUS_ERROR, 'STATUS_ERROR'),
-    )
+    class Status(models.IntegerChoices):
+        STATUS_PENDING = (1, 'STATUS_PENDING')  # Export has been requested, but not yet started
+        STATUS_BUSY = (2, 'STATUS_BUSY')  # Currently being exported
+        STATUS_EXPORTED = (3, 'STATUS_EXPORTED')  # Export finished
+        STATUS_ERROR = (4, 'STATUS_ERROR')  # was not possible to export the project
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
@@ -329,8 +316,8 @@ class Exportation(models.Model):
     )
 
     status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING)
+        choices=Status.choices,
+        default=Status.STATUS_PENDING)
     exportlog = JSONField(null=True)
     output = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
