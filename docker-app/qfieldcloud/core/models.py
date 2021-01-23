@@ -9,6 +9,7 @@ from django.contrib.postgres.fields import JSONField
 from django.db.models.signals import post_save, post_delete
 from django.db.models.aggregates import Count
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from django.dispatch import receiver
 
 from qfieldcloud.core import utils, geodb_utils, validators
@@ -218,16 +219,21 @@ class Project(models.Model):
                     validators.min_lenght_validator,
                     validators.first_symbol_validator,
                     validators.reserved_words_validator],
-        help_text='Project name'
+        help_text=_('Project name. Should start with a letter and contain only letters, numbers, underscores and hyphens.')
     )
 
     description = models.TextField(blank=True)
-    private = models.BooleanField(default=False)
+    private = models.BooleanField(
+        default=False,
+        help_text='Projects that are not marked as private would be visible and editable to anyone.')
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    overwrite_conflicts = models.BooleanField(default=True)
+    overwrite_conflicts = models.BooleanField(
+        default=True,
+        help_text=_('If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts.')
+    )
 
     def __str__(self):
         return self.name + ' (' + str(self.id) + ')' + ' owner: ' + self.owner.username
