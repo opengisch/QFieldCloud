@@ -73,6 +73,11 @@ class UserAccount(models.Model):
     storage_limit_mb = models.PositiveIntegerField(default=100)
     db_limit_mb = models.PositiveIntegerField(default=25)
     synchronizations_per_months = models.PositiveIntegerField(default=30)
+    bio = models.CharField(max_length=255, default='')
+    workplace = models.CharField(max_length=255, default='')
+    location = models.CharField(max_length=255, default='')
+    twitter = models.CharField(max_length=255, default='')
+    is_email_public = models.BooleanField(default=False)
 
     def __str__(self):
         return self.TYPE_CHOICES[self.account_type][1]
