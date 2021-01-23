@@ -7,6 +7,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
 from django.db.models.signals import post_save, post_delete
+from django.db.models.aggregates import Count
 from django.urls import reverse
 from django.dispatch import receiver
 
@@ -308,6 +309,18 @@ class Delta(models.Model):
     def __str__(self):
         return str(self.id) + ', project: ' + str(self.project.id)
 
+    def get_status_summary(filters={}):
+        rows = Delta.objects.filter(**filters).values('status').annotate(count=Count('status')).order_by()
+
+        rows_as_dict = {}
+        for r in rows:
+            rows_as_dict[r['status']] = r['count']
+
+        counts = {}
+        for status, _ in Delta.STATUS_CHOICES:
+            counts[status] = rows_as_dict.get(status, 0)
+
+        return counts
 
 class Exportation(models.Model):
     STATUS_PENDING = 1  # Export has been requested, but not yet started
