@@ -328,10 +328,11 @@ class Delta(models.Model):
             rows_as_dict[r['status']] = r['count']
 
         counts = {}
-        for status, _ in Delta.STATUS_CHOICES:
+        for status, _name in Delta.STATUS_CHOICES:
             counts[status] = rows_as_dict.get(status, 0)
 
         return counts
+
 
 class Exportation(models.Model):
     STATUS_PENDING = 1  # Export has been requested, but not yet started
