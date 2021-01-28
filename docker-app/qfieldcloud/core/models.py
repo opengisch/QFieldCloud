@@ -48,6 +48,17 @@ class User(AbstractUser):
             'content_owner': self.username,
             'pk': self.pk})
 
+    @property
+    def is_user(self):
+        return self.user_type == User.TYPE_USER
+
+    @property
+    def is_organization(self):
+        return self.user_type == User.TYPE_ORGANIZATION
+
+    def can_modify(self, object):
+        return object == self
+
 
 # Automatically create a UserAccount instance when a user is created.
 @receiver(post_save, sender=User)

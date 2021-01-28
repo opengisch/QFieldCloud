@@ -92,6 +92,11 @@ urlpatterns = [
     #      async_json_views.async_create_collaborator,
     #      name='async_create_collaborator'),
 
+    path('<str:username>/',
+        projects_views.ProjectFilterListView2.as_view(),
+        name='profile_overview'
+    ),
+
     path(*(lambda v: [f'{v.url_content_owner}/',
                       v.as_view()])(projects_views.ProjectFilterListView),
          name='home'),
