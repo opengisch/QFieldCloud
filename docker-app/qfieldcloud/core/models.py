@@ -254,9 +254,8 @@ class Project(models.Model):
 
     def get_absolute_url(self):
         return reverse('project_overview',
-                       kwargs={'content_owner': self.owner.username,
-                               'project': self.name,
-                               'pk': self.pk})
+                       kwargs={'username': self.owner.username,
+                               'project': self.name})
 
 
 class ProjectCollaborator(models.Model):
