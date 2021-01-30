@@ -112,7 +112,6 @@ urlpatterns = [
     ),
     path('<str:username>/<str:project>/files',
         projects_views.ProjectFilesView.as_view(),
-     #    projects_views.ProjectFilesView.as_view(),
         name='project_files'
     ),
     path('<str:username>/<str:project>/changes',
@@ -120,13 +119,11 @@ urlpatterns = [
         name='project_changes'
     ),
     path('<str:username>/<str:project>/collaborators',
-        projects_views.ProjectOverviewView.as_view(),
-     #    projects_views.ProjectCollaboratorsView.as_view(),
+        projects_views.ProjectCollaboratorsView.as_view(),
         name='project_collaborators'
     ),
     path('<str:username>/<str:project>/yolo',
         projects_views.ProjectYoloView.as_view(),
-     #    projects_views.ProjectYoloView.as_view(),
         name='project_yolo'
     ),
 
