@@ -59,6 +59,18 @@ class User(AbstractUser):
     def can_modify(self, object):
         return object == self
 
+    def can_upload_project_files(self, project) -> bool:
+        # TODO check also for organization membership
+        return project.owner == self
+
+    def can_explore_project(self, project) -> bool:
+        # TODO check also for organization membership
+        return project.owner == self or not project.private
+
+    def can_update_project_description(self, project) -> bool:
+        # TODO check also for organization membership
+        return project.owner == self
+
 
 # Automatically create a UserAccount instance when a user is created.
 @receiver(post_save, sender=User)
@@ -256,6 +268,14 @@ class Project(models.Model):
         return reverse('project_overview',
                        kwargs={'username': self.owner.username,
                                'project': self.name})
+
+    @property
+    def files(self):
+        return utils.get_project_files(self.id)
+
+    @property
+    def files_count(self):
+        return utils.get_project_files_count(self.id)
 
 
 class ProjectCollaborator(models.Model):

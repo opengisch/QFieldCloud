@@ -1,3 +1,5 @@
+from typing import Dict, List, TypedDict
+
 import os
 import django_rq
 import hashlib
@@ -7,7 +9,7 @@ import posixpath
 from pathlib import PurePath
 import json
 import jsonschema
-import psycopg2
+from datetime import datetime
 
 from django.core.files.uploadedfile import (
     InMemoryUploadedFile, TemporaryUploadedFile)
@@ -232,3 +234,55 @@ def get_s3_project_size(projectid):
         total_size += obj.size
 
     return round(total_size / (1024 * 1024), 3)
+
+class ProjectFileVersion(TypedDict):
+    name: str
+    size: int
+    sha256: str
+    last_modified: datetime
+    is_latest: bool
+
+class ProjectFile(TypedDict):
+    name: str
+    size: int
+    sha256: str
+    last_modified: datetime
+    versions: List[ProjectFileVersion]
+
+def get_project_files(project_id: str) -> Dict[str, ProjectFile]:
+    bucket = get_s3_bucket()
+    prefix = f'projects/{project_id}/files/'
+
+    files = {}
+    for version in bucket.object_versions.filter(Prefix=prefix):
+        files[version.key] = files.get(version.key, {'versions': []})
+
+        head = version.head()
+        path = PurePath(version.key)
+        filename = str(path.relative_to(*path.parts[:3]))
+        last_modified = version.last_modified
+
+        if version.is_latest:
+            files[version.key]['name'] = filename
+            files[version.key]['size'] = version.size
+            files[version.key]['sha256'] = head['Metadata']['Sha256sum']
+            files[version.key]['last_modified'] = last_modified
+
+        files[version.key]['versions'].append({
+            'size': version.size,
+            'sha256': head['Metadata']['Sha256sum'],
+            'version_id': version.version_id,
+            'last_modified': last_modified,
+            'is_latest': version.is_latest,
+        })
+
+    return files
+
+
+def get_project_files_count(project_id: str) -> int:
+    # there might be more optimal way to get the files count
+    bucket = get_s3_bucket()
+    prefix = f'projects/{project_id}/files/'
+    files = set([v.key for v in bucket.object_versions.filter(Prefix=prefix)])
+
+    return len(files)
