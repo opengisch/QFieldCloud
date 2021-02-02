@@ -122,6 +122,10 @@ urlpatterns = [
         projects_views.ProjectCollaboratorsView.as_view(),
         name='project_collaborators'
     ),
+    path('<str:username>/<str:project>/collaborators/invite',
+        projects_views.ProjectCollaboratorsInviteView.as_view(),
+        name='project_collaborators_invite'
+    ),
     path('<str:username>/<str:project>/yolo',
         projects_views.ProjectYoloView.as_view(),
         name='project_yolo'

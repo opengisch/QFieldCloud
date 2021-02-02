@@ -56,6 +56,10 @@ class User(AbstractUser):
     def is_organization(self):
         return self.user_type == User.TYPE_ORGANIZATION
 
+    @property
+    def full_name(self) -> str:
+        return self.first_name + self.last_name
+
     def can_modify(self, object):
         return object == self
 
