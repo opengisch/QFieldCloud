@@ -25,7 +25,7 @@ from qfieldcloud.core.views import auth_views
 from qfieldcloud.core.web.views import (async_json_views,
                                         projects_views,
                                         users_views,
-                                        collaborators_views,
+                                        settings_views,
                                         members_views,
                                         pages_views)
 
@@ -91,6 +91,14 @@ urlpatterns = [
     #      async_json_views.async_create_collaborator,
     #      name='async_create_collaborator'),
 
+    path('settings/<str:username>/',
+        settings_views.SettingsUserView.as_view(),
+        name='settings_user'
+    ),
+    path('settings/<str:username>/profile',
+        settings_views.SettingsProfileView.as_view(),
+        name='settings_profile'
+    ),
 
     path('projects/create/',
         projects_views.ProjectCreateView.as_view(),

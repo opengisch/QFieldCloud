@@ -44,9 +44,7 @@ class User(AbstractUser):
         return self.username
 
     def get_absolute_url(self):
-        return reverse('user_overview', kwargs={
-            'content_owner': self.username,
-            'pk': self.pk})
+        return reverse('profile_overview', kwargs={'username': self.username})
 
     @property
     def is_user(self):
