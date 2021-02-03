@@ -29,7 +29,6 @@ from qfieldcloud.core.web.views import (async_json_views,
                                         members_views,
                                         pages_views)
 
-
 schema_view = get_schema_view(
     openapi.Info(
         title='QFieldcloud REST API',
@@ -70,24 +69,10 @@ urlpatterns = [
     path('<str:unpermitted_action>/unpermitted',
          pages_views.unpermitted, name='unpermitted'),
 
-    # The string variables are the parameters used
-    # to derive permissions of the user that makes the request.
-    path('async/my_organizations/',
-         async_json_views.async_my_organizations,
-         name='async_my_organizations'),
-    path(f'async/possible_collaborators_for_project/{ProjectPermissionsContextMixin.url_project_pk}/',
-         async_json_views.async_possible_collaborators,
-         name='async_possible_collaborators'),
-    path(f'async/possible_members_for_organization/{PermissionsContextMixin.url_content_owner}/',
+    # TODO use this to search for users
+    path(f'async/users/search',
          async_json_views.async_possible_members,
          name='async_possible_members'),
-    path('async/public_projects/',
-         async_json_views.async_public_projects,
-         name='async_public_projects'),
-    # path('async/project/{ProjectPermissionsContextMixin.url_project_pk}/create_collaborator/<str:username>/',
-    # maybe need js once using inviation emails
-    #      async_json_views.async_create_collaborator,
-    #      name='async_create_collaborator'),
 
     path('settings/<str:username>/',
         settings_views.SettingsUserView.as_view(),
