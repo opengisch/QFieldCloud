@@ -105,6 +105,7 @@ TEMPLATES = [
                 'qfieldcloud.core.web.templatetags.display',
                 'qfieldcloud.core.web.templatetags.filters',
                 'qfieldcloud.core.web.templatetags.check',
+                'qfieldcloud.core.web.templatetags.noqs',
             ],
             'context_processors': [
                 'django.template.context_processors.debug',
