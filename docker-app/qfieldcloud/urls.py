@@ -24,14 +24,11 @@ from qfieldcloud.core.views import auth_views
 
 from qfieldcloud.core.web.views import (async_json_views,
                                         projects_views,
-                                        users_views,
                                         organizations_views,
                                         settings_views,
                                         members_views,
                                         pages_views)
 
-from qfieldcloud.core.web.views.permissions_mixins import (PermissionsContextMixin,
-                                                           ProjectPermissionsContextMixin)
 
 schema_view = get_schema_view(
     openapi.Info(
