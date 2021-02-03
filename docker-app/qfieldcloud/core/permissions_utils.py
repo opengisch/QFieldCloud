@@ -333,3 +333,28 @@ def can_get_member_role(user, organization, member):
     Return False otherwise."""
 
     return True
+
+def can_become_collaborator(user, project):
+    """Return True if the `user` can list the files in `project`.
+    Return False otherwise."""
+
+    if _is_project_owner(user, project):
+        return False
+    if _is_project_collaborator_role_admin(user, project):
+        return False
+    if _is_project_collaborator_role_manager(user, project):
+        return False
+    if _is_project_collaborator_role_editor(user, project):
+        return False
+    if _is_project_collaborator_role_reporter(user, project):
+        return False
+    if _is_project_collaborator_role_reader(user, project):
+        return False
+
+    organization = project.owner
+    if _is_organization_owner(user, organization):
+        return False
+    if _is_organization_member_role_admin(user, organization):
+        return False
+
+    return True
