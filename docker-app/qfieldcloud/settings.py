@@ -100,7 +100,6 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'builtins': [
-                'qfieldcloud.core.web.templatetags.navigation',
                 'qfieldcloud.core.web.templatetags.buttons',
                 'qfieldcloud.core.web.templatetags.display',
                 'qfieldcloud.core.web.templatetags.filters',
