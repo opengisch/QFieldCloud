@@ -25,6 +25,7 @@ from qfieldcloud.core.views import auth_views
 from qfieldcloud.core.web.views import (async_json_views,
                                         projects_views,
                                         users_views,
+                                        organizations_views,
                                         settings_views,
                                         members_views,
                                         pages_views)
@@ -106,7 +107,7 @@ urlpatterns = [
     ),
 
     path('organizations/create/',
-        projects_views.ProjectOverviewView.as_view(),
+        organizations_views.OrganizationCreateView.as_view(),
         name='organization_create'
     ),
 
