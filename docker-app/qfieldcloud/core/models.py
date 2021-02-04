@@ -58,6 +58,10 @@ class User(AbstractUser):
     def full_name(self) -> str:
         return self.first_name + self.last_name
 
+    @property
+    def has_geodb(self) -> bool:
+        return hasattr(self, 'geodb')
+
 
 # Automatically create a UserAccount instance when a user is created.
 @receiver(post_save, sender=User)
@@ -142,7 +146,15 @@ class Geodb(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # The password is generated but not stored into the db
-    password = random_password()
+    password = ''
+
+    def __init__(self, *args, password='', **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.password = password
+
+        if not self.password:
+            self.password = Geodb.random_password()
 
     def size(self):
         return geodb_utils.get_db_size(self)

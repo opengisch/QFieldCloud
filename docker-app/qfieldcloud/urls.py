@@ -82,6 +82,10 @@ urlpatterns = [
         settings_views.SettingsProfileView.as_view(),
         name='settings_profile'
     ),
+    path('settings/<str:username>/databases',
+        settings_views.SettingsDatabasesView.as_view(),
+        name='settings_databases'
+    ),
 
     path('projects/create/',
         projects_views.ProjectCreateView.as_view(),

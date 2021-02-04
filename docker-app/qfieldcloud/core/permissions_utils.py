@@ -358,3 +358,12 @@ def can_become_collaborator(user, project):
         return False
 
     return True
+
+def can_create_geodb(user, profile):
+    if profile.has_geodb:
+        return False
+
+    if not can_update_user(user, profile):
+        return False
+
+    return True
