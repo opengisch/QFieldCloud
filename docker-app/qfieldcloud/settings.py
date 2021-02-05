@@ -101,7 +101,6 @@ TEMPLATES = [
         'OPTIONS': {
             'builtins': [
                 'qfieldcloud.core.web.templatetags.buttons',
-                'qfieldcloud.core.web.templatetags.display',
                 'qfieldcloud.core.web.templatetags.filters',
                 'qfieldcloud.core.web.templatetags.check',
                 'qfieldcloud.core.web.templatetags.noqs',
