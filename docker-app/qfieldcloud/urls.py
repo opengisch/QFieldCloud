@@ -86,6 +86,10 @@ urlpatterns = [
         settings_views.SettingsDatabasesView.as_view(),
         name='settings_databases'
     ),
+    path('settings/<str:username>/security',
+        settings_views.SettingsSecurityView.as_view(),
+        name='settings_security'
+    ),
 
     path('projects/create/',
         projects_views.ProjectCreateView.as_view(),
