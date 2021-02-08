@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 
+from typing import Any, Dict
 import os
 import json
+from time import sleep
 import requests
 import click
 
@@ -23,30 +25,20 @@ def cli():
 @click.argument('password')
 @click.argument('email')
 def register_user(username, password, email):
-    """Register new user and return the token"""
+    """Register a new user and return the token"""
 
-    url = BASE_URL + 'auth/registration/'
-    data = {
+    resp = cloud_request('POST', 'auth/registration', data={
         'username': username,
         'password1': password,
         'password2': password,
         'email': email,
-    }
+    })
+    payload = resp.json()
 
-    response = requests.post(
-        url,
-        data=data,
-    )
-
-    try:
-        response.raise_for_status()
-        print('User created')
-        print('Your token is: {}'.format(response.json()['token']))
-        print('Please store your token in the QFIELDCLOUD_TOKEN environment variable with:')
-        print('export QFIELDCLOUD_TOKEN="{}"'.format(response.json()['token']))
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+    print('User created')
+    print(f'Your token is: {payload["token"]}')
+    print('Please store your token in the QFIELDCLOUD_TOKEN environment variable with:')
+    print(f'export QFIELDCLOUD_TOKEN="{payload["token"]}"')
 
 
 @cli.command()
@@ -55,25 +47,15 @@ def register_user(username, password, email):
 def login(username, password):
     """Login to QFieldCloud and print the token"""
 
-    url = BASE_URL + 'auth/login/'
-    data = {
+    resp = cloud_request('POST', 'auth/login', data={
         'username': username,
         'password': password,
-    }
+    })
+    payload = resp.json()
 
-    response = requests.post(
-        url,
-        data=data,
-    )
-
-    try:
-        response.raise_for_status()
-        print('Your token is: {}'.format(response.json()['token']))
-        print('Please store your token in the QFIELDCLOUD_TOKEN environment variable with:')
-        print('export QFIELDCLOUD_TOKEN="{}"'.format(response.json()['token']))
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+    print(f'Your token is: {payload["token"]}')
+    print('Please store your token in the QFIELDCLOUD_TOKEN environment variable with:')
+    print(f'export QFIELDCLOUD_TOKEN="{payload["token"]}"')
 
 
 @cli.command()
@@ -85,29 +67,26 @@ def login(username, password):
 def create_project(token, name, owner, description, private=True):
     """Create a new QFieldCloud project"""
 
-    url = BASE_URL + 'projects/'
-    data = {
+    resp = cloud_request('POST', 'projects', token=token, data={
         'name': name,
         'owner': owner,
         'description': description,
-        'private': private
-    }
+        'private': private,
+    })
+    payload = resp.json()
 
-    headers = {'Authorization': 'token {}'.format(token)}
+    print(f'Project created with id: {payload["id"]}')
 
-    response = requests.post(
-        url,
-        data=data,
-        headers=headers,
-    )
 
-    try:
-        response.raise_for_status()
-        print('Project created with id:')
-        print(response.json()['id'])
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+@cli.command()
+@click.argument('project_id')
+@click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
+def delete_project(token, project_id):
+    """Delete an existing QFieldCloud project"""
+
+    _ = cloud_request('DELETE', f'projects/{project_id}', token=token)
+
+    print(f'Project successfully deleted with id: {project_id}')
 
 
 @cli.command()
@@ -116,22 +95,13 @@ def create_project(token, name, owner, description, private=True):
 def projects(token, include_public):
     """List QFieldCloud projects"""
 
-    url = BASE_URL + 'projects/'
-    headers = {'Authorization': 'token {}'.format(token)}
-    params = {'include-public': include_public}
+    resp = cloud_request('GET', 'projects', token=token, params={
+        'include-public': include_public,
+    })
+    payload = resp.json()
 
-    response = requests.get(
-        url,
-        headers=headers,
-        params=params,
-    )
-
-    try:
-        response.raise_for_status()
-        print(json.dumps(response.json(), indent=4, sort_keys=True))
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+    print('Available projects:')
+    print(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @cli.command()
@@ -142,22 +112,11 @@ def projects(token, include_public):
 def upload_file(token, project_id, local_file, remote_file):
     """Upload file"""
 
-    url = BASE_URL + 'files/' + project_id + '/' + remote_file + '/'
-    headers = {
-        'Authorization': 'token {}'.format(token),
-    }
-    files = {'file': local_file}
-    response = requests.post(
-        url,
-        headers=headers,
-        files=files,
-    )
-    try:
-        response.raise_for_status()
-        print('File uploaded "{}"'.format(remote_file))
-    except requests.HTTPError:
-        print('Failed to upload "{}": {}'.format(remote_file, response))
-        print(response.text)
+    _ = cloud_request('POST', f'files/{project_id}/{remote_file}', token=token, files={
+        'file': local_file,
+    })
+
+    print(f'File uploaded "{remote_file}"')
 
 
 @cli.command()
@@ -181,26 +140,13 @@ def upload_files(token, project_id, local_dir, filter_glob, recursive):
             continue
 
         remote_path = local_path.relative_to(local_dir)
-        url = BASE_URL + 'files/' + project_id + '/' + str(remote_path) + '/'
-        headers = {
-            'Authorization': 'token {}'.format(token),
-        }
 
         with open(file_name, 'rb') as local_file:
-            files = {'file': local_file}
+            _ = cloud_request('POST', f'files/{project_id}/{remote_path}', token=token, files={
+                'file': local_file,
+            })
 
-            response = requests.post(
-                url,
-                headers=headers,
-                files=files,
-            )
-
-            try:
-                response.raise_for_status()
-                print('File "{}" uploaded'.format(remote_path))
-            except requests.HTTPError:
-                print('Error uploading "{}": {}'.format(remote_path, response))
-                print(response.text)
+            print(f'File "{remote_path}" uploaded')
 
 
 @cli.command()
@@ -208,45 +154,24 @@ def upload_files(token, project_id, local_dir, filter_glob, recursive):
 @click.argument('remote_file')
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
 def delete_file(token, project_id, remote_file):
-    """Delete file"""
+    """Delete an existing QFieldCloud project file"""
 
-    url = BASE_URL + 'files/' + project_id + '/' + remote_file + '/'
-    headers = {
-        'Authorization': 'token {}'.format(token),
-    }
-    response = requests.delete(
-        url,
-        headers=headers,
-    )
+    _ = cloud_request('DELETE', f'files/{project_id}/{remote_file}', token=token)
 
-    try:
-        response.raise_for_status()
-        print('File deleted "{}"'.format(remote_file))
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+    print(f'Project file successfully deleted with id: {remote_file}')
 
 
 @cli.command()
 @click.argument('project_id')
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
 def files(token, project_id):
-    """List files"""
+    """List project files"""
 
-    url = BASE_URL + 'files/' + project_id + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
+    resp = cloud_request('GET', f'files/{project_id}', token=token)
+    payload = resp.json()
 
-    response = requests.get(
-        url,
-        headers=headers,
-    )
-
-    try:
-        response.raise_for_status()
-        print(json.dumps(response.json(), indent=4, sort_keys=True))
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+    print(f'Project files for project {project_id}:')
+    print(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @cli.command()
@@ -257,24 +182,18 @@ def files(token, project_id):
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
 def download_file(token, project_id, remote_file, local_file, version=None):
     """Pull file"""
-
-    url = BASE_URL + 'files/' + project_id + '/' + remote_file + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
     params = {}
+
     if version:
         params = {'version': version}
 
-    with requests.get(url, headers=headers, params=params, stream=True) as response:
-        try:
-            response.raise_for_status()
-            with open(local_file, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
-            print('File downloaded at "{}"'.format(local_file))
-        except requests.HTTPError:
-            print('Error: {}'.format(response))
-            print(response.text)
+    resp = cloud_request('GET', f'files/{project_id}/{remote_file}', token=token, stream=True, params=params)
+
+    with open(local_file, 'wb') as f:
+        for chunk in resp.iter_content(chunk_size=8192):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+    print(f'File downloaded at "{local_file}"')
 
 
 @cli.command()
@@ -284,66 +203,42 @@ def download_file(token, project_id, remote_file, local_file, version=None):
 def download_files(token, project_id, local_dir):
     """Pull file"""
 
-    url = BASE_URL + 'files/' + project_id + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
+    resp = cloud_request('GET', f'files/{project_id}', token=token)
+    files = resp.json()
+    files_count = 0
 
-    response = requests.get(
-        url,
-        headers=headers,
-    )
+    for file in files:
+        local_file = Path(f'{local_dir}/{file["name"]}')
+        resp = cloud_request('GET', f'files/{project_id}/{file["name"]}', token=token, stream=True, exit_on_error=False)
 
-    try:
-        response.raise_for_status()
-        files = response.json()
-        files_count = 0
+        if not resp.ok:
+            print(f'{resp.request.method} {resp.url} got HTTP {resp.status_code}')
+            continue
 
-        for file in files:
-            local_file = Path(local_dir + '/' + file['name'])
+        if not local_file.parent.exists():
+            local_file.parent.mkdir(parents=True)
 
-            url = BASE_URL + 'files/' + project_id + '/' + file['name'] + '/'
-            headers = {'Authorization': 'token {}'.format(token)}
+        with open(local_file, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
+        files_count += 1
+        print(f'File downloaded at "{local_file}"')
 
-            with requests.get(url, headers=headers, stream=True) as response:
-                try:
-                    response.raise_for_status()
-
-                    if not local_file.parent.exists():
-                        local_file.parent.mkdir(parents=True)
-
-                    with open(local_file, 'wb') as f:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            if chunk:  # filter out keep-alive new chunks
-                                f.write(chunk)
-                    print('File downloaded {}'.format(local_file))
-                    files_count += 1
-                except requests.HTTPError:
-                    print('Failed to download {}: {}'.format(local_file, response))
-                    print(response.text)
-
-        print('Done! Downloaded {} files.'.format(files_count))
-
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+    print(f'Done! Downloaded {files_count}/{len(files)} files.')
 
 
 @cli.command()
 @click.argument('project_id')
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
 def export_files(token, project_id):
-    """Export files for qfield"""
+    """Initiate a file export for qfield"""
 
-    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
-    params = {}
+    resp = cloud_request('POST', f'qfield-files/export/{project_id}', token=token)
+    payload = resp.json()
 
-    with requests.post(url, headers=headers, params=params, stream=True) as response:
-        try:
-            response.raise_for_status()
-            print('Status: {}'.format(response.json()['status']))
-        except requests.HTTPError:
-            print('Error: {}'.format(response))
-            print(response.text)
+    print('File export started:')
+    print(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @cli.command()
@@ -352,17 +247,11 @@ def export_files(token, project_id):
 def export_files_status(token, project_id):
     """Check exported files status"""
 
-    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
-    params = {}
+    resp = cloud_request('GET', f'qfield-files/export/{project_id}', token=token)
+    payload = resp.json()
 
-    with requests.get(url, headers=headers, params=params, stream=True) as response:
-        try:
-            response.raise_for_status()
-            print(json.dumps(response.json(), indent=4, sort_keys=True))
-        except requests.HTTPError:
-            print('Error: {}'.format(response))
-            print(response.text)
+    print('File export status:')
+    print(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @cli.command()
@@ -373,100 +262,62 @@ def export_files_status(token, project_id):
 def export_files_download(token, project_id, remote_file, local_file):
     """Download exported file"""
 
-    url = BASE_URL + 'qfield-files/' + project_id + '/' + remote_file + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
+    resp = cloud_request('GET', f'qfield-files/{project_id}/{remote_file}', token=token, stream=True)
 
-    with requests.get(url, headers=headers, stream=True) as response:
-        try:
-            response.raise_for_status()
-            with open(local_file, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
-            print('File downloaded "{}"'.format(local_file))
-        except requests.HTTPError:
-            print('Error: {}'.format(response))
-            print(response.text)
+    with open(local_file, 'wb') as f:
+        for chunk in resp.iter_content(chunk_size=8192):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+
+    print(f'File downloaded at "{local_file}"')
 
 
 @cli.command()
 @click.argument('project_id')
 @click.argument('local_dir')
 @click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
-def export(token, project_id, local_dir):
+@click.option('--accept-old-export/--force-fresh-export', default=True, help='Accept old exports too')
+def export(token, project_id, local_dir, accept_old_export):
     """Export and downloads files for qfield"""
 
-    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
-
-    with requests.post(url, headers=headers, stream=True) as response:
-        try:
-            response.raise_for_status()
-        except requests.HTTPError:
-            print('Error: {}'.format(response))
-            print(response.text)
-            return
-
-    url = BASE_URL + 'qfield-files/export/' + project_id + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
-    status = None
-    files = None
+    _ = cloud_request('POST', f'qfield-files/export/{project_id}', token=token)
 
     while True:
-        with requests.get(url, headers=headers, stream=True) as response:
-            try:
-                response.raise_for_status()
-                payload = response.json()
-                status = payload['status']
+        resp = cloud_request('GET', f'qfield-files/export/{project_id}', token=token, exit_on_error=False)
 
-                print('Status updated: {}'.format(status))
+        if not resp.ok:
+            print(f'{resp.request.method} {resp.url} got HTTP {resp.status_code}')
+            sleep(1)
+            continue
 
-                if status == 'STATUS_EXPORTED':
-                    break
+        payload = resp.json()
+        status = payload['status']
+        print(f'Status updated: {status}')
 
-                if status == 'STATUS_ERROR':
-                    print(payload)
-                    return
+        if status == 'STATUS_EXPORTED':
+            break
 
-            except requests.HTTPError:
-                print('Error: {}'.format(response))
-                print(response.text)
+        if status == 'STATUS_ERROR':
+            if accept_old_export:
+                break
+            else:
                 return
 
-    url = BASE_URL + 'qfield-files/' + project_id + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
-    status = None
-    files = None
-    with requests.get(url, headers=headers, stream=True) as response:
-        try:
-            payload = response.json()
-            files = payload['files']
-
-        except requests.HTTPError:
-            print('Error: {}'.format(response))
-            print(response.text)
-            return
+    resp = cloud_request('GET', f'qfield-files/{project_id}', token=token)
+    payload = resp.json()
+    files = payload['files']
 
     for file in files:
-        url = BASE_URL + 'qfield-files/' + project_id + '/' + file['name'] + '/'
-        headers = {'Authorization': 'token {}'.format(token)}
+        resp = cloud_request('GET', f'qfield-files/{project_id}/{file["name"]}', token=token, stream=True)
+        local_file = Path(local_dir + '/' + file['name'])
+        local_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with requests.get(url, headers=headers, stream=True) as response:
-            try:
-                response.raise_for_status()
+        with open(local_file, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
 
-                local_file = Path(local_dir + '/' + file['name'])
-                local_file.parent.mkdir(parents=True, exist_ok=True)
-
-                with open(local_file, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:  # filter out keep-alive new chunks
-                            f.write(chunk)
-                print('File downloaded {}'.format(local_file))
-            except requests.HTTPError:
-                print('Error: {}'.format(response))
-                print(response.text)
-                return
+        print(f'File downloaded {local_file}')
 
     print('Done!')
 
@@ -479,23 +330,14 @@ def delta_status(token, project_id, deltafile_id=None):
     """Delta status"""
 
     if deltafile_id is None:
-        url = BASE_URL + 'deltas/' + project_id + '/'
+        url = f'deltas/{project_id}'
     else:
-        url = BASE_URL + 'deltas/' + project_id + '/' + deltafile_id + '/'
+        url = f'deltas/{project_id}/{deltafile_id}'
 
-    headers = {'Authorization': 'token {}'.format(token)}
+    resp = cloud_request('GET', url, token=token)
+    payload = resp.json()
 
-    response = requests.get(
-        url,
-        headers=headers,
-    )
-
-    try:
-        response.raise_for_status()
-        print(json.dumps(response.json(), indent=4, sort_keys=True))
-    except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+    print(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @cli.command()
@@ -510,78 +352,40 @@ def upload_deltafile(token, project_id, delta_file):
         try:
             deltas = json.load(f)
         except Exception as error:
-            print('Error: {}'.format(error))
+            print('Failed to read deltafile as json')
+            print(error)
 
     assert deltas
 
-    url = BASE_URL + 'deltas/' + project_id + '/'
-    headers = {
-        'Authorization': 'token {}'.format(token),
-    }
-
+    # Upload deltafile
     with open(delta_file, 'rb') as local_file:
-        files = {'file': local_file}
+        _ = cloud_request('GET', f'deltas/{project_id}', token=token, files={
+            'file': local_file
+        })
 
-        response = requests.post(
-            url,
-            headers=headers,
-            files=files,
-        )
-
-        try:
-            response.raise_for_status()
-            print('Deltafile "{}" uploaded'.format(delta_file))
-        except requests.HTTPError:
-            print('Error uploading deltafile"{}": {}'.format(delta_file, response))
-            print(response.text)
-            return
+        print(f'Deltafile "{delta_file}" uploaded')
 
     # Trigger deltafile apply
-    url = BASE_URL + 'deltas/apply/' + project_id + '/'
-    headers = {
-        'Authorization': 'token {}'.format(token),
-    }
-
-    with open(delta_file, 'rb') as local_file:
-        files = {'file': local_file}
-
-        response = requests.post(
-            url,
-            headers=headers,
-            files=files,
-        )
-
-        try:
-            response.raise_for_status()
-            print('Deltafile application triggered')
-        except requests.HTTPError:
-            print('Error triggering application: {}'.format(response))
-            print(response.text)
-            return
-
-    url = BASE_URL + 'deltas/' + project_id + '/' + deltas['id'] + '/'
-    headers = {'Authorization': 'token {}'.format(token)}
+    _ = cloud_request('POST', f'deltas/{project_id}', token=token)
+    print('Deltafile application triggered')
 
     while True:
-        response = requests.get(
-            url,
-            headers=headers,
-        )
+        resp = cloud_request('GET', f'deltas/{project_id}/{deltas["id"]}', token=token, exit_on_error=False)
 
-        try:
-            response.raise_for_status()
-            payload = response.json()
-            statuses = set()
-            for delta in payload:
-                statuses.add(delta['status'].upper())
-            print('Delta statuses: {}'.format(statuses))
+        if not resp.ok:
+            print(f'{resp.request.method} {resp.url} got HTTP {resp.status_code}')
+            sleep(1)
+            continue
 
-            if statuses.issubset({'STATUS_APPLIED', 'STATUS_CONFLICT', 'STATUS_ERROR'}):
-                return
+        payload = resp.json()
+        statuses = set()
+        for delta in payload:
+            statuses.add(delta['status'].upper())
 
-        except requests.HTTPError:
-            print('Error: {}'.format(response))
-            print(response.text)
+        print(f'Delta statuses: {statuses}')
+
+        if statuses.issubset({'STATUS_APPLIED', 'STATUS_CONFLICT', 'STATUS_ERROR'}):
+            return
 
 
 @cli.command()
@@ -589,20 +393,69 @@ def upload_deltafile(token, project_id, delta_file):
 def logout(token):
     """Logout and delete the token"""
 
-    url = BASE_URL + 'auth/logout/'
-    headers = {'Authorization': 'token {}'.format(token)}
+    resp = cloud_request('POST', 'auth/logout', token=token)
+    payload = resp.json()
 
-    response = requests.post(
-        url,
-        headers=headers,
+    print(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def cloud_request(
+        method: str,
+        path: str,
+        data: Any = None,
+        params: Dict[str, str] = {},
+        headers: Dict[str, str] = {},
+        files: Dict[str, str] = None,
+        stream: bool = False,
+        exit_on_error: bool = True,
+        token: str = None) -> requests.Response:
+    headers_copy = {**headers}
+    if token:
+        headers_copy['Authorization'] = f'token {token}'
+
+    if path.startswith('/'):
+        path = path[1:]
+
+    if not path.endswith('/'):
+        path += '/'
+
+    response = requests.request(
+        method=method,
+        url=BASE_URL + path,
+        data=data,
+        params=params,
+        headers=headers_copy,
+        files=files,
+        stream=stream,
+        # redirects from POST requests automagically turn into GET requests, so better forbid redirects
+        allow_redirects=False,
     )
 
     try:
         response.raise_for_status()
-        print(json.dumps(response.json(), indent=4, sort_keys=True))
+
+        return response
     except requests.HTTPError:
-        print('Error: {}'.format(response))
-        print(response.text)
+        if exit_on_error:
+            is_error_printed = 1
+            print(f'{response.request.method} {response.url} got HTTP {response.status_code}')
+
+            if response.headers.get('Content-Type') == 'application/json':
+                try:
+                    payload = response.json()
+                    print(json.dumps(payload, sort_keys=True, indent=2))
+                    is_error_printed = True
+                except Exception:
+                    pass
+
+            if is_error_printed:
+                exit(1)
+            else:
+                print('Failed to read error response as json, the contained text is:')
+                print(response.text)
+                exit(2)
+        else:
+            return response
 
 
 if __name__ == '__main__':
