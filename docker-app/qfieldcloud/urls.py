@@ -94,6 +94,10 @@ urlpatterns = [
         settings_views.SettingsOrganizationsView.as_view(),
         name='settings_organizations'
     ),
+    path('settings/<str:username>/members',
+        settings_views.SettingsMembersView.as_view(),
+        name='settings_members'
+    ),
 
     path('projects/create/',
         projects_views.ProjectCreateView.as_view(),

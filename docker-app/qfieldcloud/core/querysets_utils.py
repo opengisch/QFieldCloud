@@ -71,6 +71,9 @@ def get_user_organizations(user):
 
     return organizations
 
+def get_organization_members(organization):
+    return OrganizationMember.objects.filter(organization=organization)
+
 def get_all_public_projects():
     """Return all public projects."""
     return Project.objects.filter(private=False)
