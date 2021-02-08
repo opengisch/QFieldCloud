@@ -105,3 +105,6 @@ def get_possible_members_of_organization(user, organization):
                                  .values_list('member', flat=True))
     type_user_only = User.objects.filter(user_type=User.TYPE_USER)
     return type_user_only.exclude(Q(pk=organization.organization_owner.pk) | Q(pk__in=existing_members_user_ids))
+
+def get_users_only(username: str):
+    return User.objects.filter(Q(user_type=User.TYPE_USER)).filter(Q(username=username) | Q(email=username))
