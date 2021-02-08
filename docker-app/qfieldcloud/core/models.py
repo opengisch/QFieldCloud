@@ -193,9 +193,7 @@ class Organization(User):
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse('organization_overview', kwargs={
-            'content_owner': self.username,
-            'pk': self.pk})
+        return reverse('profile_overview', kwargs={'username': self.username})
 
 
 class OrganizationMember(models.Model):
@@ -219,13 +217,6 @@ class OrganizationMember(models.Model):
 
     def __str__(self):
         return self.organization.username + ': ' + self.member.username
-
-    def get_absolute_url(self):
-        return reverse('member_details',
-                       kwargs={'content_owner': self.organization,
-                               'member': self.member.username,
-                               'pk': self.pk})
-
 
 class Project(models.Model):
     """Represent a QFieldcloud project.
