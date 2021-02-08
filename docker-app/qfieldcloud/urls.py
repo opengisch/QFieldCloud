@@ -90,6 +90,10 @@ urlpatterns = [
         settings_views.SettingsSecurityView.as_view(),
         name='settings_security'
     ),
+    path('settings/<str:username>/organizations',
+        settings_views.SettingsOrganizationsView.as_view(),
+        name='settings_organizations'
+    ),
 
     path('projects/create/',
         projects_views.ProjectCreateView.as_view(),

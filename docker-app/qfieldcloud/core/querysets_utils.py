@@ -61,6 +61,15 @@ def get_projects_of_owner(user, owner):
 
     return queryset
 
+def get_user_organizations(user):
+    owned_organizations = Organization.objects.filter(organization_owner=user).distinct()
+    membership_organizations = Organization.objects.filter(
+        members__in=OrganizationMember.objects.filter(member=user)
+    )
+
+    organizations = owned_organizations.union(membership_organizations)
+
+    return organizations
 
 def get_all_public_projects():
     """Return all public projects."""
