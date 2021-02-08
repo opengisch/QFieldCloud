@@ -367,3 +367,11 @@ def can_create_geodb(user, profile):
         return False
 
     return True
+
+def can_become_member(user, organization):
+    if _is_organization_member_role_admin(user, organization):
+        return False
+    if _is_organization_member_role_member(user, organization):
+        return False
+
+    return True
