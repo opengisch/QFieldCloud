@@ -259,6 +259,7 @@ ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
 ACCOUNT_PRESERVE_USERNAME_CASING = False
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_ADAPTER = 'invitations.models.InvitationsAdapter'
+ACCOUNT_LOGOUT_ON_GET = True
 
 
 # Django email configuration
