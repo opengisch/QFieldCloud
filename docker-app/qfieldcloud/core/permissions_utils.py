@@ -232,6 +232,11 @@ def can_update_user(request_maker_user, user):
     if request_maker_user == user:
         return True
 
+    if not _is_organization_member_role_admin(request_maker_user, user):
+        return False
+
+    return True
+
 
 def can_list_collaborators(user, project):
     """Return True if the `user` can list collaborators of `project`.
