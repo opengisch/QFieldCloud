@@ -274,17 +274,20 @@ def can_create_collaborators(user, project):
         return True
     return False
 
+
 def can_update_delete_collaborators(user, project):
     """Return True if the `user` can update or delete collaborators of
     `project`. Return False otherwise."""
 
     return can_create_collaborators(user, project)
 
+
 def can_update_collaborator_role(user, project, collaborator):
     """Return True if the `user` can create update the `collaborator`
     role of `project`. Return False otherwise."""
 
     return can_create_collaborators(user, project)
+
 
 def can_delete_collaborator(user, project, collaborator):
     """Return True if the `user` can delete the `collaborator` of `project`.
@@ -338,6 +341,7 @@ def can_get_member_role(user, organization, member):
 
     return True
 
+
 def can_become_collaborator(user, project):
     """Return True if the `user` can list the files in `project`.
     Return False otherwise."""
@@ -363,6 +367,7 @@ def can_become_collaborator(user, project):
 
     return True
 
+
 def can_create_geodb(user, profile):
     if profile.has_geodb:
         return False
@@ -371,6 +376,7 @@ def can_create_geodb(user, profile):
         return False
 
     return True
+
 
 def can_become_member(user, organization):
     if _is_organization_member_role_admin(user, organization):

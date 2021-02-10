@@ -5,13 +5,16 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 Examples:
 Function views
     1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+    2. Add a URL to urlpatterns:  path(
+        '', views.home, name='home')
 Class-based views
     1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+    2. Add a URL to urlpatterns:  path(
+        '', Home.as_view(), name='home')
 Including another URLconf
     1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+    2. Add a URL to urlpatterns:  path(
+        'blog/', include('blog.urls'))
 '''
 from django.contrib import admin
 from django.urls import path, re_path, include
@@ -42,15 +45,21 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$',
-            schema_view.without_ui(cache_timeout=0),
-            name='schema-json'),
-    path('swagger/',
-         schema_view.with_ui('swagger', cache_timeout=0),
-         name='schema-swagger-ui'),
-    path('docs/',
-         schema_view.with_ui('redoc', cache_timeout=0),
-         name='schema-redoc'),
+    re_path(
+        r'^swagger(?P<format>\.json|\.yaml)$',
+        schema_view.without_ui(cache_timeout=0),
+        name='schema-json'
+    ),
+    path(
+        'swagger/',
+        schema_view.with_ui('swagger', cache_timeout=0),
+        name='schema-swagger-ui'
+    ),
+    path(
+        'docs/',
+        schema_view.with_ui('redoc', cache_timeout=0),
+        name='schema-redoc'
+    ),
 
     path('admin/', admin.site.urls),
     path('api/v1/auth/registration/', include('rest_auth.registration.urls')),
@@ -61,97 +70,120 @@ urlpatterns = [
     path('auth/', include('rest_framework.urls')),
 
     path('accounts/', include('allauth.urls')),
-    re_path(r'^invitations/',
-            include('invitations.urls', namespace='invitations')),
+    re_path(
+        r'^invitations/',
+        include('invitations.urls', namespace='invitations')
+    ),
 
     path('', pages_views.index, name='index'),
-    path('<str:unpermitted_action>/unpermitted',
-         pages_views.unpermitted, name='unpermitted'),
+    path(
+        '<str:unpermitted_action>/unpermitted',
+        pages_views.unpermitted,
+        name='unpermitted'
+    ),
 
     # TODO use this to search for users
-    path(f'async/users/search',
-         async_json_views.async_possible_members,
-         name='async_possible_members'),
+    path(
+        'async/users/search',
+        async_json_views.async_possible_members,
+        name='async_possible_members'
+    ),
 
-    path('settings/<str:username>/',
+    path(
+        'settings/<str:username>/',
         settings_views.SettingsUserView.as_view(),
         name='settings_user'
     ),
-    path('settings/<str:username>/profile',
+    path(
+        'settings/<str:username>/profile',
         settings_views.SettingsProfileView.as_view(),
         name='settings_profile'
     ),
-    path('settings/<str:username>/databases',
+    path(
+        'settings/<str:username>/databases',
         settings_views.SettingsDatabasesView.as_view(),
         name='settings_databases'
     ),
-    path('settings/<str:username>/security',
+    path(
+        'settings/<str:username>/security',
         settings_views.SettingsSecurityView.as_view(),
         name='settings_security'
     ),
-    path('settings/<str:username>/organizations',
+    path(
+        'settings/<str:username>/organizations',
         settings_views.SettingsOrganizationsView.as_view(),
         name='settings_organizations'
     ),
-    path('settings/<str:username>/members',
+    path(
+        'settings/<str:username>/members',
         settings_views.SettingsMembersView.as_view(),
         name='settings_members'
     ),
 
-    path('projects/create/',
+    path(
+        'projects/create/',
         projects_views.ProjectCreateView.as_view(),
         name='project_create'
     ),
 
-    path('organizations/create/',
+    path(
+        'organizations/create/',
         organizations_views.OrganizationCreateView.as_view(),
         name='organization_create'
     ),
 
-    path('<str:username>/',
+    path(
+        '<str:username>/',
         projects_views.ProjectFilterListView.as_view(),
         name='profile_overview'
     ),
-    path('<str:username>/<str:project>/',
+    path(
+        '<str:username>/<str:project>/',
         projects_views.ProjectOverviewView.as_view(),
         name='project_overview'
     ),
-    path('<str:username>/<str:project>/files',
+    path(
+        '<str:username>/<str:project>/files',
         projects_views.ProjectFilesView.as_view(),
         name='project_files'
     ),
-    path('<str:username>/<str:project>/changes',
+    path(
+        '<str:username>/<str:project>/changes',
         projects_views.ProjectChangesListView.as_view(),
         name='project_changes'
     ),
-    path('<str:username>/<str:project>/collaborators',
+    path(
+        '<str:username>/<str:project>/collaborators',
         projects_views.ProjectCollaboratorsView.as_view(),
         name='project_collaborators'
     ),
-    path('<str:username>/<str:project>/collaborators/invite',
+    path(
+        '<str:username>/<str:project>/collaborators/invite',
         projects_views.ProjectCollaboratorsInviteView.as_view(),
         name='project_collaborators_invite'
     ),
-    path('<str:username>/<str:project>/yolo',
+    path(
+        '<str:username>/<str:project>/yolo',
         projects_views.ProjectYoloView.as_view(),
         name='project_yolo'
     ),
 
-#     path(*(lambda v: [f'user/profile/{v.url_content_owner}/<int:pk>/',
-#                       v.as_view()])(users_views.UserOverview),
-#          name='user_overview'),
+    # path(*(lambda v: [f'user/profile/{v.url_content_owner}/<int:pk>/',
+    #                   v.as_view()])(users_views.UserOverview),
+    #      name='user_overview'),
 
-#     path(*(lambda v: [f'{v.url_content_owner}/settings/<int:pk>/',
-#                       v.as_view()])(users_views.OrganizationOverview),
-#          name='organization_overview'),
-#     path(*(lambda v: [f'{v.url_content_owner}/settings/tab=dangerzone/<int:pk>/',
-#                       v.as_view()])(users_views.OrganizationDangerzone),
-#          name='organization_dangerzone'),
-#     path(*(lambda v: [f'<str:user>/delete/{v.url_content_owner}/<int:pk>/',
-#                       v.as_view()])(users_views.OrganizationDeleteView),
-#          name='organization_confirm_delete'),
+    # path(*(lambda v: [f'{v.url_content_owner}/settings/<int:pk>/',
+    #                   v.as_view()])(users_views.OrganizationOverview),
+    #      name='organization_overview'),
+    # path(*(lambda v: [f'{v.url_content_owner}/settings/tab=dangerzone/<int:pk>/',
+    #                   v.as_view()])(users_views.OrganizationDangerzone),
+    #      name='organization_dangerzone'),
+    # path(*(lambda v: [f'<str:user>/delete/{v.url_content_owner}/<int:pk>/',
+    #                   v.as_view()])(users_views.OrganizationDeleteView),
+    #      name='organization_confirm_delete'),
 
-    # path('user_language/<str:lang>/',
+    # path(
+    # 'user_language/<str:lang>/',
     #      users_views.user_language,
     #      name='user_language'),
 ]

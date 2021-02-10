@@ -235,6 +235,7 @@ def get_s3_project_size(projectid):
 
     return round(total_size / (1024 * 1024), 3)
 
+
 class ProjectFileVersion(TypedDict):
     name: str
     size: int
@@ -242,12 +243,14 @@ class ProjectFileVersion(TypedDict):
     last_modified: datetime
     is_latest: bool
 
+
 class ProjectFile(TypedDict):
     name: str
     size: int
     sha256: str
     last_modified: datetime
     versions: List[ProjectFileVersion]
+
 
 def get_project_files(project_id: str) -> Dict[str, ProjectFile]:
     bucket = get_s3_bucket()

@@ -218,6 +218,7 @@ class OrganizationMember(models.Model):
     def __str__(self):
         return self.organization.username + ': ' + self.member.username
 
+
 class Project(models.Model):
     """Represent a QFieldcloud project.
     It corresponds to a directory on the file system.

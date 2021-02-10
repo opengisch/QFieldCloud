@@ -4,8 +4,6 @@ from qfieldcloud.core.models import (
     Project, ProjectCollaborator, OrganizationMember,
     Organization, Delta, User)
 
-from qfieldcloud.core.permissions_utils import can_list_deltas
-
 
 def get_available_projects(user, include_public=False):
     """Return a queryset with all projects that are available to the `user`.
@@ -61,6 +59,7 @@ def get_projects_of_owner(user, owner):
 
     return queryset
 
+
 def get_user_organizations(user):
     owned_organizations = Organization.objects.filter(organization_owner=user).distinct()
     membership_organizations = Organization.objects.filter(
@@ -71,8 +70,10 @@ def get_user_organizations(user):
 
     return organizations
 
+
 def get_organization_members(organization):
     return OrganizationMember.objects.filter(organization=organization)
+
 
 def get_all_public_projects():
     """Return all public projects."""
@@ -105,6 +106,7 @@ def get_possible_members_of_organization(user, organization):
                                  .values_list('member', flat=True))
     type_user_only = User.objects.filter(user_type=User.TYPE_USER)
     return type_user_only.exclude(Q(pk=organization.organization_owner.pk) | Q(pk__in=existing_members_user_ids))
+
 
 def get_users_only(username: str):
     return User.objects.filter(Q(user_type=User.TYPE_USER)).filter(Q(username=username) | Q(email=username))
