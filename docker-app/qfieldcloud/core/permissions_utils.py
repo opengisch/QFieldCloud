@@ -91,10 +91,13 @@ def get_param_from_request(request, param):
     return result
 
 
-def can_create_project(user, organization):
-    """Return True if the `user` can create a project owned
-    by `organization`. Return False otherwise."""
+def can_create_project(user, organization=None):
+    """Return True if the `user` can create a project. Accepts additional
+    `organizaiton` to check whether the user has permissions to do so on
+    that organization. Return False otherwise."""
 
+    if organization is None:
+        return True
     if user == organization:
         return True
     if _is_organization_owner(user, organization):
@@ -125,6 +128,8 @@ def can_get_project(user, project):
     """Return True if the `user` can get `project`.
     Return False otherwise."""
 
+    if not project.private:
+        return True
     if can_update_delete_project(user, project):
         return True
     if _is_project_collaborator_role_manager(user, project):
@@ -140,6 +145,8 @@ def can_list_files(user, project):
     """Return True if the `user` can list the files in `project`.
     Return False otherwise."""
 
+    if not project.private:
+        return True
     if _is_project_owner(user, project):
         return True
     if _is_project_collaborator_role_admin(user, project):
@@ -214,6 +221,8 @@ def can_upload_deltas(user, project):
 def can_list_deltas(user, project):
     """Return True if the `user` can list deltafiles of `project`.
     Return False otherwise."""
+    if not project.private:
+        return True
 
     return can_upload_deltas(user, project)
 
@@ -265,27 +274,17 @@ def can_create_collaborators(user, project):
         return True
     return False
 
+def can_update_delete_collaborators(user, project):
+    """Return True if the `user` can update or delete collaborators of
+    `project`. Return False otherwise."""
+
+    return can_create_collaborators(user, project)
 
 def can_update_collaborator_role(user, project, collaborator):
     """Return True if the `user` can create update the `collaborator`
     role of `project`. Return False otherwise."""
 
-    if _is_project_owner(user, project):
-        return True
-    if _is_project_collaborator_role_admin(user, project):
-        return True
-    if _is_project_collaborator_role_manager(user, project):
-        return True
-    if _is_project_collaborator_role_editor(user, project):
-        return True
-
-    organization = project.owner
-    if _is_organization_owner(user, organization):
-        return True
-    if _is_organization_member_role_admin(user, organization):
-        return True
-    return False
-
+    return can_create_collaborators(user, project)
 
 def can_delete_collaborator(user, project, collaborator):
     """Return True if the `user` can delete the `collaborator` of `project`.
