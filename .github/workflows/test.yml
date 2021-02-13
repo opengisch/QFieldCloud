@@ -36,11 +36,12 @@ jobs:
           envkey_POSTGRES_DB: "qfieldcloud_test_db"
           envkey_HOST_POSTGRES_PORT: 5433
           envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
-          envkey_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          envkey_AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
-          envkey_AWS_STORAGE_BUCKET_NAME: "qfieldcloud-test"
-          envkey_AWS_S3_REGION_NAME: "zrh1"
-          envkey_AWS_S3_ENDPOINT_URL: "https://os.zrh1.flow.swiss"
+          envkey_STORAGE_ACCESS_KEY_ID: "minio_access_key"
+          envkey_STORAGE_SECRET_ACCESS_KEY: "minio_secret_key"
+          envkey_STORAGE_BUCKET_NAME: "qfieldcloud-gh-action"
+          envkey_STORAGE_REGION_NAME: ""
+          envkey_STORAGE_ENDPOINT_URL: "http://localhost:9000"
+          envkey_MINIO_PORT: 9000
           envkey_REDIS_PASSWORD: "reeeeeedissssssss"
           envkey_REDIS_PORT: 6379
           envkey_GEODB_HOST: localhost
@@ -64,6 +65,10 @@ jobs:
           pipenv run python worker.py &
       - name: Run unit and integration tests
         run: |
-          pwd
           docker-compose run app python manage.py test -v2 qfieldcloud
 
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker-compose logs
+          cat orchestrator/orchestrator.log

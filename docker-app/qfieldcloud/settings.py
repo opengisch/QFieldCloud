@@ -71,7 +71,7 @@ INSTALLED_APPS = [
     'rest_auth',
     'rest_auth.registration',
     'django_rq',  # Integration with Redis Queue
-    'storages',  # Integration with AWS S3
+    'storages',  # Integration with S3 Storages
     'invitations',
 
     # Local
@@ -179,11 +179,11 @@ MEDIA_URL = '/mediafiles/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'mediafiles')
 
 # S3 Storage
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME")
-AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")
+STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
+STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
+STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
+STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
+STORAGE_ENDPOINT_URL = 'http://s3:9000' if 'localhost' in os.environ.get("STORAGE_ENDPOINT_URL") else os.environ.get("STORAGE_ENDPOINT_URL")
 
 AUTH_USER_MODEL = 'core.User'
 

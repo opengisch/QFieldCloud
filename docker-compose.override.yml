@@ -42,6 +42,49 @@ services:
     ports:
       - ${GEODB_PORT}:5432
 
+  s3:
+    image: minio/minio
+    restart: unless-stopped
+    volumes:
+      - s3_data1:/data1
+      - s3_data2:/data2
+      - s3_data3:/data3
+      - s3_data4:/data4
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_ACCESS_KEY}
+    ports:
+      - ${MINIO_PORT}:9000
+    command: server /data{1...4}
+    healthcheck:
+        test: [
+        "CMD",
+        "curl",
+        "-A",
+        "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
+        "-f",
+        "http://127.0.0.1:9000/minio/index.html"]
+        interval: 5s
+        timeout: 20s
+        retries: 5
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://s3:9000 ${STORAGE_ACCESS_KEY_ID} ${STORAGE_SECRET_ACCESS_KEY};
+      /usr/bin/mc mb myminio/${STORAGE_BUCKET_NAME};
+      /usr/bin/mc version enable myminio/${STORAGE_BUCKET_NAME};
+      exit 0;
+      "
+
 volumes:
   geodb_data:
   smtp4dev_data:
+  s3_data1:
+  s3_data2:
+  s3_data3:
+  s3_data4:

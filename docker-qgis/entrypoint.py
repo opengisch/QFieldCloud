@@ -23,31 +23,31 @@ from libqfieldsync.offline_converter import ExportType, OfflineConverter
 import apply_deltas
 
 # Get environment variables
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME")
-AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")
+STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
+STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
+STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
+STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
+STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
 
 
 def _get_s3_resource():
     """Get S3 Service Resource object"""
-    # Create AWS session
+    # Create session
     session = boto3.Session(
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        region_name=AWS_S3_REGION_NAME
+        aws_access_key_id=STORAGE_ACCESS_KEY_ID,
+        aws_secret_access_key=STORAGE_SECRET_ACCESS_KEY,
+        region_name=STORAGE_REGION_NAME
     )
 
-    return session.resource('s3', endpoint_url=AWS_S3_ENDPOINT_URL)
+    return session.resource('s3', endpoint_url=STORAGE_ENDPOINT_URL)
 
 
 def _get_s3_bucket():
     """Get S3 Bucket according to the env variable
-    AWS_STORAGE_BUCKET_NAME"""
+    STORAGE_BUCKET_NAME"""
 
     s3 = _get_s3_resource()
-    bucket = s3.Bucket(AWS_STORAGE_BUCKET_NAME)
+    bucket = s3.Bucket(STORAGE_BUCKET_NAME)
     return bucket
 
 

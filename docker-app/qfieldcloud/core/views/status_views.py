@@ -40,7 +40,7 @@ class APIStatusView(views.APIView):
             # Check if bucket exists (i.e. the connection works)
             try:
                 s3_client = utils.get_s3_client()
-                s3_client.head_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+                s3_client.head_bucket(Bucket=settings.STORAGE_BUCKET_NAME)
             except Exception:
                 results['storage'] = 'error'
 
