@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.urls.conf import include
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -8,12 +9,13 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 
 from qfieldcloud.core.models import (
+    Project,
     Organization)
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     PublicInfoUserSerializer,
     OrganizationSerializer)
-from qfieldcloud.core import permissions_utils
+from qfieldcloud.core import permissions_utils, querysets_utils
 
 User = get_user_model()
 
@@ -33,10 +35,33 @@ class ListUsersView(generics.ListAPIView):
     serializer_class = PublicInfoUserSerializer
     permission_classes = [permissions.IsAuthenticated,
                           ListUsersViewPermissions]
+    paginate_by = 100
 
     def get_queryset(self):
-        return User.objects.all()
+        params = self.request.GET
+        query = params.get('q', '')
 
+        project = None
+        if params.get('project'):
+            try:
+                project = Project.objects.get(id=params.get('project'))
+            except Project.DoesNotExist:
+                pass
+
+        organization = None
+        if params.get('organization'):
+            try:
+                organization = Organization.objects.get(username=params.get('organization'))
+            except Project.DoesNotExist:
+                pass
+
+        exclude_organizations = bool(int(params.get('exclude_organizations', 0)))
+        return querysets_utils.get_users(
+            query,
+            project=project,
+            organization=organization,
+            exclude_organizations=exclude_organizations
+        )
 
 class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
 

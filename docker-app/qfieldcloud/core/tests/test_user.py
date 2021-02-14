@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from qfieldcloud.core.models import (
-    Organization, OrganizationMember, UserAccount)
+    Organization, OrganizationMember, UserAccount, Project)
 
 
 User = get_user_model()
@@ -23,6 +23,11 @@ class UserTestCase(APITestCase):
             username='user2', password='abc123', email='user2@example.com')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
+        # Create a second user
+        self.user3 = User.objects.create_user(
+            username='user3', password='abc123', email='user3@example.com')
+        self.token3 = Token.objects.get_or_create(user=self.user3)[0]
+
         # Create an organization
         self.organization1 = Organization.objects.create(
             username='organization1',
@@ -30,6 +35,11 @@ class UserTestCase(APITestCase):
             user_type=2,
             organization_owner=self.user1,
         )
+
+        self.project1 = Project.objects.create(
+            name='project1',
+            private=True,
+            owner=self.user1)
 
         # Set user2 as member of organization1
         OrganizationMember.objects.create(
@@ -41,6 +51,7 @@ class UserTestCase(APITestCase):
     def tearDown(self):
         User.objects.all().delete()
         Organization.objects.all().delete()
+        OrganizationMember.objects.all().delete()
         # Remove credentials
         self.client.credentials()
 
@@ -160,9 +171,54 @@ class UserTestCase(APITestCase):
         json = response.json()
         json = sorted(json, key=lambda k: k['username'])
 
+        self.assertEqual(len(json), 4)
         self.assertEqual(json[0]['username'], 'organization1')
         self.assertEqual(json[1]['username'], 'user1')
         self.assertEqual(json[2]['username'], 'user2')
+        self.assertEqual(json[3]['username'], 'user3')
+
+    def test_list_users_filter_exclude_organization(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.get('/api/v1/users/?exclude_organizations=1')
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k['username'])
+
+        self.assertEqual(len(json), 3)
+        self.assertEqual(json[0]['username'], 'user1')
+        self.assertEqual(json[1]['username'], 'user2')
+        self.assertEqual(json[2]['username'], 'user3')
+
+    def test_list_users_filter_for_organization(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.get(f'/api/v1/users/?organization={self.organization1.username}')
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k['username'])
+
+        self.assertEqual(len(json), 1)
+        self.assertEqual(json[0]['username'], 'user3')
+
+    def test_list_users_filter_for_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)
+
+        response = self.client.get(f'/api/v1/users/?project={self.project1.id}')
+
+        self.assertTrue(status.is_success(response.status_code))
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k['username'])
+
+        self.assertEqual(len(json), 3)
+        self.assertEqual(json[0]['username'], 'organization1')
+        self.assertEqual(json[1]['username'], 'user2')
+        self.assertEqual(json[2]['username'], 'user3')
 
     def test_get_the_authenticated_user(self):
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token1.key)

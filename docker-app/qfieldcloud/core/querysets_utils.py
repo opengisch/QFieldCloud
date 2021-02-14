@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.db.models.manager import BaseManager
 
 from qfieldcloud.core.models import (
     Project, ProjectCollaborator, OrganizationMember,
@@ -89,24 +90,33 @@ def get_collaborators_of_project(project):
     """Return a queryset of all available collaborators of a specific project."""
     return ProjectCollaborator.objects.filter(project=project)
 
+def get_users(
+    username: str,
+    project: Project = None,
+    organization: Organization = None,
+    exclude_organizations: bool = False,
+) -> BaseManager:
+    assert project is None or organization is None, 'Cannot have the project and organization filters set simultaneously'
 
-def get_possible_collaborators_of_project(user, project):
-    """Return a queryset of users which are possible collaborators for a specific project,
-    which are not already collaborators."""
-    existing_collaborators_user_ids = (ProjectCollaborator.objects.filter(project=project)
-                                       .values_list('collaborator', flat=True))
-    type_user_only = User.objects.filter(user_type=User.TYPE_USER)
-    return type_user_only.exclude(Q(pk=user.pk) | Q(pk__in=existing_collaborators_user_ids))
+    if username:
+        users = User.objects.filter(Q(username__icontains=username) | Q(email__icontains=username))
+    else:
+        users = User.objects.all()
 
+    if exclude_organizations:
+        users = users.filter(user_type=User.TYPE_USER)
 
-def get_possible_members_of_organization(user, organization):
-    """Return a queryset of users which are possible members for a specific organization,
-    which are not already members."""
-    existing_members_user_ids = (OrganizationMember.objects.filter(organization=organization)
-                                 .values_list('member', flat=True))
-    type_user_only = User.objects.filter(user_type=User.TYPE_USER)
-    return type_user_only.exclude(Q(pk=organization.organization_owner.pk) | Q(pk__in=existing_members_user_ids))
+    # exclude the already existing collaborators and the project owner
+    if project:
+        collaborator_ids = ProjectCollaborator.objects.filter(project=project).values_list('collaborator', flat=True)
+        users = users.exclude(pk__in=collaborator_ids)
+        users = users.exclude(pk=project.owner.pk)
 
+    # exclude the already existing members, the organization owner and the organization itself from the returned users
+    if organization:
+        member_ids = OrganizationMember.objects.filter(organization=organization).values_list('member', flat=True)
+        users = users.exclude(pk__in=member_ids)
+        users = users.exclude(pk=organization.organization_owner.pk)
+        users = users.exclude(pk=organization.user_ptr.pk)
 
-def get_users_only(username: str):
-    return User.objects.filter(Q(user_type=User.TYPE_USER)).filter(Q(username=username) | Q(email=username))
+    return users.order_by('-username')

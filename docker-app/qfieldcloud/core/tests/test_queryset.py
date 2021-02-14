@@ -32,12 +32,24 @@ class QuerysetTestCase(APITestCase):
             password='abc123')
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
+        # Create a third user
+        self.user3 = User.objects.create_user(
+            username='user3',
+            password='abc123')
+        self.token3 = Token.objects.get_or_create(user=self.user3)[0]
+
         # Create an organization
         self.organization1 = Organization.objects.create(
             username='organization1',
             password='abc123',
             user_type=2,
             organization_owner=self.user1,
+        )
+
+        self.membership1 = OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user3,
+            role=OrganizationMember.ROLE_MEMBER,
         )
 
         # Create a private project
@@ -200,3 +212,47 @@ class QuerysetTestCase(APITestCase):
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.project4 in queryset)
         self.assertTrue(self.project5 in queryset)
+
+    def test_get_users(self):
+        # should get all the available users
+        queryset = querysets_utils.get_users('')
+        self.assertEqual(len(queryset), 4)
+        self.assertTrue(self.user1 in queryset)
+        self.assertTrue(self.user2 in queryset)
+        self.assertTrue(self.user3 in queryset)
+        self.assertTrue(self.organization1.user_ptr in queryset)
+
+        # should get all the available users
+        queryset = querysets_utils.get_users('user3')
+        self.assertEqual(len(queryset), 1)
+        self.assertTrue(self.user3 in queryset)
+
+        # should get only the users that are not an organization
+        queryset = querysets_utils.get_users('', exclude_organizations=True)
+        self.assertEqual(len(queryset), 3)
+        self.assertTrue(self.user1 in queryset)
+        self.assertTrue(self.user2 in queryset)
+        self.assertTrue(self.user3 in queryset)
+
+        # should get all the users, that are not members or owners of an organization
+        queryset = querysets_utils.get_users('', organization=self.organization1)
+        self.assertEqual(len(queryset), 1)
+        self.assertTrue(self.user2 in queryset)
+
+        # should get all the users, that are not members of an organization
+        queryset = querysets_utils.get_users('', organization=self.organization1)
+        self.assertEqual(len(queryset), 1)
+        self.assertTrue(self.user2 in queryset)
+
+        # should get all the users, that are not members or owner of a project
+        queryset = querysets_utils.get_users('', project=self.project1)
+        self.assertEqual(len(queryset), 3)
+        self.assertTrue(self.user2 in queryset)
+        self.assertTrue(self.user3 in queryset)
+        self.assertTrue(self.organization1.user_ptr in queryset)
+
+        # should get all the users, that are not members or owner of a project and are not an organization
+        queryset = querysets_utils.get_users('', project=self.project1, exclude_organizations=True)
+        self.assertEqual(len(queryset), 2)
+        self.assertTrue(self.user2 in queryset)
+        self.assertTrue(self.user3 in queryset)
