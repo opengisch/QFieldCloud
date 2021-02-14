@@ -25,11 +25,12 @@ from drf_yasg import openapi
 
 from qfieldcloud.core.views import auth_views
 
-from qfieldcloud.core.web.views import (async_json_views,
-                                        projects_views,
-                                        organizations_views,
-                                        settings_views,
-                                        pages_views)
+from qfieldcloud.core.web.views import (
+    projects_views,
+    organizations_views,
+    settings_views,
+    pages_views
+)
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -80,13 +81,6 @@ urlpatterns = [
         '<str:unpermitted_action>/unpermitted',
         pages_views.unpermitted,
         name='unpermitted'
-    ),
-
-    # TODO use this to search for users
-    path(
-        'async/users/search',
-        async_json_views.async_possible_members,
-        name='async_possible_members'
     ),
 
     path(
