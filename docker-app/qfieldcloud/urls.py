@@ -161,23 +161,4 @@ urlpatterns = [
         projects_views.ProjectYoloView.as_view(),
         name='project_yolo'
     ),
-
-    # path(*(lambda v: [f'user/profile/{v.url_content_owner}/<int:pk>/',
-    #                   v.as_view()])(users_views.UserOverview),
-    #      name='user_overview'),
-
-    # path(*(lambda v: [f'{v.url_content_owner}/settings/<int:pk>/',
-    #                   v.as_view()])(users_views.OrganizationOverview),
-    #      name='organization_overview'),
-    # path(*(lambda v: [f'{v.url_content_owner}/settings/tab=dangerzone/<int:pk>/',
-    #                   v.as_view()])(users_views.OrganizationDangerzone),
-    #      name='organization_dangerzone'),
-    # path(*(lambda v: [f'<str:user>/delete/{v.url_content_owner}/<int:pk>/',
-    #                   v.as_view()])(users_views.OrganizationDeleteView),
-    #      name='organization_confirm_delete'),
-
-    # path(
-    # 'user_language/<str:lang>/',
-    #      users_views.user_language,
-    #      name='user_language'),
 ]
