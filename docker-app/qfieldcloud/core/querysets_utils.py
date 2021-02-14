@@ -90,6 +90,7 @@ def get_collaborators_of_project(project):
     """Return a queryset of all available collaborators of a specific project."""
     return ProjectCollaborator.objects.filter(project=project)
 
+
 def get_users(
     username: str,
     project: Project = None,

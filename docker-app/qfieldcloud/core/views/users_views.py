@@ -63,6 +63,7 @@ class ListUsersView(generics.ListAPIView):
             exclude_organizations=exclude_organizations
         )
 
+
 class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
 
     def has_permission(self, request, view):
