@@ -48,7 +48,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
 class PublicInfoUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username', 'user_type')
+        fields = ('username', 'user_type', 'full_name')
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
