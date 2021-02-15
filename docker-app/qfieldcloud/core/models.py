@@ -341,6 +341,7 @@ class Delta(models.Model):
     def __str__(self):
         return str(self.id) + ', project: ' + str(self.project.id)
 
+    @staticmethod
     def get_status_summary(filters={}):
         rows = Delta.objects.filter(**filters).values('status').annotate(count=Count('status')).order_by()
 
