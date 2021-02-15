@@ -1,5 +1,6 @@
 from django.db.models import Q
 from django.db.models.manager import BaseManager
+from django.db.models.query import QuerySet
 
 from qfieldcloud.core.models import (
     Project, ProjectCollaborator, OrganizationMember,
@@ -61,12 +62,14 @@ def get_projects_of_owner(user, owner):
     return queryset
 
 
-def get_user_organizations(user):
+def get_user_organizations(user: User, administered_only: bool = False) -> QuerySet:
     owned_organizations = Organization.objects.filter(organization_owner=user).distinct()
-    membership_organizations = Organization.objects.filter(
-        members__in=OrganizationMember.objects.filter(member=user)
-    )
+    memberships = OrganizationMember.objects.filter(member=user)
 
+    if administered_only:
+        memberships = memberships.filter(role=OrganizationMember.ROLE_ADMIN)
+
+    membership_organizations = Organization.objects.filter(members__in=memberships)
     organizations = owned_organizations.union(membership_organizations)
 
     return organizations

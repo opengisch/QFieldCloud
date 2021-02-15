@@ -1,6 +1,8 @@
+from typing import Union
 from django.contrib.auth import get_user_model
 
 from qfieldcloud.core.models import (
+    Project, User as QfcUser,
     ProjectCollaborator, OrganizationMember,
     Organization)
 
@@ -91,7 +93,7 @@ def get_param_from_request(request, param):
     return result
 
 
-def can_create_project(user, organization=None):
+def can_create_project(user: User, organization: Union[QfcUser, Organization] = None) -> bool:
     """Return True if the `user` can create a project. Accepts additional
     `organizaiton` to check whether the user has permissions to do so on
     that organization. Return False otherwise."""
@@ -100,6 +102,12 @@ def can_create_project(user, organization=None):
         return True
     if user == organization:
         return True
+
+    if organization.is_organization and not isinstance(organization, Organization):
+        organization = organization.organization  # type: ignore
+    else:
+        return False
+
     if _is_organization_owner(user, organization):
         return True
     if _is_organization_member_role_admin(user, organization):
@@ -107,7 +115,7 @@ def can_create_project(user, organization=None):
     return False
 
 
-def can_update_delete_project(user, project):
+def can_update_delete_project(user: User, project: Project) -> bool:
     """Return True if the `user` can update or delete `project`.
     Return False otherwise."""
 
