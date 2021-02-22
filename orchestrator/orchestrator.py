@@ -101,7 +101,7 @@ def export_project(projectid, project_file):
     }
 
     # If we are on local dev environment, use host network to connect
-    # to the local geodb
+    # to the local geodb and s3 storage
     env = load_env_file()
     network_mode = 'bridge'
     if env.get('QFIELDCLOUD_HOST') == 'localhost':
@@ -214,12 +214,21 @@ def apply_deltas(projectid, project_file, overwrite_conflicts):
     volumes = {
         tempdir: {'bind': '/io/', 'mode': 'rw'}
     }
+
+    # If we are on local dev environment, use host network to connect
+    # to the local geodb and s3 storage
+    env = load_env_file()
+    network_mode = 'bridge'
+    if env.get('QFIELDCLOUD_HOST') == 'localhost':
+        network_mode = 'host'
+
     client = docker.from_env()
     container = client.containers.create(
         'qfieldcloud_qgis',
         environment=load_env_file(),
         auto_remove=True,
-        volumes=volumes)
+        volumes=volumes,
+        network_mode=network_mode)
 
     overwrite_conflicts_cmd = ''
     if overwrite_conflicts:

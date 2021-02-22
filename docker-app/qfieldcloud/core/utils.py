@@ -75,22 +75,22 @@ def get_s3_session():
     """Get S3 session"""
 
     session = boto3.Session(
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_S3_REGION_NAME
+        aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
+        region_name=settings.STORAGE_REGION_NAME
     )
     return session
 
 
 def get_s3_bucket():
     """Get S3 Bucket according to the env variable
-    AWS_STORAGE_BUCKET_NAME"""
+    STORAGE_BUCKET_NAME"""
 
     session = get_s3_session()
 
     # Get the bucket objects
-    s3 = session.resource('s3', endpoint_url=settings.AWS_S3_ENDPOINT_URL)
-    return s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
+    s3 = session.resource('s3', endpoint_url=settings.STORAGE_ENDPOINT_URL)
+    return s3.Bucket(settings.STORAGE_BUCKET_NAME)
 
 
 def get_s3_client():
@@ -98,10 +98,10 @@ def get_s3_client():
 
     s3_client = boto3.client(
         's3',
-        region_name=settings.AWS_S3_REGION_NAME,
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        region_name=settings.STORAGE_REGION_NAME,
+        aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
+        endpoint_url=settings.STORAGE_ENDPOINT_URL,
     )
     return s3_client
 
@@ -193,7 +193,7 @@ def check_s3_key(key):
     client = get_s3_client()
     try:
         head = client.head_object(
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
+            Bucket=settings.STORAGE_BUCKET_NAME, Key=key)
     except ClientError as e:
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
             return None

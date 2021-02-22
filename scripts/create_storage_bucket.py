@@ -19,17 +19,17 @@ def load_env_file():
 
 def _get_s3_bucket(env, bucket_name):
     """Get S3 Bucket according to the env variable
-    AWS_STORAGE_BUCKET_NAME"""
+    STORAGE_BUCKET_NAME"""
 
-    # Create AWS session
+    # Create session
     session = boto3.Session(
-        aws_access_key_id=env['AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=env['AWS_SECRET_ACCESS_KEY'],
-        region_name=env['AWS_S3_REGION_NAME']
+        aws_access_key_id=env['STORAGE_ACCESS_KEY_ID'],
+        aws_secret_access_key=env['STORAGE_SECRET_ACCESS_KEY'],
+        region_name=env['STORAGE_REGION_NAME']
     )
 
     # Get the bucket objects
-    s3 = session.resource('s3', endpoint_url=env['AWS_S3_ENDPOINT_URL'])
+    s3 = session.resource('s3', endpoint_url=env['STORAGE_ENDPOINT_URL'])
     return s3.Bucket(bucket_name)
 
 
@@ -37,10 +37,10 @@ def _get_s3_client(env):
 
     s3_client = boto3.client(
         's3',
-        region_name=env['AWS_S3_REGION_NAME'],
-        aws_access_key_id=env['AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=env['AWS_SECRET_ACCESS_KEY'],
-        endpoint_url=env['AWS_S3_ENDPOINT_URL'],
+        region_name=env['STORAGE_REGION_NAME'],
+        aws_access_key_id=env['STORAGE_ACCESS_KEY_ID'],
+        aws_secret_access_key=env['STORAGE_SECRET_ACCESS_KEY'],
+        endpoint_url=env['STORAGE_ENDPOINT_URL'],
     )
     return s3_client
 

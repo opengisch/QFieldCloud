@@ -114,11 +114,20 @@ class ListFilesView(views.APIView):
         files = []
         for obj in bucket.objects.filter(Prefix=export_prefix):
             path = PurePath(obj.key)
+
+            # We cannot be sure of the metadata's first letter case
+            # https://github.com/boto/boto3/issues/1709
+            metadata = obj.Object().metadata
+            if 'sha256sum' in metadata:
+                sha256sum = metadata['sha256sum']
+            else:
+                sha256sum = metadata['Sha256sum']
+
             files.append({
                 # Get the path of the file relative to the export directory
                 'name': str(path.relative_to(*path.parts[:3])),
                 'size': obj.size,
-                'sha256': obj.Object().metadata['Sha256sum'],
+                'sha256': sha256sum,
             })
 
         return Response({'files': files,

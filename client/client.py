@@ -36,9 +36,8 @@ def register_user(username, password, email):
     payload = resp.json()
 
     print('User created')
-    print(f'Your token is: {payload["token"]}')
-    print('Please store your token in the QFIELDCLOUD_TOKEN environment variable with:')
-    print(f'export QFIELDCLOUD_TOKEN="{payload["token"]}"')
+    print(payload)
+    print(f'Successfully registered: {payload["detail"]}')
 
 
 @cli.command()
