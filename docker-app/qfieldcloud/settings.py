@@ -100,16 +100,16 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'builtins': [
-                'qfieldcloud.core.web.templatetags.navigation',
-                'qfieldcloud.core.web.templatetags.buttons',
-                'qfieldcloud.core.web.templatetags.display',
                 'qfieldcloud.core.web.templatetags.filters',
+                'qfieldcloud.core.web.templatetags.check',
+                'qfieldcloud.core.web.templatetags.noqs',
             ],
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # 'qfieldcloud.core.web.context_processors',
             ],
         },
     },
@@ -258,6 +258,7 @@ ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
 ACCOUNT_PRESERVE_USERNAME_CASING = False
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_ADAPTER = 'invitations.models.InvitationsAdapter'
+ACCOUNT_LOGOUT_ON_GET = True
 
 
 # Django email configuration

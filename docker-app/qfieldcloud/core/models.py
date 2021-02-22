@@ -7,7 +7,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
 from django.db.models.signals import post_save, post_delete
+from django.db.models.aggregates import Count
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from django.dispatch import receiver
 
 from qfieldcloud.core import utils, geodb_utils, validators
@@ -42,9 +44,23 @@ class User(AbstractUser):
         return self.username
 
     def get_absolute_url(self):
-        return reverse('user_overview', kwargs={
-            'content_owner': self.username,
-            'pk': self.pk})
+        return reverse('profile_overview', kwargs={'username': self.username})
+
+    @property
+    def is_user(self):
+        return self.user_type == User.TYPE_USER
+
+    @property
+    def is_organization(self):
+        return self.user_type == User.TYPE_ORGANIZATION
+
+    @property
+    def full_name(self) -> str:
+        return self.first_name + self.last_name
+
+    @property
+    def has_geodb(self) -> bool:
+        return hasattr(self, 'geodb')
 
 
 # Automatically create a UserAccount instance when a user is created.
@@ -72,6 +88,11 @@ class UserAccount(models.Model):
     storage_limit_mb = models.PositiveIntegerField(default=100)
     db_limit_mb = models.PositiveIntegerField(default=25)
     synchronizations_per_months = models.PositiveIntegerField(default=30)
+    bio = models.CharField(max_length=255, default='')
+    workplace = models.CharField(max_length=255, default='')
+    location = models.CharField(max_length=255, default='')
+    twitter = models.CharField(max_length=255, default='')
+    is_email_public = models.BooleanField(default=False)
 
     def __str__(self):
         return self.TYPE_CHOICES[self.account_type][1]
@@ -125,7 +146,15 @@ class Geodb(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # The password is generated but not stored into the db
-    password = random_password()
+    password = ''
+
+    def __init__(self, *args, password='', **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.password = password
+
+        if not self.password:
+            self.password = Geodb.random_password()
 
     def size(self):
         return geodb_utils.get_db_size(self)
@@ -164,9 +193,7 @@ class Organization(User):
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse('organization_overview', kwargs={
-            'content_owner': self.username,
-            'pk': self.pk})
+        return reverse('profile_overview', kwargs={'username': self.username})
 
 
 class OrganizationMember(models.Model):
@@ -191,12 +218,6 @@ class OrganizationMember(models.Model):
     def __str__(self):
         return self.organization.username + ': ' + self.member.username
 
-    def get_absolute_url(self):
-        return reverse('member_details',
-                       kwargs={'content_owner': self.organization,
-                               'member': self.member.username,
-                               'pk': self.pk})
-
 
 class Project(models.Model):
     """Represent a QFieldcloud project.
@@ -212,16 +233,21 @@ class Project(models.Model):
                     validators.min_lenght_validator,
                     validators.first_symbol_validator,
                     validators.reserved_words_validator],
-        help_text='Project name'
+        help_text=_('Project name. Should start with a letter and contain only letters, numbers, underscores and hyphens.')
     )
 
     description = models.TextField(blank=True)
-    private = models.BooleanField(default=False)
+    private = models.BooleanField(
+        default=False,
+        help_text='Projects that are not marked as private would be visible and editable to anyone.')
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    overwrite_conflicts = models.BooleanField(default=True)
+    overwrite_conflicts = models.BooleanField(
+        default=True,
+        help_text=_('If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts.')
+    )
 
     def __str__(self):
         return self.name + ' (' + str(self.id) + ')' + ' owner: ' + self.owner.username
@@ -231,9 +257,16 @@ class Project(models.Model):
 
     def get_absolute_url(self):
         return reverse('project_overview',
-                       kwargs={'content_owner': self.owner.username,
-                               'project': self.name,
-                               'pk': self.pk})
+                       kwargs={'username': self.owner.username,
+                               'project': self.name})
+
+    @property
+    def files(self):
+        return utils.get_project_files(self.id)
+
+    @property
+    def files_count(self):
+        return utils.get_project_files_count(self.id)
 
 
 class ProjectCollaborator(models.Model):
@@ -307,6 +340,20 @@ class Delta(models.Model):
 
     def __str__(self):
         return str(self.id) + ', project: ' + str(self.project.id)
+
+    @staticmethod
+    def get_status_summary(filters={}):
+        rows = Delta.objects.filter(**filters).values('status').annotate(count=Count('status')).order_by()
+
+        rows_as_dict = {}
+        for r in rows:
+            rows_as_dict[r['status']] = r['count']
+
+        counts = {}
+        for status, _name in Delta.STATUS_CHOICES:
+            counts[status] = rows_as_dict.get(status, 0)
+
+        return counts
 
 
 class Exportation(models.Model):
