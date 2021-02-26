@@ -120,16 +120,10 @@ class Geodb(models.Model):
         return secure_str
 
     def default_hostname():
-        # If geodb is running on the same machine we connect trough
-        # the internal docker net
-        if os.environ.get('GEODB_HOST') == 'localhost':
-            return 'geodb'
+        return os.environ.get('GEODB_HOST')
 
     def default_port():
-        # If geodb is running on the same machine we connect trough
-        # the internal docker net
-        if os.environ.get('GEODB_HOST') == 'localhost':
-            return 5432
+        return os.environ.get('GEODB_PORT')
 
     user = models.OneToOneField(
         User,
