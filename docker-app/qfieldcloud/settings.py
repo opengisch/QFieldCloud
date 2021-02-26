@@ -43,6 +43,10 @@ AUTHENTICATION_BACKENDS = [
 
 # Application definition
 INSTALLED_APPS = [
+    # QFieldCloud web interface
+    'qfieldcloud.web',
+
+    # django contrib
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -74,9 +78,8 @@ INSTALLED_APPS = [
     'storages',  # Integration with S3 Storages
     'invitations',
 
-    # Local
+    # QFieldCloud core
     'qfieldcloud.core',
-    'qfieldcloud.web',
 ]
 
 MIDDLEWARE = [
@@ -96,7 +99,6 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'qfieldcloud', 'web', 'templates')
         ],
         'APP_DIRS': True,
         'OPTIONS': {
