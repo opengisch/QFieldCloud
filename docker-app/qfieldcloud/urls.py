@@ -25,7 +25,7 @@ from drf_yasg import openapi
 
 from qfieldcloud.core.views import auth_views
 
-from qfieldcloud.core.web.views import (
+from qfieldcloud.web.views import (
     projects_views,
     organizations_views,
     settings_views,
