@@ -16,6 +16,15 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = (
         'user_type', 'useraccount')
 
+    def save_model(self, request, obj, form, change):
+        # Set the password to the value in the field if it's changed.
+        if obj.pk:
+            if 'password' in form.changed_data:
+                obj.set_password(obj.password)
+        else:
+            obj.set_password(obj.password)
+        obj.save()
+
 
 class ProjectAdmin(admin.ModelAdmin):
     list_display = (
