@@ -43,9 +43,6 @@ AUTHENTICATION_BACKENDS = [
 
 # Application definition
 INSTALLED_APPS = [
-    # QFieldCloud web interface
-    'qfieldcloud.web',
-
     # django contrib
     'django.contrib.admin',
     'django.contrib.auth',
@@ -78,7 +75,8 @@ INSTALLED_APPS = [
     'storages',  # Integration with S3 Storages
     'invitations',
 
-    # QFieldCloud core
+    # Local
+    'qfieldcloud.web',
     'qfieldcloud.core',
 ]
 
