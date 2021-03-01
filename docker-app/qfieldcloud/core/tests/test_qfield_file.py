@@ -195,6 +195,7 @@ class QfieldFileTestCase(APITransactionTestCase):
                 response = self.client.get(
                     '/api/v1/qfield-files/{}/project_qfield.qgs/'.format(
                         self.project1.id),
+                    follow=True,
                 )
                 temp_dir = tempfile.mkdtemp()
                 local_file = os.path.join(temp_dir, 'project.qgs')
@@ -299,6 +300,7 @@ class QfieldFileTestCase(APITransactionTestCase):
                 response = self.client.get(
                     '/api/v1/qfield-files/{}/project_qfield.qgs/'.format(
                         self.project1.id),
+                    follow=True,
                 )
                 temp_dir = tempfile.mkdtemp()
                 local_file = os.path.join(temp_dir, 'project.qgs')
