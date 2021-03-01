@@ -1,4 +1,6 @@
-from django.db.models import Q
+from django.db.models import Q, Count
+from django.db.models.expressions import Case, F, Value, When
+from django.db.models.fields import CharField
 from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 
@@ -26,6 +28,19 @@ def get_available_projects(user, include_public=False):
 
     # Add all the projects of the organizations where `user` is admin
     queryset |= Project.objects.filter(owner__in=org_admin).distinct()
+    queryset = queryset.annotate(collaborators__count=Count('collaborators'))
+    queryset = queryset.annotate(deltas__count=Count('deltas'))
+    queryset = queryset.annotate(collaborators__role=Case(
+        When(collaborators__collaborator=user, then=F('collaborators__role'))
+    ))
+    queryset = queryset.annotate(collaborators__role=Case(
+        When(owner=user, then=Value('owner', output_field=CharField())),
+        When(collaborators__role=1, then=Value('admin', output_field=CharField())),
+        When(collaborators__role=2, then=Value('manager', output_field=CharField())),
+        When(collaborators__role=3, then=Value('editor', output_field=CharField())),
+        When(collaborators__role=4, then=Value('reporter', output_field=CharField())),
+        When(collaborators__role=5, then=Value('reader', output_field=CharField())),
+    ))
 
     return queryset
 
