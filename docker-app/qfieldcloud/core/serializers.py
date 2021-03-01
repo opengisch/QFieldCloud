@@ -19,15 +19,7 @@ class UserSerializer():
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
-    collaborators__count = serializers.SerializerMethodField()
-    deltas__count = serializers.SerializerMethodField()
     collaborators__role = serializers.SerializerMethodField()
-
-    def get_collaborators__count(self, obj):
-        return getattr(obj, 'collaborators__count', None)
-
-    def get_deltas__count(self, obj):
-        return getattr(obj, 'deltas__count', None)
 
     def get_collaborators__role(self, obj):
         return getattr(obj, 'collaborators__role', None)
@@ -47,8 +39,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ('id', 'name', 'owner', 'description', 'private',
-                  'created_at', 'updated_at', 'collaborators__count', 'deltas__count',
-                  'collaborators__role')
+                  'created_at', 'updated_at', 'collaborators__role')
         model = Project
 
 
