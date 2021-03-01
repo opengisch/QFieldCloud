@@ -34,7 +34,6 @@ def get_available_projects(user, include_public=False):
         When(collaborators__collaborator=user, then=F('collaborators__role'))
     ))
     queryset = queryset.annotate(collaborators__role=Case(
-        When(owner=user, then=Value('owner', output_field=CharField())),
         When(collaborators__role=1, then=Value('admin', output_field=CharField())),
         When(collaborators__role=2, then=Value('manager', output_field=CharField())),
         When(collaborators__role=3, then=Value('editor', output_field=CharField())),
