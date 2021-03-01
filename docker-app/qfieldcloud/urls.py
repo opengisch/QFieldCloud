@@ -25,13 +25,6 @@ from drf_yasg import openapi
 
 from qfieldcloud.core.views import auth_views
 
-from qfieldcloud.core.web.views import (
-    projects_views,
-    organizations_views,
-    settings_views,
-    pages_views
-)
-
 schema_view = get_schema_view(
     openapi.Info(
         title='QFieldcloud REST API',
@@ -76,89 +69,5 @@ urlpatterns = [
         include('invitations.urls', namespace='invitations')
     ),
 
-    path('', pages_views.index, name='index'),
-    path(
-        '<str:unpermitted_action>/unpermitted',
-        pages_views.unpermitted,
-        name='unpermitted'
-    ),
-
-    path(
-        'settings/<str:username>/',
-        settings_views.SettingsUserView.as_view(),
-        name='settings_user'
-    ),
-    path(
-        'settings/<str:username>/profile',
-        settings_views.SettingsProfileView.as_view(),
-        name='settings_profile'
-    ),
-    path(
-        'settings/<str:username>/databases',
-        settings_views.SettingsDatabasesView.as_view(),
-        name='settings_databases'
-    ),
-    path(
-        'settings/<str:username>/security',
-        settings_views.SettingsSecurityView.as_view(),
-        name='settings_security'
-    ),
-    path(
-        'settings/<str:username>/organizations',
-        settings_views.SettingsOrganizationsView.as_view(),
-        name='settings_organizations'
-    ),
-    path(
-        'settings/<str:username>/members',
-        settings_views.SettingsMembersView.as_view(),
-        name='settings_members'
-    ),
-
-    path(
-        'projects/create/',
-        projects_views.ProjectCreateView.as_view(),
-        name='project_create'
-    ),
-
-    path(
-        'organizations/create/',
-        organizations_views.OrganizationCreateView.as_view(),
-        name='organization_create'
-    ),
-
-    path(
-        '<str:username>/',
-        projects_views.ProjectFilterListView.as_view(),
-        name='profile_overview'
-    ),
-    path(
-        '<str:username>/<str:project>/',
-        projects_views.ProjectOverviewView.as_view(),
-        name='project_overview'
-    ),
-    path(
-        '<str:username>/<str:project>/files',
-        projects_views.ProjectFilesView.as_view(),
-        name='project_files'
-    ),
-    path(
-        '<str:username>/<str:project>/changes',
-        projects_views.ProjectChangesListView.as_view(),
-        name='project_changes'
-    ),
-    path(
-        '<str:username>/<str:project>/collaborators',
-        projects_views.ProjectCollaboratorsView.as_view(),
-        name='project_collaborators'
-    ),
-    path(
-        '<str:username>/<str:project>/collaborators/invite',
-        projects_views.ProjectCollaboratorsInviteView.as_view(),
-        name='project_collaborators_invite'
-    ),
-    path(
-        '<str:username>/<str:project>/yolo',
-        projects_views.ProjectYoloView.as_view(),
-        name='project_yolo'
-    ),
+    path('', include('qfieldcloud.web.urls')),
 ]

@@ -43,6 +43,7 @@ AUTHENTICATION_BACKENDS = [
 
 # Application definition
 INSTALLED_APPS = [
+    # django contrib
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -75,6 +76,7 @@ INSTALLED_APPS = [
     'invitations',
 
     # Local
+    'qfieldcloud.web',
     'qfieldcloud.core',
 ]
 
@@ -95,21 +97,20 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'qfieldcloud', 'core', 'web', 'templates')
         ],
         'APP_DIRS': True,
         'OPTIONS': {
             'builtins': [
-                'qfieldcloud.core.web.templatetags.filters',
-                'qfieldcloud.core.web.templatetags.check',
-                'qfieldcloud.core.web.templatetags.noqs',
+                'qfieldcloud.web.templatetags.filters',
+                'qfieldcloud.web.templatetags.check',
+                'qfieldcloud.web.templatetags.noqs',
             ],
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                # 'qfieldcloud.core.web.context_processors',
+                # 'qfieldcloud.web.context_processors',
             ],
         },
     },
@@ -171,7 +172,7 @@ USE_TZ = True
 STATIC_URL = '/staticfiles/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'qfieldcloud', 'core', 'web', 'staticfiles'),
+    os.path.join(BASE_DIR, 'qfieldcloud', 'web', 'staticfiles'),
 ]
 
 
