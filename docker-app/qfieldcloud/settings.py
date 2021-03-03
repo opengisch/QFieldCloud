@@ -76,7 +76,6 @@ INSTALLED_APPS = [
     'invitations',
 
     # Local
-    'qfieldcloud.web',
     'qfieldcloud.core',
 ]
 
@@ -101,16 +100,12 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'builtins': [
-                'qfieldcloud.web.templatetags.filters',
-                'qfieldcloud.web.templatetags.check',
-                'qfieldcloud.web.templatetags.noqs',
             ],
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                # 'qfieldcloud.web.context_processors',
             ],
         },
     },
@@ -171,9 +166,7 @@ USE_TZ = True
 
 STATIC_URL = '/staticfiles/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'qfieldcloud', 'web', 'staticfiles'),
-]
+STATICFILES_DIRS = []
 
 
 MEDIA_URL = '/mediafiles/'
