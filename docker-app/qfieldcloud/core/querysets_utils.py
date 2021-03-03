@@ -41,6 +41,8 @@ def get_available_projects(user, include_public=False):
         When(collaborators__role=5, then=Value('reader', output_field=CharField())),
     ))
 
+    queryset.order_by('owner__username', 'name')
+
     return queryset
 
 
