@@ -3,8 +3,10 @@ import json
 import tempfile
 import time
 import sqlite3
+import requests
 
 from django.contrib.auth import get_user_model
+from django.http.response import HttpResponseRedirect
 
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -12,7 +14,7 @@ from rest_framework.authtoken.models import Token
 
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project
-from .utils import testdata_path
+from .utils import testdata_path, get_filename
 
 User = get_user_model()
 
@@ -132,18 +134,22 @@ class DeltaTestCase(APITransactionTestCase):
             self.assertEqual('STATUS_APPLIED', response.json()[0]['status'])
 
             # Download the geojson file
-            response = self.client.get(
-                '/api/v1/files/{}/testdata.gpkg/'.format(
-                    self.project1.id),
-            )
+            response = self.client.get(f'/api/v1/files/{self.project1.id}/testdata.gpkg/')
+
+            self.assertIsInstance(response, HttpResponseRedirect)
+
+            response = requests.get(response.url, stream=True)
+
             self.assertTrue(status.is_success(response.status_code))
+            self.assertEqual(get_filename(response), 'testdata.gpkg')
 
             temp_dir = tempfile.mkdtemp()
             local_file = os.path.join(temp_dir, 'testdata.gpkg')
 
             with open(local_file, 'wb') as f:
-                for chunk in response.streaming_content:
-                    f.write(chunk)
+                for chunk in response.iter_content():
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
 
             conn = sqlite3.connect(local_file)
             conn.row_factory = sqlite3.Row
@@ -494,19 +500,22 @@ class DeltaTestCase(APITransactionTestCase):
 
             self.assertEqual('STATUS_APPLIED', response.json()[0]['status'])
 
-            # Download the geojson file
-            response = self.client.get(
-                '/api/v1/files/{}/testdata.gpkg/'.format(
-                    self.project1.id),
-            )
+            response = self.client.get(f'/api/v1/files/{self.project1.id}/testdata.gpkg/')
+
+            self.assertIsInstance(response, HttpResponseRedirect)
+
+            response = requests.get(response.url, stream=True)
+
             self.assertTrue(status.is_success(response.status_code))
+            self.assertEqual(get_filename(response), 'testdata.gpkg')
 
             temp_dir = tempfile.mkdtemp()
             local_file = os.path.join(temp_dir, 'testdata.gpkg')
 
             with open(local_file, 'wb') as f:
-                for chunk in response.streaming_content:
-                    f.write(chunk)
+                for chunk in response.iter_content():
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
 
             conn = sqlite3.connect(local_file)
             conn.row_factory = sqlite3.Row
