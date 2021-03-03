@@ -36,7 +36,7 @@ jobs:
           envkey_POSTGRES_DB: "qfieldcloud_test_db"
           envkey_HOST_POSTGRES_PORT: 5433
           envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
-          envkey_DJANGO_SETTINGS_MODULE: "qfieldcloud.settings"
+          envkey_DJANGO_SETTINGS_MODULE: "qfieldcloud.web.settings"
           envkey_STORAGE_ACCESS_KEY_ID: "minio_access_key"
           envkey_STORAGE_SECRET_ACCESS_KEY: "minio_secret_key"
           envkey_STORAGE_BUCKET_NAME: "qfieldcloud-gh-action"
