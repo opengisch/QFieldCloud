@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time
+from django.http.response import HttpResponseRedirect
 import psycopg2
 
 from django.contrib.auth import get_user_model
@@ -192,11 +193,14 @@ class QfieldFileTestCase(APITransactionTestCase):
                 '/api/v1/qfield-files/export/{}/'.format(self.project1.id),
             )
             if response.json()['status'] == 'STATUS_EXPORTED':
-                response = self.client.get(
-                    '/api/v1/qfield-files/{}/project_qfield.qgs/'.format(
-                        self.project1.id),
-                    follow=True,
-                )
+                response = self.client.get(f'/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/')
+
+                self.assertIsInstance(response, HttpResponseRedirect)
+
+                print(response.url)
+                response = self.client.get(response.url)
+                print(response)
+
                 temp_dir = tempfile.mkdtemp()
                 local_file = os.path.join(temp_dir, 'project.qgs')
 
