@@ -44,7 +44,7 @@ jobs:
           envkey_MINIO_PORT: 9000
           envkey_REDIS_PASSWORD: "reeeeeedissssssss"
           envkey_REDIS_PORT: 6379
-          envkey_GEODB_HOST: localhost
+          envkey_GEODB_HOST: geodb
           envkey_GEODB_USER: postgres
           envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
           envkey_GEODB_DB: postgres
