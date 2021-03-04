@@ -68,6 +68,4 @@ urlpatterns = [
         r'^invitations/',
         include('invitations.urls', namespace='invitations')
     ),
-
-    path('', include('qfieldcloud.web.urls')),
 ]

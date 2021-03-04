@@ -23,6 +23,7 @@ services:
       - media_volume:/usr/src/app/mediafiles/
     environment:
       DJANGO_ALLOWED_HOSTS: ${QFIELDCLOUD_HOST}
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: 0
       SQL_DATABASE: ${POSTGRES_DB}
