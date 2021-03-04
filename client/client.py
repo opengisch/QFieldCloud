@@ -410,6 +410,7 @@ def cloud_request(
         stream: bool = False,
         exit_on_error: bool = True,
         token: str = None) -> requests.Response:
+    method = method.upper()
     headers_copy = {**headers}
     if token:
         headers_copy['Authorization'] = f'token {token}'
@@ -429,7 +430,7 @@ def cloud_request(
         files=files,
         stream=stream,
         # redirects from POST requests automagically turn into GET requests, so better forbid redirects
-        allow_redirects=False,
+        allow_redirects=(method != 'POST'),
     )
 
     try:

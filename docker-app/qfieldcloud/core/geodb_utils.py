@@ -15,8 +15,7 @@ class GeodbConnection(object):
 
         # If geodb is running on the same machine we connect trough
         # the internal docker net
-        if host == 'localhost':
-            host = 'geodb'
+        if host == 'geodb':
             port = 5432
 
         self.connection = psycopg2.connect(

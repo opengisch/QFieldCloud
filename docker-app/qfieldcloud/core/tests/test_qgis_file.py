@@ -2,7 +2,9 @@
 import filecmp
 import tempfile
 import time
+import requests
 
+from django.http.response import HttpResponseRedirect
 from django.contrib.auth import get_user_model
 
 from rest_framework import status
@@ -10,7 +12,7 @@ from rest_framework.test import APITransactionTestCase
 from rest_framework.authtoken.models import Token
 
 from qfieldcloud.core.models import Project
-from .utils import testdata_path
+from .utils import testdata_path, get_filename
 
 User = get_user_model()
 
@@ -75,17 +77,22 @@ class QgisFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Pull the file
-        response = self.client.get(
-            '/api/v1/files/{}/file.txt/'.format(self.project1.id))
+        response = self.client.get(f'/api/v1/files/{self.project1.id}/file.txt/')
+
+        self.assertIsInstance(response, HttpResponseRedirect)
+
+        response = requests.get(response.url, stream=True)
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.filename, 'file.txt')
+        self.assertEqual(get_filename(response), 'file.txt')
 
         temp_file = tempfile.NamedTemporaryFile()
 
         with open(temp_file.name, 'wb') as f:
-            for _ in response.streaming_content:
-                f.write(_)
+            for chunk in response.iter_content():
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
+
         self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
 
     def test_push_download_file_with_path(self):
@@ -103,17 +110,22 @@ class QgisFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Pull the file
-        response = self.client.get(
-            '/api/v1/files/{}/foo/bar/file.txt/'.format(self.project1.id))
+        response = self.client.get(f'/api/v1/files/{self.project1.id}/foo/bar/file.txt/')
+
+        self.assertIsInstance(response, HttpResponseRedirect)
+
+        response = requests.get(response.url, stream=True)
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.filename, 'foo/bar/file.txt')
+        self.assertEqual(get_filename(response), 'foo/bar/file.txt')
 
         temp_file = tempfile.NamedTemporaryFile()
 
         with open(temp_file.name, 'wb') as f:
-            for _ in response.streaming_content:
-                f.write(_)
+            for chunk in response.iter_content():
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
+
         self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
 
     def test_push_list_file(self):
@@ -265,17 +277,21 @@ class QgisFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Pull the last file (without version parameter)
-        response = self.client.get(
-            '/api/v1/files/{}/file.txt/'.format(self.project1.id))
+        response = self.client.get(f'/api/v1/files/{self.project1.id}/file.txt/')
+
+        self.assertIsInstance(response, HttpResponseRedirect)
+
+        response = requests.get(response.url, stream=True)
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.filename, 'file.txt')
+        self.assertEqual(get_filename(response), 'file.txt')
 
         temp_file = tempfile.NamedTemporaryFile()
 
         with open(temp_file.name, 'wb') as f:
-            for _ in response.streaming_content:
-                f.write(_)
+            for chunk in response.iter_content():
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
 
         self.assertFalse(
             filecmp.cmp(temp_file.name, testdata_path('file.txt')))
@@ -292,35 +308,45 @@ class QgisFileTestCase(APITransactionTestCase):
 
         # Pull the oldest version
         response = self.client.get(
-            '/api/v1/files/{}/file.txt/'.format(self.project1.id),
+            f'/api/v1/files/{self.project1.id}/file.txt/',
             {"version": versions[0]['version_id']}
         )
 
+        self.assertIsInstance(response, HttpResponseRedirect)
+
+        response = requests.get(response.url, stream=True)
+
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.filename, 'file.txt')
+        self.assertEqual(get_filename(response), 'file.txt')
 
         temp_file = tempfile.NamedTemporaryFile()
 
         with open(temp_file.name, 'wb') as f:
-            for _ in response.streaming_content:
-                f.write(_)
+            for chunk in response.iter_content():
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
 
         self.assertTrue(filecmp.cmp(temp_file.name, testdata_path('file.txt')))
 
         # Pull the newest version
         response = self.client.get(
-            '/api/v1/files/{}/file.txt/'.format(self.project1.id),
+            f'/api/v1/files/{self.project1.id}/file.txt/',
             {"version": versions[1]['version_id']}
         )
 
+        self.assertIsInstance(response, HttpResponseRedirect)
+
+        response = requests.get(response.url, stream=True)
+
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.filename, 'file.txt')
+        self.assertEqual(get_filename(response), 'file.txt')
 
         temp_file = tempfile.NamedTemporaryFile()
 
         with open(temp_file.name, 'wb') as f:
-            for _ in response.streaming_content:
-                f.write(_)
+            for chunk in response.iter_content():
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
 
         self.assertTrue(
             filecmp.cmp(temp_file.name, testdata_path('file2.txt')))

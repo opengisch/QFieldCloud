@@ -1,8 +1,6 @@
 
 from pathlib import PurePath
-from django.core.files.base import ContentFile
-from django.http import FileResponse
-from django.core.exceptions import ObjectDoesNotExist
+from django.http.response import HttpResponseRedirect
 
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
@@ -111,17 +109,18 @@ class DownloadPushDeleteFileView(views.APIView):
             version = self.request.query_params['version']
             extra_args['VersionId'] = version
 
-        bucket = utils.get_s3_bucket()
-
         filekey = utils.safe_join(
             'projects/{}/files/'.format(projectid), filename)
-        return_file = ContentFile(b'')
-        bucket.download_fileobj(filekey, return_file, extra_args)
 
-        return FileResponse(
-            return_file.open(),
-            as_attachment=True,
-            filename=filename)
+        url = utils.get_s3_client().generate_presigned_url('get_object', Params={
+            **extra_args,
+            'Key': filekey,
+            'Bucket': utils.get_s3_bucket().name,
+            'ResponseContentType': 'application/force-download',
+            'ResponseContentDisposition': f'attachment;filename="{filename}"',
+        }, ExpiresIn=60, HttpMethod='GET')
+
+        return HttpResponseRedirect(url)
 
     def post(self, request, projectid, filename, format=None):
 

@@ -1,7 +1,9 @@
 import os
 import tempfile
 import time
+from django.http.response import HttpResponseRedirect
 import psycopg2
+import requests
 
 from django.contrib.auth import get_user_model
 
@@ -192,16 +194,22 @@ class QfieldFileTestCase(APITransactionTestCase):
                 '/api/v1/qfield-files/export/{}/'.format(self.project1.id),
             )
             if response.json()['status'] == 'STATUS_EXPORTED':
-                response = self.client.get(
-                    '/api/v1/qfield-files/{}/project_qfield.qgs/'.format(
-                        self.project1.id),
-                )
+                response = self.client.get(f'/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/')
+
+                self.assertIsInstance(response, HttpResponseRedirect)
+
                 temp_dir = tempfile.mkdtemp()
                 local_file = os.path.join(temp_dir, 'project.qgs')
 
-                with open(local_file, 'wb') as f:
-                    for chunk in response.streaming_content:
-                        f.write(chunk)
+                # We cannot use the self.client HTTP client, since it does not support
+                # requests outside the current Django App
+                # Using the rest_api_framework.RequestsClient is not much better, so better
+                # use the `requests` module
+
+                with requests.get(response.url, stream=True) as r:
+                    with open(local_file, 'wb') as f:
+                        for chunk in r.iter_content():
+                            f.write(chunk)
 
                 with open(local_file, 'r') as f:
                     self.assertEqual(
@@ -296,16 +304,21 @@ class QfieldFileTestCase(APITransactionTestCase):
             )
 
             if response.json()['status'] == 'STATUS_EXPORTED':
-                response = self.client.get(
-                    '/api/v1/qfield-files/{}/project_qfield.qgs/'.format(
-                        self.project1.id),
-                )
+                response = self.client.get(f'/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/')
+
+                self.assertIsInstance(response, HttpResponseRedirect)
+
                 temp_dir = tempfile.mkdtemp()
                 local_file = os.path.join(temp_dir, 'project.qgs')
 
-                with open(local_file, 'wb') as f:
-                    for chunk in response.streaming_content:
-                        f.write(chunk)
+                # We cannot use the self.client HTTP client, since it does not support
+                # requests outside the current Django App
+                # Using the rest_api_framework.RequestsClient is not much better, so better
+                # use the `requests` module
+                with requests.get(response.url, stream=True) as r:
+                    with open(local_file, 'wb') as f:
+                        for chunk in r.iter_content():
+                            f.write(chunk)
 
                 with open(local_file, 'r') as f:
                     for line in f:

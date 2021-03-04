@@ -4,6 +4,7 @@ from pathlib import PurePath
 from django.db.models import Q
 from django.http import FileResponse
 from django.core.files.base import ContentFile
+from django.http.response import HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -154,16 +155,14 @@ class DownloadFileView(views.APIView):
             raise exceptions.InvalidJobError(
                 'Project files have not been exported for the provided project id')
 
-        # Obtain the bucket object
-        bucket = utils.get_s3_bucket()
-
         filekey = utils.safe_join(
             'projects/{}/export/'.format(projectid), filename)
 
-        return_file = ContentFile(b'')
-        bucket.download_fileobj(filekey, return_file)
+        url = utils.get_s3_client().generate_presigned_url('get_object', Params={
+            'Key': filekey,
+            'Bucket': utils.get_s3_bucket().name,
+            'ResponseContentType': 'application/force-download',
+            'ResponseContentDisposition': f'attachment;filename="{filename}"',
+        }, ExpiresIn=60, HttpMethod='GET')
 
-        return FileResponse(
-            return_file.open(),
-            as_attachment=True,
-            filename=filename)
+        return HttpResponseRedirect(url)
