@@ -61,8 +61,8 @@
     | admin    | The owner of a project is always admin of the project. He can add and remove collaborators |
     | manager  | Can add or remove collaborators                                                            |
     | editor   | Can edit data                                                                              |
-    | reporter | Can only insert data (no update nor delete). (Don't have to be a collaborator?)            |
-    | reader   | Can read data. (Don't have to be a collaborator?)                                          |
+    | reporter | Can only insert data (no update nor delete).                                               |
+    | reader   | Can read data.                                                                             |
 *** OrganizationMember
 **** Roles
     A higher role always include also the lowest ones
