@@ -146,6 +146,8 @@ def can_get_project(user, project):
         return True
     if _is_project_collaborator_role_reporter(user, project):
         return True
+    if _is_project_collaborator_role_reader(user, project):
+        return True
     return False
 
 
