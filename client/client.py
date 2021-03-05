@@ -367,11 +367,43 @@ def upload_deltafile(token, project_id, delta_file):
         print(f'Deltafile "{delta_file}" uploaded')
 
     # Trigger deltafile apply
-    _ = cloud_request('POST', f'deltas/{project_id}', token=token)
+    _ = cloud_request('POST', f'deltas/apply/{project_id}', token=token)
     print('Deltafile application triggered')
 
     while True:
         resp = cloud_request('GET', f'deltas/{project_id}/{deltas["id"]}', token=token, exit_on_error=False)
+
+        if not resp.ok:
+            print(f'{resp.request.method} {resp.url} got HTTP {resp.status_code}')
+            sleep(1)
+            continue
+
+        payload = resp.json()
+        statuses = set()
+        for delta in payload:
+            statuses.add(delta['status'].upper())
+
+        print(f'Delta statuses: {statuses}')
+
+        if statuses.issubset({'STATUS_APPLIED', 'STATUS_CONFLICT', 'STATUS_ERROR'}):
+            return
+
+
+@cli.command()
+@click.argument('project_id')
+@click.argument('delta_id', required=False)
+@click.argument('token', envvar='QFIELDCLOUD_TOKEN', type=str)
+def apply_deltas(token, project_id, delta_id):
+    _ = cloud_request('POST', f'deltas/apply/{project_id}', token=token)
+    print('Deltafile application triggered')
+
+    while True:
+        if delta_id:
+            url = f'deltas/{project_id}/{delta_id}'
+        else:
+            url = f'deltas/{project_id}/'
+
+        resp = cloud_request('GET', url, token=token, exit_on_error=False)
 
         if not resp.ok:
             print(f'{resp.request.method} {resp.url} got HTTP {resp.status_code}')
