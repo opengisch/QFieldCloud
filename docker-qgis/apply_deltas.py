@@ -359,11 +359,11 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
             delta = inverse_delta(delta) if inverse else delta
 
             if delta['method'] == str(DeltaMethod.CREATE):
-                create_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
+                feature = create_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             elif delta['method'] == str(DeltaMethod.PATCH):
-                patch_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
+                feature = patch_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             elif delta['method'] == str(DeltaMethod.DELETE):
-                delete_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
+                feature = delete_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
             else:
                 raise DeltaException('Unknown delta method')
 
@@ -371,6 +371,16 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
                 raise DeltaException('Failed to commit changes')
 
             logger.info(f'Successfully applied delta on layer "{layer_id}"')
+
+            feature_pk = delta.get('sourcePk')
+            if feature.isValid():
+                _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
+                modified_feature_pk = feature.attribute(pk_attr_name)
+
+                if modified_feature_pk and modified_feature_pk != str(feature_pk):
+                    logger.warning(f'The modified feature pk valued does not match "sourcePk" in the delta in "{layer_id}": sourcePk={feature_pk} modifiedFeaturePk={modified_feature_pk}')
+            else:
+                logger.warning(f'The returned modified feature is invalid in "{layer_id}"')
 
             delta_log.append({
                 'msg': 'Successfully applied delta!',
@@ -380,7 +390,7 @@ def apply_deltas_without_transaction(project: QgsProject, delta_file: DeltaFile,
                 'layer_id': layer_id,
                 'delta_index': idx,
                 'delta_id': delta['uuid'],
-                'feature_pk': delta.get('sourcePk'),
+                'feature_pk': feature_pk,
                 'conflicts': None,
                 'provider_errors': None,
                 'method': delta['method'],
@@ -799,6 +809,8 @@ def create_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: boo
     if not layer.addFeature(new_feat):
         raise DeltaException('Unable to add new feature', provider_errors=layer.dataProvider().errors())
 
+    return new_feat
+
 
 def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool):
     """Patches a feature in layer
@@ -862,6 +874,8 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
         if not layer.changeAttributeValue(old_feature.id(), fields.indexOf(attr_name), new_attr_value, old_attrs[attr_name], True):
             raise DeltaException('Unable to change attribute "{}"'.format(attr_name), provider_errors=layer.dataProvider().errors())
 
+    return layer.getFeature(old_feature.id())
+
 
 def delete_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool) -> None:
     """Deletes a feature from layer
@@ -890,6 +904,8 @@ def delete_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: boo
 
     if not layer.deleteFeature(old_feature.id()):
         raise DeltaException('Unable delete feature')
+
+    return old_feature
 
 
 def compare_feature(feature: QgsFeature, delta_feature: DeltaFeature, is_delta_subset: bool = False) -> List[str]:
