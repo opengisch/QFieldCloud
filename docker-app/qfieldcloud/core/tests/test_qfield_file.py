@@ -372,10 +372,12 @@ class QfieldFileTestCase(APITransactionTestCase):
                     '/api/v1/qfield-files/{}/'.format(self.project1.id),
                 )
 
-                self.assertTrue(
-                    response.json()['layers']['points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c']['valid'])
-                self.assertFalse(
-                    response.json()['layers']['surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16']['valid'])
+                payload = response.json()
+                layer_ok = payload['layers']['points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c']
+                layer_failed = payload['layers']['surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16']
+
+                self.assertTrue(layer_ok['valid'], layer_ok['status'])
+                self.assertFalse(layer_failed['valid'], layer_failed['status'])
                 return
 
         self.fail("Worker didn't finish")

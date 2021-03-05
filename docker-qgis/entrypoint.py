@@ -183,9 +183,28 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     # Check if the layers are valid (i.e. if the datasources are available)
     layers_check = {}
     for layer in layers.values():
+        is_valid = True
+        status = 'ok'
+        if layer:
+            if layer.dataProvider():
+                if not layer.dataProvider().isValid():
+                    is_valid = False
+                    status = 'invalid_dataprovider'
+                # there might be another reason why the layer is not valid, other than the data provider
+                elif not layer.isValid():
+                    is_valid = False
+                    status = 'invalid_layer'
+            else:
+                is_valid = False
+                status = 'missing_dataprovider'
+        else:
+            is_valid = False
+            status = 'missing_layer'
+
         layers_check[layer.id()] = {
             'name': layer.name(),
-            'valid': layer.dataProvider().isValid()
+            'valid': is_valid,
+            'status': status,
         }
 
     with open('/io/exportlog.json', 'w') as f:
