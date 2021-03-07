@@ -9,25 +9,61 @@ from qfieldcloud.core.models import (
     Organization, Delta, User)
 
 
-def get_available_projects(user, include_public=False):
+def get_available_projects(user, owner, include_public=False, include_memberships=False):
     """Return a queryset with all projects that are available to the `user`.
-    The param `user` is meant to be the user that did the request"""
+    The param `user` is meant to be the user that did the request and the `owner`
+    is the user that has access to them.
+    - owned `owner` or organization he belongs to and collaborated with `user`
+    """
 
-    queryset = (Project.objects.filter(
-        owner=user) | Project.objects.filter(
-            collaborators__in=ProjectCollaborator.objects.filter(
-                collaborator=user))).distinct()
+    filters = {}
+    if user != owner:
+        filters['private'] = False
+
+    # 1) owned by `owner` (public only if user!=owner)
+    queryset = Project.objects.filter(
+        owner=owner,
+        **filters).distinct()
+
+    if not owner.is_organization:
+        # 2) owned by anyone, but `owner` is a collaborator (public only if user!=owner)
+        queryset |= Project.objects.filter(
+            collaborators__in=ProjectCollaborator.objects.filter(collaborator=owner),
+            **filters).distinct()
+
+    if include_memberships:
+        if owner.is_organization:
+            organization_filters = {**filters}
+
+            # has `user` as a member, then include also private projects
+            if OrganizationMember.objects.filter(organization=owner, member=user).exists():
+                organization_filters.pop('private', None)
+            # has `user` as an owner, then include also private projects
+            elif Organization.objects.filter(id=owner.id, organization_owner=user).exists():
+                organization_filters.pop('private', None)
+
+            # 3) owned by `owner` which is an organization
+            queryset |= Project.objects.filter(
+                owner=owner,
+                **organization_filters).distinct()
+
+            # 4) owned by `owner` which is an organization and has `user` as a collanorator
+            queryset |=Project.objects.filter(
+                owner=owner,
+                collaborators__in=ProjectCollaborator.objects.filter(collaborator=user)).distinct()
+        else:
+            # 5) owned by organizations where `owner` is a member (public only if user!=owner)
+            membership_organizations = OrganizationMember.objects.filter(member=owner).values('organization')
+            queryset |= Project.objects.filter(owner__in=membership_organizations).distinct()
+
+            # 6) owned by organizations where `owner` is the owner (public only if user!=owner)
+            owned_organizations = Organization.objects.filter(organization_owner=owner).distinct()
+            queryset |= Project.objects.filter(owner__in=owned_organizations).distinct()
 
     if include_public:
         queryset |= Project.objects.filter(private=False).distinct()
 
-    # Get all the organizations where the `user` is admin
-    org_admin = OrganizationMember.objects.filter(
-        member=user,
-        role=OrganizationMember.ROLE_ADMIN).values('organization')
-
     # Add all the projects of the organizations where `user` is admin
-    queryset |= Project.objects.filter(owner__in=org_admin).distinct()
     queryset = queryset.annotate(collaborators__count=Count('collaborators'))
     queryset = queryset.annotate(deltas__count=Count('deltas'))
     queryset = queryset.annotate(collaborators__role=Case(
@@ -42,38 +78,6 @@ def get_available_projects(user, include_public=False):
     ))
 
     queryset.order_by('owner__username', 'name')
-
-    return queryset
-
-
-def get_projects_of_owner(user, owner):
-    """Return a queryset with all the projects of `owner` that
-    are visible to `user`. The param `user` is meant to be the
-    user that did the request"""
-
-    # If the user is the owner return all projects
-    if owner == user:
-        return Project.objects.filter(owner=owner)
-
-    # If the user is owner of the organitazion return all projects
-    if type(owner) == Organization and owner.organization_owner == user:
-        return Project.objects.filter(owner=owner)
-
-    # If the user is an admin of the organization return all projects
-    if OrganizationMember.objects.filter(
-            organization=owner,
-            member=user,
-            role=OrganizationMember.ROLE_ADMIN).exists():
-        return Project.objects.filter(owner=owner)
-
-    # Get all the project where `user` is a collaborator
-    queryset = (Project.objects.filter(
-        owner=owner,
-        collaborators__in=ProjectCollaborator.objects.filter(
-            collaborator=user))).distinct()
-
-    # Add all the public projects of `owner`
-    queryset |= Project.objects.filter(owner=owner, private=False).distinct()
 
     return queryset
 

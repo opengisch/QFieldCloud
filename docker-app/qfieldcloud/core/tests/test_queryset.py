@@ -95,7 +95,7 @@ class QuerysetTestCase(APITestCase):
     def test_available_projects(self):
 
         queryset = querysets_utils.get_available_projects(
-            self.user1, include_public=False)
+            self.user1, self.user1, include_public=False)
 
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.project1 in queryset)
@@ -104,7 +104,7 @@ class QuerysetTestCase(APITestCase):
     def test_available_projects_with_organization_admin(self):
 
         queryset = querysets_utils.get_available_projects(
-            self.user1, include_public=False)
+            self.user1, self.user1, include_public=False)
 
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.project1 in queryset)
@@ -117,7 +117,7 @@ class QuerysetTestCase(APITestCase):
             role=OrganizationMember.ROLE_ADMIN)
 
         queryset = querysets_utils.get_available_projects(
-            self.user1, include_public=False)
+            self.user1, self.user1, include_memberships=True)
 
         self.assertEqual(len(queryset), 4)
         self.assertTrue(self.project1 in queryset)
@@ -128,7 +128,7 @@ class QuerysetTestCase(APITestCase):
     def test_available_and_public_projects(self):
 
         queryset = querysets_utils.get_available_projects(
-            self.user1, include_public=True)
+            self.user1, self.user1, include_public=True)
 
         self.assertEqual(len(queryset), 4)
         self.assertTrue(self.project1 in queryset)
@@ -138,7 +138,7 @@ class QuerysetTestCase(APITestCase):
 
     def test_projects_of_owner_same_as_user(self):
 
-        queryset = querysets_utils.get_projects_of_owner(
+        queryset = querysets_utils.get_available_projects(
             self.user1, self.user1)
 
         self.assertEqual(len(queryset), 2)
@@ -147,7 +147,7 @@ class QuerysetTestCase(APITestCase):
 
     def test_projects_of_owner_another_user(self):
 
-        queryset = querysets_utils.get_projects_of_owner(
+        queryset = querysets_utils.get_available_projects(
             self.user1, self.user2)
 
         # user1 is not a collaborator of any projects so only
@@ -157,8 +157,8 @@ class QuerysetTestCase(APITestCase):
 
     def test_projects_of_owner_organization(self):
 
-        queryset = querysets_utils.get_projects_of_owner(
-            self.user2, self.organization1)
+        queryset = querysets_utils.get_available_projects(
+            self.user2, self.organization1, include_memberships=True)
 
         # user2 is not a collaborator of any projects so only
         # public projects should be available
@@ -171,16 +171,15 @@ class QuerysetTestCase(APITestCase):
             collaborator=self.user2,
             role=ProjectCollaborator.ROLE_MANAGER)
 
-        queryset = querysets_utils.get_projects_of_owner(
-            self.user2, self.organization1)
-
+        queryset = querysets_utils.get_available_projects(
+            self.user2, self.organization1, include_memberships=True)
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.project4 in queryset)
         self.assertTrue(self.project5 in queryset)
 
     def test_projects_of_owner_organization_for_admin_member(self):
 
-        queryset = querysets_utils.get_projects_of_owner(
+        queryset = querysets_utils.get_available_projects(
             self.user2, self.organization1)
 
         # user2 is not member of the organization so only
@@ -194,17 +193,16 @@ class QuerysetTestCase(APITestCase):
             member=self.user2,
             role=OrganizationMember.ROLE_ADMIN)
 
-        queryset = querysets_utils.get_projects_of_owner(
-            self.user2, self.organization1)
+        queryset = querysets_utils.get_available_projects(
+            self.user2, self.organization1, include_memberships=True)
 
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.project4 in queryset)
         self.assertTrue(self.project5 in queryset)
 
     def test_projects_of_owner_for_organization_owner(self):
-
-        queryset = querysets_utils.get_projects_of_owner(
-            self.user1, self.organization1)
+        queryset = querysets_utils.get_available_projects(
+            self.user1, self.organization1, include_memberships=True)
 
         # user1 is owner of the organization so it should see
         # all the projects of the organization

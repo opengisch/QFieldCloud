@@ -95,7 +95,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             include_public = True
 
         return querysets_utils.get_available_projects(
-            self.request.user, include_public)
+            self.request.user, self.request.user, include_public)
 
     def destroy(self, request, projectid):
         # Delete files from storage
