@@ -48,7 +48,7 @@ def get_available_projects(user, owner, include_public=False, include_membership
                 **organization_filters).distinct()
 
             # 4) owned by `owner` which is an organization and has `user` as a collanorator
-            queryset |=Project.objects.filter(
+            queryset |= Project.objects.filter(
                 owner=owner,
                 collaborators__in=ProjectCollaborator.objects.filter(collaborator=user)).distinct()
         else:
