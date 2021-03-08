@@ -220,6 +220,11 @@ class Project(models.Model):
     The owner of a project is an Organization.
     """
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['owner', 'name'], name='project_owner_name_uniq')
+        ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
         max_length=255,
