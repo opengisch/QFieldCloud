@@ -63,6 +63,14 @@
     #+begin_src sh
       docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
     #+end_src
+*** Code style
+    Code style done with precommit
+    #+begin_src sh
+      pip install pre-commit
+      # install pre-commit hook
+      pre-commit install
+    #+end_src
+
 ** Deployment
 *** Servers
     QFieldCloud is published on two servers:
@@ -153,4 +161,3 @@
    - [[https://qfield.cloud][QField Cloud "marketing" page]]
    - [[https://app.qfield.cloud/swagger/][API Swagger doc]]
    - [[http://status.qfield.cloud/][API status page]]
-

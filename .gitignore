@@ -6,4 +6,3 @@ __pycache__/
 .vscode
 .env
 docker-compose.override.yml
-

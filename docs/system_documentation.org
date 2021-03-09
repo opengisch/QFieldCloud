@@ -201,7 +201,7 @@
         =GET ​/files​/{projectid}​/= and downloads all the files
         one after the other with the API =GET
         /files​/{projectid}​/{filename}​/=
-*** Offline data file 
+*** Offline data file
     - Alice creates a QGIS project with a layer using a local
       geopackage as datasource
     - She configures the layer action in QFieldSync as OFFLINE

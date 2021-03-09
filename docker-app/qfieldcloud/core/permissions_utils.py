@@ -1,10 +1,13 @@
 from typing import Union
-from django.contrib.auth import get_user_model
 
+from django.contrib.auth import get_user_model
 from qfieldcloud.core.models import (
-    Project, User as QfcUser,
-    ProjectCollaborator, OrganizationMember,
-    Organization)
+    Organization,
+    OrganizationMember,
+    Project,
+    ProjectCollaborator,
+)
+from qfieldcloud.core.models import User as QfcUser
 
 User = get_user_model()
 
@@ -19,37 +22,32 @@ def _is_project_collaborator_role_admin(user, project):
         return True
 
     return ProjectCollaborator.objects.filter(
-        project=project,
-        collaborator=user,
-        role=ProjectCollaborator.ROLE_ADMIN).exists()
+        project=project, collaborator=user, role=ProjectCollaborator.ROLE_ADMIN
+    ).exists()
 
 
 def _is_project_collaborator_role_manager(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project,
-        collaborator=user,
-        role=ProjectCollaborator.ROLE_MANAGER).exists()
+        project=project, collaborator=user, role=ProjectCollaborator.ROLE_MANAGER
+    ).exists()
 
 
 def _is_project_collaborator_role_editor(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project,
-        collaborator=user,
-        role=ProjectCollaborator.ROLE_EDITOR).exists()
+        project=project, collaborator=user, role=ProjectCollaborator.ROLE_EDITOR
+    ).exists()
 
 
 def _is_project_collaborator_role_reporter(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project,
-        collaborator=user,
-        role=ProjectCollaborator.ROLE_REPORTER).exists()
+        project=project, collaborator=user, role=ProjectCollaborator.ROLE_REPORTER
+    ).exists()
 
 
 def _is_project_collaborator_role_reader(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project,
-        collaborator=user,
-        role=ProjectCollaborator.ROLE_READER).exists()
+        project=project, collaborator=user, role=ProjectCollaborator.ROLE_READER
+    ).exists()
 
 
 def _is_organization_owner(user, organization):
@@ -59,8 +57,7 @@ def _is_organization_owner(user, organization):
         # To be sure we didn't receive a User object instead of an
         # Organization one
         if type(organization) == User:
-            organization = Organization.objects.get(
-                username=organization.username)
+            organization = Organization.objects.get(username=organization.username)
         return organization.organization_owner == user
     return False
 
@@ -71,16 +68,14 @@ def _is_organization_member_role_admin(user, organization):
         return True
 
     return OrganizationMember.objects.filter(
-        organization=organization,
-        member=user,
-        role=OrganizationMember.ROLE_ADMIN).exists()
+        organization=organization, member=user, role=OrganizationMember.ROLE_ADMIN
+    ).exists()
 
 
 def _is_organization_member_role_member(user, organization):
     return OrganizationMember.objects.filter(
-        organization=organization,
-        member=user,
-        role=OrganizationMember.ROLE_MEMBER).exists()
+        organization=organization, member=user, role=OrganizationMember.ROLE_MEMBER
+    ).exists()
 
 
 def get_param_from_request(request, param):
@@ -89,11 +84,13 @@ def get_param_from_request(request, param):
 
     result = request.data.get(param, None)
     if not result:
-        result = request.parser_context['kwargs'].get(param, None)
+        result = request.parser_context["kwargs"].get(param, None)
     return result
 
 
-def can_create_project(user: User, organization: Union[QfcUser, Organization] = None) -> bool:
+def can_create_project(
+    user: User, organization: Union[QfcUser, Organization] = None
+) -> bool:
     """Return True if the `user` can create a project. Accepts additional
     `organizaiton` to check whether the user has permissions to do so on
     that organization. Return False otherwise."""

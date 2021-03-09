@@ -28,7 +28,7 @@
    #+end_src
    By default the new created project is a private project. To create
    a public project you can use the =--public= flag:
-   
+
    #+begin_src sh
      python client.py create-project proba demo_user "demo project" --private
    #+end_src
@@ -78,4 +78,3 @@
    #+begin_src sh
      python client.py files 68ea7981-970f-4c57-9c73-04f7ba2fab2c
    #+end_src
-

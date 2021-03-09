@@ -19,7 +19,7 @@ deltas:
         fid: b938698a-73aa-4f1e-aacc-734cb3754284
         layerId: 220b14d8-de1a-4557-919b-cc59b1e01355_layer2
         method: delete
-        # if we already add a custom `fid` column that is `uuid`, it is possible to add another column `updated_at` 
+        # if we already add a custom `fid` column that is `uuid`, it is possible to add another column `updated_at`
         # and check the date only instead of the whole feature
         old:
             geometry: POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))

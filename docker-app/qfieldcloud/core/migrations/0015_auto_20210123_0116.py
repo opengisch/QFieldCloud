@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0014_exportation_output'),
+        ("core", "0014_exportation_output"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='useraccount',
-            name='bio',
-            field=models.CharField(default='', max_length=255),
+            model_name="useraccount",
+            name="bio",
+            field=models.CharField(default="", max_length=255),
         ),
         migrations.AddField(
-            model_name='useraccount',
-            name='is_email_public',
+            model_name="useraccount",
+            name="is_email_public",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='useraccount',
-            name='location',
-            field=models.CharField(default='', max_length=255),
+            model_name="useraccount",
+            name="location",
+            field=models.CharField(default="", max_length=255),
         ),
         migrations.AddField(
-            model_name='useraccount',
-            name='twitter',
-            field=models.CharField(default='', max_length=255),
+            model_name="useraccount",
+            name="twitter",
+            field=models.CharField(default="", max_length=255),
         ),
         migrations.AddField(
-            model_name='useraccount',
-            name='workplace',
-            field=models.CharField(default='', max_length=255),
+            model_name="useraccount",
+            name="workplace",
+            field=models.CharField(default="", max_length=255),
         ),
     ]

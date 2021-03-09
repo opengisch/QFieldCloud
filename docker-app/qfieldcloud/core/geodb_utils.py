@@ -1,6 +1,6 @@
 import os
-import psycopg2
 
+import psycopg2
 from psycopg2 import sql
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
@@ -10,20 +10,21 @@ class GeodbConnection(object):
         pass
 
     def __enter__(self):
-        host = os.environ.get('GEODB_HOST')
-        port = os.environ.get('GEODB_PORT')
+        host = os.environ.get("GEODB_HOST")
+        port = os.environ.get("GEODB_PORT")
 
         # If geodb is running on the same machine we connect trough
         # the internal docker net
-        if host == 'geodb':
+        if host == "geodb":
             port = 5432
 
         self.connection = psycopg2.connect(
-            dbname=os.environ.get('GEODB_DB'),
-            user=os.environ.get('GEODB_USER'),
-            password=os.environ.get('GEODB_PASSWORD'),
+            dbname=os.environ.get("GEODB_DB"),
+            user=os.environ.get("GEODB_USER"),
+            password=os.environ.get("GEODB_PASSWORD"),
             host=host,
-            port=port)
+            port=port,
+        )
 
         return self.connection
 
@@ -44,7 +45,7 @@ def geodb_is_running():
 
 
 def create_role_and_db(geodb):
-    """ Create role and db.
+    """Create role and db.
     This function is automatically called when a Geodb object is created
     """
 
@@ -55,8 +56,9 @@ def create_role_and_db(geodb):
 
         cur = conn.cursor()
 
-        cur.execute(sql.SQL(
-            """
+        cur.execute(
+            sql.SQL(
+                """
             CREATE ROLE {} WITH
             LOGIN
             NOSUPERUSER
@@ -66,28 +68,31 @@ def create_role_and_db(geodb):
             NOREPLICATION
             CONNECTION LIMIT 5
             PASSWORD %s;
-            """).format(sql.Identifier(geodb.username)),
-            (geodb.password,)
+            """
+            ).format(sql.Identifier(geodb.username)),
+            (geodb.password,),
         )
 
-        cur.execute(sql.SQL(
-            """
+        cur.execute(
+            sql.SQL(
+                """
             CREATE DATABASE {}
             WITH
             OWNER = %s
             TEMPLATE = template_postgis
             ENCODING = 'UTF8'
             CONNECTION LIMIT = 5;
-            """).format(sql.Identifier(geodb.dbname)),
-            (geodb.username,)
+            """
+            ).format(sql.Identifier(geodb.dbname)),
+            (geodb.username,),
         )
 
     result = {
-        'hostname': geodb.hostname,
-        'port': geodb.port,
-        'username': geodb.username,
-        'dbname': geodb.dbname,
-        'password': geodb.password,
+        "hostname": geodb.hostname,
+        "port": geodb.port,
+        "username": geodb.username,
+        "dbname": geodb.dbname,
+        "password": geodb.password,
     }
     return result
 
@@ -99,16 +104,20 @@ def delete_db_and_role(geodb):
 
         cur = conn.cursor()
 
-        cur.execute(sql.SQL(
-            """
+        cur.execute(
+            sql.SQL(
+                """
             DROP DATABASE IF EXISTS {};
-            """).format(sql.Identifier(geodb.dbname))
+            """
+            ).format(sql.Identifier(geodb.dbname))
         )
 
-        cur.execute(sql.SQL(
-            """
+        cur.execute(
+            sql.SQL(
+                """
             DROP ROLE IF EXISTS {};
-            """).format(sql.Identifier(geodb.username))
+            """
+            ).format(sql.Identifier(geodb.username))
         )
 
 

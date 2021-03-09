@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
+import json
+import logging
 import os
 import tempfile
-import hashlib
-import logging
-import json
-import mock
-import boto3
-
-from pathlib import PurePath, Path
-
-from qgis.core import (
-    QgsProject, QgsOfflineEditing, QgsVectorLayer, QgsMapSettings,
-    QgsApplication)
-from qgis.gui import QgisInterface, QgsMapCanvas
-from qgis.PyQt.QtWidgets import QMainWindow
-from qgis.PyQt.QtCore import QSize
-
-from libqfieldsync.offline_converter import ExportType, OfflineConverter
+from pathlib import Path, PurePath
 
 import apply_deltas
+import boto3
+import mock
+from libqfieldsync.offline_converter import ExportType, OfflineConverter
+from qgis.core import (
+    QgsApplication,
+    QgsMapSettings,
+    QgsOfflineEditing,
+    QgsProject,
+    QgsVectorLayer,
+)
+from qgis.gui import QgisInterface, QgsMapCanvas
+from qgis.PyQt.QtCore import QSize
+from qgis.PyQt.QtWidgets import QMainWindow
 
 # Get environment variables
 STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
@@ -36,10 +37,10 @@ def _get_s3_resource():
     session = boto3.Session(
         aws_access_key_id=STORAGE_ACCESS_KEY_ID,
         aws_secret_access_key=STORAGE_SECRET_ACCESS_KEY,
-        region_name=STORAGE_REGION_NAME
+        region_name=STORAGE_REGION_NAME,
     )
 
-    return session.resource('s3', endpoint_url=STORAGE_ENDPOINT_URL)
+    return session.resource("s3", endpoint_url=STORAGE_ENDPOINT_URL)
 
 
 def _get_s3_bucket():
@@ -70,13 +71,13 @@ def _download_project_directory(projectid):
     bucket = _get_s3_bucket()
 
     # Prefix of the working directory on the Storages
-    working_prefix = '/'.join(['projects', projectid, 'files'])
+    working_prefix = "/".join(["projects", projectid, "files"])
 
     # Create a temporary directory
     tmpdir = tempfile.mkdtemp()
 
     # Create a local working directory
-    working_dir = os.path.join(tmpdir, 'files')
+    working_dir = os.path.join(tmpdir, "files")
     os.mkdir(working_dir)
 
     # Download the files
@@ -99,23 +100,23 @@ def _upload_project_directory(projectid, local_dir):
 
     bucket = _get_s3_bucket()
 
-    export_prefix = '/'.join(['projects', projectid, 'export'])
+    export_prefix = "/".join(["projects", projectid, "export"])
 
     # Remove existing export directory on the storage
     bucket.objects.filter(Prefix=export_prefix).delete()
 
     # Loop recursively in the local export directory
-    for elem in Path(local_dir).rglob('*.*'):
+    for elem in Path(local_dir).rglob("*.*"):
         # Don't upload .qgs~ and .qgz~ files
-        if str(elem).endswith('~'):
+        if str(elem).endswith("~"):
             continue
         # Calculate sha256sum
-        with open(elem, 'rb') as e:
+        with open(elem, "rb") as e:
             sha256sum = _get_sha256sum(e)
 
         # Create the key
-        key = '/'.join([export_prefix, str(elem.relative_to(*elem.parts[:4]))])
-        metadata = {'sha256sum': sha256sum}
+        key = "/".join([export_prefix, str(elem.relative_to(*elem.parts[:4]))])
+        metadata = {"sha256sum": sha256sum}
         bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
@@ -125,34 +126,33 @@ def _upload_delta_modified_files(projectid, local_dir):
 
     bucket = _get_s3_bucket()
 
-    files_prefix = '/'.join(['projects', projectid, 'files'])
+    files_prefix = "/".join(["projects", projectid, "files"])
 
     # Loop recursively in the local files directory
-    for elem in Path(local_dir).rglob('*.*'):
+    for elem in Path(local_dir).rglob("*.*"):
         # Don't upload .qgs~ and .qgz~ files
-        if str(elem).endswith('~'):
+        if str(elem).endswith("~"):
             continue
-        if str(elem).endswith('qfieldcloudbackup'):
+        if str(elem).endswith("qfieldcloudbackup"):
             continue
 
         # Calculate sha256sum
-        with open(elem, 'rb') as e:
+        with open(elem, "rb") as e:
             sha256sum = _get_sha256sum(e)
 
         # Create the key
-        key = '/'.join([files_prefix, str(elem.relative_to(*elem.parts[:4]))])
-        metadata = {'sha256sum': sha256sum}
+        key = "/".join([files_prefix, str(elem.relative_to(*elem.parts[:4]))])
+        metadata = {"sha256sum": sha256sum}
 
         # Check if the file is different on the storage
-        if not bucket.Object(key).metadata.get('Sha256sum', None) == sha256sum:
-            bucket.upload_file(
-                str(elem), key, ExtraArgs={"Metadata": metadata})
+        if not bucket.Object(key).metadata.get("Sha256sum", None) == sha256sum:
+            bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
 def _call_qfieldsync_exporter(project_filepath, export_dir):
     """Call the function of QFieldSync to export a project for QField"""
 
-    argvb = list(map(os.fsencode, ['']))
+    argvb = list(map(os.fsencode, [""]))
     qgis_app = QgsApplication(argvb, True)
     qgis_app.initQgis()
 
@@ -172,8 +172,7 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
         raise FileNotFoundError(project_filepath)
 
     if not project.read(project_filepath):
-        raise Exception(
-            "Unable to open file with QGIS: {}".format(project_filepath))
+        raise Exception("Unable to open file with QGIS: {}".format(project_filepath))
 
     # Set the crs from the original project to the canvas
     # so it will be present in the exported project
@@ -184,30 +183,30 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     layers_check = {}
     for layer in layers.values():
         is_valid = True
-        status = 'ok'
+        status = "ok"
         if layer:
             if layer.dataProvider():
                 if not layer.dataProvider().isValid():
                     is_valid = False
-                    status = 'invalid_dataprovider'
+                    status = "invalid_dataprovider"
                 # there might be another reason why the layer is not valid, other than the data provider
                 elif not layer.isValid():
                     is_valid = False
-                    status = 'invalid_layer'
+                    status = "invalid_layer"
             else:
                 is_valid = False
-                status = 'missing_dataprovider'
+                status = "missing_dataprovider"
         else:
             is_valid = False
-            status = 'missing_layer'
+            status = "missing_layer"
 
         layers_check[layer.id()] = {
-            'name': layer.name(),
-            'valid': is_valid,
-            'status': status,
+            "name": layer.name(),
+            "valid": is_valid,
+            "status": status,
         }
 
-    with open('/io/exportlog.json', 'w') as f:
+    with open("/io/exportlog.json", "w") as f:
         f.write(json.dumps(layers_check))
 
     # Calculate the project extent
@@ -226,7 +225,8 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
 
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
-        project, export_dir, extent, offline_editing, export_type=ExportType.Cloud)
+        project, export_dir, extent, offline_editing, export_type=ExportType.Cloud
+    )
 
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
@@ -242,11 +242,10 @@ def _export_project(args):
 
     tmpdir = _download_project_directory(projectid)
 
-    project_filepath = os.path.join(
-        tmpdir, 'files', project_file)
+    project_filepath = os.path.join(tmpdir, "files", project_file)
 
     # create an export directory inside the tempdir
-    export_dir = os.path.join(tmpdir, 'export')
+    export_dir = os.path.join(tmpdir, "export")
     os.mkdir(export_dir)
 
     _call_qfieldsync_exporter(project_filepath, export_dir)
@@ -260,55 +259,51 @@ def _apply_delta(args):
     project_file = args.project_file
 
     tmpdir = _download_project_directory(projectid)
-    deltafile = '/io/deltafile.json'
+    deltafile = "/io/deltafile.json"
 
-    project_filepath = os.path.join(
-        tmpdir, 'files', project_file)
+    project_filepath = os.path.join(tmpdir, "files", project_file)
 
     has_errors = apply_deltas.cmd_delta_apply(
-        opts={'project': project_filepath,
-              'delta_file': deltafile,
-              'delta_log': '/io/deltalog.json',
-              'inverse': False,
-              'overwrite_conflicts': args.overwrite_conflicts,
-              'transaction': False})
+        opts={
+            "project": project_filepath,
+            "delta_file": deltafile,
+            "delta_log": "/io/deltalog.json",
+            "inverse": False,
+            "overwrite_conflicts": args.overwrite_conflicts,
+            "transaction": False,
+        }
+    )
 
-    _upload_delta_modified_files(
-        projectid, os.path.join(tmpdir, 'files'))
+    _upload_delta_modified_files(projectid, os.path.join(tmpdir, "files"))
 
     exit(int(has_errors))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # Set S3 logging levels
-    logging.getLogger('boto3').setLevel(logging.CRITICAL)
-    logging.getLogger('botocore').setLevel(logging.CRITICAL)
-    logging.getLogger('nose').setLevel(logging.CRITICAL)
-    logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
-    logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+    logging.getLogger("boto3").setLevel(logging.CRITICAL)
+    logging.getLogger("botocore").setLevel(logging.CRITICAL)
+    logging.getLogger("nose").setLevel(logging.CRITICAL)
+    logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
+    logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-    parser = argparse.ArgumentParser(prog='COMMAND')
+    parser = argparse.ArgumentParser(prog="COMMAND")
 
-    subparsers = parser.add_subparsers(dest='cmd')
+    subparsers = parser.add_subparsers(dest="cmd")
 
-    parser_export = subparsers.add_parser('export', help='Export a project')
-    parser_export.add_argument('projectid', type=str, help='projectid')
-    parser_export.add_argument(
-        'project_file', type=str, help='QGIS project file path')
+    parser_export = subparsers.add_parser("export", help="Export a project")
+    parser_export.add_argument("projectid", type=str, help="projectid")
+    parser_export.add_argument("project_file", type=str, help="QGIS project file path")
     parser_export.set_defaults(func=_export_project)
 
-    parser_delta = subparsers.add_parser(
-        'apply-delta', help='Apply deltafile')
-    parser_delta.add_argument('projectid', type=str, help='projectid')
+    parser_delta = subparsers.add_parser("apply-delta", help="Apply deltafile")
+    parser_delta.add_argument("projectid", type=str, help="projectid")
+    parser_delta.add_argument("project_file", type=str, help="QGIS project file path")
     parser_delta.add_argument(
-        'project_file', type=str, help='QGIS project file path')
-    parser_delta.add_argument(
-        '--overwrite-conflicts',
-        dest='overwrite_conflicts',
-        action='store_true')
-    parser_delta.set_defaults(
-        func=_apply_delta)
+        "--overwrite-conflicts", dest="overwrite_conflicts", action="store_true"
+    )
+    parser_delta.set_defaults(func=_apply_delta)
 
     args = parser.parse_args()
     args.func(args)
