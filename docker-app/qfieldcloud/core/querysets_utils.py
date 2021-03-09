@@ -104,7 +104,7 @@ def get_all_public_projects():
     return Project.objects.filter(private=False)
 
 
-def get_deltas_of_project(project):
+def get_project_deltas(project):
     """Return a queryset of all available deltas of a specific project."""
     return Delta.objects.filter(project=project)
 
