@@ -6,7 +6,7 @@
 
 ** Create a new user
    #+begin_src sh
-     python client.py register-user giulia password1234
+     python client.py register-user giulia password1234 giulia@example.com
    #+end_src
 
 ** Login with an existing user
@@ -49,23 +49,23 @@
 ** Push a file
    The project id should be passed to the command
    #+begin_src sh
-     python client.py push-file 68ea7981-970f-4c57-9c73-04f7ba2fab2c /path/of/local/file.txt relative/path/of/remote/file.txt
+     python client.py upload-file 68ea7981-970f-4c57-9c73-04f7ba2fab2c /path/of/local/local_name.txt owner/project/files/remote_name.txt
    #+end_src
 
 ** Push a directory
    Pushes a directory and all its contents to the project with specified id. By default, the command will upload all the available files recursively. This behavior can be limited by passing `--filter-glob` and `--no-recursive` CLI options.
    #+begin_src sh
-     python client.py push-files 68ea7981-970f-4c57-9c73-04f7ba2fab2c /path/of/local/project
+     python client.py upload-files 68ea7981-970f-4c57-9c73-04f7ba2fab2c /path/of/local/project
    #+end_src
 
 ** Pull a file
    #+begin_src sh
-     python client.py pull-file 68ea7981-970f-4c57-9c73-04f7ba2fab2c relative/path/of/remote/file.txt local_file.txt
+     python client.py download-file 68ea7981-970f-4c57-9c73-04f7ba2fab2c relative/path/of/remote/file.txt local_file.txt
    #+end_src
 
    To download a specific version of the file
    #+begin_src sh
-     python client.py pull-file 68ea7981-970f-4c57-9c73-04f7ba2fab2c hello.txt hello.txt --version 2020-05-11T06:01:42.493157Z
+     python client.py download-file 68ea7981-970f-4c57-9c73-04f7ba2fab2c hello.txt hello.txt --version 2020-05-11T06:01:42.493157Z
    #+end_src
 
 ** Delete a file
@@ -76,6 +76,6 @@
 
 ** List files of a project
    #+begin_src sh
-     python client.py list-files 68ea7981-970f-4c57-9c73-04f7ba2fab2c
+     python client.py files 68ea7981-970f-4c57-9c73-04f7ba2fab2c
    #+end_src
 
