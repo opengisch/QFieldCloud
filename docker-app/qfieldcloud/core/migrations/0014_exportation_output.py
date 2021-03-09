@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0013_remove_exportation_output'),
+        ("core", "0013_remove_exportation_output"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='exportation',
-            name='output',
+            model_name="exportation",
+            name="output",
             field=models.TextField(null=True),
         ),
     ]

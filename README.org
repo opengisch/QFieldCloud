@@ -70,6 +70,7 @@
       # install pre-commit hook
       pre-commit install
     #+end_src
+
 ** Deployment
 *** Servers
     QFieldCloud is published on two servers:
@@ -160,4 +161,3 @@
    - [[https://qfield.cloud][QField Cloud "marketing" page]]
    - [[https://app.qfield.cloud/swagger/][API Swagger doc]]
    - [[http://status.qfield.cloud/][API status page]]
-

@@ -1,50 +1,54 @@
-import uuid
+import os
 import secrets
 import string
-import os
+import uuid
 
-from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
-from django.db.models.signals import post_save, post_delete
+from django.db import models
 from django.db.models.aggregates import Count
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 from django.urls import reverse
 from django.utils.translation import gettext as _
-from django.dispatch import receiver
-
-from qfieldcloud.core import utils, geodb_utils, validators
-
+from qfieldcloud.core import geodb_utils, utils, validators
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
+
 
 class User(AbstractUser):
     TYPE_USER = 1
     TYPE_ORGANIZATION = 2
 
     TYPE_CHOICES = (
-        (TYPE_USER, 'user'),
-        (TYPE_ORGANIZATION, 'organization'),
+        (TYPE_USER, "user"),
+        (TYPE_ORGANIZATION, "organization"),
     )
 
     user_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_USER)
+        choices=TYPE_CHOICES, default=TYPE_USER
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._meta.get_field('username').validators.append(
-            validators.reserved_words_validator)
-        self._meta.get_field('username').validators.append(
-            validators.allowed_symbols_validator)
-        self._meta.get_field('username').validators.append(
-            validators.min_lenght_validator)
-        self._meta.get_field('username').validators.append(
-            validators.first_symbol_validator)
+        self._meta.get_field("username").validators.append(
+            validators.reserved_words_validator
+        )
+        self._meta.get_field("username").validators.append(
+            validators.allowed_symbols_validator
+        )
+        self._meta.get_field("username").validators.append(
+            validators.min_lenght_validator
+        )
+        self._meta.get_field("username").validators.append(
+            validators.first_symbol_validator
+        )
 
     def __str__(self):
         return self.username
 
     def get_absolute_url(self):
-        return reverse('profile_overview', kwargs={'username': self.username})
+        return reverse("profile_overview", kwargs={"username": self.username})
 
     @property
     def is_user(self):
@@ -56,11 +60,11 @@ class User(AbstractUser):
 
     @property
     def full_name(self) -> str:
-        return f'{self.first_name} {self.last_name}'
+        return f"{self.first_name} {self.last_name}"
 
     @property
     def has_geodb(self) -> bool:
-        return hasattr(self, 'geodb')
+        return hasattr(self, "geodb")
 
 
 # Automatically create a UserAccount instance when a user is created.
@@ -75,23 +79,21 @@ class UserAccount(models.Model):
     TYPE_PRO = 2
 
     TYPE_CHOICES = (
-        (TYPE_COMMUNITY, 'community'),
-        (TYPE_PRO, 'pro'),
+        (TYPE_COMMUNITY, "community"),
+        (TYPE_PRO, "pro"),
     )
 
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     account_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_COMMUNITY)
+        choices=TYPE_CHOICES, default=TYPE_COMMUNITY
+    )
     storage_limit_mb = models.PositiveIntegerField(default=100)
     db_limit_mb = models.PositiveIntegerField(default=25)
     synchronizations_per_months = models.PositiveIntegerField(default=30)
-    bio = models.CharField(max_length=255, default='')
-    workplace = models.CharField(max_length=255, default='')
-    location = models.CharField(max_length=255, default='')
-    twitter = models.CharField(max_length=255, default='')
+    bio = models.CharField(max_length=255, default="")
+    workplace = models.CharField(max_length=255, default="")
+    location = models.CharField(max_length=255, default="")
+    twitter = models.CharField(max_length=255, default="")
     is_email_public = models.BooleanField(default=False)
 
     def __str__(self):
@@ -99,50 +101,45 @@ class UserAccount(models.Model):
 
 
 class Geodb(models.Model):
-
     def random_string():
-        """ Generate random sting starting with a lowercase letter and then
+        """Generate random sting starting with a lowercase letter and then
         lowercase letters and digits"""
 
         first_letter = secrets.choice(string.ascii_lowercase)
         letters_and_digits = string.ascii_lowercase + string.digits
-        secure_str = first_letter + ''.join(
-            (secrets.choice(letters_and_digits) for i in range(15)))
+        secure_str = first_letter + "".join(
+            (secrets.choice(letters_and_digits) for i in range(15))
+        )
         return secure_str
 
     def random_password():
-        """ Generate secure random password composed of
+        """Generate secure random password composed of
         letters, digits and special characters"""
 
-        password_characters = string.ascii_letters + string.digits + '!#$%&()*+,-.:;<=>?@[]_{}~'
-        secure_str = ''.join(
-            (secrets.choice(password_characters) for i in range(16)))
+        password_characters = (
+            string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
+        )
+        secure_str = "".join((secrets.choice(password_characters) for i in range(16)))
         return secure_str
 
     def default_hostname():
-        return os.environ.get('GEODB_HOST')
+        return os.environ.get("GEODB_HOST")
 
     def default_port():
-        return os.environ.get('GEODB_PORT')
+        return os.environ.get("GEODB_PORT")
 
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
-    username = models.CharField(
-        blank=False, max_length=255, default=random_string)
-    dbname = models.CharField(
-        blank=False, max_length=255, default=random_string)
-    hostname = models.CharField(
-        blank=False, max_length=255, default=default_hostname)
+    username = models.CharField(blank=False, max_length=255, default=random_string)
+    dbname = models.CharField(blank=False, max_length=255, default=random_string)
+    hostname = models.CharField(blank=False, max_length=255, default=default_hostname)
     port = models.PositiveIntegerField(default=default_port)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # The password is generated but not stored into the db
-    password = ''
+    password = ""
 
-    def __init__(self, *args, password='', **kwargs) -> None:
+    def __init__(self, *args, password="", **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.password = password
@@ -154,8 +151,9 @@ class Geodb(models.Model):
         return geodb_utils.get_db_size(self)
 
     def __str__(self):
-        return '{}\'s db account, dbname: {}, username: {}'.format(
-            self.user.username, self.dbname, self.username)
+        return "{}'s db account, dbname: {}, username: {}".format(
+            self.user.username, self.dbname, self.username
+        )
 
 
 # Automatically create a role and database when a Geodb object is created.
@@ -173,13 +171,15 @@ def delete_geodb(sender, instance, **kwargs):
 class Organization(User):
 
     organization_owner = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='owner',
-        limit_choices_to=models.Q(user_type=User.TYPE_USER))
+        User,
+        on_delete=models.CASCADE,
+        related_name="owner",
+        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+    )
 
     class Meta:
-        verbose_name = 'organization'
-        verbose_name_plural = 'organizations'
+        verbose_name = "organization"
+        verbose_name_plural = "organizations"
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -187,7 +187,7 @@ class Organization(User):
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse('profile_overview', kwargs={'username': self.username})
+        return reverse("profile_overview", kwargs={"username": self.username})
 
 
 class OrganizationMember(models.Model):
@@ -195,22 +195,25 @@ class OrganizationMember(models.Model):
     ROLE_MEMBER = 2
 
     ROLE_CHOICES = (
-        (ROLE_ADMIN, 'admin'),
-        (ROLE_MEMBER, 'member'),
+        (ROLE_ADMIN, "admin"),
+        (ROLE_MEMBER, "member"),
     )
 
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE,
+        Organization,
+        on_delete=models.CASCADE,
         limit_choices_to=models.Q(user_type=User.TYPE_ORGANIZATION),
-        related_name='members')
+        related_name="members",
+    )
     member = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER))
-    role = models.PositiveSmallIntegerField(
-        choices=ROLE_CHOICES, default=ROLE_MEMBER)
+        User,
+        on_delete=models.CASCADE,
+        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+    )
+    role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, default=ROLE_MEMBER)
 
     def __str__(self):
-        return self.organization.username + ': ' + self.member.username
+        return self.organization.username + ": " + self.member.username
 
 
 class Project(models.Model):
@@ -222,42 +225,51 @@ class Project(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['owner', 'name'], name='project_owner_name_uniq')
+            models.UniqueConstraint(
+                fields=["owner", "name"], name="project_owner_name_uniq"
+            )
         ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
         max_length=255,
-        validators=[validators.allowed_symbols_validator,
-                    validators.min_lenght_validator,
-                    validators.first_symbol_validator,
-                    validators.reserved_words_validator],
-        help_text=_('Project name. Should start with a letter and contain only letters, numbers, underscores and hyphens.')
+        validators=[
+            validators.allowed_symbols_validator,
+            validators.min_lenght_validator,
+            validators.first_symbol_validator,
+            validators.reserved_words_validator,
+        ],
+        help_text=_(
+            "Project name. Should start with a letter and contain only letters, numbers, underscores and hyphens."
+        ),
     )
 
     description = models.TextField(blank=True)
     private = models.BooleanField(
         default=False,
-        help_text='Projects that are not marked as private would be visible and editable to anyone.')
-    owner = models.ForeignKey(
-        User, on_delete=models.CASCADE)
+        help_text="Projects that are not marked as private would be visible and editable to anyone.",
+    )
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     overwrite_conflicts = models.BooleanField(
         default=True,
-        help_text=_('If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts.')
+        help_text=_(
+            "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
+        ),
     )
 
     def __str__(self):
-        return self.name + ' (' + str(self.id) + ')' + ' owner: ' + self.owner.username
+        return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
     def storage_size(self):
         return utils.get_s3_project_size(self.id)
 
     def get_absolute_url(self):
-        return reverse('project_overview',
-                       kwargs={'username': self.owner.username,
-                               'project': self.name})
+        return reverse(
+            "project_overview",
+            kwargs={"username": self.owner.username, "project": self.name},
+        )
 
     @property
     def files(self):
@@ -276,33 +288,39 @@ class ProjectCollaborator(models.Model):
     ROLE_READER = 5
 
     ROLE_CHOICES = (
-        (ROLE_ADMIN, 'admin'),
-        (ROLE_MANAGER, 'manager'),
-        (ROLE_EDITOR, 'editor'),
-        (ROLE_REPORTER, 'reporter'),
-        (ROLE_READER, 'reader'),
+        (ROLE_ADMIN, "admin"),
+        (ROLE_MANAGER, "manager"),
+        (ROLE_EDITOR, "editor"),
+        (ROLE_REPORTER, "reporter"),
+        (ROLE_READER, "reader"),
     )
 
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE,
-        related_name='collaborators',
+        Project,
+        on_delete=models.CASCADE,
+        related_name="collaborators",
     )
     collaborator = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER))
-    role = models.PositiveSmallIntegerField(
-        choices=ROLE_CHOICES, default=ROLE_READER)
+        User,
+        on_delete=models.CASCADE,
+        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+    )
+    role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, default=ROLE_READER)
 
     def __str__(self):
-        return self.project.name + ': ' + self.collaborator.username
+        return self.project.name + ": " + self.collaborator.username
 
     def get_absolute_url(self):
-        return reverse('collaborator_details',
-                       kwargs={'content_owner': self.project.owner.username,
-                               'project': self.project.name,
-                               'collaborator': self.collaborator.username,
-                               'pk': self.pk,
-                               'project_pk': self.project.pk})
+        return reverse(
+            "collaborator_details",
+            kwargs={
+                "content_owner": self.project.owner.username,
+                "project": self.project.name,
+                "collaborator": self.collaborator.username,
+                "pk": self.pk,
+                "project_pk": self.project.pk,
+            },
+        )
 
 
 class Delta(models.Model):
@@ -315,38 +333,44 @@ class Delta(models.Model):
     STATUS_ERROR = 6  # was not possible to apply the delta
 
     STATUS_CHOICES = (
-        (STATUS_PENDING, 'STATUS_PENDING'),
-        (STATUS_BUSY, 'STATUS_BUSY'),
-        (STATUS_APPLIED, 'STATUS_APPLIED'),
-        (STATUS_CONFLICT, 'STATUS_CONFLICT'),
-        (STATUS_NOT_APPLIED, 'STATUS_NOT_APPLIED'),
-        (STATUS_ERROR, 'STATUS_ERROR'),
+        (STATUS_PENDING, "STATUS_PENDING"),
+        (STATUS_BUSY, "STATUS_BUSY"),
+        (STATUS_APPLIED, "STATUS_APPLIED"),
+        (STATUS_CONFLICT, "STATUS_CONFLICT"),
+        (STATUS_NOT_APPLIED, "STATUS_NOT_APPLIED"),
+        (STATUS_ERROR, "STATUS_ERROR"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deltafile_id = models.UUIDField()
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE,
-        related_name='deltas',
+        Project,
+        on_delete=models.CASCADE,
+        related_name="deltas",
     )
     content = JSONField()
     status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING)
+        choices=STATUS_CHOICES, default=STATUS_PENDING
+    )
     output = JSONField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return str(self.id) + ', project: ' + str(self.project.id)
+        return str(self.id) + ", project: " + str(self.project.id)
 
     @staticmethod
     def get_status_summary(filters={}):
-        rows = Delta.objects.filter(**filters).values('status').annotate(count=Count('status')).order_by()
+        rows = (
+            Delta.objects.filter(**filters)
+            .values("status")
+            .annotate(count=Count("status"))
+            .order_by()
+        )
 
         rows_as_dict = {}
         for r in rows:
-            rows_as_dict[r['status']] = r['count']
+            rows_as_dict[r["status"]] = r["count"]
 
         counts = {}
         for status, _name in Delta.STATUS_CHOICES:
@@ -362,21 +386,22 @@ class Exportation(models.Model):
     STATUS_ERROR = 4  # was not possible to export the project
 
     STATUS_CHOICES = (
-        (STATUS_PENDING, 'STATUS_PENDING'),
-        (STATUS_BUSY, 'STATUS_BUSY'),
-        (STATUS_EXPORTED, 'STATUS_EXPORTED'),
-        (STATUS_ERROR, 'STATUS_ERROR'),
+        (STATUS_PENDING, "STATUS_PENDING"),
+        (STATUS_BUSY, "STATUS_BUSY"),
+        (STATUS_EXPORTED, "STATUS_EXPORTED"),
+        (STATUS_ERROR, "STATUS_ERROR"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE,
-        related_name='exports',
+        Project,
+        on_delete=models.CASCADE,
+        related_name="exports",
     )
 
     status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING)
+        choices=STATUS_CHOICES, default=STATUS_PENDING
+    )
     exportlog = JSONField(null=True)
     output = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)

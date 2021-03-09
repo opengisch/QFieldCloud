@@ -1,28 +1,27 @@
 import unittest
+
 import psycopg2
-
 from django.contrib.auth import get_user_model
-
 from qfieldcloud.core.models import Geodb
 
 User = get_user_model()
 
 
 class GeodbTestCase(unittest.TestCase):
-
     def setUp(self):
         pass
 
     def test_create_db(self):
         # Create a user
         user1 = User.objects.create_user(
-            username='user1', password='abc123', email='user1@pizza.it')
+            username="user1", password="abc123", email="user1@pizza.it"
+        )
 
         # Create a geodb object
 
         geodb = Geodb.objects.create(
             user=user1,
-            hostname='geodb',
+            hostname="geodb",
             port=5432,
         )
 
@@ -31,7 +30,8 @@ class GeodbTestCase(unittest.TestCase):
             user=geodb.username,
             password=geodb.password,
             host=geodb.hostname,
-            port=geodb.port)
+            port=geodb.port,
+        )
 
         cur = conn.cursor()
 

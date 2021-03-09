@@ -1,14 +1,13 @@
-
 from typing import Any, Callable, List, Union
 
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse, HttpResponseForbidden
-
 from qfieldcloud.core import permissions_utils
 
 
-def permission_check(perm: str,
-                     check_args: List[Union[str, Callable]] = []) -> Callable:
+def permission_check(
+    perm: str, check_args: List[Union[str, Callable]] = []
+) -> Callable:
     perm_check = getattr(permissions_utils, perm)
 
     def decorator_wrapper(func: Callable):
