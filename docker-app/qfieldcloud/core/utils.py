@@ -265,15 +265,21 @@ def get_project_files(project_id: str) -> Dict[str, ProjectFile]:
         filename = str(path.relative_to(*path.parts[:3]))
         last_modified = version.last_modified
 
+        metadata = head['Metadata']
+        if 'sha256sum' in metadata:
+            sha256sum = metadata['sha256sum']
+        else:
+            sha256sum = metadata['Sha256sum']
+
         if version.is_latest:
             files[version.key]['name'] = filename
             files[version.key]['size'] = version.size
-            files[version.key]['sha256'] = head['Metadata']['Sha256sum']
+            files[version.key]['sha256'] = sha256sum
             files[version.key]['last_modified'] = last_modified
 
         files[version.key]['versions'].append({
             'size': version.size,
-            'sha256': head['Metadata']['Sha256sum'],
+            'sha256': sha256sum,
             'version_id': version.version_id,
             'last_modified': last_modified,
             'is_latest': version.is_latest,
