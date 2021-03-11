@@ -14,8 +14,7 @@ services:
       - ${HOST_POSTGRES_PORT}:5432
 
   app:
-    build:
-      context: ./docker-app
+    image: opengischprivate/qfieldcloud-application:latest
     restart: unless-stopped
     command: gunicorn qfieldcloud.wsgi:application --bind 0.0.0.0:8000 -t 300
     volumes:
@@ -55,8 +54,7 @@ services:
       - db
 
   web:
-    build:
-      context: ./docker-caddy
+    image: opengischprivate/qfieldcloud-caddy:latest
     restart: unless-stopped
     environment:
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
@@ -70,48 +68,18 @@ services:
       - ${WEB_HTTPS_PORT}:443
 
   qgis:
-    build:
-      context: ./docker-qgis
+    image: opengischprivate/qfieldcloud-qgis:latest
     tty: true
     command: bash -c "echo QGIS builded"
 
   redis:
-    build:
-      context: ./docker-redis
-      args:
-        REDIS_PASSWORD: ${REDIS_PASSWORD}
+    image: opengischprivate/qfieldcloud-redis:latest
     restart: unless-stopped
     ports:
       - "${REDIS_PORT}:6379"
-
-  orchestrator:
-    build:
-      context: ./docker-orchestrator
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      HOST_POSTGRES_PORT: ${HOST_POSTGRES_PORT}
-      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
-      SENTRY_DSN: ${SENTRY_DSN}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID}
-      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY}
-      STORAGE_BUCKET_NAME: ${STORAGE_BUCKET_NAME}
-      STORAGE_REGION_NAME: ${STORAGE_REGION_NAME}
-      STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL}
-      TMP_DIRECTORY: ${TMP_DIRECTORY}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${LOG_DIRECTORY}:/log
-      - ${TMP_DIRECTORY}:/tmp
-    depends_on:
-      - redis
-      - db
+      REDIS_PORT: ${REDIS_PORT}
 
 volumes:
   postgres_data:

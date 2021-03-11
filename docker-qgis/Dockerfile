@@ -17,18 +17,18 @@ RUN apt-get update && \
     xvfb \
     && apt-get clean
 
-COPY ./docker-qgis/requirements.txt /tmp/
+COPY ./requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt
 
-COPY ./docker-qgis/entrypoint.py /
-COPY ./docker-qgis/apply_deltas.py /
-COPY ./docker-qgis/schemas/deltafile_01.json /schemas/
+COPY ./entrypoint.py /
+COPY ./apply_deltas.py /
+COPY ./schemas/deltafile_01.json /schemas/
 
-COPY ./docker-qgis/libqfieldsync /libqfieldsync
+COPY ./libqfieldsync /libqfieldsync
 ENV PYTHONPATH="/libqfieldsync:${PYTHONPATH}"
 
 # Add supervisor service configuration script
-COPY ./docker-qgis/supervisord.conf /etc/supervisor/
+COPY ./supervisord.conf /etc/supervisor/
 
 ENV LANG=C.UTF-8
 

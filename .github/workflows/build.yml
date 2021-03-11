@@ -1,0 +1,120 @@
+name: Build and Push
+on:
+  push:
+    branches:
+      - master
+      - build-containers-with-github-actions
+    tags:
+      - "v*.*.*"
+jobs:
+  build_and_push:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Prepare
+        id: prepare
+        run: |
+          VERSION="latest"
+          TAG=""
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          TAG=${VERSION}
+          echo ::set-output name=tag::${TAG}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Login to dockerhub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # Caddy
+      - name: Docker Test Caddy
+        id: docker_test_caddy
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-caddy
+          file: ./docker-caddy/Dockerfile
+
+      - name: Docker Build and Push Caddy
+        id: docker_build_and_push_caddy
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-caddy
+          file: ./docker-caddy/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: opengischprivate/qfieldcloud-caddy:${{ steps.prepare.outputs.tag }}
+
+      # Application
+      - name: Docker Test Application
+        id: docker_test_application
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-app
+          file: ./docker-app/Dockerfile
+
+      - name: Docker Build and Push Application
+        id: docker_build_and_push_application
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-app
+          file: ./docker-app/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: opengischprivate/qfieldcloud-application:${{ steps.prepare.outputs.tag }}
+
+      # Redis
+      - name: Docker Test Redis
+        id: docker_test_redis
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-redis
+          file: ./docker-redis/Dockerfile
+
+      - name: Docker Build and Push Redis
+        id: docker_build_and_push_redis
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-redis
+          file: ./docker-redis/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: opengischprivate/qfieldcloud-redis:${{ steps.prepare.outputs.tag }}
+
+      # QGIS
+      - name: Docker Test QGIS
+        id: docker_test_qgis
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-qgis
+          file: ./docker-qgis/Dockerfile
+
+      - name: Docker Build and Push QGIS
+        id: docker_build_and_push_qgis
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-qgis
+          file: ./docker-qgis/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: opengischprivate/qfieldcloud-qgis:${{ steps.prepare.outputs.tag }}
