@@ -13,6 +13,32 @@ from qfieldcloud.core.models import (
 )
 
 
+def _project_annotated(user, queryset):
+    # Add all the projects of the organizations where `user` is admin
+    queryset = queryset.annotate(collaborators__count=Count("collaborators"))
+    queryset = queryset.annotate(deltas__count=Count("deltas"))
+    queryset = queryset.annotate(
+        collaborators__role=Case(
+            When(collaborators__collaborator=user, then=F("collaborators__role"))
+        )
+    )
+    queryset = queryset.annotate(
+        collaborators__role=Case(
+            When(collaborators__role=1, then=Value("admin", output_field=CharField())),
+            When(
+                collaborators__role=2, then=Value("manager", output_field=CharField())
+            ),
+            When(collaborators__role=3, then=Value("editor", output_field=CharField())),
+            When(
+                collaborators__role=4, then=Value("reporter", output_field=CharField())
+            ),
+            When(collaborators__role=5, then=Value("reader", output_field=CharField())),
+        )
+    )
+
+    return queryset
+
+
 def get_available_projects(
     user, owner, include_public=False, include_memberships=False
 ):
@@ -80,28 +106,7 @@ def get_available_projects(
         queryset |= Project.objects.filter(private=False).distinct()
 
     # Add all the projects of the organizations where `user` is admin
-    queryset = queryset.annotate(collaborators__count=Count("collaborators"))
-    queryset = queryset.annotate(deltas__count=Count("deltas"))
-    queryset = queryset.annotate(
-        collaborators__role=Case(
-            When(collaborators__collaborator=user, then=F("collaborators__role"))
-        )
-    )
-    queryset = queryset.annotate(
-        collaborators__role=Case(
-            When(collaborators__role=1, then=Value("admin", output_field=CharField())),
-            When(
-                collaborators__role=2, then=Value("manager", output_field=CharField())
-            ),
-            When(collaborators__role=3, then=Value("editor", output_field=CharField())),
-            When(
-                collaborators__role=4, then=Value("reporter", output_field=CharField())
-            ),
-            When(collaborators__role=5, then=Value("reader", output_field=CharField())),
-        )
-    )
-
-    queryset.order_by("owner__username", "name")
+    queryset = _project_annotated(user, queryset)
 
     return queryset
 
@@ -125,9 +130,11 @@ def get_organization_members(organization):
     return OrganizationMember.objects.filter(organization=organization)
 
 
-def get_all_public_projects():
+def get_public_projects(user):
     """Return all public projects."""
-    return Project.objects.filter(private=False)
+    queryset = Project.objects.filter(private=False)
+    queryset = _project_annotated(user, queryset)
+    return queryset
 
 
 def get_project_deltas(project):

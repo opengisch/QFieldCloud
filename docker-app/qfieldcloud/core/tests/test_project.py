@@ -297,3 +297,30 @@ class ProjectTestCase(APITestCase):
         response = self.client.get("/api/v1/projects/{}/".format("pizza"))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "validation_error")
+
+    def test_public_projecs(self):
+        # Create a project of user1
+        self.project1 = Project.objects.create(
+            name="project1", private=False, owner=self.user1
+        )
+
+        # Create another project of user2
+        self.project2 = Project.objects.create(
+            name="project2", private=False, owner=self.user2
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        response = self.client.get("/api/v1/projects/public", follow=True)
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 2)
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k["name"])
+
+        self.assertEqual(json[0]["name"], "project1")
+        self.assertEqual(json[0]["owner"], "user1")
+        self.assertEqual(json[0]["collaborators__role"], None)
+        self.assertEqual(json[1]["name"], "project2")
+        self.assertEqual(json[1]["owner"], "user2")
+        self.assertEqual(json[1]["collaborators__role"], None)
