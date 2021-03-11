@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import permissions_utils, querysets_utils, utils
 from qfieldcloud.core.models import Project
 from qfieldcloud.core.serializers import ProjectSerializer
-from rest_framework import permissions, viewsets
+from rest_framework import generics, permissions, viewsets
 
 User = get_user_model()
 
@@ -117,3 +117,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
         bucket.objects.filter(Prefix=prefix).delete()
 
         return super().destroy(request, projectid)
+
+
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="List public projects",
+        operation_id="List public projects",
+    ),
+)
+class PublicProjectsListView(generics.ListAPIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ProjectSerializer
+
+    def get_queryset(self):
+        return querysets_utils.get_public_projects(self.request.user)
