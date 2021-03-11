@@ -18,14 +18,10 @@ jobs:
       - name: Prepare docker-compose override file
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
-      - name: Install pipenv dependencies
-        run: |
-          cd orchestrator
-          pipenv install
       - name: Check code with Flake8
         run: |
-          cd orchestrator
-          pipenv run python -m flake8 --ignore=E501,F401,W503 --exclude "../.git/,../docker-qgis/libqfieldsync/" ../
+          pipenv install flake8
+          pipenv run python -m flake8 --ignore=E501,F401,W503 --exclude ".git/,docker-qgis/libqfieldsync/" ./
       - name: Create .env file from secret
         uses: SpicyPizza/create-envfile@v1
         with:
@@ -37,6 +33,8 @@ jobs:
           envkey_POSTGRES_USER: "qfieldcloud_test_db_admin"
           envkey_POSTGRES_PASSWORD: ${{ secrets.SQL_PASSWORD }}
           envkey_POSTGRES_DB: "qfieldcloud_test_db"
+          envkey_POSTGRES_HOST: db
+          envkey_POSTGRES_PORT: 5432
           envkey_HOST_POSTGRES_PORT: 5433
           envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
           envkey_DJANGO_SETTINGS_MODULE: "qfieldcloud.web.settings"
@@ -46,6 +44,7 @@ jobs:
           envkey_STORAGE_REGION_NAME: ""
           envkey_STORAGE_ENDPOINT_URL: "http://localhost:9000"
           envkey_MINIO_PORT: 9000
+          envkey_REDIS_HOST: "redis"
           envkey_REDIS_PASSWORD: "reeeeeedissssssss"
           envkey_REDIS_PORT: 6379
           envkey_GEODB_HOST: geodb
@@ -59,14 +58,12 @@ jobs:
           envkey_EMAIL_PORT: 25
           envkey_EMAIL_HOST_USER: ''
           envkey_EMAIL_HOST_PASSWORD: ''
+          envkey_LOG_DIRECTORY: '/tmp/'
+          envkey_TMP_DIRECTORY: '/tmp/'
           file_name: .env
       - name: Build and run docker containers
         run: |
           docker-compose up -d --build
-      - name: Run RQ workers
-        run: |
-          cd orchestrator
-          pipenv run python worker.py &
       - name: Run unit and integration tests
         run: |
           docker-compose run app python manage.py test -v2 qfieldcloud
@@ -75,4 +72,4 @@ jobs:
         if: failure()
         run: |
           docker-compose logs
-          cat orchestrator/orchestrator.log
+          cat /tmp/orchestrator.log

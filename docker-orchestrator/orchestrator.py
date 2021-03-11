@@ -30,36 +30,22 @@ class ApplyDeltaScriptException(Exception):
     pass
 
 
-def load_env_file():
-    """Read env file and return a dict with the variables"""
-
-    environment = {}
-    with open("../.env") as f:
-        for line in f:
-            if line.strip():
-                splitted = line.rstrip().split("=", maxsplit=1)
-                environment[splitted[0]] = splitted[1]
-
-    return environment
-
-
 def get_django_db_connection(is_test_db=False):
     """Connect to the Django db. If the param is_test_db is true
     it will try to connect to the temporary test db.
     Return the connection or None"""
 
-    env = load_env_file()
-    dbname = env.get("POSTGRES_DB")
+    dbname = os.environ.get("POSTGRES_DB")
     if is_test_db:
         dbname = "test_" + dbname
 
     try:
         conn = psycopg2.connect(
             dbname=dbname,
-            user=env.get("POSTGRES_USER"),
-            password=env.get("POSTGRES_PASSWORD"),
-            host=env.get("QFIELDCLOUD_HOST"),
-            port=env.get("HOST_POSTGRES_PORT"),
+            user=os.environ.get("POSTGRES_USER"),
+            password=os.environ.get("POSTGRES_PASSWORD"),
+            host=os.environ.get("POSTGRES_HOST"),
+            port=os.environ.get("POSTGRES_PORT"),
         )
     except psycopg2.OperationalError:
         return None
@@ -96,20 +82,27 @@ def set_exportation_status_and_log(
 def export_project(projectid, project_file):
     """Start a QGIS docker container to export the project using libqfieldsync """
 
-    tempdir = tempfile.mkdtemp()
-    volumes = {tempdir: {"bind": "/io/", "mode": "rw"}}
+    orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
+    qgis_tempdir = os.path.join(os.environ.get("TMP_DIRECTORY"), orchestrator_tempdir)
+
+    volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
 
     # If we are on local dev environment, use host network to connect
     # to the local geodb and s3 storage
-    env = load_env_file()
     network_mode = "bridge"
-    if env.get("QFIELDCLOUD_HOST") == "localhost":
+    if os.environ.get("QFIELDCLOUD_HOST") == "localhost":
         network_mode = "host"
 
     client = docker.from_env()
     container = client.containers.create(
         "qfieldcloud_qgis",
-        environment=load_env_file(),
+        environment={
+            "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
+            "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
+            "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
+            "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
+            "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+        },
         auto_remove=True,
         volumes=volumes,
         network_mode=network_mode,
@@ -142,7 +135,7 @@ def export_project(projectid, project_file):
         )
         raise QgisException(output)
 
-    exportlog_file = os.path.join(tempdir, "exportlog.json")
+    exportlog_file = os.path.join(orchestrator_tempdir, "exportlog.json")
     try:
         with open(exportlog_file, "r") as f:
             exportlog = json.load(f)
@@ -218,22 +211,29 @@ def apply_deltas(projectid, project_file, overwrite_conflicts):
     """Start a QGIS docker container to apply a deltafile unsing the
     apply-delta script"""
 
-    tempdir = tempfile.mkdtemp()
-    create_deltafile_with_pending_deltas(projectid, tempdir)
+    orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
+    qgis_tempdir = os.path.join(os.environ.get("TMP_DIRECTORY"), orchestrator_tempdir)
 
-    volumes = {tempdir: {"bind": "/io/", "mode": "rw"}}
+    create_deltafile_with_pending_deltas(projectid, orchestrator_tempdir)
+
+    volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
 
     # If we are on local dev environment, use host network to connect
     # to the local geodb and s3 storage
-    env = load_env_file()
     network_mode = "bridge"
-    if env.get("QFIELDCLOUD_HOST") == "localhost":
+    if os.environ.get("QFIELDCLOUD_HOST") == "localhost":
         network_mode = "host"
 
     client = docker.from_env()
     container = client.containers.create(
         "qfieldcloud_qgis",
-        environment=load_env_file(),
+        environment={
+            "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
+            "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
+            "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
+            "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
+            "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+        },
         auto_remove=True,
         volumes=volumes,
         network_mode=network_mode,
@@ -258,7 +258,7 @@ def apply_deltas(projectid, project_file, overwrite_conflicts):
         )
     )
 
-    deltalog_file = os.path.join(tempdir, "deltalog.json")
+    deltalog_file = os.path.join(orchestrator_tempdir, "deltalog.json")
     with open(deltalog_file, "r") as f:
         deltalog = json.load(f)
 
@@ -288,7 +288,16 @@ def check_status():
 
     client = docker.from_env()
     container = client.containers.create(
-        "qfieldcloud_qgis", environment=load_env_file(), auto_remove=True
+        "qfieldcloud_qgis",
+        environment={
+            "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
+            "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
+            "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
+            "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
+            "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+        },
+        # TODO: environment=load_env_file(),
+        auto_remove=True,
     )
 
     container.start()

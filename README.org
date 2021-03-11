@@ -40,13 +40,6 @@
       docker-compose exec app python manage.py migrate
     #+end_src
 
-    To lauch the RQ (Redis Queue) workers that runs the QGIS containers jobs:
-    #+begin_src sh
-      cd orchestrator
-      pipenv install
-      pipenv run python worker.py
-    #+end_src
-
     You can check if everything seems to work correctly using the
     =status= command:
     #+begin_src sh
@@ -95,13 +88,6 @@
       mkdir /var/local/qfieldcloud
     #+end_src
 
-    Configure the =.env= file to your desire with a good editor
-    #+begin_src sh
-      cd conf
-      cp supervisord.conf.example supervisord.conf
-      emacs supervisord.conf
-    #+end_src
-
     Run and build the docker containers
     #+begin_src sh
       # dev server:
@@ -116,23 +102,6 @@
       docker-compose -f docker-compose.yml exec app python manage.py migrate
     #+end_src
 
-    Prepare and run supervisord with the workers
-    #+begin_src sh
-      apt install python3-pip  # If needed
-      pip3 install pipenv  # If needed
-      # You should upgrade your python version on your host to 3.8.3 or superior
-      cd orchestrator
-      pipenv --python /usr/bin/python3.8 install
-      pipenv run supervisord -c ../conf/supervisord.conf
-    #+end_src
-
-    You can watch and control the processes managed with supervisor
-    with ~supervisorctl~.
-
-    #+begin_src sh
-      pipenv run supervisorctl -c ../conf/supervisord.conf
-    #+end_src
-    For details see the offical [[http://supervisord.org/running.html#running-supervisorctl][documentation]]
 *** Infrastructure
     Based on this example
     https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/
