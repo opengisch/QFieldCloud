@@ -3,6 +3,7 @@ import logging
 import os
 import tempfile
 import uuid
+from typing import Iterable, Optional
 
 import docker
 import psycopg2
@@ -15,6 +16,7 @@ DELTA_STATUS_APPLIED = 3  # applied correctly
 DELTA_STATUS_CONFLICT = 4  # needs conflict resolution
 DELTA_STATUS_NOT_APPLIED = 5
 DELTA_STATUS_ERROR = 6  # was not possible to apply the deltafile
+DELTA_STATUS_IGNORED = 7  # delta is ignored
 
 EXPORTATION_STATUS_PENDING = 1  # Export has been requested, but not yet started
 EXPORTATION_STATUS_BUSY = 2  # Currently being exported
@@ -170,7 +172,9 @@ def set_delta_status_and_output(projectid, delta_id, status, output={}):
     conn.close()
 
 
-def create_deltafile_with_pending_deltas(projectid, tempdir):
+def create_deltafile_with_pending_deltas(
+    projectid, tempdir, delta_ids: Optional[Iterable]
+):
     """Retrieve the pending deltas from the db and create a deltafile-like
     json to be passed to the apply_deltas script"""
 
@@ -180,8 +184,18 @@ def create_deltafile_with_pending_deltas(projectid, tempdir):
 
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, deltafile_id, content FROM core_delta WHERE project_id = %s AND status = %s;",
-        (projectid, DELTA_STATUS_PENDING),
+        """
+            SELECT
+                id,
+                deltafile_id,
+                content
+            FROM core_delta
+            WHERE TRUE
+                AND project_id = %s
+                AND status = %s
+                AND (%s IS NULL OR id = ANY(%s))
+        """,
+        (projectid, DELTA_STATUS_PENDING, delta_ids, delta_ids),
     )
 
     json_content = {
@@ -207,14 +221,14 @@ def create_deltafile_with_pending_deltas(projectid, tempdir):
     return deltafile
 
 
-def apply_deltas(projectid, project_file, overwrite_conflicts):
+def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
     """Start a QGIS docker container to apply a deltafile unsing the
     apply-delta script"""
 
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
     qgis_tempdir = os.path.join(os.environ.get("TMP_DIRECTORY"), orchestrator_tempdir)
 
-    create_deltafile_with_pending_deltas(projectid, orchestrator_tempdir)
+    create_deltafile_with_pending_deltas(projectid, orchestrator_tempdir, delta_ids)
 
     volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
 

@@ -89,6 +89,7 @@ services:
   orchestrator:
     build:
       context: ./docker-orchestrator
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}

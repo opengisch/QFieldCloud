@@ -331,6 +331,7 @@ class Delta(models.Model):
     STATUS_CONFLICT = 4  # needs conflict resolution
     STATUS_NOT_APPLIED = 5
     STATUS_ERROR = 6  # was not possible to apply the delta
+    STATUS_IGNORED = 7  # final: ignored status
 
     STATUS_CHOICES = (
         (STATUS_PENDING, "STATUS_PENDING"),
@@ -339,6 +340,7 @@ class Delta(models.Model):
         (STATUS_CONFLICT, "STATUS_CONFLICT"),
         (STATUS_NOT_APPLIED, "STATUS_NOT_APPLIED"),
         (STATUS_ERROR, "STATUS_ERROR"),
+        (STATUS_IGNORED, "STATUS_IGNORED"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -377,6 +379,9 @@ class Delta(models.Model):
             counts[status] = rows_as_dict.get(status, 0)
 
         return counts
+
+    def short_id(self):
+        return str(self.id)[0:8]
 
 
 class Exportation(models.Model):
