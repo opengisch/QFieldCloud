@@ -2,6 +2,7 @@ from typing import Union
 
 from django.contrib.auth import get_user_model
 from qfieldcloud.core.models import (
+    Delta,
     Organization,
     OrganizationMember,
     Project,
@@ -219,7 +220,14 @@ def can_download_files(user, project):
 
 
 def can_upload_deltas(user, project):
-    """Return True if the `user` upload deltafiles in `project`.
+    """Return True if the `user` can upload deltas in `project`.
+    Return False otherwise."""
+
+    return can_upload_files(user, project)
+
+
+def can_apply_deltas(user, project):
+    """Return True if the `user` can apply deltas in `project`.
     Return False otherwise."""
 
     return can_upload_files(user, project)
@@ -389,6 +397,34 @@ def can_become_member(user, organization):
     if _is_organization_member_role_admin(user, organization):
         return False
     if _is_organization_member_role_member(user, organization):
+        return False
+
+    return True
+
+
+def can_retry_delta(user, delta: Delta):
+    if not can_apply_deltas(user, delta.project):
+        return False
+
+    if delta.status not in (
+        Delta.STATUS_CONFLICT,
+        Delta.STATUS_NOT_APPLIED,
+        Delta.STATUS_ERROR,
+    ):
+        return False
+
+    return True
+
+
+def can_ignore_delta(user, delta: Delta):
+    if not can_apply_deltas(user, delta.project):
+        return False
+
+    if delta.status not in (
+        Delta.STATUS_CONFLICT,
+        Delta.STATUS_NOT_APPLIED,
+        Delta.STATUS_ERROR,
+    ):
         return False
 
     return True
