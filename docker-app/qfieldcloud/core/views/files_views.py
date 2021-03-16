@@ -118,7 +118,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 "ResponseContentType": "application/force-download",
                 "ResponseContentDisposition": f'attachment;filename="{filename}"',
             },
-            ExpiresIn=60,
+            ExpiresIn=600,
             HttpMethod="GET",
         )
 

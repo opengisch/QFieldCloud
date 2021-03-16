@@ -30,6 +30,7 @@ urlpatterns = [
     path(
         "files/<uuid:projectid>/<path:filename>/",
         files_views.DownloadPushDeleteFileView.as_view(),
+        name="project_file_download",
     ),
     path("qfield-files/<uuid:projectid>/", qfield_files_views.ListFilesView.as_view()),
     path(
