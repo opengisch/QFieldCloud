@@ -34,7 +34,7 @@ with Connection():
     redis = Redis(
         host=os.environ.get("REDIS_HOST"),
         password=os.environ.get("REDIS_PASSWORD"),
-        port=os.environ.get("REDIS_PORT"),
+        port=6379,
     )
 
     qs = ["delta", "export"]
