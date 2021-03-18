@@ -107,7 +107,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
             include_public = True
 
         return querysets_utils.get_available_projects(
-            self.request.user, self.request.user, include_public
+            self.request.user,
+            self.request.user,
+            ownerships=True,
+            collaborations=True,
+            memberships=True,
+            public=include_public,
         )
 
     def destroy(self, request, projectid):
@@ -132,4 +137,6 @@ class PublicProjectsListView(generics.ListAPIView):
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return querysets_utils.get_public_projects(self.request.user)
+        return querysets_utils.get_available_projects(
+            self.request.user, self.request.user, public=True
+        )

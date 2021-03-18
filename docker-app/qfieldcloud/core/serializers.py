@@ -22,10 +22,10 @@ class UserSerializer:
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
-    collaborators__role = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
 
-    def get_collaborators__role(self, obj):
-        return getattr(obj, "collaborators__role", None)
+    def get_user_role(self, obj):
+        return getattr(obj, "user_role", None)
 
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
@@ -49,7 +49,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "private",
             "created_at",
             "updated_at",
-            "collaborators__role",
+            "user_role",
         )
         model = Project
 
