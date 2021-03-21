@@ -297,6 +297,40 @@ def can_update_delete_collaborators(user, project):
     return can_create_collaborators(user, project)
 
 
+def can_store_delta(user, delta: Delta) -> bool:
+    project: Project = delta.project
+
+    if _is_project_owner(user, project):
+        return True
+
+    if _is_project_collaborator_role_admin(user, project):
+        return True
+
+    if _is_project_collaborator_role_editor(user, project):
+        return True
+
+    if _is_project_collaborator_role_manager(user, project):
+        return True
+
+    if _is_project_collaborator_role_manager(user, project):
+        return True
+
+    if _is_project_collaborator_role_reporter(user, project):
+        if delta.method == Delta.Method.Create:
+            return True
+
+    if _is_project_collaborator_role_reader(user, project):
+        return False
+
+    if _is_organization_owner(user, project.owner):
+        return True
+
+    if _is_organization_member_role_admin(user, project.owner):
+        return True
+
+    return False
+
+
 def can_update_collaborator_role(user, project, collaborator):
     """Return True if the `user` can create update the `collaborator`
     role of `project`. Return False otherwise."""

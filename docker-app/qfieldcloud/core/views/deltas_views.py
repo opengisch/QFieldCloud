@@ -64,12 +64,19 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
         deltas = deltafile_json.get("deltas", [])
         for delta in deltas:
-            Delta.objects.create(
+            delta_obj = Delta(
                 id=delta["uuid"],
                 deltafile_id=deltafile_id,
                 project=project_obj,
                 content=delta,
             )
+
+            if permissions_utils.can_store_delta(self.request.user, delta_obj):
+                delta_obj.status = Delta.STATUS_PENDING
+            else:
+                delta_obj.status = Delta.STATUS_UNPERMITTED
+
+            delta_obj.save()
 
         return Response()
 
