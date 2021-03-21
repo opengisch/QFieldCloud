@@ -279,8 +279,6 @@ def can_create_collaborators(user, project):
         return True
     if _is_project_collaborator_role_manager(user, project):
         return True
-    if _is_project_collaborator_role_editor(user, project):
-        return True
 
     organization = project.owner
     if _is_organization_owner(user, organization):
