@@ -35,37 +35,49 @@ def get_available_projects(
         # 1) owned by `owner` (public only if user!=owner)
         where_owner = {
             "owner": owner,
-            "private": (user == owner),
         }
+
+        if user != owner:
+            where_owner["private"] = False
+
         where |= Q(**where_owner)
         when.append(
             When(**where_owner, then=Value("owner", output_field=CharField())),
         )
 
     if collaborations:
-        # 2) owned by anyone, but `owner` is a collaborator (public only if user!=owner)
+        # 2.1) owned by anyone, but `user` is a collaborator
+        where |= Q(
+            collaborators__in=ProjectCollaborator.objects.filter(collaborator=user)
+        )
+
+        # 2.2) owned by anyone, but `owner` is a collaborator (public only if user!=owner)
         where_collaborator = {
             "collaborators__in": ProjectCollaborator.objects.filter(collaborator=owner),
-            "private": (user == owner),
         }
+
+        if user != owner:
+            where_collaborator["private"] = False
+
         where |= Q(**where_collaborator)
 
     if memberships:
         if owner.is_organization:
-            organization_filters = {"private": (user == owner)}
+            organization_filters = {}
 
-            # has `user` as an admin, then include also private projects
-            if OrganizationMember.objects.filter(
-                organization=owner,
-                member=user,
-                role=OrganizationMember.ROLE_ADMIN,
-            ).exists():
-                organization_filters.pop("private", None)
-            # has `user` as an owner, then include also private projects
-            elif Organization.objects.filter(
-                id=owner.id, organization_owner=user
-            ).exists():
-                organization_filters.pop("private", None)
+            if (
+                # has no `user` as an admin, then include also private projects
+                not OrganizationMember.objects.filter(
+                    organization=owner,
+                    member=user,
+                    role=OrganizationMember.ROLE_ADMIN,
+                ).exists()
+                # has `user` as an owner, then include also private projects
+                and not Organization.objects.filter(
+                    id=owner.id, organization_owner=user
+                ).exists()
+            ):
+                organization_filters["private"] = False
 
             # 3) owned by `owner` which is an organization
             where |= Q(
@@ -85,6 +97,10 @@ def get_available_projects(
                 role=OrganizationMember.ROLE_ADMIN,
             ).values("organization")
             where_org_admin_condition = {"owner__in": membership_organizations}
+
+            if user != owner:
+                where_org_admin_condition["private"] = False
+
             where |= Q(**where_org_admin_condition)
             when.append(
                 When(
@@ -96,6 +112,10 @@ def get_available_projects(
             # 6) owned by organizations where `owner` is the owner (public only if user!=owner)
             owned_organizations = Organization.objects.filter(organization_owner=owner)
             where_org_owner = {"owner__in": owned_organizations}
+
+            if user != owner:
+                where_org_owner["private"] = False
+
             where |= Q(**where_org_owner)
             when.append(
                 When(
