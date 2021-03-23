@@ -15,5 +15,6 @@ class AuthTokenView(ObtainAuthToken):
             {
                 "token": token.key,
                 "username": user.username,
+                "email": user.email,
             }
         )
