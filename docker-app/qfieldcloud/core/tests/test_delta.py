@@ -8,7 +8,7 @@ import requests
 from django.contrib.auth import get_user_model
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import Project, ProjectCollaborator
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
@@ -30,14 +30,23 @@ class DeltaTestCase(APITransactionTestCase):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
         self.user1.save()
+        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2.save()
 
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
+        self.token2 = Token.objects.get_or_create(user=self.user2)[0]
 
         # Create a project
         self.project1 = Project.objects.create(
             name="project1", private=True, owner=self.user1
         )
         self.project1.save()
+
+        ProjectCollaborator.objects.create(
+            project=self.project1,
+            collaborator=self.user2,
+            role=ProjectCollaborator.ROLE_REPORTER,
+        )
 
     def tearDown(self):
         # Remove all projects avoiding bulk delete in order to use
@@ -511,8 +520,10 @@ class DeltaTestCase(APITransactionTestCase):
         json = response.json()
         json = sorted(json, key=lambda k: k["id"])
 
-        self.assertEqual(json[1]["id"], "e4546ec2-6e01-43a1-ab30-a52db9469afd")
         self.assertEqual(json[0]["id"], "802ae2ef-f360-440e-a816-8990d6a06667")
+        self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[1]["id"], "e4546ec2-6e01-43a1-ab30-a52db9469afd")
+        self.assertEqual(json[1]["status"], "STATUS_PENDING")
 
     def test_push_list_multidelta(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -532,8 +543,11 @@ class DeltaTestCase(APITransactionTestCase):
         json = sorted(json, key=lambda k: k["id"])
 
         self.assertEqual(json[0]["id"], "736bf2c2-646a-41a2-8c55-28c26aecd68d")
+        self.assertEqual(json[0]["status"], "STATUS_PENDING")
         self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
+        self.assertEqual(json[1]["status"], "STATUS_PENDING")
         self.assertEqual(json[2]["id"], "c6c88e78-172c-4f77-b2fd-2ff41f5aa854")
+        self.assertEqual(json[2]["status"], "STATUS_PENDING")
 
     def test_push_list_deltas_of_deltafile(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -564,7 +578,9 @@ class DeltaTestCase(APITransactionTestCase):
         json = sorted(json, key=lambda k: k["id"])
 
         self.assertEqual(json[0]["id"], "ad98634e-509f-4dff-9000-de79b09c5359")
+        self.assertEqual(json[0]["status"], "STATUS_PENDING")
         self.assertEqual(json[1]["id"], "df6a19eb-7d61-4c64-9e3b-29bce0a8dfab")
+        self.assertEqual(json[1]["status"], "STATUS_PENDING")
 
         # Get only deltas of one deltafile
         response = self.client.get(
@@ -577,6 +593,7 @@ class DeltaTestCase(APITransactionTestCase):
         json = response.json()
         self.assertEqual(len(json), 1)
         self.assertEqual(json[0]["id"], "ad98634e-509f-4dff-9000-de79b09c5359")
+        self.assertEqual(json[0]["status"], "STATUS_PENDING")
         self.assertIn("output", json[0])
 
     def test_push_apply_delta_file_conflicts_overwrite_false(self):
@@ -659,3 +676,27 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertFalse(status.is_success(response.status_code))
         json = response.json()
         self.assertEqual(json["code"], "object_not_found")
+
+    def test_push_delta_not_allowed(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+
+        # Push a deltafile
+        delta_file = testdata_path(
+            "delta/deltas/singlelayer_multidelta_patch_create.json"
+        )
+        response = self.client.post(
+            "/api/v1/deltas/{}/".format(self.project1.id),
+            {"file": open(delta_file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
+        self.assertTrue(status.is_success(response.status_code))
+        json = response.json()
+        json = sorted(json, key=lambda k: k["id"])
+
+        self.assertEqual(json[0]["id"], "736bf2c2-646a-41a2-8c55-28c26aecd68d")
+        self.assertEqual(json[0]["status"], "STATUS_UNPERMITTED")
+        self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
+        self.assertEqual(json[1]["status"], "STATUS_UNPERMITTED")

@@ -2,6 +2,7 @@ import os
 import secrets
 import string
 import uuid
+from enum import Enum
 
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
@@ -324,6 +325,10 @@ class ProjectCollaborator(models.Model):
 
 
 class Delta(models.Model):
+    class Method(Enum):
+        Create = "create"
+        Delete = "delete"
+        Patch = "patch"
 
     STATUS_PENDING = 1  # delta has been received, but have not started application
     STATUS_BUSY = 2  # currently being applied
@@ -332,6 +337,7 @@ class Delta(models.Model):
     STATUS_NOT_APPLIED = 5
     STATUS_ERROR = 6  # was not possible to apply the delta
     STATUS_IGNORED = 7  # final: ignored status
+    STATUS_UNPERMITTED = 8  # final: unpermitted status, the user does not have permissions to upload delta
 
     STATUS_CHOICES = (
         (STATUS_PENDING, "STATUS_PENDING"),
@@ -341,6 +347,7 @@ class Delta(models.Model):
         (STATUS_NOT_APPLIED, "STATUS_NOT_APPLIED"),
         (STATUS_ERROR, "STATUS_ERROR"),
         (STATUS_IGNORED, "STATUS_IGNORED"),
+        (STATUS_UNPERMITTED, "STATUS_UNPERMITTED"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -380,8 +387,13 @@ class Delta(models.Model):
 
         return counts
 
+    @property
     def short_id(self):
         return str(self.id)[0:8]
+
+    @property
+    def method(self):
+        return self.content.get("method")
 
 
 class Exportation(models.Model):
