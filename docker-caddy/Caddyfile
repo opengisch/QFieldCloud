@@ -1,6 +1,5 @@
 {
-    # use the staging let's encrypt certs
-    acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    acme_ca {$CADDY_ACME_CA}
     email info@opengis.ch
 }
 
