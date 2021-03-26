@@ -33,6 +33,22 @@ class StatusNotOkError(QFieldCloudException):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
 
+class AuthenticationFailedError(QFieldCloudException):
+    """Raised when QFieldCloud incoming request includes incorrect authentication."""
+
+    code = "authentication_failed"
+    message = "Authentication failed"
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+
+class NotAuthenticatedError(QFieldCloudException):
+    """Raised when QFieldCloud unauthenticated request fails the permission checks."""
+
+    code = "not_authenticated"
+    message = "Not authenticated"
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+
 class EmptyContentError(QFieldCloudException):
     """Raised when a request doesn't contain an expected content
     (e.g. a file)"""

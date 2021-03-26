@@ -8,6 +8,10 @@ def exception_handler(exc, context):
 
     if isinstance(exc, qfieldcloud_exceptions.QFieldCloudException):
         pass
+    elif isinstance(exc, rest_exceptions.AuthenticationFailed):
+        exc = qfieldcloud_exceptions.AuthenticationFailedError()
+    elif isinstance(exc, rest_exceptions.NotAuthenticated):
+        exc = qfieldcloud_exceptions.NotAuthenticatedError()
     elif isinstance(exc, rest_exceptions.APIException):
         exc = qfieldcloud_exceptions.APIError(
             status_code=exc.status_code, detail=exc.detail
