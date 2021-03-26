@@ -81,6 +81,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
@@ -266,3 +267,31 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 INVITATIONS_INVITATION_EXPIRY = 7  # Days
 INVITATIONS_INVITATION_ONLY = True
 INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+
+LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "formatters": {
+        "json": {
+            "()": "qfieldcloud.core.log_formatter.CustomisedJSONFormatter",
+        },
+    },
+    "handlers": {
+        "console.json": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        }
+    },
+    "root": {
+        "handlers": ["console.json"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "qfieldcloud.request_response_log": {
+            "level": LOGLEVEL,
+            "handlers": ["console.json"],
+            "propagate": False,
+        },
+    },
+}
