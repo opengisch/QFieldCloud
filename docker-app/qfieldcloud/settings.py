@@ -273,6 +273,9 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": True,
     "formatters": {
+        "request.human": {
+            "()": "qfieldcloud.core.log_formatter.CustomisedRequestHumanFormatter",
+        },
         "json": {
             "()": "qfieldcloud.core.log_formatter.CustomisedJSONFormatter",
         },
@@ -281,7 +284,11 @@ LOGGING = {
         "console.json": {
             "class": "logging.StreamHandler",
             "formatter": "json",
-        }
+        },
+        "console.human": {
+            "class": "logging.StreamHandler",
+            "formatter": "request.human",
+        },
     },
     "root": {
         "handlers": ["console.json"],
@@ -290,7 +297,11 @@ LOGGING = {
     "loggers": {
         "qfieldcloud.request_response_log": {
             "level": LOGLEVEL,
-            "handlers": ["console.json"],
+            "handlers": [
+                # TODO enable console.json once it is clear how we do store the json logs
+                # 'console.json',
+                "console.human",
+            ],
             "propagate": False,
         },
     },
