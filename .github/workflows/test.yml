@@ -52,6 +52,7 @@ jobs:
           envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
           envkey_GEODB_DB: postgres
           envkey_GEODB_PORT: 5432
+          envkey_CADDY_ACME_CA: 'https://acme-staging-v02.api.letsencrypt.org/directory'
           envkey_ACCOUNT_EMAIL_VERIFICATION: "optional"
           envkey_EMAIL_HOST: "smtp4dev"
           envkey_EMAIL_USE_TLS: False
