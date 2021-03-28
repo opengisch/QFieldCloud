@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from datetime import datetime
 from uuid import UUID
 
@@ -61,6 +62,15 @@ class CustomisedRequestHumanFormatter(logging.Formatter):
         if not isinstance(response_body, str):
             response_body = json.dumps(response_body, indent=2, cls=JsonEncoder)
 
+        python_exception = ""
+        if extra.get("exception"):
+            exception = extra.get("exception")
+            tb1 = traceback.TracebackException.from_exception(exception)
+            exception_str = "    ".join(tb1.format())
+            python_exception = f"""Exception (ERROR):
+  {exception_str}
+"""
+
         return f"""
 ================================================================================
 | HTTP Request
@@ -73,6 +83,7 @@ Request payload:
 ------------------------------------------------------------------------------S
 {request_body}
 ------------------------------------------------------------------------------E
+{python_exception}
 Response headers: {response_headers}
 Response payload:
 ------------------------------------------------------------------------------S
