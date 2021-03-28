@@ -60,6 +60,9 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
                     log_data["request_body"]
                 )
 
+        if hasattr(request, "exception"):
+            log_data["exception"] = request.exception
+
         if response:
             if response.get("content-type") == "application/json":
                 if hasattr(response, "data"):
@@ -121,8 +124,6 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
 
     def process_exception(self, request, exception):
         """Log Exceptions."""
-        try:
-            raise exception
-        except Exception:
-            logger.exception(msg="Unhandled Exception")
-        return exception
+        request.exception = exception
+
+        raise exception
