@@ -1,9 +1,18 @@
 import json
 import logging
 from datetime import datetime
+from uuid import UUID
 
 import json_log_formatter
 from django.core.handlers.wsgi import WSGIRequest
+
+
+class JsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            # if the obj is uuid, we simply return the value of uuid
+            return obj.hex
+        return json.JSONEncoder.default(self, obj)
 
 
 class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
@@ -15,10 +24,12 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         Override this method to change the way dict is converted to JSON.
         """
         try:
-            return self.json_lib.dumps(record, default=json_default, sort_keys=True)
+            return self.json_lib.dumps(
+                record, default=json_default, sort_keys=True, cls=JsonEncoder
+            )
         # ujson doesn't support default argument and raises TypeError.
         except TypeError:
-            return self.json_lib.dumps(record)
+            return self.json_lib.dumps(record, cls=JsonEncoder)
 
 
 class CustomisedRequestHumanFormatter(logging.Formatter):
@@ -42,13 +53,13 @@ class CustomisedRequestHumanFormatter(logging.Formatter):
             extra.get("request_body", "NO_REQUEST_BODY") or "EMPTY_REQUEST_BODY"
         )
         if not isinstance(request_body, str):
-            request_body = json.dumps(request_body, indent=2)
+            request_body = json.dumps(request_body, indent=2, cls=JsonEncoder)
 
         response_body = (
             extra.get("response_body", "NO_RESPONSE_BODY") or "EMPTY_RESPONSE_BODY"
         )
         if not isinstance(response_body, str):
-            response_body = json.dumps(response_body, indent=2)
+            response_body = json.dumps(response_body, indent=2, cls=JsonEncoder)
 
         return f"""
 ================================================================================
