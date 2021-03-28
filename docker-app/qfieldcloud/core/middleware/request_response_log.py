@@ -36,9 +36,6 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
         """Set Request Start Time to measure time taken to service request."""
         request.start_time = time.time()
 
-        if request.method in ["POST", "PUT", "PATCH"]:
-            request.req_body = request.body
-
     def extract_log_info(self, request, response=None, exception=None):
         """Extract appropriate log info from requests/responses/exceptions."""
         log_data = {
@@ -55,10 +52,13 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
         )
 
         if request.method in ["PUT", "POST", "PATCH"]:
-            log_data["request_body"] = request.POST
-            log_data["request_body"] = self.censor_sensitive_data(
-                log_data["request_body"]
-            )
+            if request.content_type == "application/octet-stream":
+                log_data["request_body"] = None
+            else:
+                log_data["request_body"] = request.POST
+                log_data["request_body"] = self.censor_sensitive_data(
+                    log_data["request_body"]
+                )
 
         if response:
             if response.get("content-type") == "application/json":
