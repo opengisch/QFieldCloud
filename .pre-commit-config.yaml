@@ -19,7 +19,7 @@ repos:
         args:
           - "--in-place"
           - "--remove-all-unused-imports"
-          - "--remove-unused-variable"
+          - "--remove-unused-variables"
 
   # Sort imports
   - repo: https://github.com/pycqa/isort
