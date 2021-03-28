@@ -1,5 +1,12 @@
 version: "3.7"
 
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "10"
+
 services:
   db:
     image: postgres:11
@@ -12,6 +19,7 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     ports:
       - ${HOST_POSTGRES_PORT}:5432
+    logging: *default-logging
 
   app:
     build:
@@ -55,6 +63,7 @@ services:
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
     depends_on:
       - db
+    logging: *default-logging
 
   web:
     build:
@@ -71,12 +80,14 @@ services:
     ports:
       - ${WEB_HTTP_PORT}:80
       - ${WEB_HTTPS_PORT}:443
+    logging: *default-logging
 
   qgis:
     build:
       context: ./docker-qgis
     tty: true
     command: bash -c "echo QGIS builded"
+    logging: *default-logging
 
   redis:
     build:
@@ -86,6 +97,7 @@ services:
     restart: unless-stopped
     ports:
       - "${REDIS_PORT}:6379"
+    logging: *default-logging
 
   orchestrator:
     build:
@@ -116,6 +128,7 @@ services:
     depends_on:
       - redis
       - db
+    logging: *default-logging
 
 volumes:
   postgres_data:
