@@ -118,11 +118,3 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
         logger.info(msg="", extra=log_data)
 
         return response
-
-    def process_exception(self, request, exception):
-        """Log Exceptions."""
-        try:
-            raise exception
-        except Exception:
-            logger.exception(msg="Unhandled Exception")
-        return exception
