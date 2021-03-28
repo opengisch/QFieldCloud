@@ -12,7 +12,7 @@ repos:
           - '--fix=lf'
 
   # Remove unused imports/variables
-  - repo: git@github.com:myint/autoflake.git
+  - repo: https://github.com/myint/autoflake
     rev: v1.4
     hooks:
       - id: autoflake
@@ -35,7 +35,7 @@ repos:
       - id: black
 
   # Lint files
-  - repo: git@github.com:PyCQA/flake8.git
+  - repo: https://gitlab.com/pycqa/flake8
     rev: "3.9.0"
     hooks:
       - id: flake8
