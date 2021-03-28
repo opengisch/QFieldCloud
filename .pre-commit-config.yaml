@@ -33,3 +33,9 @@ repos:
     rev: 20.8b1
     hooks:
       - id: black
+
+  # Lint files
+  - repo: git@github.com:PyCQA/flake8.git
+    rev: "3.9.0"
+    hooks:
+      - id: flake8
