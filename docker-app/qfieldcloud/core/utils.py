@@ -256,7 +256,7 @@ def get_project_files(project_id: str) -> Dict[str, ProjectFile]:
     prefix = f"projects/{project_id}/files/"
 
     files = {}
-    for version in bucket.object_versions.filter(Prefix=prefix):
+    for version in reversed(list(bucket.object_versions.filter(Prefix=prefix))):
         files[version.key] = files.get(version.key, {"versions": []})
 
         head = version.head()
