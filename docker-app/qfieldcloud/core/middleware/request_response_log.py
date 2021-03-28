@@ -61,7 +61,7 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
             )
 
         if response:
-            if response["content-type"] == "application/json":
+            if response.get("content-type") == "application/json":
                 if hasattr(response, "data"):
                     log_data["response_body"] = response.data
                 else:
