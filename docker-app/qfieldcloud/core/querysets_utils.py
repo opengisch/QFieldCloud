@@ -1,5 +1,5 @@
 from django.db.models import Count, Q
-from django.db.models.expressions import Case, F, Value, When
+from django.db.models.expressions import Case, Value, When
 from django.db.models.fields import CharField
 from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
@@ -133,15 +133,9 @@ def get_available_projects(
             ),
         )
 
-    queryset = Project.objects.filter(where)
+    queryset = Project.objects.filter(where).distinct()
     queryset = queryset.annotate(collaborators__count=Count("collaborators"))
     queryset = queryset.annotate(deltas__count=Count("deltas"))
-    queryset = queryset.annotate(
-        collaborators__role=Case(
-            When(collaborators__collaborator=user, then=F("collaborators__role"))
-        )
-    )
-
     queryset = queryset.annotate(
         user_role=Case(
             When(
@@ -167,6 +161,8 @@ def get_available_projects(
             *when,
         )
     )
+
+    queryset = queryset.order_by("owner__username", "name")
 
     return queryset
 
