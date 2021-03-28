@@ -18,10 +18,10 @@ jobs:
       - name: Prepare docker-compose override file
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
-      - name: Check code with Flake8
+      - name: Check code formatting
         run: |
-          pipenv install flake8
-          pipenv run python -m flake8 --ignore=E501,F401,W503 --exclude ".git/,docker-qgis/libqfieldsync/" ./
+          pipenv install pre_commit
+          pipenv run python -m pre_commit run --all-files
       - name: Create .env file from secret
         uses: SpicyPizza/create-envfile@v1
         with:

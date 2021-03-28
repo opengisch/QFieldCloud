@@ -12,14 +12,14 @@ repos:
           - '--fix=lf'
 
   # Remove unused imports/variables
-  - repo: git@github.com:myint/autoflake.git
+  - repo: https://github.com/myint/autoflake
     rev: v1.4
     hooks:
       - id: autoflake
         args:
           - "--in-place"
           - "--remove-all-unused-imports"
-          - "--remove-unused-variable"
+          - "--remove-unused-variables"
 
   # Sort imports
   - repo: https://github.com/pycqa/isort
@@ -33,3 +33,9 @@ repos:
     rev: 20.8b1
     hooks:
       - id: black
+
+  # Lint files
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: "3.9.0"
+    hooks:
+      - id: flake8
