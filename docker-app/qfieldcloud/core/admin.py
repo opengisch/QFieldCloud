@@ -1,8 +1,15 @@
+import json
+
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.contrib import admin, messages
+from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
+from django.shortcuts import resolve_url
+from django.utils.html import escape, format_html
+from django.utils.safestring import SafeText
 from qfieldcloud.core.models import (
     Delta,
+    Exportation,
     Geodb,
     Organization,
     OrganizationMember,
@@ -11,6 +18,11 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+
+
+def model_admin_url(obj, name: str = None) -> str:
+    url = resolve_url(admin_urlname(obj._meta, SafeText("change")), obj.pk)
+    return format_html('<a href="{}">{}</a>', url, name or str(obj))
 
 
 class UserAdmin(admin.ModelAdmin):
@@ -66,6 +78,54 @@ class DeltaAdmin(admin.ModelAdmin):
     # TODO: add a custom action to re-apply the deltafile
 
 
+class ExportationAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "project__owner",
+        "project__name",
+        "status",
+        "created_at",
+        "updated_at",
+    )
+    list_filter = ("project", "status", "created_at")
+    list_select_related = ("project", "project__owner")
+    actions = None
+    exclude = ("exportlog", "output")
+
+    readonly_fields = (
+        "project",
+        "status",
+        "created_at",
+        "updated_at",
+        "output__pre",
+        "exportlog__pre",
+    )
+
+    def project__owner(self, instance):
+        return model_admin_url(instance.project.owner)
+
+    project__owner.admin_order_field = "project__owner"
+
+    def project__name(self, instance):
+        return model_admin_url(instance.project, instance.project.name)
+
+    project__name.admin_order_field = "project__name"
+
+    def output__pre(self, instance):
+        return format_html("<pre>{}</pre>", escape(instance.output))
+
+    def exportlog__pre(self, instance):
+        value = json.dumps(instance.exportlog, indent=2, sort_keys=True)
+        return format_html("<pre>{}</pre>", escape(value))
+
+    # This will disable add functionality
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 class UserAccountAdmin(admin.ModelAdmin):
     list_display = (
         "user",
@@ -106,6 +166,7 @@ class GeodbAdmin(admin.ModelAdmin):
 admin.site.register(User, UserAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
+admin.site.register(Exportation, ExportationAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
 admin.site.register(Geodb, GeodbAdmin)
 
