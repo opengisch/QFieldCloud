@@ -157,7 +157,7 @@ class ExportationAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("project", "status", "created_at")
+    list_filter = ("status", "created_at")
     list_select_related = ("project", "project__owner")
     actions = None
     exclude = ("exportlog", "output")
@@ -169,6 +169,13 @@ class ExportationAdmin(admin.ModelAdmin):
         "updated_at",
         "output__pre",
         "exportlog__pre",
+    )
+
+    search_fields = (
+        "id",
+        "exportlog__icontains",
+        "project__name__iexact",
+        "project__owner__username__iexact",
     )
 
     def project__owner(self, instance):
