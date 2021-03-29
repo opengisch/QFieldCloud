@@ -18,10 +18,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path, re_path
+from django.utils.translation import gettext as _
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from qfieldcloud.core.views import auth_views
 from rest_framework import permissions
+
+admin.site.site_header = _("QFieldCloud Admin")
+admin.site.site_title = _("QFieldCloud Admin")
+admin.site.index_title = _("Welcome to QFieldCloud Admin")
 
 schema_view = get_schema_view(
     openapi.Info(
