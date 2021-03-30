@@ -274,9 +274,18 @@ def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
     container.kill()
 
     logger.info(
-        "apply_delta, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}".format(
-            projectid, project_file, exit_code, output.decode("utf-8")
-        )
+        f"""
+===============================================================================
+| Apply deltas finished
+===============================================================================
+Project ID: {projectid}
+Project file: {project_file}
+Exit code: {exit_code}
+Output:
+------------------------------------------------------------------------------S
+{output.decode('utf-8')}
+------------------------------------------------------------------------------E
+"""
     )
 
     deltalog_file = os.path.join(orchestrator_tempdir, "deltalog.json")
