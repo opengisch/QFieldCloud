@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import tempfile
+from datetime import datetime
 from pathlib import Path, PurePath
 
 import apply_deltas
@@ -13,6 +14,7 @@ import boto3
 import mock
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from qgis.core import (
+    Qgis,
     QgsApplication,
     QgsMapSettings,
     QgsOfflineEditing,
@@ -29,6 +31,23 @@ STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
 STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
 STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
 STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
+def _write_log_message(message, tag, level):
+    time = datetime.now().isoformat()
+    level_str = "UNKNOWN"
+
+    if level == Qgis.Info:
+        level_str = "INFO"
+    elif level == Qgis.Warning:
+        level_str = "WARNING"
+    else:
+        level_str = "CRITICAL"
+
+    logger.info(f"QMessageLog {time} {level_str} {tag} {message}")
 
 
 def _get_s3_resource():
@@ -287,6 +306,8 @@ if __name__ == "__main__":
     logging.getLogger("nose").setLevel(logging.CRITICAL)
     logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
     logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+
+    QgsApplication.messageLog().messageReceived.connect(_write_log_message)
 
     parser = argparse.ArgumentParser(prog="COMMAND")
 

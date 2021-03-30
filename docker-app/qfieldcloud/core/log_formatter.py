@@ -1,19 +1,16 @@
+import datetime
 import json
 import logging
 import traceback
-from datetime import datetime
-from uuid import UUID
 
 import json_log_formatter
 from django.core.handlers.wsgi import WSGIRequest
+from django.core.serializers.json import DjangoJSONEncoder
 
 
-class JsonEncoder(json.JSONEncoder):
+class JsonEncoder(DjangoJSONEncoder):
     def default(self, obj):
-        if isinstance(obj, UUID):
-            # if the obj is uuid, we simply return the value of uuid
-            return obj.hex
-        return json.JSONEncoder.default(self, obj)
+        return super().default(obj)
 
 
 class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
@@ -40,7 +37,7 @@ class CustomisedRequestHumanFormatter(logging.Formatter):
 
         created = extra.get("created")
         if created:
-            created = datetime.fromtimestamp(created)
+            created = datetime.datetime.fromtimestamp(created)
 
         request_headers = "\n"
         for header, value in extra.get("request_headers", {}).items():

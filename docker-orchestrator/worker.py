@@ -1,6 +1,5 @@
 import logging
 import os
-from logging import handlers
 
 import sentry_sdk
 from redis import Redis
@@ -14,20 +13,9 @@ sentry_sdk.init(
     attach_stacktrace="on",
 )
 
-
-rotating_file_handler = handlers.RotatingFileHandler(
-    filename=os.path.join("/log", "orchestrator.log"),
-    mode="a",
-    maxBytes=5 * 1024 * 1024,
-    backupCount=2,
-    encoding=None,
-    delay=False,
-)
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(message)s",
-    handlers=[rotating_file_handler],
 )
 
 with Connection():

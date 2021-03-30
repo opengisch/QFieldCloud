@@ -356,6 +356,8 @@ def export(token, project_id, local_dir, accept_old_export):
             else:
                 return
 
+        sleep(1)
+
     resp = cloud_request("GET", f"qfield-files/{project_id}", token=token)
     payload = resp.json()
     files = payload["files"]

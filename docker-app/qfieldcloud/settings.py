@@ -89,7 +89,9 @@ ROOT_URLCONF = "qfieldcloud.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [
+            os.path.join(BASE_DIR, "qfieldcloud", "core", "templates"),
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "builtins": [],

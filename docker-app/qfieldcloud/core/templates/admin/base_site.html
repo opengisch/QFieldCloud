@@ -1,0 +1,11 @@
+{% extends "admin/base.html" %}
+
+{% load staticfiles %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('QFieldCloud Admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('QFieldCloud Admin') }}</a></h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import posixpath
 from datetime import datetime
@@ -13,6 +14,8 @@ from botocore.errorfactory import ClientError
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from redis import Redis, exceptions
+
+logger = logging.getLogger(__name__)
 
 
 def export_project(projectid, project_file):
@@ -30,6 +33,10 @@ def export_project(projectid, project_file):
 
 def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids=None):
     """Call the orchestrator API to apply a delta file"""
+
+    logger.info(
+        f"Requested apply_deltas on {projectid} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
+    )
 
     queue = django_rq.get_queue("delta")
     queue.enqueue(

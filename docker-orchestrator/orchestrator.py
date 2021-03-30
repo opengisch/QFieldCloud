@@ -24,6 +24,9 @@ EXPORTATION_STATUS_EXPORTED = 3  # Export finished
 EXPORTATION_STATUS_ERROR = 4  # was not possible to export the project
 
 
+logger = logging.getLogger(__name__)
+
+
 class QgisException(Exception):
     pass
 
@@ -84,6 +87,8 @@ def set_exportation_status_and_log(
 def export_project(projectid, project_file):
     """Start a QGIS docker container to export the project using libqfieldsync """
 
+    logger.info(f"Starting a new export for project {projectid}")
+
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
     qgis_tempdir = os.path.join(os.environ.get("TMP_DIRECTORY"), orchestrator_tempdir)
 
@@ -122,7 +127,7 @@ def export_project(projectid, project_file):
     exit_code, output = container.exec_run(container_command)
     container.kill()
 
-    logging.info(
+    logger.info(
         "export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}".format(
             projectid, project_file, exit_code, output.decode("utf-8")
         )
@@ -193,7 +198,7 @@ def create_deltafile_with_pending_deltas(
             WHERE TRUE
                 AND project_id = %s
                 AND status = %s
-                AND (%s IS NULL OR id = ANY(%s))
+                AND (%s IS NULL OR id::text = ANY(%s))
         """,
         (projectid, DELTA_STATUS_PENDING, delta_ids, delta_ids),
     )
@@ -227,6 +232,8 @@ def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
 
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
     qgis_tempdir = os.path.join(os.environ.get("TMP_DIRECTORY"), orchestrator_tempdir)
+
+    logger.info(f"Starting a new export for project {projectid}")
 
     create_deltafile_with_pending_deltas(projectid, orchestrator_tempdir, delta_ids)
 
@@ -266,10 +273,19 @@ def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
     exit_code, output = container.exec_run(container_command)
     container.kill()
 
-    logging.info(
-        "apply_delta, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}".format(
-            projectid, project_file, exit_code, output.decode("utf-8")
-        )
+    logger.info(
+        f"""
+===============================================================================
+| Apply deltas finished
+===============================================================================
+Project ID: {projectid}
+Project file: {project_file}
+Exit code: {exit_code}
+Output:
+------------------------------------------------------------------------------S
+{output.decode('utf-8')}
+------------------------------------------------------------------------------E
+"""
     )
 
     deltalog_file = os.path.join(orchestrator_tempdir, "deltalog.json")
@@ -323,7 +339,7 @@ def check_status():
     exit_code, output = container.exec_run(container_command)
     container.kill()
 
-    logging.info(
+    logger.info(
         "check_status, exit_code: {}, output:\n\n{}".format(
             exit_code, output.decode("utf-8")
         )
