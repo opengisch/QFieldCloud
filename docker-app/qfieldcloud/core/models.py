@@ -10,7 +10,6 @@ from django.db import models
 from django.db.models.aggregates import Count
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-from django.urls import reverse
 from django.utils.translation import gettext as _
 from qfieldcloud.core import geodb_utils, utils, validators
 
@@ -47,9 +46,6 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
-
-    def get_absolute_url(self):
-        return reverse("profile_overview", kwargs={"username": self.username})
 
     @property
     def is_user(self):
@@ -196,9 +192,6 @@ class Organization(User):
             self.user_type = self.TYPE_ORGANIZATION
         return super().save(*args, **kwargs)
 
-    def get_absolute_url(self):
-        return reverse("profile_overview", kwargs={"username": self.username})
-
 
 class OrganizationMember(models.Model):
     ROLE_ADMIN = 1
@@ -275,12 +268,6 @@ class Project(models.Model):
     def storage_size(self):
         return utils.get_s3_project_size(self.id)
 
-    def get_absolute_url(self):
-        return reverse(
-            "project_overview",
-            kwargs={"username": self.owner.username, "project": self.name},
-        )
-
     @property
     def files(self):
         return utils.get_project_files(self.id)
@@ -319,18 +306,6 @@ class ProjectCollaborator(models.Model):
 
     def __str__(self):
         return self.project.name + ": " + self.collaborator.username
-
-    def get_absolute_url(self):
-        return reverse(
-            "collaborator_details",
-            kwargs={
-                "content_owner": self.project.owner.username,
-                "project": self.project.name,
-                "collaborator": self.collaborator.username,
-                "pk": self.pk,
-                "project_pk": self.project.pk,
-            },
-        )
 
 
 class Delta(models.Model):
