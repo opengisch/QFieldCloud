@@ -193,7 +193,7 @@ def create_deltafile_with_pending_deltas(
             WHERE TRUE
                 AND project_id = %s
                 AND status = %s
-                AND (%s IS NULL OR id = ANY(%s))
+                AND (%s IS NULL OR id::text = ANY(%s))
         """,
         (projectid, DELTA_STATUS_PENDING, delta_ids, delta_ids),
     )

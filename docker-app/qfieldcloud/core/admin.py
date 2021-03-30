@@ -1,4 +1,5 @@
 import json
+import time
 
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.contrib import admin, messages
@@ -6,9 +7,11 @@ from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.contrib.postgres.fields import JSONField
 from django.forms import widgets
+from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
+from qfieldcloud.core import exceptions, utils
 from qfieldcloud.core.models import (
     Delta,
     Exportation,
@@ -101,7 +104,14 @@ class DeltaAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_filter = ("status",)
-    actions = None
+
+    actions = (
+        "set_status_pending",
+        "set_status_ignored",
+        "set_status_unpermitted",
+        "apply_selected_deltas",
+    )
+
     readonly_fields = (
         "project",
         "deltafile_id",
@@ -128,6 +138,8 @@ class DeltaAdmin(admin.ModelAdmin):
 
     formfield_overrides = {JSONField: {"widget": PrettyJSONWidget}}
 
+    change_form_template = "admin/delta_change_form.html"
+
     # This will disable add functionality
     def has_add_permission(self, request):
         return False
@@ -145,7 +157,38 @@ class DeltaAdmin(admin.ModelAdmin):
 
     project__name.admin_order_field = "project__name"
 
-    # TODO: add a custom action to re-apply the deltafile
+    def set_status_pending(self, request, queryset):
+        queryset.update(status=Delta.STATUS_PENDING)
+
+    def set_status_ignored(self, request, queryset):
+        queryset.update(status=Delta.STATUS_IGNORED)
+
+    def set_status_unpermitted(self, request, queryset):
+        queryset.update(status=Delta.STATUS_UNPERMITTED)
+
+    def response_change(self, request, delta):
+        if "_apply_delta_btn" in request.POST:
+            project_file = utils.get_qgis_project_file(delta.project.id)
+
+            utils.apply_deltas(
+                str(delta.project.id),
+                project_file,
+                delta.project.overwrite_conflicts,
+                delta_ids=[str(delta.id)],
+            )
+
+            if project_file is None:
+                self.message_user(request, "Missing project file")
+                raise exceptions.NoQGISProjectError()
+
+            self.message_user(request, "Delta application started")
+
+            # we need to sleep 1 second, just to make surethe apply delta started
+            time.sleep(1)
+
+            return HttpResponseRedirect(".")
+
+        return super().response_change(request, delta)
 
 
 class ExportationAdmin(admin.ModelAdmin):
