@@ -64,6 +64,15 @@ class User(AbstractUser):
         return f"{self.first_name} {self.last_name}"
 
     @property
+    def username_with_full_name(self) -> str:
+        full_name = self.full_name.strip()
+
+        if full_name:
+            return f"{self.username} ({full_name})"
+        else:
+            return self.username
+
+    @property
     def has_geodb(self) -> bool:
         return hasattr(self, "geodb")
 
