@@ -292,6 +292,14 @@ class ProjectCollaborator(models.Model):
         (ROLE_READER, "reader"),
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "collaborator"],
+                name="projectcollaborator_project_collaborator_uniq",
+            )
+        ]
+
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
