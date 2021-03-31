@@ -227,6 +227,12 @@ class OrganizationMember(models.Model):
     def __str__(self):
         return self.organization.username + ": " + self.member.username
 
+    def clean(self) -> None:
+        if self.organization.organization_owner == self.member:
+            raise ValidationError(_("Cannot add the organization owner as a member."))
+
+        return super().clean()
+
 
 class Project(models.Model):
     """Represent a QFieldcloud project.
