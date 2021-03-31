@@ -203,6 +203,14 @@ class OrganizationMember(models.Model):
         (ROLE_MEMBER, "member"),
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "member"],
+                name="organization_organization_member_uniq",
+            )
+        ]
+
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
