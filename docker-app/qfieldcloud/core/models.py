@@ -6,6 +6,7 @@ from enum import Enum
 
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.aggregates import Count
 from django.db.models.signals import post_delete, post_save
@@ -292,6 +293,14 @@ class ProjectCollaborator(models.Model):
         (ROLE_READER, "reader"),
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "collaborator"],
+                name="projectcollaborator_project_collaborator_uniq",
+            )
+        ]
+
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -306,6 +315,32 @@ class ProjectCollaborator(models.Model):
 
     def __str__(self):
         return self.project.name + ": " + self.collaborator.username
+
+    def clean(self) -> None:
+        if self.project.owner == self.collaborator:
+            raise ValidationError(_("Cannot add the project owner as collaborator"))
+
+        if self.project.owner.is_organization:
+            organization = Organization.objects.get(pk=self.project.owner.pk)
+
+            if organization.organization_owner == self.collaborator:
+                raise ValidationError(
+                    _(
+                        "Cannot add the owner of the project owning organization as collaborator"
+                    )
+                )
+            elif OrganizationMember.objects.filter(
+                organization=organization,
+                member=self.collaborator,
+                role=OrganizationMember.ROLE_ADMIN,
+            ).exists():
+                raise ValidationError(
+                    _(
+                        "Cannot add an admin of the project owning organization as collaborator"
+                    )
+                )
+
+        return super().clean()
 
 
 class Delta(models.Model):
