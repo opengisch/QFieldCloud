@@ -5,6 +5,7 @@ import time
 import requests
 from django.contrib.auth import get_user_model
 from django.http.response import HttpResponseRedirect
+from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -36,6 +37,10 @@ class QgisFileTestCase(APITransactionTestCase):
         # Remove all projects avoiding bulk delete in order to use
         # the overrided delete() function in the model
         for p in Project.objects.all():
+            bucket = utils.get_s3_bucket()
+            prefix = utils.safe_join("projects/{}/".format(p.id))
+            bucket.objects.filter(Prefix=prefix).delete()
+
             p.delete()
 
         User.objects.all().delete()
@@ -45,6 +50,11 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_push_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
@@ -53,10 +63,16 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
     def test_push_download_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
@@ -65,6 +81,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # Pull the file
         response = self.client.get(f"/api/v1/files/{self.project1.id}/file.txt/")
@@ -88,6 +105,11 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_push_download_file_with_path(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
@@ -96,6 +118,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # Pull the file
         response = self.client.get(
@@ -121,6 +144,11 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_push_list_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
@@ -129,6 +157,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         file_path = testdata_path("file2.txt")
         # Push a second file
@@ -138,6 +167,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 2)
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -162,14 +192,24 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_push_list_file_with_space_in_name(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
+        project_file = "aaa bbb/project qgis 1.2.qgs"
         response = self.client.post(
-            "/api/v1/files/{}/aaa bbb/project qgis 1.2.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/{project_file}/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, project_file
+        )
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -182,6 +222,11 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_push_list_file_versions(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
@@ -190,6 +235,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # Wait 2 seconds to be sure the file timestamps are different
         time.sleep(2)
@@ -203,6 +249,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -230,6 +277,11 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_push_download_specific_version_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
@@ -238,6 +290,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # Wait 2 seconds to be sure the file timestamps are different
         time.sleep(2)
@@ -251,6 +304,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # Pull the last file (without version parameter)
         response = self.client.get(f"/api/v1/files/{self.project1.id}/file.txt/")
@@ -327,6 +381,11 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_push_delete_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
@@ -335,6 +394,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         file_path = testdata_path("file2.txt")
         # Push a second file
@@ -344,6 +404,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 2)
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -355,6 +416,7 @@ class QgisFileTestCase(APITransactionTestCase):
             "/api/v1/files/{}/aaa/file.txt/".format(self.project1.id)
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -364,37 +426,58 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_one_qgis_project_per_project(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
-        file_path = testdata_path("file.txt")
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
 
+        file_path = testdata_path("file.txt")
+        qgis_project_file = "foo/bar/file.qgs"
         # Push a QGIS project file
         response = self.client.post(
-            "/api/v1/files/{}/foo/bar/file.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/{qgis_project_file}/",
             {
                 "file": open(file_path, "rb"),
             },
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file,
+            qgis_project_file,
+        )
 
         # Push again the same QGIS project file (this is allowed)
         response = self.client.post(
-            "/api/v1/files/{}/foo/bar/file.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/{qgis_project_file}/",
             {
                 "file": open(file_path, "rb"),
             },
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file,
+            qgis_project_file,
+        )
 
+        failing_qgis_project_file = "foo/bar/file2.qgs"
         # Push another QGIS project file
         response = self.client.post(
-            "/api/v1/files/{}/foo/bar/file2.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/{failing_qgis_project_file}/",
             {
                 "file": open(file_path, "rb"),
             },
             format="multipart",
         )
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file,
+            qgis_project_file,
+        )
 
         # Push another QGIS project file
         response = self.client.post(
@@ -405,9 +488,28 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file,
+            qgis_project_file,
+        )
+
+        response = self.client.delete(
+            f"/api/v1/files/{self.project1.id}/{qgis_project_file}/",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
 
     def test_upload_1mb_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
 
         big_file = tempfile.NamedTemporaryFile()
         with open(big_file.name, "wb") as bf:
@@ -420,6 +522,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -433,6 +536,11 @@ class QgisFileTestCase(APITransactionTestCase):
     def test_upload_10mb_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).qgis_project_file, None
+        )
+
         big_file = tempfile.NamedTemporaryFile()
         with open(big_file.name, "wb") as bf:
             bf.truncate(1024 * 1024 * 10)
@@ -444,6 +552,7 @@ class QgisFileTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))

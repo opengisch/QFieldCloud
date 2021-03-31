@@ -126,13 +126,15 @@ class DownloadPushDeleteFileView(views.APIView):
 
     def post(self, request, projectid, filename, format=None):
 
-        Project.objects.get(id=projectid)
+        project = Project.objects.get(id=projectid)
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
 
+        is_qgis_project_file = False
         # check only one qgs/qgz file per project
         if filename.lower().endswith(".qgs") or filename.lower().endswith(".qgz"):
+            is_qgis_project_file = True
             current_project_file = utils.get_qgis_project_file(projectid)
             if current_project_file is not None:
                 # Allowed only to push the a new version of the same file
@@ -149,17 +151,30 @@ class DownloadPushDeleteFileView(views.APIView):
         key = utils.safe_join("projects/{}/files/".format(projectid), filename)
         metadata = {"Sha256sum": sha256sum}
 
+        if is_qgis_project_file:
+            project.qgis_project_file = filename
+
+        if not utils.check_s3_key(key):
+            project.files_count += 1
+
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
+
+        project.save()
 
         return Response(status=status.HTTP_201_CREATED)
 
     def delete(self, request, projectid, filename):
 
-        Project.objects.get(id=projectid)
+        project = Project.objects.get(id=projectid)
 
         key = utils.safe_join("projects/{}/files/".format(projectid), filename)
         bucket = utils.get_s3_bucket()
 
         bucket.object_versions.filter(Prefix=key).delete()
+
+        if filename.lower().endswith(".qgs") or filename.lower().endswith(".qgz"):
+            project.qgis_project_file = None
+        project.files_count -= 1
+        project.save()
 
         return Response(status=status.HTTP_200_OK)
