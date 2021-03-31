@@ -203,6 +203,14 @@ class OrganizationMember(models.Model):
         (ROLE_MEMBER, "member"),
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "member"],
+                name="organization_organization_member_uniq",
+            )
+        ]
+
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
@@ -218,6 +226,12 @@ class OrganizationMember(models.Model):
 
     def __str__(self):
         return self.organization.username + ": " + self.member.username
+
+    def clean(self) -> None:
+        if self.organization.organization_owner == self.member:
+            raise ValidationError(_("Cannot add the organization owner as a member."))
+
+        return super().clean()
 
 
 class Project(models.Model):
@@ -318,7 +332,7 @@ class ProjectCollaborator(models.Model):
 
     def clean(self) -> None:
         if self.project.owner == self.collaborator:
-            raise ValidationError(_("Cannot add the project owner as collaborator"))
+            raise ValidationError(_("Cannot add the project owner as a collaborator."))
 
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
@@ -326,7 +340,7 @@ class ProjectCollaborator(models.Model):
             if organization.organization_owner == self.collaborator:
                 raise ValidationError(
                     _(
-                        "Cannot add the owner of the project owning organization as collaborator"
+                        "Cannot add the owner of the owning organization of the project as a collaborator."
                     )
                 )
             elif OrganizationMember.objects.filter(
@@ -336,7 +350,7 @@ class ProjectCollaborator(models.Model):
             ).exists():
                 raise ValidationError(
                     _(
-                        "Cannot add an admin of the project owning organization as collaborator"
+                        "Cannot add an admin of the owning organization of the project as a collaborator."
                     )
                 )
 
