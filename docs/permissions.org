@@ -54,7 +54,7 @@
     A collaborator of an normal user project can only be reporter or
     reader. Editor or manager can only be set to an organization's project.
 **** Roles
-    A higher role always include also the lowest ones
+    A higher role always include also the lower ones
 
     | Name     | Description                                                                                           |
     |----------+-------------------------------------------------------------------------------------------------------|
@@ -65,7 +65,7 @@
     | reader   | Can read data.                                                                                        |
 *** OrganizationMember
 **** Roles
-    A higher role always include also the lowest ones
+    A higher role always include also the lower ones
 
     | Name    | Description                                                        |
     |---------+--------------------------------------------------------------------|
