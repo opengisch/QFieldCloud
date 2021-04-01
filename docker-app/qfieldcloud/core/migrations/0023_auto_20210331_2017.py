@@ -18,7 +18,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(forwards_func, migrations.RunPython.noop),
         migrations.AddField(
             model_name="project",
             name="files_count",
@@ -34,4 +33,5 @@ class Migration(migrations.Migration):
                 null=True,
             ),
         ),
+        migrations.RunPython(forwards_func, migrations.RunPython.noop),
     ]
