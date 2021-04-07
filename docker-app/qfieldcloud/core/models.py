@@ -294,6 +294,10 @@ class Project(models.Model):
         return utils.get_project_files(self.id)
 
     @property
+    def qgis_project_file(self):
+        return utils.get_qgis_project_file(self.id)
+
+    @property
     def files_count(self):
         return utils.get_project_files_count(self.id)
 
