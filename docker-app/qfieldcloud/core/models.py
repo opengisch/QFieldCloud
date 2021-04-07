@@ -30,6 +30,8 @@ class User(AbstractUser):
         choices=TYPE_CHOICES, default=TYPE_USER
     )
 
+    remaining_invitations = models.PositiveIntegerField(default=3)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.get_field("username").validators.append(
