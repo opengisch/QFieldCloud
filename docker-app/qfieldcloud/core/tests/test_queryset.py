@@ -252,8 +252,7 @@ class QuerysetTestCase(APITestCase):
             memberships=True,
         )
 
-        self.assertEqual(len(queryset), 2)
-        self.assertTrue(self.project7 in queryset)
+        self.assertEqual(len(queryset), 1)
         self.assertTrue(self.project8 in queryset)
 
     def test_another_user_projects_where_collaborated_reversed(self):
