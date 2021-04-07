@@ -291,6 +291,12 @@ class Project(models.Model):
         ),
     )
 
+    def get_absolute_url(self):
+        return reverse_lazy(
+            "project_overview",
+            kwargs={"username": self.owner.username, "project": self.name},
+        )
+
     def __str__(self):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
