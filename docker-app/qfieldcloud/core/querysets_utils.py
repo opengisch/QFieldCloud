@@ -46,12 +46,7 @@ def get_available_projects(
         )
 
     if collaborations:
-        # 2.1) owned by anyone, but `user` is a collaborator
-        where |= Q(
-            collaborators__in=ProjectCollaborator.objects.filter(collaborator=user)
-        )
-
-        # 2.2) owned by anyone, but `owner` is a collaborator (public only if user!=owner)
+        # 2) owned by anyone, but `owner` is a collaborator (public only if user!=owner)
         where_collaborator = {
             "collaborators__in": ProjectCollaborator.objects.filter(collaborator=owner),
         }
