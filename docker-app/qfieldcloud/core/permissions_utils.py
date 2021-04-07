@@ -460,3 +460,10 @@ def can_ignore_delta(user, delta: Delta):
         return False
 
     return True
+
+
+def can_send_invitations(user) -> bool:
+    if user.is_organization:
+        return False
+
+    return True

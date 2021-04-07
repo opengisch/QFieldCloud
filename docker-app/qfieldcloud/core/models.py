@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models.aggregates import Count
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from qfieldcloud.core import geodb_utils, utils, validators
 
@@ -30,6 +31,8 @@ class User(AbstractUser):
         choices=TYPE_CHOICES, default=TYPE_USER
     )
 
+    remaining_invitations = models.PositiveIntegerField(default=3)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.get_field("username").validators.append(
@@ -47,6 +50,9 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def get_absolute_url(self):
+        return reverse_lazy("profile_overview", kwargs={"username": self.username})
 
     @property
     def is_user(self):
