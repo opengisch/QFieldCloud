@@ -402,6 +402,21 @@ def delta_status(token, project_id, deltafile_id=None):
 @click.argument("delta_file")
 @click.argument("token", envvar="QFIELDCLOUD_TOKEN", type=str)
 def upload_deltafile(token, project_id, delta_file):
+    """Uploads deltafile"""
+    # Upload deltafile
+    with open(delta_file, "rb") as local_file:
+        _ = cloud_request(
+            "POST", f"deltas/{project_id}", token=token, files={"file": local_file}
+        )
+
+        print(f'Deltafile "{delta_file}" uploaded')
+
+
+@cli.command()
+@click.argument("project_id")
+@click.argument("delta_file")
+@click.argument("token", envvar="QFIELDCLOUD_TOKEN", type=str)
+def upload_apply_deltafile(token, project_id, delta_file):
     """Uploads deltafile and checks for the status until final status reached"""
     deltas = None
 
@@ -417,7 +432,7 @@ def upload_deltafile(token, project_id, delta_file):
     # Upload deltafile
     with open(delta_file, "rb") as local_file:
         _ = cloud_request(
-            "GET", f"deltas/{project_id}", token=token, files={"file": local_file}
+            "POST", f"deltas/{project_id}", token=token, files={"file": local_file}
         )
 
         print(f'Deltafile "{delta_file}" uploaded')
