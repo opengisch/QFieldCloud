@@ -44,7 +44,7 @@ class CustomisedRequestHumanFormatter(logging.Formatter):
             request_headers += f"    {header}: {value}\n"
 
         response_headers = "\n"
-        for _key, (header, value) in extra.get("response_headers", {}).items():
+        for header, value in extra.get("response_headers", {}).items():
             response_headers += f"    {header}: {value}\n"
 
         request_body = (

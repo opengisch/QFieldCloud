@@ -88,7 +88,7 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
                 if len(response_string) > MAX_RESPONSE_BODY_LENGTH:
                     log_data["response_trimmed"] = MAX_RESPONSE_BODY_LENGTH
 
-            log_data["response_headers"] = {**response._headers}
+            log_data["response_headers"] = {**response.headers}
             log_data["status_code"] = response.status_code
             log_data["response_body"] = self.censor_sensitive_data(
                 log_data["response_body"]
