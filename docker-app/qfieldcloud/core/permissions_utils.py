@@ -467,3 +467,7 @@ def can_send_invitations(user) -> bool:
         return False
 
     return True
+
+
+def can_list_exportations(user, project: Project) -> bool:
+    return can_download_files(user, project)
