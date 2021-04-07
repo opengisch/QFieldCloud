@@ -463,7 +463,4 @@ def can_ignore_delta(user, delta: Delta):
 
 
 def can_send_invitations(user):
-    if user.remaining_invitations > 0:
-        return True
-
-    return False
+    return True
