@@ -282,17 +282,6 @@ class Project(models.Model):
             "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
         ),
     )
-    qgis_project_file = models.TextField(
-        null=True,
-        help_text=_(
-            "The QGIS project file (.qgs, .qgz) associated with this project. Null if no project file uploaded yet."
-        ),
-    )
-
-    files_count = models.PositiveIntegerField(
-        default=0,
-        help_text=_("The number of files associated with this project."),
-    )
 
     def __str__(self):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
@@ -303,6 +292,14 @@ class Project(models.Model):
     @property
     def files(self):
         return utils.get_project_files(self.id)
+
+    @property
+    def qgis_project_file(self):
+        return utils.get_qgis_project_file(self.id)
+
+    @property
+    def files_count(self):
+        return utils.get_project_files_count(self.id)
 
 
 class ProjectCollaborator(models.Model):
