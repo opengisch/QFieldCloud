@@ -76,6 +76,7 @@ Request: {extra.get("request_method", "UNKNOWN_REQUEST_METHOD")} {extra.get("req
 Time: {created}; relative - {extra.get("relativeCreated", "UNKNOWN_RELATIVE_CREATED")}; runtime - {extra.get("run_time", "UNKNOWN_RUN_TIME")}
 Context: PID #{extra.get("process", "UNKNOWN_PID")}; thread #{extra.get("thread", "UNKNOWN_THREAD")} ({extra.get("threadName", "UNKNOWN_THREAD_NAME")})
 Request headers: {request_headers}
+Request files: {", ".join(extra.get("files", [])) or "NO_FILES"}
 Request payload:
 ------------------------------------------------------------------------------S
 {request_body}

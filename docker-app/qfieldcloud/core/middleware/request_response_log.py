@@ -42,6 +42,7 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
             "remote_address": request.META["REMOTE_ADDR"],
             "server_hostname": socket.gethostname(),
             "request_method": request.method,
+            "files": tuple(dict(request.FILES).keys()),
             "request_path": request.get_full_path(),
             "request_headers": {**request.headers},
             "run_time": time.time() - request.start_time,
