@@ -416,6 +416,9 @@ def can_become_collaborator(user, project):
 
 
 def can_create_geodb(user, profile):
+    if not profile.is_geodb_enabled:
+        return False
+
     if profile.has_geodb:
         return False
 
