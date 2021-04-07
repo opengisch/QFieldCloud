@@ -31,7 +31,10 @@ class User(AbstractUser):
         choices=TYPE_CHOICES, default=TYPE_USER
     )
 
-    remaining_invitations = models.PositiveIntegerField(default=3)
+    remaining_invitations = models.PositiveIntegerField(
+        default=3,
+        help_text="Remaining invitations that can be sent by the user himself.",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
