@@ -1,6 +1,7 @@
 import json
+import logging
+from datetime import datetime
 
-import jsonschema
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
@@ -11,6 +12,8 @@ from rest_framework import generics, permissions, views
 from rest_framework.response import Response
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class DeltaFilePermissions(permissions.BasePermission):
@@ -57,26 +60,31 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         try:
             deltafile_json = json.load(request_file)
             utils.get_deltafile_schema_validator().validate(deltafile_json)
-        except (ValueError, jsonschema.exceptions.ValidationError):
+
+            deltafile_id = deltafile_json["id"]
+
+            deltas = deltafile_json.get("deltas", [])
+            for delta in deltas:
+                delta_obj = Delta(
+                    id=delta["uuid"],
+                    deltafile_id=deltafile_id,
+                    project=project_obj,
+                    content=delta,
+                )
+
+                if permissions_utils.can_store_delta(self.request.user, delta_obj):
+                    delta_obj.status = Delta.STATUS_PENDING
+                else:
+                    delta_obj.status = Delta.STATUS_UNPERMITTED
+
+                delta_obj.save()
+
+        except Exception as err:
+            key = f"projects/{projectid}/deltas/{datetime.now().isoformat()}.json"
+            utils.get_s3_bucket().upload_fileobj(request_file, key)
+
+            logger.exception(err)
             raise exceptions.DeltafileValidationError()
-
-        deltafile_id = deltafile_json["id"]
-
-        deltas = deltafile_json.get("deltas", [])
-        for delta in deltas:
-            delta_obj = Delta(
-                id=delta["uuid"],
-                deltafile_id=deltafile_id,
-                project=project_obj,
-                content=delta,
-            )
-
-            if permissions_utils.can_store_delta(self.request.user, delta_obj):
-                delta_obj.status = Delta.STATUS_PENDING
-            else:
-                delta_obj.status = Delta.STATUS_UNPERMITTED
-
-            delta_obj.save()
 
         return Response()
 
