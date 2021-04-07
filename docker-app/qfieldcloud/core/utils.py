@@ -12,10 +12,68 @@ import django_rq
 import jsonschema
 from botocore.errorfactory import ClientError
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
+from django.core.validators import validate_email
+from django.db import IntegrityError
+from django.http.request import HttpRequest
+from django.utils.translation import gettext as _
+from invitations.utils import get_invitation_model
+from qfieldcloud.core.models import User
 from redis import Redis, exceptions
 
 logger = logging.getLogger(__name__)
+
+
+def is_valid_email(email: str) -> bool:
+    try:
+        validate_email(email)
+        return True
+    except ValidationError:
+        return False
+
+
+def invite_user_by_email(
+    email: str, sender: User, request: HttpRequest, send=False
+) -> tuple:
+    """
+    Sends an invite for a given email address
+
+    Args :
+        email:      recipient's email
+        sender:     inviter
+        request:    the request (used to build the absolute URL)
+
+    Returns :
+        (bool, str) success, message
+    """
+
+    try:
+        validate_email(email)
+    except ValidationError:
+        return False, _(
+            "The provided email address is not valid. Users can only be invited with a valid email address."
+        )
+
+    Invitation = get_invitation_model()
+    try:
+        invite = Invitation.create(email, inviter=request.user)
+    except IntegrityError:
+        return False, _(
+            'User "%(email)s" has already been invited to create a QFieldCloud account.'
+            % {"email": email}
+        )
+
+    # TODO see if we can "pre-attach" this future user to this project, probably to be done
+    # at the same time as TODO below about actual invitation
+    if send:
+        invite.send_invitation(request)
+
+    return (
+        True,
+        _('User "%(email)s" has been invited to create a QFieldCloud account.')
+        % {"email": email},
+    )
 
 
 def export_project(projectid, project_file):
