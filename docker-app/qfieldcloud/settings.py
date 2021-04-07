@@ -223,7 +223,6 @@ RQ_QUEUES = {
 
 LOGIN_URL = "account_login"
 
-LOGIN_REDIRECT_URL = "index"
 
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", ""),
