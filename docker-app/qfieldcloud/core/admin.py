@@ -5,7 +5,7 @@ from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
-from django.contrib.postgres.fields import JSONField
+from django.db.models.fields.json import JSONField
 from django.forms import widgets
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
