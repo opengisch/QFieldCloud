@@ -115,6 +115,7 @@ class UserAccount(models.Model):
     location = models.CharField(max_length=255, default="")
     twitter = models.CharField(max_length=255, default="")
     is_email_public = models.BooleanField(default=False)
+    avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
 
     def __str__(self):
         return self.TYPE_CHOICES[self.account_type][1]
