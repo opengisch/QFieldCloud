@@ -208,6 +208,12 @@ class Organization(User):
         return super().save(*args, **kwargs)
 
 
+@receiver(post_save, sender=Organization)
+def create_account_for_organization(sender, instance, created, **kwargs):
+    if created:
+        UserAccount.objects.create(user=instance)
+
+
 class OrganizationMember(models.Model):
     ROLE_ADMIN = 1
     ROLE_MEMBER = 2
