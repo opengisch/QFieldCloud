@@ -36,11 +36,6 @@ class User(AbstractUser):
         help_text="Remaining invitations that can be sent by the user himself.",
     )
 
-    is_geodb_enabled = models.BooleanField(
-        default=False,
-        help_text="Whether the account has the option to create a GeoDB.",
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.get_field("username").validators.append(
@@ -90,7 +85,7 @@ class User(AbstractUser):
 
 # Automatically create a UserAccount instance when a user is created.
 @receiver(post_save, sender=User)
-def create_account(sender, instance, created, **kwargs):
+def create_account_for_user(sender, instance, created, **kwargs):
     if created:
         UserAccount.objects.create(user=instance)
 
@@ -110,12 +105,17 @@ class UserAccount(models.Model):
     )
     storage_limit_mb = models.PositiveIntegerField(default=100)
     db_limit_mb = models.PositiveIntegerField(default=25)
+    is_geodb_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether the account has the option to create a GeoDB.",
+    )
     synchronizations_per_months = models.PositiveIntegerField(default=30)
     bio = models.CharField(max_length=255, default="")
     workplace = models.CharField(max_length=255, default="")
     location = models.CharField(max_length=255, default="")
     twitter = models.CharField(max_length=255, default="")
     is_email_public = models.BooleanField(default=False)
+    avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
 
     def __str__(self):
         return self.TYPE_CHOICES[self.account_type][1]
@@ -206,6 +206,12 @@ class Organization(User):
         if not self.id:
             self.user_type = self.TYPE_ORGANIZATION
         return super().save(*args, **kwargs)
+
+
+@receiver(post_save, sender=Organization)
+def create_account_for_organization(sender, instance, created, **kwargs):
+    if created:
+        UserAccount.objects.create(user=instance)
 
 
 class OrganizationMember(models.Model):
