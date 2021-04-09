@@ -415,8 +415,18 @@ def can_become_collaborator(user, project):
     return True
 
 
+def can_preview_geodb(user, profile):
+    if not profile.useraccount.is_geodb_enabled:
+        return False
+
+    if not can_update_user(user, profile):
+        return False
+
+    return True
+
+
 def can_create_geodb(user, profile):
-    if not profile.is_geodb_enabled:
+    if not profile.useraccount.is_geodb_enabled:
         return False
 
     if profile.has_geodb:

@@ -36,11 +36,6 @@ class User(AbstractUser):
         help_text="Remaining invitations that can be sent by the user himself.",
     )
 
-    is_geodb_enabled = models.BooleanField(
-        default=False,
-        help_text="Whether the account has the option to create a GeoDB.",
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.get_field("username").validators.append(
@@ -90,7 +85,7 @@ class User(AbstractUser):
 
 # Automatically create a UserAccount instance when a user is created.
 @receiver(post_save, sender=User)
-def create_account(sender, instance, created, **kwargs):
+def create_account_for_user(sender, instance, created, **kwargs):
     if created:
         UserAccount.objects.create(user=instance)
 
@@ -110,6 +105,10 @@ class UserAccount(models.Model):
     )
     storage_limit_mb = models.PositiveIntegerField(default=100)
     db_limit_mb = models.PositiveIntegerField(default=25)
+    is_geodb_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether the account has the option to create a GeoDB.",
+    )
     synchronizations_per_months = models.PositiveIntegerField(default=30)
     bio = models.CharField(max_length=255, default="")
     workplace = models.CharField(max_length=255, default="")
