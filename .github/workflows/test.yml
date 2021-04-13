@@ -33,7 +33,7 @@ jobs:
           envkey_POSTGRES_USER: "qfieldcloud_test_db_admin"
           envkey_POSTGRES_PASSWORD: ${{ secrets.SQL_PASSWORD }}
           envkey_POSTGRES_DB: "qfieldcloud_test_db"
-          envkey_POSTGRES_HOST: db
+          envkey_POSTGRES_HOST: "db"
           envkey_POSTGRES_PORT: 5432
           envkey_HOST_POSTGRES_PORT: 5433
           envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
@@ -47,22 +47,22 @@ jobs:
           envkey_REDIS_HOST: "redis"
           envkey_REDIS_PASSWORD: "reeeeeedissssssss"
           envkey_REDIS_PORT: 6379
-          envkey_GEODB_HOST: geodb
-          envkey_GEODB_USER: postgres
+          envkey_GEODB_HOST: "geodb"
+          envkey_GEODB_USER: "postgres"
           envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
-          envkey_GEODB_DB: postgres
+          envkey_GEODB_DB: "postgres"
           envkey_GEODB_PORT: 5432
-          envkey_CADDY_ACME_CA: 'https://acme-staging-v02.api.letsencrypt.org/directory'
+          envkey_CADDY_ACME_CA: "https://acme-staging-v02.api.letsencrypt.org/directory"
           envkey_ACCOUNT_EMAIL_VERIFICATION: "optional"
           envkey_EMAIL_HOST: "smtp4dev"
           envkey_EMAIL_USE_TLS: False
           envkey_EMAIL_PORT: 25
-          envkey_EMAIL_HOST_USER: ''
-          envkey_EMAIL_HOST_PASSWORD: ''
-          envkey_LOG_DIRECTORY: '/tmp/'
-          envkey_TMP_DIRECTORY: '/tmp/'
+          envkey_EMAIL_HOST_USER: ""
+          envkey_EMAIL_HOST_PASSWORD: ""
+          envkey_LOG_DIRECTORY: "/tmp/"
+          envkey_TMP_DIRECTORY: "/tmp/"
           envkey_COMPOSE_PROJECT_NAME: "qfc"
-          file_name: .env
+          file_name: ".env"
       - name: Build and run docker containers
         run: |
           docker-compose up -d --build
