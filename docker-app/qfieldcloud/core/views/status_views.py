@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, geodb_utils, utils
+from qfieldcloud.core.logging.filters import skip_logging
 from rest_framework import status, views
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -20,8 +21,8 @@ from rest_framework.response import Response
 class APIStatusView(views.APIView):
     permission_classes = [AllowAny]
 
+    @skip_logging
     def get(self, request):
-
         # Try to get the status from the cache
         results = cache.get("status_results", {})
         if not results:
