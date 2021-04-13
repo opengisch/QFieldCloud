@@ -77,7 +77,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 else:
                     delta_obj.status = Delta.STATUS_UNPERMITTED
 
-                delta_obj.save()
+                delta_obj.save(force_insert=True)
 
         except Exception as err:
             key = f"projects/{projectid}/deltas/{datetime.now().isoformat()}.json"
