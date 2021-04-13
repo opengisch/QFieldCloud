@@ -275,11 +275,16 @@ LOGGING = {
     "disable_existing_loggers": True,
     "formatters": {
         "request.human": {
-            "()": "qfieldcloud.core.log_formatter.CustomisedRequestHumanFormatter",
+            "()": "qfieldcloud.core.logging.formatters.CustomisedRequestHumanFormatter",
         },
         "json": {
-            "()": "qfieldcloud.core.log_formatter.CustomisedJSONFormatter",
+            "()": "qfieldcloud.core.logging.formatters.CustomisedJSONFormatter",
         },
+    },
+    "filters": {
+        "skip_logging_filter": {
+            "()": "qfieldcloud.core.logging.filters.SkipLoggingFilter",
+        }
     },
     "handlers": {
         "console.json": {
@@ -298,6 +303,9 @@ LOGGING = {
     "loggers": {
         "qfieldcloud.request_response_log": {
             "level": LOGLEVEL,
+            "filters": [
+                "skip_logging_filter",
+            ],
             "handlers": [
                 # TODO enable console.json once it is clear how we do store the json logs
                 # 'console.json',
