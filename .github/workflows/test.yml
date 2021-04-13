@@ -61,6 +61,7 @@ jobs:
           envkey_EMAIL_HOST_PASSWORD: ''
           envkey_LOG_DIRECTORY: '/tmp/'
           envkey_TMP_DIRECTORY: '/tmp/'
+          envkey_COMPOSE_PROJECT_NAME: "qfc"
           file_name: .env
       - name: Build and run docker containers
         run: |
