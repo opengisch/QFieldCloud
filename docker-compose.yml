@@ -121,6 +121,7 @@ services:
       STORAGE_REGION_NAME: ${STORAGE_REGION_NAME}
       STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL}
       TMP_DIRECTORY: ${TMP_DIRECTORY}
+      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${LOG_DIRECTORY}:/log
