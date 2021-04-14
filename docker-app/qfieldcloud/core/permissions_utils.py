@@ -134,7 +134,7 @@ def can_get_project(user, project):
     """Return True if the `user` can get `project`.
     Return False otherwise."""
 
-    if not project.private:
+    if project.is_public:
         return True
     if can_update_delete_project(user, project):
         return True
@@ -153,7 +153,7 @@ def can_list_files(user, project):
     """Return True if the `user` can list the files in `project`.
     Return False otherwise."""
 
-    if not project.private:
+    if project.is_public:
         return True
     if _is_project_owner(user, project):
         return True
@@ -211,6 +211,8 @@ def can_upload_files(user, project):
 def can_download_files(user, project):
     """Return True if the `user` can download files from `project`.
     Return False otherwise."""
+    if project.is_public:
+        return True
 
     if can_upload_files(user, project):
         return True
@@ -236,7 +238,7 @@ def can_apply_deltas(user, project):
 def can_list_deltas(user, project):
     """Return True if the `user` can list deltafiles of `project`.
     Return False otherwise."""
-    if not project.private:
+    if project.is_public:
         return True
 
     return can_upload_deltas(user, project)

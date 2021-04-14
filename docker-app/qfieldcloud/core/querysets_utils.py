@@ -38,7 +38,7 @@ def get_available_projects(
         }
 
         if user != owner:
-            where_owner["private"] = False
+            where_owner["is_public"] = True
 
         where |= Q(**where_owner)
         when.append(
@@ -52,7 +52,7 @@ def get_available_projects(
         }
 
         if user != owner:
-            where_collaborator["private"] = False
+            where_collaborator["is_public"] = True
 
         where |= Q(**where_collaborator)
 
@@ -72,7 +72,7 @@ def get_available_projects(
                     id=owner.id, organization_owner=user
                 ).exists()
             ):
-                organization_filters["private"] = False
+                organization_filters["is_public"] = True
 
             # 3) owned by `owner` which is an organization
             where |= Q(
@@ -94,7 +94,7 @@ def get_available_projects(
             where_org_admin_condition = {"owner__in": membership_organizations}
 
             if user != owner:
-                where_org_admin_condition["private"] = False
+                where_org_admin_condition["is_public"] = True
 
             where |= Q(**where_org_admin_condition)
             when.append(
@@ -109,7 +109,7 @@ def get_available_projects(
             where_org_owner = {"owner__in": owned_organizations}
 
             if user != owner:
-                where_org_owner["private"] = False
+                where_org_owner["is_public"] = True
 
             where |= Q(**where_org_owner)
             when.append(
@@ -120,7 +120,7 @@ def get_available_projects(
             )
 
     if public:
-        where_public_condition = {"private": False}
+        where_public_condition = {"is_public": True}
         where |= Q(**where_public_condition)
         when.append(
             When(

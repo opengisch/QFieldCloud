@@ -72,10 +72,10 @@ def login(username, password):
 @click.argument("owner")
 @click.argument("description")
 @click.option(
-    "--private/--public", default=True, help="Make the project private or public"
+    "--public/--private", default=False, help="Make the project private or public"
 )
 @click.argument("token", envvar="QFIELDCLOUD_TOKEN", type=str)
-def create_project(token, name, owner, description, private=True):
+def create_project(token, name, owner, description, public=False):
     """Create a new QFieldCloud project"""
 
     resp = cloud_request(
@@ -86,7 +86,7 @@ def create_project(token, name, owner, description, private=True):
             "name": name,
             "owner": owner,
             "description": description,
-            "private": private,
+            "is_public": public,
         },
     )
     payload = resp.json()

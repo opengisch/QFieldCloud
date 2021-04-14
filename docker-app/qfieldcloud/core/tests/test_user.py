@@ -41,7 +41,7 @@ class UserTestCase(APITestCase):
         )
 
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         # Set user2 as member of organization1
