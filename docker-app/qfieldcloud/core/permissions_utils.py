@@ -211,6 +211,8 @@ def can_upload_files(user, project):
 def can_download_files(user, project):
     """Return True if the `user` can download files from `project`.
     Return False otherwise."""
+    if project.is_public:
+        return True
 
     if can_upload_files(user, project):
         return True
