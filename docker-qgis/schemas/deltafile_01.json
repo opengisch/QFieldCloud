@@ -20,7 +20,7 @@
             "additionalProperties": false,
             "properties": {
                 "geometry": {
-                    "type": "string",
+                    "type": ["string", "null"],
                     "title": "Geometry",
                     "description": "Feature's geometry serialized in WKT. GeoJSON has a number of limitations so it was reconsidered.",
                     "format": "wkt",
