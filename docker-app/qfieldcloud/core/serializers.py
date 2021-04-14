@@ -106,7 +106,14 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Organization
-        fields = ("username", "email", "avatar_url", "members", "organization_owner")
+        fields = (
+            "username",
+            "user_type",
+            "email",
+            "avatar_url",
+            "members",
+            "organization_owner",
+        )
 
 
 class RoleChoiceField(serializers.ChoiceField):
