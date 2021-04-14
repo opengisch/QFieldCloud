@@ -310,6 +310,10 @@ class Project(models.Model):
         return utils.get_s3_project_size(self.id)
 
     @property
+    def is_public(self):
+        return not self.private
+
+    @property
     def files(self):
         return utils.get_project_files(self.id)
 
