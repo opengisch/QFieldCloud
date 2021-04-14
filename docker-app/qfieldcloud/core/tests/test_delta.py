@@ -700,3 +700,41 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertEqual(json[0]["status"], "STATUS_UNPERMITTED")
         self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
         self.assertEqual(json[1]["status"], "STATUS_UNPERMITTED")
+
+    def test_non_spatial_delta(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        csv_file = testdata_path("delta/nonspatial.csv")
+        response = self.client.post(
+            f"/api/v1/files/{self.project1.id}/nonspatial.csv/",
+            {"file": open(csv_file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project_file = testdata_path("delta/project.qgs")
+        response = self.client.post(
+            f"/api/v1/files/{self.project1.id}/project.qgs/",
+            {"file": open(project_file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Push a deltafile
+        delta_file = testdata_path("delta/deltas/nonspatial.json")
+        response = self.client.post(
+            f"/api/v1/deltas/{self.project1.id}/",
+            {"file": open(delta_file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
+        self.assertTrue(status.is_success(response.status_code))
+        json = response.json()
+        json = sorted(json, key=lambda k: k["id"])
+
+        self.assertEqual(json[0]["id"], "1270b97d-6a28-49cc-83f3-b827ec574fee")
+        self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[1]["id"], "f326c3c1-138f-4261-9151-4946237ce714")
+        self.assertEqual(json[1]["status"], "STATUS_PENDING")
