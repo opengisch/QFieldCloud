@@ -335,18 +335,6 @@ class ProjectQueryset(models.QuerySet):
         # Exclude those without role (invisible)
         qs = qs.exclude(user_role__isnull=True)
 
-        # NOTE : this was implemented in get_available_projects() but doesn't seem used anywhere.
-        # If we need these annotation, we should probaby do that elsewhere, as it's not related
-        # to permissions.
-        # qs = qs.annotate(collaborators__count=Count("collaborators"))
-        # qs = qs.annotate(deltas__count=Count("deltas"))
-
-        # NOTE : this was implemented in get_available_projects() but should either be done there explictely,
-        # or if needed everywhere defined in the model's Meta or in a default manager.
-        # qs = qs.order_by("owner__username", "name")
-
-        # NOTE : for notes above, see (e.g. custom manager, see https://docs.djangoproject.com/en/3.1/topics/db/managers/#from-queryset)
-
         return qs
 
 
