@@ -74,6 +74,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             "username",
+            "user_type",
             "full_name",
             "email",
             "avatar_url",
@@ -91,7 +92,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "full_name", "email", "avatar_url")
+        fields = ("username", "user_type", "full_name", "avatar_url")
         read_only_fields = ("full_name", "avatar_url")
 
 
