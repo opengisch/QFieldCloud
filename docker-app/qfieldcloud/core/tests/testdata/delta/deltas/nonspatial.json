@@ -1,0 +1,46 @@
+{
+    "deltas": [
+      {
+        "uuid": "1270b97d-6a28-49cc-83f3-b827ec574fee",
+        "localPk": "1",
+        "sourcePk": "1",
+        "localLayerId": "nonspatial_5b9be5d0_6faa_4c14_825d_7889615c842c",
+        "sourceLayerId": "nonspatial_5b9be5d0_6faa_4c14_825d_7889615c842c",
+        "method": "patch",
+        "new": {
+          "geometry": null,
+          "attributes": {
+            "col1": "foo"
+          }
+        },
+        "old": {
+          "geometry": null,
+          "attributes": {
+            "col1": "bar"
+          }
+        }
+      },
+      {
+        "uuid": "f326c3c1-138f-4261-9151-4946237ce714",
+        "localPk": "1",
+        "sourcePk": "1",
+        "localLayerId": "nonspatial_5b9be5d0_6faa_4c14_825d_7889615c842c",
+        "sourceLayerId": "nonspatial_5b9be5d0_6faa_4c14_825d_7889615c842c",
+        "method": "patch",
+        "new": {
+          "attributes": {
+            "col1": "bar"
+          }
+        },
+        "old": {
+          "attributes": {
+            "col1": "qux"
+          }
+        }
+      }
+    ],
+    "files": [],
+    "id": "2c98410f-e1b2-45e6-9026-97898bfee730",
+    "project": "504ef91b-43f2-4b2e-a617-ea9f29cd7abc",
+    "version": "1.0"
+}
