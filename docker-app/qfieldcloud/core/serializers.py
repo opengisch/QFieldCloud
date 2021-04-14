@@ -98,6 +98,10 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
 class OrganizationSerializer(serializers.ModelSerializer):
     organization_owner = serializers.StringRelatedField()
     members = serializers.StringRelatedField(many=True)
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return obj.useraccount.avatar_url
 
     class Meta:
         model = Organization
