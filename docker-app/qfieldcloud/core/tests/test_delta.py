@@ -52,10 +52,13 @@ class DeltaTestCase(APITransactionTestCase):
         # Remove all projects avoiding bulk delete in order to use
         # the overrided delete() function in the model
         for p in Project.objects.all():
+            bucket = utils.get_s3_bucket()
+            prefix = utils.safe_join(f"projects/{p.id}/")
+            bucket.objects.filter(Prefix=prefix).delete()
+
             p.delete()
 
         User.objects.all().delete()
-
         # Remove credentials
         self.client.credentials()
 
@@ -266,6 +269,16 @@ class DeltaTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertFalse(status.is_success(response.status_code))
+
+        # check it is uploaded
+        bucket = utils.get_s3_bucket()
+        prefix = utils.safe_join(f"projects/{self.project1.id}/deltas/")
+        wrong_deltas = list(bucket.objects.filter(Prefix=prefix))
+
+        self.assertEqual(len(wrong_deltas), 1)
+
+        with open(delta_file, "rb") as f:
+            self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
