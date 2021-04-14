@@ -40,7 +40,7 @@ class ProjectTestCase(APITestCase):
                 "name": "api_created_project",
                 "owner": "user1",
                 "description": "desc",
-                "private": True,
+                "is_public": False,
             },
         )
         self.assertTrue(status.is_success(response.status_code))
@@ -58,7 +58,7 @@ class ProjectTestCase(APITestCase):
                 "name": "project",
                 "owner": "user1",
                 "description": "desc",
-                "private": True,
+                "is_public": False,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -67,12 +67,12 @@ class ProjectTestCase(APITestCase):
 
         # Create a public project of user2
         self.project1 = Project.objects.create(
-            name="project1", private=False, owner=self.user2
+            name="project1", is_public=True, owner=self.user2
         )
 
         # Create a private project of user2
         self.project1 = Project.objects.create(
-            name="project2", private=True, owner=self.user2
+            name="project2", is_public=False, owner=self.user2
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -86,7 +86,7 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         # Add user2 as collaborator
@@ -112,22 +112,22 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         # Create another project of user1
         self.project2 = Project.objects.create(
-            name="project2", private=True, owner=self.user1
+            name="project2", is_public=False, owner=self.user1
         )
 
         # Create a project of user2 without access to user1
         self.project3 = Project.objects.create(
-            name="project3", private=True, owner=self.user2
+            name="project3", is_public=False, owner=self.user2
         )
 
         # Create a project of user2 with access to user1
         self.project4 = Project.objects.create(
-            name="project4", private=True, owner=self.user2
+            name="project4", is_public=False, owner=self.user2
         )
 
         ProjectCollaborator.objects.create(
@@ -159,7 +159,7 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -182,7 +182,7 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         # Add user2 as collaborator
@@ -206,7 +206,7 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         # Add user2 as collaborator
@@ -236,7 +236,7 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         # Add user2 as collaborator
@@ -261,7 +261,7 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         # Delete the project
@@ -276,7 +276,7 @@ class ProjectTestCase(APITestCase):
 
         # Create a project of user1
         project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user2
+            name="project1", is_public=False, owner=self.user2
         )
 
         # Get the project without permissions
@@ -301,12 +301,12 @@ class ProjectTestCase(APITestCase):
     def test_public_projecs(self):
         # Create a project of user1
         self.project1 = Project.objects.create(
-            name="project1", private=False, owner=self.user1
+            name="project1", is_public=True, owner=self.user1
         )
 
         # Create another project of user2
         self.project2 = Project.objects.create(
-            name="project2", private=False, owner=self.user2
+            name="project2", is_public=True, owner=self.user2
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)

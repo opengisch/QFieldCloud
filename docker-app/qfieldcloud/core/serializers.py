@@ -23,9 +23,13 @@ class UserSerializer:
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
     user_role = serializers.SerializerMethodField()
+    private = serializers.BooleanField(allow_null=True, default=None)
 
     def get_user_role(self, obj):
         return getattr(obj, "user_role", None)
+
+    def get_private(self, obj):
+        return getattr(obj, "private", None)
 
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
@@ -38,6 +42,13 @@ class ProjectSerializer(serializers.ModelSerializer):
                 code="invalid",
             )
         internal_data["owner"] = owner
+
+        if "private" in internal_data:
+            if internal_data["private"] is not None:
+                internal_data["is_public"] = not internal_data["private"]
+
+            del internal_data["private"]
+
         return internal_data
 
     class Meta:
@@ -46,7 +57,9 @@ class ProjectSerializer(serializers.ModelSerializer):
             "name",
             "owner",
             "description",
+            # remove "private" field one day
             "private",
+            "is_public",
             "created_at",
             "updated_at",
             "user_role",

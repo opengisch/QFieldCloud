@@ -283,9 +283,9 @@ class Project(models.Model):
     )
 
     description = models.TextField(blank=True)
-    private = models.BooleanField(
+    is_public = models.BooleanField(
         default=False,
-        help_text="Projects that are not marked as private would be visible and editable to anyone.",
+        help_text="Projects that are marked as public would be visible and editable to anyone.",
     )
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -308,10 +308,6 @@ class Project(models.Model):
 
     def storage_size(self):
         return utils.get_s3_project_size(self.id)
-
-    @property
-    def is_public(self):
-        return not self.private
 
     @property
     def files(self):
