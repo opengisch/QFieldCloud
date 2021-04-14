@@ -395,6 +395,7 @@ class Project(models.Model):
     objects = ProjectQueryset.as_manager()
 
     class Meta:
+        ordering = ["owner__username", "name"]
         constraints = [
             models.UniqueConstraint(
                 fields=["owner", "name"], name="project_owner_name_uniq"
