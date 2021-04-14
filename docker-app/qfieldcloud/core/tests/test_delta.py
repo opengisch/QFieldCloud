@@ -738,3 +738,27 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertEqual(json[0]["status"], "STATUS_PENDING")
         self.assertEqual(json[1]["id"], "f326c3c1-138f-4261-9151-4946237ce714")
         self.assertEqual(json[1]["status"], "STATUS_PENDING")
+
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
+            json = response.json()
+            json = sorted(json, key=lambda k: k["id"])
+
+            if json[0]["status"] in ["STATUS_BUSY", "STATUS_PENDING"] or json[1][
+                "status"
+            ] in ["STATUS_BUSY", "STATUS_PENDING"]:
+                continue
+
+            response = self.client.get(
+                f"/api/v1/files/{self.project1.id}/nonspatial.csv/"
+            )
+
+            self.assertIsInstance(response, HttpResponseRedirect)
+
+            response = requests.get(response.url)
+
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertEqual(get_filename(response), "nonspatial.csv")
+
+            self.assertEqual(response.content, b'fid,col1\n"1",qux\n')
