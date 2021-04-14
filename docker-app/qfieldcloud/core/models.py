@@ -276,18 +276,6 @@ class ProjectQueryset(models.QuerySet):
                 V(ProjectCollaborator.ROLE_ADMIN),
                 "you are the owner",
             ),
-            # Collaborator - admin
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator=user,
-                        role=ProjectCollaborator.ROLE_ADMIN,
-                    )
-                ),
-                ProjectCollaborator.ROLE_ADMIN,
-                "you are admin of the project",
-            ),
             # Memberships - admin
             (
                 Q(owner__in=Organization.objects.filter(organization_owner=user)),
@@ -303,50 +291,19 @@ class ProjectQueryset(models.QuerySet):
                 ProjectCollaborator.ROLE_ADMIN,
                 "you are admin of the organisation owning the project",
             ),
-            # Collaborator - Less than admin
+            # Role through ProjectCollaborator
             (
                 Exists(
                     ProjectCollaborator.objects.filter(
                         project=OuterRef("pk"),
                         collaborator=user,
-                        role=ProjectCollaborator.ROLE_MANAGER,
                     )
                 ),
-                ProjectCollaborator.ROLE_MANAGER,
-                "you are manager of the project",
-            ),
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator=user,
-                        role=ProjectCollaborator.ROLE_EDITOR,
-                    )
-                ),
-                ProjectCollaborator.ROLE_EDITOR,
-                "you are editor of the project",
-            ),
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator=user,
-                        role=ProjectCollaborator.ROLE_REPORTER,
-                    )
-                ),
-                ProjectCollaborator.ROLE_REPORTER,
-                "you are reporter of the project",
-            ),
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator=user,
-                        role=ProjectCollaborator.ROLE_READER,
-                    )
-                ),
-                ProjectCollaborator.ROLE_READER,
-                "you are reader of the project",
+                ProjectCollaborator.objects.filter(
+                    project=OuterRef("pk"),
+                    collaborator=user,
+                ).values_list("role"),
+                "you are collaborator of the project",
             ),
             # Public
             (
