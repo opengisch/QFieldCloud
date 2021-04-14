@@ -68,15 +68,34 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return obj.useraccount.avatar_url
+
     class Meta:
         model = User
-        exclude = ("id", "password")
+        fields = (
+            "username",
+            "full_name",
+            "email",
+            "avatar_url",
+            "first_name",
+            "last_name",
+        )
+        read_only_fields = ("full_name", "avatar_url")
 
 
 class PublicInfoUserSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return obj.useraccount.avatar_url
+
     class Meta:
         model = User
-        fields = ("username", "user_type", "full_name")
+        fields = ("username", "full_name", "email", "avatar_url")
+        read_only_fields = ("full_name", "avatar_url")
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -85,7 +104,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Organization
-        exclude = ("id", "password", "first_name", "last_name")
+        fields = ("username", "members", "email", "avatar_url")
 
 
 class RoleChoiceField(serializers.ChoiceField):

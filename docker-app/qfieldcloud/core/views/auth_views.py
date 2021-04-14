@@ -16,5 +16,6 @@ class AuthTokenView(ObtainAuthToken):
                 "token": token.key,
                 "username": user.username,
                 "email": user.email,
+                "avatar_url": user.useraccount.avatar_url,
             }
         )
