@@ -124,10 +124,18 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
 class TokenSerializer(serializers.ModelSerializer):
     username = serializers.StringRelatedField(source="user")
     token = serializers.CharField(source="key")
+    email = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_email(self, obj):
+        return obj.user.email
+
+    def get_avatar_url(self, obj):
+        return obj.user.useraccount.avatar_url
 
     class Meta:
         model = Token
-        fields = ("token", "username")
+        fields = ("token", "username", "email", "avatar_url")
 
 
 class StatusChoiceField(serializers.ChoiceField):
