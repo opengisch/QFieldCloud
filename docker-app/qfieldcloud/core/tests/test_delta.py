@@ -671,7 +671,7 @@ class DeltaTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         response = self.client.get(
-            "/api/v1/deltas/{}/".format("7199612e-7641-48fc-8c11-c25176a9761b")
+            "/api/v1/deltas/7199612e-7641-48fc-8c11-c25176a9761b/"
         )
         self.assertFalse(status.is_success(response.status_code))
         json = response.json()
@@ -685,13 +685,13 @@ class DeltaTestCase(APITransactionTestCase):
             "delta/deltas/singlelayer_multidelta_patch_create.json"
         )
         response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
+            f"/api/v1/deltas/{self.project1.id}/",
             {"file": open(delta_file, "rb")},
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
         json = response.json()
         json = sorted(json, key=lambda k: k["id"])
@@ -729,7 +729,7 @@ class DeltaTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
         json = response.json()
         json = sorted(json, key=lambda k: k["id"])
