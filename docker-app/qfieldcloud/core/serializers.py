@@ -28,9 +28,6 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_user_role(self, obj):
         return getattr(obj, "user_role", None)
 
-    def get_private(self, obj):
-        return getattr(obj, "private", None)
-
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
         owner_username = data.get("owner")

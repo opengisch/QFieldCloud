@@ -318,6 +318,11 @@ class Project(models.Model):
         return utils.get_s3_project_size(self.id)
 
     @property
+    def private(self):
+        # still used in the project serializer
+        return not self.is_public
+
+    @property
     def files(self):
         return utils.get_project_files(self.id)
 
