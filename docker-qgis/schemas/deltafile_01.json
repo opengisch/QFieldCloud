@@ -20,7 +20,7 @@
             "additionalProperties": false,
             "properties": {
                 "geometry": {
-                    "type": "string",
+                    "type": ["string", "null"],
                     "title": "Geometry",
                     "description": "Feature's geometry serialized in WKT. GeoJSON has a number of limitations so it was reconsidered.",
                     "format": "wkt",
@@ -38,6 +38,20 @@
                     "examples": [
                         {
                             "prop1": "new contents"
+                        }
+                    ],
+                    "additionalProperties": true
+                },
+                "files_sha256": {
+                    "type": "object",
+                    "title": "Files",
+                    "description": "Attachments files names and HEX SHA256 checksums.",
+                    "examples": [
+                        {
+                            "FILE1.jpg": null
+                        },
+                        {
+                            "FILE2.jpg": "5d5b09f6dcb2d53a5fffc60c4ac0d55fabdf556069d6631545f42aa6e3500f2e"
                         }
                     ],
                     "additionalProperties": true

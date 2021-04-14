@@ -26,6 +26,10 @@ EXPORTATION_STATUS_ERROR = 4  # was not possible to export the project
 
 logger = logging.getLogger(__name__)
 
+QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
+
+assert QGIS_CONTAINER_NAME
+
 
 class QgisException(Exception):
     pass
@@ -102,7 +106,7 @@ def export_project(projectid, project_file):
 
     client = docker.from_env()
     container = client.containers.create(
-        "qfieldcloud_qgis",
+        QGIS_CONTAINER_NAME,
         environment={
             "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
             "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
@@ -247,7 +251,7 @@ def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
 
     client = docker.from_env()
     container = client.containers.create(
-        "qfieldcloud_qgis",
+        QGIS_CONTAINER_NAME,
         environment={
             "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
             "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
@@ -318,7 +322,7 @@ def check_status():
 
     client = docker.from_env()
     container = client.containers.create(
-        "qfieldcloud_qgis",
+        QGIS_CONTAINER_NAME,
         environment={
             "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
             "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),

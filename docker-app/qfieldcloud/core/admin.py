@@ -83,13 +83,13 @@ class ProjectAdmin(admin.ModelAdmin):
         "id",
         "name",
         "owner",
-        "private",
+        "is_public",
         "description",
         "created_at",
         "updated_at",
     )
-    list_filter = ("private",)
-    fields = ("name", "description", "private", "owner", "storage_size")
+    list_filter = ("is_public",)
+    fields = ("name", "description", "is_public", "owner", "storage_size")
     readonly_fields = ("storage_size",)
 
 

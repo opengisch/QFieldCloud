@@ -38,7 +38,7 @@ class DeltaTestCase(APITransactionTestCase):
 
         # Create a project
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
         self.project1.save()
 
@@ -52,10 +52,13 @@ class DeltaTestCase(APITransactionTestCase):
         # Remove all projects avoiding bulk delete in order to use
         # the overrided delete() function in the model
         for p in Project.objects.all():
+            bucket = utils.get_s3_bucket()
+            prefix = utils.safe_join(f"projects/{p.id}/")
+            bucket.objects.filter(Prefix=prefix).delete()
+
             p.delete()
 
         User.objects.all().delete()
-
         # Remove credentials
         self.client.credentials()
 
@@ -266,6 +269,16 @@ class DeltaTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertFalse(status.is_success(response.status_code))
+
+        # check it is uploaded
+        bucket = utils.get_s3_bucket()
+        prefix = utils.safe_join(f"projects/{self.project1.id}/deltas/")
+        wrong_deltas = list(bucket.objects.filter(Prefix=prefix))
+
+        self.assertEqual(len(wrong_deltas), 1)
+
+        with open(delta_file, "rb") as f:
+            self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -671,7 +684,7 @@ class DeltaTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         response = self.client.get(
-            "/api/v1/deltas/{}/".format("7199612e-7641-48fc-8c11-c25176a9761b")
+            "/api/v1/deltas/7199612e-7641-48fc-8c11-c25176a9761b/"
         )
         self.assertFalse(status.is_success(response.status_code))
         json = response.json()
@@ -685,13 +698,13 @@ class DeltaTestCase(APITransactionTestCase):
             "delta/deltas/singlelayer_multidelta_patch_create.json"
         )
         response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
+            f"/api/v1/deltas/{self.project1.id}/",
             {"file": open(delta_file, "rb")},
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
         json = response.json()
         json = sorted(json, key=lambda k: k["id"])
@@ -700,3 +713,65 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertEqual(json[0]["status"], "STATUS_UNPERMITTED")
         self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
         self.assertEqual(json[1]["status"], "STATUS_UNPERMITTED")
+
+    def test_non_spatial_delta(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        csv_file = testdata_path("delta/nonspatial.csv")
+        response = self.client.post(
+            f"/api/v1/files/{self.project1.id}/nonspatial.csv/",
+            {"file": open(csv_file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project_file = testdata_path("delta/project.qgs")
+        response = self.client.post(
+            f"/api/v1/files/{self.project1.id}/project.qgs/",
+            {"file": open(project_file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Push a deltafile
+        delta_file = testdata_path("delta/deltas/nonspatial.json")
+        response = self.client.post(
+            f"/api/v1/deltas/{self.project1.id}/",
+            {"file": open(delta_file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
+        self.assertTrue(status.is_success(response.status_code))
+        json = response.json()
+        json = sorted(json, key=lambda k: k["id"])
+
+        self.assertEqual(json[0]["id"], "1270b97d-6a28-49cc-83f3-b827ec574fee")
+        self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[1]["id"], "f326c3c1-138f-4261-9151-4946237ce714")
+        self.assertEqual(json[1]["status"], "STATUS_PENDING")
+
+        for _ in range(30):
+            time.sleep(2)
+            response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
+            json = response.json()
+            json = sorted(json, key=lambda k: k["id"])
+
+            if json[0]["status"] in ["STATUS_BUSY", "STATUS_PENDING"] or json[1][
+                "status"
+            ] in ["STATUS_BUSY", "STATUS_PENDING"]:
+                continue
+
+            response = self.client.get(
+                f"/api/v1/files/{self.project1.id}/nonspatial.csv/"
+            )
+
+            self.assertIsInstance(response, HttpResponseRedirect)
+
+            response = requests.get(response.url)
+
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertEqual(get_filename(response), "nonspatial.csv")
+
+            self.assertEqual(response.content, b'fid,col1\n"1",qux\n')

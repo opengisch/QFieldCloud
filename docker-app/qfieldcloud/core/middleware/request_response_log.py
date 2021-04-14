@@ -39,6 +39,7 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
     def extract_log_info(self, request, response=None, exception=None):
         """Extract appropriate log info from requests/responses/exceptions."""
         log_data = {
+            "skip_logging": getattr(request, "skip_logging", False),
             "remote_address": request.META["REMOTE_ADDR"],
             "server_hostname": socket.gethostname(),
             "request_method": request.method,

@@ -868,19 +868,11 @@ def create_feature(
     new_feat_delta = delta["new"]
     geometry = QgsGeometry()
 
-    if layer.isSpatial():
-        if not isinstance(new_feat_delta["geometry"], str):
-            raise DeltaException(
-                "The layer is spatial, but not WKT geometry has been provided"
-            )
-
-        geometry = QgsGeometry.fromWkt(new_feat_delta["geometry"])
-
-        if geometry.isNull():
-            raise DeltaException("The layer is spatial, but the geometry is invalid")
-    else:
-        if new_feat_delta["geometry"]:
-            logger.warning("The layer is not spatial, but geometry has been provided")
+    if "geometry" in new_feat_delta:
+        if isinstance(new_feat_delta["geometry"], str):
+            geometry = QgsGeometry.fromWkt(new_feat_delta["geometry"])
+        elif new_feat_delta["geometry"] is not None:
+            logger.warning("The provided geometry is not null or a WKT string.")
 
     new_feat_attrs = new_feat_delta.get("attributes", {})
     feat_attrs = {}
@@ -944,35 +936,30 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
                 e_type=DeltaExceptionType.Conflict,
             )
 
-    if layer.isSpatial() and new_feature_delta.get("geometry") is not None:
-        if not isinstance(new_feature_delta["geometry"], str):
-            raise DeltaException(
-                "The layer is spatial, but not WKT geometry has been provided"
-            )
+    geometry = QgsGeometry()
 
-        if new_feature_delta["geometry"] == old_feature_delta["geometry"]:
+    if "geometry" in new_feature_delta:
+        if isinstance(new_feature_delta["geometry"], str):
+            geometry = QgsGeometry.fromWkt(new_feature_delta["geometry"])
+        elif new_feature_delta["geometry"] is not None:
+            logger.warning("The provided geometry is not null or a WKT string.")
+
+        if new_feature_delta["geometry"] == old_feature_delta.get("geometry"):
             logger.warning(
                 "The geometries of the new and the old features are the same, even though by spec they should not be provided in such case"
             )
 
-        geometry = QgsGeometry.fromWkt(new_feature_delta["geometry"])
-
-        if geometry.isNull():
-            raise DeltaException("The layer is spatial, but the geometry is invalid")
-
-        if geometry.type() != old_feature.geometry().type():
+    if layer.isSpatial():
+        if geometry.isNull() or geometry.type() == layer.geometry().type():
+            if not layer.changeGeometry(old_feature.id(), geometry, True):
+                raise DeltaException(
+                    "Unable to change geometry",
+                    provider_errors=layer.dataProvider().errors(),
+                )
+        else:
             raise DeltaException(
                 "The provided geometry type differs from the layer geometry type"
             )
-
-        if not layer.changeGeometry(old_feature.id(), geometry, True):
-            raise DeltaException(
-                "Unable to change geometry",
-                provider_errors=layer.dataProvider().errors(),
-            )
-    else:
-        if new_feature_delta.get("geometry"):
-            logger.warning("The layer is not spatial, but geometry has been provided")
 
     fields = layer.fields()
     new_attrs = new_feature_delta.get("attributes") or {}

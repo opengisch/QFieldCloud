@@ -303,3 +303,7 @@ def get_project_files_count(project_id: str) -> int:
     files = set([v.key for v in bucket.object_versions.filter(Prefix=prefix)])
 
     return len(files)
+
+
+def get_s3_object_url(key: str, bucket=get_s3_bucket()) -> str:
+    return f"{bucket.meta.client.meta.endpoint_url}/{bucket.name}/{key}"

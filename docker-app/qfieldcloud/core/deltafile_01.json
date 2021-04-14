@@ -20,7 +20,7 @@
             "additionalProperties": false,
             "properties": {
                 "geometry": {
-                    "type": "string",
+                    "type": ["string", "null"],
                     "title": "Geometry",
                     "description": "Feature's geometry serialized in WKT. GeoJSON has a number of limitations so it was reconsidered.",
                     "format": "wkt",
@@ -38,6 +38,20 @@
                     "examples": [
                         {
                             "prop1": "new contents"
+                        }
+                    ],
+                    "additionalProperties": true
+                },
+                "files_sha256": {
+                    "type": "object",
+                    "title": "Files",
+                    "description": "Attachments files names and HEX SHA256 checksums.",
+                    "examples": [
+                        {
+                            "FILE1.jpg": null
+                        },
+                        {
+                            "FILE2.jpg": "5d5b09f6dcb2d53a5fffc60c4ac0d55fabdf556069d6631545f42aa6e3500f2e"
                         }
                     ],
                     "additionalProperties": true
@@ -83,6 +97,7 @@
                 "description": "Describes the changes to be applied to a single feature.",
                 "additionalProperties": true,
                 "required": [
+                    "uuid",
                     "localPk",
                     "sourcePk",
                     "localLayerId",
@@ -90,9 +105,18 @@
                     "method"
                 ],
                 "properties": {
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Delta ID",
+                        "description": "A unique identifier of the delta.",
+                        "examples": [
+                            "ddc41fa4-3961-4127-80f6-7d3e3f3f985b"
+                        ]
+                    },
                     "localPk": {
                         "type": "string",
-                        "title": "Feature ID",
+                        "title": "Local Feature ID",
                         "description": "To be able to unique identify features in the layers, we use the first primary key column, or a column named \"fid\" if no primary keys are set. This is the primary key value in the exported project.",
                         "examples": [
                             "ddc41fa4-3961-4127-80f6-7d3e3f3f985b",
@@ -102,7 +126,7 @@
                     },
                     "sourcePk": {
                         "type": "string",
-                        "title": "Feature ID",
+                        "title": "Source Feature ID",
                         "description": "To be able to unique identify features in the layers, we use the first primary key column, or a column named \"fid\" if no primary keys are set. This is the primary key value in the original project.",
                         "examples": [
                             "ddc41fa4-3961-4127-80f6-7d3e3f3f985b",

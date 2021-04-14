@@ -77,11 +77,14 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 else:
                     delta_obj.status = Delta.STATUS_UNPERMITTED
 
-                delta_obj.save()
+                delta_obj.save(force_insert=True)
 
         except Exception as err:
-            key = f"projects/{projectid}/deltas/{datetime.now().isoformat()}.json"
-            utils.get_s3_bucket().upload_fileobj(request_file, key)
+            if request_file:
+                key = f"projects/{projectid}/deltas/{datetime.now().isoformat()}.json"
+                # otherwise we upload an empty file
+                request_file.seek(0)
+                utils.get_s3_bucket().upload_fileobj(request_file, key)
 
             logger.exception(err)
             raise exceptions.DeltafileValidationError()

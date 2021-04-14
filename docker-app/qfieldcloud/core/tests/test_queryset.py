@@ -51,35 +51,35 @@ class QuerysetTestCase(APITestCase):
         )
 
         self.project1 = Project.objects.create(
-            name="project1", private=True, owner=self.user1
+            name="project1", is_public=False, owner=self.user1
         )
 
         self.project2 = Project.objects.create(
-            name="project2", private=False, owner=self.user1
+            name="project2", is_public=True, owner=self.user1
         )
 
         self.project3 = Project.objects.create(
-            name="project3", private=True, owner=self.user2
+            name="project3", is_public=False, owner=self.user2
         )
 
         self.project4 = Project.objects.create(
-            name="project4", private=False, owner=self.user2
+            name="project4", is_public=True, owner=self.user2
         )
 
         self.project5 = Project.objects.create(
-            name="project5", private=True, owner=self.organization1
+            name="project5", is_public=False, owner=self.organization1
         )
 
         self.project6 = Project.objects.create(
-            name="project6", private=False, owner=self.organization1
+            name="project6", is_public=True, owner=self.organization1
         )
 
         self.project7 = Project.objects.create(
-            name="project7", private=True, owner=self.user3
+            name="project7", is_public=False, owner=self.user3
         )
 
         self.project8 = Project.objects.create(
-            name="project8", private=False, owner=self.user3
+            name="project8", is_public=True, owner=self.user3
         )
 
         self.collaborator1 = ProjectCollaborator.objects.create(
