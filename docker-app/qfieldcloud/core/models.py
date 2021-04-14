@@ -266,6 +266,14 @@ class ProjectQueryset(models.QuerySet):
     ```
     """
 
+    class RoleOrigin(Enum):
+        ProjectOwner = "project_owner"
+        OrganizationOwner = "organization_owner"
+        OrganizationAdmin = "organization_admin"
+        Collaborator = "collaborator"
+        OrganizationTeam = "organization_team"
+        Public = "public"
+
     def for_user(self, user):
 
         # orderd list of 3-uples : (condition, role, role origin)
@@ -274,13 +282,13 @@ class ProjectQueryset(models.QuerySet):
             (
                 Q(owner=user),
                 V(ProjectCollaborator.ROLE_ADMIN),
-                "you are the owner",
+                ProjectQueryset.RoleOrigin.ProjectOwner.value,
             ),
             # Memberships - admin
             (
                 Q(owner__in=Organization.objects.filter(organization_owner=user)),
                 ProjectCollaborator.ROLE_ADMIN,
-                "you are owner of the organisation owning the project",
+                ProjectQueryset.RoleOrigin.OrganizationOwner.value,
             ),
             (
                 Q(
@@ -289,7 +297,7 @@ class ProjectQueryset(models.QuerySet):
                     ).values("organization")
                 ),
                 ProjectCollaborator.ROLE_ADMIN,
-                "you are admin of the organisation owning the project",
+                ProjectQueryset.RoleOrigin.OrganizationAdmin.value,
             ),
             # Role through ProjectCollaborator
             (
@@ -303,13 +311,13 @@ class ProjectQueryset(models.QuerySet):
                     project=OuterRef("pk"),
                     collaborator=user,
                 ).values_list("role"),
-                "you are collaborator of the project",
+                ProjectQueryset.RoleOrigin.Collaborator.value,
             ),
             # Public
             (
                 Q(private=False),
                 ProjectCollaborator.ROLE_READER,
-                "project is public",
+                ProjectQueryset.RoleOrigin.Public.value,
             ),
         ]
 
