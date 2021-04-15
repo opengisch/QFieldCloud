@@ -28,9 +28,6 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_user_role(self, obj):
         return getattr(obj, "user_role", None)
 
-    def get_private(self, obj):
-        return getattr(obj, "private", None)
-
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
         owner_username = data.get("owner")
@@ -68,24 +65,55 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return obj.useraccount.avatar_url
+
     class Meta:
         model = User
-        exclude = ("id", "password")
+        fields = (
+            "username",
+            "user_type",
+            "full_name",
+            "email",
+            "avatar_url",
+            "first_name",
+            "last_name",
+        )
+        read_only_fields = ("full_name", "avatar_url")
 
 
 class PublicInfoUserSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return obj.useraccount.avatar_url
+
     class Meta:
         model = User
-        fields = ("username", "user_type", "full_name")
+        fields = ("username", "user_type", "full_name", "avatar_url")
+        read_only_fields = ("full_name", "avatar_url")
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
     organization_owner = serializers.StringRelatedField()
     members = serializers.StringRelatedField(many=True)
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return obj.useraccount.avatar_url
 
     class Meta:
         model = Organization
-        exclude = ("id", "password", "first_name", "last_name")
+        fields = (
+            "username",
+            "user_type",
+            "email",
+            "avatar_url",
+            "members",
+            "organization_owner",
+        )
 
 
 class RoleChoiceField(serializers.ChoiceField):
@@ -124,10 +152,18 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
 class TokenSerializer(serializers.ModelSerializer):
     username = serializers.StringRelatedField(source="user")
     token = serializers.CharField(source="key")
+    email = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_email(self, obj):
+        return obj.user.email
+
+    def get_avatar_url(self, obj):
+        return obj.user.useraccount.avatar_url
 
     class Meta:
         model = Token
-        fields = ("token", "username")
+        fields = ("token", "username", "email", "avatar_url")
 
 
 class StatusChoiceField(serializers.ChoiceField):

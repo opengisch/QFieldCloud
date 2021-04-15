@@ -17,6 +17,7 @@ from django.dispatch import receiver
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.core.utils import get_s3_object_url
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
@@ -119,6 +120,13 @@ class UserAccount(models.Model):
     twitter = models.CharField(max_length=255, default="")
     is_email_public = models.BooleanField(default=False)
     avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
+
+    @property
+    def avatar_url(self):
+        if self.avatar_uri:
+            return get_s3_object_url(self.avatar_uri)
+        else:
+            return None
 
     def __str__(self):
         return self.TYPE_CHOICES[self.account_type][1]
@@ -401,6 +409,11 @@ class Project(models.Model):
 
     def storage_size(self):
         return utils.get_s3_project_size(self.id)
+
+    @property
+    def private(self):
+        # still used in the project serializer
+        return not self.is_public
 
     @property
     def files(self):

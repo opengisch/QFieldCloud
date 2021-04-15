@@ -161,6 +161,7 @@ USE_TZ = True
 STATIC_URL = "/staticfiles/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = []
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 
 MEDIA_URL = "/mediafiles/"
@@ -202,6 +203,7 @@ SWAGGER_SETTINGS = {
 
 REST_AUTH_SERIALIZERS = {
     "TOKEN_SERIALIZER": "qfieldcloud.core.serializers.TokenSerializer",
+    "USER_DETAILS_SERIALIZER": "qfieldcloud.core.serializers.PublicInfoUserSerializer",
 }
 
 RQ_QUEUES = {
