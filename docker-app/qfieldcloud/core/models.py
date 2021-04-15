@@ -226,13 +226,9 @@ def create_account_for_organization(sender, instance, created, **kwargs):
 
 
 class OrganizationMember(models.Model):
-    ROLE_ADMIN = 1
-    ROLE_MEMBER = 2
-
-    ROLE_CHOICES = (
-        (ROLE_ADMIN, "admin"),
-        (ROLE_MEMBER, "member"),
-    )
+    class Roles(models.TextChoices):
+        ADMIN = "admin", _("Admin")
+        MEMBER = "member", _("Member")
 
     class Meta:
         constraints = [
@@ -253,7 +249,7 @@ class OrganizationMember(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(user_type=User.TYPE_USER),
     )
-    role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, default=ROLE_MEMBER)
+    role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.MEMBER)
 
     def __str__(self):
         return self.organization.username + ": " + self.member.username
@@ -295,22 +291,22 @@ class ProjectQueryset(models.QuerySet):
             # Direct ownership
             (
                 Q(owner=user),
-                V(ProjectCollaborator.ROLE_ADMIN),
+                V(ProjectCollaborator.Roles.ADMIN),
                 ProjectQueryset.RoleOrigin.ProjectOwner.value,
             ),
             # Memberships - admin
             (
                 Q(owner__in=Organization.objects.filter(organization_owner=user)),
-                ProjectCollaborator.ROLE_ADMIN,
+                V(ProjectCollaborator.Roles.ADMIN),
                 ProjectQueryset.RoleOrigin.OrganizationOwner.value,
             ),
             (
                 Q(
                     owner__in=OrganizationMember.objects.filter(
-                        member=user, role=OrganizationMember.ROLE_ADMIN
+                        member=user, role=OrganizationMember.Roles.ADMIN
                     ).values("organization")
                 ),
-                ProjectCollaborator.ROLE_ADMIN,
+                V(ProjectCollaborator.Roles.ADMIN),
                 ProjectQueryset.RoleOrigin.OrganizationAdmin.value,
             ),
             # Role through ProjectCollaborator
@@ -330,7 +326,7 @@ class ProjectQueryset(models.QuerySet):
             # Public
             (
                 Q(is_public=True),
-                ProjectCollaborator.ROLE_READER,
+                V(ProjectCollaborator.Roles.READER),
                 ProjectQueryset.RoleOrigin.Public.value,
             ),
         ]
@@ -429,19 +425,12 @@ class Project(models.Model):
 
 
 class ProjectCollaborator(models.Model):
-    ROLE_ADMIN = 1
-    ROLE_MANAGER = 2
-    ROLE_EDITOR = 3
-    ROLE_REPORTER = 4
-    ROLE_READER = 5
-
-    ROLE_CHOICES = (
-        (ROLE_ADMIN, "admin"),
-        (ROLE_MANAGER, "manager"),
-        (ROLE_EDITOR, "editor"),
-        (ROLE_REPORTER, "reporter"),
-        (ROLE_READER, "reader"),
-    )
+    class Roles(models.TextChoices):
+        ADMIN = "admin", _("Admin")
+        MANAGER = "manager", _("Manager")
+        EDITOR = "editor", _("Editor")
+        REPORTER = "reporter", _("Reporter")
+        READER = "reader", _("Reader")
 
     class Meta:
         constraints = [
@@ -461,7 +450,7 @@ class ProjectCollaborator(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(user_type=User.TYPE_USER),
     )
-    role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, default=ROLE_READER)
+    role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
 
     def __str__(self):
         return self.project.name + ": " + self.collaborator.username
@@ -482,7 +471,7 @@ class ProjectCollaborator(models.Model):
             elif OrganizationMember.objects.filter(
                 organization=organization,
                 member=self.collaborator,
-                role=OrganizationMember.ROLE_ADMIN,
+                role=OrganizationMember.Roles.ADMIN,
             ).exists():
                 raise ValidationError(
                     _(

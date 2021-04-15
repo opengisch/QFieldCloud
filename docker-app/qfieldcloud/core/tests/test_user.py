@@ -48,7 +48,7 @@ class UserTestCase(APITestCase):
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
-            role=OrganizationMember.ROLE_MEMBER,
+            role=OrganizationMember.Roles.MEMBER,
         ).save()
 
     def tearDown(self):

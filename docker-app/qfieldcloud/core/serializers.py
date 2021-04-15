@@ -116,24 +116,9 @@ class OrganizationSerializer(serializers.ModelSerializer):
         )
 
 
-class RoleChoiceField(serializers.ChoiceField):
-    def to_representation(self, obj):
-        return self._choices[obj]
-
-    def to_internal_value(self, data):
-        for i in self._choices:
-            if self._choices[i] == data:
-                return i
-        raise serializers.ValidationError(
-            "Invalid role. Acceptable values are {0}.".format(
-                list(self._choices.values())
-            )
-        )
-
-
 class ProjectCollaboratorSerializer(serializers.ModelSerializer):
     collaborator = serializers.StringRelatedField()
-    role = RoleChoiceField(choices=ProjectCollaborator.ROLE_CHOICES)
+    role = serializers.CharField()
 
     class Meta:
         model = ProjectCollaborator
@@ -142,7 +127,7 @@ class ProjectCollaboratorSerializer(serializers.ModelSerializer):
 
 class OrganizationMemberSerializer(serializers.ModelSerializer):
     member = serializers.StringRelatedField()
-    role = RoleChoiceField(choices=OrganizationMember.ROLE_CHOICES)
+    role = serializers.CharField()
 
     class Meta:
         model = OrganizationMember

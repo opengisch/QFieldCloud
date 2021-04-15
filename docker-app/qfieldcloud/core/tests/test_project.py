@@ -93,7 +93,7 @@ class ProjectTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_MANAGER,
+            role=ProjectCollaborator.Roles.MANAGER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -133,7 +133,7 @@ class ProjectTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=self.project4,
             collaborator=self.user1,
-            role=ProjectCollaborator.ROLE_MANAGER,
+            role=ProjectCollaborator.Roles.MANAGER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -176,7 +176,7 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(len(collaborators), 1)
         self.assertEqual(collaborators[0].project, self.project1)
         self.assertEqual(collaborators[0].collaborator, self.user2)
-        self.assertEqual(collaborators[0].role, ProjectCollaborator.ROLE_EDITOR)
+        self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.EDITOR)
 
     def test_get_collaborator(self):
 
@@ -189,7 +189,7 @@ class ProjectTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_REPORTER,
+            role=ProjectCollaborator.Roles.REPORTER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -213,7 +213,7 @@ class ProjectTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_REPORTER,
+            role=ProjectCollaborator.Roles.REPORTER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -230,7 +230,7 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(len(collaborators), 1)
         self.assertEqual(collaborators[0].project, self.project1)
         self.assertEqual(collaborators[0].collaborator, self.user2)
-        self.assertEqual(collaborators[0].role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.ADMIN)
 
     def test_delete_collaborator(self):
 
@@ -243,7 +243,7 @@ class ProjectTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_REPORTER,
+            role=ProjectCollaborator.Roles.REPORTER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)

@@ -41,13 +41,13 @@ class QuerysetTestCase(APITestCase):
         self.membership1 = OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
-            role=OrganizationMember.ROLE_ADMIN,
+            role=OrganizationMember.Roles.ADMIN,
         )
 
         self.membership2 = OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user3,
-            role=OrganizationMember.ROLE_MEMBER,
+            role=OrganizationMember.Roles.MEMBER,
         )
 
         self.project1 = Project.objects.create(
@@ -85,7 +85,7 @@ class QuerysetTestCase(APITestCase):
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project7,
             collaborator=self.user1,
-            role=ProjectCollaborator.ROLE_REPORTER,
+            role=ProjectCollaborator.Roles.REPORTER,
         )
 
     def tearDown(self):
