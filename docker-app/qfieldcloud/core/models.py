@@ -329,7 +329,7 @@ class ProjectQueryset(models.QuerySet):
             ),
             # Public
             (
-                Q(private=False),
+                Q(is_public=True),
                 ProjectCollaborator.ROLE_READER,
                 ProjectQueryset.RoleOrigin.Public.value,
             ),
