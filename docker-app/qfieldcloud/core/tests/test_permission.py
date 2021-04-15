@@ -47,6 +47,7 @@ class PermissionTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         response = self.client.get("/api/v1/projects/", format="json")
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(1, len(response.data))
         self.assertEqual("project1", response.data[0].get("name"))
 
