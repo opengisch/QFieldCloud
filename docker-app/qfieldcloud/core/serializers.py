@@ -22,27 +22,9 @@ class UserSerializer:
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
-    user_role = serializers.SerializerMethodField()
+    user_role = serializers.CharField(read_only=True)
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
-
-    def get_user_role(self, obj):
-        # TODO : roles should be stored as str in the DB anyway to avoid this type of juggling
-        if not hasattr(obj, "user_role"):
-            return None
-        for role_id, role_str in ProjectCollaborator.ROLE_CHOICES:
-            if obj.user_role == role_id:
-                return role_str
-        return None
-
-    def get_user_role_origin(self, obj):
-        # TODO : roles should be stored as str in the DB anyway to avoid this type of juggling
-        if not hasattr(obj, "user_role_origin"):
-            return None
-        for role_id, role_str in ProjectCollaborator.ROLE_CHOICES:
-            if obj.user_role_origin == role_id:
-                return role_str
-        return None
 
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)

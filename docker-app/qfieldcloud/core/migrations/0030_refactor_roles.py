@@ -18,7 +18,7 @@ def refactor_roles(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0029_merge_20210415_1034"),
+        ("core", "0029_auto_20210415_1420"),
     ]
 
     operations = [

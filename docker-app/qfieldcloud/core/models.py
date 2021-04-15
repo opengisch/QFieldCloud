@@ -276,12 +276,12 @@ class ProjectQueryset(models.QuerySet):
     ```
     """
 
-    class RoleOrigin(Enum):
-        ProjectOwner = "project_owner"
-        OrganizationOwner = "organization_owner"
-        OrganizationAdmin = "organization_admin"
-        Collaborator = "collaborator"
-        Public = "public"
+    class RoleOrigins(models.TextChoices):
+        PROJECTOWNER = "project_owner", _("Project owner")
+        ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
+        ORGANIZATIONADMIN = "organization_admin", _("Organization admin")
+        COLLABORATOR = "collaborator", _("Collaborator")
+        PUBLIC = "public", _("Public")
 
     def for_user(self, user):
 
@@ -291,13 +291,13 @@ class ProjectQueryset(models.QuerySet):
             (
                 Q(owner=user),
                 V(ProjectCollaborator.Roles.ADMIN),
-                ProjectQueryset.RoleOrigin.ProjectOwner.value,
+                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
             ),
             # Memberships - admin
             (
                 Q(owner__in=Organization.objects.filter(organization_owner=user)),
                 V(ProjectCollaborator.Roles.ADMIN),
-                ProjectQueryset.RoleOrigin.OrganizationOwner.value,
+                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
             ),
             (
                 Q(
@@ -306,7 +306,7 @@ class ProjectQueryset(models.QuerySet):
                     ).values("organization")
                 ),
                 V(ProjectCollaborator.Roles.ADMIN),
-                ProjectQueryset.RoleOrigin.OrganizationAdmin.value,
+                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
             ),
             # Role through ProjectCollaborator
             (
@@ -320,13 +320,13 @@ class ProjectQueryset(models.QuerySet):
                     project=OuterRef("pk"),
                     collaborator=user,
                 ).values_list("role"),
-                ProjectQueryset.RoleOrigin.Collaborator.value,
+                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
             ),
             # Public
             (
                 Q(is_public=True),
                 V(ProjectCollaborator.Roles.READER),
-                ProjectQueryset.RoleOrigin.Public.value,
+                V(ProjectQueryset.RoleOrigins.PUBLIC),
             ),
         ]
 
@@ -334,10 +334,10 @@ class ProjectQueryset(models.QuerySet):
             user_role=Case(
                 *[When(perm[0], perm[1]) for perm in permissions_config],
                 default=None,
-                output_field=models.IntegerField(),
+                output_field=models.CharField(),
             ),
             user_role_origin=Case(
-                *[When(perm[0], V(perm[2])) for perm in permissions_config],
+                *[When(perm[0], perm[2]) for perm in permissions_config],
                 default=None,
             ),
         )
