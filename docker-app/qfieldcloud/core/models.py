@@ -285,7 +285,6 @@ class ProjectQueryset(models.QuerySet):
         OrganizationOwner = "organization_owner"
         OrganizationAdmin = "organization_admin"
         Collaborator = "collaborator"
-        OrganizationTeam = "organization_team"
         Public = "public"
 
     def for_user(self, user):
