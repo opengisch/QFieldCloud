@@ -9,6 +9,8 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Project,
     ProjectCollaborator,
+    Team,
+    TeamMember,
     User,
 )
 
@@ -55,6 +57,14 @@ def get_user_organizations(user: User, administered_only: bool = False) -> Query
     return organizations
 
 
+def get_organization_teams(organization):
+    return Team.objects.filter(team_organization=organization)
+
+
+def get_team_members(team):
+    return TeamMember.objects.filter(team=team)
+
+
 def get_organization_members(organization):
     return OrganizationMember.objects.filter(organization=organization)
 
@@ -74,6 +84,7 @@ def get_users(
     project: Project = None,
     organization: Organization = None,
     exclude_organizations: bool = False,
+    exclude_teams: bool = False,
 ) -> BaseManager:
     assert (
         project is None or organization is None
@@ -87,7 +98,10 @@ def get_users(
         users = User.objects.all()
 
     if exclude_organizations:
-        users = users.filter(user_type=User.TYPE_USER)
+        users = users.exclude(user_type=User.TYPE_ORGANIZATION)
+
+    if exclude_teams:
+        users = users.exclude(user_type=User.TYPE_TEAM)
 
     # exclude the already existing collaborators and the project owner
     if project:

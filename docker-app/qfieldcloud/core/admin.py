@@ -20,6 +20,8 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Project,
     ProjectCollaborator,
+    Team,
+    TeamMember,
     User,
     UserAccount,
 )
@@ -291,6 +293,8 @@ admin.site.register(Geodb, GeodbAdmin)
 
 admin.site.register(Organization)
 admin.site.register(OrganizationMember)
+admin.site.register(Team)
+admin.site.register(TeamMember)
 admin.site.register(ProjectCollaborator)
 
 admin.site.unregister(Group)
