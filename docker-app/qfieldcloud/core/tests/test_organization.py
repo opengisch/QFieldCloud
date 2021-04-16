@@ -40,14 +40,14 @@ class ProjectTestCase(APITestCase):
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
-            role=OrganizationMember.ROLE_MEMBER,
+            role=OrganizationMember.Roles.MEMBER,
         )
 
         # Set user3 as admin of organization1
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user3,
-            role=OrganizationMember.ROLE_ADMIN,
+            role=OrganizationMember.Roles.ADMIN,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -81,14 +81,14 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0].organization, self.organization1)
         self.assertEqual(members[0].member, self.user2)
-        self.assertEqual(members[0].role, OrganizationMember.ROLE_ADMIN)
+        self.assertEqual(members[0].role, OrganizationMember.Roles.ADMIN)
 
     def test_update_member(self):
         # Set user2 as member of organization1
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
-            role=OrganizationMember.ROLE_MEMBER,
+            role=OrganizationMember.Roles.MEMBER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -105,7 +105,7 @@ class ProjectTestCase(APITestCase):
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0].organization, self.organization1)
         self.assertEqual(members[0].member, self.user2)
-        self.assertEqual(members[0].role, OrganizationMember.ROLE_MEMBER)
+        self.assertEqual(members[0].role, OrganizationMember.Roles.MEMBER)
 
     def test_delete_member(self):
 
@@ -113,7 +113,7 @@ class ProjectTestCase(APITestCase):
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
-            role=OrganizationMember.ROLE_MEMBER,
+            role=OrganizationMember.Roles.MEMBER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -129,7 +129,7 @@ class ProjectTestCase(APITestCase):
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
-            role=OrganizationMember.ROLE_MEMBER,
+            role=OrganizationMember.Roles.MEMBER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
@@ -145,7 +145,7 @@ class ProjectTestCase(APITestCase):
 
         # Set user2 as admin of organization1
         obj = OrganizationMember.objects.all()[0]
-        obj.role = OrganizationMember.ROLE_ADMIN
+        obj.role = OrganizationMember.Roles.ADMIN
         obj.save()
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)

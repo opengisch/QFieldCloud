@@ -47,7 +47,7 @@ def get_user_organizations(user: User, administered_only: bool = False) -> Query
     memberships = OrganizationMember.objects.filter(member=user)
 
     if administered_only:
-        memberships = memberships.filter(role=OrganizationMember.ROLE_ADMIN)
+        memberships = memberships.filter(role=OrganizationMember.Roles.ADMIN)
 
     membership_organizations = Organization.objects.filter(members__in=memberships)
     organizations = owned_organizations.union(membership_organizations)

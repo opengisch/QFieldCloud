@@ -23,31 +23,31 @@ def _is_project_collaborator_role_admin(user, project):
         return True
 
     return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.ROLE_ADMIN
+        project=project, collaborator=user, role=ProjectCollaborator.Roles.ADMIN
     ).exists()
 
 
 def _is_project_collaborator_role_manager(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.ROLE_MANAGER
+        project=project, collaborator=user, role=ProjectCollaborator.Roles.MANAGER
     ).exists()
 
 
 def _is_project_collaborator_role_editor(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.ROLE_EDITOR
+        project=project, collaborator=user, role=ProjectCollaborator.Roles.EDITOR
     ).exists()
 
 
 def _is_project_collaborator_role_reporter(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.ROLE_REPORTER
+        project=project, collaborator=user, role=ProjectCollaborator.Roles.REPORTER
     ).exists()
 
 
 def _is_project_collaborator_role_reader(user, project):
     return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.ROLE_READER
+        project=project, collaborator=user, role=ProjectCollaborator.Roles.READER
     ).exists()
 
 
@@ -69,13 +69,13 @@ def _is_organization_member_role_admin(user, organization):
         return True
 
     return OrganizationMember.objects.filter(
-        organization=organization, member=user, role=OrganizationMember.ROLE_ADMIN
+        organization=organization, member=user, role=OrganizationMember.Roles.ADMIN
     ).exists()
 
 
 def _is_organization_member_role_member(user, organization):
     return OrganizationMember.objects.filter(
-        organization=organization, member=user, role=OrganizationMember.ROLE_MEMBER
+        organization=organization, member=user, role=OrganizationMember.Roles.MEMBER
     ).exists()
 
 

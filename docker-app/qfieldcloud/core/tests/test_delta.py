@@ -45,7 +45,7 @@ class DeltaTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_REPORTER,
+            role=ProjectCollaborator.Roles.REPORTER,
         )
 
     def tearDown(self):

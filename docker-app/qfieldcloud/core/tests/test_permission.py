@@ -70,7 +70,7 @@ class PermissionTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=project,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_READER,
+            role=ProjectCollaborator.Roles.READER,
         )
         response = self.client.get("/api/v1/projects/", format="json")
         self.assertEqual(1, len(response.data))
@@ -93,7 +93,7 @@ class PermissionTestCase(APITestCase):
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_READER,
+            role=ProjectCollaborator.Roles.READER,
         )
 
         file_path = testdata_path("file.txt")
@@ -113,7 +113,7 @@ class PermissionTestCase(APITestCase):
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.ROLE_REPORTER,
+            role=ProjectCollaborator.Roles.REPORTER,
         )
 
         file_path = testdata_path("file.txt")
