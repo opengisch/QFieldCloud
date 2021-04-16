@@ -147,13 +147,16 @@ class ProjectTestCase(APITestCase):
 
         self.assertEqual(json[0]["name"], "project1")
         self.assertEqual(json[0]["owner"], "user1")
-        self.assertEqual(json[0]["user_role"], "owner")
+        self.assertEqual(json[0]["user_role"], "admin")
+        self.assertEqual(json[0]["user_role_origin"], "project_owner")
         self.assertEqual(json[1]["name"], "project2")
         self.assertEqual(json[1]["owner"], "user1")
-        self.assertEqual(json[1]["user_role"], "owner")
+        self.assertEqual(json[1]["user_role"], "admin")
+        self.assertEqual(json[1]["user_role_origin"], "project_owner")
         self.assertEqual(json[2]["name"], "project4")
         self.assertEqual(json[2]["owner"], "user2")
         self.assertEqual(json[2]["user_role"], "manager")
+        self.assertEqual(json[2]["user_role_origin"], "collaborator")
 
     def test_create_collaborator(self):
 
@@ -320,7 +323,9 @@ class ProjectTestCase(APITestCase):
 
         self.assertEqual(json[0]["name"], "project1")
         self.assertEqual(json[0]["owner"], "user1")
-        self.assertEqual(json[0]["user_role"], "public")
+        self.assertEqual(json[0]["user_role"], "admin")
+        self.assertEqual(json[0]["user_role_origin"], "project_owner")
         self.assertEqual(json[1]["name"], "project2")
         self.assertEqual(json[1]["owner"], "user2")
-        self.assertEqual(json[1]["user_role"], "public")
+        self.assertEqual(json[1]["user_role"], "reader")
+        self.assertEqual(json[1]["user_role_origin"], "public")

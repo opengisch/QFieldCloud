@@ -7,6 +7,9 @@ from enum import Enum
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Case, Exists, OuterRef, Q
+from django.db.models import Value as V
+from django.db.models import When
 from django.db.models.aggregates import Count
 from django.db.models.fields.json import JSONField
 from django.db.models.signals import post_delete, post_save
@@ -262,6 +265,92 @@ class OrganizationMember(models.Model):
         return super().clean()
 
 
+class ProjectQueryset(models.QuerySet):
+    """Adds for_user(user) method to the project's querysets, allowing to filter only projects visible to that user.
+
+    Projects are annotated with the user's role (`user_role`) and the origin of this role (`user_role_origin`).
+
+    Args:
+        user:               user to check permission for
+
+    Usage:
+    ```
+    # List Olivier's projects that are visible to Ivan (olivier/ivan are User instances)
+    olivier.projects.for_user(ivan)
+    ```
+    """
+
+    class RoleOrigin(Enum):
+        ProjectOwner = "project_owner"
+        OrganizationOwner = "organization_owner"
+        OrganizationAdmin = "organization_admin"
+        Collaborator = "collaborator"
+        Public = "public"
+
+    def for_user(self, user):
+
+        # orderd list of 3-uples : (condition, role, role origin)
+        permissions_config = [
+            # Direct ownership
+            (
+                Q(owner=user),
+                V(ProjectCollaborator.ROLE_ADMIN),
+                ProjectQueryset.RoleOrigin.ProjectOwner.value,
+            ),
+            # Memberships - admin
+            (
+                Q(owner__in=Organization.objects.filter(organization_owner=user)),
+                ProjectCollaborator.ROLE_ADMIN,
+                ProjectQueryset.RoleOrigin.OrganizationOwner.value,
+            ),
+            (
+                Q(
+                    owner__in=OrganizationMember.objects.filter(
+                        member=user, role=OrganizationMember.ROLE_ADMIN
+                    ).values("organization")
+                ),
+                ProjectCollaborator.ROLE_ADMIN,
+                ProjectQueryset.RoleOrigin.OrganizationAdmin.value,
+            ),
+            # Role through ProjectCollaborator
+            (
+                Exists(
+                    ProjectCollaborator.objects.filter(
+                        project=OuterRef("pk"),
+                        collaborator=user,
+                    )
+                ),
+                ProjectCollaborator.objects.filter(
+                    project=OuterRef("pk"),
+                    collaborator=user,
+                ).values_list("role"),
+                ProjectQueryset.RoleOrigin.Collaborator.value,
+            ),
+            # Public
+            (
+                Q(is_public=True),
+                ProjectCollaborator.ROLE_READER,
+                ProjectQueryset.RoleOrigin.Public.value,
+            ),
+        ]
+
+        qs = self.annotate(
+            user_role=Case(
+                *[When(perm[0], perm[1]) for perm in permissions_config],
+                default=None,
+                output_field=models.IntegerField(),
+            ),
+            user_role_origin=Case(
+                *[When(perm[0], V(perm[2])) for perm in permissions_config],
+                default=None,
+            ),
+        )
+        # Exclude those without role (invisible)
+        qs = qs.exclude(user_role__isnull=True)
+
+        return qs
+
+
 class Project(models.Model):
     """Represent a QFieldcloud project.
     It corresponds to a directory on the file system.
@@ -269,7 +358,10 @@ class Project(models.Model):
     The owner of a project is an Organization.
     """
 
+    objects = ProjectQueryset.as_manager()
+
     class Meta:
+        ordering = ["owner__username", "name"]
         constraints = [
             models.UniqueConstraint(
                 fields=["owner", "name"], name="project_owner_name_uniq"
@@ -295,7 +387,7 @@ class Project(models.Model):
         default=False,
         help_text="Projects that are marked as public would be visible and editable to anyone.",
     )
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="projects")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     overwrite_conflicts = models.BooleanField(

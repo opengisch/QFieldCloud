@@ -5,6 +5,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Project,
     ProjectCollaborator,
+    ProjectQueryset,
 )
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -98,211 +99,6 @@ class QuerysetTestCase(APITestCase):
             # Remove credentials
             self.client.credentials()
 
-    def test_my_owned_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            ownerships=True,
-        )
-
-        self.assertEqual(len(queryset), 2)
-        self.assertTrue(self.project1 in queryset)
-        self.assertTrue(self.project2 in queryset)
-
-    def test_my_organization_owned_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 2)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-
-    def test_my_organization_admin_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user2,
-            self.user2,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 2)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-
-    def test_my_collaboration_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            collaborations=True,
-        )
-
-        self.assertEqual(len(queryset), 1)
-        self.assertTrue(self.project7 in queryset)
-
-    def test_my_ownerships_and_memberships_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            ownerships=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 4)
-        self.assertTrue(self.project1 in queryset)
-        self.assertTrue(self.project2 in queryset)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-
-    def test_my_ownerships_and_collaborations_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            ownerships=True,
-            collaborations=True,
-        )
-
-        self.assertEqual(len(queryset), 3)
-        self.assertTrue(self.project1 in queryset)
-        self.assertTrue(self.project2 in queryset)
-        self.assertTrue(self.project7 in queryset)
-
-    def test_my_collaborations_and_memberships_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            collaborations=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 3)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-        self.assertTrue(self.project7 in queryset)
-
-    def test_my_ownerships_and_collaborations_and_memberships_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            ownerships=True,
-            collaborations=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 5)
-        self.assertTrue(self.project1 in queryset)
-        self.assertTrue(self.project2 in queryset)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-        self.assertTrue(self.project7 in queryset)
-
-    def test_my_available_and_public_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            ownerships=True,
-            collaborations=True,
-            memberships=True,
-            public=True,
-        )
-
-        self.assertEqual(len(queryset), 7)
-        self.assertTrue(self.project1 in queryset)
-        self.assertTrue(self.project2 in queryset)
-        self.assertTrue(self.project4 in queryset)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-        self.assertTrue(self.project7 in queryset)
-        self.assertTrue(self.project8 in queryset)
-
-    def test_my_public_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user1,
-            public=True,
-        )
-
-        self.assertEqual(len(queryset), 4)
-        self.assertTrue(self.project2 in queryset)
-        self.assertTrue(self.project4 in queryset)
-        self.assertTrue(self.project6 in queryset)
-        self.assertTrue(self.project8 in queryset)
-
-    def test_another_user_projects(self):
-
-        queryset = querysets_utils.get_available_projects(
-            self.user2,
-            self.user3,
-            ownerships=True,
-            collaborations=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 1)
-        self.assertTrue(self.project8 in queryset)
-
-    def test_another_user_projects_where_collaborated(self):
-
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.user3,
-            ownerships=True,
-            collaborations=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 1)
-        self.assertTrue(self.project8 in queryset)
-
-    def test_another_user_projects_where_collaborated_reversed(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user3,
-            self.user1,
-            ownerships=True,
-            collaborations=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 2)
-        self.assertTrue(self.project2 in queryset)
-        self.assertTrue(self.project6 in queryset)
-
-    def test_own_organization_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user1,
-            self.organization1,
-            ownerships=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 2)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-
-    def test_administered_organization_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user2,
-            self.organization1,
-            ownerships=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 2)
-        self.assertTrue(self.project5 in queryset)
-        self.assertTrue(self.project6 in queryset)
-
-    def test_member_organization_projects(self):
-        queryset = querysets_utils.get_available_projects(
-            self.user3,
-            self.organization1,
-            ownerships=True,
-            memberships=True,
-        )
-
-        self.assertEqual(len(queryset), 1)
-        self.assertTrue(self.project6 in queryset)
-
     def test_get_users(self):
         # should get all the available users
         queryset = querysets_utils.get_users("")
@@ -342,3 +138,64 @@ class QuerysetTestCase(APITestCase):
         self.assertEqual(len(queryset), 2)
         self.assertTrue(self.user2 in queryset)
         self.assertTrue(self.user3 in queryset)
+
+    def test_projects_roles_and_role_origins(self):
+        """
+        Checks user_role and user_role_origin are correctly defined
+        """
+
+        def p(proj, user):
+            return Project.objects.for_user(user).get(pk=proj.pk)
+
+        # fmt: off
+        self.assertEqual(p(self.project1, self.user1).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project1, self.user1).user_role_origin, ProjectQueryset.RoleOrigin.ProjectOwner.value)
+        self.assertEqual(p(self.project2, self.user1).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project2, self.user1).user_role_origin, ProjectQueryset.RoleOrigin.ProjectOwner.value)
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project3, self.user1)
+        self.assertEqual(p(self.project4, self.user1).user_role, ProjectCollaborator.ROLE_READER)
+        self.assertEqual(p(self.project4, self.user1).user_role_origin, ProjectQueryset.RoleOrigin.Public.value)
+        self.assertEqual(p(self.project5, self.user1).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project5, self.user1).user_role_origin, ProjectQueryset.RoleOrigin.OrganizationOwner.value)
+        self.assertEqual(p(self.project6, self.user1).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project6, self.user1).user_role_origin, ProjectQueryset.RoleOrigin.OrganizationOwner.value)
+        self.assertEqual(p(self.project7, self.user1).user_role, ProjectCollaborator.ROLE_REPORTER)
+        self.assertEqual(p(self.project7, self.user1).user_role_origin, ProjectQueryset.RoleOrigin.Collaborator.value)
+        self.assertEqual(p(self.project8, self.user1).user_role, ProjectCollaborator.ROLE_READER)
+        self.assertEqual(p(self.project8, self.user1).user_role_origin, ProjectQueryset.RoleOrigin.Public.value)
+
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project1, self.user2)
+        self.assertEqual(p(self.project2, self.user2).user_role, ProjectCollaborator.ROLE_READER)
+        self.assertEqual(p(self.project2, self.user2).user_role_origin, ProjectQueryset.RoleOrigin.Public.value)
+        self.assertEqual(p(self.project3, self.user2).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project3, self.user2).user_role_origin, ProjectQueryset.RoleOrigin.ProjectOwner.value)
+        self.assertEqual(p(self.project4, self.user2).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project4, self.user2).user_role_origin, ProjectQueryset.RoleOrigin.ProjectOwner.value)
+        self.assertEqual(p(self.project5, self.user2).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project5, self.user2).user_role_origin, ProjectQueryset.RoleOrigin.OrganizationAdmin.value)
+        self.assertEqual(p(self.project6, self.user2).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project6, self.user2).user_role_origin, ProjectQueryset.RoleOrigin.OrganizationAdmin.value)
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project7, self.user2)
+        self.assertEqual(p(self.project8, self.user2).user_role, ProjectCollaborator.ROLE_READER)
+        self.assertEqual(p(self.project8, self.user2).user_role_origin, ProjectQueryset.RoleOrigin.Public.value)
+
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project1, self.user3)
+        self.assertEqual(p(self.project2, self.user3).user_role, ProjectCollaborator.ROLE_READER)
+        self.assertEqual(p(self.project2, self.user3).user_role_origin, ProjectQueryset.RoleOrigin.Public.value)
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project3, self.user3)
+        self.assertEqual(p(self.project4, self.user3).user_role, ProjectCollaborator.ROLE_READER)
+        self.assertEqual(p(self.project4, self.user3).user_role_origin, ProjectQueryset.RoleOrigin.Public.value)
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project5, self.user3)
+        self.assertEqual(p(self.project6, self.user3).user_role, ProjectCollaborator.ROLE_READER)
+        self.assertEqual(p(self.project6, self.user3).user_role_origin, ProjectQueryset.RoleOrigin.Public.value)
+        self.assertEqual(p(self.project7, self.user3).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project7, self.user3).user_role_origin, ProjectQueryset.RoleOrigin.ProjectOwner.value)
+        self.assertEqual(p(self.project8, self.user3).user_role, ProjectCollaborator.ROLE_ADMIN)
+        self.assertEqual(p(self.project8, self.user3).user_role_origin, ProjectQueryset.RoleOrigin.ProjectOwner.value)
+        # fmt: on

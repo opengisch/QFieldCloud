@@ -1,6 +1,6 @@
-from django.db.models import Count, Q
-from django.db.models.expressions import Case, Value, When
-from django.db.models.fields import CharField
+import warnings
+
+from django.db.models import Q
 from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from qfieldcloud.core.models import (
@@ -27,139 +27,17 @@ def get_available_projects(
     - owned `owner` or organization he belongs to and collaborated with `user`
     """
 
-    # just a hacky way to get always false where clause. This allows all the conditions below to be `where |=`
-    where = Q(pk=None)
-    when = []
-
-    if ownerships:
-        # 1) owned by `owner` (public only if user!=owner)
-        where_owner = {
-            "owner": owner,
-        }
-
-        if user != owner:
-            where_owner["is_public"] = True
-
-        where |= Q(**where_owner)
-        when.append(
-            When(**where_owner, then=Value("owner", output_field=CharField())),
-        )
-
-    if collaborations:
-        # 2) owned by anyone, but `owner` is a collaborator (public only if user!=owner)
-        where_collaborator = {
-            "collaborators__in": ProjectCollaborator.objects.filter(collaborator=owner),
-        }
-
-        if user != owner:
-            where_collaborator["is_public"] = True
-
-        where |= Q(**where_collaborator)
-
-    if memberships:
-        if owner.is_organization:
-            organization_filters = {}
-
-            if (
-                # has no `user` as an admin, then include also private projects
-                not OrganizationMember.objects.filter(
-                    organization=owner,
-                    member=user,
-                    role=OrganizationMember.ROLE_ADMIN,
-                ).exists()
-                # has `user` as an owner, then include also private projects
-                and not Organization.objects.filter(
-                    id=owner.id, organization_owner=user
-                ).exists()
-            ):
-                organization_filters["is_public"] = True
-
-            # 3) owned by `owner` which is an organization
-            where |= Q(
-                owner=owner,
-                **organization_filters,
-            )
-
-            # 4) owned by `owner` which is an organization and has `user` as a collanorator
-            where |= Q(
-                owner=owner,
-                collaborators__in=ProjectCollaborator.objects.filter(collaborator=user),
-            )
-        else:
-            # 5) owned by organizations where `owner` is a member (public only if user!=owner)
-            membership_organizations = OrganizationMember.objects.filter(
-                member=owner,
-                role=OrganizationMember.ROLE_ADMIN,
-            ).values("organization")
-            where_org_admin_condition = {"owner__in": membership_organizations}
-
-            if user != owner:
-                where_org_admin_condition["is_public"] = True
-
-            where |= Q(**where_org_admin_condition)
-            when.append(
-                When(
-                    **where_org_admin_condition,
-                    then=Value("organization_admin", output_field=CharField()),
-                ),
-            )
-
-            # 6) owned by organizations where `owner` is the owner (public only if user!=owner)
-            owned_organizations = Organization.objects.filter(organization_owner=owner)
-            where_org_owner = {"owner__in": owned_organizations}
-
-            if user != owner:
-                where_org_owner["is_public"] = True
-
-            where |= Q(**where_org_owner)
-            when.append(
-                When(
-                    **where_org_owner,
-                    then=Value("organization_owner", output_field=CharField()),
-                ),
-            )
-
-    if public:
-        where_public_condition = {"is_public": True}
-        where |= Q(**where_public_condition)
-        when.append(
-            When(
-                **where_public_condition, then=Value("public", output_field=CharField())
-            ),
-        )
-
-    queryset = Project.objects.filter(where).distinct()
-    queryset = queryset.annotate(collaborators__count=Count("collaborators"))
-    queryset = queryset.annotate(deltas__count=Count("deltas"))
-    queryset = queryset.annotate(
-        user_role=Case(
-            When(
-                collaborators__role=ProjectCollaborator.ROLE_ADMIN,
-                then=Value("admin", output_field=CharField()),
-            ),
-            When(
-                collaborators__role=ProjectCollaborator.ROLE_MANAGER,
-                then=Value("manager", output_field=CharField()),
-            ),
-            When(
-                collaborators__role=ProjectCollaborator.ROLE_EDITOR,
-                then=Value("editor", output_field=CharField()),
-            ),
-            When(
-                collaborators__role=ProjectCollaborator.ROLE_REPORTER,
-                then=Value("reporter", output_field=CharField()),
-            ),
-            When(
-                collaborators__role=ProjectCollaborator.ROLE_READER,
-                then=Value("reader", output_field=CharField()),
-            ),
-            *when,
-        )
+    warnings.warn(
+        "`get_available_projects()` is deprecated. Use `owner.projects.for_user(user)` instead.",
+        DeprecationWarning,
     )
 
-    queryset = queryset.order_by("owner__username", "name")
+    if not ownerships or not collaborations or not memberships or not public:
+        raise Exception(
+            "`get_available_projects()` was reimplemented and doesn't support excluding permissions from ownerships/collaborations/memberships anymore. Use `owner.projects.for_user(user)` instead and do the required filtering yourself."
+        )
 
-    return queryset
+    return owner.projects.for_user(user, include_public=public)
 
 
 def get_user_organizations(user: User, administered_only: bool = False) -> QuerySet:

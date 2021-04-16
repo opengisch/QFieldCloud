@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils, querysets_utils, utils
-from qfieldcloud.core.models import Project
+from qfieldcloud.core import permissions_utils, utils
+from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from rest_framework import generics, permissions, viewsets
 
@@ -106,14 +106,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if include_public_param and include_public_param.lower() == "true":
             include_public = True
 
-        return querysets_utils.get_available_projects(
-            self.request.user,
-            self.request.user,
-            ownerships=True,
-            collaborations=True,
-            memberships=True,
-            public=include_public,
-        )
+        projects = Project.objects.for_user(self.request.user)
+        if not include_public:
+            projects = projects.exclude(
+                user_role_origin=ProjectQueryset.RoleOrigin.Public
+            )
+        return projects
 
     def destroy(self, request, projectid):
         # Delete files from storage
@@ -137,6 +135,4 @@ class PublicProjectsListView(generics.ListAPIView):
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return querysets_utils.get_available_projects(
-            self.request.user, self.request.user, public=True
-        )
+        return Project.objects.for_user(self.request.user).filter(is_public=True)
