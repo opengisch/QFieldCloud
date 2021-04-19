@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Union
 
 from django.contrib.auth import get_user_model
 from qfieldcloud.core.models import (
@@ -79,6 +79,19 @@ def _is_organization_member_role_member(user, organization):
     ).exists()
 
 
+def _project_for_owner(user: QfcUser, project: Project):
+    if hasattr(project, "user_role"):
+        return project
+    else:
+        return Project.objects.for_user(user).filter(pk=project.pk)
+
+
+def user_has_project_roles(
+    user: QfcUser, project: Project, roles: List[ProjectCollaborator.Roles]
+):
+    return _project_for_owner(user, project).filter(user_role__in=roles).exists()
+
+
 def get_param_from_request(request, param):
     """Try to get the param from the request data or the request
     context, returns None otherwise"""
@@ -114,134 +127,99 @@ def can_create_project(
 
 
 def can_update_delete_project(user: User, project: Project) -> bool:
-    """Return True if the `user` can update or delete `project`.
-    Return False otherwise."""
-
-    if _is_project_owner(user, project):
-        return True
-    if _is_project_collaborator_role_admin(user, project):
-        return True
-
-    organization = project.owner
-    if _is_organization_owner(user, organization):
-        return True
-    if _is_organization_member_role_admin(user, organization):
-        return True
-    return False
+    return user_has_project_roles(user, project, [ProjectCollaborator.Roles.ADMIN])
 
 
-def can_get_project(user, project):
-    """Return True if the `user` can get `project`.
-    Return False otherwise."""
-
-    if project.is_public:
-        return True
-    if can_update_delete_project(user, project):
-        return True
-    if _is_project_collaborator_role_manager(user, project):
-        return True
-    if _is_project_collaborator_role_editor(user, project):
-        return True
-    if _is_project_collaborator_role_reporter(user, project):
-        return True
-    if _is_project_collaborator_role_reader(user, project):
-        return True
-    return False
+def can_read_project(user, project):
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaborator.Roles.READER,
+        ],
+    )
 
 
-def can_list_files(user, project):
-    """Return True if the `user` can list the files in `project`.
-    Return False otherwise."""
+def can_create_files(user, project):
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
 
-    if project.is_public:
-        return True
-    if _is_project_owner(user, project):
-        return True
-    if _is_project_collaborator_role_admin(user, project):
-        return True
-    if _is_project_collaborator_role_manager(user, project):
-        return True
-    if _is_project_collaborator_role_editor(user, project):
-        return True
-    if _is_project_collaborator_role_reporter(user, project):
-        return True
-    if _is_project_collaborator_role_reader(user, project):
-        return True
 
-    organization = project.owner
-    if _is_organization_owner(user, organization):
-        return True
-    if _is_organization_member_role_admin(user, organization):
-        return True
-    return False
+def can_read_files(user, project):
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaborator.Roles.READER,
+        ],
+    )
 
 
 def can_delete_files(user, project):
-    """Return True if the `user` can delete files in `project`.
-    Return False otherwise."""
-
-    if _is_project_owner(user, project):
-        return True
-    if _is_project_collaborator_role_admin(user, project):
-        return True
-    if _is_project_collaborator_role_manager(user, project):
-        return True
-    if _is_project_collaborator_role_editor(user, project):
-        return True
-
-    organization = project.owner
-    if _is_organization_owner(user, organization):
-        return True
-    if _is_organization_member_role_admin(user, organization):
-        return True
-    return False
-
-
-def can_upload_files(user, project):
-    """Return True if the `user` can upload files to `project`.
-    Return False otherwise."""
-
-    if can_delete_files(user, project):
-        return True
-    if _is_project_collaborator_role_reporter(user, project):
-        return True
-    return False
-
-
-def can_download_files(user, project):
-    """Return True if the `user` can download files from `project`.
-    Return False otherwise."""
-    if project.is_public:
-        return True
-
-    if can_upload_files(user, project):
-        return True
-    if _is_project_collaborator_role_reader(user, project):
-        return True
-    return False
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+        ],
+    )
 
 
 def can_upload_deltas(user, project):
-    """Return True if the `user` can upload deltas in `project`.
-    Return False otherwise."""
-
-    return can_upload_files(user, project)
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
 
 
 def can_apply_deltas(user, project):
-    """Return True if the `user` can apply deltas in `project`.
-    Return False otherwise."""
-
-    return can_upload_files(user, project)
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
 
 
 def can_list_deltas(user, project):
-    """Return True if the `user` can list deltafiles of `project`.
-    Return False otherwise."""
-    if project.is_public:
-        return True
-
-    return can_upload_deltas(user, project)
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
 
 
 def can_list_users_organizations(user):
@@ -265,36 +243,36 @@ def can_update_user(request_maker_user, user):
 
 
 def can_list_collaborators(user, project):
-    """Return True if the `user` can list collaborators of `project`.
-    Return False otherwise."""
-
-    return True
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
 
 
 def can_create_collaborators(user, project):
-    """Return True if the `user` can create collaborators of `project`.
-    Return False otherwise."""
-
-    if _is_project_owner(user, project):
-        return True
-    if _is_project_collaborator_role_admin(user, project):
-        return True
-    if _is_project_collaborator_role_manager(user, project):
-        return True
-
-    organization = project.owner
-    if _is_organization_owner(user, organization):
-        return True
-    if _is_organization_member_role_admin(user, organization):
-        return True
-    return False
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
 
 
 def can_update_delete_collaborators(user, project):
-    """Return True if the `user` can update or delete collaborators of
-    `project`. Return False otherwise."""
-
-    return can_create_collaborators(user, project)
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
 
 
 def can_store_delta(user, delta: Delta) -> bool:
@@ -332,24 +310,39 @@ def can_store_delta(user, delta: Delta) -> bool:
 
 
 def can_update_collaborator_role(user, project, collaborator):
-    """Return True if the `user` can create update the `collaborator`
-    role of `project`. Return False otherwise."""
-
-    return can_create_collaborators(user, project)
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
 
 
 def can_delete_collaborator(user, project, collaborator):
-    """Return True if the `user` can delete the `collaborator` of `project`.
-    Return False otherwise."""
-
-    return can_update_collaborator_role(user, project, collaborator)
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
 
 
 def can_get_collaborator_role(user, project, collaborator):
-    """Return True if the `user` can create get the role of `collaborator`
-    of `project`. Return False otherwise."""
-
-    return True
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaborator.Roles.READER,
+        ],
+    )
 
 
 def can_list_members(user, organization):
@@ -485,4 +478,4 @@ def can_send_invitations(user) -> bool:
 
 
 def can_list_exportations(user, project: Project) -> bool:
-    return can_download_files(user, project)
+    return can_read_files(user, project)

@@ -33,7 +33,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         if view.action in ["update", "partial_update", "destroy"]:
             return permissions_utils.can_update_delete_project(user, project)
         if view.action == "retrieve":
-            return permissions_utils.can_get_project(user, project)
+            return permissions_utils.can_read_project(user, project)
 
         return False
 

@@ -82,11 +82,11 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
         user = request.user
 
         if request.method == "GET":
-            return permissions_utils.can_download_files(user, project)
+            return permissions_utils.can_read_files(user, project)
         if request.method == "DELETE":
             return permissions_utils.can_delete_files(user, project)
         if request.method == "POST":
-            return permissions_utils.can_upload_files(user, project)
+            return permissions_utils.can_create_files(user, project)
         return False
 
 

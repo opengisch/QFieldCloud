@@ -19,7 +19,7 @@ class ExportViewPermissions(permissions.BasePermission):
         except ObjectDoesNotExist:
             return False
         user = request.user
-        return permissions_utils.can_download_files(user, project)
+        return permissions_utils.can_read_files(user, project)
 
 
 @method_decorator(
