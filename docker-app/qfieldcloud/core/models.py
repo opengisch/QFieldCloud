@@ -4,7 +4,7 @@ import string
 import uuid
 from enum import Enum
 
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Case, Exists, OuterRef, Q
@@ -194,6 +194,84 @@ class Geodb(models.Model):
         )
 
 
+class OrganizationQueryset(models.QuerySet):
+    """Adds of_user(user) method to the organization's querysets, allowing to filter only organization related to that user.
+
+    Organizations are annotated with the user's role (`membership_role`), the origin of this role (`membership_role_origin`)
+    and whether it is public (`membership_is_public`).
+
+    Args:
+        user:               user to check membership for
+
+    Usage:
+    ```
+    # List Olivier's projects that are visible to Ivan (olivier/ivan are User instances)
+    olivier.projects.for_user(ivan)
+    ```
+    """
+
+    class RoleOrigins(models.TextChoices):
+        ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
+        ORGANIZATIONMEMBER = "organization_admin", _("Organization admin")
+
+    def of_user(self, user):
+        permissions_config = [
+            # Direct ownership
+            (
+                Q(organization_owner=user),
+                V(OrganizationMember.Roles.ADMIN),
+                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER),
+                V(True),
+            ),
+            # Organization membership
+            (
+                Exists(
+                    OrganizationMember.objects.filter(
+                        organization=OuterRef("pk"),
+                        member=user,
+                    )
+                ),
+                OrganizationMember.objects.filter(
+                    organization=OuterRef("pk"),
+                    member=user,
+                ).values_list("role"),
+                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER),
+                OrganizationMember.objects.filter(
+                    organization=OuterRef("pk"),
+                    member=user,
+                ).values_list("is_public"),
+            ),
+        ]
+
+        qs = self.annotate(
+            membership_role=Case(
+                *[When(perm[0], perm[1]) for perm in permissions_config],
+                default=None,
+                output_field=models.CharField(),
+            ),
+            membership_role_origin=Case(
+                *[When(perm[0], perm[2]) for perm in permissions_config],
+                default=None,
+            ),
+            membership_is_public=Case(
+                *[When(perm[0], perm[3]) for perm in permissions_config],
+                default=None,
+            ),
+        )
+        # Exclude those without role (invisible)
+        qs = qs.exclude(membership_role__isnull=True)
+
+        return qs
+
+
+class OrganizationManager(UserManager):
+    def get_queryset(self):
+        return OrganizationQueryset(self.model, using=self._db)
+
+    def of_user(self, user):
+        return self.get_queryset().of_user(user)
+
+
 # Automatically create a role and database when a Geodb object is created.
 @receiver(post_save, sender=Geodb)
 def create_geodb(sender, instance, created, **kwargs):
@@ -207,6 +285,7 @@ def delete_geodb(sender, instance, **kwargs):
 
 
 class Organization(User):
+    objects = OrganizationManager()
 
     organization_owner = models.ForeignKey(
         User,
@@ -255,6 +334,8 @@ class OrganizationMember(models.Model):
         limit_choices_to=models.Q(user_type=User.TYPE_USER),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.MEMBER)
+
+    is_public = models.BooleanField(default=False)
 
     def __str__(self):
         return self.organization.username + ": " + self.member.username

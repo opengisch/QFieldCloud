@@ -2,7 +2,6 @@ import warnings
 
 from django.db.models import Q
 from django.db.models.manager import BaseManager
-from django.db.models.query import QuerySet
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -40,21 +39,6 @@ def get_available_projects(
         )
 
     return owner.projects.for_user(user, include_public=public)
-
-
-def get_user_organizations(user: User, administered_only: bool = False) -> QuerySet:
-    owned_organizations = Organization.objects.filter(
-        organization_owner=user
-    ).distinct()
-    memberships = OrganizationMember.objects.filter(member=user)
-
-    if administered_only:
-        memberships = memberships.filter(role=OrganizationMember.Roles.ADMIN)
-
-    membership_organizations = Organization.objects.filter(members__in=memberships)
-    organizations = owned_organizations.union(membership_organizations)
-
-    return organizations
 
 
 def get_organization_teams(organization):
