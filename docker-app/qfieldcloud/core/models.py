@@ -256,6 +256,8 @@ class OrganizationMember(models.Model):
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.MEMBER)
 
+    is_public = models.BooleanField(default=False)
+
     def __str__(self):
         return self.organization.username + ": " + self.member.username
 
