@@ -535,8 +535,10 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]["id"], "802ae2ef-f360-440e-a816-8990d6a06667")
         self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[0]["created_by"], self.user1.username)
         self.assertEqual(json[1]["id"], "e4546ec2-6e01-43a1-ab30-a52db9469afd")
         self.assertEqual(json[1]["status"], "STATUS_PENDING")
+        self.assertEqual(json[1]["created_by"], self.user1.username)
 
     def test_push_list_multidelta(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -557,10 +559,13 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]["id"], "736bf2c2-646a-41a2-8c55-28c26aecd68d")
         self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[0]["created_by"], self.user1.username)
         self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
         self.assertEqual(json[1]["status"], "STATUS_PENDING")
+        self.assertEqual(json[1]["created_by"], self.user1.username)
         self.assertEqual(json[2]["id"], "c6c88e78-172c-4f77-b2fd-2ff41f5aa854")
         self.assertEqual(json[2]["status"], "STATUS_PENDING")
+        self.assertEqual(json[2]["created_by"], self.user1.username)
 
     def test_push_list_deltas_of_deltafile(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -592,8 +597,10 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]["id"], "ad98634e-509f-4dff-9000-de79b09c5359")
         self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[0]["created_by"], self.user1.username)
         self.assertEqual(json[1]["id"], "df6a19eb-7d61-4c64-9e3b-29bce0a8dfab")
         self.assertEqual(json[1]["status"], "STATUS_PENDING")
+        self.assertEqual(json[1]["created_by"], self.user1.username)
 
         # Get only deltas of one deltafile
         response = self.client.get(
@@ -607,6 +614,7 @@ class DeltaTestCase(APITransactionTestCase):
         self.assertEqual(len(json), 1)
         self.assertEqual(json[0]["id"], "ad98634e-509f-4dff-9000-de79b09c5359")
         self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[0]["created_by"], self.user1.username)
         self.assertIn("output", json[0])
 
     def test_push_apply_delta_file_conflicts_overwrite_false(self):
@@ -711,8 +719,10 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]["id"], "736bf2c2-646a-41a2-8c55-28c26aecd68d")
         self.assertEqual(json[0]["status"], "STATUS_UNPERMITTED")
+        self.assertEqual(json[0]["created_by"], self.user2.username)
         self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
         self.assertEqual(json[1]["status"], "STATUS_UNPERMITTED")
+        self.assertEqual(json[1]["created_by"], self.user2.username)
 
     def test_non_spatial_delta(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -749,8 +759,10 @@ class DeltaTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]["id"], "1270b97d-6a28-49cc-83f3-b827ec574fee")
         self.assertEqual(json[0]["status"], "STATUS_PENDING")
+        self.assertEqual(json[0]["created_by"], self.user1.username)
         self.assertEqual(json[1]["id"], "f326c3c1-138f-4261-9151-4946237ce714")
         self.assertEqual(json[1]["status"], "STATUS_PENDING")
+        self.assertEqual(json[1]["created_by"], self.user1.username)
 
         for _ in range(30):
             time.sleep(2)

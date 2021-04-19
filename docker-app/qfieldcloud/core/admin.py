@@ -102,6 +102,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "project__owner",
         "project__name",
         "status",
+        "created_by",
         "created_at",
         "updated_at",
     )
@@ -118,6 +119,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "project",
         "deltafile_id",
         "output__pre",
+        "created_by",
         "created_at",
         "updated_at",
     )
@@ -125,6 +127,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "project",
         "deltafile_id",
         "status",
+        "created_by",
         "created_at",
         "updated_at",
         "content",
