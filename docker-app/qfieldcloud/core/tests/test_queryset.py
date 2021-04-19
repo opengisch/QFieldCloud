@@ -6,6 +6,8 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     ProjectQueryset,
+    Team,
+    TeamMember,
 )
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -51,6 +53,18 @@ class QuerysetTestCase(APITestCase):
             role=OrganizationMember.Roles.MEMBER,
         )
 
+        self.team1 = Team.objects.create(
+            username="team1",
+            password="abc123",
+            user_type=User.TYPE_TEAM,
+            team_organization=self.organization1,
+        )
+
+        self.teammembership1 = TeamMember.objects.create(
+            team=self.team1,
+            member=self.user3,
+        )
+
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
         )
@@ -83,10 +97,20 @@ class QuerysetTestCase(APITestCase):
             name="project8", is_public=True, owner=self.user3
         )
 
+        self.project9 = Project.objects.create(
+            name="project9", is_public=False, owner=self.organization1
+        )
+
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project7,
             collaborator=self.user1,
             role=ProjectCollaborator.Roles.REPORTER,
+        )
+
+        self.collaborator2 = ProjectCollaborator.objects.create(
+            project=self.project9,
+            collaborator=self.team1,
+            role=ProjectCollaborator.Roles.EDITOR,
         )
 
     def tearDown(self):
@@ -102,11 +126,12 @@ class QuerysetTestCase(APITestCase):
     def test_get_users(self):
         # should get all the available users
         queryset = querysets_utils.get_users("")
-        self.assertEqual(len(queryset), 4)
+        self.assertEqual(len(queryset), 5)
         self.assertTrue(self.user1 in queryset)
         self.assertTrue(self.user2 in queryset)
         self.assertTrue(self.user3 in queryset)
         self.assertTrue(self.organization1.user_ptr in queryset)
+        self.assertTrue(self.team1.user_ptr in queryset)
 
         # should get all the available users
         queryset = querysets_utils.get_users("user3")
@@ -115,29 +140,40 @@ class QuerysetTestCase(APITestCase):
 
         # should get only the users that are not an organization
         queryset = querysets_utils.get_users("", exclude_organizations=True)
-        self.assertEqual(len(queryset), 3)
+        self.assertEqual(len(queryset), 4)
         self.assertTrue(self.user1 in queryset)
         self.assertTrue(self.user2 in queryset)
         self.assertTrue(self.user3 in queryset)
+        self.assertTrue(self.team1.user_ptr in queryset)
 
-        # should get all the users, that are not members or owners of an organization
-        queryset = querysets_utils.get_users("", organization=self.organization1)
-        self.assertEqual(len(queryset), 0)
-
-        # should get all the users, that are not members or owner of a project
-        queryset = querysets_utils.get_users("", project=self.project1)
-        self.assertEqual(len(queryset), 3)
+        # should get only the users that are not a team
+        queryset = querysets_utils.get_users("", exclude_teams=True)
+        self.assertEqual(len(queryset), 4)
+        self.assertTrue(self.user1 in queryset)
         self.assertTrue(self.user2 in queryset)
         self.assertTrue(self.user3 in queryset)
         self.assertTrue(self.organization1.user_ptr in queryset)
+
+        # should get all the users, that are not members or owners of an organization
+        queryset = querysets_utils.get_users("", organization=self.organization1)
+        self.assertEqual(len(queryset), 1)
+
+        # should get all the users, that are not members or owner of a project
+        queryset = querysets_utils.get_users("", project=self.project1)
+        self.assertEqual(len(queryset), 4)
+        self.assertTrue(self.user2 in queryset)
+        self.assertTrue(self.user3 in queryset)
+        self.assertTrue(self.organization1.user_ptr in queryset)
+        self.assertTrue(self.team1.user_ptr in queryset)
 
         # should get all the users, that are not members or owner of a project and are not an organization
         queryset = querysets_utils.get_users(
             "", project=self.project1, exclude_organizations=True
         )
-        self.assertEqual(len(queryset), 2)
+        self.assertEqual(len(queryset), 3)
         self.assertTrue(self.user2 in queryset)
         self.assertTrue(self.user3 in queryset)
+        self.assertTrue(self.team1.user_ptr in queryset)
 
     def test_projects_roles_and_role_origins(self):
         """
@@ -164,6 +200,8 @@ class QuerysetTestCase(APITestCase):
         self.assertEqual(p(self.project7, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.COLLABORATOR.value)
         self.assertEqual(p(self.project8, self.user1).user_role, ProjectCollaborator.Roles.READER)
         self.assertEqual(p(self.project8, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.PUBLIC.value)
+        self.assertEqual(p(self.project9, self.user1).user_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project9, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
 
         with self.assertRaises(Project.DoesNotExist):
             p(self.project1, self.user2)
@@ -181,6 +219,8 @@ class QuerysetTestCase(APITestCase):
             p(self.project7, self.user2)
         self.assertEqual(p(self.project8, self.user2).user_role, ProjectCollaborator.Roles.READER)
         self.assertEqual(p(self.project8, self.user2).user_role_origin, ProjectQueryset.RoleOrigins.PUBLIC.value)
+        self.assertEqual(p(self.project9, self.user2).user_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project9, self.user2).user_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN.value)
 
         with self.assertRaises(Project.DoesNotExist):
             p(self.project1, self.user3)
@@ -198,4 +238,6 @@ class QuerysetTestCase(APITestCase):
         self.assertEqual(p(self.project7, self.user3).user_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
         self.assertEqual(p(self.project8, self.user3).user_role, ProjectCollaborator.Roles.ADMIN)
         self.assertEqual(p(self.project8, self.user3).user_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        self.assertEqual(p(self.project9, self.user3).user_role, ProjectCollaborator.Roles.EDITOR)
+        self.assertEqual(p(self.project9, self.user3).user_role_origin, ProjectQueryset.RoleOrigins.TEAMMEMBER.value)
         # fmt: on

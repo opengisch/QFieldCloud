@@ -25,14 +25,16 @@ from qfieldcloud.core.utils import get_s3_object_url
 class User(AbstractUser):
     TYPE_USER = 1
     TYPE_ORGANIZATION = 2
+    TYPE_TEAM = 3
 
     TYPE_CHOICES = (
         (TYPE_USER, "user"),
         (TYPE_ORGANIZATION, "organization"),
+        (TYPE_TEAM, "team"),
     )
 
     user_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_USER
+        choices=TYPE_CHOICES, default=TYPE_USER, editable=False
     )
 
     remaining_invitations = models.PositiveIntegerField(
@@ -68,6 +70,10 @@ class User(AbstractUser):
     @property
     def is_organization(self):
         return self.user_type == User.TYPE_ORGANIZATION
+
+    @property
+    def is_team(self):
+        return self.user_type == User.TYPE_TEAM
 
     @property
     def full_name(self) -> str:
@@ -214,8 +220,7 @@ class Organization(User):
         verbose_name_plural = "organizations"
 
     def save(self, *args, **kwargs):
-        if not self.id:
-            self.user_type = self.TYPE_ORGANIZATION
+        self.user_type = self.TYPE_ORGANIZATION
         return super().save(*args, **kwargs)
 
 
@@ -261,6 +266,48 @@ class OrganizationMember(models.Model):
         return super().clean()
 
 
+class Team(User):
+
+    team_organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="teams",
+    )
+
+    class Meta:
+        verbose_name = "team"
+        verbose_name_plural = "teams"
+
+    def save(self, *args, **kwargs):
+        self.user_type = self.TYPE_TEAM
+        return super().save(*args, **kwargs)
+
+
+class TeamMember(models.Model):
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "member"],
+                name="team_team_member_uniq",
+            )
+        ]
+
+    team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        limit_choices_to=models.Q(user_type=User.TYPE_TEAM),
+        related_name="members",
+    )
+    member = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+    )
+
+    def __str__(self):
+        return self.team.username + ": " + self.member.username
+
+
 class ProjectQueryset(models.QuerySet):
     """Adds for_user(user) method to the project's querysets, allowing to filter only projects visible to that user.
 
@@ -281,6 +328,7 @@ class ProjectQueryset(models.QuerySet):
         ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
         ORGANIZATIONADMIN = "organization_admin", _("Organization admin")
         COLLABORATOR = "collaborator", _("Collaborator")
+        TEAMMEMBER = "team_member", _("Team member")
         PUBLIC = "public", _("Public")
 
     def for_user(self, user):
@@ -293,7 +341,7 @@ class ProjectQueryset(models.QuerySet):
                 V(ProjectCollaborator.Roles.ADMIN),
                 V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
             ),
-            # Memberships - admin
+            # Organization memberships - admin
             (
                 Q(owner__in=Organization.objects.filter(organization_owner=user)),
                 V(ProjectCollaborator.Roles.ADMIN),
@@ -321,6 +369,20 @@ class ProjectQueryset(models.QuerySet):
                     collaborator=user,
                 ).values_list("role"),
                 V(ProjectQueryset.RoleOrigins.COLLABORATOR),
+            ),
+            # Role through Team membership
+            (
+                Exists(
+                    ProjectCollaborator.objects.filter(
+                        project=OuterRef("pk"),
+                        collaborator__team__members__member=user,
+                    )
+                ),
+                ProjectCollaborator.objects.filter(
+                    project=OuterRef("pk"),
+                    collaborator__team__members__member=user,
+                ).values_list("role"),
+                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
             ),
             # Public
             (
@@ -383,7 +445,14 @@ class Project(models.Model):
         default=False,
         help_text="Projects that are marked as public would be visible and editable to anyone.",
     )
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="projects")
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="projects",
+        limit_choices_to=models.Q(
+            user_type__in=[User.TYPE_USER, User.TYPE_ORGANIZATION]
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     overwrite_conflicts = models.BooleanField(

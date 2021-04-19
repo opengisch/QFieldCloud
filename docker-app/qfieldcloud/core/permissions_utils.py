@@ -353,14 +353,14 @@ def can_get_collaborator_role(user, project, collaborator):
 
 
 def can_list_members(user, organization):
-    """Return True if the `user` can list members of `organization`.
+    """Return True if the `user` can list members (incl. teams) of `organization`.
     Return False otherwise."""
 
     return True
 
 
 def can_create_members(user, organization):
-    """Return True if the `user` can create members of `organization`.
+    """Return True if the `user` can create members (incl. teams) of `organization`.
     Return False otherwise."""
 
     if _is_organization_owner(user, organization):
