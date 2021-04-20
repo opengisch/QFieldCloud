@@ -23,9 +23,9 @@ class DeltaFilePermissions(permissions.BasePermission):
         user = request.user
 
         if request.method == "GET":
-            return permissions_utils.can_list_deltas(user, project)
+            return permissions_utils.can_read_deltas(user, project)
         if request.method == "POST":
-            return permissions_utils.can_upload_deltas(user, project)
+            return permissions_utils.can_create_deltas(user, project)
         return False
 
 
@@ -73,7 +73,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                     created_by=self.request.user,
                 )
 
-                if permissions_utils.can_store_delta(self.request.user, delta_obj):
+                if permissions_utils.can_create_delta(self.request.user, delta_obj):
                     delta_obj.status = Delta.STATUS_PENDING
                 else:
                     delta_obj.status = Delta.STATUS_UNPERMITTED
