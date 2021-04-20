@@ -1,6 +1,5 @@
 from typing import List, Union
 
-from django.contrib.auth import get_user_model
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -10,74 +9,6 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.models import User as QfcUser
 
-User = get_user_model()
-
-
-def _is_project_owner(user, project):
-    return project.owner == user
-
-
-def _is_project_collaborator_role_admin(user, project):
-    # An owner is always admin
-    if _is_project_owner(user, project):
-        return True
-
-    return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.Roles.ADMIN
-    ).exists()
-
-
-def _is_project_collaborator_role_manager(user, project):
-    return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.Roles.MANAGER
-    ).exists()
-
-
-def _is_project_collaborator_role_editor(user, project):
-    return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.Roles.EDITOR
-    ).exists()
-
-
-def _is_project_collaborator_role_reporter(user, project):
-    return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.Roles.REPORTER
-    ).exists()
-
-
-def _is_project_collaborator_role_reader(user, project):
-    return ProjectCollaborator.objects.filter(
-        project=project, collaborator=user, role=ProjectCollaborator.Roles.READER
-    ).exists()
-
-
-def _is_organization_owner(user, organization):
-    if organization == user:
-        return True
-    if organization.user_type == Organization.TYPE_ORGANIZATION:
-        # To be sure we didn't receive a User object instead of an
-        # Organization one
-        if type(organization) == User:
-            organization = Organization.objects.get(username=organization.username)
-        return organization.organization_owner == user
-    return False
-
-
-def _is_organization_member_role_admin(user, organization):
-    # An owner is always admin
-    if _is_organization_owner(user, organization):
-        return True
-
-    return OrganizationMember.objects.filter(
-        organization=organization, member=user, role=OrganizationMember.Roles.ADMIN
-    ).exists()
-
-
-def _is_organization_member_role_member(user, organization):
-    return OrganizationMember.objects.filter(
-        organization=organization, member=user, role=OrganizationMember.Roles.MEMBER
-    ).exists()
-
 
 def _project_for_owner(user: QfcUser, project: Project):
     if hasattr(project, "user_role"):
@@ -86,10 +17,27 @@ def _project_for_owner(user: QfcUser, project: Project):
         return Project.objects.for_user(user).filter(pk=project.pk)
 
 
+def _organization_of_owner(user: QfcUser, organization: Organization):
+    if hasattr(organization, "membership_role"):
+        return organization
+    else:
+        return Organization.objects.of_user(user).filter(pk=organization.pk)
+
+
 def user_has_project_roles(
     user: QfcUser, project: Project, roles: List[ProjectCollaborator.Roles]
 ):
     return _project_for_owner(user, project).filter(user_role__in=roles).exists()
+
+
+def user_has_organization_roles(
+    user: QfcUser, organization: Organization, roles: List[OrganizationMember.Roles]
+):
+    return (
+        _organization_of_owner(user, organization)
+        .filter(membership_role__in=roles)
+        .exists()
+    )
 
 
 def get_param_from_request(request, param):
@@ -103,7 +51,7 @@ def get_param_from_request(request, param):
 
 
 def can_create_project(
-    user: User, organization: Union[QfcUser, Organization] = None
+    user: QfcUser, organization: Union[QfcUser, Organization] = None
 ) -> bool:
     """Return True if the `user` can create a project. Accepts additional
     `organizaiton` to check whether the user has permissions to do so on
@@ -119,18 +67,15 @@ def can_create_project(
     else:
         return False
 
-    if _is_organization_owner(user, organization):
+    if user_has_organization_roles(
+        user, organization, [OrganizationMember.Roles.ADMIN]
+    ):
         return True
-    if _is_organization_member_role_admin(user, organization):
-        return True
+
     return False
 
 
-def can_update_delete_project(user: User, project: Project) -> bool:
-    return user_has_project_roles(user, project, [ProjectCollaborator.Roles.ADMIN])
-
-
-def can_read_project(user, project):
+def can_read_project(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -144,7 +89,29 @@ def can_read_project(user, project):
     )
 
 
-def can_create_files(user, project):
+def can_update_project(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
+def can_delete_project(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
+def can_create_files(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -157,7 +124,7 @@ def can_create_files(user, project):
     )
 
 
-def can_read_files(user, project):
+def can_read_files(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -171,7 +138,7 @@ def can_read_files(user, project):
     )
 
 
-def can_delete_files(user, project):
+def can_delete_files(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -183,20 +150,8 @@ def can_delete_files(user, project):
     )
 
 
-def can_upload_deltas(user, project):
-    return user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-        ],
-    )
-
-
-def can_apply_deltas(user, project):
+def can_create_deltas(user: QfcUser, project: Project) -> bool:
+    """Whether the user can store deltas in a project."""
     return user_has_project_roles(
         user,
         project,
@@ -209,107 +164,72 @@ def can_apply_deltas(user, project):
     )
 
 
-def can_list_deltas(user, project):
-    return user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-        ],
-    )
-
-
-def can_list_users_organizations(user):
-    """Return True if the `user` can list users and orgnizations.
-    Return False otherwise."""
-
-    return True
-
-
-def can_update_user(request_maker_user, user):
-    """Return True if the `request_maker_user` can update details of `user`.
-    Return False otherwise."""
-
-    if request_maker_user == user:
-        return True
-
-    if not _is_organization_member_role_admin(request_maker_user, user):
-        return False
-
-    return True
-
-
-def can_list_collaborators(user, project):
-    return user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-        ],
-    )
-
-
-def can_create_collaborators(user, project):
-    return user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-        ],
-    )
-
-
-def can_update_delete_collaborators(user, project):
-    return user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-        ],
-    )
-
-
-def can_store_delta(user, delta: Delta) -> bool:
+def can_create_delta(user: QfcUser, delta: Delta) -> bool:
+    """Whether the user can store given delta."""
     project: Project = delta.project
 
-    if _is_project_owner(user, project):
+    if user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+        ],
+    ):
         return True
 
-    if _is_project_collaborator_role_admin(user, project):
-        return True
-
-    if _is_project_collaborator_role_editor(user, project):
-        return True
-
-    if _is_project_collaborator_role_manager(user, project):
-        return True
-
-    if _is_project_collaborator_role_manager(user, project):
-        return True
-
-    if _is_project_collaborator_role_reporter(user, project):
+    if user_has_project_roles(user, project, [ProjectCollaborator.Roles.REPORTER]):
         if delta.method == Delta.Method.Create:
             return True
 
-    if _is_project_collaborator_role_reader(user, project):
-        return False
+    return False
 
-    if _is_organization_owner(user, project.owner):
+
+def can_read_deltas(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
+
+
+def can_apply_deltas(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
+
+
+def can_list_users_organizations(user: QfcUser) -> bool:
+    """Return True if the `user` can list users and organizations.
+    Return False otherwise."""
+
+    return True
+
+
+def can_update_user(user: QfcUser, account: QfcUser) -> bool:
+    if user == account:
         return True
 
-    if _is_organization_member_role_admin(user, project.owner):
+    if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
         return True
 
     return False
 
 
-def can_update_collaborator_role(user, project, collaborator):
+def can_create_collaborators(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -320,7 +240,7 @@ def can_update_collaborator_role(user, project, collaborator):
     )
 
 
-def can_delete_collaborator(user, project, collaborator):
+def can_read_collaborators(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -331,7 +251,29 @@ def can_delete_collaborator(user, project, collaborator):
     )
 
 
-def can_get_collaborator_role(user, project, collaborator):
+def can_update_collaborators(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
+def can_delete_collaborators(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
+def can_read_exportations(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -345,104 +287,84 @@ def can_get_collaborator_role(user, project, collaborator):
     )
 
 
-def can_list_members(user, organization):
+def can_create_members(user: QfcUser, organization: Organization) -> bool:
+    """Return True if the `user` can create members (incl. teams) of `organization`.
+    Return False otherwise."""
+
+    return user_has_organization_roles(
+        user, organization, [OrganizationMember.Roles.ADMIN]
+    )
+
+
+def can_read_members(user: QfcUser, organization: Organization) -> bool:
     """Return True if the `user` can list members (incl. teams) of `organization`.
     Return False otherwise."""
 
     return True
 
 
-def can_create_members(user, organization):
-    """Return True if the `user` can create members (incl. teams) of `organization`.
-    Return False otherwise."""
-
-    if _is_organization_owner(user, organization):
-        return True
-    if _is_organization_member_role_admin(user, organization):
-        return True
-    return False
+def can_update_members(
+    user: QfcUser, organization: Organization, member: OrganizationMember
+) -> bool:
+    return user_has_organization_roles(
+        user, organization, [OrganizationMember.Roles.ADMIN]
+    )
 
 
-def can_update_member_role(user, organization, member):
-    """Return True if the `user` can update `member` of `organization`.
-    Return False otherwise."""
-
-    return can_create_members(user, organization)
-
-
-def can_delete_member_role(user, organization, member):
-    """Return True if the `user` can delete `member` of `organization`.
-    Return False otherwise."""
-
-    return can_update_member_role(user, organization, member)
+def can_delete_members(
+    user: QfcUser, organization: Organization, member: OrganizationMember
+) -> bool:
+    return user_has_organization_roles(
+        user, organization, [OrganizationMember.Roles.ADMIN]
+    )
 
 
-def can_get_member_role(user, organization, member):
-    """Return True if the `user` can get `member` of `organization`.
-    Return False otherwise."""
-
-    return True
-
-
-def can_become_collaborator(user, project):
-    """Return True if the `user` can list the files in `project`.
-    Return False otherwise."""
-
-    if _is_project_owner(user, project):
-        return False
-    if _is_project_collaborator_role_admin(user, project):
-        return False
-    if _is_project_collaborator_role_manager(user, project):
-        return False
-    if _is_project_collaborator_role_editor(user, project):
-        return False
-    if _is_project_collaborator_role_reporter(user, project):
-        return False
-    if _is_project_collaborator_role_reader(user, project):
-        return False
-
-    organization = project.owner
-    if _is_organization_owner(user, organization):
-        return False
-    if _is_organization_member_role_admin(user, organization):
-        return False
-
-    return True
+def can_become_collaborator(user: QfcUser, project: Project) -> bool:
+    return not user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaborator.Roles.READER,
+        ],
+    )
 
 
-def can_preview_geodb(user, profile):
+def can_preview_geodb(user: QfcUser, profile: QfcUser) -> bool:
     if not profile.useraccount.is_geodb_enabled:
         return False
 
-    if not can_update_user(user, profile):
-        return False
+    if can_update_user(user, profile):
+        return True
 
-    return True
+    return False
 
 
-def can_create_geodb(user, profile):
+def can_create_geodb(user: QfcUser, profile: QfcUser) -> bool:
     if not profile.useraccount.is_geodb_enabled:
         return False
 
     if profile.has_geodb:
         return False
 
-    if not can_update_user(user, profile):
-        return False
+    if can_update_user(user, profile):
+        return True
 
-    return True
-
-
-def can_become_member(user, organization):
-    if _is_organization_member_role_admin(user, organization):
-        return False
-    if _is_organization_member_role_member(user, organization):
-        return False
-
-    return True
+    return False
 
 
-def can_retry_delta(user, delta: Delta):
+def can_become_member(user: QfcUser, organization: Organization) -> bool:
+    return not user_has_organization_roles(
+        user,
+        organization,
+        [OrganizationMember.Roles.ADMIN, OrganizationMember.Roles.MEMBER],
+    )
+
+
+def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
     if not can_apply_deltas(user, delta.project):
         return False
 
@@ -456,7 +378,7 @@ def can_retry_delta(user, delta: Delta):
     return True
 
 
-def can_ignore_delta(user, delta: Delta):
+def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
     if not can_apply_deltas(user, delta.project):
         return False
 
@@ -470,12 +392,8 @@ def can_ignore_delta(user, delta: Delta):
     return True
 
 
-def can_send_invitations(user) -> bool:
-    if user.is_organization:
-        return False
+def can_send_invitations(user: QfcUser) -> bool:
+    if user.is_user:
+        return True
 
-    return True
-
-
-def can_list_exportations(user, project: Project) -> bool:
-    return can_read_files(user, project)
+    return False
