@@ -16,7 +16,7 @@ class ListFilesViewPermissions(permissions.BasePermission):
         projectid = request.parser_context["kwargs"]["projectid"]
         project = Project.objects.get(id=projectid)
 
-        return permissions_utils.can_list_files(request.user, project)
+        return permissions_utils.can_read_files(request.user, project)
 
 
 class ListFilesView(views.APIView):

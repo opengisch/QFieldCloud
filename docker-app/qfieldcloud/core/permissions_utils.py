@@ -11,17 +11,11 @@ from qfieldcloud.core.models import User as QfcUser
 
 
 def _project_for_owner(user: QfcUser, project: Project):
-    if hasattr(project, "user_role"):
-        return project
-    else:
-        return Project.objects.for_user(user).filter(pk=project.pk)
+    return Project.objects.for_user(user).filter(pk=project.pk)
 
 
 def _organization_of_owner(user: QfcUser, organization: Organization):
-    if hasattr(organization, "membership_role"):
-        return organization
-    else:
-        return Organization.objects.of_user(user).filter(pk=organization.pk)
+    return Organization.objects.of_user(user).filter(pk=organization.pk)
 
 
 def user_has_project_roles(
@@ -124,6 +118,14 @@ def can_create_files(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_read_projects(user: QfcUser, _account: QfcUser) -> bool:
+    return user.is_authenticated
+
+
+def can_read_public_projects(user: QfcUser) -> bool:
+    return user.is_authenticated
+
+
 def can_read_files(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
@@ -164,28 +166,6 @@ def can_create_deltas(user: QfcUser, project: Project) -> bool:
     )
 
 
-def can_create_delta(user: QfcUser, delta: Delta) -> bool:
-    """Whether the user can store given delta."""
-    project: Project = delta.project
-
-    if user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-        ],
-    ):
-        return True
-
-    if user_has_project_roles(user, project, [ProjectCollaborator.Roles.REPORTER]):
-        if delta.method == Delta.Method.Create:
-            return True
-
-    return False
-
-
 def can_read_deltas(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
@@ -212,6 +192,56 @@ def can_apply_deltas(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_create_delta(user: QfcUser, delta: Delta) -> bool:
+    """Whether the user can store given delta."""
+    project: Project = delta.project
+
+    if user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+        ],
+    ):
+        return True
+
+    if user_has_project_roles(user, project, [ProjectCollaborator.Roles.REPORTER]):
+        if delta.method == Delta.Method.Create:
+            return True
+
+    return False
+
+
+def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
+    if not can_apply_deltas(user, delta.project):
+        return False
+
+    if delta.status not in (
+        Delta.STATUS_CONFLICT,
+        Delta.STATUS_NOT_APPLIED,
+        Delta.STATUS_ERROR,
+    ):
+        return False
+
+    return True
+
+
+def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
+    if not can_apply_deltas(user, delta.project):
+        return False
+
+    if delta.status not in (
+        Delta.STATUS_CONFLICT,
+        Delta.STATUS_NOT_APPLIED,
+        Delta.STATUS_ERROR,
+    ):
+        return False
+
+    return True
+
+
 def can_list_users_organizations(user: QfcUser) -> bool:
     """Return True if the `user` can list users and organizations.
     Return False otherwise."""
@@ -219,7 +249,21 @@ def can_list_users_organizations(user: QfcUser) -> bool:
     return True
 
 
+def can_create_organizations(user: QfcUser) -> bool:
+    return user.is_authenticated
+
+
 def can_update_user(user: QfcUser, account: QfcUser) -> bool:
+    if user == account:
+        return True
+
+    if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
+        return True
+
+    return False
+
+
+def can_delete_user(user: QfcUser, account: QfcUser) -> bool:
     if user == account:
         return True
 
@@ -333,7 +377,7 @@ def can_become_collaborator(user: QfcUser, project: Project) -> bool:
     )
 
 
-def can_preview_geodb(user: QfcUser, profile: QfcUser) -> bool:
+def can_read_geodb(user: QfcUser, profile: QfcUser) -> bool:
     if not profile.useraccount.is_geodb_enabled:
         return False
 
@@ -356,40 +400,25 @@ def can_create_geodb(user: QfcUser, profile: QfcUser) -> bool:
     return False
 
 
+def can_delete_geodb(user: QfcUser, profile: QfcUser) -> bool:
+    if not profile.useraccount.is_geodb_enabled:
+        return False
+
+    if not profile.has_geodb:
+        return False
+
+    if can_update_user(user, profile):
+        return True
+
+    return False
+
+
 def can_become_member(user: QfcUser, organization: Organization) -> bool:
     return not user_has_organization_roles(
         user,
         organization,
         [OrganizationMember.Roles.ADMIN, OrganizationMember.Roles.MEMBER],
     )
-
-
-def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
-    if not can_apply_deltas(user, delta.project):
-        return False
-
-    if delta.status not in (
-        Delta.STATUS_CONFLICT,
-        Delta.STATUS_NOT_APPLIED,
-        Delta.STATUS_ERROR,
-    ):
-        return False
-
-    return True
-
-
-def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
-    if not can_apply_deltas(user, delta.project):
-        return False
-
-    if delta.status not in (
-        Delta.STATUS_CONFLICT,
-        Delta.STATUS_NOT_APPLIED,
-        Delta.STATUS_ERROR,
-    ):
-        return False
-
-    return True
 
 
 def can_send_invitations(user: QfcUser) -> bool:
