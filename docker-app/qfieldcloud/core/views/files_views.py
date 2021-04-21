@@ -16,7 +16,7 @@ class ListFilesViewPermissions(permissions.BasePermission):
         projectid = request.parser_context["kwargs"]["projectid"]
         project = Project.objects.get(id=projectid)
 
-        return permissions_utils.can_list_files(request.user, project)
+        return permissions_utils.can_read_files(request.user, project)
 
 
 class ListFilesView(views.APIView):
@@ -82,11 +82,11 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
         user = request.user
 
         if request.method == "GET":
-            return permissions_utils.can_download_files(user, project)
+            return permissions_utils.can_read_files(user, project)
         if request.method == "DELETE":
             return permissions_utils.can_delete_files(user, project)
         if request.method == "POST":
-            return permissions_utils.can_upload_files(user, project)
+            return permissions_utils.can_create_files(user, project)
         return False
 
 
