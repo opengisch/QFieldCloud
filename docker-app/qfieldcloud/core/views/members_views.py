@@ -81,20 +81,18 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
         organization_name = permissions_utils.get_param_from_request(
             request, "organization"
         )
-        member_name = permissions_utils.get_param_from_request(request, "username")
 
         try:
             organization = Organization.objects.get(username=organization_name)
-            member = User.objects.get(username=member_name)
         except ObjectDoesNotExist:
             return False
 
         if request.method == "GET":
-            return permissions_utils.can_read_members(user, organization, member)
+            return permissions_utils.can_read_members(user, organization)
         if request.method in ["PUT", "PATCH"]:
-            return permissions_utils.can_update_members(user, organization, member)
+            return permissions_utils.can_update_members(user, organization)
         if request.method in ["DELETE"]:
-            return permissions_utils.can_delete_members(user, organization, member)
+            return permissions_utils.can_delete_members(user, organization)
         return False
 
 

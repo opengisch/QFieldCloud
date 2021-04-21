@@ -347,17 +347,13 @@ def can_read_members(user: QfcUser, organization: Organization) -> bool:
     return True
 
 
-def can_update_members(
-    user: QfcUser, organization: Organization, member: OrganizationMember
-) -> bool:
+def can_update_members(user: QfcUser, organization: Organization) -> bool:
     return user_has_organization_roles(
         user, organization, [OrganizationMember.Roles.ADMIN]
     )
 
 
-def can_delete_members(
-    user: QfcUser, organization: Organization, member: OrganizationMember
-) -> bool:
+def can_delete_members(user: QfcUser, organization: Organization) -> bool:
     return user_has_organization_roles(
         user, organization, [OrganizationMember.Roles.ADMIN]
     )
