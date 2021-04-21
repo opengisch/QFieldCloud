@@ -70,6 +70,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                     deltafile_id=deltafile_id,
                     project=project_obj,
                     content=delta,
+                    created_by=self.request.user,
                 )
 
                 if permissions_utils.can_store_delta(self.request.user, delta_obj):

@@ -671,6 +671,11 @@ class Delta(models.Model):
     output = JSONField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="uploaded_deltas",
+    )
 
     def __str__(self):
         return str(self.id) + ", project: " + str(self.project.id)
