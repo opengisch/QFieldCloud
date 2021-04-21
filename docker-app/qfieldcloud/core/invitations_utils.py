@@ -46,7 +46,7 @@ def invite_user_by_email(
     if not inviter:
         inviter = request.user
 
-    if not permissions_utils.can_send_invitations(inviter):
+    if not permissions_utils.can_send_invitations(inviter, inviter):
         return False, _("Your user cannot send invitations.")
 
     Invitation = get_invitation_model()

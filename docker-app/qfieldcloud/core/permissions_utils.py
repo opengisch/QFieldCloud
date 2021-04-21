@@ -417,8 +417,8 @@ def can_become_member(user: QfcUser, organization: Organization) -> bool:
     )
 
 
-def can_send_invitations(user: QfcUser) -> bool:
-    if user.is_user:
+def can_send_invitations(user: QfcUser, account: QfcUser) -> bool:
+    if account.is_user:
         return True
 
     return False
