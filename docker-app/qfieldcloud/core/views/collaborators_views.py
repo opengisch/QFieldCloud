@@ -86,7 +86,7 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
             return False
 
         if request.method == "GET":
-            return permissions_utils.can_get_collaborators(user, project)
+            return permissions_utils.can_read_collaborators(user, project)
         if request.method in ["PUT", "PATCH"]:
             return permissions_utils.can_update_collaborators(user, project)
         if request.method in ["DELETE"]:
