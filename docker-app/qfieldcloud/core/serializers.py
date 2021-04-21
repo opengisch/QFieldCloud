@@ -66,7 +66,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url
+        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
 
     class Meta:
         model = User
@@ -86,7 +86,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url
+        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
 
     class Meta:
         model = User
@@ -100,7 +100,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url
+        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
 
     class Meta:
         model = Organization
@@ -142,7 +142,11 @@ class TokenSerializer(serializers.ModelSerializer):
         return obj.user.email
 
     def get_avatar_url(self, obj):
-        return obj.user.useraccount.avatar_url
+        return (
+            obj.user.useraccount.avatar_url
+            if hasattr(obj.user, "useraccount")
+            else None
+        )
 
     class Meta:
         model = Token

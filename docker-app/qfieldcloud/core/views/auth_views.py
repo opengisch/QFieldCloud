@@ -11,11 +11,14 @@ class AuthTokenView(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         token, created = Token.objects.get_or_create(user=user)
+        avatar_url = (
+            user.useraccount.avatar_url if hasattr(user, "useraccount") else None
+        )
         return Response(
             {
                 "token": token.key,
                 "username": user.username,
                 "email": user.email,
-                "avatar_url": user.useraccount.avatar_url,
+                "avatar_url": avatar_url,
             }
         )

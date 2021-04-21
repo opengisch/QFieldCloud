@@ -374,7 +374,7 @@ def can_become_collaborator(user: QfcUser, project: Project) -> bool:
 
 
 def can_read_geodb(user: QfcUser, profile: QfcUser) -> bool:
-    if not profile.useraccount.is_geodb_enabled:
+    if not hasattr(profile, "useraccount") or not profile.useraccount.is_geodb_enabled:
         return False
 
     if can_update_user(user, profile):
@@ -384,7 +384,7 @@ def can_read_geodb(user: QfcUser, profile: QfcUser) -> bool:
 
 
 def can_create_geodb(user: QfcUser, profile: QfcUser) -> bool:
-    if not profile.useraccount.is_geodb_enabled:
+    if not hasattr(profile, "useraccount") or not profile.useraccount.is_geodb_enabled:
         return False
 
     if profile.has_geodb:
@@ -397,7 +397,7 @@ def can_create_geodb(user: QfcUser, profile: QfcUser) -> bool:
 
 
 def can_delete_geodb(user: QfcUser, profile: QfcUser) -> bool:
-    if not profile.useraccount.is_geodb_enabled:
+    if not hasattr(profile, "useraccount") or not profile.useraccount.is_geodb_enabled:
         return False
 
     if not profile.has_geodb:
