@@ -6,7 +6,7 @@ from django.http.response import HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, serializers, utils
-from qfieldcloud.core.models import Exportation, Project
+from qfieldcloud.core.models import ExportJob, Project
 from rest_framework import permissions, views
 from rest_framework.response import Response
 
@@ -48,35 +48,35 @@ class ExportView(views.APIView):
         if project_file is None:
             raise exceptions.NoQGISProjectError()
 
-        # Check if active exportation already exists
-        # TODO: cache results for some minutes
+        # Check if active export job already exists
+        # TODO: !!!!!!!!!!!! cache results for some minutes
         query = Q(project=project_obj) & (
-            Q(status=Exportation.STATUS_PENDING) | Q(status=Exportation.STATUS_BUSY)
+            Q(status=ExportJob.Status.QUEUED) | Q(status=ExportJob.Status.STARTED)
         )
-        if Exportation.objects.filter(query).exists():
-            serializer = serializers.ExportationSerializer(
-                Exportation.objects.get(query)
-            )
+        ExportJob.objects.filter(query).delete()
+
+        if ExportJob.objects.filter(query).exists():
+            serializer = serializers.ExportJobSerializer(ExportJob.objects.get(query))
             return Response(serializer.data)
 
-        utils.export_project(str(project_obj.id), project_file)
+        export_job = ExportJob.objects.create(
+            project=project_obj, user=self.request.user
+        )
 
-        exportation = Exportation.objects.create(project=project_obj)
+        utils.export_project(export_job.pk, project_file)
 
         # TODO: check if user is allowed otherwise ERROR 403
-        serializer = serializers.ExportationSerializer(exportation)
+        serializer = serializers.ExportJobSerializer(export_job)
         return Response(serializer.data)
 
     def get(self, request, projectid):
         project_obj = Project.objects.get(id=projectid)
 
-        exportation = (
-            Exportation.objects.filter(project=project_obj)
-            .order_by("updated_at")
-            .last()
+        export_job = (
+            ExportJob.objects.filter(project=project_obj).order_by("updated_at").last()
         )
 
-        serializer = serializers.ExportationSerializer(exportation)
+        serializer = serializers.ExportJobSerializer(export_job)
         return Response(serializer.data)
 
 
@@ -96,16 +96,16 @@ class ListFilesView(views.APIView):
         project_obj = Project.objects.get(id=projectid)
 
         # Check if the project was exported at least once
-        if not Exportation.objects.filter(
-            project=project_obj, status=Exportation.STATUS_EXPORTED
+        if not ExportJob.objects.filter(
+            project=project_obj, status=ExportJob.Status.FINISHED
         ):
             raise exceptions.InvalidJobError(
                 "Project files have not been exported for the provided project id"
             )
 
-        exportation = (
-            Exportation.objects.filter(
-                project=project_obj, status=Exportation.STATUS_EXPORTED
+        export_job = (
+            ExportJob.objects.filter(
+                project=project_obj, status=ExportJob.Status.FINISHED
             )
             .order_by("updated_at")
             .last()
@@ -140,8 +140,8 @@ class ListFilesView(views.APIView):
         return Response(
             {
                 "files": files,
-                "layers": exportation.exportlog,
-                "exported_at": exportation.updated_at,
+                "layers": export_job.exportlog,
+                "exported_at": export_job.updated_at,
             }
         )
 
@@ -162,8 +162,9 @@ class DownloadFileView(views.APIView):
         project_obj = Project.objects.get(id=projectid)
 
         # Check if the project was exported at least once
-        if not Exportation.objects.filter(
-            project=project_obj, status=Exportation.STATUS_EXPORTED
+        if not ExportJob.objects.filter(
+            project=project_obj,
+            status=ExportJob.Status.FINISHED,
         ):
             raise exceptions.InvalidJobError(
                 "Project files have not been exported for the provided project id"

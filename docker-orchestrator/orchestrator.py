@@ -3,10 +3,13 @@ import logging
 import os
 import tempfile
 import uuid
+from pathlib import Path
 from typing import Iterable, Optional
 
 import docker
 import psycopg2
+from db_utils import JobStatus, get_job_row, update_job
+from psycopg2 import connect
 
 DELTA_STATUS_PENDING = (
     1  # deltafile has been received, but have not started application
@@ -49,7 +52,7 @@ def get_django_db_connection(is_test_db=False):
         dbname = "test_" + dbname
 
     try:
-        conn = psycopg2.connect(
+        conn = connect(
             dbname=dbname,
             user=os.environ.get("POSTGRES_USER"),
             password=os.environ.get("POSTGRES_PASSWORD"),
@@ -88,15 +91,18 @@ def set_exportation_status_and_log(
     conn.close()
 
 
-def export_project(projectid, project_file):
+def export_project(job_id, project_file):
     """Start a QGIS docker container to export the project using libqfieldsync """
 
-    logger.info(f"Starting a new export for project {projectid}")
+    logger.info(f"Starting a new export for project {job_id}")
 
+    project_id = get_job_row(job_id)["project_id"]
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
-    qgis_tempdir = os.path.join(os.environ.get("TMP_DIRECTORY"), orchestrator_tempdir)
+    qgis_tempdir = Path(os.environ.get("TMP_DIRECTORY")).joinpath(orchestrator_tempdir)
 
     volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
+
+    update_job(job_id, JobStatus.STARTED)
 
     # If we are on local dev environment, use host network to connect
     # to the local geodb and s3 storage
@@ -121,45 +127,35 @@ def export_project(projectid, project_file):
 
     container.start()
     container.attach(logs=True)
-    container_command = "xvfb-run python3 entrypoint.py export {} {}".format(
-        projectid, project_file
-    )
-
-    set_exportation_status_and_log(
-        projectid, EXPORTATION_STATUS_PENDING, EXPORTATION_STATUS_BUSY
+    container_command = (
+        f"xvfb-run python3 entrypoint.py export {project_id} {project_file}"
     )
     exit_code, output = container.exec_run(container_command)
     container.kill()
 
     logger.info(
         "export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}".format(
-            projectid, project_file, exit_code, output.decode("utf-8")
+            project_id, project_file, exit_code, output.decode("utf-8")
         )
     )
 
     if not exit_code == 0:
-        set_exportation_status_and_log(
-            projectid,
-            EXPORTATION_STATUS_BUSY,
-            EXPORTATION_STATUS_ERROR,
-            output=output.decode("utf-8"),
-        )
+        update_job(job_id, JobStatus.FAILED, output=output.decode("utf-8"))
+
         raise QgisException(output)
 
     exportlog_file = os.path.join(orchestrator_tempdir, "exportlog.json")
+
     try:
         with open(exportlog_file, "r") as f:
             exportlog = json.load(f)
     except FileNotFoundError:
         exportlog = "Export log not available"
 
-    set_exportation_status_and_log(
-        projectid,
-        EXPORTATION_STATUS_BUSY,
-        EXPORTATION_STATUS_EXPORTED,
-        exportlog=exportlog,
-        output=output.decode("utf-8"),
+    update_job(
+        job_id, JobStatus.FINISHED, exportlog=exportlog, output=output.decode("utf-8")
     )
+
     return exit_code, output.decode("utf-8"), exportlog
 
 

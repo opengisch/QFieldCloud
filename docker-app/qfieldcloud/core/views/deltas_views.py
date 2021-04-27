@@ -8,6 +8,7 @@ from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
 from qfieldcloud.core.serializers import DeltaSerializer
+from qfieldcloud.core.utils2 import jobs
 from rest_framework import generics, permissions, views
 from rest_framework.response import Response
 
@@ -74,9 +75,9 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 )
 
                 if permissions_utils.can_create_delta(self.request.user, delta_obj):
-                    delta_obj.status = Delta.STATUS_PENDING
+                    delta_obj.last_status = Delta.Status.PENDING
                 else:
-                    delta_obj.status = Delta.STATUS_UNPERMITTED
+                    delta_obj.last_status = Delta.Status.UNPERMITTED
 
                 delta_obj.save(force_insert=True)
 
@@ -136,8 +137,12 @@ class ApplyView(views.APIView):
         if project_file is None:
             raise exceptions.NoQGISProjectError()
 
-        utils.apply_deltas(
-            str(project_obj.id), project_file, project_obj.overwrite_conflicts
-        )
+        if not jobs.apply_deltas(
+            project_obj,
+            self.request.user,
+            project_file,
+            project_obj.overwrite_conflicts,
+        ):
+            raise exceptions.NoDeltasToApplyError()
 
         return Response()

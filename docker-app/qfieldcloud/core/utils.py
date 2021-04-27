@@ -18,34 +18,18 @@ from redis import Redis, exceptions
 logger = logging.getLogger(__name__)
 
 
-def export_project(projectid, project_file):
+def export_project(job_id, project_file):
     """Call the orchestrator API to export a project with QFieldSync"""
 
     queue = django_rq.get_queue("export")
     job = queue.enqueue(
         "orchestrator.export_project",
-        projectid=projectid,
-        project_file=str(project_file),
+        str(job_id),
+        str(project_file),
+        job_id=str(job_id),
     )
 
     return job
-
-
-def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids=None):
-    """Call the orchestrator API to apply a delta file"""
-
-    logger.info(
-        f"Requested apply_deltas on {projectid} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
-    )
-
-    queue = django_rq.get_queue("delta")
-    queue.enqueue(
-        "orchestrator.apply_deltas",
-        projectid=projectid,
-        project_file=str(project_file),
-        overwrite_conflicts=overwrite_conflicts,
-        delta_ids=delta_ids,
-    )
 
 
 def check_orchestrator_status():

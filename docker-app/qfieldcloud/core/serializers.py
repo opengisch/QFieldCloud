@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from qfieldcloud.core.models import (
     Delta,
-    Exportation,
+    ExportJob,
+    Job,
     Organization,
     OrganizationMember,
     Project,
@@ -184,8 +185,9 @@ class StatusChoiceField(serializers.ChoiceField):
 
 
 class DeltaSerializer(serializers.ModelSerializer):
-    status = StatusChoiceField(choices=Delta.STATUS_CHOICES)
     created_by = serializers.StringRelatedField()
+    status = serializers.CharField(source="last_status")
+    output = serializers.CharField(source="last_output")
 
     class Meta:
         model = Delta
@@ -197,14 +199,32 @@ class DeltaSerializer(serializers.ModelSerializer):
             "updated_at",
             "status",
             "output",
+            "last_status",
+            "last_output",
             "content",
         )
 
 
-class ExportationSerializer(serializers.ModelSerializer):
-    status = StatusChoiceField(choices=Exportation.STATUS_CHOICES)
+class ExportJobSerializer(serializers.ModelSerializer):
     layers = serializers.JSONField(source="exportlog")
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj):
+        if obj.status == Job.Status.QUEUED:
+            return "STATUS_PENDING"
+        elif obj.status == Job.Status.STARTED:
+            return "STATUS_BUSY"
+        elif obj.status == Job.Status.DEFERRED:
+            return "STATUS_BUSY"
+        elif obj.status == Job.Status.STOPPED:
+            return "STATUS_BUSY"
+        elif obj.status == Job.Status.FINISHED:
+            return "STATUS_EXPORTED"
+        elif obj.status == Job.Status.FAILED:
+            return "STATUS_ERROR"
+        else:
+            return "STATUS_ERROR"
 
     class Meta:
-        model = Exportation
+        model = ExportJob
         fields = ("status", "layers", "output")

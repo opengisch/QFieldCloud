@@ -664,25 +664,15 @@ class Delta(models.Model):
         Delete = "delete"
         Patch = "patch"
 
-    STATUS_PENDING = 1  # delta has been received, but have not started application
-    STATUS_BUSY = 2  # currently being applied
-    STATUS_APPLIED = 3  # applied correctly
-    STATUS_CONFLICT = 4  # needs conflict resolution
-    STATUS_NOT_APPLIED = 5
-    STATUS_ERROR = 6  # was not possible to apply the delta
-    STATUS_IGNORED = 7  # final: ignored status
-    STATUS_UNPERMITTED = 8  # final: unpermitted status, the user does not have permissions to upload delta
-
-    STATUS_CHOICES = (
-        (STATUS_PENDING, "STATUS_PENDING"),
-        (STATUS_BUSY, "STATUS_BUSY"),
-        (STATUS_APPLIED, "STATUS_APPLIED"),
-        (STATUS_CONFLICT, "STATUS_CONFLICT"),
-        (STATUS_NOT_APPLIED, "STATUS_NOT_APPLIED"),
-        (STATUS_ERROR, "STATUS_ERROR"),
-        (STATUS_IGNORED, "STATUS_IGNORED"),
-        (STATUS_UNPERMITTED, "STATUS_UNPERMITTED"),
-    )
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        STARTED = "started", _("Started")
+        APPLIED = "applied", _("Applied")
+        CONFLICT = "conflict", _("Conflict")
+        NOT_APPLIED = "not_applied", _("Not_applied")
+        ERROR = "error", _("Error")
+        IGNORED = "ignored", _("Ignored")
+        UNPERMITTED = "unpermitted", _("Unpermitted")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deltafile_id = models.UUIDField()
@@ -692,10 +682,12 @@ class Delta(models.Model):
         related_name="deltas",
     )
     content = JSONField()
-    status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES, default=STATUS_PENDING
+    last_status = models.CharField(
+        choices=Status.choices,
+        default=Status.PENDING,
+        max_length=32,
     )
-    output = JSONField(null=True)
+    last_output = JSONField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
@@ -711,17 +703,17 @@ class Delta(models.Model):
     def get_status_summary(filters={}):
         rows = (
             Delta.objects.filter(**filters)
-            .values("status")
-            .annotate(count=Count("status"))
+            .values("last_status")
+            .annotate(count=Count("last_status"))
             .order_by()
         )
 
         rows_as_dict = {}
         for r in rows:
-            rows_as_dict[r["status"]] = r["count"]
+            rows_as_dict[r["last_status"]] = r["count"]
 
         counts = {}
-        for status, _name in Delta.STATUS_CHOICES:
+        for status, _name in Delta.Status.choices:
             counts[status] = rows_as_dict.get(status, 0)
 
         return counts
@@ -735,18 +727,18 @@ class Delta(models.Model):
         return self.content.get("method")
 
 
-class Exportation(models.Model):
-    STATUS_PENDING = 1  # Export has been requested, but not yet started
-    STATUS_BUSY = 2  # Currently being exported
-    STATUS_EXPORTED = 3  # Export finished
-    STATUS_ERROR = 4  # was not possible to export the project
+class Job(models.Model):
+    class Type(models.TextChoices):
+        EXPORT = "export", _("Export")
+        DELTA_APPLY = "delta_apply", _("Delta Apply")
 
-    STATUS_CHOICES = (
-        (STATUS_PENDING, "STATUS_PENDING"),
-        (STATUS_BUSY, "STATUS_BUSY"),
-        (STATUS_EXPORTED, "STATUS_EXPORTED"),
-        (STATUS_ERROR, "STATUS_ERROR"),
-    )
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        QUEUED = "queued", _("Queued")
+        STARTED = "started", _("Started")
+        FINISHED = "finished", _("Finished")
+        STOPPED = "stopped", _("Stopped")
+        FAILED = "failed", _("Failed")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
@@ -754,11 +746,49 @@ class Exportation(models.Model):
         on_delete=models.CASCADE,
         related_name="exports",
     )
-
-    status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES, default=STATUS_PENDING
+    type = models.CharField(max_length=32, choices=Type.choices)
+    status = models.CharField(
+        max_length=32, choices=Status.choices, default=Status.QUEUED
     )
     exportlog = JSONField(null=True)
     output = models.TextField(null=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class ExportJob(Job):
+    def save(self, *args, **kwargs):
+        self.type = self.Type.EXPORT
+        return super().save(*args, **kwargs)
+
+
+class DeltaApplyJob(Job):
+
+    deltas_to_apply = models.ManyToManyField(
+        to=Delta,
+        through="DeltaApplyJobDelta",
+    )
+
+    overwrite_conflicts = models.BooleanField(
+        help_text=_(
+            "If enabled, QFieldCloud will automatically overwrite conflicts while applying deltas."
+        ),
+    )
+
+    def save(self, *args, **kwargs):
+        self.type = self.Type.DELTA_APPLY
+        return super().save(*args, **kwargs)
+
+
+class DeltaApplyJobDelta(models.Model):
+    delta_apply_job = models.ForeignKey(DeltaApplyJob, on_delete=models.CASCADE)
+    delta = models.ForeignKey(Delta, on_delete=models.CASCADE)
+    status = models.CharField(
+        choices=Delta.Status.choices, default=Delta.Status.PENDING, max_length=32
+    )
+    feedback = JSONField(null=True)
+    qgis_output = models.TextField(null=True)
+
+    def __str__(self):
+        return f"{self.delta_apply_job_id}:{self.delta_id}"
