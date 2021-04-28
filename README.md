@@ -1,15 +1,15 @@
 # QFieldCloud
 
-![img](./docs/assets/images/logo.png)
+<a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal.svg" width="100%"/></a>
+
+QFieldCloud is a Django based service designed to synchronize projects and data between QGIS (+ QFieldSync plugin) and QField.
+
+QFieldCloud allows seamless synchronization of your field data with your spatial infrastructure with change tracking, team management and online-offline work capabilities in QField.
+
+If you're interested in quickly getting up and running, we suggest subscribing to the version hosted by OPENGIS.ch at https://qfield.cloud. This is also the instance that is integrated by default into QField.
 
 
-## Purpose
-
-QFieldCloud is a service designed to synchronize projects and data
-between QGIS (+ QFieldSync plugin) and QField.
-
-It allows replacing the use of the cable to copy projects in QField, it allows to synchronize data
-and view and edit projects metadata (such as team management) via a web interface.
+## Documentation
 
 System documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org)
 
