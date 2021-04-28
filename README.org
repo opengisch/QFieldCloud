@@ -1,15 +1,12 @@
-* QFieldCloud server
+* QFieldCloud
 [[./docs/assets/images/logo.png]]
-[[https://github.com/opengisch/qfieldcloud/workflows/Deploy%20on%20dev.qfield.cloud/badge.svg]]
-[[https://github.com/opengisch/status.qfield.cloud/workflows/dev.qfield.cloud%20APIs%20status/badge.svg]]
-[[https://github.com/opengisch/status.qfield.cloud/workflows/app.qfield.cloud%20APIs%20status/badge.svg]]
+
 ** Purpose
    QFieldCloud is a service designed to synchronize projects and data
    between QGIS (+ QFieldSync plugin) and QField.
 
-   Initially it will allow to replace the use of the cable to copy
-   projects in QField and later it will also allow to synchronize data
-   and view and edit projects via web interface.
+   It allows replacing the use of the cable to copy projects in QField, it allows to synchronize data
+   and view and edit projects metadata (such as team management) via a web interface.
 
    System documentation is [[https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org][here]]
 
