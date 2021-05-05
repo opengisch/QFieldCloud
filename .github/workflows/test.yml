@@ -22,47 +22,10 @@ jobs:
         run: |
           pipenv install pre_commit
           pipenv run python -m pre_commit run --all-files
-      - name: Create .env file from secret
-        uses: SpicyPizza/create-envfile@v1
-        with:
-          envkey_DEBUG: 1
-          envkey_QFIELDCLOUD_HOST: "localhost"
-          envkey_SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          envkey_WEB_HTTP_PORT: 80
-          envkey_WEB_HTTPS_PORT: 443
-          envkey_POSTGRES_USER: "qfieldcloud_test_db_admin"
-          envkey_POSTGRES_PASSWORD: ${{ secrets.SQL_PASSWORD }}
-          envkey_POSTGRES_DB: "qfieldcloud_test_db"
-          envkey_POSTGRES_HOST: "db"
-          envkey_POSTGRES_PORT: 5432
-          envkey_HOST_POSTGRES_PORT: 5433
-          envkey_DJANGO_ALLOWED_HOSTS: "localhost 127.0.0.1 [::1]"
-          envkey_DJANGO_SETTINGS_MODULE: "qfieldcloud.settings"
-          envkey_STORAGE_ACCESS_KEY_ID: "minio_access_key"
-          envkey_STORAGE_SECRET_ACCESS_KEY: "minio_secret_key"
-          envkey_STORAGE_BUCKET_NAME: "qfieldcloud-gh-action"
-          envkey_STORAGE_REGION_NAME: ""
-          envkey_STORAGE_ENDPOINT_URL: "http://localhost:9000"
-          envkey_MINIO_PORT: 9000
-          envkey_REDIS_HOST: "redis"
-          envkey_REDIS_PASSWORD: "reeeeeedissssssss"
-          envkey_REDIS_PORT: 6379
-          envkey_GEODB_HOST: "geodb"
-          envkey_GEODB_USER: "postgres"
-          envkey_GEODB_PASSWORD: ${{ secrets.GEODB_PASSWORD }}
-          envkey_GEODB_DB: "postgres"
-          envkey_GEODB_PORT: 5432
-          envkey_CADDY_ACME_CA: "https://acme-staging-v02.api.letsencrypt.org/directory"
-          envkey_ACCOUNT_EMAIL_VERIFICATION: "optional"
-          envkey_EMAIL_HOST: "smtp4dev"
-          envkey_EMAIL_USE_TLS: False
-          envkey_EMAIL_PORT: 25
-          envkey_EMAIL_HOST_USER: ""
-          envkey_EMAIL_HOST_PASSWORD: ""
-          envkey_LOG_DIRECTORY: "/tmp/"
-          envkey_TMP_DIRECTORY: "/tmp/"
-          envkey_COMPOSE_PROJECT_NAME: "qfc"
-          file_name: ".env"
+      - name: Export the env variables file
+        run: |
+          cp .env.example .env
+          export $(egrep -v '^#' .env | xargs)
       - name: Build and run docker containers
         run: |
           docker-compose up -d --build
