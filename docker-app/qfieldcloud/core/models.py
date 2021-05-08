@@ -42,6 +42,9 @@ class User(AbstractUser):
         help_text="Remaining invitations that can be sent by the user himself.",
     )
 
+    has_newsletter_subscription = models.BooleanField(default=False)
+    has_accepted_tos = models.BooleanField(default=False)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.get_field("username").validators.append(
