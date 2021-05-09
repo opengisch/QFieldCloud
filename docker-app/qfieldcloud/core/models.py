@@ -363,6 +363,10 @@ class Team(User):
         self.user_type = self.TYPE_TEAM
         return super().save(*args, **kwargs)
 
+    @property
+    def teamname(self):
+        return self.username.replace(f"{self.team_organization.username}-", "")
+
 
 class TeamMember(models.Model):
     class Meta:
