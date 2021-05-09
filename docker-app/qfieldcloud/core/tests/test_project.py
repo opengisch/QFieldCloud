@@ -50,12 +50,12 @@ class ProjectTestCase(APITestCase):
 
         self.assertEqual(str(project.owner), "user1")
 
-    def test_create_project_reserved_name(self):
+    def test_create_project_invalid_name(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.post(
             "/api/v1/projects/",
             {
-                "name": "project",
+                "name": "project$",
                 "owner": "user1",
                 "description": "desc",
                 "is_public": False,

@@ -6,6 +6,7 @@ from enum import Enum
 
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Case, Exists, OuterRef, Q
 from django.db.models import Value as V
@@ -518,13 +519,13 @@ class Project(models.Model):
     name = models.CharField(
         max_length=255,
         validators=[
-            validators.allowed_symbols_validator,
-            validators.min_lenght_validator,
-            validators.first_symbol_validator,
-            validators.reserved_words_validator,
+            RegexValidator(
+                r"^[a-zA-Z0-9-_\.]+$",
+                _("Only letters, numbers, underscores, hyphens and dots are allowed."),
+            )
         ],
         help_text=_(
-            "Project name. Should start with a letter and contain only letters, numbers, underscores and hyphens."
+            _("Only letters, numbers, underscores, hyphens and dots are allowed.")
         ),
     )
 
