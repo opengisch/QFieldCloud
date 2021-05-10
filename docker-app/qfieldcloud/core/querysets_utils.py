@@ -1,4 +1,6 @@
 import warnings
+from functools import reduce
+from operator import and_, or_
 
 from django.db.models import Q
 from django.db.models.manager import BaseManager
@@ -69,6 +71,7 @@ def get_users(
     organization: Organization = None,
     exclude_organizations: bool = False,
     exclude_teams: bool = False,
+    invert: bool = False,
 ) -> BaseManager:
     assert (
         project is None or organization is None
@@ -87,21 +90,32 @@ def get_users(
     if exclude_teams:
         users = users.exclude(user_type=User.TYPE_TEAM)
 
+    # one day conditions can be more than just pk check, please keep it for now
+    conditions = []
     # exclude the already existing collaborators and the project owner
     if project:
         collaborator_ids = ProjectCollaborator.objects.filter(
             project=project
         ).values_list("collaborator", flat=True)
-        users = users.exclude(pk__in=collaborator_ids)
-        users = users.exclude(pk=project.owner.pk)
+        user_ids = [*collaborator_ids, project.owner.pk]
+        conditions = [Q(pk__in=user_ids)]
 
     # exclude the already existing members, the organization owner and the organization itself from the returned users
-    if organization:
+    elif organization:
         member_ids = OrganizationMember.objects.filter(
             organization=organization
         ).values_list("member", flat=True)
-        users = users.exclude(pk__in=member_ids)
-        users = users.exclude(pk=organization.organization_owner.pk)
-        users = users.exclude(pk=organization.user_ptr.pk)
+        user_ids = [
+            *member_ids,
+            organization.organization_owner.pk,
+            organization.user_ptr.pk,
+        ]
+        conditions = [Q(pk__in=user_ids)]
+
+    if conditions:
+        if invert:
+            users = users.filter(reduce(and_, [c for c in conditions]))
+        else:
+            users = users.exclude(reduce(or_, [c for c in conditions]))
 
     return users.order_by("-username")

@@ -56,14 +56,16 @@ class ListUsersView(generics.ListAPIView):
         # TODO : are these GET paremters documented somewhere ? Shouldn't we use something
         # like django_filters.rest_framework.DjangoFilterBackend so they get auto-documented
         # in DRF's views, or is that supposedly done with swagger ?
-        exclude_organizations = bool(int(params.get("exclude_organizations", 0)))
-        exclude_teams = bool(int(params.get("exclude_teams", 0)))
+        exclude_organizations = bool(int(params.get("exclude_organizations") or 0))
+        exclude_teams = bool(int(params.get("exclude_teams") or 0))
+        invert = bool(int(params.get("invert") or 0))
         return querysets_utils.get_users(
             query,
             project=project,
             organization=organization,
             exclude_organizations=exclude_organizations,
             exclude_teams=exclude_teams,
+            invert=invert,
         )
 
 
