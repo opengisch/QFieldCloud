@@ -404,6 +404,14 @@ class TeamMember(models.Model):
         limit_choices_to=models.Q(user_type=User.TYPE_USER),
     )
 
+    def clean(self) -> None:
+        if not self.team.team_organization.members.filter(member=self.member):
+            raise ValidationError(
+                _("Cannot add team member that is not an organization member.")
+            )
+
+        return super().clean()
+
     def __str__(self):
         return self.team.username + ": " + self.member.username
 
