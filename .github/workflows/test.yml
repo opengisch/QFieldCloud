@@ -26,11 +26,14 @@ jobs:
         run: |
           cp .env.example .env
           export $(egrep -v '^#' .env | xargs)
-      - uses: whoan/docker-build-with-cache-action@v5
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-          compose_file: docker-compose.yml > docker-compose.override.yml
+      - name: Pull docker containers
+        run: docker-compose pull
+      - name: Cache docker containers
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+      - name: Build and run docker containers
+        run: |
+          docker-compose up -d --build
       - name: Run unit and integration tests
         run: |
           docker-compose run app python manage.py test -v2 qfieldcloud
