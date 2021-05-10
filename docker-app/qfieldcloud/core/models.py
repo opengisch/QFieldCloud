@@ -135,10 +135,10 @@ class UserAccount(models.Model):
         help_text="Whether the account has the option to create a GeoDB.",
     )
     synchronizations_per_months = models.PositiveIntegerField(default=30)
-    bio = models.CharField(max_length=255, default="")
-    workplace = models.CharField(max_length=255, default="")
-    location = models.CharField(max_length=255, default="")
-    twitter = models.CharField(max_length=255, default="")
+    bio = models.CharField(max_length=255, default="", blank=True)
+    workplace = models.CharField(max_length=255, default="", blank=True)
+    location = models.CharField(max_length=255, default="", blank=True)
+    twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
     avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
 
