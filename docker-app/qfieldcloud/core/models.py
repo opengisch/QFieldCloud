@@ -22,6 +22,7 @@ from qfieldcloud.core.utils import get_s3_object_url
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
 
+# TODO change types to Enum
 class User(AbstractUser):
     TYPE_USER = 1
     TYPE_ORGANIZATION = 2
