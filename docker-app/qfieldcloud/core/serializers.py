@@ -6,6 +6,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Project,
     ProjectCollaborator,
+    Team,
 )
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
@@ -84,14 +85,28 @@ class CompleteUserSerializer(serializers.ModelSerializer):
 
 class PublicInfoUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
+    username_display = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
         return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
 
+    def get_username_display(self, obj):
+        if obj.user_type == obj.TYPE_TEAM:
+            team = Team.objects.get(id=obj.id)
+            return team.username.replace(f"@{team.team_organization.username}/", "")
+        else:
+            return obj.username
+
     class Meta:
         model = User
-        fields = ("username", "user_type", "full_name", "avatar_url")
-        read_only_fields = ("full_name", "avatar_url")
+        fields = (
+            "username",
+            "user_type",
+            "full_name",
+            "avatar_url",
+            "username_display",
+        )
+        read_only_fields = ("full_name", "avatar_url", "username_display")
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
