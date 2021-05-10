@@ -65,7 +65,17 @@ class User(AbstractUser):
         return self.username
 
     def get_absolute_url(self):
-        return reverse_lazy("profile_overview", kwargs={"username": self.username})
+        if self.user_type == User.TYPE_TEAM:
+            team = Team.objects.get(pk=self.pk)
+            return reverse_lazy(
+                "settings_teams_edit",
+                kwargs={
+                    "username": team.team_organization.username,
+                    "teamname": team.teamname,
+                },
+            )
+        else:
+            return reverse_lazy("profile_overview", kwargs={"username": self.username})
 
     @property
     def is_user(self):
@@ -369,7 +379,7 @@ class Team(User):
 
     @property
     def teamname(self):
-        return self.username.replace(f"{self.team_organization.username}-", "")
+        return self.username.replace(f"@{self.team_organization.username}/", "")
 
 
 class TeamMember(models.Model):
