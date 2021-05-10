@@ -379,7 +379,7 @@ class Team(User):
 
     @property
     def teamname(self):
-        return self.username.replace(f"{self.team_organization.username}-", "")
+        return self.username.replace(f"@{self.team_organization.username}/", "")
 
 
 class TeamMember(models.Model):
