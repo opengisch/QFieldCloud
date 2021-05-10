@@ -6,7 +6,7 @@ gunicorn>=20.0.4,<20.1
 psycopg2-binary>=2.8.6,<2.9
 django-rest-auth>=0.9.5,<0.10
 django-allauth>=0.44.0,<0.45
-pyyaml>=5.3.1,<5.4
+pyyaml==5.4
 drf-yasg>=1.20.0,<1.21
 coverage==5.3
 django-rq>=2.4.0,<2.5
