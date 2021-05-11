@@ -210,11 +210,11 @@ class ExportJobSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
 
     def get_status(self, obj):
-        if obj.status == Job.Status.QUEUED:
+        if obj.status == Job.Status.PENDING:
             return "STATUS_PENDING"
-        elif obj.status == Job.Status.STARTED:
+        elif obj.status == Job.Status.QUEUED:
             return "STATUS_BUSY"
-        elif obj.status == Job.Status.DEFERRED:
+        elif obj.status == Job.Status.STARTED:
             return "STATUS_BUSY"
         elif obj.status == Job.Status.STOPPED:
             return "STATUS_BUSY"
