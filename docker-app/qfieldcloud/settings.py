@@ -286,9 +286,9 @@ LOGGING = {
         },
     },
     "filters": {
-        "skip_logging_filter": {
+        "skip_logging": {
             "()": "qfieldcloud.core.logging.filters.SkipLoggingFilter",
-        }
+        },
     },
     "handlers": {
         "console.json": {
@@ -308,7 +308,7 @@ LOGGING = {
         "qfieldcloud.request_response_log": {
             "level": LOGLEVEL,
             "filters": [
-                "skip_logging_filter",
+                "skip_logging",
             ],
             "handlers": [
                 # TODO enable console.json once it is clear how we do store the json logs
