@@ -53,7 +53,9 @@ class ExportView(views.APIView):
         query = Q(project=project_obj) & (
             Q(status=ExportJob.Status.QUEUED) | Q(status=ExportJob.Status.STARTED)
         )
-        ExportJob.objects.filter(query).delete()
+
+        # NOTE uncomment to enforce job creation
+        # ExportJob.objects.filter(query).delete()
 
         if ExportJob.objects.filter(query).exists():
             serializer = serializers.ExportJobSerializer(ExportJob.objects.get(query))
