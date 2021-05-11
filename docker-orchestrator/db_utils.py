@@ -30,11 +30,34 @@ class JobStatus(Enum):
 
 def get_django_db_connection():
     """Connect to the Django db."""
-    dbname = os.environ.get("POSTGRES_DB")
-
     try:
+        dbname = os.environ.get("POSTGRES_DB")
+        test_dbname = f"test_{dbname}"
+        conn_dbname = dbname
+
         conn = connect(
-            dbname=dbname,
+            dbname="template1",
+            user=os.environ.get("POSTGRES_USER"),
+            password=os.environ.get("POSTGRES_PASSWORD"),
+            host=os.environ.get("POSTGRES_HOST"),
+            port=os.environ.get("POSTGRES_PORT"),
+        )
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+                SELECT datname
+                FROM pg_database
+                WHERE datname = %s
+            """,
+            (test_dbname,),
+        )
+
+        if cur.fetchone():
+            conn_dbname = test_dbname
+
+        conn = connect(
+            dbname=conn_dbname,
             user=os.environ.get("POSTGRES_USER"),
             password=os.environ.get("POSTGRES_PASSWORD"),
             host=os.environ.get("POSTGRES_HOST"),
