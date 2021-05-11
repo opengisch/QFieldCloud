@@ -17,7 +17,6 @@ from db_utils import (
     update_deltas,
     update_job,
 )
-from psycopg2 import connect
 
 psycopg2.extras.register_uuid()
 
@@ -32,33 +31,6 @@ assert TMP_DIRECTORY
 
 class QgisException(Exception):
     pass
-
-
-class ApplyDeltaScriptException(Exception):
-    pass
-
-
-def get_django_db_connection(is_test_db=False):
-    """Connect to the Django db. If the param is_test_db is true
-    it will try to connect to the temporary test db.
-    Return the connection or None"""
-
-    dbname = os.environ.get("POSTGRES_DB")
-    if is_test_db:
-        dbname = "test_" + dbname
-
-    try:
-        conn = connect(
-            dbname=dbname,
-            user=os.environ.get("POSTGRES_USER"),
-            password=os.environ.get("POSTGRES_PASSWORD"),
-            host=os.environ.get("POSTGRES_HOST"),
-            port=os.environ.get("POSTGRES_PORT"),
-        )
-    except psycopg2.OperationalError:
-        return None
-
-    return conn
 
 
 def export_project(job_id, project_file):
@@ -232,8 +204,6 @@ Output:
 
             update_deltas(job_id, [delta_id], status, feedback)
 
-    # if exit_code not in [0, 1]:
-    #     raise ApplyDeltaScriptException(output)
     return exit_code, output.decode("utf-8")
 
 
