@@ -80,7 +80,7 @@ def apply_deltas(job_id, project_file):
 
     job_row = get_job_row(job_id)
     project_id = job_row["project_id"]
-    overwrite_conflicts = job_row["project_id"]
+    overwrite_conflicts = job_row["overwrite_conflicts"]
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
     qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
     delta_ids = get_deltas_to_apply_list(job_id)
