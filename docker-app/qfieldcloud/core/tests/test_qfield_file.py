@@ -6,6 +6,7 @@ import psycopg2
 import requests
 from django.contrib.auth import get_user_model
 from django.http.response import HttpResponseRedirect
+from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Project
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -29,6 +30,11 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
         )
+
+        try:
+            delete_db_and_role("test", self.user1.username)
+        except Exception:
+            pass
 
         self.geodb = Geodb.objects.create(
             user=self.user1,

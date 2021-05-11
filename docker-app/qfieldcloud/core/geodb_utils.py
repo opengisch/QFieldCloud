@@ -97,7 +97,7 @@ def create_role_and_db(geodb):
     return result
 
 
-def delete_db_and_role(geodb):
+def delete_db_and_role(dbname, username):
     with GeodbConnection() as conn:
         # DROP DATABASE cannot be executed inside a transaction block
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -109,7 +109,7 @@ def delete_db_and_role(geodb):
                 """
             DROP DATABASE IF EXISTS {};
             """
-            ).format(sql.Identifier(geodb.dbname))
+            ).format(sql.Identifier(dbname))
         )
 
         cur.execute(
@@ -117,7 +117,7 @@ def delete_db_and_role(geodb):
                 """
             DROP ROLE IF EXISTS {};
             """
-            ).format(sql.Identifier(geodb.username))
+            ).format(sql.Identifier(username))
         )
 
 

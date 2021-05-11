@@ -296,7 +296,7 @@ def create_geodb(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=Geodb)
 def delete_geodb(sender, instance, **kwargs):
-    geodb_utils.delete_db_and_role(instance)
+    geodb_utils.delete_db_and_role(instance.dbname, instance.username)
 
 
 class Organization(User):
