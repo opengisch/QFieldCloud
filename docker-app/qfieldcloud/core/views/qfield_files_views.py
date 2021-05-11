@@ -60,7 +60,7 @@ class ExportView(views.APIView):
             return Response(serializer.data)
 
         export_job = ExportJob.objects.create(
-            project=project_obj, user=self.request.user
+            project=project_obj, created_by=self.request.user
         )
 
         utils.export_project(export_job.pk, project_file)
