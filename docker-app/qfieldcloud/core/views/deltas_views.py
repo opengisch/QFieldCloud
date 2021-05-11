@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.utils import IntegrityError
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
@@ -66,21 +67,23 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             deltafile_id = deltafile_json["id"]
 
             deltas = deltafile_json.get("deltas", [])
-            for delta in deltas:
-                delta_obj = Delta(
-                    id=delta["uuid"],
-                    deltafile_id=deltafile_id,
-                    project=project_obj,
-                    content=delta,
-                    created_by=self.request.user,
-                )
 
-                if permissions_utils.can_create_delta(self.request.user, delta_obj):
-                    delta_obj.last_status = Delta.Status.PENDING
-                else:
-                    delta_obj.last_status = Delta.Status.UNPERMITTED
+            with transaction.atomic():
+                for delta in deltas:
+                    delta_obj = Delta(
+                        id=delta["uuid"],
+                        deltafile_id=deltafile_id,
+                        project=project_obj,
+                        content=delta,
+                        created_by=self.request.user,
+                    )
 
-                delta_obj.save(force_insert=True)
+                    if permissions_utils.can_create_delta(self.request.user, delta_obj):
+                        delta_obj.last_status = Delta.Status.PENDING
+                    else:
+                        delta_obj.last_status = Delta.Status.UNPERMITTED
+
+                    delta_obj.save(force_insert=True)
 
         except Exception as err:
             if request_file:

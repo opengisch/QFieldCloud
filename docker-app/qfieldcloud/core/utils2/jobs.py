@@ -18,7 +18,7 @@ def apply_deltas(
     delta_apply_job = DeltaApplyJob.objects.create(
         project=project, created_by=user, overwrite_conflicts=overwrite_conflicts
     )
-    pending_deltas = Delta.objects.filter(last_status__in=Delta.Status.PENDING)
+    pending_deltas = Delta.objects.filter(last_status__in=[Delta.Status.PENDING])
 
     if delta_ids is not None:
         pending_deltas = pending_deltas.filter(pk__in=delta_ids)
@@ -27,15 +27,12 @@ def apply_deltas(
         return False
 
     for delta in pending_deltas:
-        delta_apply_job.deltas[0].add(delta)
+        delta_apply_job.deltas_to_apply.add(delta)
 
+    job_id = delta_apply_job.id
     queue = django_rq.get_queue("delta")
     queue.enqueue(
-        "orchestrator.apply_deltas",
-        projectid=project.id,
-        project_file=str(project_file),
-        overwrite_conflicts=overwrite_conflicts,
-        delta_ids=delta_ids,
+        "orchestrator.apply_deltas", str(job_id), str(project_file), job_id=str(job_id)
     )
 
     return True

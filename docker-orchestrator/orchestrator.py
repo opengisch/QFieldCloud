@@ -4,34 +4,30 @@ import os
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import List
 
 import docker
 import psycopg2
-from db_utils import JobStatus, get_job_row, update_job
+import psycopg2.extras
+from db_utils import (
+    DeltaStatus,
+    JobStatus,
+    get_deltas_to_apply_list,
+    get_job_row,
+    update_deltas,
+    update_job,
+)
 from psycopg2 import connect
 
-DELTA_STATUS_PENDING = (
-    1  # deltafile has been received, but have not started application
-)
-DELTA_STATUS_BUSY = 2  # currently being applied
-DELTA_STATUS_APPLIED = 3  # applied correctly
-DELTA_STATUS_CONFLICT = 4  # needs conflict resolution
-DELTA_STATUS_NOT_APPLIED = 5
-DELTA_STATUS_ERROR = 6  # was not possible to apply the deltafile
-DELTA_STATUS_IGNORED = 7  # delta is ignored
-
-EXPORTATION_STATUS_PENDING = 1  # Export has been requested, but not yet started
-EXPORTATION_STATUS_BUSY = 2  # Currently being exported
-EXPORTATION_STATUS_EXPORTED = 3  # Export finished
-EXPORTATION_STATUS_ERROR = 4  # was not possible to export the project
-
+psycopg2.extras.register_uuid()
 
 logger = logging.getLogger(__name__)
 
 QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
+TMP_DIRECTORY = os.environ.get("TMP_DIRECTORY", None)
 
 assert QGIS_CONTAINER_NAME
+assert TMP_DIRECTORY
 
 
 class QgisException(Exception):
@@ -72,7 +68,7 @@ def export_project(job_id, project_file):
 
     project_id = get_job_row(job_id)["project_id"]
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
-    qgis_tempdir = Path(os.environ.get("TMP_DIRECTORY")).joinpath(orchestrator_tempdir)
+    qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
 
     volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
 
@@ -133,83 +129,38 @@ def export_project(job_id, project_file):
     return exit_code, output.decode("utf-8"), exportlog
 
 
-def set_delta_status_and_output(projectid, delta_id, status, output={}):
-    """Set the deltafile status and output into the database record """
-
-    conn = get_django_db_connection(True)
-    if not conn:
-        conn = get_django_db_connection(False)
-
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE core_delta SET status = %s, updated_at = now(), output = %s WHERE id = %s AND project_id = %s",
-        (status, json.dumps(output), delta_id, projectid),
-    )
-    conn.commit()
-
-    cur.close()
-    conn.close()
-
-
-def create_deltafile_with_pending_deltas(
-    projectid, tempdir, delta_ids: Optional[Iterable]
-):
-    """Retrieve the pending deltas from the db and create a deltafile-like
-    json to be passed to the apply_deltas script"""
-
-    conn = get_django_db_connection(is_test_db=True)
-    if not conn:
-        conn = get_django_db_connection(is_test_db=False)
-
-    cur = conn.cursor()
-    cur.execute(
-        """
-            SELECT
-                id,
-                deltafile_id,
-                content
-            FROM core_delta
-            WHERE TRUE
-                AND project_id = %s
-                AND status = %s
-                AND (%s IS NULL OR id::text = ANY(%s))
-        """,
-        (projectid, DELTA_STATUS_PENDING, delta_ids, delta_ids),
-    )
+def deltas_to_deltafile(
+    job_id: str, project_id: str, delta_ids: List[str], filename: Path
+) -> None:
+    deltas = update_deltas(job_id, delta_ids, DeltaStatus.STARTED)
 
     json_content = {
-        "deltas": [],
+        "deltas": [delta["content"] for delta in deltas],
         "files": [],
         "id": str(uuid.uuid4()),
-        "project": projectid,
+        "project": str(project_id),
         "version": "1.0",
     }
 
-    deltas = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    for delta in deltas:
-        json_content["deltas"].append(delta[2])
-        set_delta_status_and_output(projectid, delta[0], DELTA_STATUS_BUSY)
-
-    deltafile = os.path.join(tempdir, "deltafile.json")
-    with open(deltafile, "w") as f:
+    with open(filename, "w") as f:
         json.dump(json_content, f)
 
-    return deltafile
 
-
-def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
-    """Start a QGIS docker container to apply a deltafile unsing the
+def apply_deltas(job_id, project_file):
+    """Start a QGIS docker container to apply a deltafile using the
     apply-delta script"""
 
+    logger.info(f"Starting a new delta apply job {job_id}")
+
+    job_row = get_job_row(job_id)
+    project_id = job_row["project_id"]
+    overwrite_conflicts = job_row["project_id"]
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
-    qgis_tempdir = os.path.join(os.environ.get("TMP_DIRECTORY"), orchestrator_tempdir)
+    qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
+    delta_ids = get_deltas_to_apply_list(job_id)
+    deltafile_path = qgis_tempdir.joinpath("deltafile.json")
 
-    logger.info(f"Starting a new export for project {projectid}")
-
-    create_deltafile_with_pending_deltas(projectid, orchestrator_tempdir, delta_ids)
+    deltas_to_deltafile(job_id, project_id, delta_ids, deltafile_path)
 
     volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
 
@@ -241,7 +192,7 @@ def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
     container.start()
     container.attach(logs=True)
     container_command = "xvfb-run python3 entrypoint.py apply-delta {} {} {}".format(
-        projectid, project_file, overwrite_conflicts_cmd
+        project_id, project_file, overwrite_conflicts_cmd
     )
 
     exit_code, output = container.exec_run(container_command)
@@ -252,7 +203,7 @@ def apply_deltas(projectid, project_file, overwrite_conflicts, delta_ids):
 ===============================================================================
 | Apply deltas finished
 ===============================================================================
-Project ID: {projectid}
+Project ID: {project_id}
 Project file: {project_file}
 Exit code: {exit_code}
 Output:
@@ -266,20 +217,20 @@ Output:
     with open(deltalog_file, "r") as f:
         deltalog = json.load(f)
 
-        for log in deltalog:
-            delta_id = log["delta_id"]
-            status = log["status"]
-            if status == "status_applied":
-                status = DELTA_STATUS_APPLIED
-            elif status == "status_conflict":
-                status = DELTA_STATUS_CONFLICT
-            elif status == "status_apply_failed":
-                status = DELTA_STATUS_NOT_APPLIED
-            else:
-                status = DELTA_STATUS_ERROR
-            msg = log
+        for feedback in deltalog:
+            delta_id = feedback["delta_id"]
+            status = feedback["status"]
 
-            set_delta_status_and_output(projectid, delta_id, status, msg)
+            if status == "status_applied":
+                status = DeltaStatus.APPLIED
+            elif status == "status_conflict":
+                status = DeltaStatus.CONFLICT
+            elif status == "status_apply_failed":
+                status = DeltaStatus.NOT_APPLIED
+            else:
+                status = DeltaStatus.ERROR
+
+            update_deltas(job_id, [delta_id], status, feedback)
 
     # if exit_code not in [0, 1]:
     #     raise ApplyDeltaScriptException(output)
