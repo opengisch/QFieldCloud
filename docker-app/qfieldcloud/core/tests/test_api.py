@@ -1,8 +1,11 @@
+import logging
 import time
 
 from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
+
+logging.disable(logging.CRITICAL)
 
 
 class StatusTestCase(APITransactionTestCase):

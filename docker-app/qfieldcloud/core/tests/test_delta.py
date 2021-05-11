@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import sqlite3
 import tempfile
@@ -13,6 +14,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import get_filename, testdata_path
+
+logging.disable(logging.CRITICAL)
 
 
 class DeltaTestCase(APITransactionTestCase):

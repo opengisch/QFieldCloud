@@ -1,9 +1,13 @@
+import logging
+
 from qfieldcloud.core.models import Organization, Project, ProjectCollaborator, User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from .utils import testdata_path
+
+logging.disable(logging.CRITICAL)
 
 
 class PermissionTestCase(APITestCase):

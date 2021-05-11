@@ -1,3 +1,5 @@
+import logging
+
 from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
     Organization,
@@ -11,6 +13,8 @@ from qfieldcloud.core.models import (
 )
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
+
+logging.disable(logging.CRITICAL)
 
 
 class QuerysetTestCase(APITestCase):

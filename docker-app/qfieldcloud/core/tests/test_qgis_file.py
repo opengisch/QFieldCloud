@@ -1,4 +1,5 @@
 import filecmp
+import logging
 import tempfile
 import time
 
@@ -11,6 +12,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import get_filename, testdata_path
+
+logging.disable(logging.CRITICAL)
 
 
 class QgisFileTestCase(APITransactionTestCase):

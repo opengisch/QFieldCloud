@@ -1,7 +1,10 @@
+import logging
 import unittest
 
 import psycopg2
 from qfieldcloud.core.models import Geodb, User
+
+logging.disable(logging.CRITICAL)
 
 
 class GeodbTestCase(unittest.TestCase):

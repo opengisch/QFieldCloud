@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import time
@@ -12,6 +13,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import testdata_path
+
+logging.disable(logging.CRITICAL)
 
 
 class QfieldFileTestCase(APITransactionTestCase):
