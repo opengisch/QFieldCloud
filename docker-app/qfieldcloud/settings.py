@@ -223,6 +223,8 @@ RQ_QUEUES = {
     },
 }
 
+RQ_SHOW_ADMIN_LINK = True
+
 LOGIN_URL = "account_login"
 
 
