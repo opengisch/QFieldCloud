@@ -102,8 +102,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -173,8 +173,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -226,8 +226,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -271,8 +271,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -330,8 +330,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
