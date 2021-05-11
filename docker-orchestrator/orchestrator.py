@@ -65,32 +65,6 @@ def get_django_db_connection(is_test_db=False):
     return conn
 
 
-def set_exportation_status_and_log(
-    projectid, old_status, new_status, exportlog={}, output=""
-):
-    """Set the deltafile status and output into the database record """
-
-    conn = get_django_db_connection(True)
-    if not conn:
-        conn = get_django_db_connection(False)
-
-    cur = conn.cursor()
-    cur.execute(
-        """
-        UPDATE core_exportation SET
-              status = %s,
-              updated_at = now(),
-              exportlog = %s,
-              output = %s
-              WHERE project_id = %s AND status = %s""",
-        (new_status, json.dumps(exportlog), output, projectid, old_status),
-    )
-    conn.commit()
-
-    cur.close()
-    conn.close()
-
-
 def export_project(job_id, project_file):
     """Start a QGIS docker container to export the project using libqfieldsync """
 
