@@ -4,9 +4,7 @@ import os
 import tempfile
 import uuid
 from pathlib import Path
-from typing import List
 
-import docker
 import psycopg2
 import psycopg2.extras
 from db_utils import (
@@ -17,15 +15,14 @@ from db_utils import (
     update_deltas,
     update_job,
 )
+from docker_utils import run_docker
 
 psycopg2.extras.register_uuid()
 
 logger = logging.getLogger(__name__)
 
-QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 TMP_DIRECTORY = os.environ.get("TMP_DIRECTORY", None)
 
-assert QGIS_CONTAINER_NAME
 assert TMP_DIRECTORY
 
 
@@ -42,38 +39,12 @@ def export_project(job_id, project_file):
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
     qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
 
-    volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
-
     update_job(job_id, JobStatus.STARTED)
 
-    # If we are on local dev environment, use host network to connect
-    # to the local geodb and s3 storage
-    network_mode = "bridge"
-    if os.environ.get("QFIELDCLOUD_HOST") == "localhost":
-        network_mode = "host"
-
-    client = docker.from_env()
-    container = client.containers.create(
-        QGIS_CONTAINER_NAME,
-        environment={
-            "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
-            "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
-            "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
-            "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
-            "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
-        },
-        auto_remove=True,
-        volumes=volumes,
-        network_mode=network_mode,
+    exit_code, output = run_docker(
+        f"xvfb-run python3 entrypoint.py export {project_id} {project_file}",
+        volumes={qgis_tempdir: {"bind": "/io/", "mode": "rw"}},
     )
-
-    container.start()
-    container.attach(logs=True)
-    container_command = (
-        f"xvfb-run python3 entrypoint.py export {project_id} {project_file}"
-    )
-    exit_code, output = container.exec_run(container_command)
-    container.kill()
 
     logger.info(
         "export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}".format(
@@ -101,23 +72,6 @@ def export_project(job_id, project_file):
     return exit_code, output.decode("utf-8"), exportlog
 
 
-def deltas_to_deltafile(
-    job_id: str, project_id: str, delta_ids: List[str], filename: Path
-) -> None:
-    deltas = update_deltas(job_id, delta_ids, DeltaStatus.STARTED)
-
-    json_content = {
-        "deltas": [delta["content"] for delta in deltas],
-        "files": [],
-        "id": str(uuid.uuid4()),
-        "project": str(project_id),
-        "version": "1.0",
-    }
-
-    with open(filename, "w") as f:
-        json.dump(json_content, f)
-
-
 def apply_deltas(job_id, project_file):
     """Start a QGIS docker container to apply a deltafile using the
     apply-delta script"""
@@ -130,45 +84,24 @@ def apply_deltas(job_id, project_file):
     orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
     qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
     delta_ids = get_deltas_to_apply_list(job_id)
-    deltafile_path = qgis_tempdir.joinpath("deltafile.json")
+    deltas = update_deltas(job_id, delta_ids, DeltaStatus.STARTED)
 
-    deltas_to_deltafile(job_id, project_id, delta_ids, deltafile_path)
+    json_content = {
+        "deltas": [delta["content"] for delta in deltas],
+        "files": [],
+        "id": str(uuid.uuid4()),
+        "project": str(project_id),
+        "version": "1.0",
+    }
 
-    volumes = {qgis_tempdir: {"bind": "/io/", "mode": "rw"}}
+    with open(qgis_tempdir.joinpath("deltafile.json"), "w") as f:
+        json.dump(json_content, f)
 
-    # If we are on local dev environment, use host network to connect
-    # to the local geodb and s3 storage
-    network_mode = "bridge"
-    if os.environ.get("QFIELDCLOUD_HOST") == "localhost":
-        network_mode = "host"
-
-    client = docker.from_env()
-    container = client.containers.create(
-        QGIS_CONTAINER_NAME,
-        environment={
-            "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
-            "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
-            "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
-            "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
-            "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
-        },
-        auto_remove=True,
-        volumes=volumes,
-        network_mode=network_mode,
+    overwrite_conflicts_arg = "--overwrite-conflicts" if overwrite_conflicts else ""
+    exit_code, output = run_docker(
+        f"xvfb-run python3 entrypoint.py apply-delta {project_id} {project_file} {overwrite_conflicts_arg}",
+        volumes={qgis_tempdir: {"bind": "/io/", "mode": "rw"}},
     )
-
-    overwrite_conflicts_cmd = ""
-    if overwrite_conflicts:
-        overwrite_conflicts_cmd = "--overwrite-conflicts"
-
-    container.start()
-    container.attach(logs=True)
-    container_command = "xvfb-run python3 entrypoint.py apply-delta {} {} {}".format(
-        project_id, project_file, overwrite_conflicts_cmd
-    )
-
-    exit_code, output = container.exec_run(container_command)
-    container.kill()
 
     logger.info(
         f"""
@@ -211,28 +144,7 @@ def check_status():
     """Launch a container to check that everything is working
     correctly."""
 
-    client = docker.from_env()
-    container = client.containers.create(
-        QGIS_CONTAINER_NAME,
-        environment={
-            "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
-            "STORAGE_SECRET_ACCESS_KEY": os.environ.get("STORAGE_SECRET_ACCESS_KEY"),
-            "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
-            "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
-            "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
-        },
-        # TODO: environment=load_env_file(),
-        auto_remove=True,
-    )
-
-    container.start()
-    container.attach(logs=True)
-
-    # TODO: create a command to actually start qgis and check some features
-    container_command = "echo QGIS container is running"
-
-    exit_code, output = container.exec_run(container_command)
-    container.kill()
+    exit_code, output = run_docker('echo "QGIS container is running"')
 
     logger.info(
         "check_status, exit_code: {}, output:\n\n{}".format(
