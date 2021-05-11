@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
     Organization,
@@ -8,11 +7,10 @@ from qfieldcloud.core.models import (
     ProjectQueryset,
     Team,
     TeamMember,
+    User,
 )
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
-
-User = get_user_model()
 
 
 class QuerysetTestCase(APITestCase):

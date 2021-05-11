@@ -1,11 +1,8 @@
 import time
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
-
-User = get_user_model()
 
 
 class StatusTestCase(APITransactionTestCase):

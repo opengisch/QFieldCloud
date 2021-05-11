@@ -1,10 +1,7 @@
 import unittest
 
 import psycopg2
-from django.contrib.auth import get_user_model
-from qfieldcloud.core.models import Geodb
-
-User = get_user_model()
+from qfieldcloud.core.models import Geodb, User
 
 
 class GeodbTestCase(unittest.TestCase):

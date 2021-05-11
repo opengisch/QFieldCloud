@@ -3,17 +3,14 @@ import tempfile
 import time
 
 import requests
-from django.contrib.auth import get_user_model
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import Project, User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import get_filename, testdata_path
-
-User = get_user_model()
 
 
 class QgisFileTestCase(APITransactionTestCase):

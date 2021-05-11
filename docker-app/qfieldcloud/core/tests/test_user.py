@@ -1,15 +1,13 @@
-from django.contrib.auth import get_user_model
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Project,
+    User,
     UserAccount,
 )
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
-
-User = get_user_model()
 
 
 class UserTestCase(APITestCase):

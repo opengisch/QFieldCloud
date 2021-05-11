@@ -4,17 +4,14 @@ import time
 
 import psycopg2
 import requests
-from django.contrib.auth import get_user_model
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Geodb, Project
+from qfieldcloud.core.models import Geodb, Project, User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import testdata_path
-
-User = get_user_model()
 
 
 class QfieldFileTestCase(APITransactionTestCase):
