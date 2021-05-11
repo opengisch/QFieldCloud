@@ -186,8 +186,28 @@ class StatusChoiceField(serializers.ChoiceField):
 
 class DeltaSerializer(serializers.ModelSerializer):
     created_by = serializers.StringRelatedField()
-    status = serializers.CharField(source="last_status")
+    status = serializers.SerializerMethodField()
     output = serializers.CharField(source="last_output")
+
+    def get_status(self, obj):
+        if obj.last_status == Delta.Status.PENDING:
+            return "STATUS_PENDING"
+        elif obj.last_status == Delta.Status.STARTED:
+            return "STATUS_BUSY"
+        elif obj.last_status == Delta.Status.APPLIED:
+            return "STATUS_APPLIED"
+        elif obj.last_status == Delta.Status.CONFLICT:
+            return "STATUS_CONFLICT"
+        elif obj.last_status == Delta.Status.NOT_APPLIED:
+            return "STATUS_NOT_APPLIED"
+        elif obj.last_status == Delta.Status.ERROR:
+            return "STATUS_ERROR"
+        elif obj.last_status == Delta.Status.IGNORED:
+            return "STATUS_IGNORED"
+        elif obj.last_status == Delta.Status.UNPERMITTED:
+            return "STATUS_UNPERMITTED"
+        else:
+            return "STATUS_ERROR"
 
     class Meta:
         model = Delta
