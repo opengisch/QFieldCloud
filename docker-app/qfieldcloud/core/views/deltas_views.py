@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.db.utils import IntegrityError
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, utils
@@ -89,7 +90,11 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 utils.get_s3_bucket().upload_fileobj(request_file, key)
 
             logger.exception(err)
-            raise exceptions.DeltafileValidationError()
+
+            if isinstance(err, IntegrityError):
+                raise exceptions.DeltafileDuplicationError()
+            else:
+                raise exceptions.DeltafileValidationError()
 
         return Response()
 
