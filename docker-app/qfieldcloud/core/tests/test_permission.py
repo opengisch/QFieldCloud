@@ -10,7 +10,7 @@ from .utils import testdata_path
 logging.disable(logging.CRITICAL)
 
 
-class PermissionTestCase(APITestCase):
+class QfcTestCase(APITestCase):
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")

@@ -7,7 +7,7 @@ from qfieldcloud.core.models import Geodb, User
 logging.disable(logging.CRITICAL)
 
 
-class GeodbTestCase(unittest.TestCase):
+class QfcTestCase(unittest.TestCase):
     def setUp(self):
         pass
 

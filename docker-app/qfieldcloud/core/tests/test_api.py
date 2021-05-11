@@ -8,7 +8,7 @@ from rest_framework.test import APITransactionTestCase
 logging.disable(logging.CRITICAL)
 
 
-class StatusTestCase(APITransactionTestCase):
+class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         # Empty cache value
         cache.delete("status_results")

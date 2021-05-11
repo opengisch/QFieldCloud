@@ -16,7 +16,7 @@ from .utils import get_filename, testdata_path
 logging.disable(logging.CRITICAL)
 
 
-class QgisFileTestCase(APITransactionTestCase):
+class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")

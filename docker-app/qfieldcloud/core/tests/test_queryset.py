@@ -17,7 +17,7 @@ from rest_framework.test import APITestCase
 logging.disable(logging.CRITICAL)
 
 
-class QuerysetTestCase(APITestCase):
+class QfcTestCase(APITestCase):
     def setUp(self):
         # user1 owns p1 and p2
         # user1 owns o1
