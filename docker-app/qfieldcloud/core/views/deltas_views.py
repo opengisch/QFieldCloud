@@ -103,6 +103,14 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             else:
                 raise exceptions.DeltafileValidationError()
 
+        if not jobs.apply_deltas(
+            project_obj,
+            self.request.user,
+            project_file,
+            project_obj.overwrite_conflicts,
+        ):
+            logger.warning("Failed to start delta apply job.")
+
         return Response()
 
     def get_queryset(self):
