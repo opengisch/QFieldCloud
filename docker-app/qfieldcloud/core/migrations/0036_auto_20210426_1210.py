@@ -67,7 +67,7 @@ class Migration(migrations.Migration):
         ApplyJob.objects.all().delete()
 
         for delta in Delta.objects.all():
-            delta_apply_job = ApplyJob.objects.create(
+            apply_job = ApplyJob.objects.create(
                 project=delta.project,
                 created_by=delta.created_by,
                 overwrite_conflicts=True,
@@ -76,7 +76,7 @@ class Migration(migrations.Migration):
             )
 
             ApplyJobDelta.objects.create(
-                delta_apply_job=delta_apply_job,
+                apply_job=apply_job,
                 delta=delta,
                 status=delta.last_status,
                 feedback=delta.last_feedback,
@@ -241,7 +241,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "delta_apply_job",
+                    "apply_job",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         to="core.applyjob",

@@ -144,7 +144,7 @@ class ApplyJobDeltaInline(admin.TabularInline):
     )
 
     def job_id(self, instance):
-        return model_admin_url(instance.delta_apply_job)
+        return model_admin_url(instance.apply_job)
 
     def output__pre(self, instance):
         return format_pre_json(instance.output)

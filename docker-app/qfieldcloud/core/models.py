@@ -782,7 +782,7 @@ class ApplyJob(Job):
 
 
 class ApplyJobDelta(models.Model):
-    delta_apply_job = models.ForeignKey(ApplyJob, on_delete=models.CASCADE)
+    apply_job = models.ForeignKey(ApplyJob, on_delete=models.CASCADE)
     delta = models.ForeignKey(Delta, on_delete=models.CASCADE)
     status = models.CharField(
         choices=Delta.Status.choices, default=Delta.Status.PENDING, max_length=32
@@ -790,4 +790,4 @@ class ApplyJobDelta(models.Model):
     feedback = JSONField(null=True)
 
     def __str__(self):
-        return f"{self.delta_apply_job_id}:{self.delta_id}"
+        return f"{self.apply_job_id}:{self.delta_id}"

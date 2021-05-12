@@ -137,7 +137,7 @@ def get_deltas_to_apply_list(job_id: str) -> Dict[str, Any]:
             SELECT array_agg(delta_id) as delta_ids
             FROM core_applyjobdelta dajd
             WHERE
-              delta_apply_job_id = %s
+              apply_job_id = %s
         """,
         (job_id,),
     )
@@ -168,7 +168,7 @@ def update_deltas(
                 -- updated_at = now(),
                 {data}
             WHERE TRUE
-                AND delta_apply_job_id = {job_id}
+                AND apply_job_id = {job_id}
                 AND delta_id IN ({delta_ids})
         """
     ).format(
