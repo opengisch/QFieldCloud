@@ -13,9 +13,9 @@ from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
 from qfieldcloud.core import exceptions, utils
 from qfieldcloud.core.models import (
+    ApplyJob,
+    ApplyJobDelta,
     Delta,
-    DeltaApplyJob,
-    DeltaApplyJobDelta,
     ExportJob,
     Geodb,
     Organization,
@@ -98,7 +98,7 @@ class ProjectAdmin(admin.ModelAdmin):
     readonly_fields = ("storage_size",)
 
 
-class DeltaApplyJobAdmin(admin.ModelAdmin):
+class ApplyJobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "project__owner",
@@ -128,8 +128,8 @@ class DeltaApplyJobAdmin(admin.ModelAdmin):
         return False
 
 
-class DeltaApplyJobDeltaInline(admin.TabularInline):
-    model = DeltaApplyJobDelta
+class ApplyJobDeltaInline(admin.TabularInline):
+    model = ApplyJobDelta
 
     readonly_fields = (
         "job_id",
@@ -203,7 +203,7 @@ class DeltaAdmin(admin.ModelAdmin):
     )
 
     inlines = [
-        DeltaApplyJobDeltaInline,
+        ApplyJobDeltaInline,
     ]
 
     formfield_overrides = {JSONField: {"widget": PrettyJSONWidget}}
@@ -357,7 +357,7 @@ class GeodbAdmin(admin.ModelAdmin):
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Project, ProjectAdmin)
-admin.site.register(DeltaApplyJob, DeltaApplyJobAdmin)
+admin.site.register(ApplyJob, ApplyJobAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(ExportJob, ExportJobAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)

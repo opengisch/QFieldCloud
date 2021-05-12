@@ -1,7 +1,7 @@
 import logging
 
 import django_rq
-from qfieldcloud.core.models import Delta, DeltaApplyJob
+from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def apply_deltas(
         f"Requested apply_deltas on {project} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
     )
 
-    delta_apply_job = DeltaApplyJob.objects.create(
+    delta_apply_job = ApplyJob.objects.create(
         project=project, created_by=user, overwrite_conflicts=overwrite_conflicts
     )
     pending_deltas = Delta.objects.filter(last_status__in=[Delta.Status.PENDING])

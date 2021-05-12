@@ -61,13 +61,13 @@ class Migration(migrations.Migration):
 
     def refactor_deltas_forward(apps, schema_editor):
         Delta = apps.get_model("core", "Delta")
-        DeltaApplyJob = apps.get_model("core", "DeltaApplyJob")
-        DeltaApplyJobDelta = apps.get_model("core", "DeltaApplyJobDelta")
+        ApplyJob = apps.get_model("core", "ApplyJob")
+        ApplyJobDelta = apps.get_model("core", "ApplyJobDelta")
 
-        DeltaApplyJob.objects.all().delete()
+        ApplyJob.objects.all().delete()
 
         for delta in Delta.objects.all():
-            delta_apply_job = DeltaApplyJob.objects.create(
+            delta_apply_job = ApplyJob.objects.create(
                 project=delta.project,
                 created_by=delta.created_by,
                 overwrite_conflicts=True,
@@ -75,7 +75,7 @@ class Migration(migrations.Migration):
                 type="delta_apply",
             )
 
-            DeltaApplyJobDelta.objects.create(
+            ApplyJobDelta.objects.create(
                 delta_apply_job=delta_apply_job,
                 delta=delta,
                 status=delta.last_status,
@@ -179,7 +179,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RunPython(add_export_jobs_forward, migrations.RunPython.noop),
         migrations.CreateModel(
-            name="DeltaApplyJob",
+            name="ApplyJob",
             fields=[
                 (
                     "job_ptr",
@@ -196,7 +196,7 @@ class Migration(migrations.Migration):
             bases=("core.job",),
         ),
         migrations.AddField(
-            model_name="deltaapplyjob",
+            model_name="applyjob",
             name="overwrite_conflicts",
             field=models.BooleanField(
                 default=True,
@@ -205,7 +205,7 @@ class Migration(migrations.Migration):
             preserve_default=False,
         ),
         migrations.CreateModel(
-            name="DeltaApplyJobDelta",
+            name="ApplyJobDelta",
             fields=[
                 (
                     "id",
@@ -244,17 +244,15 @@ class Migration(migrations.Migration):
                     "delta_apply_job",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="core.deltaapplyjob",
+                        to="core.applyjob",
                     ),
                 ),
             ],
         ),
         migrations.AddField(
-            model_name="deltaapplyjob",
+            model_name="applyjob",
             name="deltas_to_apply",
-            field=models.ManyToManyField(
-                through="core.DeltaApplyJobDelta", to="core.Delta"
-            ),
+            field=models.ManyToManyField(through="core.ApplyJobDelta", to="core.Delta"),
         ),
         migrations.RenameField(
             model_name="delta",

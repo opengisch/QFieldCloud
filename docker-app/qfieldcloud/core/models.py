@@ -763,11 +763,11 @@ class ExportJob(Job):
         return super().save(*args, **kwargs)
 
 
-class DeltaApplyJob(Job):
+class ApplyJob(Job):
 
     deltas_to_apply = models.ManyToManyField(
         to=Delta,
-        through="DeltaApplyJobDelta",
+        through="ApplyJobDelta",
     )
 
     overwrite_conflicts = models.BooleanField(
@@ -781,8 +781,8 @@ class DeltaApplyJob(Job):
         return super().save(*args, **kwargs)
 
 
-class DeltaApplyJobDelta(models.Model):
-    delta_apply_job = models.ForeignKey(DeltaApplyJob, on_delete=models.CASCADE)
+class ApplyJobDelta(models.Model):
+    delta_apply_job = models.ForeignKey(ApplyJob, on_delete=models.CASCADE)
     delta = models.ForeignKey(Delta, on_delete=models.CASCADE)
     status = models.CharField(
         choices=Delta.Status.choices, default=Delta.Status.PENDING, max_length=32

@@ -76,7 +76,7 @@ def get_job_row(job_id: str) -> Dict[str, Any]:
         """
             SELECT *
             FROM core_job j
-            LEFT JOIN core_deltaapplyjob daj ON daj.job_ptr_id = j.id
+            LEFT JOIN core_applyjob daj ON daj.job_ptr_id = j.id
             WHERE
               id = %s
         """,
@@ -135,7 +135,7 @@ def get_deltas_to_apply_list(job_id: str) -> Dict[str, Any]:
     cur.execute(
         """
             SELECT array_agg(delta_id) as delta_ids
-            FROM core_deltaapplyjobdelta dajd
+            FROM core_applyjobdelta dajd
             WHERE
               delta_apply_job_id = %s
         """,
@@ -157,13 +157,13 @@ def update_deltas(
     status: DeltaStatus,
     feedback: Optional[str] = None,
 ) -> List[Dict]:
-    update_deltaapplyjobdelta_data = {
+    update_applyjobdelta_data = {
         "status": status.value,
         "feedback": Json(feedback),
     }
-    sql_deltaapplyjobdelta_query = sql.SQL(
+    sql_applyjobdelta_query = sql.SQL(
         """
-            UPDATE core_deltaapplyjobdelta
+            UPDATE core_applyjobdelta
             SET
                 -- updated_at = now(),
                 {data}
@@ -175,7 +175,7 @@ def update_deltas(
         job_id=sql.Literal(job_id),
         data=sql.SQL(", ").join(
             sql.Composed([sql.Identifier(k), sql.SQL(" = "), sql.Placeholder(k)])
-            for k in update_deltaapplyjobdelta_data.keys()
+            for k in update_applyjobdelta_data.keys()
         ),
         delta_ids=sql.SQL(", ").join(
             map(lambda uuid: sql.Literal(str(uuid)), delta_ids)
@@ -209,7 +209,7 @@ def update_deltas(
 
     conn = get_django_db_connection()
     with conn.cursor(cursor_factory=DictCursor) as cur:
-        cur.execute(sql_deltaapplyjobdelta_query, update_deltaapplyjobdelta_data)
+        cur.execute(sql_applyjobdelta_query, update_applyjobdelta_data)
         cur.execute(sql_delta_query, update_delta_data)
         deltas = cur.fetchall()
         conn.commit()
