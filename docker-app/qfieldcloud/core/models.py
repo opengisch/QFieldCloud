@@ -687,7 +687,7 @@ class Delta(models.Model):
         default=Status.PENDING,
         max_length=32,
     )
-    last_output = JSONField(null=True)
+    last_feedback = JSONField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(

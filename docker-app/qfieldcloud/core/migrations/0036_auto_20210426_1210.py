@@ -67,7 +67,7 @@ class Migration(migrations.Migration):
         DeltaApplyJob.objects.all().delete()
 
         for delta in Delta.objects.all():
-            delta_apply_job = DeltaApplyJob(
+            delta_apply_job = DeltaApplyJob.objects.create(
                 project=delta.project,
                 created_by=delta.created_by,
                 overwrite_conflicts=True,
@@ -79,7 +79,7 @@ class Migration(migrations.Migration):
                 delta_apply_job=delta_apply_job,
                 delta=delta,
                 status=delta.last_status,
-                feedback=delta.last_output,
+                feedback=delta.last_feedback,
             )
 
     dependencies = [
@@ -260,7 +260,7 @@ class Migration(migrations.Migration):
         migrations.RenameField(
             model_name="delta",
             old_name="output",
-            new_name="last_output",
+            new_name="last_feedback",
         ),
         migrations.AddField(
             model_name="delta",

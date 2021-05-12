@@ -187,7 +187,7 @@ class StatusChoiceField(serializers.ChoiceField):
 class DeltaSerializer(serializers.ModelSerializer):
     created_by = serializers.StringRelatedField()
     status = serializers.SerializerMethodField()
-    output = serializers.CharField(source="last_output")
+    output = serializers.CharField(source="last_feedback")
 
     def get_status(self, obj):
         if obj.last_status == Delta.Status.PENDING:
@@ -220,7 +220,7 @@ class DeltaSerializer(serializers.ModelSerializer):
             "status",
             "output",
             "last_status",
-            "last_output",
+            "last_feedback",
             "content",
         )
 

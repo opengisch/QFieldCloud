@@ -184,7 +184,7 @@ class DeltaAdmin(admin.ModelAdmin):
     readonly_fields = (
         "project",
         "deltafile_id",
-        "last_output__pre",
+        "last_feedback__pre",
         "created_by",
         "created_at",
         "updated_at",
@@ -197,7 +197,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "content",
-        "last_output__pre",
+        "last_feedback__pre",
     )
     search_fields = (
         "project__name__iexact",
@@ -219,8 +219,8 @@ class DeltaAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    def last_output__pre(self, instance):
-        return format_pre_json(instance.last_output)
+    def last_feedback__pre(self, instance):
+        return format_pre_json(instance.last_feedback)
 
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)

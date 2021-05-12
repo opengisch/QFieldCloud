@@ -184,7 +184,7 @@ def update_deltas(
 
     update_delta_data = {
         "last_status": status.value,
-        "last_output": Json(feedback),
+        "last_feedback": Json(feedback),
     }
 
     sql_delta_query = sql.SQL(
