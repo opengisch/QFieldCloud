@@ -54,6 +54,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     def post(self, request, projectid):
 
         project_obj = Project.objects.get(id=projectid)
+        project_file = utils.get_qgis_project_file(projectid)
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
@@ -67,6 +68,9 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             deltafile_id = deltafile_json["id"]
 
             deltas = deltafile_json.get("deltas", [])
+
+            if project_file is None:
+                raise exceptions.NoQGISProjectError()
 
             with transaction.atomic():
                 for delta in deltas:
