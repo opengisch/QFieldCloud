@@ -234,7 +234,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("feedback", models.JSONField(null=True)),
-                ("qgis_output", models.TextField(null=True)),
                 (
                     "delta",
                     models.ForeignKey(

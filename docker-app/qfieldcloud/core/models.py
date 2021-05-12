@@ -788,7 +788,6 @@ class DeltaApplyJobDelta(models.Model):
         choices=Delta.Status.choices, default=Delta.Status.PENDING, max_length=32
     )
     feedback = JSONField(null=True)
-    qgis_output = models.TextField(null=True)
 
     def __str__(self):
         return f"{self.delta_apply_job_id}:{self.delta_id}"

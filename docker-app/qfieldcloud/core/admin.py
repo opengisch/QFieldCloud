@@ -135,14 +135,12 @@ class DeltaApplyJobDeltaInline(admin.TabularInline):
         "job_id",
         "status",
         "output__pre",
-        "qgis_output__pre",
     )
 
     fields = (
         "job_id",
         "status",
         "output__pre",
-        "qgis_output__pre",
     )
 
     def job_id(self, instance):
@@ -150,9 +148,6 @@ class DeltaApplyJobDeltaInline(admin.TabularInline):
 
     def output__pre(self, instance):
         return format_pre_json(instance.output)
-
-    def qgis_output__pre(self, instance):
-        return format_pre_json(instance.qgis_output)
 
     def has_add_permission(self, request, obj):
         return False
