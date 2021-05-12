@@ -137,6 +137,8 @@ Output:
 
             update_deltas(job_id, [delta_id], status, feedback)
 
+    update_job(job_id, JobStatus.FINISHED, output=output.decode("utf-8"))
+
     return exit_code, output.decode("utf-8")
 
 
