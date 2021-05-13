@@ -1,4 +1,5 @@
-from django.contrib.auth import get_user_model
+import logging
+
 from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
     Organization,
@@ -8,14 +9,15 @@ from qfieldcloud.core.models import (
     ProjectQueryset,
     Team,
     TeamMember,
+    User,
 )
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-User = get_user_model()
+logging.disable(logging.CRITICAL)
 
 
-class QuerysetTestCase(APITestCase):
+class QfcTestCase(APITestCase):
     def setUp(self):
         # user1 owns p1 and p2
         # user1 owns o1

@@ -101,6 +101,22 @@ class DeltafileValidationError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
+class DeltafileDuplicationError(QFieldCloudException):
+    """Raised when a deltafile with the same id has already been uploaded"""
+
+    code = "duplicate_deltafile"
+    message = "Deltafile already uploaded"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
+class NoDeltasToApplyError(QFieldCloudException):
+    """Raised when a deltafile validation fails"""
+
+    code = "no_deltas_to_apply"
+    message = "No deltas to apply"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
 class NoQGISProjectError(QFieldCloudException):
     """Raised when a QFieldCloud doesn't contain a QGIS project that is needed
     for the requested operation"""

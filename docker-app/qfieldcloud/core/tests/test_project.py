@@ -1,13 +1,14 @@
-from django.contrib.auth import get_user_model
-from qfieldcloud.core.models import Project, ProjectCollaborator
+import logging
+
+from qfieldcloud.core.models import Project, ProjectCollaborator, User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-User = get_user_model()
+logging.disable(logging.CRITICAL)
 
 
-class ProjectTestCase(APITestCase):
+class QfcTestCase(APITestCase):
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")

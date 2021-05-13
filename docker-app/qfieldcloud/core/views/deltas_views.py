@@ -3,11 +3,14 @@ import logging
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.utils import IntegrityError
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
 from qfieldcloud.core.serializers import DeltaSerializer
+from qfieldcloud.core.utils2 import jobs
 from rest_framework import generics, permissions, views
 from rest_framework.response import Response
 
@@ -51,6 +54,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     def post(self, request, projectid):
 
         project_obj = Project.objects.get(id=projectid)
+        project_file = utils.get_qgis_project_file(projectid)
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
@@ -64,21 +68,26 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             deltafile_id = deltafile_json["id"]
 
             deltas = deltafile_json.get("deltas", [])
-            for delta in deltas:
-                delta_obj = Delta(
-                    id=delta["uuid"],
-                    deltafile_id=deltafile_id,
-                    project=project_obj,
-                    content=delta,
-                    created_by=self.request.user,
-                )
 
-                if permissions_utils.can_create_delta(self.request.user, delta_obj):
-                    delta_obj.status = Delta.STATUS_PENDING
-                else:
-                    delta_obj.status = Delta.STATUS_UNPERMITTED
+            if project_file is None:
+                raise exceptions.NoQGISProjectError()
 
-                delta_obj.save(force_insert=True)
+            with transaction.atomic():
+                for delta in deltas:
+                    delta_obj = Delta(
+                        id=delta["uuid"],
+                        deltafile_id=deltafile_id,
+                        project=project_obj,
+                        content=delta,
+                        created_by=self.request.user,
+                    )
+
+                    if permissions_utils.can_create_delta(self.request.user, delta_obj):
+                        delta_obj.last_status = Delta.Status.PENDING
+                    else:
+                        delta_obj.last_status = Delta.Status.UNPERMITTED
+
+                    delta_obj.save(force_insert=True)
 
         except Exception as err:
             if request_file:
@@ -88,7 +97,21 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 utils.get_s3_bucket().upload_fileobj(request_file, key)
 
             logger.exception(err)
-            raise exceptions.DeltafileValidationError()
+
+            if isinstance(err, IntegrityError):
+                raise exceptions.DeltafileDuplicationError()
+            elif isinstance(err, exceptions.NoQGISProjectError):
+                raise err
+            else:
+                raise exceptions.DeltafileValidationError()
+
+        if not jobs.apply_deltas(
+            project_obj,
+            self.request.user,
+            project_file,
+            project_obj.overwrite_conflicts,
+        ):
+            logger.warning("Failed to start delta apply job.")
 
         return Response()
 
@@ -136,8 +159,12 @@ class ApplyView(views.APIView):
         if project_file is None:
             raise exceptions.NoQGISProjectError()
 
-        utils.apply_deltas(
-            str(project_obj.id), project_file, project_obj.overwrite_conflicts
-        )
+        if not jobs.apply_deltas(
+            project_obj,
+            self.request.user,
+            project_file,
+            project_obj.overwrite_conflicts,
+        ):
+            logger.warning("Failed to start delta apply job.")
 
         return Response()

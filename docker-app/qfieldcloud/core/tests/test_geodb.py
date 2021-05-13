@@ -1,13 +1,13 @@
+import logging
 import unittest
 
 import psycopg2
-from django.contrib.auth import get_user_model
-from qfieldcloud.core.models import Geodb
+from qfieldcloud.core.models import Geodb, User
 
-User = get_user_model()
+logging.disable(logging.CRITICAL)
 
 
-class GeodbTestCase(unittest.TestCase):
+class QfcTestCase(unittest.TestCase):
     def setUp(self):
         pass
 

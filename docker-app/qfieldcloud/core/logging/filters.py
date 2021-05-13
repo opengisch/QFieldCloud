@@ -19,7 +19,6 @@ def skip_logging(func):
 
 class SkipLoggingFilter(logging.Filter):
     def filter(self, record):
-        print(self.extra_from_record(record))
         return not getattr(record, "skip_logging", False)
 
     def extra_from_record(self, record):

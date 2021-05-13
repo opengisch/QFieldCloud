@@ -1,22 +1,23 @@
+import logging
 import os
 import tempfile
 import time
 
 import psycopg2
 import requests
-from django.contrib.auth import get_user_model
 from django.http.response import HttpResponseRedirect
-from qfieldcloud.core.models import Geodb, Project
+from qfieldcloud.core.geodb_utils import delete_db_and_role
+from qfieldcloud.core.models import Geodb, Project, User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import testdata_path
 
-User = get_user_model()
+logging.disable(logging.CRITICAL)
 
 
-class QfieldFileTestCase(APITransactionTestCase):
+class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
@@ -29,6 +30,11 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
         )
+
+        try:
+            delete_db_and_role("test", self.user1.username)
+        except Exception:
+            pass
 
         self.geodb = Geodb.objects.create(
             user=self.user1,
@@ -96,8 +102,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -167,8 +173,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -220,8 +226,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -265,8 +271,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
@@ -324,8 +330,8 @@ class QfieldFileTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
+        for _ in range(10):
+            time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )

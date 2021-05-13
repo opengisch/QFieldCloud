@@ -218,10 +218,10 @@ def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
     if not can_apply_deltas(user, delta.project):
         return False
 
-    if delta.status not in (
-        Delta.STATUS_CONFLICT,
-        Delta.STATUS_NOT_APPLIED,
-        Delta.STATUS_ERROR,
+    if delta.last_status not in (
+        Delta.Status.CONFLICT,
+        Delta.Status.NOT_APPLIED,
+        Delta.Status.ERROR,
     ):
         return False
 
@@ -232,10 +232,10 @@ def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
     if not can_apply_deltas(user, delta.project):
         return False
 
-    if delta.status not in (
-        Delta.STATUS_CONFLICT,
-        Delta.STATUS_NOT_APPLIED,
-        Delta.STATUS_ERROR,
+    if delta.last_status not in (
+        Delta.Status.CONFLICT,
+        Delta.Status.NOT_APPLIED,
+        Delta.Status.ERROR,
     ):
         return False
 

@@ -1,22 +1,22 @@
 import filecmp
+import logging
 import tempfile
 import time
 
 import requests
-from django.contrib.auth import get_user_model
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import Project, User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import get_filename, testdata_path
 
-User = get_user_model()
+logging.disable(logging.CRITICAL)
 
 
-class QgisFileTestCase(APITransactionTestCase):
+class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")

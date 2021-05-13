@@ -13,8 +13,10 @@ from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
 from qfieldcloud.core import exceptions, utils
 from qfieldcloud.core.models import (
+    ApplyJob,
+    ApplyJobDelta,
     Delta,
-    Exportation,
+    ExportJob,
     Geodb,
     Organization,
     OrganizationMember,
@@ -25,6 +27,7 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+from qfieldcloud.core.utils2 import jobs
 
 
 class PrettyJSONWidget(widgets.Textarea):
@@ -95,18 +98,76 @@ class ProjectAdmin(admin.ModelAdmin):
     readonly_fields = ("storage_size",)
 
 
+class ApplyJobAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "project__owner",
+        "project__name",
+        "status",
+        "created_at",
+        "updated_at",
+    )
+
+    def project__owner(self, instance):
+        return model_admin_url(instance.project.owner)
+
+    project__owner.admin_order_field = "project__owner"
+
+    def project__name(self, instance):
+        return model_admin_url(instance.project, instance.project.name)
+
+    project__name.admin_order_field = "project__name"
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class ApplyJobDeltaInline(admin.TabularInline):
+    model = ApplyJobDelta
+
+    readonly_fields = (
+        "job_id",
+        "status",
+        "output__pre",
+    )
+
+    fields = (
+        "job_id",
+        "status",
+        "output__pre",
+    )
+
+    def job_id(self, instance):
+        return model_admin_url(instance.apply_job)
+
+    def output__pre(self, instance):
+        return format_pre_json(instance.output)
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj):
+        return False
+
+
 class DeltaAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "deltafile_id",
         "project__owner",
         "project__name",
-        "status",
+        "last_status",
         "created_by",
         "created_at",
         "updated_at",
     )
-    list_filter = ("status",)
+    list_filter = ("last_status",)
 
     actions = (
         "set_status_pending",
@@ -118,7 +179,7 @@ class DeltaAdmin(admin.ModelAdmin):
     readonly_fields = (
         "project",
         "deltafile_id",
-        "output__pre",
+        "last_feedback__pre",
         "created_by",
         "created_at",
         "updated_at",
@@ -126,12 +187,12 @@ class DeltaAdmin(admin.ModelAdmin):
     fields = (
         "project",
         "deltafile_id",
-        "status",
+        "last_status",
         "created_by",
         "created_at",
         "updated_at",
         "content",
-        "output__pre",
+        "last_feedback__pre",
     )
     search_fields = (
         "project__name__iexact",
@@ -141,6 +202,10 @@ class DeltaAdmin(admin.ModelAdmin):
         "id",
     )
 
+    inlines = [
+        ApplyJobDeltaInline,
+    ]
+
     formfield_overrides = {JSONField: {"widget": PrettyJSONWidget}}
 
     change_form_template = "admin/delta_change_form.html"
@@ -149,8 +214,8 @@ class DeltaAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    def output__pre(self, instance):
-        return format_pre_json(instance.output)
+    def last_feedback__pre(self, instance):
+        return format_pre_json(instance.last_feedback)
 
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
@@ -163,24 +228,27 @@ class DeltaAdmin(admin.ModelAdmin):
     project__name.admin_order_field = "project__name"
 
     def set_status_pending(self, request, queryset):
-        queryset.update(status=Delta.STATUS_PENDING)
+        queryset.update(status=Delta.Status.PENDING)
 
     def set_status_ignored(self, request, queryset):
-        queryset.update(status=Delta.STATUS_IGNORED)
+        queryset.update(status=Delta.Status.IGNORED)
 
     def set_status_unpermitted(self, request, queryset):
-        queryset.update(status=Delta.STATUS_UNPERMITTED)
+        queryset.update(status=Delta.Status.UNPERMITTED)
 
     def response_change(self, request, delta):
         if "_apply_delta_btn" in request.POST:
             project_file = utils.get_qgis_project_file(delta.project.id)
 
-            utils.apply_deltas(
-                str(delta.project.id),
+            if not jobs.apply_deltas(
+                delta.project,
+                request.user,
                 project_file,
                 delta.project.overwrite_conflicts,
                 delta_ids=[str(delta.id)],
-            )
+            ):
+                self.message_user(request, "No deltas to apply")
+                raise exceptions.NoDeltasToApplyError()
 
             if project_file is None:
                 self.message_user(request, "Missing project file")
@@ -196,7 +264,7 @@ class DeltaAdmin(admin.ModelAdmin):
         return super().response_change(request, delta)
 
 
-class ExportationAdmin(admin.ModelAdmin):
+class ExportJobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "project__owner",
@@ -289,8 +357,9 @@ class GeodbAdmin(admin.ModelAdmin):
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Project, ProjectAdmin)
+admin.site.register(ApplyJob, ApplyJobAdmin)
 admin.site.register(Delta, DeltaAdmin)
-admin.site.register(Exportation, ExportationAdmin)
+admin.site.register(ExportJob, ExportJobAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
 admin.site.register(Geodb, GeodbAdmin)
 

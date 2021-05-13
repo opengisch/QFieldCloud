@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 
-class QgisTestCase(unittest.TestCase):
+class QfcTestCase(unittest.TestCase):
     def test_export(self):
         project_directory = self.data_directory_path("simple_project")
         output_directory = tempfile.mkdtemp()
