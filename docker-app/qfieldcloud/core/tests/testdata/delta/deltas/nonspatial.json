@@ -29,12 +29,12 @@
         "method": "patch",
         "new": {
           "attributes": {
-            "col1": "bar"
+            "col1": "qux"
           }
         },
         "old": {
           "attributes": {
-            "col1": "qux"
+            "col1": "bar"
           }
         }
       }
