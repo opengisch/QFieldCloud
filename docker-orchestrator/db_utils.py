@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -63,7 +64,8 @@ def get_django_db_connection():
             host=os.environ.get("POSTGRES_HOST"),
             port=os.environ.get("POSTGRES_PORT"),
         )
-    except psycopg2.OperationalError:
+    except psycopg2.OperationalError as err:
+        logging.exception(err)
         return None
 
     return conn

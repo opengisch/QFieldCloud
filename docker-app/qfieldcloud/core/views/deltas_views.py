@@ -100,6 +100,8 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
             if isinstance(err, IntegrityError):
                 raise exceptions.DeltafileDuplicationError()
+            elif isinstance(err, exceptions.NoQGISProjectError):
+                raise err
             else:
                 raise exceptions.DeltafileValidationError()
 
