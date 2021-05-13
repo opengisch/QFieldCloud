@@ -163,6 +163,6 @@ class ApplyView(views.APIView):
             project_file,
             project_obj.overwrite_conflicts,
         ):
-            raise exceptions.NoDeltasToApplyError()
+            logger.warning("Failed to start delta apply job.")
 
         return Response()
