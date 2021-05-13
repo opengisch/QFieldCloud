@@ -750,7 +750,6 @@ class Job(models.Model):
     status = models.CharField(
         max_length=32, choices=Status.choices, default=Status.QUEUED
     )
-    exportlog = JSONField(null=True)
     output = models.TextField(null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -758,6 +757,8 @@ class Job(models.Model):
 
 
 class ExportJob(Job):
+    exportlog = JSONField(null=True)
+
     def save(self, *args, **kwargs):
         self.type = self.Type.EXPORT
         return super().save(*args, **kwargs)

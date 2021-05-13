@@ -97,17 +97,14 @@ def get_job_row(job_id: str) -> Dict[str, Any]:
 def update_job(job_id, status, exportlog=None, output=None):
     """Set the deltafile status and output into the database record """
 
-    update_data = {
+    update_job_data = {
         "status": status.value,
     }
 
-    if exportlog is not None:
-        update_data["exportlog"] = json.dumps(exportlog)
-
     if output is not None:
-        update_data["output"] = output
+        update_job_data["output"] = output
 
-    sql_query = sql.SQL(
+    sql_job_query = sql.SQL(
         """
             UPDATE core_job
             SET
@@ -118,15 +115,41 @@ def update_job(job_id, status, exportlog=None, output=None):
     ).format(
         data=sql.SQL(", ").join(
             sql.Composed([sql.Identifier(k), sql.SQL(" = "), sql.Placeholder(k)])
-            for k in update_data.keys()
+            for k in update_job_data.keys()
         ),
         id=sql.Placeholder("id"),
     )
-    update_data.update(id=job_id)
+    update_job_data.update(id=job_id)
+
+    update_export_job_data = None
+    sql_export_job_query = None
+    if exportlog is not None:
+        update_export_job_data = {
+            "exportlog": json.dumps(exportlog),
+        }
+        sql_export_job_query = sql.SQL(
+            """
+                UPDATE core_exportjob
+                SET
+                    {data}
+                WHERE job_ptr_id = {id}
+            """
+        ).format(
+            data=sql.SQL(", ").join(
+                sql.Composed([sql.Identifier(k), sql.SQL(" = "), sql.Placeholder(k)])
+                for k in update_export_job_data.keys()
+            ),
+            id=sql.Placeholder("id"),
+        )
+        update_export_job_data.update(id=job_id)
 
     conn = get_django_db_connection()
     with conn.cursor() as cur:
-        cur.execute(sql_query, update_data)
+        cur.execute(sql_job_query, update_job_data)
+
+        if sql_export_job_query:
+            cur.execute(sql_export_job_query, update_export_job_data)
+
         conn.commit()
         conn.close()
 

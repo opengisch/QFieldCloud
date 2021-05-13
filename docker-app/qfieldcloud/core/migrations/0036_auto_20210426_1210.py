@@ -33,7 +33,14 @@ class Migration(migrations.Migration):
         ExportJob = apps.get_model("core", "ExportJob")
 
         for job in Job.objects.all():
-            ExportJob.objects.create(pk=job.pk)
+            ExportJob.objects.create(pk=job.pk, exportlog=job.exportlog)
+
+    def add_export_jobs_backward(apps, schema_editor):
+        Job = apps.get_model("core", "Job")
+        ExportJob = apps.get_model("core", "ExportJob")
+
+        for export_job in ExportJob.objects.all():
+            Job.objects.filter(pk=export_job.pk).update(exportlog=export_job.exportlog)
 
     def refactor_deltas_status_forward(apps, schema_editor):
         Delta = apps.get_model("core", "Delta")
@@ -174,10 +181,18 @@ class Migration(migrations.Migration):
                         serialize=False,
                         to="core.job",
                     ),
-                )
+                ),
+                (
+                    "exportlog",
+                    models.JSONField(null=True),
+                ),
             ],
         ),
-        migrations.RunPython(add_export_jobs_forward, migrations.RunPython.noop),
+        migrations.RunPython(add_export_jobs_forward, add_export_jobs_backward),
+        migrations.RemoveField(
+            model_name="job",
+            name="exportlog",
+        ),
         migrations.CreateModel(
             name="ApplyJob",
             fields=[
