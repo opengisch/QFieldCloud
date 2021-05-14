@@ -66,11 +66,17 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             utils.get_deltafile_schema_validator().validate(deltafile_json)
 
             deltafile_id = deltafile_json["id"]
+            deltafile_projectid = deltafile_json["project"]
 
             deltas = deltafile_json.get("deltas", [])
 
             if project_file is None:
                 raise exceptions.NoQGISProjectError()
+
+            if deltafile_projectid != str(projectid):
+                exc = exceptions.DeltafileValidationError()
+                exc.message = f"Deltafile's project id ({deltafile_projectid}) doesn't match URL parameter project id ({project_obj.id})."
+                raise exc
 
             with transaction.atomic():
                 for delta in deltas:

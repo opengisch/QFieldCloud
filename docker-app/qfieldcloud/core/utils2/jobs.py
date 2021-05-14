@@ -22,6 +22,7 @@ def apply_deltas(
         project=project, created_by=user, overwrite_conflicts=overwrite_conflicts
     )
     pending_deltas = Delta.objects.filter(
+        project=project,
         last_status__in=[
             # do not include deltas with NOT_APPLIED status, as it is a final status
             Delta.Status.PENDING,

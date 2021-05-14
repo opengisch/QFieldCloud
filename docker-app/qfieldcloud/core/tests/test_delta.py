@@ -38,7 +38,10 @@ class QfcTestCase(APITransactionTestCase):
 
         # Create a project
         self.project1 = Project.objects.create(
-            name="project1", is_public=False, owner=self.user1
+            id="e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
+            name="project1",
+            is_public=False,
+            owner=self.user1,
         )
         self.project1.save()
 
@@ -178,6 +181,10 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         self.upload_project_files()
 
+        bucket = utils.get_s3_bucket()
+        prefix = utils.safe_join(f"projects/{self.project1.id}/deltas/")
+        wrong_deltas_before = list(bucket.objects.filter(Prefix=prefix))
+
         # Push a deltafile
         delta_file = testdata_path("delta/deltas/not_schema_valid.json")
         response = self.client.post(
@@ -188,11 +195,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertFalse(status.is_success(response.status_code))
 
         # check it is uploaded
-        bucket = utils.get_s3_bucket()
-        prefix = utils.safe_join(f"projects/{self.project1.id}/deltas/")
         wrong_deltas = list(bucket.objects.filter(Prefix=prefix))
 
-        self.assertEqual(len(wrong_deltas), 1)
+        # TODO : cleanup buckets before in setUp so tests are completely independent
+        self.assertEqual(len(wrong_deltas), len(wrong_deltas_before) + 1)
 
         with open(delta_file, "rb") as f:
             self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
