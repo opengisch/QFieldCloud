@@ -21,7 +21,7 @@ services:
       - ${HOST_POSTGRES_PORT}:5432
     logging: *default-logging
 
-  app:
+  app: &default-django
     build:
       context: ./docker-app
     restart: unless-stopped
@@ -61,6 +61,18 @@ services:
       EMAIL_HOST_USER: ${EMAIL_HOST_USER}
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      # Settings below are specific to orchestrator
+      # TODO : move this to the orchestrator service and keep things DRY (yaml syntax expert needed)
+      REDIS_HOST: ${REDIS_HOST}
+      TMP_DIRECTORY: ${TMP_DIRECTORY} # TODO : how can we both need that variable inside and outside the container ?
+      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
+      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
+      HOST_POSTGRES_PORT: ${HOST_POSTGRES_PORT}  # is this used ?
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
     depends_on:
       - db
     logging: *default-logging
@@ -100,35 +112,16 @@ services:
     logging: *default-logging
 
   orchestrator:
-    build:
-      context: ./docker-orchestrator
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      HOST_POSTGRES_PORT: ${HOST_POSTGRES_PORT}
-      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
-      SENTRY_DSN: ${SENTRY_DSN}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID}
-      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY}
-      STORAGE_BUCKET_NAME: ${STORAGE_BUCKET_NAME}
-      STORAGE_REGION_NAME: ${STORAGE_REGION_NAME}
-      STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL}
-      TMP_DIRECTORY: ${TMP_DIRECTORY}
-      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
+    <<: *default-django
+    command: python orchestrator/worker.py
+    user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
+      # TODO : how can we reuse static/media volumes from default-django to keep things DRY (yaml syntax expert needed)
+      - static_volume:/usr/src/app/staticfiles
+      - media_volume:/usr/src/app/mediafiles/
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${LOG_DIRECTORY}:/log
-      - ${TMP_DIRECTORY}:/tmp
-    depends_on:
-      - redis
-      - db
+      - ${LOG_DIRECTORY}:/log # TODO : how can we both need that variable inside and outside the container ?
+      - ${TMP_DIRECTORY}:/tmp # TODO : how can we both need that variable inside and outside the container ?
     logging: *default-logging
 
 volumes:
