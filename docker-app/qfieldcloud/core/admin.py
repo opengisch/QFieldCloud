@@ -197,8 +197,8 @@ class DeltaAdmin(admin.ModelAdmin):
     search_fields = (
         "project__name__iexact",
         "project__owner__username__iexact",
-        "output__icontains",
-        "deltafile_id",
+        "last_feedback__icontains",
+        "deltafile_id__startswith",
         "id",
     )
 
