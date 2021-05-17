@@ -41,7 +41,7 @@ class User(AbstractUser):
 
     remaining_invitations = models.PositiveIntegerField(
         default=3,
-        help_text="Remaining invitations that can be sent by the user himself.",
+        help_text=_("Remaining invitations that can be sent by the user himself."),
     )
 
     has_newsletter_subscription = models.BooleanField(default=False)
@@ -132,7 +132,7 @@ class UserAccount(models.Model):
     db_limit_mb = models.PositiveIntegerField(default=25)
     is_geodb_enabled = models.BooleanField(
         default=False,
-        help_text="Whether the account has the option to create a GeoDB.",
+        help_text=_("Whether the account has the option to create a GeoDB."),
     )
     synchronizations_per_months = models.PositiveIntegerField(default=30)
     bio = models.CharField(max_length=255, default="", blank=True)
@@ -551,7 +551,9 @@ class Project(models.Model):
     description = models.TextField(blank=True)
     is_public = models.BooleanField(
         default=False,
-        help_text="Projects that are marked as public would be visible and editable to anyone.",
+        help_text=_(
+            "Projects that are marked as public would be visible and editable to anyone."
+        ),
     )
     owner = models.ForeignKey(
         User,
@@ -559,6 +561,9 @@ class Project(models.Model):
         related_name="projects",
         limit_choices_to=models.Q(
             user_type__in=[User.TYPE_USER, User.TYPE_ORGANIZATION]
+        ),
+        help_text=_(
+            "The project owner can be either you or any of the organization you are member of."
         ),
     )
     created_at = models.DateTimeField(auto_now_add=True)
