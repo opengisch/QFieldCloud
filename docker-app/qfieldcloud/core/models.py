@@ -136,7 +136,7 @@ class UserAccount(models.Model):
     )
     synchronizations_per_months = models.PositiveIntegerField(default=30)
     bio = models.CharField(max_length=255, default="", blank=True)
-    workplace = models.CharField(max_length=255, default="", blank=True)
+    company = models.CharField(max_length=255, default="", blank=True)
     location = models.CharField(max_length=255, default="", blank=True)
     twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
