@@ -53,8 +53,10 @@ def invite_user_by_email(
     try:
         invite = Invitation.create(email, inviter=inviter)
     except IntegrityError:
-        return False, _(
-            f"{email} has already been invited to create a QFieldCloud account."
+        return (
+            False,
+            _("%(email)s has already been invited to create a QFieldCloud account.")
+            % {"email": email},
         )
 
     # TODO see if we can "pre-attach" this future user to this project, probably to be done
@@ -63,6 +65,12 @@ def invite_user_by_email(
         inviter.remaining_invitations -= 1
         inviter.save()
         invite.send_invitation(request)
-        return True, _(f"{email} has been invited to create a QFieldCloud account.")
+        return (
+            True,
+            _("%(email)s has been invited to create a QFieldCloud account.")
+            % {"email": email},
+        )
 
-    return True, _(f"{email} has been added to the QFieldCloud waiting list.")
+    return True, _("%(email)s has been added to the QFieldCloud waiting list.") % {
+        "email": email
+    }
