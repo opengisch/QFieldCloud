@@ -217,12 +217,6 @@ class OrganizationQueryset(models.QuerySet):
 
     Args:
         user:               user to check membership for
-
-    Usage:
-    ```
-    # List Olivier's projects that are visible to Ivan (olivier/ivan are User instances)
-    olivier.projects.for_user(ivan)
-    ```
     """
 
     class RoleOrigins(models.TextChoices):
