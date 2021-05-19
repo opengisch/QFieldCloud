@@ -421,6 +421,9 @@ def can_become_member(user: QfcUser, organization: Organization) -> bool:
 
 
 def can_send_invitations(user: QfcUser, account: QfcUser) -> bool:
+    if user.pk != account.pk:
+        return False
+
     if account.is_user:
         return True
 
