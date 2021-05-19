@@ -344,6 +344,9 @@ def can_read_members(user: QfcUser, organization: Organization) -> bool:
     """Return True if the `user` can list members (incl. teams) of `organization`.
     Return False otherwise."""
 
+    if not organization.is_organization:
+        return False
+
     return True
 
 
