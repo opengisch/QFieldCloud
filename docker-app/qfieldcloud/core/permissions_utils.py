@@ -344,6 +344,9 @@ def can_read_members(user: QfcUser, organization: Organization) -> bool:
     """Return True if the `user` can list members (incl. teams) of `organization`.
     Return False otherwise."""
 
+    if not organization.is_organization:
+        return False
+
     return True
 
 
@@ -418,6 +421,9 @@ def can_become_member(user: QfcUser, organization: Organization) -> bool:
 
 
 def can_send_invitations(user: QfcUser, account: QfcUser) -> bool:
+    if user.pk != account.pk:
+        return False
+
     if account.is_user:
         return True
 
