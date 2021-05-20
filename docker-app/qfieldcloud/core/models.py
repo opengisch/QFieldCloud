@@ -217,19 +217,13 @@ class OrganizationQueryset(models.QuerySet):
 
     Args:
         user:               user to check membership for
-
-    Usage:
-    ```
-    # List Olivier's projects that are visible to Ivan (olivier/ivan are User instances)
-    olivier.projects.for_user(ivan)
-    ```
     """
 
     class RoleOrigins(models.TextChoices):
         ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
         ORGANIZATIONMEMBER = "organization_admin", _("Organization admin")
 
-    def of_user(self, user):
+    def with_roles(self, user):
         permissions_config = [
             # Direct ownership
             (
@@ -273,8 +267,12 @@ class OrganizationQueryset(models.QuerySet):
                 default=None,
             ),
         )
+
+        return qs
+
+    def of_user(self, user):
         # Exclude those without role (invisible)
-        qs = qs.exclude(membership_role__isnull=True)
+        qs = self.with_roles(user).exclude(membership_role__isnull=True)
 
         return qs
 
@@ -285,6 +283,9 @@ class OrganizationManager(UserManager):
 
     def of_user(self, user):
         return self.get_queryset().of_user(user)
+
+    def with_roles(self, user):
+        return self.get_queryset().with_roles(user)
 
 
 # Automatically create a role and database when a Geodb object is created.
