@@ -311,3 +311,25 @@ class QfcTestCase(APITestCase):
     def test_user_account_is_created_for_each_user(self):
         self.assertTrue(UserAccount.objects.filter(user=self.user1).exists())
         self.assertTrue(UserAccount.objects.filter(user=self.user2).exists())
+
+    def test_user_organizations(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        response = self.client.get("/api/v1/users/user1/organizations")
+
+        self.assertTrue(status.is_success(response.status_code))
+        payload = response.json()
+
+        self.assertEqual(len(payload), 1)
+
+        organization = payload[0]
+
+        self.assertEquals(
+            organization.get("username", None), self.organization1.username
+        )
+        self.assertEquals(organization.get("user_type", None), User.TYPE_ORGANIZATION)
+        self.assertEquals(organization.get("membership_role", None), "admin")
+        self.assertEquals(
+            organization.get("membership_role_origin", None), "organization_owner"
+        )
+        self.assertEquals(organization.get("membership_is_public", None), True)

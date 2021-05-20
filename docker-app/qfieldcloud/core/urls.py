@@ -18,6 +18,10 @@ urlpatterns = [
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
     path("users/", users_views.ListUsersView.as_view()),
+    path(
+        "users/<str:username>/organizations",
+        users_views.ListUserOrganizationsView.as_view(),
+    ),
     path("users/<str:username>/", users_views.RetrieveUpdateUserView.as_view()),
     path(
         "collaborators/<uuid:projectid>/",
