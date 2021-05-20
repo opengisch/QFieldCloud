@@ -128,7 +128,9 @@ class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
         user = User.objects.get(username=username)
 
         if user.user_type == User.TYPE_ORGANIZATION:
-            organization = Organization.objects.get(username=username)
+            organization = Organization.objects.with_roles(request.user).get(
+                username=username
+            )
             serializer = OrganizationSerializer(organization)
         else:
             if request.user == user:
@@ -137,3 +139,29 @@ class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
                 serializer = PublicInfoUserSerializer(user)
 
         return Response(serializer.data)
+
+
+class ListUserOrganizationsViewPermissions(permissions.BasePermission):
+    def has_permission(self, request, view):
+        username = permissions_utils.get_param_from_request(request, "username")
+
+        if request.user.username != username:
+            return False
+
+        if request.method == "GET":
+            return True
+
+        return False
+
+
+class ListUserOrganizationsView(generics.ListAPIView):
+    """Get user's organizations"""
+
+    permission_classes = [
+        permissions.IsAuthenticated,
+        ListUserOrganizationsViewPermissions,
+    ]
+    serializer_class = OrganizationSerializer
+
+    def get_queryset(self):
+        return Organization.objects.of_user(self.request.user)
