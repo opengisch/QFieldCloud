@@ -51,6 +51,7 @@ class QfcTestCase(APITestCase):
             organization=self.organization1,
             member=self.user2,
             role=OrganizationMember.Roles.MEMBER,
+            is_public=True,
         ).save()
 
     def tearDown(self):

@@ -112,11 +112,19 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
 
 class OrganizationSerializer(serializers.ModelSerializer):
     organization_owner = serializers.StringRelatedField()
-    members = serializers.StringRelatedField(many=True)
+    members = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
     membership_role = serializers.CharField(read_only=True)
     membership_role_origin = serializers.CharField(read_only=True)
     membership_is_public = serializers.BooleanField()
+
+    def get_members(self, obj):
+        return [
+            m["member__username"]
+            for m in OrganizationMember.objects.filter(
+                organization=obj, is_public=True
+            ).values("member__username")
+        ]
 
     def get_avatar_url(self, obj):
         return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
