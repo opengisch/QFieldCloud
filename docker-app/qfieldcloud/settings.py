@@ -269,7 +269,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
 # Django invitations configurations
 # https://github.com/bee-keeper/django-invitations#additional-configuration
-INVITATIONS_INVITATION_EXPIRY = 7  # Days
+INVITATIONS_INVITATION_EXPIRY = 14  # Days
 INVITATIONS_INVITATION_ONLY = True
 INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
 
