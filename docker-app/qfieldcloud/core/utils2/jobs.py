@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import django_rq
-from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta
+from qfieldcloud.core.models import ApplyJob, Delta
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,8 @@ def apply_deltas(
             Delta.Status.ERROR,
         ],
     ).exclude(
-        id__in=ApplyJobDelta.objects.filter(apply_job_id__in=job_ids).values("delta_id")
+        # exclude jobs that are currently being processed
+        applyjob__id__in=job_ids,
     )
 
     if delta_ids is not None:
