@@ -6,6 +6,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Project,
     ProjectCollaborator,
+    ProjectQueryset,
 )
 from qfieldcloud.core.models import User as QfcUser
 
@@ -22,6 +23,14 @@ def user_has_project_roles(
     user: QfcUser, project: Project, roles: List[ProjectCollaborator.Roles]
 ):
     return _project_for_owner(user, project).filter(user_role__in=roles).exists()
+
+
+def user_has_project_role_origins(
+    user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
+):
+    return (
+        _project_for_owner(user, project).filter(user_role_origin__in=origins).exists()
+    )
 
 
 def user_has_organization_roles(
@@ -363,6 +372,11 @@ def can_delete_members(user: QfcUser, organization: Organization) -> bool:
 
 
 def can_become_collaborator(user: QfcUser, project: Project) -> bool:
+    if user_has_project_role_origins(
+        user, project, [ProjectQueryset.RoleOrigins.PUBLIC]
+    ):
+        return True
+
     return not user_has_project_roles(
         user,
         project,
