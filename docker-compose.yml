@@ -113,7 +113,7 @@ services:
 
   orchestrator:
     <<: *default-django
-    command: python orchestrator/worker.py
+    command: python -m orchestrator
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
       # TODO : how can we reuse static/media volumes from default-django to keep things DRY (yaml syntax expert needed)

@@ -2,10 +2,14 @@ import logging
 import os
 
 import sentry_sdk
-from db_utils import JobStatus, get_job_row, update_job
+from qfieldcloud.core.models import Job
 from redis import Redis
 from rq import Connection, Worker
 from sentry_sdk.integrations.rq import RqIntegration
+
+from .db_utils import use_test_db_if_exists
+
+logger = logging.getLogger(__name__)
 
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", ""),
@@ -14,27 +18,27 @@ sentry_sdk.init(
     attach_stacktrace="on",
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(message)s",
-)
-
 
 def handle_exception(job, *exc_info):
-    try:
-        job_row = get_job_row(job.id)
+    logger.warning(f"Exception {exc_info}")
 
-        # TODO this is highly questionable behavior. Why do we have error anyway?
-        # It lies on the assumption that the FINISHED status is set once we are sure we are done.
-        # This is the case for exports and delta application.
-        if job_row["status"] != JobStatus.FINISHED.value:
-            update_job(job.id, JobStatus.FAILED)
-        else:
-            logging.info(
-                "No need to update the current job status as it already finished"
-            )
+    try:
+
+        with use_test_db_if_exists():
+            job = Job.objects.get(pk=job.id)
+
+            # TODO this is highly questionable behavior. Why do we have error anyway?
+            # It lies on the assumption that the FINISHED status is set once we are sure we are done.
+            # This is the case for exports and delta application.
+            if job.status != Job.Status.FINISHED:
+                job.status = Job.Status.FAILED
+                job.save()
+            else:
+                logger.info(
+                    "No need to update the current job status as it already finished"
+                )
     except Exception as err:
-        logging.critical("Failed to handle exception: ", str(err))
+        logger.critical("Failed to handle exception: ", str(err))
 
 
 with Connection():

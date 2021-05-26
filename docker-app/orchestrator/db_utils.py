@@ -1,243 +1,44 @@
-import json
 import logging
-import os
-from enum import Enum
-from typing import Any, Dict, List, Optional
 
-import psycopg2
-from psycopg2 import connect, sql
-from psycopg2.extras import DictCursor, Json
+from django.conf import settings
+from django.db import connection, connections
+
+logger = logging.getLogger(__name__)
 
 
-class DeltaStatus(Enum):
-    PENDING = "pending"
-    STARTED = "started"
-    APPLIED = "applied"
-    CONFLICT = "conflict"
-    NOT_APPLIED = "not_applied"
-    ERROR = "error"
-    IGNORED = "ignored"
-    UNPERMITTED = "unpermitted"
+class use_test_db_if_exists:
+    """
+    Context manager that updates django database settigs to use the test db if it exists.
+    Will be ignored if debug is False
+    """
 
+    def __enter__(self):
+        # save initial db name
+        if not settings.DEBUG:
+            return
+        self._init_dbname = settings.DATABASES["default"]["NAME"]
 
-class JobStatus(Enum):
-    PENDING = "pending"
-    QUEUED = "queued"
-    STARTED = "started"
-    FINISHED = "finished"
-    # STOPPED = "stopped" # NOT IN USE
-    FAILED = "failed"
+        # updating the database name to use the test database
+        test_dbname = f"test_{self._init_dbname}"
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT datname FROM pg_database WHERE datname = %s", [test_dbname]
+            )
+            if cursor.fetchone():
+                settings.DATABASES["default"]["NAME"] = test_dbname
+                self._invalidate()
+        logger.info(f'Using DB {settings.DATABASES["default"]["NAME"]}')
 
+    def __exit__(self, exc_type, exc_value, traceback):
+        # restore initial db name
+        if not settings.DEBUG:
+            return
 
-def get_django_db_connection():
-    """Connect to the Django db."""
-    try:
-        dbname = os.environ.get("POSTGRES_DB")
-        test_dbname = f"test_{dbname}"
-        conn_dbname = dbname
+        settings.DATABASES["default"]["NAME"] = self._init_dbname
+        logger.info(f'Restoring DB {settings.DATABASES["default"]["NAME"]}')
+        self._invalidate()
 
-        conn = connect(
-            dbname="template1",
-            user=os.environ.get("POSTGRES_USER"),
-            password=os.environ.get("POSTGRES_PASSWORD"),
-            host=os.environ.get("POSTGRES_HOST"),
-            port=os.environ.get("POSTGRES_PORT"),
-        )
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-                SELECT datname
-                FROM pg_database
-                WHERE datname = %s
-            """,
-            (test_dbname,),
-        )
-
-        if cur.fetchone():
-            conn_dbname = test_dbname
-
-        conn = connect(
-            dbname=conn_dbname,
-            user=os.environ.get("POSTGRES_USER"),
-            password=os.environ.get("POSTGRES_PASSWORD"),
-            host=os.environ.get("POSTGRES_HOST"),
-            port=os.environ.get("POSTGRES_PORT"),
-        )
-    except psycopg2.OperationalError as err:
-        logging.exception(err)
-        return None
-
-    return conn
-
-
-def get_job_row(job_id: str) -> Dict[str, Any]:
-    conn = get_django_db_connection()
-    cur = conn.cursor(cursor_factory=DictCursor)
-    cur.execute(
-        """
-            SELECT *
-            FROM core_job j
-            LEFT JOIN core_applyjob daj ON daj.job_ptr_id = j.id
-            WHERE
-              id = %s
-        """,
-        (job_id,),
-    )
-    conn.commit()
-
-    row = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    return row
-
-
-def update_job(job_id, status, exportlog=None, output=None):
-    """Set the deltafile status and output into the database record """
-
-    update_job_data = {
-        "status": status.value,
-    }
-
-    if output is not None:
-        update_job_data["output"] = output
-
-    sql_job_query = sql.SQL(
-        """
-            UPDATE core_job
-            SET
-                updated_at = now(),
-                {data}
-            WHERE id = {id}
-        """
-    ).format(
-        data=sql.SQL(", ").join(
-            sql.Composed([sql.Identifier(k), sql.SQL(" = "), sql.Placeholder(k)])
-            for k in update_job_data.keys()
-        ),
-        id=sql.Placeholder("id"),
-    )
-    update_job_data.update(id=job_id)
-
-    update_export_job_data = None
-    sql_export_job_query = None
-    if exportlog is not None:
-        update_export_job_data = {
-            "exportlog": json.dumps(exportlog),
-        }
-        sql_export_job_query = sql.SQL(
-            """
-                UPDATE core_exportjob
-                SET
-                    {data}
-                WHERE job_ptr_id = {id}
-            """
-        ).format(
-            data=sql.SQL(", ").join(
-                sql.Composed([sql.Identifier(k), sql.SQL(" = "), sql.Placeholder(k)])
-                for k in update_export_job_data.keys()
-            ),
-            id=sql.Placeholder("id"),
-        )
-        update_export_job_data.update(id=job_id)
-
-    conn = get_django_db_connection()
-    with conn.cursor() as cur:
-        cur.execute(sql_job_query, update_job_data)
-
-        if sql_export_job_query:
-            cur.execute(sql_export_job_query, update_export_job_data)
-
-        conn.commit()
-        conn.close()
-
-
-def get_deltas_to_apply_list(job_id: str) -> Dict[str, Any]:
-    conn = get_django_db_connection()
-    cur = conn.cursor(cursor_factory=DictCursor)
-    cur.execute(
-        """
-            SELECT array_agg(delta_id) as delta_ids
-            FROM core_applyjobdelta dajd
-            WHERE
-              apply_job_id = %s
-        """,
-        (job_id,),
-    )
-    conn.commit()
-
-    row = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    return row["delta_ids"]
-
-
-def update_deltas(
-    job_id: str,
-    delta_ids: List[str],
-    status: DeltaStatus,
-    feedback: Optional[str] = None,
-) -> List[Dict]:
-    update_applyjobdelta_data = {
-        "status": status.value,
-        "feedback": Json(feedback),
-    }
-    sql_applyjobdelta_query = sql.SQL(
-        """
-            UPDATE core_applyjobdelta
-            SET
-                -- updated_at = now(),
-                {data}
-            WHERE TRUE
-                AND apply_job_id = {job_id}
-                AND delta_id IN ({delta_ids})
-        """
-    ).format(
-        job_id=sql.Literal(job_id),
-        data=sql.SQL(", ").join(
-            sql.Composed([sql.Identifier(k), sql.SQL(" = "), sql.Placeholder(k)])
-            for k in update_applyjobdelta_data.keys()
-        ),
-        delta_ids=sql.SQL(", ").join(
-            map(lambda uuid: sql.Literal(str(uuid)), delta_ids)
-        ),
-    )
-
-    update_delta_data = {
-        "last_status": status.value,
-        "last_feedback": Json(feedback),
-    }
-
-    sql_delta_query = sql.SQL(
-        """
-            UPDATE core_delta
-            SET
-                updated_at = now(),
-                {data}
-            WHERE
-                id IN ({delta_ids})
-            RETURNING *
-        """
-    ).format(
-        data=sql.SQL(", ").join(
-            sql.Composed([sql.Identifier(k), sql.SQL(" = "), sql.Placeholder(k)])
-            for k in update_delta_data.keys()
-        ),
-        delta_ids=sql.SQL(", ").join(
-            map(lambda uuid: sql.Literal(str(uuid)), delta_ids)
-        ),
-    )
-
-    conn = get_django_db_connection()
-    with conn.cursor(cursor_factory=DictCursor) as cur:
-        cur.execute(sql_applyjobdelta_query, update_applyjobdelta_data)
-        cur.execute(sql_delta_query, update_delta_data)
-        deltas = cur.fetchall()
-        conn.commit()
-        conn.close()
-
-    return deltas
+    def _invalidate(self):
+        # invalidate connections so they are recreated with the modified dbname
+        for conn in connections.all():
+            conn.close()

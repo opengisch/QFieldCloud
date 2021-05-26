@@ -9,11 +9,15 @@ services:
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
-      - ./docker-app/orchestrator:/usr/src/app/orchestrator
     environment:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
     command: python3 manage.py runserver 0.0.0.0:8000
+
+  orchestrator:
+    volumes:
+      # mount the source for live reload
+      - ./docker-app/orchestrator:/usr/src/app/orchestrator
 
   smtp4dev:
     image: rnwood/smtp4dev:v3

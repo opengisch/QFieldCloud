@@ -43,7 +43,10 @@ def apply_deltas(
 
     job_id = apply_job.id
     queue.enqueue(
-        "orchestrator.apply_deltas", str(job_id), str(project_file), job_id=str(job_id)
+        "orchestrator.orchestrator.apply_deltas",
+        str(job_id),
+        str(project_file),
+        job_id=str(job_id),
     )
 
     return True
