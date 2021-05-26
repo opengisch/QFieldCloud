@@ -63,16 +63,9 @@ services:
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
       # Settings below are specific to orchestrator
       # TODO : move this to the orchestrator service and keep things DRY (yaml syntax expert needed)
-      REDIS_HOST: ${REDIS_HOST}
       TMP_DIRECTORY: ${TMP_DIRECTORY} # TODO : how can we both need that variable inside and outside the container ?
       QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
-      HOST_POSTGRES_PORT: ${HOST_POSTGRES_PORT}  # is this used ?
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
     depends_on:
       - db
     logging: *default-logging

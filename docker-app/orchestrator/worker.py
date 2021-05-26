@@ -43,7 +43,7 @@ def handle_exception(job, *exc_info):
 
 with Connection():
     redis = Redis(
-        host=os.environ.get("REDIS_HOST"),
+        "redis",
         password=os.environ.get("REDIS_PASSWORD"),
         port=6379,
     )
