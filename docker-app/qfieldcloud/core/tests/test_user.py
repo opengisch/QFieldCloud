@@ -316,7 +316,7 @@ class QfcTestCase(APITestCase):
     def test_user_organizations(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
-        response = self.client.get("/api/v1/users/user1/organizations")
+        response = self.client.get("/api/v1/users/user1/organizations/")
 
         self.assertTrue(status.is_success(response.status_code))
         payload = response.json()
