@@ -113,8 +113,8 @@ services:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${LOG_DIRECTORY}:/log # TODO : how can we both need that variable inside and outside the container ?
-      - ${TMP_DIRECTORY}:/tmp # TODO : how can we both need that variable inside and outside the container ?
+      - ${LOG_DIRECTORY}:/log
+      - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
 
 volumes:
