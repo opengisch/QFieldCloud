@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "django_rq",  # Integration with Redis Queue
     "storages",  # Integration with S3 Storages
     "invitations",
+    "django_cron",
     # Local
     "qfieldcloud.core",
 ]
@@ -82,6 +83,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
+]
+
+CRON_CLASSES = [
+    "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
