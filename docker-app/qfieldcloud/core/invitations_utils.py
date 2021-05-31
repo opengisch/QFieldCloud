@@ -2,7 +2,6 @@ import logging
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.db import IntegrityError
 from django.http.request import HttpRequest
 from django.utils.translation import gettext as _
 from invitations.utils import get_invitation_model
@@ -50,15 +49,23 @@ def invite_user_by_email(
         return False, _("Your user cannot send invitations.")
 
     Invitation = get_invitation_model()
-    try:
-        invite = Invitation.create(email, inviter=inviter)
-    except IntegrityError:
-        return (
-            False,
-            _("{} has already been invited to create a QFieldCloud account.").format(
-                email
-            ),
-        )
+    Invitation.objects.filter(email=email, sent__isnull=True).delete()
+    qs = Invitation.objects.filter(email=email)
+
+    if len(qs) > 0:
+        invite = qs[0]
+
+        if invite.key_expired():
+            qs.delete()
+        else:
+            return (
+                False,
+                _(
+                    "{} has already been invited to create a QFieldCloud account."
+                ).format(email),
+            )
+
+    invite = Invitation.create(email, inviter=inviter)
 
     # TODO see if we can "pre-attach" this future user to this project, probably to be done
     # at the same time as TODO below about actual invitation
