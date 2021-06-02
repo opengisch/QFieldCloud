@@ -23,7 +23,7 @@ def export_project(job_id, project_file):
 
     queue = django_rq.get_queue("export")
     job = queue.enqueue(
-        "orchestrator.export_project",
+        "orchestrator.orchestrator.export_project",
         str(job_id),
         str(project_file),
         job_id=str(job_id),
@@ -37,7 +37,7 @@ def check_orchestrator_status():
     container"""
 
     queue = django_rq.get_queue("export")
-    job = queue.enqueue("orchestrator.check_status")
+    job = queue.enqueue("orchestrator.orchestrator.check_status")
 
     return job
 
