@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "django_rq",  # Integration with Redis Queue
     "storages",  # Integration with S3 Storages
     "invitations",
+    "django_cron",
     # Local
     "qfieldcloud.core",
 ]
@@ -82,6 +83,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
+]
+
+CRON_CLASSES = [
+    "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
@@ -272,6 +277,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 INVITATIONS_INVITATION_EXPIRY = 14  # Days
 INVITATIONS_INVITATION_ONLY = True
 INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+INVITATIONS_GONE_ON_ACCEPT_ERROR = False
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
 LOGGING = {
