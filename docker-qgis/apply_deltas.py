@@ -936,30 +936,37 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
                 e_type=DeltaExceptionType.Conflict,
             )
 
-    geometry = QgsGeometry()
+    geometry = None
 
     if "geometry" in new_feature_delta:
-        if isinstance(new_feature_delta["geometry"], str):
-            geometry = QgsGeometry.fromWkt(new_feature_delta["geometry"])
-        elif new_feature_delta["geometry"] is not None:
-            logger.warning("The provided geometry is not null or a WKT string.")
+        if layer.isSpatial():
+            if isinstance(new_feature_delta["geometry"], str):
+                geometry = QgsGeometry.fromWkt(new_feature_delta["geometry"])
 
-        if new_feature_delta["geometry"] == old_feature_delta.get("geometry"):
-            logger.warning(
-                "The geometries of the new and the old features are the same, even though by spec they should not be provided in such case"
-            )
-
-    if layer.isSpatial():
-        if geometry.isNull() or geometry.type() == layer.geometry().type():
-            if not layer.changeGeometry(old_feature.id(), geometry, True):
-                raise DeltaException(
-                    "Unable to change geometry",
-                    provider_errors=layer.dataProvider().errors(),
+                if geometry.isNull() or geometry.type() == layer.geometry().type():
+                    raise DeltaException(
+                        "The provided geometry type differs from the layer geometry type"
+                    )
+            elif new_feature_delta["geometry"] is None:
+                geometry = QgsGeometry()
+            else:
+                logger.warning(
+                    "The provided geometry is not null or a WKT string, ignoring geometry."
                 )
+
+            if new_feature_delta["geometry"] == old_feature_delta.get("geometry"):
+                logger.warning(
+                    "The geometries of the new and the old features are the same, even though by spec they should not be provided in such case. Ignoring geometry."
+                )
+
+            if geometry is not None:
+                if not layer.changeGeometry(old_feature.id(), geometry, True):
+                    raise DeltaException(
+                        "Unable to change geometry",
+                        provider_errors=layer.dataProvider().errors(),
+                    )
         else:
-            raise DeltaException(
-                "The provided geometry type differs from the layer geometry type"
-            )
+            logger.warning("Layer is not spatial, ignoring geometry")
 
     fields = layer.fields()
     new_attrs = new_feature_delta.get("attributes") or {}
