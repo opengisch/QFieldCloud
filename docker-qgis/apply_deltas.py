@@ -381,7 +381,10 @@ def apply_deltas_without_transaction(
                 raise DeltaException(f'Invalid layer "{layer_id}"')
 
             if not layer.isEditable() and not layer.startEditing():
-                raise DeltaException(f'Cannot start editing layer "{layer_id}"')
+                raise DeltaException(
+                    f'Cannot start editing layer "{layer_id}"',
+                    provider_errors=layer.dataProvider().errors(),
+                )
 
             delta = inverse_delta(delta) if inverse else delta
 
@@ -401,7 +404,10 @@ def apply_deltas_without_transaction(
                 raise DeltaException("Unknown delta method")
 
             if not layer.commitChanges():
-                raise DeltaException("Failed to commit changes")
+                raise DeltaException(
+                    "Failed to commit changes",
+                    provider_errors=layer.dataProvider().errors(),
+                )
 
             logger.info(f'Successfully applied delta on layer "{layer_id}"')
 
