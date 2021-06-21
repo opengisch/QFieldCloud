@@ -26,6 +26,9 @@ COPY ./schemas/deltafile_01.json /schemas/
 
 COPY ./libqfieldsync /libqfieldsync
 ENV PYTHONPATH="/libqfieldsync:${PYTHONPATH}"
+ENV LD_PRELOAD="/lib/x86_64-linux-gnu/libSegFault.so"
+ENV SEGFAULT_SIGNALS="abrt segv"
+ENV LIBC_FATAL_STDERR_=1
 
 # Add supervisor service configuration script
 COPY ./supervisord.conf /etc/supervisor/
