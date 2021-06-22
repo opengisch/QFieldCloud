@@ -68,6 +68,7 @@ services:
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
     depends_on:
       - db
+      - redis
     logging: *default-logging
 
   web:
@@ -116,6 +117,10 @@ services:
       - ${LOG_DIRECTORY}:/log
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
+    depends_on:
+      - db
+      - redis
+      - app
 
 volumes:
   postgres_data:
