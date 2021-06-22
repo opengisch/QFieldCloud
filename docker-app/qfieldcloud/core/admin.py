@@ -98,6 +98,26 @@ class ProjectAdmin(admin.ModelAdmin):
     readonly_fields = ("storage_size",)
 
 
+class DeltaInline(admin.TabularInline):
+    model = ApplyJob.deltas_to_apply.through
+
+    fields = (
+        "delta",
+        "status",
+        # TODO find a way to use dynamic fields
+        # "feedback__pre",
+    )
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj):
+        return False
+
+    # def feedback__pre(self, instance):
+    #     return format_pre_json(instance.feedback)
+
+
 class ApplyJobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
@@ -107,6 +127,18 @@ class ApplyJobAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+    list_filter = ("status", "updated_at")
+    ordering = ("-updated_at",)
+    search_fields = (
+        "project__name__iexact",
+        "project__owner__username__iexact",
+        "deltas_to_apply__id__startswith",
+        "id",
+    )
+    inlines = [
+        DeltaInline,
+    ]
 
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
@@ -167,7 +199,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("last_status",)
+    list_filter = ("last_status", "updated_at")
 
     actions = (
         "set_status_pending",
@@ -201,6 +233,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "deltafile_id__startswith",
         "id",
     )
+    ordering = ("-updated_at",)
 
     inlines = [
         ApplyJobDeltaInline,
@@ -273,7 +306,7 @@ class ExportJobAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("status", "created_at")
+    list_filter = ("status", "updated_at")
     list_select_related = ("project", "project__owner")
     actions = None
     exclude = ("exportlog", "output")
@@ -293,6 +326,8 @@ class ExportJobAdmin(admin.ModelAdmin):
         "project__name__iexact",
         "project__owner__username__iexact",
     )
+
+    ordering = ("-updated_at",)
 
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)

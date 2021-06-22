@@ -9,9 +9,6 @@
       name="_apply_delta_btn"
       class="button default"
       value="Apply delta"
-      {% comment %} TODO with Django3.2 we can use status enum, for now `status == 1` is actually `status == 'STATUS_PENDING'` {% endcomment %}
-      {% if original.status != 1 %}disabled{% endif %}
     >
-    </button>
   </div>
 {% endblock %}
