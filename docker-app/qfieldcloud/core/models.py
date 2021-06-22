@@ -769,6 +769,10 @@ class ExportJob(Job):
         self.type = self.Type.EXPORT
         return super().save(*args, **kwargs)
 
+    class Meta:
+        verbose_name = "Job: export"
+        verbose_name_plural = "Jobs: export"
+
 
 class ApplyJob(Job):
 
@@ -786,6 +790,10 @@ class ApplyJob(Job):
     def save(self, *args, **kwargs):
         self.type = self.Type.DELTA_APPLY
         return super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Job: apply"
+        verbose_name_plural = "Jobs: apply"
 
 
 class ApplyJobDelta(models.Model):
