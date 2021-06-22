@@ -83,6 +83,11 @@ class UserAdmin(admin.ModelAdmin):
         obj.save()
 
 
+class ProjectCollaboratorInline(admin.TabularInline):
+    extra = 0
+    model = ProjectCollaborator
+
+
 class ProjectAdmin(admin.ModelAdmin):
     list_display = (
         "id",
@@ -96,6 +101,7 @@ class ProjectAdmin(admin.ModelAdmin):
     list_filter = ("is_public",)
     fields = ("name", "description", "is_public", "owner", "storage_size")
     readonly_fields = ("storage_size",)
+    inlines = (ProjectCollaboratorInline,)
 
 
 class DeltaInline(admin.TabularInline):
