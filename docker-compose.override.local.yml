@@ -13,6 +13,10 @@ services:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
     command: python3 manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - geodb
+      - s3
+      - smtp4dev
 
   orchestrator:
     volumes:
