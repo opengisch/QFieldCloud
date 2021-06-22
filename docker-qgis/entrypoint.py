@@ -13,12 +13,14 @@ import apply_deltas
 import boto3
 import mock
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
+from libqfieldsync.project import ProjectConfiguration
 from qgis.core import (
     Qgis,
     QgsApplication,
-    QgsMapSettings,
+    QgsCoordinateTransform,
     QgsOfflineEditing,
     QgsProject,
+    QgsRectangle,
     QgsVectorLayer,
 )
 from qgis.gui import QgisInterface, QgsMapCanvas
@@ -228,23 +230,31 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     with open("/io/exportlog.json", "w") as f:
         f.write(json.dumps(layers_check))
 
-    # Calculate the project extent
-    mapsettings = QgsMapSettings()
+    project_config = ProjectConfiguration(project)
+    vl_extent = QgsRectangle()
+    vl_extent_crs = project.crs().authid()
 
-    # TODO: Check if the extent have been defined in QFieldSync
-    # TODO: Do I need to really exclude all the non-vector layers
-    # from the extent?
+    if project_config.area_of_interest and project_config.area_of_interest_crs:
+        vl_extent = project_config.area_of_interest
+        vl_extent_crs = project_config.area_of_interest_crs
+    else:
+        for layer in layers.values():
+            if type(layer) != QgsVectorLayer:
+                continue
 
-    # Only vector layers
-    mapsettings.setLayers(
-        [layers[key] for key in layers if type(layers[key]) == QgsVectorLayer]
-    )
+            transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
+            vl_extent.combineExtentWith(transform.transformBoundingBox(layer.extent()))
 
-    extent = mapsettings.fullExtent()
+        vl_extent_crs = project.crs().authid()
 
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
-        project, export_dir, extent, offline_editing, export_type=ExportType.Cloud
+        project,
+        export_dir,
+        vl_extent.asWktPolygon(),
+        vl_extent_crs,
+        offline_editing,
+        export_type=ExportType.Cloud,
     )
 
     # Disable the basemap generation because it needs the processing
