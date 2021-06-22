@@ -102,12 +102,13 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
-        for _ in range(10):
+        for _ in range(20):
             time.sleep(3)
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
-            if response.json()["status"] == "STATUS_EXPORTED":
+            payload = response.json()
+            if payload["status"] == "STATUS_EXPORTED":
                 response = self.client.get(
                     "/api/v1/qfield-files/{}/".format(self.project1.id),
                 )
@@ -116,6 +117,8 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(files[0]["name"], "data.gpkg")
                 self.assertEqual(files[1]["name"], "project_qfield.qgs")
                 return
+            elif payload["status"] == "STATUS_ERROR":
+                self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish")
 
@@ -178,7 +181,8 @@ class QfcTestCase(APITransactionTestCase):
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
-            if response.json()["status"] == "STATUS_EXPORTED":
+            payload = response.json()
+            if payload["status"] == "STATUS_EXPORTED":
                 response = self.client.get(
                     f"/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/"
                 )
@@ -204,6 +208,8 @@ class QfcTestCase(APITransactionTestCase):
                         "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
                     )
                 return
+            elif payload["status"] == "STATUS_ERROR":
+                self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish")
 
@@ -277,7 +283,8 @@ class QfcTestCase(APITransactionTestCase):
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
 
-            if response.json()["status"] == "STATUS_EXPORTED":
+            payload = response.json()
+            if payload["status"] == "STATUS_EXPORTED":
                 response = self.client.get(
                     f"/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/"
                 )
@@ -300,6 +307,8 @@ class QfcTestCase(APITransactionTestCase):
                     for line in f:
                         if 'name="theMapCanvas"' in line:
                             return
+            elif payload["status"] == "STATUS_ERROR":
+                self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish or there was an error")
 
@@ -335,22 +344,25 @@ class QfcTestCase(APITransactionTestCase):
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
-            if response.json()["status"] == "STATUS_EXPORTED":
+            payload = response.json()
+            if payload["status"] == "STATUS_EXPORTED":
 
                 response = self.client.get(
                     "/api/v1/qfield-files/{}/".format(self.project1.id),
                 )
 
-                payload = response.json()
-                layer_ok = payload["layers"][
+                export_payload = response.json()
+                layer_ok = export_payload["layers"][
                     "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c"
                 ]
-                layer_failed = payload["layers"][
+                layer_failed = export_payload["layers"][
                     "surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16"
                 ]
 
                 self.assertTrue(layer_ok["valid"], layer_ok["status"])
                 self.assertFalse(layer_failed["valid"], layer_failed["status"])
                 return
+            elif payload["status"] == "STATUS_ERROR":
+                self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish")
