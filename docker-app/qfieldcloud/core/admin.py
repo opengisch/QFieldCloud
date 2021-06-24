@@ -58,6 +58,119 @@ def format_pre_json(value):
         return format_pre(value)
 
 
+class GeodbInline(admin.TabularInline):
+    model = Geodb
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj):
+        return False
+
+    def has_change_permission(self, request, obj):
+        return False
+
+
+class OwnedOrganizationInline(admin.TabularInline):
+    model = Organization
+    fk_name = "organization_owner"
+    extra = 0
+
+    fields = (
+        "owned_organization",
+        "email",
+    )
+    readonly_fields = (
+        "owned_organization",
+        "email",
+    )
+
+    def owned_organization(self, obj):
+        return model_admin_url(obj, obj.username)
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj):
+        return False
+
+    def has_change_permission(self, request, obj):
+        return False
+
+
+class MemberOrganizationInline(admin.TabularInline):
+    model = OrganizationMember
+    extra = 0
+
+    def has_add_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+    def has_delete_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+    def has_change_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+
+class MemberTeamInline(admin.TabularInline):
+    model = TeamMember
+    extra = 0
+
+    def has_add_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+    def has_delete_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+    def has_change_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+
+class UserAccountInline(admin.StackedInline):
+    model = UserAccount
+    extra = 0
+
+    def has_add_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+    def has_delete_permission(self, request, obj):
+        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+
+
+class ProjectInline(admin.TabularInline):
+    model = Project
+    extra = 0
+
+    fields = ("owned_project", "is_public", "overwrite_conflicts")
+    readonly_fields = ("owned_project",)
+
+    def owned_project(self, obj):
+        return model_admin_url(obj, obj.name)
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj):
+        return False
+
+    def has_change_permission(self, request, obj):
+        return False
+
+
+class UserProjectCollaboratorInline(admin.TabularInline):
+    model = ProjectCollaborator
+    extra = 0
+
+    def has_add_permission(self, request, obj):
+        return obj.user_type == User.TYPE_USER
+
+    def has_delete_permission(self, request, obj):
+        return obj.user_type == User.TYPE_USER
+
+    def has_change_permission(self, request, obj):
+        return obj.user_type == User.TYPE_USER
+
+
 class UserAdmin(admin.ModelAdmin):
     list_display = (
         "username",
@@ -71,7 +184,25 @@ class UserAdmin(admin.ModelAdmin):
         "user_type",
         "useraccount",
     )
-    list_filter = ("user_type", "useraccount")
+    list_filter = (
+        "user_type",
+        "date_joined",
+        "is_active",
+        "is_staff",
+        "useraccount__account_type",
+    )
+
+    search_fields = ("username__icontains", "team_organization__username__iexact")
+
+    inlines = (
+        UserAccountInline,
+        GeodbInline,
+        OwnedOrganizationInline,
+        MemberOrganizationInline,
+        MemberTeamInline,
+        ProjectInline,
+        UserProjectCollaboratorInline,
+    )
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -81,6 +212,11 @@ class UserAdmin(admin.ModelAdmin):
         else:
             obj.set_password(obj.password)
         obj.save()
+
+
+class ProjectCollaboratorInline(admin.TabularInline):
+    model = ProjectCollaborator
+    extra = 0
 
 
 class ProjectAdmin(admin.ModelAdmin):
@@ -93,9 +229,14 @@ class ProjectAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("is_public",)
+    list_filter = (
+        "is_public",
+        "created_at",
+        "updated_at",
+    )
     fields = ("name", "description", "is_public", "owner", "storage_size")
     readonly_fields = ("storage_size",)
+    inlines = (ProjectCollaboratorInline,)
 
 
 class DeltaInline(admin.TabularInline):
@@ -353,18 +494,8 @@ class ExportJobAdmin(admin.ModelAdmin):
         return False
 
 
-class UserAccountAdmin(admin.ModelAdmin):
-    list_display = (
-        "user",
-        "account_type",
-        "storage_limit_mb",
-        "db_limit_mb",
-        "synchronizations_per_months",
-    )
-    list_filter = ("account_type",)
-
-
 class GeodbAdmin(admin.ModelAdmin):
+    list_filter = ("created_at", "hostname")
     list_display = (
         "user",
         "username",
@@ -375,9 +506,25 @@ class GeodbAdmin(admin.ModelAdmin):
         "size",
     )
 
-    fields = ("user", "username", "dbname", "hostname", "port", "created_at", "size")
+    fields = (
+        "user",
+        "username",
+        "dbname",
+        "hostname",
+        "port",
+        "created_at",
+        "size",
+        "last_geodb_error",
+    )
 
-    readonly_fields = ("size", "created_at")
+    readonly_fields = ("size", "created_at", "last_geodb_error")
+
+    search_fields = (
+        "user__username",
+        "username",
+        "dbname",
+        "hostname",
+    )
 
     def save_model(self, request, obj, form, change):
         # Only on creation
@@ -390,19 +537,85 @@ class GeodbAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+class OrganizationMemberInline(admin.TabularInline):
+    model = OrganizationMember
+    fk_name = "organization"
+    extra = 0
+
+
+class TeamInline(admin.TabularInline):
+    model = Team
+    fk_name = "team_organization"
+    extra = 0
+
+    fields = ("username",)
+
+    def has_add_permission(self, request, obj):
+        return False
+
+    def has_delete_permission(self, request, obj):
+        return False
+
+    def has_change_permission(self, request, obj):
+        return False
+
+
+class OrganizationAdmin(admin.ModelAdmin):
+    inlines = (
+        UserAccountInline,
+        GeodbInline,
+        OrganizationMemberInline,
+        ProjectInline,
+        TeamInline,
+    )
+    list_display = (
+        "username",
+        "email",
+        "organization_owner__link",
+        "date_joined",
+        "useraccount",
+    )
+
+    search_fields = (
+        "username__icontains",
+        "owner__username__icontains",
+    )
+
+    list_filter = ("date_joined",)
+
+    def organization_owner__link(self, instance):
+        return model_admin_url(
+            instance.organization_owner, instance.organization_owner.username
+        )
+
+
+class TeamMemberInline(admin.TabularInline):
+    model = TeamMember
+    fk_name = "team"
+    extra = 0
+
+
+class TeamAdmin(admin.ModelAdmin):
+    inlines = (TeamMemberInline,)
+
+    list_display = (
+        "username",
+        "date_joined",
+    )
+
+    search_fields = ("username__icontains", "team_organization__username__iexact")
+
+    list_filter = ("date_joined",)
+
+
 admin.site.register(User, UserAdmin)
+admin.site.register(Organization, OrganizationAdmin)
+admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(ApplyJob, ApplyJobAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(ExportJob, ExportJobAdmin)
-admin.site.register(UserAccount, UserAccountAdmin)
 admin.site.register(Geodb, GeodbAdmin)
-
-admin.site.register(Organization)
-admin.site.register(OrganizationMember)
-admin.site.register(Team)
-admin.site.register(TeamMember)
-admin.site.register(ProjectCollaborator)
 
 admin.site.unregister(Group)
 admin.site.unregister(SocialAccount)

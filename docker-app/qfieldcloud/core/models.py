@@ -191,6 +191,7 @@ class Geodb(models.Model):
 
     # The password is generated but not stored into the db
     password = ""
+    last_geodb_error = None
 
     def __init__(self, *args, password="", **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -201,7 +202,11 @@ class Geodb(models.Model):
             self.password = Geodb.random_password()
 
     def size(self):
-        return geodb_utils.get_db_size(self)
+        try:
+            return geodb_utils.get_db_size(self)
+        except Exception as err:
+            self.last_geodb_error = str(err)
+            return None
 
     def __str__(self):
         return "{}'s db account, dbname: {}, username: {}".format(
@@ -769,6 +774,10 @@ class ExportJob(Job):
         self.type = self.Type.EXPORT
         return super().save(*args, **kwargs)
 
+    class Meta:
+        verbose_name = "Job: export"
+        verbose_name_plural = "Jobs: export"
+
 
 class ApplyJob(Job):
 
@@ -786,6 +795,10 @@ class ApplyJob(Job):
     def save(self, *args, **kwargs):
         self.type = self.Type.DELTA_APPLY
         return super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Job: apply"
+        verbose_name_plural = "Jobs: apply"
 
 
 class ApplyJobDelta(models.Model):
