@@ -2,6 +2,8 @@
     "deltas": [
         {
             "uuid": "5cab83db-e2be-4e1b-8239-b30942bb4810",
+            "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+            "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
             "localPk": "2",
             "sourcePk": "2",
             "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
@@ -24,6 +26,8 @@
         },
         {
             "uuid": "e3ac977e-1cb2-4daf-9acb-f6e28ba016f4",
+            "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+            "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
             "localPk": "1",
             "sourcePk": "1",
             "localLayerId": "polygons_f18b6046_8e46_4206_a698_641c58e5ac73",

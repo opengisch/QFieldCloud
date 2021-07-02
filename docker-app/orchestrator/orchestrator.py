@@ -94,12 +94,33 @@ def apply_deltas(job_id, project_file):
         deltas = job.deltas_to_apply.all()
         deltas.update(last_status=Delta.Status.STARTED)
 
+        # prepare client id pks
+        delta_contents = []
+        delta_client_ids = []
+        for delta in deltas:
+            delta_contents.append(delta.content)
+
+            if "clientId" in delta.content:
+                delta_client_ids.append(delta.content["clientId"])
+
+        local_to_remote_pk_deltas = Delta.objects.filter(
+            content__clientId__in=delta_client_ids,
+            last_modified_pk__isnull=False,
+        ).values("content__clientId", "content__localPk", "last_modified_pk")
+
+        client_pks_map = {}
+
+        for delta in local_to_remote_pk_deltas:
+            key = f"{delta['content__clientId']}__{delta['content__localPk']}"
+            client_pks_map[key] = delta["last_modified_pk"]
+
         json_content = {
-            "deltas": [delta.content for delta in deltas],
+            "deltas": delta_contents,
             "files": [],
             "id": str(uuid.uuid4()),
             "project": str(project_id),
             "version": "1.0",
+            "clientPks": client_pks_map,
         }
 
         with open(qgis_tempdir.joinpath("deltafile.json"), "w") as f:
@@ -133,6 +154,7 @@ Output:
             for feedback in deltalog:
                 delta_id = feedback["delta_id"]
                 status = feedback["status"]
+                modified_pk = feedback["modified_pk"]
 
                 if status == "status_applied":
                     status = Delta.Status.APPLIED
@@ -144,7 +166,9 @@ Output:
                     status = Delta.Status.ERROR
 
                 Delta.objects.filter(pk=delta_id).update(
-                    last_status=status, last_feedback=feedback
+                    last_status=status,
+                    last_feedback=feedback,
+                    last_modified_pk=modified_pk,
                 )
 
         job.status = Job.Status.FINISHED

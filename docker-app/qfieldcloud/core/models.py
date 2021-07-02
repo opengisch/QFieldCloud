@@ -699,6 +699,7 @@ class Delta(models.Model):
         max_length=32,
     )
     last_feedback = JSONField(null=True)
+    last_modified_pk = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(

@@ -115,11 +115,13 @@ class DeltaFile:
         version: str,
         deltas: List[Union[Dict, Delta]],
         files: List[str],
+        client_pks: Dict[str, str],
     ):
         self.id = delta_file_id
         self.project_id = project_id
         self.version = version
         self.files = files
+        self.client_pks = client_pks
         self.deltas: List[Delta] = []
 
         for d in deltas:
@@ -140,6 +142,7 @@ class DeltaException(Exception):
         delta_idx: int = None,
         delta_id: str = None,
         feature_pk: str = None,
+        modified_pk: str = None,
         conflicts: List[str] = None,
         method: DeltaMethod = None,
         provider_errors: str = None,
@@ -152,6 +155,7 @@ class DeltaException(Exception):
         self.delta_idx = delta_idx
         self.delta_id = delta_id
         self.feature_pk = feature_pk
+        self.modified_pk = modified_pk
         self.method = method
         self.conflicts = conflicts
         self.provider_errors = provider_errors
@@ -301,7 +305,12 @@ def delta_file_args_loader(args: DeltaOptions) -> Optional[DeltaFile]:
     obj = args["delta_contents"]
     get_json_schema_validator().validate(obj)
     delta_file = DeltaFile(
-        obj["id"], obj["project"], obj["version"], obj["deltas"], obj["files"]
+        obj["id"],
+        obj["project"],
+        obj["version"],
+        obj["deltas"],
+        obj["files"],
+        obj["clientPks"],
     )
 
     return delta_file
@@ -326,7 +335,12 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
         obj = json.load(f)
         get_json_schema_validator().validate(obj)
         delta_file = DeltaFile(
-            obj["id"], obj["project"], obj["version"], obj["deltas"], obj["files"]
+            obj["id"],
+            obj["project"],
+            obj["version"],
+            obj["deltas"],
+            obj["files"],
+            obj["clientPks"],
         )
 
     return delta_file
@@ -372,6 +386,7 @@ def apply_deltas_without_transaction(
         delta_status = DeltaStatus.Applied
         layer_id: str = delta.get("sourceLayerId")
         layer: QgsVectorLayer = project.mapLayer(layer_id)
+        feature = QgsFeature()
 
         try:
             if not isinstance(layer, QgsVectorLayer):
@@ -394,11 +409,17 @@ def apply_deltas_without_transaction(
                 )
             elif delta["method"] == str(DeltaMethod.PATCH):
                 feature = patch_feature(
-                    layer, delta, overwrite_conflicts=overwrite_conflicts
+                    layer,
+                    delta,
+                    overwrite_conflicts=overwrite_conflicts,
+                    client_pks=delta_file.client_pks,
                 )
             elif delta["method"] == str(DeltaMethod.DELETE):
                 feature = delete_feature(
-                    layer, delta, overwrite_conflicts=overwrite_conflicts
+                    layer,
+                    delta,
+                    overwrite_conflicts=overwrite_conflicts,
+                    client_pks=delta_file.client_pks,
                 )
             else:
                 raise DeltaException("Unknown delta method")
@@ -412,13 +433,17 @@ def apply_deltas_without_transaction(
             logger.info(f'Successfully applied delta on layer "{layer_id}"')
 
             feature_pk = delta.get("sourcePk")
+            modified_pk = None
             if feature.isValid():
                 _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
-                modified_feature_pk = feature.attribute(pk_attr_name)
 
-                if modified_feature_pk and modified_feature_pk != str(feature_pk):
+                assert pk_attr_name
+
+                modified_pk = feature.attribute(pk_attr_name)
+
+                if modified_pk and modified_pk != str(feature_pk):
                     logger.warning(
-                        f'The modified feature pk valued does not match "sourcePk" in the delta in "{layer_id}": sourcePk={feature_pk} modifiedFeaturePk={modified_feature_pk}'
+                        f'The modified feature pk valued does not match "sourcePk" in the delta in "{layer_id}": sourcePk={feature_pk} modifiedFeaturePk={modified_pk}'
                     )
             else:
                 logger.warning(
@@ -435,6 +460,7 @@ def apply_deltas_without_transaction(
                     "delta_index": idx,
                     "delta_id": delta["uuid"],
                     "feature_pk": feature_pk,
+                    "modified_pk": modified_pk,
                     "conflicts": None,
                     "provider_errors": None,
                     "method": delta["method"],
@@ -470,6 +496,7 @@ def apply_deltas_without_transaction(
                     "delta_index": err.delta_idx,
                     "delta_id": err.delta_id,
                     "feature_pk": err.feature_pk,
+                    "modified_pk": err.modified_pk,
                     "conflicts": err.conflicts,
                     "provider_errors": err.provider_errors,
                     "method": err.method,
@@ -487,6 +514,7 @@ def apply_deltas_without_transaction(
                     "delta_index": idx,
                     "delta_id": delta.get("uuid"),
                     "feature_pk": None,
+                    "modified_pk": None,
                     "conflicts": None,
                     "provider_errors": None,
                     "method": delta.get("method"),
@@ -841,25 +869,40 @@ def find_layer_pk(layer: QgsVectorLayer) -> Tuple[int, str]:
     return (pk_attr_idx, pk_attr_name)
 
 
-def get_feature(layer: QgsVectorLayer, feature_pk: FeaturePk) -> QgsFeature:
+def get_feature(
+    layer: QgsVectorLayer, delta: Delta, client_pks: Dict[str, str] = None
+) -> QgsFeature:
     _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
 
     assert pk_attr_name
 
+    source_pk = delta["sourcePk"]
+
+    if client_pks:
+        client_pk_key = f'{delta["clientId"]}__{delta["localPk"]}'
+        if client_pk_key in client_pks:
+            source_pk = client_pks[client_pk_key]
+
     expr = " {} = {} ".format(
         QgsExpression.quotedColumnRef(pk_attr_name),
-        QgsExpression.quotedValue(feature_pk),
+        QgsExpression.quotedValue(source_pk),
     )
 
+    feature = QgsFeature()
+    has_feature = False
     for f in layer.getFeatures(expr):
-        return f
+        if has_feature:
+            raise Exception("More than one feature match the feature select query")
 
-    return QgsFeature()
+        feature = f
+        has_feature = True
+
+    return feature
 
 
 def create_feature(
     layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
-) -> None:
+) -> QgsFeature:
     """Creates new feature in layer
 
     Arguments:
@@ -910,7 +953,12 @@ def create_feature(
     return new_feat
 
 
-def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool):
+def patch_feature(
+    layer: QgsVectorLayer,
+    delta: Delta,
+    overwrite_conflicts: bool,
+    client_pks: Dict[str, str],
+) -> QgsFeature:
     """Patches a feature in layer
 
     Arguments:
@@ -923,7 +971,7 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
     """
     new_feature_delta = delta["new"]
     old_feature_delta = delta["old"]
-    old_feature = get_feature(layer, delta["sourcePk"])
+    old_feature = get_feature(layer, delta, client_pks)
 
     if not old_feature.isValid():
         raise DeltaException("Unable to find feature")
@@ -1004,8 +1052,11 @@ def patch_feature(layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
 
 
 def delete_feature(
-    layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
-) -> None:
+    layer: QgsVectorLayer,
+    delta: Delta,
+    overwrite_conflicts: bool,
+    client_pks: Dict[str, str],
+) -> QgsFeature:
     """Deletes a feature from layer
 
     Arguments:
@@ -1017,7 +1068,7 @@ def delete_feature(
         DeltaException: whenever the feature cannot be deleted
     """
     old_feature_delta = delta["old"]
-    old_feature = get_feature(layer, delta["sourcePk"])
+    old_feature = get_feature(layer, delta, client_pks)
 
     if not old_feature.isValid():
         raise DeltaException("Unable to find feature")
