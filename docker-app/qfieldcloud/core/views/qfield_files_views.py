@@ -144,6 +144,7 @@ class ListFilesView(views.APIView):
                 "files": files,
                 "layers": export_job.exportlog,
                 "exported_at": export_job.updated_at,
+                "export_id": export_job.pk,
             }
         )
 

@@ -2,6 +2,8 @@
     "no-deltas-here": [
         {
             "uuid": "cfed67a6-326c-4807-897b-57da7af7d33b",
+            "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+            "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
             "localPk": "1",
             "sourcePk": "1",
             "localLayerId": "pippo",

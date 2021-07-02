@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import os
@@ -5,7 +6,9 @@ import sqlite3
 import tempfile
 import time
 
+import fiona
 import requests
+import rest_framework
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project, ProjectCollaborator, User
@@ -32,9 +35,12 @@ class QfcTestCase(APITransactionTestCase):
         self.user1.save()
         self.user2 = User.objects.create_user(username="user2", password="abc123")
         self.user2.save()
+        self.user3 = User.objects.create_user(username="user3", password="abc123")
+        self.user3.save()
 
         self.token1 = Token.objects.get_or_create(user=self.user1)[0]
         self.token2 = Token.objects.get_or_create(user=self.user2)[0]
+        self.token3 = Token.objects.get_or_create(user=self.user3)[0]
 
         # Create a project
         self.project1 = Project.objects.create(
@@ -49,6 +55,11 @@ class QfcTestCase(APITransactionTestCase):
             project=self.project1,
             collaborator=self.user2,
             role=ProjectCollaborator.Roles.REPORTER,
+        )
+        ProjectCollaborator.objects.create(
+            project=self.project1,
+            collaborator=self.user3,
+            role=ProjectCollaborator.Roles.ADMIN,
         )
 
     def tearDown(self):
@@ -555,3 +566,234 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(response.content, b'fid,col1\n"1",qux\n')
 
             return
+
+    def test_apply222(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        self.upload_project_files()
+
+        # 1) client 1 creates a feature
+        self.upload_deltafile(
+            project=self.project1,
+            delta_filename="multistage_p1_c1_create.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        with fiona.open(gpkg, "r", layer="points") as layer:
+            features = list(layer)
+
+            self.assertEqual(len(features), 4)
+            self.assertEqual(features[0]["properties"]["int"], 1)
+            self.assertEqual(features[1]["properties"]["int"], 2)
+            self.assertEqual(features[2]["properties"]["int"], 3)
+            self.assertEqual(features[3]["properties"]["int"], 1000)
+
+        # 2) client 2 creates a feature
+        self.upload_deltafile(
+            project=self.project1,
+            delta_filename="multistage_p2_c2_create.json",
+            token=self.token3.key,
+            final_values=[
+                [
+                    "608bbfb7-fb9c-49c4-818f-f636ee4ec20a",
+                    "STATUS_APPLIED",
+                    self.user3.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        with fiona.open(gpkg, "r", layer="points") as layer:
+            features = list(layer)
+
+            self.assertEqual(len(features), 5)
+            self.assertEqual(features[0]["properties"]["int"], 1)
+            self.assertEqual(features[1]["properties"]["int"], 2)
+            self.assertEqual(features[2]["properties"]["int"], 3)
+            self.assertEqual(features[3]["properties"]["int"], 1000)
+            self.assertEqual(features[4]["properties"]["int"], 2000)
+
+        # 3) client 1 updates their created feature
+        self.upload_deltafile(
+            project=self.project1,
+            delta_filename="multistage_p3_c1_patch.json",
+            token=self.token3.key,
+            final_values=[
+                [
+                    "f11603e5-13b2-43a9-b27a-db722297773b",
+                    "STATUS_APPLIED",
+                    self.user3.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        with fiona.open(gpkg, "r", layer="points") as layer:
+            features = list(layer)
+
+            self.assertEqual(len(features), 5)
+            self.assertEqual(features[0]["properties"]["int"], 1)
+            self.assertEqual(features[1]["properties"]["int"], 2)
+            self.assertEqual(features[2]["properties"]["int"], 3)
+            self.assertEqual(features[3]["properties"]["int"], 1001)
+            self.assertEqual(features[4]["properties"]["int"], 2000)
+
+        # 4) client 2 updates their created feature
+        self.upload_deltafile(
+            project=self.project1,
+            delta_filename="multistage_p4_c2_patch.json",
+            token=self.token3.key,
+            final_values=[
+                [
+                    "582de6de-562f-4482-9350-5b5aaa25d822",
+                    "STATUS_APPLIED",
+                    self.user3.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        with fiona.open(gpkg, "r", layer="points") as layer:
+            features = list(layer)
+
+            self.assertEqual(len(features), 5)
+            self.assertEqual(features[0]["properties"]["int"], 1)
+            self.assertEqual(features[1]["properties"]["int"], 2)
+            self.assertEqual(features[2]["properties"]["int"], 3)
+            self.assertEqual(features[3]["properties"]["int"], 1001)
+            self.assertEqual(features[4]["properties"]["int"], 2002)
+
+        # 5) client 1 deletes their created feature
+        self.upload_deltafile(
+            project=self.project1,
+            delta_filename="multistage_p5_c1_delete.json",
+            token=self.token3.key,
+            final_values=[
+                [
+                    "b7a09a1d-9626-4da0-8456-61c2ff884611",
+                    "STATUS_APPLIED",
+                    self.user3.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        with fiona.open(gpkg, "r", layer="points") as layer:
+            features = list(layer)
+
+            self.assertEqual(len(features), 4)
+            self.assertEqual(features[0]["properties"]["int"], 1)
+            self.assertEqual(features[1]["properties"]["int"], 2)
+            self.assertEqual(features[2]["properties"]["int"], 3)
+            self.assertEqual(features[3]["properties"]["int"], 2002)
+
+        # 6) client 2 deletes their created feature
+        self.upload_deltafile(
+            project=self.project1,
+            delta_filename="multistage_p6_c2_delete.json",
+            token=self.token3.key,
+            final_values=[
+                [
+                    "7cb988e9-5de2-4bd7-af4b-c1d27a2d579f",
+                    "STATUS_APPLIED",
+                    self.user3.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        with fiona.open(gpkg, "r", layer="points") as layer:
+            features = list(layer)
+
+            self.assertEqual(len(features), 3)
+            self.assertEqual(features[0]["properties"]["int"], 1)
+            self.assertEqual(features[1]["properties"]["int"], 2)
+            self.assertEqual(features[2]["properties"]["int"], 3)
+
+    def get_file_contents(self, filename):
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/{filename}/")
+
+        self.assertIsInstance(response, HttpResponseRedirect)
+
+        response = requests.get(response.url)
+
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(get_filename(response), filename)
+
+        return response.content
+
+    def upload_deltafile(
+        self,
+        project,
+        delta_filename,
+        final_values,
+        token,
+        wait_status=["STATUS_PENDING", "STATUS_BUSY"],
+        failing_status=["STATUS_ERROR"],
+        immediate_values=None,
+    ):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
+
+        # Push a deltafile
+        delta_file = testdata_path(f"delta/deltas/{delta_filename}")
+        with open(delta_file) as f:
+            deltafile_id = json.load(f)["id"]
+
+        response = self.client.post(
+            f"/api/v1/deltas/{project.id}/",
+            {"file": open(delta_file, "rb")},
+            format="multipart",
+        )
+        print(response, response.content)
+        self.assertTrue(rest_framework.status.is_success(response.status_code))
+
+        response = self.client.get(f"/api/v1/deltas/{project.id}/{deltafile_id}/")
+        self.assertTrue(rest_framework.status.is_success(response.status_code))
+        payload = response.json()
+        payload = sorted(payload, key=lambda k: k["id"])
+
+        if immediate_values:
+            self.assertEqual(len(payload), len(immediate_values))
+
+            for idx, immediate_value in enumerate(immediate_values):
+                delta_id, status, created_by = immediate_value
+                status = status if isinstance(status, list) else list(status)
+
+                self.assertEqual(payload[idx]["id"], delta_id)
+                self.assertIn(payload[idx]["status"], status)
+                self.assertEqual(payload[idx]["created_by"], created_by)
+
+        for _ in range(10):
+
+            time.sleep(2)
+            response = self.client.get(f"/api/v1/deltas/{project.id}/{deltafile_id}/")
+
+            payload = response.json()
+            payload = sorted(payload, key=lambda k: k["id"])
+
+            self.assertEqual(len(payload), len(final_values))
+
+            for idx, final_value in enumerate(final_values):
+                if payload[idx]["status"] in wait_status:
+                    break
+
+                if payload[idx]["status"] in failing_status:
+                    self.fail(f"Got failing status {payload[idx]['status']}")
+                    return
+
+                delta_id, status, created_by = final_value
+                status = status if isinstance(status, list) else [status]
+
+                self.assertEqual(payload[idx]["id"], delta_id)
+                self.assertIn(payload[idx]["status"], status)
+                self.assertEqual(payload[idx]["created_by"], created_by)
+                return
+
+        self.fail("Worker didn't finish")

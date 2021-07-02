@@ -114,6 +114,24 @@
                             "ddc41fa4-3961-4127-80f6-7d3e3f3f985b"
                         ]
                     },
+                    "exportId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Export ID",
+                        "description": "A unique identifier of the local data snapshot that the delta was generated from. Each of the export ID is unique for each server export and device. Generated client-side.",
+                        "examples": [
+                            "f7b5230c-d078-4654-9bcc-1adc1646bb28"
+                        ]
+                    },
+                    "clientId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Client Export ID",
+                        "description": "A unique identifier of the client that has exported the project.",
+                        "examples": [
+                            "f7b5230c-d078-4654-9bcc-1adc1646bb28"
+                        ]
+                    },
                     "localPk": {
                         "type": "string",
                         "title": "Local Feature ID",
@@ -176,6 +194,17 @@
                 "description": "Filename with path relative to project root",
                 "example": "DCIM/photo1.jpg"
             }
+        },
+        "clientPks": {
+            "type": "object",
+            "title": "Local to remote primary keys",
+            "description": "Map with the client PK as keys and remote data source PK as values. Used when deleting a newly created feature that was never exported back to the client.",
+            "additionalProperties": true,
+            "examples": [
+                {
+                    "86f1179c-0885-410a-916c-8b26bedfcc51__123": "fead14da-9d09-4320-a915-2c898f5ac38a"
+                }
+            ]
         }
     }
 }
