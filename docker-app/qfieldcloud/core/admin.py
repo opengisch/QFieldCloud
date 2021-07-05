@@ -11,7 +11,7 @@ from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
-from qfieldcloud.core import exceptions, utils
+from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -412,21 +412,19 @@ class DeltaAdmin(admin.ModelAdmin):
 
     def response_change(self, request, delta):
         if "_apply_delta_btn" in request.POST:
-            project_file = utils.get_qgis_project_file(delta.project.id)
+            if delta.project.project_filename:
+                self.message_user(request, "Missing project file")
+                raise exceptions.NoQGISProjectError()
 
             if not jobs.apply_deltas(
                 delta.project,
                 request.user,
-                project_file,
+                delta.project.project_filename,
                 delta.project.overwrite_conflicts,
                 delta_ids=[str(delta.id)],
             ):
                 self.message_user(request, "No deltas to apply")
                 raise exceptions.NoDeltasToApplyError()
-
-            if project_file is None:
-                self.message_user(request, "Missing project file")
-                raise exceptions.NoQGISProjectError()
 
             self.message_user(request, "Delta application started")
 

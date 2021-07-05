@@ -161,6 +161,15 @@ def safe_join(base, *paths):
     return final_path.lstrip("/")
 
 
+def is_qgis_project_file(filename: str) -> bool:
+    path = PurePath(filename)
+
+    if path.suffix in (".qgs", ".qgz"):
+        return True
+
+    return False
+
+
 def get_qgis_project_file(projectid):
     """Return the relative path inside the project of the qgs/qgz file or
     None if no qgs/qgz file is present"""
@@ -170,7 +179,7 @@ def get_qgis_project_file(projectid):
     prefix = "projects/{}/files/".format(projectid)
 
     for obj in bucket.objects.filter(Prefix=prefix):
-        if obj.key.lower().endswith(".qgs") or obj.key.lower().endswith(".qgz"):
+        if is_qgis_project_file(obj.key):
             path = PurePath(obj.key)
             return str(path.relative_to(*path.parts[:3]))
 

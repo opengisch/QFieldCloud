@@ -44,8 +44,7 @@ class ExportView(views.APIView):
 
         project_obj = Project.objects.get(id=projectid)
 
-        project_file = utils.get_qgis_project_file(projectid)
-        if project_file is None:
+        if not project_obj.project_filename:
             raise exceptions.NoQGISProjectError()
 
         # Check if active export job already exists
@@ -65,7 +64,7 @@ class ExportView(views.APIView):
             project=project_obj, created_by=self.request.user
         )
 
-        utils.export_project(export_job.pk, project_file)
+        utils.export_project(export_job.pk, project_obj.project_filename)
 
         # TODO: check if user is allowed otherwise ERROR 403
         serializer = serializers.ExportJobSerializer(export_job)

@@ -54,7 +54,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     def post(self, request, projectid):
 
         project_obj = Project.objects.get(id=projectid)
-        project_file = utils.get_qgis_project_file(projectid)
+        project_file = project_obj.project_filename
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
@@ -160,7 +160,7 @@ class ApplyView(views.APIView):
 
     def post(self, request, projectid):
         project_obj = Project.objects.get(id=projectid)
-        project_file = utils.get_qgis_project_file(projectid)
+        project_file = project_obj.project_filename
 
         if project_file is None:
             raise exceptions.NoQGISProjectError()

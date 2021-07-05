@@ -532,6 +532,12 @@ class Project(models.Model):
 
     objects = ProjectQueryset.as_manager()
 
+    class Status(models.TextChoices):
+        IDLE = "idle", _("Idle")
+        EXPORTING = "exporting", _("Exporting")
+        APPLYING_DELTAS = "applying_deltas", _("Applying deltas")
+        PROCESS_PROJECTFILE = "process_projectfile", _("Process QGIS project file")
+
     class Meta:
         ordering = ["owner__username", "name"]
         constraints = [
@@ -555,11 +561,15 @@ class Project(models.Model):
     )
 
     description = models.TextField(blank=True)
+    project_filename = models.TextField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
         help_text=_(
             "Projects that are marked as public would be visible and editable to anyone."
         ),
+    )
+    status = models.CharField(
+        max_length=30, choices=Status.choices, default=Status.IDLE
     )
     owner = models.ForeignKey(
         User,
@@ -601,10 +611,6 @@ class Project(models.Model):
     @property
     def files(self):
         return utils.get_project_files(self.id)
-
-    @property
-    def qgis_project_file(self):
-        return utils.get_qgis_project_file(self.id)
 
     @property
     def files_count(self):
