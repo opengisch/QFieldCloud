@@ -3,7 +3,9 @@ import secrets
 import string
 import uuid
 from enum import Enum
+from typing import Any, Type
 
+import qfieldcloud.core.utils2.storage
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
@@ -13,7 +15,7 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count
 from django.db.models.fields.json import JSONField
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -590,6 +592,16 @@ class Project(models.Model):
             "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
         ),
     )
+    thumbnail_uri = models.CharField(
+        _("Thumbnail Picture URI"), max_length=255, blank=True
+    )
+
+    @property
+    def thumbnail_url(self):
+        if self.thumbnail_uri:
+            return get_s3_object_url(self.thumbnail_uri)
+        else:
+            return None
 
     def get_absolute_url(self):
         return reverse_lazy(
@@ -615,6 +627,12 @@ class Project(models.Model):
     @property
     def files_count(self):
         return utils.get_project_files_count(self.id)
+
+
+@receiver(pre_delete, sender=Project)
+def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> None:
+    if instance.thumbnail_uri:
+        qfieldcloud.core.utils2.storage.remove_project_thumbail(instance)
 
 
 class ProjectCollaborator(models.Model):
