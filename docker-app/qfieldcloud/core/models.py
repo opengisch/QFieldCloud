@@ -767,6 +767,7 @@ class Job(models.Model):
     class Type(models.TextChoices):
         EXPORT = "export", _("Export")
         DELTA_APPLY = "delta_apply", _("Delta Apply")
+        PROCESS_PROJECTFILE = "process_projectfile", _("Process QGIS Project File")
 
     class Status(models.TextChoices):
         PENDING = "pending", _("Pending")
@@ -802,6 +803,18 @@ class ExportJob(Job):
     class Meta:
         verbose_name = "Job: export"
         verbose_name_plural = "Jobs: export"
+
+
+class ProcessQgisProjectfileJob(Job):
+    feedback = JSONField(null=True)
+
+    def save(self, *args, **kwargs):
+        self.type = self.Type.PROCESS_PROJECTFILE
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Job: process QGIS project file"
+        verbose_name_plural = "Jobs: process QGIS project file"
 
 
 class ApplyJob(Job):
