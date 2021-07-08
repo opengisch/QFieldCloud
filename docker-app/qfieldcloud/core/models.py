@@ -332,6 +332,15 @@ def create_account_for_organization(sender, instance, created, **kwargs):
         UserAccount.objects.create(user=instance)
 
 
+@receiver(pre_delete, sender=User)
+@receiver(pre_delete, sender=Organization)
+def delete_user(sender: Type[User], instance: User, **kwargs: Any) -> None:
+    if instance.user_type == User.TYPE_TEAM:
+        return
+
+    qfieldcloud.core.utils2.storage.remove_user_avatar(instance)
+
+
 class OrganizationMember(models.Model):
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
