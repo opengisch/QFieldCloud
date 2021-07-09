@@ -2,7 +2,7 @@ from pathlib import PurePath
 
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import exceptions, permissions_utils, utils
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import ProcessQgisProjectfileJob, Project
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -131,14 +131,18 @@ class DownloadPushDeleteFileView(views.APIView):
             raise exceptions.EmptyContentError()
 
         # check only one qgs/qgz file per project
-        if (
-            utils.is_qgis_project_file(filename)
-            and project.project_filename is not None
-            and PurePath(filename) != PurePath(project.project_filename)
-        ):
-            raise exceptions.MultipleProjectsError(
-                "Only one QGIS project per project allowed"
-            )
+        if utils.is_qgis_project_file(filename):
+            if project.project_filename is not None and PurePath(filename) != PurePath(
+                project.project_filename
+            ):
+                raise exceptions.MultipleProjectsError(
+                    "Only one QGIS project per project allowed"
+                )
+            else:
+                job = ProcessQgisProjectfileJob.objects.create(
+                    project=project, created_by=self.request.user
+                )
+                utils.process_projectfile(job.id)
 
         request_file = request.FILES.get("file")
 

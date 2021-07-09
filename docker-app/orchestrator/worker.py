@@ -48,7 +48,7 @@ with Connection():
         port=6379,
     )
 
-    qs = ["delta", "export"]
+    qs = ["delta", "export", "process_projectfile"]
 
     w = Worker(qs, connection=redis, exception_handlers=handle_exception)
     w.work()

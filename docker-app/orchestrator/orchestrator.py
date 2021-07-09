@@ -5,7 +5,15 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from qfieldcloud.core.models import ApplyJob, Delta, ExportJob, Job
+import qfieldcloud.core.utils2.storage
+from qfieldcloud.core.models import (
+    ApplyJob,
+    Delta,
+    ExportJob,
+    Job,
+    ProcessQgisProjectfileJob,
+    Project,
+)
 
 from .db_utils import use_test_db_if_exists
 from .docker_utils import run_docker
@@ -176,6 +184,69 @@ Output:
         job.save()
 
         return exit_code, output.decode("utf-8")
+
+
+def process_projectfile(job_id):
+    logger.info(f"Starting a new process QGIS projectfile job {job_id}")
+
+    with use_test_db_if_exists():
+        try:
+            job = ProcessQgisProjectfileJob.objects.get(id=job_id)
+        except ProcessQgisProjectfileJob.DoesNotExist:
+            logger.warning(f"ProcessQgisProjectfileJob {job_id} does not exist.")
+            return -1, f"ProcessQgisProjectfileJob {job_id} does not exist."
+
+        orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
+        qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
+
+        project = job.project
+
+        job.status = Job.Status.STARTED
+        job.save()
+        project.status = Project.Status.PROCESS_PROJECTFILE
+        project.save()
+
+        exit_code, output = run_docker(
+            f"xvfb-run python3 entrypoint.py process-qgis-projectfile {project.id} {project.project_filename}",
+            volumes={qgis_tempdir: {"bind": "/io/", "mode": "rw"}},
+        )
+
+        logger.info(
+            "postprocess QGIS projectfile, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}".format(
+                project.id, project.project_filename, exit_code, output.decode("utf-8")
+            )
+        )
+
+        if not exit_code == 0:
+            job.status = Job.Status.FAILED
+            job.output = output.decode("utf-8")
+            job.save()
+            raise QgisException(output)
+
+        thumbnail_filename = Path(orchestrator_tempdir).joinpath("thumbnail.png")
+        with open(thumbnail_filename, "rb") as f:
+            thumbnail_uri = qfieldcloud.core.utils2.storage.upload_project_thumbail(
+                job.project, f, "image/png", "thumbnail"
+            )
+
+        feedback_filename = Path(orchestrator_tempdir).joinpath("feedback.json")
+        try:
+            with open(feedback_filename, "r") as f:
+                feedback = json.load(f)
+        except FileNotFoundError:
+            feedback = "Feedback log not available"
+
+        logger.info("Project processed successfully")
+
+        job.status = Job.Status.STARTED
+        job.output = output.decode("utf-8")
+        job.feedback = feedback
+        job.save()
+        project.status = Project.Status.IDLE
+        project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
+        project.save()
+
+        return exit_code, output.decode("utf-8"), feedback
 
 
 def check_status():

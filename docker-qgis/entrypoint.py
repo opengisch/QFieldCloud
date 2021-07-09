@@ -9,9 +9,10 @@ import tempfile
 from datetime import datetime
 from pathlib import Path, PurePath
 
-import apply_deltas
 import boto3
 import mock
+import qfieldcloud.qgis.apply_deltas
+import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
 from qgis.core import (
@@ -292,7 +293,7 @@ def _apply_delta(args):
 
     project_filepath = os.path.join(tmpdir, "files", project_file)
 
-    has_errors = apply_deltas.cmd_delta_apply(
+    has_errors = qfieldcloud.qgis.apply_deltas.cmd_delta_apply(
         opts={
             "project": project_filepath,
             "delta_file": deltafile,
@@ -306,6 +307,22 @@ def _apply_delta(args):
     _upload_delta_modified_files(projectid, os.path.join(tmpdir, "files"))
 
     exit(int(has_errors))
+
+
+def _process_projectfile(args):
+    projectid = args.projectid
+    project_file = args.project_file
+
+    tmpdir = Path(_download_project_directory(projectid))
+    project_filepath = tmpdir.joinpath("files", project_file)
+    thumbnail_filename = Path("/io").joinpath("thumbnail.png")
+    feedback_filename = Path("/io").joinpath("feedback.json")
+
+    qfieldcloud.qgis.process_projectfile.process_projectfile(
+        project_filepath,
+        thumbnail_filename,
+        feedback_filename,
+    )
 
 
 if __name__ == "__main__":
@@ -335,6 +352,15 @@ if __name__ == "__main__":
         "--overwrite-conflicts", dest="overwrite_conflicts", action="store_true"
     )
     parser_delta.set_defaults(func=_apply_delta)
+
+    parser_process_projectfile = subparsers.add_parser(
+        "process-qgis-projectfile", help="Process QGIS project file"
+    )
+    parser_process_projectfile.add_argument("projectid", type=str, help="projectid")
+    parser_process_projectfile.add_argument(
+        "project_file", type=str, help="QGIS project file path"
+    )
+    parser_process_projectfile.set_defaults(func=_process_projectfile)
 
     args = parser.parse_args()
     args.func(args)

@@ -20,12 +20,16 @@ RUN apt-get update && \
 COPY ./requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt
 
-COPY ./entrypoint.py /
-COPY ./apply_deltas.py /
-COPY ./schemas/deltafile_01.json /schemas/
+WORKDIR /usr/src/app
 
-COPY ./libqfieldsync /libqfieldsync
-ENV PYTHONPATH="/libqfieldsync:${PYTHONPATH}"
+COPY entrypoint.py .
+COPY ./apply_deltas.py ./lib/qfieldcloud/qgis/
+COPY ./process_projectfile.py ./lib/qfieldcloud/qgis/
+COPY ./utils.py ./lib/qfieldcloud/qgis/
+COPY ./schemas/deltafile_01.json ./lib/qfieldcloud/qgis/schemas/
+COPY ./libqfieldsync ./lib/libqfieldsync
+
+ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
 ENV LD_PRELOAD="/lib/x86_64-linux-gnu/libSegFault.so"
 ENV SEGFAULT_SIGNALS="abrt segv"
 ENV LIBC_FATAL_STDERR_=1
@@ -35,7 +39,6 @@ COPY ./supervisord.conf /etc/supervisor/
 
 ENV LANG=C.UTF-8
 
-WORKDIR /
 
 # Run supervisor
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

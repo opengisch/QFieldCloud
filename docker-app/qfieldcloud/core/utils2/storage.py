@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 from typing import IO
 
 import qfieldcloud.core.utils
-from qfieldcloud.core.models import Project, User
 
 
-def upload_user_avatar(user: User, file: IO, mimetype: str) -> str:
+def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
     NOTE you need to set the URI to the user account manually
@@ -40,13 +41,15 @@ def upload_user_avatar(user: User, file: IO, mimetype: str) -> str:
     return key
 
 
-def remove_user_avatar(user: User) -> None:
+def remove_user_avatar(user: "User") -> None:  # noqa: F821
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = user.useraccount.avatar_uri
     bucket.object_versions.filter(Prefix=key).delete()
 
 
-def upload_project_thumbail(project: Project, file: IO, mimetype: str) -> str:
+def upload_project_thumbail(
+    project: "Project", file: IO, mimetype: str, filename: str  # noqa: F821
+) -> str:
     """Uploads a picture as a project thumbnail.
 
     NOTE you need to set the URI to the project manually
@@ -55,6 +58,7 @@ def upload_project_thumbail(project: Project, file: IO, mimetype: str) -> str:
         project (Project):
         file (IO): file used as thumbail
         mimetype (str): file mimetype
+        filename (str): filename
 
     Returns:
         str: URI to the thumbnail
@@ -71,7 +75,7 @@ def upload_project_thumbail(project: Project, file: IO, mimetype: str) -> str:
     else:
         raise Exception(f"Unknown mimetype: {mimetype}")
 
-    key = f"projects/{project.id}/meta/thumbnail.{extension}"
+    key = f"projects/{project.id}/meta/{filename}.{extension}"
     bucket.upload_fileobj(
         file,
         key,
@@ -84,7 +88,7 @@ def upload_project_thumbail(project: Project, file: IO, mimetype: str) -> str:
     return key
 
 
-def remove_project_thumbail(project: Project) -> None:
+def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     """Uploads a picture as a project thumbnail.
 
     NOTE you need to remove the URI to the project manually
