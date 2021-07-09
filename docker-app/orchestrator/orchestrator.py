@@ -29,7 +29,7 @@ class QgisException(Exception):
     pass
 
 
-def export_project(job_id, project_file):
+def export_project(job_id: str) -> None:
     """Start a QGIS docker container to export the project using libqfieldsync """
 
     logger.info(f"Starting a new export for project {job_id}")
@@ -42,6 +42,7 @@ def export_project(job_id, project_file):
             return -1, f"ExportJob {job_id} does not exist."
 
         project_id = job.project_id
+        project_file = job.project.project_filename
         orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
         qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
 

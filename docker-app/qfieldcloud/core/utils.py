@@ -25,7 +25,6 @@ def export_project(job_id, project_file):
     job = queue.enqueue(
         "orchestrator.orchestrator.export_project",
         str(job_id),
-        str(project_file),
         job_id=str(job_id),
     )
 
