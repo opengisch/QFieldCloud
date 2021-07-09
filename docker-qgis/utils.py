@@ -1,9 +1,12 @@
+import json
 import socket
 import subprocess
 import sys
+import traceback
 import uuid
 from contextlib import contextmanager
-from typing import Callable, List, Optional
+from pathlib import Path
+from typing import IO, Any, Callable, Dict, List, Optional, Union
 
 from qgis.core import QgsMapLayer, QgsProviderRegistry
 
@@ -97,3 +100,68 @@ def get_layer_filename(layer: QgsMapLayer) -> Optional[str]:
             return decoded["path"]
 
     return None
+
+
+def perform_task(
+    steps: List[Step],
+    arguments: Dict[str, Any],
+    feedback_filename: Optional[Union[IO, Path]],
+) -> Dict:
+    """Executes the steps required to perform a task and return structured feedback from the execution
+
+    Each step has a method that is executed.
+    Method may take arguments as defined in `arg_names`.
+    Method may return values, as defined in `return_values`.
+    Some return values can used as task output, as defined in `output_names`.
+    Some return values can used as arguments for next steps, as defined in `public_returns`.
+
+    Args:
+        steps (List[Step]): ordered steps to be executed
+        arguments (Dict[str, Any]): list of available arguments to be executed
+        feedback_filename (Optional[Union[IO, Path]]): write feedback to an IO device, to Path filename, or don't write it
+    """
+    feedback = {}
+    # argument values by name. Note it may be modified after the successful completion of each step.
+    arguments = {**arguments}
+
+    try:
+        for step in steps:
+            with logger_context(step):
+                args = [arguments[arg_name] for arg_name in step.arg_names]
+                return_values = step.method(*args)
+                return_values = (
+                    return_values if len(step.return_names) > 1 else (return_values,)
+                )
+
+                return_map = {}
+                for name, value in zip(step.return_names, return_values):
+                    return_map[name] = value
+
+                for output_name in step.output_names:
+                    step.outputs[output_name] = return_map[output_name]
+
+                for return_name in step.public_returns:
+                    arguments[return_name] = return_map[return_name]
+
+    except BaseException as err:
+        feedback["error"] = str(err)
+        (_type, _value, tb) = sys.exc_info()
+        feedback["error_stack"] = traceback.format_tb(tb)
+    finally:
+        feedback["steps"] = [
+            {
+                "name": step.name,
+                "stage": step.stage,
+                "outputs": step.outputs,
+            }
+            for step in steps
+        ]
+
+        if feedback_filename in [sys.stderr, sys.stdout]:
+            print("Feedback:")
+            print(json.dump(feedback, feedback_filename, indent=2, sort_keys=True))
+        elif feedback_filename:
+            with open(feedback_filename, "w") as f:
+                json.dump(feedback, f, indent=2, sort_keys=True)
+
+        return feedback

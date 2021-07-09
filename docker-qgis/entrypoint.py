@@ -8,6 +8,7 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path, PurePath
+from typing import List
 
 import boto3
 import mock
@@ -15,6 +16,7 @@ import qfieldcloud.qgis.apply_deltas
 import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
+from qfieldcloud.qgis.utils import Step
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -86,32 +88,33 @@ def _get_sha256sum(filepath):
     return hasher.hexdigest()
 
 
-def _download_project_directory(projectid):
+def _download_project_directory(project_id: str, tmpdir: Path = None) -> Path:
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""
 
     bucket = _get_s3_bucket()
 
     # Prefix of the working directory on the Storages
-    working_prefix = "/".join(["projects", projectid, "files"])
+    working_prefix = "/".join(["projects", project_id, "files"])
 
-    # Create a temporary directory
-    tmpdir = tempfile.mkdtemp()
+    if not tmpdir:
+        # Create a temporary directory
+        tmpdir = Path(tempfile.mkdtemp())
 
     # Create a local working directory
-    working_dir = os.path.join(tmpdir, "files")
-    os.mkdir(working_dir)
+    working_dir = tmpdir.joinpath("files")
+    working_dir.mkdir(parents=True)
 
     # Download the files
     for obj in bucket.objects.filter(Prefix=working_prefix):
-        path = PurePath(obj.key)
+        key_filename = PurePath(obj.key)
 
         # Get the path of the file relative to the project directory
-        filepath = path.relative_to(*path.parts[:2])
+        relative_filename = key_filename.relative_to(*key_filename.parts[:2])
+        absolute_filename = tmpdir.joinpath(relative_filename)
+        absolute_filename.parent.mkdir(parents=True, exist_ok=True)
 
-        dest_filepath = os.path.join(tmpdir, filepath)
-        os.makedirs(Path(dest_filepath).parent, exist_ok=True)
-        bucket.download_file(obj.key, dest_filepath)
+        bucket.download_file(obj.key, str(absolute_filename))
 
     return tmpdir
 
@@ -310,18 +313,54 @@ def _apply_delta(args):
 
 
 def _process_projectfile(args):
-    projectid = args.projectid
+    project_id = args.projectid
     project_file = args.project_file
 
-    tmpdir = Path(_download_project_directory(projectid))
-    project_filepath = tmpdir.joinpath("files", project_file)
-    thumbnail_filename = Path("/io").joinpath("thumbnail.png")
-    feedback_filename = Path("/io").joinpath("feedback.json")
+    tmpdir = Path(tempfile.mkdtemp())
+    arguments = {
+        "tmpdir": tmpdir,
+        "project_id": project_id,
+        "project_filename": tmpdir.joinpath("files", project_file),
+        "thumbnail_filename": Path("/io").joinpath("thumbnail.png"),
+    }
+    steps: List[Step] = [
+        Step(
+            name="Download Project Directory",
+            arg_names=["project_id", "tmpdir"],
+            method=_download_project_directory,
+            return_names=["tmp_project_dir"],
+            public_returns=["tmp_project_dir"],
+        ),
+        Step(
+            name="Project Validity Check",
+            arg_names=["project_filename"],
+            method=qfieldcloud.qgis.process_projectfile.check_valid_project_file,
+        ),
+        Step(
+            name="Opening Check",
+            arg_names=["project_filename"],
+            method=qfieldcloud.qgis.process_projectfile.load_project_file,
+            return_names=["project"],
+            public_returns=["project"],
+        ),
+        Step(
+            name="Layer Validity Check",
+            arg_names=["project"],
+            method=qfieldcloud.qgis.process_projectfile.check_layer_validity,
+            return_names=["layers_summary"],
+            output_names=["layers_summary"],
+        ),
+        Step(
+            name="Generate Thumbnail Image",
+            arg_names=["project", "thumbnail_filename"],
+            method=qfieldcloud.qgis.process_projectfile.generate_thumbnail,
+        ),
+    ]
 
-    qfieldcloud.qgis.process_projectfile.process_projectfile(
-        project_filepath,
-        thumbnail_filename,
-        feedback_filename,
+    qfieldcloud.qgis.utils.perform_task(
+        steps,
+        arguments,
+        Path("/io").joinpath("feedback.json"),
     )
 
 

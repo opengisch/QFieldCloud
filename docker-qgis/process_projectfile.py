@@ -1,7 +1,5 @@
-import json
 import logging
 import sys
-import traceback
 from pathlib import Path
 from typing import List
 from xml.etree import ElementTree
@@ -10,11 +8,9 @@ from PyQt5.QtCore import QFile, QIODevice
 from PyQt5.QtXml import QDomDocument
 from qfieldcloud.qgis.utils import (
     BaseException,
-    Step,
     get_layer_filename,
     has_ping,
     is_localhost,
-    logger_context,
 )
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.gui import QgsLayerTreeMapCanvasBridge, QgsMapCanvas
@@ -38,9 +34,7 @@ class InvalidFileExtensionException(BaseException):
 
 
 class InvalidXmlFileException(BaseException):
-    message = (
-        'Project file "%(project_filename)s" is an invalid XML document:\n%(xml_error)s'
-    )
+    message = "Project file is an invalid XML document:\n%(xml_error)s"
 
 
 class InvalidQgisFileException(BaseException):
@@ -82,9 +76,7 @@ def load_project_file(project_filename: Path) -> QgsProject:
 
     project = QgsProject.instance()
     if not project.read(str(project_filename)):
-        raise InvalidXmlFileException(
-            project_filename=project_filename, error=project.error()
-        )
+        raise InvalidXmlFileException(error=project.error())
 
     return project
 
@@ -173,9 +165,7 @@ def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:
     if file.open(QIODevice.ReadOnly):
         (_retval, error, _error_line, _error_column) = doc.setContent(file, False)
         if error:
-            raise InvalidXmlFileException(
-                project_filename=project_filename, error=error
-            )
+            raise InvalidXmlFileException(error=error)
 
     canvas.readProject(doc)
     settings = QgsMapSettings()
@@ -200,93 +190,4 @@ def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:
     loop.exec_()
 
     if not Path(thumbnail_filename).exists():
-        raise FailedThumbnailGenerationException(
-            project_filename=project_filename, reason="File does not exist."
-        )
-
-
-def process_projectfile(
-    project_filename: Path,
-    thumbnail_filename: Path,
-    feedback_filename: Path = None,
-) -> None:
-    feedback = {}
-    # argument values by name. Note it may be modified after the successful completion of each step.
-    arg_values = {
-        "project_filename": project_filename,
-        "thumbnail_filename": thumbnail_filename,
-    }
-    steps: List[Step] = [
-        Step(
-            name="Project Validity Check",
-            arg_names=["project_filename"],
-            method=check_valid_project_file,
-        ),
-        Step(
-            name="Opening Check",
-            arg_names=["project_filename"],
-            method=load_project_file,
-            return_names=["project"],
-            public_returns=["project"],
-        ),
-        Step(
-            name="Layer Validity Check",
-            arg_names=["project"],
-            method=check_layer_validity,
-            return_names=["layers_summary"],
-            output_names=["layers_summary"],
-        ),
-        Step(
-            name="Generate Thumbnail Image",
-            arg_names=["project", "thumbnail_filename"],
-            method=generate_thumbnail,
-        ),
-    ]
-
-    try:
-        for step in steps:
-            with logger_context(step):
-                args = [arg_values[arg_name] for arg_name in step.arg_names]
-                return_values = step.method(*args)
-                return_values = (
-                    return_values if len(step.return_names) > 1 else (return_values,)
-                )
-
-                return_map = {}
-                for name, value in zip(step.return_names, return_values):
-                    return_map[name] = value
-
-                for output_name in step.output_names:
-                    step.outputs[output_name] = return_map[output_name]
-
-                for return_name in step.public_returns:
-                    arg_values[return_name] = return_map[return_name]
-
-    except BaseException as err:
-        feedback["error"] = str(err)
-        (_type, _value, tb) = sys.exc_info()
-        feedback["error_stack"] = traceback.format_tb(tb)
-    finally:
-        feedback["steps"] = [
-            {
-                "name": step.name,
-                "stage": step.stage,
-                "outputs": step.outputs,
-            }
-            for step in steps
-        ]
-
-        if feedback_filename:
-            with open(feedback_filename, "w") as f:
-                json.dump(feedback, f, indent=2, sort_keys=True)
-        else:
-            print("Feedback:")
-            print(json.dumps(feedback, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    import sys
-
-    project_filename = Path(sys.argv[1])
-
-    process_projectfile(project_filename, Path("/tmp/thumbnail.png"))
+        raise FailedThumbnailGenerationException(reason="File does not exist.")
