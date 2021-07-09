@@ -794,7 +794,7 @@ class Job(models.Model):
     )
     type = models.CharField(max_length=32, choices=Type.choices)
     status = models.CharField(
-        max_length=32, choices=Status.choices, default=Status.QUEUED
+        max_length=32, choices=Status.choices, default=Status.PENDING
     )
     output = models.TextField(null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
