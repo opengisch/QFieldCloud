@@ -122,6 +122,15 @@ services:
       - redis
       - app
 
+  dequeue:
+    <<: *default-django
+    command: python manage.py dequeue
+    depends_on:
+      - db
+      - redis
+      - orchestrator
+      - app
+
 volumes:
   postgres_data:
   static_volume:
