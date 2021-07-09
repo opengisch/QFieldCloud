@@ -18,6 +18,9 @@ def start_job(job: Job):  # noqa: F821
     else:
         raise NotImplementedError(f"Unknown job type {job.type}")
 
+    job.status = Job.Status.QUEUED
+    job.save()
+
     queue = django_rq.get_queue(queue_name)
     rq_job = queue.enqueue(
         f"orchestrator.orchestrator.{method}",

@@ -139,10 +139,9 @@ class DownloadPushDeleteFileView(views.APIView):
                     "Only one QGIS project per project allowed"
                 )
             else:
-                job = ProcessQgisProjectfileJob.objects.create(
+                ProcessQgisProjectfileJob.objects.create(
                     project=project, created_by=self.request.user
                 )
-                utils.process_projectfile(job.id)
 
         request_file = request.FILES.get("file")
 

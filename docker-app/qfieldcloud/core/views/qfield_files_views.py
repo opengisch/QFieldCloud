@@ -64,10 +64,9 @@ class ExportView(views.APIView):
             project=project_obj, created_by=self.request.user
         )
 
-        utils.export_project(export_job.pk, project_obj.project_filename)
-
         # TODO: check if user is allowed otherwise ERROR 403
         serializer = serializers.ExportJobSerializer(export_job)
+
         return Response(serializer.data)
 
     def get(self, request, projectid):

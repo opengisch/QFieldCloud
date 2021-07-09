@@ -16,8 +16,7 @@ def apply_deltas(
         f"Requested apply_deltas on {project} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
     )
 
-    queue = django_rq.get_queue("delta")
-    job_ids = queue.started_job_registry.get_job_ids()
+    job_ids = django_rq.get_queue("delta").started_job_registry.get_job_ids()
     pending_deltas = Delta.objects.filter(
         project=project,
         last_status__in=[
@@ -43,13 +42,5 @@ def apply_deltas(
 
     for delta in pending_deltas:
         apply_job.deltas_to_apply.add(delta)
-
-    job_id = apply_job.id
-    queue.enqueue(
-        "orchestrator.orchestrator.apply_deltas",
-        str(job_id),
-        str(project_file),
-        job_id=str(job_id),
-    )
 
     return apply_job
