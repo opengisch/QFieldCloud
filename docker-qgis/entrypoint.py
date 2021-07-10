@@ -169,7 +169,12 @@ def _upload_delta_modified_files(projectid, local_dir):
         metadata = {"sha256sum": sha256sum}
 
         # Check if the file is different on the storage
-        if not bucket.Object(key).metadata.get("Sha256sum", None) == sha256sum:
+        storage_metadata = bucket.Object(key).metadata
+        # depends on the storage
+        storage_metadata["Sha256sum"] = storage_metadata.get(
+            "Sha256sum", storage_metadata.get("sha256sum", None)
+        )
+        if storage_metadata["Sha256sum"] != sha256sum:
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
@@ -267,22 +272,47 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
     return layer_checks
 
 
-def _export_project(args):
-    projectid = args.projectid
+def cmd_export_project(args):
+    project_id = args.projectid
     project_file = args.project_file
 
-    tmpdir = _download_project_directory(projectid)
+    tmpdir = Path(tempfile.mkdtemp())
+    exportdir = tmpdir.joinpath("export")
+    exportdir.mkdir()
 
-    project_filepath = os.path.join(tmpdir, "files", project_file)
+    arguments = {
+        "tmpdir": tmpdir,
+        "project_id": project_id,
+        "project_filename": tmpdir.joinpath("files", project_file),
+        "exportdir": exportdir,
+    }
+    steps: List[Step] = [
+        Step(
+            name="Download Project Directory",
+            arg_names=["project_id", "tmpdir"],
+            method=_download_project_directory,
+            return_names=["tmp_project_dir"],
+            public_returns=["tmp_project_dir"],
+        ),
+        Step(
+            name="Export Project",
+            arg_names=["project_filename", "exportdir"],
+            return_names=["layer_checks"],
+            output_names=["layer_checks"],
+            method=_call_qfieldsync_exporter,
+        ),
+        Step(
+            name="Upload Exported Project",
+            arg_names=["project_id", "exportdir"],
+            method=_upload_project_directory,
+        ),
+    ]
 
-    # create an export directory inside the tempdir
-    export_dir = os.path.join(tmpdir, "export")
-    os.mkdir(export_dir)
-
-    _call_qfieldsync_exporter(project_filepath, export_dir)
-
-    # Upload changed data files to the "export" directory on the storage
-    _upload_project_directory(projectid, export_dir)
+    qfieldcloud.qgis.utils.perform_task(
+        steps,
+        arguments,
+        Path("/io").joinpath("feedback.json"),
+    )
 
 
 def _apply_delta(args):
@@ -310,7 +340,7 @@ def _apply_delta(args):
     exit(int(has_errors))
 
 
-def _process_projectfile(args):
+def cmd_process_projectfile(args):
     project_id = args.projectid
     project_file = args.project_file
 
@@ -380,7 +410,7 @@ if __name__ == "__main__":
     parser_export = subparsers.add_parser("export", help="Export a project")
     parser_export.add_argument("projectid", type=str, help="projectid")
     parser_export.add_argument("project_file", type=str, help="QGIS project file path")
-    parser_export.set_defaults(func=_export_project)
+    parser_export.set_defaults(func=cmd_export_project)
 
     parser_delta = subparsers.add_parser("apply-delta", help="Apply deltafile")
     parser_delta.add_argument("projectid", type=str, help="projectid")
@@ -397,7 +427,7 @@ if __name__ == "__main__":
     parser_process_projectfile.add_argument(
         "project_file", type=str, help="QGIS project file path"
     )
-    parser_process_projectfile.set_defaults(func=_process_projectfile)
+    parser_process_projectfile.set_defaults(func=cmd_process_projectfile)
 
     args = parser.parse_args()
     args.func(args)

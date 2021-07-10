@@ -1,7 +1,9 @@
 import json
 import logging
 import os
+import sys
 import tempfile
+import traceback
 import uuid
 from pathlib import Path
 from typing import Tuple
@@ -15,8 +17,8 @@ from qfieldcloud.core.models import (
     ProcessQgisProjectfileJob,
     Project,
 )
+from qfieldcloud.core.utils2.db import use_test_db_if_exists
 
-from .db_utils import use_test_db_if_exists
 from .docker_utils import run_docker
 
 logger = logging.getLogger(__name__)
@@ -63,23 +65,30 @@ def export_project(job_id: str) -> Tuple[int, str]:
             )
         )
 
-        if not exit_code == 0:
+        feedback = {}
+        try:
+            with open(host_tmpdir.joinpath("feedback.json"), "r") as f:
+                feedback = json.load(f)
+
+                if feedback.get("error"):
+                    feedback["error_origin"] = "container"
+        except Exception as err:
+            (_type, _value, tb) = sys.exc_info()
+            feedback["error"] = err
+            feedback["error_origin"] = "orchestrator"
+            feedback["error_stack"] = traceback.format_tb(tb)
+
+        feedback["container_exit_code"] = exit_code
+
+        job.output = output.decode("utf-8")
+        job.feedback = feedback
+
+        if exit_code != 0 or feedback.get("error") is not None:
             job.status = Job.Status.FAILED
-            job.output = output.decode("utf-8")
             job.save()
             raise QgisException(output)
 
-        exportlog_file = os.path.join(host_tmpdir, "exportlog.json")
-
-        try:
-            with open(exportlog_file, "r") as f:
-                exportlog = json.load(f)
-        except FileNotFoundError:
-            exportlog = "Export log not available"
-
         job.status = Job.Status.FINISHED
-        job.output = output.decode("utf-8")
-        job.exportlog = exportlog
         job.save()
 
         return exit_code, output.decode("utf-8")

@@ -142,7 +142,7 @@ class ListFilesView(views.APIView):
         return Response(
             {
                 "files": files,
-                "layers": export_job.exportlog,
+                "layers": export_job.feedback,
                 "exported_at": export_job.updated_at,
                 "export_id": export_job.pk,
             }

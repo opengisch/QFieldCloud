@@ -797,14 +797,13 @@ class Job(models.Model):
         max_length=32, choices=Status.choices, default=Status.PENDING
     )
     output = models.TextField(null=True)
+    feedback = JSONField(null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
 class ExportJob(Job):
-    exportlog = JSONField(null=True)
-
     def save(self, *args, **kwargs):
         self.type = self.Type.EXPORT
         return super().save(*args, **kwargs)
@@ -815,8 +814,6 @@ class ExportJob(Job):
 
 
 class ProcessQgisProjectfileJob(Job):
-    feedback = JSONField(null=True)
-
     def save(self, *args, **kwargs):
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)

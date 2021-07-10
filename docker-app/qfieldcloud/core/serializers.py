@@ -240,7 +240,7 @@ class DeltaSerializer(serializers.ModelSerializer):
 
 
 class ExportJobSerializer(serializers.ModelSerializer):
-    layers = serializers.JSONField(source="exportlog")
+    layers = serializers.JSONField(source="feedback")
     status = serializers.SerializerMethodField()
 
     def get_status(self, obj):

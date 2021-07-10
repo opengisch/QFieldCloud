@@ -448,7 +448,7 @@ class ExportJobAdmin(admin.ModelAdmin):
     list_filter = ("status", "updated_at")
     list_select_related = ("project", "project__owner")
     actions = None
-    exclude = ("exportlog", "output")
+    exclude = ("feedback", "output")
 
     readonly_fields = (
         "project",
@@ -456,12 +456,12 @@ class ExportJobAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "output__pre",
-        "exportlog__pre",
+        "feedback__pre",
     )
 
     search_fields = (
         "id",
-        "exportlog__icontains",
+        "feedback__icontains",
         "project__name__iexact",
         "project__owner__username__iexact",
     )
@@ -481,8 +481,8 @@ class ExportJobAdmin(admin.ModelAdmin):
     def output__pre(self, instance):
         return format_pre(instance.output)
 
-    def exportlog__pre(self, instance):
-        return format_pre_json(instance.exportlog)
+    def feedback__pre(self, instance):
+        return format_pre_json(instance.feedback)
 
     # This will disable add functionality
     def has_add_permission(self, request):
