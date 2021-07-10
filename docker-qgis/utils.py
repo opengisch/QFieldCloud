@@ -143,7 +143,7 @@ def perform_task(
                 for return_name in step.public_returns:
                     arguments[return_name] = return_map[return_name]
 
-    except BaseException as err:
+    except Exception as err:
         feedback["error"] = str(err)
         (_type, _value, tb) = sys.exc_info()
         feedback["error_stack"] = traceback.format_tb(tb)
@@ -160,7 +160,7 @@ def perform_task(
         if feedback_filename in [sys.stderr, sys.stdout]:
             print("Feedback:")
             print(json.dump(feedback, feedback_filename, indent=2, sort_keys=True))
-        elif feedback_filename:
+        elif isinstance(feedback_filename, Path):
             with open(feedback_filename, "w") as f:
                 json.dump(feedback, f, indent=2, sort_keys=True)
 
