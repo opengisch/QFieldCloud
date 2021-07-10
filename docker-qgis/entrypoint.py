@@ -118,46 +118,27 @@ def _download_project_directory(project_id: str, tmpdir: Path = None) -> Path:
     return tmpdir
 
 
-def _upload_project_directory(projectid, local_dir):
-    """Upload the files in the local_dir (export directory) to the
-    storage"""
+def _upload_project_directory(
+    project_id: str, local_dir: Path, should_delete: bool = False
+) -> None:
+    """Upload the files in the local_dir to the storage"""
 
     bucket = _get_s3_bucket()
+    # either "files" or "export"
+    subdir = local_dir.parts[-1]
+    prefix = "/".join(["projects", project_id, subdir])
 
-    export_prefix = "/".join(["projects", projectid, "export"])
-
-    # Remove existing export directory on the storage
-    bucket.objects.filter(Prefix=export_prefix).delete()
+    if should_delete:
+        # Remove existing export directory on the storage
+        bucket.objects.filter(Prefix=prefix).delete()
 
     # Loop recursively in the local export directory
     for elem in Path(local_dir).rglob("*.*"):
         # Don't upload .qgs~ and .qgz~ files
         if str(elem).endswith("~"):
             continue
-        # Calculate sha256sum
-        with open(elem, "rb") as e:
-            sha256sum = _get_sha256sum(e)
-
-        # Create the key
-        key = "/".join([export_prefix, str(elem.relative_to(*elem.parts[:4]))])
-        metadata = {"sha256sum": sha256sum}
-        bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
-
-
-def _upload_delta_modified_files(projectid, local_dir):
-    """Upload the files changed by apply delta to the files/ directory of
-    the storage, qgs project excluded"""
-
-    bucket = _get_s3_bucket()
-
-    files_prefix = "/".join(["projects", projectid, "files"])
-
-    # Loop recursively in the local files directory
-    for elem in Path(local_dir).rglob("*.*"):
-        # Don't upload .qgs~ and .qgz~ files
-        if str(elem).endswith("~"):
-            continue
-        if str(elem).endswith("qfieldcloudbackup"):
+        # Don't upload qfieldcloud backup files
+        if str(elem).endswith(".qfieldcloudbackup"):
             continue
 
         # Calculate sha256sum
@@ -165,16 +146,19 @@ def _upload_delta_modified_files(projectid, local_dir):
             sha256sum = _get_sha256sum(e)
 
         # Create the key
-        key = "/".join([files_prefix, str(elem.relative_to(*elem.parts[:4]))])
+        key = "/".join([prefix, str(elem.relative_to(*elem.parts[:4]))])
         metadata = {"sha256sum": sha256sum}
+
+        if should_delete:
+            storage_metadata = {"sha256sum": None}
+        else:
+            storage_metadata = bucket.Object(key).metadata
+            storage_metadata["sha256sum"] = storage_metadata.get(
+                "sha256sum", storage_metadata.get("Sha256sum", None)
+            )
 
         # Check if the file is different on the storage
-        storage_metadata = bucket.Object(key).metadata
-        # depends on the storage
-        storage_metadata["Sha256sum"] = storage_metadata.get(
-            "Sha256sum", storage_metadata.get("sha256sum", None)
-        )
-        if storage_metadata["Sha256sum"] != sha256sum:
+        if metadata["sha256sum"] != storage_metadata["sha256sum"]:
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
@@ -285,6 +269,7 @@ def cmd_export_project(args):
         "project_id": project_id,
         "project_filename": tmpdir.joinpath("files", project_file),
         "exportdir": exportdir,
+        "should_delete": True,
     }
     steps: List[Step] = [
         Step(
@@ -303,7 +288,7 @@ def cmd_export_project(args):
         ),
         Step(
             name="Upload Exported Project",
-            arg_names=["project_id", "exportdir"],
+            arg_names=["project_id", "exportdir", "should_delete"],
             method=_upload_project_directory,
         ),
     ]
@@ -335,7 +320,7 @@ def _apply_delta(args):
         }
     )
 
-    _upload_delta_modified_files(projectid, os.path.join(tmpdir, "files"))
+    _upload_project_directory(projectid, tmpdir.joinpath("files"), False)
 
     exit(int(has_errors))
 
