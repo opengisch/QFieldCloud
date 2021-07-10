@@ -50,7 +50,9 @@ class ExportView(views.APIView):
         # Check if active export job already exists
         # TODO: !!!!!!!!!!!! cache results for some minutes
         query = Q(project=project_obj) & (
-            Q(status=ExportJob.Status.QUEUED) | Q(status=ExportJob.Status.STARTED)
+            Q(status=ExportJob.Status.PENDING)
+            | Q(status=ExportJob.Status.QUEUED)
+            | Q(status=ExportJob.Status.STARTED)
         )
 
         # NOTE uncomment to enforce job creation
