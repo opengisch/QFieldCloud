@@ -4,6 +4,7 @@ import os
 import tempfile
 import uuid
 from pathlib import Path
+from typing import Tuple
 
 import qfieldcloud.core.utils2.storage
 from qfieldcloud.core.models import (
@@ -29,10 +30,12 @@ class QgisException(Exception):
     pass
 
 
-def export_project(job_id: str) -> None:
+def export_project(job_id: str) -> Tuple[int, str]:
     """Start a QGIS docker container to export the project using libqfieldsync """
 
     logger.info(f"Starting a new export for project {job_id}")
+
+    assert TMP_DIRECTORY
 
     with use_test_db_if_exists():
         try:
@@ -43,15 +46,15 @@ def export_project(job_id: str) -> None:
 
         project_id = job.project_id
         project_file = job.project.project_filename
-        orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
-        qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
+        host_tmpdir = Path(tempfile.mkdtemp(dir="/tmp"))
+        qgis_tmpdir = Path(TMP_DIRECTORY).joinpath(host_tmpdir)
 
         job.status = Job.Status.STARTED
         job.save()
 
         exit_code, output = run_docker(
             f"xvfb-run python3 entrypoint.py export {project_id} {project_file}",
-            volumes={qgis_tempdir: {"bind": "/io/", "mode": "rw"}},
+            volumes={qgis_tmpdir: {"bind": "/io/", "mode": "rw"}},  # type: ignore
         )
 
         logger.info(
@@ -66,7 +69,7 @@ def export_project(job_id: str) -> None:
             job.save()
             raise QgisException(output)
 
-        exportlog_file = os.path.join(orchestrator_tempdir, "exportlog.json")
+        exportlog_file = os.path.join(host_tmpdir, "exportlog.json")
 
         try:
             with open(exportlog_file, "r") as f:
@@ -79,7 +82,7 @@ def export_project(job_id: str) -> None:
         job.exportlog = exportlog
         job.save()
 
-        return exit_code, output.decode("utf-8"), exportlog
+        return exit_code, output.decode("utf-8")
 
 
 def apply_deltas(job_id, project_file):

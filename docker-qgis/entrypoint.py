@@ -2,13 +2,12 @@
 
 import argparse
 import hashlib
-import json
 import logging
 import os
 import tempfile
 from datetime import datetime
 from pathlib import Path, PurePath
-from typing import List
+from typing import Dict, List
 
 import boto3
 import mock
@@ -174,7 +173,7 @@ def _upload_delta_modified_files(projectid, local_dir):
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
-def _call_qfieldsync_exporter(project_filepath, export_dir):
+def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
     """Call the function of QFieldSync to export a project for QField"""
 
     argvb = list(map(os.fsencode, [""]))
@@ -193,11 +192,11 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     canvas.setObjectName("theMapCanvas")
 
     project = QgsProject.instance()
-    if not os.path.exists(project_filepath):
+    if not project_filepath.exists():
         raise FileNotFoundError(project_filepath)
 
-    if not project.read(project_filepath):
-        raise Exception("Unable to open file with QGIS: {}".format(project_filepath))
+    if not project.read(str(project_filepath)):
+        raise Exception(f"Unable to open file with QGIS: {project_filepath}")
 
     # Set the crs from the original project to the canvas
     # so it will be present in the exported project
@@ -205,7 +204,7 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
 
     layers = project.mapLayers()
     # Check if the layers are valid (i.e. if the datasources are available)
-    layers_check = {}
+    layer_checks = {}
     for layer in layers.values():
         is_valid = True
         status = "ok"
@@ -225,14 +224,11 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
             is_valid = False
             status = "missing_layer"
 
-        layers_check[layer.id()] = {
+        layer_checks[layer.id()] = {
             "name": layer.name(),
             "valid": is_valid,
             "status": status,
         }
-
-    with open("/io/exportlog.json", "w") as f:
-        f.write(json.dumps(layers_check))
 
     project_config = ProjectConfiguration(project)
     vl_extent = QgsRectangle()
@@ -254,7 +250,7 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project,
-        export_dir,
+        str(export_dir),
         vl_extent.asWktPolygon(),
         vl_extent_crs,
         offline_editing,
@@ -267,6 +263,8 @@ def _call_qfieldsync_exporter(project_filepath, export_dir):
     offline_converter.convert()
 
     qgis_app.exitQgis()
+
+    return layer_checks
 
 
 def _export_project(args):
