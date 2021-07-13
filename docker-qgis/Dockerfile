@@ -26,7 +26,7 @@ COPY entrypoint.py .
 COPY ./apply_deltas.py ./lib/qfieldcloud/qgis/
 COPY ./process_projectfile.py ./lib/qfieldcloud/qgis/
 COPY ./utils.py ./lib/qfieldcloud/qgis/
-COPY ./schemas/deltafile_01.json ./lib/qfieldcloud/qgis/schemas/
+COPY ./schemas/deltafile_01.json ./schemas/
 COPY ./libqfieldsync ./lib/libqfieldsync
 
 ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
