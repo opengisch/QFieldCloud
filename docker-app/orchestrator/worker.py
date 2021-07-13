@@ -3,11 +3,10 @@ import os
 
 import sentry_sdk
 from qfieldcloud.core.models import Job
+from qfieldcloud.core.utils2.db import use_test_db_if_exists
 from redis import Redis
 from rq import Connection, Worker
 from sentry_sdk.integrations.rq import RqIntegration
-
-from .db_utils import use_test_db_if_exists
 
 logger = logging.getLogger(__name__)
 

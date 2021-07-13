@@ -4,8 +4,9 @@ from time import sleep
 from django.core.management.base import BaseCommand
 from qfieldcloud.core.models import Job, Project
 from qfieldcloud.core.utils2 import queue
+from qfieldcloud.core.utils2.db import use_test_db_if_exists
 
-SECONDS = 10
+SECONDS = 1
 
 
 class Command(BaseCommand):
@@ -15,15 +16,15 @@ class Command(BaseCommand):
         logging.info("Dequeue QFieldCloud Jobs from the DB")
 
         while True:
-            jobs_count = 0
-            for job in Job.objects.filter(
-                status=Job.Status.PENDING, project__status=Project.Status.IDLE
-            ):
-                logging.info(f"Start job {job.id}")
-                jobs_count += 1
-                queue.start_job(job)
+            with use_test_db_if_exists():
+                jobs_count = 0
+                for job in Job.objects.filter(
+                    status=Job.Status.PENDING, project__status=Project.Status.IDLE
+                ):
+                    logging.info(f"Start job {job.id}")
+                    jobs_count += 1
+                    queue.start_job(job)
 
-            if jobs_count == 0:
-                logging.info(f"No jobs found, sleep for {SECONDS} seconds")
-                for _i in range(SECONDS):
-                    sleep(1)
+                if jobs_count == 0:
+                    for _i in range(SECONDS):
+                        sleep(1)
