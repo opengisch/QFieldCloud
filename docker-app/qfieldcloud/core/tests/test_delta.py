@@ -79,7 +79,7 @@ class QfcTestCase(APITransactionTestCase):
 
         User.objects.all().delete()
 
-    def upload_project_files(self):
+    def upload_project_files(self, project) -> Project:
         # Verify the original geojson file
         with open(testdata_path("delta/points.geojson")) as f:
             points_geojson = json.load(f)
@@ -95,7 +95,7 @@ class QfcTestCase(APITransactionTestCase):
         ]:
             file_path = testdata_path(f"delta/{project_file}")
             response = self.client.post(
-                f"/api/v1/files/{self.project1.id}/{project_file}/",
+                f"/api/v1/files/{project.id}/{project_file}/",
                 {"file": open(file_path, "rb")},
                 format="multipart",
             )
