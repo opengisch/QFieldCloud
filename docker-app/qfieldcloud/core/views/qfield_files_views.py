@@ -139,10 +139,12 @@ class ListFilesView(views.APIView):
                 }
             )
 
+        layers = export_job.feedback["steps"][1]["outputs"]["layer_checks"]
+
         return Response(
             {
                 "files": files,
-                "layers": export_job.feedback,
+                "layers": layers,
                 "exported_at": export_job.updated_at,
                 "export_id": export_job.pk,
             }
