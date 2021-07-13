@@ -256,10 +256,13 @@ def process_projectfile(job_id):
             raise QgisException(output)
 
         thumbnail_filename = Path(orchestrator_tempdir).joinpath("thumbnail.png")
-        with open(thumbnail_filename, "rb") as f:
-            thumbnail_uri = qfieldcloud.core.utils2.storage.upload_project_thumbail(
-                job.project, f, "image/png", "thumbnail"
-            )
+
+        if thumbnail_filename.exists():
+            with open(thumbnail_filename, "rb") as f:
+                thumbnail_uri = qfieldcloud.core.utils2.storage.upload_project_thumbail(
+                    job.project, f, "image/png", "thumbnail"
+                )
+            project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
 
         feedback_filename = Path(orchestrator_tempdir).joinpath("feedback.json")
         try:
@@ -275,7 +278,6 @@ def process_projectfile(job_id):
         job.feedback = feedback
         job.save()
         project.status = Project.Status.IDLE
-        project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
         project.save()
 
         return exit_code, output.decode("utf-8"), feedback
