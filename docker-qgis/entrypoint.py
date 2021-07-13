@@ -304,7 +304,7 @@ def cmd_export_project(args):
 
 def _apply_delta(args):
     tmpdir = Path(tempfile.mkdtemp())
-    files_dir = tmpdir.joinpath("files_")
+    files_dir = tmpdir.joinpath("files")
     steps: List[Step] = [
         Step(
             name="Download Project Directory",
