@@ -10,7 +10,7 @@ def start_job(job: Job):  # noqa: F821
         queue_name = "export"
         method = "export_project"
     elif job.type == Job.Type.DELTA_APPLY:
-        queue_name = "deltas"
+        queue_name = "delta"
         method = "apply_deltas"
     elif job.type == Job.Type.PROCESS_PROJECTFILE:
         queue_name = "export"
