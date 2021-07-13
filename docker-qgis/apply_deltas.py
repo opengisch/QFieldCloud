@@ -62,7 +62,7 @@ class DeltaOptions(BaseOptions):
     transaction: bool
 
 
-class DeltaMethod(Enum):
+class DeltaMethod(str, Enum):
     def __str__(self):
         return str(self.value)
 
@@ -71,7 +71,7 @@ class DeltaMethod(Enum):
     DELETE = "delete"
 
 
-class DeltaExceptionType(Enum):
+class DeltaExceptionType(str, Enum):
     def __str__(self):
         return str(self.value)
 
@@ -80,7 +80,7 @@ class DeltaExceptionType(Enum):
     Conflict = "CONFLICT"
 
 
-class DeltaStatus(Enum):
+class DeltaStatus(str, Enum):
     def __str__(self):
         return str(self.value)
 
