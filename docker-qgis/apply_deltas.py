@@ -203,6 +203,8 @@ def delta_apply(
         project, delta_file, inverse, overwrite_conflicts
     )
 
+    project.clear()
+
     if not all_applied:
         logger.info("Some deltas have not been applied")
 
