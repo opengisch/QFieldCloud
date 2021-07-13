@@ -3,7 +3,7 @@ import os
 
 def testdata_path(path):
     basepath = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(basepath, "testdata", path)
+    return os.path.realpath(os.path.join(basepath, "testdata", path))
 
 
 def get_filename(response):
