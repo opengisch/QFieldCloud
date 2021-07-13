@@ -1030,7 +1030,7 @@ def patch_feature(
             if isinstance(new_feature_delta["geometry"], str):
                 geometry = QgsGeometry.fromWkt(new_feature_delta["geometry"])
 
-                if geometry.isNull() or geometry.type() == layer.geometry().type():
+                if geometry.isNull() or geometry.type() != layer.geometryType():
                     raise DeltaException(
                         "The provided geometry type differs from the layer geometry type"
                     )
