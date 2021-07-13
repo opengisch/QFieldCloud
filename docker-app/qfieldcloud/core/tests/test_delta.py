@@ -129,33 +129,11 @@ class QfcTestCase(APITransactionTestCase):
 
             self.assertEqual("STATUS_APPLIED", response.json()[0]["status"])
 
-            # Download the geojson file
-            response = self.client.get(
-                f"/api/v1/files/{self.project1.id}/testdata.gpkg/"
-            )
+            gpkg = io.BytesIO(self.get_file_contents(self.project1, "testdata.gpkg"))
+            with fiona.open(gpkg, layer="points") as layer:
+                features = list(layer)
+                self.assertEqual(666, features[0]["properties"]["int"])
 
-            self.assertIsInstance(response, HttpResponseRedirect)
-
-            response = requests.get(response.url, stream=True)
-
-            self.assertTrue(status.is_success(response.status_code))
-            self.assertEqual(get_filename(response), "testdata.gpkg")
-
-            temp_dir = tempfile.mkdtemp()
-            local_file = os.path.join(temp_dir, "testdata.gpkg")
-
-            with open(local_file, "wb") as f:
-                for chunk in response.iter_content():
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
-
-            conn = sqlite3.connect(local_file)
-            conn.row_factory = sqlite3.Row
-            c = conn.cursor()
-            c.execute("""SELECT * FROM points WHERE fid = 1""")
-            f = c.fetchone()
-
-            self.assertEqual(666, f["int"])
             return
 
         self.fail("Worker didn't finish")
@@ -585,7 +563,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(self.project1, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -609,7 +587,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(self.project1, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -634,7 +612,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(self.project1, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -659,7 +637,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(self.project1, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -684,7 +662,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(self.project1, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -708,7 +686,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(self.project1, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -717,8 +695,8 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[1]["properties"]["int"], 2)
             self.assertEqual(features[2]["properties"]["int"], 3)
 
-    def get_file_contents(self, filename):
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/{filename}/")
+    def get_file_contents(self, project, filename):
+        response = self.client.get(f"/api/v1/files/{project.id}/{filename}/")
 
         self.assertIsInstance(response, HttpResponseRedirect)
 
@@ -751,7 +729,6 @@ class QfcTestCase(APITransactionTestCase):
             {"file": open(delta_file, "rb")},
             format="multipart",
         )
-        print(response, response.content)
         self.assertTrue(rest_framework.status.is_success(response.status_code))
 
         response = self.client.get(f"/api/v1/deltas/{project.id}/{deltafile_id}/")
