@@ -139,6 +139,7 @@ class DownloadPushDeleteFileView(views.APIView):
                     "Only one QGIS project per project allowed"
                 )
             else:
+                project.project_filename = filename
                 ProcessQgisProjectfileJob.objects.create(
                     project=project, created_by=self.request.user
                 )
@@ -152,7 +153,6 @@ class DownloadPushDeleteFileView(views.APIView):
         metadata = {"Sha256sum": sha256sum}
 
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
-        project.project_filename = filename
         project.save()
 
         return Response(status=status.HTTP_201_CREATED)
