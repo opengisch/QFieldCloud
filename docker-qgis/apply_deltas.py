@@ -174,11 +174,42 @@ def project_decorator(f):
         start_app()
         project = QgsProject.instance()
         project.setAutoTransaction(opts["transaction"])
-        project.read(opts["project"])
+        project.read(opts.get("project_filename", opts["project"]))
 
         return f(project, opts, *args, **kw)  # type: ignore
 
     return wrapper
+
+
+def delta_apply(
+    project_filename: Path,
+    delta_filename: Path,
+    inverse: bool,
+    overwrite_conflicts: bool,
+):
+    del delta_log[:]
+
+    start_app()
+    project = QgsProject.instance()
+    project.read()
+    project.read(str(project_filename))
+
+    delta_file = delta_file_file_loader({"delta_file": delta_filename})  # type: ignore
+
+    if not delta_file:
+        raise Exception("Missing delta file")
+
+    all_applied = apply_deltas_without_transaction(
+        project, delta_file, inverse, overwrite_conflicts
+    )
+
+    if not all_applied:
+        logger.info("Some deltas have not been applied")
+
+    delta_log_copy = [*delta_log]
+    del delta_log[:]
+
+    return delta_log_copy
 
 
 @project_decorator
