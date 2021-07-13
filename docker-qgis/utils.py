@@ -104,11 +104,11 @@ def get_layer_filename(layer: QgsMapLayer) -> Optional[str]:
     return None
 
 
-def perform_task(
+def run_task(
     steps: List[Step],
     feedback_filename: Optional[Union[IO, Path]],
 ) -> Dict:
-    """Executes the steps required to perform a task and return structured feedback from the execution
+    """Executes the steps required to run a task and return structured feedback from the execution
 
     Each step has a method that is executed.
     Method may take arguments as defined in `arguments` and ordered in `arg_names`.

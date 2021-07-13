@@ -296,7 +296,7 @@ def cmd_export_project(args):
         ),
     ]
 
-    qfieldcloud.qgis.utils.perform_task(
+    qfieldcloud.qgis.utils.run_task(
         steps,
         Path("/io/feedback.json"),
     )
@@ -347,7 +347,7 @@ def _apply_delta(args):
         ),
     ]
 
-    qfieldcloud.qgis.utils.perform_task(
+    qfieldcloud.qgis.utils.run_task(
         steps,
         Path("/io/feedback.json"),
     )
@@ -406,7 +406,7 @@ def cmd_process_projectfile(args):
         ),
     ]
 
-    qfieldcloud.qgis.utils.perform_task(
+    qfieldcloud.qgis.utils.run_task(
         steps,
         Path("/io/feedback.json"),
     )
