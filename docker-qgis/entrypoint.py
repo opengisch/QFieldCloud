@@ -257,23 +257,17 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
 
 
 def cmd_export_project(args):
-    project_id = args.projectid
-    project_file = args.project_file
-
     tmpdir = Path(tempfile.mkdtemp())
     exportdir = tmpdir.joinpath("export")
     exportdir.mkdir()
 
-    arguments = {
-        "tmpdir": tmpdir,
-        "project_id": project_id,
-        "project_filename": tmpdir.joinpath("files", project_file),
-        "exportdir": exportdir,
-        "should_delete": True,
-    }
     steps: List[Step] = [
         Step(
             name="Download Project Directory",
+            arguments={
+                "tmpdir": tmpdir,
+                "project_id": args.projectid,
+            },
             arg_names=["project_id", "tmpdir"],
             method=_download_project_directory,
             return_names=["tmp_project_dir"],
@@ -281,6 +275,10 @@ def cmd_export_project(args):
         ),
         Step(
             name="Export Project",
+            arguments={
+                "project_filename": tmpdir.joinpath("files", args.project_file),
+                "exportdir": exportdir,
+            },
             arg_names=["project_filename", "exportdir"],
             return_names=["layer_checks"],
             output_names=["layer_checks"],
@@ -288,6 +286,11 @@ def cmd_export_project(args):
         ),
         Step(
             name="Upload Exported Project",
+            arguments={
+                "project_id": args.projectid,
+                "exportdir": exportdir,
+                "should_delete": True,
+            },
             arg_names=["project_id", "exportdir", "should_delete"],
             method=_upload_project_directory,
         ),
@@ -295,34 +298,59 @@ def cmd_export_project(args):
 
     qfieldcloud.qgis.utils.perform_task(
         steps,
-        arguments,
-        Path("/io").joinpath("feedback.json"),
+        Path("/io/feedback.json"),
     )
 
 
 def _apply_delta(args):
-    projectid = args.projectid
-    project_file = args.project_file
+    tmpdir = Path(tempfile.mkdtemp())
+    files_dir = tmpdir.joinpath("files_")
+    steps: List[Step] = [
+        Step(
+            name="Download Project Directory",
+            arguments={
+                "project_id": args.projectid,
+                "tmpdir": tmpdir,
+            },
+            arg_names=["project_id", "tmpdir"],
+            method=_download_project_directory,
+            return_names=["tmp_project_dir"],
+            public_returns=["tmp_project_dir"],
+        ),
+        Step(
+            name="Apply Deltas",
+            arguments={
+                "project_filename": tmpdir.joinpath("files", args.project_file),
+                "delta_filename": "/io/deltafile.json",
+                "inverse": args.inverse,
+                "overwrite_conflicts": args.overwrite_conflicts,
+            },
+            arg_names=[
+                "project_filename",
+                "delta_filename",
+                "inverse",
+                "overwrite_conflicts",
+            ],
+            method=qfieldcloud.qgis.apply_deltas.delta_apply,
+            return_names=["delta_feedback"],
+            output_names=["delta_feedback"],
+        ),
+        Step(
+            name="Upload Exported Project",
+            arguments={
+                "project_id": args.projectid,
+                "files_dir": files_dir,
+                "should_delete": False,
+            },
+            arg_names=["project_id", "files_dir", "should_delete"],
+            method=_upload_project_directory,
+        ),
+    ]
 
-    tmpdir = _download_project_directory(projectid)
-    deltafile = "/io/deltafile.json"
-
-    project_filepath = os.path.join(tmpdir, "files", project_file)
-
-    has_errors = qfieldcloud.qgis.apply_deltas.cmd_delta_apply(
-        opts={
-            "project": project_filepath,
-            "delta_file": deltafile,
-            "delta_log": "/io/deltalog.json",
-            "inverse": False,
-            "overwrite_conflicts": args.overwrite_conflicts,
-            "transaction": False,
-        }
+    qfieldcloud.qgis.utils.perform_task(
+        steps,
+        Path("/io/feedback.json"),
     )
-
-    _upload_project_directory(projectid, tmpdir.joinpath("files"), False)
-
-    exit(int(has_errors))
 
 
 def cmd_process_projectfile(args):
@@ -330,15 +358,14 @@ def cmd_process_projectfile(args):
     project_file = args.project_file
 
     tmpdir = Path(tempfile.mkdtemp())
-    arguments = {
-        "tmpdir": tmpdir,
-        "project_id": project_id,
-        "project_filename": tmpdir.joinpath("files", project_file),
-        "thumbnail_filename": Path("/io").joinpath("thumbnail.png"),
-    }
+    project_filename = tmpdir.joinpath("files", project_file)
     steps: List[Step] = [
         Step(
             name="Download Project Directory",
+            arguments={
+                "project_id": project_id,
+                "tmpdir": tmpdir,
+            },
             arg_names=["project_id", "tmpdir"],
             method=_download_project_directory,
             return_names=["tmp_project_dir"],
@@ -346,11 +373,17 @@ def cmd_process_projectfile(args):
         ),
         Step(
             name="Project Validity Check",
+            arguments={
+                "project_filename": project_filename,
+            },
             arg_names=["project_filename"],
             method=qfieldcloud.qgis.process_projectfile.check_valid_project_file,
         ),
         Step(
             name="Opening Check",
+            arguments={
+                "project_filename": project_filename,
+            },
             arg_names=["project_filename"],
             method=qfieldcloud.qgis.process_projectfile.load_project_file,
             return_names=["project"],
@@ -365,6 +398,9 @@ def cmd_process_projectfile(args):
         ),
         Step(
             name="Generate Thumbnail Image",
+            arguments={
+                "thumbnail_filename": Path("/io/thumbnail.png"),
+            },
             arg_names=["project", "thumbnail_filename"],
             method=qfieldcloud.qgis.process_projectfile.generate_thumbnail,
         ),
@@ -372,8 +408,7 @@ def cmd_process_projectfile(args):
 
     qfieldcloud.qgis.utils.perform_task(
         steps,
-        arguments,
-        Path("/io").joinpath("feedback.json"),
+        Path("/io/feedback.json"),
     )
 
 
@@ -403,6 +438,7 @@ if __name__ == "__main__":
     parser_delta.add_argument(
         "--overwrite-conflicts", dest="overwrite_conflicts", action="store_true"
     )
+    parser_delta.add_argument("--inverse", dest="inverse", action="store_true")
     parser_delta.set_defaults(func=_apply_delta)
 
     parser_process_projectfile = subparsers.add_parser(

@@ -94,7 +94,7 @@ def export_project(job_id: str) -> Tuple[int, str]:
         return exit_code, output.decode("utf-8")
 
 
-def apply_deltas(job_id, project_file):
+def apply_deltas(job_id):
     """Start a QGIS docker container to apply a deltafile using the
     apply-delta script"""
 
@@ -108,10 +108,10 @@ def apply_deltas(job_id, project_file):
             return -1, f"ApplyJob {job_id} does not exist."
 
         project_id = job.project_id
+        project = job.project
         overwrite_conflicts = job.overwrite_conflicts
         orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
         qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
-
         deltas = job.deltas_to_apply.all()
         deltas.update(last_status=Delta.Status.STARTED)
 
@@ -149,7 +149,7 @@ def apply_deltas(job_id, project_file):
 
         overwrite_conflicts_arg = "--overwrite-conflicts" if overwrite_conflicts else ""
         exit_code, output = run_docker(
-            f"xvfb-run python3 entrypoint.py apply-delta {project_id} {project_file} {overwrite_conflicts_arg}",
+            f"xvfb-run python3 entrypoint.py apply-delta {project_id} {project.project_filename} {overwrite_conflicts_arg}",
             volumes={qgis_tempdir: {"bind": "/io/", "mode": "rw"}},
         )
 
@@ -159,7 +159,7 @@ def apply_deltas(job_id, project_file):
 | Apply deltas finished
 ===============================================================================
 Project ID: {project_id}
-Project file: {project_file}
+Project file: {project.project_filename}
 Exit code: {exit_code}
 Output:
 ------------------------------------------------------------------------------S
@@ -168,33 +168,52 @@ Output:
 """
         )
 
-        deltalog_file = os.path.join(orchestrator_tempdir, "deltalog.json")
-        with open(deltalog_file, "r") as f:
-            deltalog = json.load(f)
+        feedback = {}
+        try:
+            with open(Path(orchestrator_tempdir).joinpath("feedback.json"), "r") as f:
+                feedback = json.load(f)
 
-            for feedback in deltalog:
-                delta_id = feedback["delta_id"]
-                status = feedback["status"]
-                modified_pk = feedback["modified_pk"]
+                if feedback.get("error"):
+                    feedback["error_origin"] = "container"
+        except Exception as err:
+            (_type, _value, tb) = sys.exc_info()
+            feedback["error"] = err
+            feedback["error_origin"] = "orchestrator"
+            feedback["error_stack"] = traceback.format_tb(tb)
 
-                if status == "status_applied":
-                    status = Delta.Status.APPLIED
-                elif status == "status_conflict":
-                    status = Delta.Status.CONFLICT
-                elif status == "status_apply_failed":
-                    status = Delta.Status.NOT_APPLIED
-                else:
-                    status = Delta.Status.ERROR
+        feedback["container_exit_code"] = exit_code
 
-                Delta.objects.filter(pk=delta_id).update(
-                    last_status=status,
-                    last_feedback=feedback,
-                    last_modified_pk=modified_pk,
-                )
+        job.output = output.decode("utf-8")
+        job.feedback = feedback
+
+        if exit_code != 0 or feedback.get("error") is not None:
+            job.status = Job.Status.FAILED
+            job.save()
+            raise QgisException(output)
 
         job.status = Job.Status.FINISHED
-        job.output = output.decode("utf-8")
         job.save()
+
+        delta_feedback = feedback["steps"][1]["outputs"]["delta_feedback"]
+        for feedback in delta_feedback:
+            delta_id = feedback["delta_id"]
+            status = feedback["status"]
+            modified_pk = feedback["modified_pk"]
+
+            if status == "status_applied":
+                status = Delta.Status.APPLIED
+            elif status == "status_conflict":
+                status = Delta.Status.CONFLICT
+            elif status == "status_apply_failed":
+                status = Delta.Status.NOT_APPLIED
+            else:
+                status = Delta.Status.ERROR
+
+            Delta.objects.filter(pk=delta_id).update(
+                last_status=status,
+                last_feedback=feedback,
+                last_modified_pk=modified_pk,
+            )
 
         return exit_code, output.decode("utf-8")
 

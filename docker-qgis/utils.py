@@ -16,6 +16,7 @@ class Step:
         self,
         name: str,
         method: Callable,
+        arguments: Dict[str, Any] = {},
         arg_names: List[str] = [],
         return_names: List[str] = [],
         output_names: List[str] = [],
@@ -23,6 +24,7 @@ class Step:
     ):
         self.name = name
         self.method = method
+        self.arguments = arguments
         self.arg_names = arg_names
         # names of method return values
         self.return_names = return_names
@@ -104,29 +106,31 @@ def get_layer_filename(layer: QgsMapLayer) -> Optional[str]:
 
 def perform_task(
     steps: List[Step],
-    arguments: Dict[str, Any],
     feedback_filename: Optional[Union[IO, Path]],
 ) -> Dict:
     """Executes the steps required to perform a task and return structured feedback from the execution
 
     Each step has a method that is executed.
-    Method may take arguments as defined in `arg_names`.
+    Method may take arguments as defined in `arguments` and ordered in `arg_names`.
     Method may return values, as defined in `return_values`.
     Some return values can used as task output, as defined in `output_names`.
     Some return values can used as arguments for next steps, as defined in `public_returns`.
 
     Args:
         steps (List[Step]): ordered steps to be executed
-        arguments (Dict[str, Any]): list of available arguments to be executed
         feedback_filename (Optional[Union[IO, Path]]): write feedback to an IO device, to Path filename, or don't write it
     """
     feedback = {}
-    # argument values by name. Note it may be modified after the successful completion of each step.
-    arguments = {**arguments}
+    # it may be modified after the successful completion of each step.
+    returned_arguments = {}
 
     try:
         for step in steps:
             with logger_context(step):
+                arguments = {
+                    **returned_arguments,
+                    **step.arguments,
+                }
                 args = [arguments[arg_name] for arg_name in step.arg_names]
                 return_values = step.method(*args)
                 return_values = (
@@ -141,7 +145,7 @@ def perform_task(
                     step.outputs[output_name] = return_map[output_name]
 
                 for return_name in step.public_returns:
-                    arguments[return_name] = return_map[return_name]
+                    returned_arguments[return_name] = return_map[return_name]
 
     except Exception as err:
         feedback["error"] = str(err)
