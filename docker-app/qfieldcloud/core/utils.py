@@ -91,7 +91,7 @@ def get_s3_client():
         region_name=settings.STORAGE_REGION_NAME,
         aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
         aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
-        endpoint_url=settings.STORAGE_ENDPOINT_URL,
+        endpoint_url=settings.STORAGE_ENDPOINT_URL_EXTERNAL,
     )
     return s3_client
 
@@ -290,4 +290,4 @@ def get_project_files_count(project_id: str) -> int:
 
 
 def get_s3_object_url(key: str, bucket=get_s3_bucket()) -> str:
-    return f"{bucket.meta.client.meta.endpoint_url}/{bucket.name}/{key}"
+    return f"{settings.STORAGE_ENDPOINT_URL_EXTERNAL}/{bucket.name}/{key}"
