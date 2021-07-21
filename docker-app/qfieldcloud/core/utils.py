@@ -8,7 +8,6 @@ from pathlib import PurePath
 from typing import Dict, List, TypedDict
 
 import boto3
-import django_rq
 import jsonschema
 from botocore.errorfactory import ClientError
 from django.conf import settings
@@ -16,23 +15,6 @@ from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUpload
 from redis import Redis, exceptions
 
 logger = logging.getLogger(__name__)
-
-
-def check_orchestrator_status():
-    """Call the orchestrator to check if he's able to launch a QGIS
-    container"""
-
-    queue = django_rq.get_queue("export")
-    job = queue.enqueue("orchestrator.orchestrator.check_status")
-
-    return job
-
-
-def get_job(queue, jobid):
-    """Get the job from the specified queue or None"""
-
-    queue = django_rq.get_queue(queue)
-    return queue.fetch_job(jobid)
 
 
 def redis_is_running():
