@@ -107,7 +107,7 @@ services:
 
   orchestrator:
     <<: *default-django
-    command: python -m orchestrator
+    command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
       # TODO : how can we reuse static/media volumes from default-django to keep things DRY (yaml syntax expert needed)
@@ -120,15 +120,6 @@ services:
     depends_on:
       - db
       - redis
-      - app
-
-  dequeue:
-    <<: *default-django
-    command: python manage.py dequeue
-    depends_on:
-      - db
-      - redis
-      - orchestrator
       - app
 
 volumes:

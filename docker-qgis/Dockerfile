@@ -13,7 +13,6 @@ RUN apt-get update && \
     python3-qgis \
     python3-qgis-common \
     python3-pip \
-    supervisor \
     xvfb \
     && apt-get clean
 
@@ -29,16 +28,13 @@ COPY ./utils.py ./lib/qfieldcloud/qgis/
 COPY ./schemas/deltafile_01.json ./schemas/
 COPY ./libqfieldsync ./lib/libqfieldsync
 
-ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
+# crashes to STDERR
 ENV LD_PRELOAD="/lib/x86_64-linux-gnu/libSegFault.so"
 ENV SEGFAULT_SIGNALS="abrt segv"
 ENV LIBC_FATAL_STDERR_=1
 
-# Add supervisor service configuration script
-COPY ./supervisord.conf /etc/supervisor/
-
+# other env
 ENV LANG=C.UTF-8
+ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
 
-
-# Run supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a $@", ""]

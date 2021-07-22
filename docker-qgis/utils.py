@@ -1,14 +1,139 @@
+import atexit
 import json
+import logging
+import os
 import socket
 import subprocess
 import sys
+import tempfile
 import traceback
 import uuid
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
-from qgis.core import QgsMapLayer, QgsProviderRegistry
+from qgis.core import Qgis, QgsApplication, QgsMapLayer, QgsProviderRegistry
+from qgis.PyQt import QtCore
+
+qgs_stderr_logger = logging.getLogger("QGIS_STDERR")
+qgs_stderr_logger.setLevel(logging.DEBUG)
+qgs_msglog_logger = logging.getLogger("QGIS_MSGLOG")
+qgs_msglog_logger.setLevel(logging.DEBUG)
+
+
+def _qt_message_handler(mode, context, message):
+    log_level = logging.DEBUG
+    if mode == QtCore.QtDebugMsg:
+        log_level = logging.DEBUG
+    elif mode == QtCore.QtInfoMsg:
+        log_level = logging.INFO
+    elif mode == QtCore.QtWarningMsg:
+        log_level = logging.WARNING
+    elif mode == QtCore.QtCriticalMsg:
+        log_level = logging.CRITICAL
+    elif mode == QtCore.QtFatalMsg:
+        log_level = logging.FATAL
+
+    qgs_stderr_logger.log(
+        log_level,
+        message,
+        extra={
+            "time": datetime.now().isoformat(),
+            "line": context.line,
+            "file": context.file,
+            "function": context.function,
+        },
+    )
+
+
+QtCore.qInstallMessageHandler(_qt_message_handler)
+
+
+def _write_log_message(message, tag, level):
+    log_level = logging.DEBUG
+
+    # in 3.16 it was Qgis.None, but since None is a reserved keyword, it was inaccessible
+    try:
+        Qgis.NoLevel
+    except Exception:
+        Qgis.NoLevel = 4
+
+    if level == Qgis.NoLevel:
+        log_level = logging.DEBUG
+    elif level == Qgis.Info:
+        log_level = logging.INFO
+    elif level == Qgis.Success:
+        log_level = logging.INFO
+    elif level == Qgis.Warning:
+        log_level = logging.WARNING
+    elif level == Qgis.Critical:
+        log_level = logging.CRITICAL
+
+    qgs_msglog_logger.log(
+        log_level,
+        message,
+        extra={
+            "time": datetime.now().isoformat(),
+            "tag": tag,
+        },
+    )
+
+
+QGISAPP: QgsApplication = None
+
+
+def start_app():
+    """
+    Will start a QgsApplication and call all initialization code like
+    registering the providers and other infrastructure. It will not load
+    any plugins.
+
+    You can always get the reference to a running app by calling `QgsApplication.instance()`.
+
+    The initialization will only happen once, so it is safe to call this method repeatedly.
+
+        Returns
+        -------
+        QgsApplication
+
+        A QgsApplication singleton
+    """
+    global QGISAPP
+
+    if QGISAPP is None:
+        qgs_stderr_logger.info("Starting QGIS app...")
+        argvb = []
+
+        # Note: QGIS_PREFIX_PATH is evaluated in QgsApplication -
+        # no need to mess with it here.
+        gui_flag = False
+        QGISAPP = QgsApplication(argvb, gui_flag)
+
+        QtCore.qInstallMessageHandler(_qt_message_handler)
+        os.environ["QGIS_CUSTOM_CONFIG_PATH"] = tempfile.mkdtemp(
+            "", "QGIS-PythonTestConfigPath"
+        )
+        QGISAPP.initQgis()
+
+        QtCore.qInstallMessageHandler(_qt_message_handler)
+        QgsApplication.messageLog().messageReceived.connect(_write_log_message)
+
+        @atexit.register
+        def exitQgis():
+            stop_app()
+
+    return QGISAPP
+
+
+def stop_app():
+    """
+    Cleans up and exits QGIS
+    """
+    global QGISAPP
+
+    QGISAPP.exitQgis()
+    del QGISAPP
 
 
 class Step:

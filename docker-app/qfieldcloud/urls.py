@@ -53,7 +53,6 @@ urlpatterns = [
         name="schema-swagger-ui",
     ),
     path("docs/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-    path("admin/rq/", include("django_rq.urls")),
     path("admin/", admin.site.urls),
     path("api/v1/auth/registration/", include("rest_auth.registration.urls")),
     path("api/v1/auth/token/", auth_views.AuthTokenView.as_view()),

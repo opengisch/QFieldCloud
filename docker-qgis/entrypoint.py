@@ -5,7 +5,6 @@ import hashlib
 import logging
 import os
 import tempfile
-from datetime import datetime
 from pathlib import Path, PurePath
 from typing import Dict, List
 
@@ -17,7 +16,6 @@ from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
 from qfieldcloud.qgis.utils import Step
 from qgis.core import (
-    Qgis,
     QgsApplication,
     QgsCoordinateTransform,
     QgsOfflineEditing,
@@ -38,20 +36,6 @@ STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-def _write_log_message(message, tag, level):
-    time = datetime.now().isoformat()
-    level_str = "UNKNOWN"
-
-    if level == Qgis.Info:
-        level_str = "INFO"
-    elif level == Qgis.Warning:
-        level_str = "WARNING"
-    else:
-        level_str = "CRITICAL"
-
-    logger.info(f"QMessageLog {time} {level_str} {tag} {message}")
 
 
 def _get_s3_resource():
@@ -421,8 +405,6 @@ if __name__ == "__main__":
     logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
     logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-    QgsApplication.messageLog().messageReceived.connect(_write_log_message)
-
     parser = argparse.ArgumentParser(prog="COMMAND")
 
     subparsers = parser.add_subparsers(dest="cmd")
@@ -432,7 +414,7 @@ if __name__ == "__main__":
     parser_export.add_argument("project_file", type=str, help="QGIS project file path")
     parser_export.set_defaults(func=cmd_export_project)
 
-    parser_delta = subparsers.add_parser("apply-delta", help="Apply deltafile")
+    parser_delta = subparsers.add_parser("delta_apply", help="Apply deltafile")
     parser_delta.add_argument("projectid", type=str, help="projectid")
     parser_delta.add_argument("project_file", type=str, help="QGIS project file path")
     parser_delta.add_argument(
@@ -442,7 +424,7 @@ if __name__ == "__main__":
     parser_delta.set_defaults(func=_apply_delta)
 
     parser_process_projectfile = subparsers.add_parser(
-        "process-qgis-projectfile", help="Process QGIS project file"
+        "process_projectfile", help="Process QGIS project file"
     )
     parser_process_projectfile.add_argument("projectid", type=str, help="projectid")
     parser_process_projectfile.add_argument(

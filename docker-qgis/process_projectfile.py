@@ -11,12 +11,12 @@ from qfieldcloud.qgis.utils import (
     get_layer_filename,
     has_ping,
     is_localhost,
+    start_app,
 )
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.gui import QgsLayerTreeMapCanvasBridge, QgsMapCanvas
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
-from qgis.testing import start_app
 
 logging.basicConfig(
     stream=sys.stderr, level=logging.DEBUG, format="%(asctime)s %(levelname)s %(msg)s"

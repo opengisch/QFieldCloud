@@ -543,12 +543,6 @@ class Project(models.Model):
 
     objects = ProjectQueryset.as_manager()
 
-    class Status(models.TextChoices):
-        IDLE = "idle", _("Idle")
-        EXPORTING = "exporting", _("Exporting")
-        APPLYING_DELTAS = "applying_deltas", _("Applying deltas")
-        PROCESS_PROJECTFILE = "process_projectfile", _("Process QGIS project file")
-
     class Meta:
         ordering = ["owner__username", "name"]
         constraints = [
@@ -578,9 +572,6 @@ class Project(models.Model):
         help_text=_(
             "Projects that are marked as public would be visible and editable to anyone."
         ),
-    )
-    status = models.CharField(
-        max_length=30, choices=Status.choices, default=Status.IDLE
     )
     owner = models.ForeignKey(
         User,
@@ -790,7 +781,7 @@ class Job(models.Model):
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
-        related_name="exports",
+        related_name="jobs",
     )
     type = models.CharField(max_length=32, choices=Type.choices)
     status = models.CharField(
@@ -801,6 +792,10 @@ class Job(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def short_id(self):
+        return str(self.id)[0:8]
 
 
 class ExportJob(Job):
@@ -813,7 +808,7 @@ class ExportJob(Job):
         verbose_name_plural = "Jobs: export"
 
 
-class ProcessQgisProjectfileJob(Job):
+class ProcessProjectfileJob(Job):
     def save(self, *args, **kwargs):
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)
@@ -852,6 +847,7 @@ class ApplyJobDelta(models.Model):
         choices=Delta.Status.choices, default=Delta.Status.PENDING, max_length=32
     )
     feedback = JSONField(null=True)
+    modified_pk = models.TextField(null=True)
 
     def __str__(self):
         return f"{self.apply_job_id}:{self.delta_id}"

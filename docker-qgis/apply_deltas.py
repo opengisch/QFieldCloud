@@ -20,6 +20,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import jsonschema
+from qfieldcloud.qgis.utils import start_app
 
 # pylint: disable=no-name-in-module
 from qgis.core import (
@@ -34,7 +35,6 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerUtils,
 )
-from qgis.testing import start_app
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -191,10 +191,14 @@ def delta_apply(
 
     start_app()
     project = QgsProject.instance()
-    project.read()
+    logging.info(project_filename)
+    logging.info(delta_filename)
     project.read(str(project_filename))
+    logging.info(project.mapLayers())
 
     delta_file = delta_file_file_loader({"delta_file": delta_filename})  # type: ignore
+
+    logging.info(delta_file)
 
     if not delta_file:
         raise Exception("Missing delta file")

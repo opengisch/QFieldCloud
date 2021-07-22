@@ -2,7 +2,7 @@ from pathlib import PurePath
 
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import exceptions, permissions_utils, utils
-from qfieldcloud.core.models import ProcessQgisProjectfileJob, Project
+from qfieldcloud.core.models import ProcessProjectfileJob, Project
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -140,7 +140,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 )
             else:
                 project.project_filename = filename
-                ProcessQgisProjectfileJob.objects.create(
+                ProcessProjectfileJob.objects.create(
                     project=project, created_by=self.request.user
                 )
 
