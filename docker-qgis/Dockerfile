@@ -1,20 +1,6 @@
-FROM ubuntu:20.04
+FROM qfieldcloud_worker:latest
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get -y install wget gpg && \
-    wget -O - https://qgis.org/downloads/qgis-2020.gpg.key | gpg --import && \
-    gpg --export --armor F7E06F06199EF2F2 | apt-key add - && \
-    echo 'deb http://qgis.org/ubuntu focal main' > /etc/apt/sources.list.d/ubuntu-qgis.list
-
-
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    qgis \
-    python3-qgis \
-    python3-qgis-common \
-    python3-pip \
-    xvfb \
-    && apt-get clean
+RUN apk add py3-pip
 
 COPY ./requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt
@@ -37,4 +23,4 @@ ENV LIBC_FATAL_STDERR_=1
 ENV LANG=C.UTF-8
 ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
 
-ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a $@", ""]
+ENTRYPOINT ["sh", "-c", "$@", ""]
