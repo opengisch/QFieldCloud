@@ -1,6 +1,10 @@
-FROM qfieldcloud_worker:latest
+FROM qgis/qgis:release-3_18
 
-RUN apk add py3-pip
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3-pip \
+    xvfb \
+    && apt-get clean
 
 COPY ./requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt
@@ -23,4 +27,4 @@ ENV LIBC_FATAL_STDERR_=1
 ENV LANG=C.UTF-8
 ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
 
-ENTRYPOINT ["sh", "-c", "$@", ""]
+ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a $@", ""]
