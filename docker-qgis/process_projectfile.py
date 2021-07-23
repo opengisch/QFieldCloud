@@ -4,8 +4,6 @@ from pathlib import Path
 from typing import List
 from xml.etree import ElementTree
 
-from PyQt5.QtCore import QFile, QIODevice
-from PyQt5.QtXml import QDomDocument
 from qfieldcloud.qgis.utils import (
     BaseException,
     get_layer_filename,
@@ -14,7 +12,6 @@ from qfieldcloud.qgis.utils import (
     start_app,
 )
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
-from qgis.gui import QgsLayerTreeMapCanvasBridge, QgsMapCanvas
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
 
@@ -156,38 +153,46 @@ def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:
     """
     logging.info("Generate project thumbnail image...")
 
+    map_settings = QgsMapSettings()
     layer_tree = project.layerTreeRoot()
-    canvas = QgsMapCanvas()
-    QgsLayerTreeMapCanvasBridge(layer_tree, canvas)
 
-    doc = QDomDocument("qgis")
-    file = QFile(project.fileName())
-    if file.open(QIODevice.ReadOnly):
-        (_retval, error, _error_line, _error_column) = doc.setContent(file, False)
-        if error:
-            raise InvalidXmlFileException(error=error)
+    def on_project_read(doc):
+        r, _success = project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
+        g, _success = project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
+        b, _success = project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
+        map_settings.setBackgroundColor(QColor(r, g, b))
 
-    canvas.readProject(doc)
-    settings = QgsMapSettings()
-    settings.setLayers(reversed(list(layer_tree.customLayerOrder())))
-    settings.setBackgroundColor(QColor(255, 255, 255))
-    settings.setOutputSize(QSize(250, 250))
-    settings.setDestinationCrs(project.crs())
-    settings.setExtent(canvas.extent())
+        nodes = doc.elementsByTagName("mapcanvas")
 
-    render = QgsMapRendererParallelJob(settings)
+        for i in range(nodes.size()):
+            node = nodes.item(i)
+            element = node.toElement()
+            if (
+                element.hasAttribute("name")
+                and element.attribute("name") == "theMapCanvas"
+            ):
+                map_settings.readXml(node)
 
-    def finished():
-        if not render.renderedImage().save(str(thumbnail_filename)):
-            logging.info("Failed to create project thumbnail image")
+        map_settings.setRotation(0)
+        map_settings.setTransformContext(project.transformContext())
+        map_settings.setPathResolver(project.pathResolver())
+        map_settings.setOutputSize(QSize(100, 100))
+        map_settings.setLayers(reversed(list(layer_tree.customLayerOrder())))
+        # print(f'output size: {map_settings.outputSize().width()} {map_settings.outputSize().height()}')
+        # print(f'layers: {[layer.name() for layer in map_settings.layers()]}')
 
-    render.finished.connect(finished)
+    project.readProject.connect(on_project_read)
+    project.read(project.fileName())
 
-    render.start()
+    renderer = QgsMapRendererParallelJob(map_settings)
 
-    loop = QEventLoop()
-    render.finished.connect(loop.quit)
-    loop.exec_()
+    event_loop = QEventLoop()
+    renderer.finished.connect(event_loop.quit)
+    renderer.start()
 
-    if not Path(thumbnail_filename).exists():
-        raise FailedThumbnailGenerationException(reason="File does not exist.")
+    event_loop.exec_()
+
+    img = renderer.renderedImage()
+
+    if not img.save(str(thumbnail_filename)):
+        raise FailedThumbnailGenerationException(reason="Failed to save.")

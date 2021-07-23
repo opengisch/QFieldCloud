@@ -9,7 +9,6 @@ from pathlib import Path, PurePath
 from typing import Dict, List
 
 import boto3
-import mock
 import qfieldcloud.qgis.apply_deltas
 import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
@@ -23,9 +22,6 @@ from qgis.core import (
     QgsRectangle,
     QgsVectorLayer,
 )
-from qgis.gui import QgisInterface, QgsMapCanvas
-from qgis.PyQt.QtCore import QSize
-from qgis.PyQt.QtWidgets import QMainWindow
 
 # Get environment variables
 STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
@@ -153,27 +149,12 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
     qgis_app = QgsApplication(argvb, True)
     qgis_app.initQgis()
 
-    iface = mock.Mock(spec=QgisInterface)
-    iface.mainWindow.return_value = QMainWindow()
-
-    canvas = QgsMapCanvas(iface.mainWindow())
-    canvas.resize(QSize(400, 400))
-
-    # Set the canvas object name to the
-    # exported project because qfieldsync running
-    # headless on the server doesn't do that
-    canvas.setObjectName("theMapCanvas")
-
     project = QgsProject.instance()
     if not project_filepath.exists():
         raise FileNotFoundError(project_filepath)
 
     if not project.read(str(project_filepath)):
         raise Exception(f"Unable to open file with QGIS: {project_filepath}")
-
-    # Set the crs from the original project to the canvas
-    # so it will be present in the exported project
-    canvas.setDestinationCrs(project.crs())
 
     layers = project.mapLayers()
     # Check if the layers are valid (i.e. if the datasources are available)
