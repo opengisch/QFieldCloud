@@ -65,7 +65,6 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "rest_auth",
     "rest_auth.registration",
-    "django_rq",  # Integration with Redis Queue
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
@@ -210,25 +209,6 @@ REST_AUTH_SERIALIZERS = {
     "TOKEN_SERIALIZER": "qfieldcloud.core.serializers.TokenSerializer",
     "USER_DETAILS_SERIALIZER": "qfieldcloud.core.serializers.PublicInfoUserSerializer",
 }
-
-RQ_QUEUES = {
-    "export": {
-        "HOST": "redis",
-        "PORT": 6379,
-        "DB": 0,
-        "DEFAULT_TIMEOUT": 600,
-        "PASSWORD": os.environ.get("REDIS_PASSWORD"),
-    },
-    "delta": {
-        "HOST": "redis",
-        "PORT": 6379,
-        "DB": 0,
-        "DEFAULT_TIMEOUT": 600,
-        "PASSWORD": os.environ.get("REDIS_PASSWORD"),
-    },
-}
-
-RQ_SHOW_ADMIN_LINK = True
 
 LOGIN_URL = "account_login"
 

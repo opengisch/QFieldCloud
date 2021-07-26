@@ -20,6 +20,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import jsonschema
+from qfieldcloud.qgis.utils import start_app
 
 # pylint: disable=no-name-in-module
 from qgis.core import (
@@ -34,7 +35,6 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerUtils,
 )
-from qgis.testing import start_app
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -62,7 +62,7 @@ class DeltaOptions(BaseOptions):
     transaction: bool
 
 
-class DeltaMethod(Enum):
+class DeltaMethod(str, Enum):
     def __str__(self):
         return str(self.value)
 
@@ -71,7 +71,7 @@ class DeltaMethod(Enum):
     DELETE = "delete"
 
 
-class DeltaExceptionType(Enum):
+class DeltaExceptionType(str, Enum):
     def __str__(self):
         return str(self.value)
 
@@ -80,7 +80,7 @@ class DeltaExceptionType(Enum):
     Conflict = "CONFLICT"
 
 
-class DeltaStatus(Enum):
+class DeltaStatus(str, Enum):
     def __str__(self):
         return str(self.value)
 
@@ -174,11 +174,48 @@ def project_decorator(f):
         start_app()
         project = QgsProject.instance()
         project.setAutoTransaction(opts["transaction"])
-        project.read(opts["project"])
+        project.read(opts.get("project_filename", opts["project"]))
 
         return f(project, opts, *args, **kw)  # type: ignore
 
     return wrapper
+
+
+def delta_apply(
+    project_filename: Path,
+    delta_filename: Path,
+    inverse: bool,
+    overwrite_conflicts: bool,
+):
+    del delta_log[:]
+
+    start_app()
+    project = QgsProject.instance()
+    logging.info(project_filename)
+    logging.info(delta_filename)
+    project.read(str(project_filename))
+    logging.info(project.mapLayers())
+
+    delta_file = delta_file_file_loader({"delta_file": delta_filename})  # type: ignore
+
+    logging.info(delta_file)
+
+    if not delta_file:
+        raise Exception("Missing delta file")
+
+    all_applied = apply_deltas_without_transaction(
+        project, delta_file, inverse, overwrite_conflicts
+    )
+
+    project.clear()
+
+    if not all_applied:
+        logger.info("Some deltas have not been applied")
+
+    delta_log_copy = [*delta_log]
+    del delta_log[:]
+
+    return delta_log_copy
 
 
 @project_decorator
@@ -997,7 +1034,7 @@ def patch_feature(
             if isinstance(new_feature_delta["geometry"], str):
                 geometry = QgsGeometry.fromWkt(new_feature_delta["geometry"])
 
-                if geometry.isNull() or geometry.type() == layer.geometry().type():
+                if geometry.isNull() or geometry.type() != layer.geometryType():
                     raise DeltaException(
                         "The provided geometry type differs from the layer geometry type"
                     )

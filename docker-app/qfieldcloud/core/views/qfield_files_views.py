@@ -44,14 +44,15 @@ class ExportView(views.APIView):
 
         project_obj = Project.objects.get(id=projectid)
 
-        project_file = utils.get_qgis_project_file(projectid)
-        if project_file is None:
+        if not project_obj.project_filename:
             raise exceptions.NoQGISProjectError()
 
         # Check if active export job already exists
         # TODO: !!!!!!!!!!!! cache results for some minutes
         query = Q(project=project_obj) & (
-            Q(status=ExportJob.Status.QUEUED) | Q(status=ExportJob.Status.STARTED)
+            Q(status=ExportJob.Status.PENDING)
+            | Q(status=ExportJob.Status.QUEUED)
+            | Q(status=ExportJob.Status.STARTED)
         )
 
         # NOTE uncomment to enforce job creation
@@ -65,10 +66,9 @@ class ExportView(views.APIView):
             project=project_obj, created_by=self.request.user
         )
 
-        utils.export_project(export_job.pk, project_file)
-
         # TODO: check if user is allowed otherwise ERROR 403
         serializer = serializers.ExportJobSerializer(export_job)
+
         return Response(serializer.data)
 
     def get(self, request, projectid):
@@ -139,10 +139,12 @@ class ListFilesView(views.APIView):
                 }
             )
 
+        layers = export_job.feedback["steps"][1]["outputs"]["layer_checks"]
+
         return Response(
             {
                 "files": files,
-                "layers": export_job.exportlog,
+                "layers": layers,
                 "exported_at": export_job.updated_at,
                 "export_id": export_job.pk,
             }

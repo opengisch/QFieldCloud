@@ -2,7 +2,7 @@ from pathlib import PurePath
 
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import exceptions, permissions_utils, utils
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import ProcessProjectfileJob, Project
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -125,41 +125,47 @@ class DownloadPushDeleteFileView(views.APIView):
         return HttpResponseRedirect(url)
 
     def post(self, request, projectid, filename, format=None):
-
-        Project.objects.get(id=projectid)
+        project = Project.objects.get(id=projectid)
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
 
         # check only one qgs/qgz file per project
-        if filename.lower().endswith(".qgs") or filename.lower().endswith(".qgz"):
-            current_project_file = utils.get_qgis_project_file(projectid)
-            if current_project_file is not None:
-                # Allowed only to push the a new version of the same file
-                if not PurePath(filename) == PurePath(current_project_file):
-                    raise exceptions.MultipleProjectsError(
-                        "Only one QGIS project per project allowed"
-                    )
+        if utils.is_qgis_project_file(filename):
+            if project.project_filename is not None and PurePath(filename) != PurePath(
+                project.project_filename
+            ):
+                raise exceptions.MultipleProjectsError(
+                    "Only one QGIS project per project allowed"
+                )
+            else:
+                project.project_filename = filename
+                ProcessProjectfileJob.objects.create(
+                    project=project, created_by=self.request.user
+                )
 
         request_file = request.FILES.get("file")
 
         sha256sum = utils.get_sha256(request_file)
         bucket = utils.get_s3_bucket()
 
-        key = utils.safe_join("projects/{}/files/".format(projectid), filename)
+        key = utils.safe_join(f"projects/{projectid}/files/", filename)
         metadata = {"Sha256sum": sha256sum}
 
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
+        project.save()
 
         return Response(status=status.HTTP_201_CREATED)
 
     def delete(self, request, projectid, filename):
-
-        Project.objects.get(id=projectid)
-
-        key = utils.safe_join("projects/{}/files/".format(projectid), filename)
+        project = Project.objects.get(id=projectid)
+        key = utils.safe_join(f"projects/{projectid}/files/", filename)
         bucket = utils.get_s3_bucket()
 
         bucket.object_versions.filter(Prefix=key).delete()
+
+        if utils.is_qgis_project_file(filename):
+            project.project_filename = None
+            project.save()
 
         return Response(status=status.HTTP_200_OK)
