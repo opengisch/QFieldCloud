@@ -30,6 +30,7 @@ RUN mkdir mediafiles
 # chown all the files to the app user
 RUN addgroup --system app && adduser --system app --ingroup app
 RUN chown -R app:app .
+# RUN groupmod -g 1000 app
 # RUN usermod -u 1000 app
 
 # change to the app user
