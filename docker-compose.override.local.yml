@@ -19,7 +19,7 @@ services:
       - smtp4dev
 
   orchestrator:
-    command: bash -c 'while true; do python manage.py dequeue --single-shot; done;'
+    command: bash -c 'while true; do python manage.py dequeue --single-shot; sleep 2; done;'
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
