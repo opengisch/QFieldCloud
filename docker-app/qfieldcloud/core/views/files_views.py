@@ -140,6 +140,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 )
             else:
                 project.project_filename = filename
+                project.save()
                 ProcessProjectfileJob.objects.create(
                     project=project, created_by=self.request.user
                 )
@@ -153,7 +154,6 @@ class DownloadPushDeleteFileView(views.APIView):
         metadata = {"Sha256sum": sha256sum}
 
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
-        project.save()
 
         return Response(status=status.HTTP_201_CREATED)
 
