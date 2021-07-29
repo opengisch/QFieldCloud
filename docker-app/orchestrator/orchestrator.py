@@ -200,6 +200,7 @@ class JobRun:
             logger.exception("Timeout error.", exc_info=err)
 
         logs = container.logs()
+        container.stop()
         container.remove()
         logger.info(
             f"Finished execution with code {response['StatusCode']}, logs:\n{logs}"
