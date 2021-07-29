@@ -60,7 +60,7 @@ jobs:
           context: ./docker-caddy
           file: ./docker-caddy/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengischprivate/qfieldcloud-caddy:${{ steps.prepare.outputs.tag }}
+          tags: opengisch/qfieldcloud-caddy:${{ steps.prepare.outputs.tag }}
 
       # Application
       - name: Docker Test Application
@@ -79,7 +79,7 @@ jobs:
           context: ./docker-app
           file: ./docker-app/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengischprivate/qfieldcloud-application:${{ steps.prepare.outputs.tag }}
+          tags: opengisch/qfieldcloud-app:${{ steps.prepare.outputs.tag }}
 
       # Redis
       - name: Docker Test Redis
@@ -98,7 +98,7 @@ jobs:
           context: ./docker-redis
           file: ./docker-redis/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengischprivate/qfieldcloud-redis:${{ steps.prepare.outputs.tag }}
+          tags: opengisch/qfieldcloud-redis:${{ steps.prepare.outputs.tag }}
 
       # QGIS
       - name: Docker Test QGIS
@@ -117,4 +117,4 @@ jobs:
           context: ./docker-qgis
           file: ./docker-qgis/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengischprivate/qfieldcloud-qgis:${{ steps.prepare.outputs.tag }}
+          tags: opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.tag }}
