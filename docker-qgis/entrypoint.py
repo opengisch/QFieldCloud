@@ -199,13 +199,14 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
             transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
             vl_extent.combineExtentWith(transform.transformBoundingBox(layer.extent()))
 
+        vl_extent = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs().authid()
 
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project,
         str(export_dir),
-        vl_extent.asWktPolygon(),
+        vl_extent,
         vl_extent_crs,
         offline_editing,
         export_type=ExportType.Cloud,
