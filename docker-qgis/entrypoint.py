@@ -196,8 +196,13 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
             if type(layer) != QgsVectorLayer:
                 continue
 
+            layer_extent = layer.extent()
+
+            if layer_extent.isNull() or not layer_extent.isFinite():
+                continue
+
             transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
-            vl_extent.combineExtentWith(transform.transformBoundingBox(layer.extent()))
+            vl_extent.combineExtentWith(transform.transformBoundingBox(layer_extent))
 
         vl_extent = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs().authid()
