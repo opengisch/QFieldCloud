@@ -20,6 +20,7 @@ from qfieldcloud.core.models import (
     Geodb,
     Organization,
     OrganizationMember,
+    ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
     Team,
@@ -492,6 +493,62 @@ class ExportJobAdmin(admin.ModelAdmin):
         return False
 
 
+class ProcessProjectfileJobAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "project__owner",
+        "project__name",
+        "status",
+        "created_at",
+        "updated_at",
+    )
+    list_filter = ("status", "updated_at")
+    list_select_related = ("project", "project__owner")
+    actions = None
+    exclude = ("feedback", "output")
+
+    readonly_fields = (
+        "project",
+        "status",
+        "created_at",
+        "updated_at",
+        "output__pre",
+        "feedback__pre",
+    )
+
+    search_fields = (
+        "id",
+        "feedback__icontains",
+        "project__name__iexact",
+        "project__owner__username__iexact",
+    )
+
+    ordering = ("-updated_at",)
+
+    def project__owner(self, instance):
+        return model_admin_url(instance.project.owner)
+
+    project__owner.admin_order_field = "project__owner"
+
+    def project__name(self, instance):
+        return model_admin_url(instance.project, instance.project.name)
+
+    project__name.admin_order_field = "project__name"
+
+    def output__pre(self, instance):
+        return format_pre(instance.output)
+
+    def feedback__pre(self, instance):
+        return format_pre_json(instance.feedback)
+
+    # This will disable add functionality
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 class GeodbAdmin(admin.ModelAdmin):
     list_filter = ("created_at", "hostname")
     list_display = (
@@ -610,9 +667,10 @@ admin.site.register(User, UserAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
-admin.site.register(ApplyJob, ApplyJobAdmin)
 admin.site.register(Delta, DeltaAdmin)
+admin.site.register(ApplyJob, ApplyJobAdmin)
 admin.site.register(ExportJob, ExportJobAdmin)
+admin.site.register(ProcessProjectfileJob, ProcessProjectfileJobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
 
 admin.site.unregister(Group)
