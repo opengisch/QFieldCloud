@@ -38,8 +38,7 @@ class QgisException(Exception):
 
 
 class JobRun:
-    # container_timeout_secs = 10 * 60
-    container_timeout_secs = 1 * 60
+    container_timeout_secs = 3 * 60
     job_class = Job
     command = ""
 
