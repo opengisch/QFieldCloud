@@ -1,4 +1,4 @@
-FROM qgis/qgis:final-3_20_1
+FROM qgis/qgis:final-3_20_2
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
