@@ -210,12 +210,12 @@ class JobRun:
 
 class ExportJobRun(JobRun):
     job_class = ExportJob
-    command = "export %(project__id)s '%(project__project_filename)s'"
+    command = "export %(project__id)s %(project__project_filename)s"
 
 
 class DeltaApplyJobRun(JobRun):
     job_class = ApplyJob
-    command = "delta_apply %(project__id)s '%(project__project_filename)s'"
+    command = "delta_apply %(project__id)s %(project__project_filename)s"
 
     def get_command(self) -> str:
         command = super().get_command()
@@ -310,7 +310,7 @@ class DeltaApplyJobRun(JobRun):
 
 class ProcessProjectfileJobRun(JobRun):
     job_class = ProcessProjectfileJob
-    command = "process_projectfile %(project__id)s '%(project__project_filename)s'"
+    command = "process_projectfile %(project__id)s %(project__project_filename)s"
 
     def after_docker(self) -> None:
         thumbnail_filename = self.host_tempdir.joinpath("thumbnail.png")
