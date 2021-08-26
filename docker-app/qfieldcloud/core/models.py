@@ -535,10 +535,6 @@ class ProjectQueryset(models.QuerySet):
         return qs
 
 
-def get_default_worker_image():
-    return settings.QFC_DEFAULT_WORKER_IMAGE
-
-
 class Project(models.Model):
     """Represent a QFieldcloud project.
     It corresponds to a directory on the file system.
@@ -600,8 +596,13 @@ class Project(models.Model):
     thumbnail_uri = models.CharField(
         _("Thumbnail Picture URI"), max_length=255, blank=True
     )
-    worker_image = models.CharField(
-        max_length=255, blank=False, null=False, default=get_default_worker_image
+    _workers_list = list(settings.QFC_WORKERS_CONFIG.keys())
+    worker_label = models.CharField(
+        max_length=255,
+        blank=False,
+        null=False,
+        choices=[(v, v) for v in _workers_list],
+        default=_workers_list[0],
     )
 
     @property

@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable, Tuple
 import docker
 import qfieldcloud.core.utils2.storage
 import requests
+from django.conf import settings
 from django.db import transaction
 from django.forms.models import model_to_dict
 from qfieldcloud.core.models import (
@@ -100,10 +101,14 @@ class JobRun:
             volumes = {}
             volumes[str(self.qgis_tempdir)] = {"bind": "/io/", "mode": "rw"}
 
+            worker_image = settings.QFC_WORKERS_CONFIG.get(
+                self.job.project.worker_label
+            )
+
             exit_code, output = self._run_docker(
                 command,
                 volumes=volumes,
-                worker_image=self.job.project.worker_image,
+                worker_image=worker_image,
             )
 
             try:

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
+import collections
 import os
 
 import sentry_sdk
@@ -182,8 +183,14 @@ STORAGE_ENDPOINT_URL = (
     else os.environ.get("STORAGE_ENDPOINT_URL")
 )
 
-# Worker settings
-QFC_DEFAULT_WORKER_IMAGE = os.environ.get("QFC_DEFAULT_WORKER_IMAGE")
+# Worker settings `{label: dockerimage}`
+# The first one is the default one. Changing the keys requires a migration
+QFC_WORKERS_CONFIG = collections.OrderedDict(
+    [
+        ("qfc-qgis-3.20", "opengisch/qfc_worker:3.20.2"),
+        ("qfc-qgis-3.18", "opengisch/qfc_worker:3.18"),
+    ]
+)
 
 AUTH_USER_MODEL = "core.User"
 

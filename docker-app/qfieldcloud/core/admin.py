@@ -227,7 +227,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "owner",
         "is_public",
         "description",
-        "worker_image",
+        "worker_label",
         "created_at",
         "updated_at",
     )
@@ -235,7 +235,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "is_public",
         "created_at",
         "updated_at",
-        "worker_image",
+        "worker_label",
     )
     fields = (
         "name",
@@ -243,7 +243,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "is_public",
         "owner",
         "storage_size",
-        "worker_image",
+        "worker_label",
     )
     readonly_fields = ("storage_size",)
     inlines = (ProjectCollaboratorInline,)
