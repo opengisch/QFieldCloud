@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any, Type
 
 import qfieldcloud.core.utils2.storage
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
@@ -534,6 +535,10 @@ class ProjectQueryset(models.QuerySet):
         return qs
 
 
+def get_default_worker_image():
+    return settings.QFC_DEFAULT_WORKER_IMAGE
+
+
 class Project(models.Model):
     """Represent a QFieldcloud project.
     It corresponds to a directory on the file system.
@@ -594,6 +599,9 @@ class Project(models.Model):
     )
     thumbnail_uri = models.CharField(
         _("Thumbnail Picture URI"), max_length=255, blank=True
+    )
+    worker_image = models.CharField(
+        max_length=255, blank=False, null=False, default=get_default_worker_image
     )
 
     @property

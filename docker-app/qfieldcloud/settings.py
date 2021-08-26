@@ -182,6 +182,9 @@ STORAGE_ENDPOINT_URL = (
     else os.environ.get("STORAGE_ENDPOINT_URL")
 )
 
+# Worker settings
+QFC_DEFAULT_WORKER_IMAGE = os.environ.get("QFC_DEFAULT_WORKER_IMAGE")
+
 AUTH_USER_MODEL = "core.User"
 
 REST_FRAMEWORK = {

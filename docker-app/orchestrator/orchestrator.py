@@ -25,11 +25,9 @@ from qfieldcloud.core.models import (
 logger = logging.getLogger(__name__)
 
 TMP_DIRECTORY = os.environ.get("TMP_DIRECTORY", None)
-QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 
 assert TMP_DIRECTORY
-assert QGIS_CONTAINER_NAME
 assert QFIELDCLOUD_HOST
 
 
@@ -105,6 +103,7 @@ class JobRun:
             exit_code, output = self._run_docker(
                 command,
                 volumes=volumes,
+                worker_image=self.job.project.worker_image,
             )
 
             try:
@@ -159,20 +158,19 @@ class JobRun:
                 logger.exception(err, exc_info=err)
 
     def _run_docker(
-        self, command: str, volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
+        self,
+        command: str,
+        volumes: Dict[str, str],
+        worker_image: str,
+        run_opts: Dict[str, Any] = {},
     ) -> Tuple[int, bytes]:
-        QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
-        QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
-
-        assert QGIS_CONTAINER_NAME
-        assert QFIELDCLOUD_HOST
 
         client = docker.from_env()
 
         logger.info(f"Execute: {command}")
 
         container = client.containers.run(
-            QGIS_CONTAINER_NAME,
+            worker_image,
             command,
             environment={
                 "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),

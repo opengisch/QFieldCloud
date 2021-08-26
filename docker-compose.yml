@@ -64,7 +64,7 @@ services:
       # Settings below are specific to orchestrator
       # TODO : move this to the orchestrator service and keep things DRY (yaml syntax expert needed)
       TMP_DIRECTORY: ${TMP_DIRECTORY}
-      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
+      QFC_DEFAULT_WORKER_IMAGE: ${QFC_DEFAULT_WORKER_IMAGE}
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
     depends_on:
       - db
@@ -92,9 +92,25 @@ services:
       - ${WEB_HTTPS_PORT}:443
     logging: *default-logging
 
-  qgis:
+  # Builders for workers
+  # These don't run as part of the stack, but create images that are then ran by the orchestrator
+  qgis_worker_320:
+    image: opengisch/qfc_worker:3.20.2
     build:
       context: ./docker-qgis
+      args:
+        QGIS_BASE_IMAGE: final-3_20_2
+    tty: true
+    command: bash -c "echo QGIS builded"
+    logging: *default-logging
+
+  # DUMMY WORKER, NOT TESTED !!
+  qgis_worker_318:
+    image: opengisch/qfc_worker:3.18
+    build:
+      context: ./docker-qgis
+      args:
+        QGIS_BASE_IMAGE: release-3_18
     tty: true
     command: bash -c "echo QGIS builded"
     logging: *default-logging

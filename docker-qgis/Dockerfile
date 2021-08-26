@@ -1,4 +1,5 @@
-FROM qgis/qgis:final-3_20_2
+ARG  QGIS_BASE_IMAGE=final-3_20_2
+FROM qgis/qgis:${QGIS_BASE_IMAGE}
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
