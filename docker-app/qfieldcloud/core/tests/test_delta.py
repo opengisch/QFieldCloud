@@ -630,7 +630,7 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
-        for _ in range(10):
+        for _ in range(60):
 
             time.sleep(2)
             response = self.client.get(uri)
