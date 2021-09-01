@@ -59,7 +59,7 @@ def get_s3_client():
         region_name=settings.STORAGE_REGION_NAME,
         aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
         aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
-        endpoint_url=settings.STORAGE_ENDPOINT_URL_EXTERNAL,
+        endpoint_url=settings.STORAGE_ENDPOINT_URL,
     )
     return s3_client
 
