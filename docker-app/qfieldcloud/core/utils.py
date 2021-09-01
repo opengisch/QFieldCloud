@@ -8,7 +8,6 @@ from pathlib import PurePath
 from typing import Dict, List, TypedDict
 
 import boto3
-import django_rq
 import jsonschema
 from botocore.errorfactory import ClientError
 from django.conf import settings
@@ -16,37 +15,6 @@ from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUpload
 from redis import Redis, exceptions
 
 logger = logging.getLogger(__name__)
-
-
-def export_project(job_id, project_file):
-    """Call the orchestrator API to export a project with QFieldSync"""
-
-    queue = django_rq.get_queue("export")
-    job = queue.enqueue(
-        "orchestrator.orchestrator.export_project",
-        str(job_id),
-        str(project_file),
-        job_id=str(job_id),
-    )
-
-    return job
-
-
-def check_orchestrator_status():
-    """Call the orchestrator to check if he's able to launch a QGIS
-    container"""
-
-    queue = django_rq.get_queue("export")
-    job = queue.enqueue("orchestrator.orchestrator.check_status")
-
-    return job
-
-
-def get_job(queue, jobid):
-    """Get the job from the specified queue or None"""
-
-    queue = django_rq.get_queue(queue)
-    return queue.fetch_job(jobid)
 
 
 def redis_is_running():
@@ -161,6 +129,15 @@ def safe_join(base, *paths):
     return final_path.lstrip("/")
 
 
+def is_qgis_project_file(filename: str) -> bool:
+    path = PurePath(filename)
+
+    if path.suffix in (".qgs", ".qgz"):
+        return True
+
+    return False
+
+
 def get_qgis_project_file(projectid):
     """Return the relative path inside the project of the qgs/qgz file or
     None if no qgs/qgz file is present"""
@@ -170,7 +147,7 @@ def get_qgis_project_file(projectid):
     prefix = "projects/{}/files/".format(projectid)
 
     for obj in bucket.objects.filter(Prefix=prefix):
-        if obj.key.lower().endswith(".qgs") or obj.key.lower().endswith(".qgz"):
+        if is_qgis_project_file(obj.key):
             path = PurePath(obj.key)
             return str(path.relative_to(*path.parts[:3]))
 

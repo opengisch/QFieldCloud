@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class use_test_db_if_exists:
     """
-    Context manager that updates django database settigs to use the test db if it exists.
+    Context manager that updates django database settings to use the test db if it exists.
     Will be ignored if debug is False
     """
 
@@ -26,16 +26,17 @@ class use_test_db_if_exists:
             )
             if cursor.fetchone():
                 settings.DATABASES["default"]["NAME"] = test_dbname
+                logger.info(f'Using DB {settings.DATABASES["default"]["NAME"]}')
                 self._invalidate()
-        logger.info(f'Using DB {settings.DATABASES["default"]["NAME"]}')
 
     def __exit__(self, exc_type, exc_value, traceback):
         # restore initial db name
         if not settings.DEBUG:
             return
 
-        settings.DATABASES["default"]["NAME"] = self._init_dbname
-        logger.info(f'Restoring DB {settings.DATABASES["default"]["NAME"]}')
+        if settings.DATABASES["default"]["NAME"] != self._init_dbname:
+            logger.info(f'Restoring DB {settings.DATABASES["default"]["NAME"]}')
+
         self._invalidate()
 
     def _invalidate(self):

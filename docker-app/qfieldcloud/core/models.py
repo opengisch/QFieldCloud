@@ -3,7 +3,9 @@ import secrets
 import string
 import uuid
 from enum import Enum
+from typing import Any, Type
 
+import qfieldcloud.core.utils2.storage
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
@@ -13,7 +15,7 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count
 from django.db.models.fields.json import JSONField
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -330,6 +332,15 @@ def create_account_for_organization(sender, instance, created, **kwargs):
         UserAccount.objects.create(user=instance)
 
 
+@receiver(pre_delete, sender=User)
+@receiver(pre_delete, sender=Organization)
+def delete_user(sender: Type[User], instance: User, **kwargs: Any) -> None:
+    if instance.user_type == User.TYPE_TEAM:
+        return
+
+    qfieldcloud.core.utils2.storage.remove_user_avatar(instance)
+
+
 class OrganizationMember(models.Model):
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
@@ -555,6 +566,7 @@ class Project(models.Model):
     )
 
     description = models.TextField(blank=True)
+    project_filename = models.TextField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
         help_text=_(
@@ -580,6 +592,16 @@ class Project(models.Model):
             "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
         ),
     )
+    thumbnail_uri = models.CharField(
+        _("Thumbnail Picture URI"), max_length=255, blank=True
+    )
+
+    @property
+    def thumbnail_url(self):
+        if self.thumbnail_uri:
+            return get_s3_object_url(self.thumbnail_uri)
+        else:
+            return None
 
     def get_absolute_url(self):
         return reverse_lazy(
@@ -603,12 +625,14 @@ class Project(models.Model):
         return utils.get_project_files(self.id)
 
     @property
-    def qgis_project_file(self):
-        return utils.get_qgis_project_file(self.id)
-
-    @property
     def files_count(self):
         return utils.get_project_files_count(self.id)
+
+
+@receiver(pre_delete, sender=Project)
+def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> None:
+    if instance.thumbnail_uri:
+        qfieldcloud.core.utils2.storage.remove_project_thumbail(instance)
 
 
 class ProjectCollaborator(models.Model):
@@ -743,6 +767,7 @@ class Job(models.Model):
     class Type(models.TextChoices):
         EXPORT = "export", _("Export")
         DELTA_APPLY = "delta_apply", _("Delta Apply")
+        PROCESS_PROJECTFILE = "process_projectfile", _("Process QGIS Project File")
 
     class Status(models.TextChoices):
         PENDING = "pending", _("Pending")
@@ -756,21 +781,24 @@ class Job(models.Model):
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
-        related_name="exports",
+        related_name="jobs",
     )
     type = models.CharField(max_length=32, choices=Type.choices)
     status = models.CharField(
-        max_length=32, choices=Status.choices, default=Status.QUEUED
+        max_length=32, choices=Status.choices, default=Status.PENDING
     )
     output = models.TextField(null=True)
+    feedback = JSONField(null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def short_id(self):
+        return str(self.id)[0:8]
+
 
 class ExportJob(Job):
-    exportlog = JSONField(null=True)
-
     def save(self, *args, **kwargs):
         self.type = self.Type.EXPORT
         return super().save(*args, **kwargs)
@@ -778,6 +806,16 @@ class ExportJob(Job):
     class Meta:
         verbose_name = "Job: export"
         verbose_name_plural = "Jobs: export"
+
+
+class ProcessProjectfileJob(Job):
+    def save(self, *args, **kwargs):
+        self.type = self.Type.PROCESS_PROJECTFILE
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Job: process QGIS project file"
+        verbose_name_plural = "Jobs: process QGIS project file"
 
 
 class ApplyJob(Job):
@@ -809,6 +847,7 @@ class ApplyJobDelta(models.Model):
         choices=Delta.Status.choices, default=Delta.Status.PENDING, max_length=32
     )
     feedback = JSONField(null=True)
+    modified_pk = models.TextField(null=True)
 
     def __str__(self):
         return f"{self.apply_job_id}:{self.delta_id}"

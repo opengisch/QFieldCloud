@@ -1,9 +1,6 @@
 import io
 import json
 import logging
-import os
-import sqlite3
-import tempfile
 import time
 
 import fiona
@@ -79,7 +76,7 @@ class QfcTestCase(APITransactionTestCase):
 
         User.objects.all().delete()
 
-    def upload_project_files(self):
+    def upload_project_files(self, project) -> Project:
         # Verify the original geojson file
         with open(testdata_path("delta/points.geojson")) as f:
             points_geojson = json.load(f)
@@ -95,7 +92,7 @@ class QfcTestCase(APITransactionTestCase):
         ]:
             file_path = testdata_path(f"delta/{project_file}")
             response = self.client.post(
-                f"/api/v1/files/{self.project1.id}/{project_file}/",
+                f"/api/v1/files/{project.id}/{project_file}/",
                 {"file": open(file_path, "rb")},
                 format="multipart",
             )
@@ -104,106 +101,65 @@ class QfcTestCase(APITransactionTestCase):
                 f"Failed to upload file '{project_file}'",
             )
 
+        # wait until the project file check are ready
+        for i in range(30):
+            updated_project = Project.objects.get(id=project.id)
+            if updated_project.project_filename:
+                return updated_project
+
+            time.sleep(1)
+
+        raise Exception("Projectfile never set on project")
+
     def test_push_apply_delta_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta2.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta2.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "c8c421cd-e39c-40a0-97d8-a319c245ba14",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
-            response = self.client.get(
-                "/api/v1/deltas/{}/".format(self.project1.id),
-            )
-
-            if response.json()[0]["status"] in ["STATUS_BUSY", "STATUS_PENDING"]:
-                continue
-
-            self.assertEqual("STATUS_APPLIED", response.json()[0]["status"])
-
-            # Download the geojson file
-            response = self.client.get(
-                f"/api/v1/files/{self.project1.id}/testdata.gpkg/"
-            )
-
-            self.assertIsInstance(response, HttpResponseRedirect)
-
-            response = requests.get(response.url, stream=True)
-
-            self.assertTrue(status.is_success(response.status_code))
-            self.assertEqual(get_filename(response), "testdata.gpkg")
-
-            temp_dir = tempfile.mkdtemp()
-            local_file = os.path.join(temp_dir, "testdata.gpkg")
-
-            with open(local_file, "wb") as f:
-                for chunk in response.iter_content():
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
-
-            conn = sqlite3.connect(local_file)
-            conn.row_factory = sqlite3.Row
-            c = conn.cursor()
-            c.execute("""SELECT * FROM points WHERE fid = 1""")
-            f = c.fetchone()
-
-            self.assertEqual(666, f["int"])
-            return
-
-        self.fail("Worker didn't finish")
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
+        with fiona.open(gpkg, layer="points") as layer:
+            features = list(layer)
+            self.assertEqual(666, features[0]["properties"]["int"])
 
     def test_push_apply_delta_file_with_error(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path("delta/deltas/with_errors.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="with_errors.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "65b605b4-9832-4de0-9055-92e1dd94ebec",
+                    "STATUS_NOT_APPLIED",
+                    self.user1.username,
+                ]
+            ],
         )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
-            response = self.client.get(
-                "/api/v1/deltas/{}/".format(self.project1.id),
-            )
-
-            if response.json()[0]["status"] == "STATUS_BUSY":
-                continue
-
-            self.assertEqual("STATUS_NOT_APPLIED", response.json()[0]["status"])
-            return
-
-        self.fail("Worker didn't finish")
 
     def test_push_apply_delta_file_invalid_json_schema(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
         bucket = utils.get_s3_bucket()
-        prefix = utils.safe_join(f"projects/{self.project1.id}/deltas/")
+        prefix = utils.safe_join(f"projects/{project.id}/deltas/")
         wrong_deltas_before = list(bucket.objects.filter(Prefix=prefix))
-
-        # Push a deltafile
         delta_file = testdata_path("delta/deltas/not_schema_valid.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
-        )
-        self.assertFalse(status.is_success(response.status_code))
+
+        self.assertFalse(self.upload_deltas(project, "not_schema_valid.json"))
 
         # check it is uploaded
         wrong_deltas = list(bucket.objects.filter(Prefix=prefix))
@@ -216,271 +172,191 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a wrong deltafile
-        delta_file = testdata_path("file.txt")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
-        )
-        self.assertFalse(status.is_success(response.status_code))
+        self.assertFalse(self.upload_deltas(project, "../../file.txt"))
 
     def test_push_apply_delta_file_conflicts_overwrite_true(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta_conflict.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta_conflict.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "8d185b67-f05e-40c6-9c9a-6ceca8100c39",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
         )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
-            response = self.client.get(
-                "/api/v1/deltas/{}/".format(self.project1.id),
-            )
-
-            if response.json()[0]["status"] == "STATUS_BUSY":
-                continue
-
-            self.assertEqual("STATUS_APPLIED", response.json()[0]["status"])
-            return
-
-        self.fail("Worker didn't finish")
 
     def test_push_apply_delta_file_twice(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
-            response = self.client.get(
-                "/api/v1/deltas/{}/".format(self.project1.id),
-            )
-
-            if response.json()[0]["status"] == "STATUS_BUSY":
-                continue
-
-            self.assertEqual("STATUS_APPLIED", response.json()[0]["status"])
-
-            response = self.client.get(
-                f"/api/v1/files/{self.project1.id}/testdata.gpkg/"
-            )
-
-            self.assertIsInstance(response, HttpResponseRedirect)
-
-            response = requests.get(response.url, stream=True)
-
-            self.assertTrue(status.is_success(response.status_code))
-            self.assertEqual(get_filename(response), "testdata.gpkg")
-
-            temp_dir = tempfile.mkdtemp()
-            local_file = os.path.join(temp_dir, "testdata.gpkg")
-
-            with open(local_file, "wb") as f:
-                for chunk in response.iter_content():
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
-
-            conn = sqlite3.connect(local_file)
-            conn.row_factory = sqlite3.Row
-            c = conn.cursor()
-            c.execute("""SELECT * FROM points WHERE fid = 1""")
-            f = c.fetchone()
-
-            self.assertEqual(666, f["int"])
-            return
-
-        # Push the same deltafile again
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta.json")
-
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Push a deltafile with same id but different content
-        delta_file = testdata_path(
-            "delta/deltas/singlelayer_singledelta_diff_content.json"
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
         )
 
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
+        with fiona.open(gpkg, layer="points") as layer:
+            features = list(layer)
+            self.assertEqual(666, features[0]["properties"]["int"])
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
         )
-        self.assertTrue(status.is_client_error(response.status_code))
+
+        self.assertFalse(
+            self.upload_deltas(project, "singlelayer_singledelta_diff_content.json")
+        )
 
     def test_push_list_deltas(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta3.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.assertTrue(
+            self.upload_deltas(self.project1, "singlelayer_singledelta3.json")
         )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Push another deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta4.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.assertTrue(
+            self.upload_deltas(self.project1, "singlelayer_singledelta4.json")
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
-        self.assertTrue(status.is_success(response.status_code))
-        json = response.json()
-        self.assertEqual(len(json), 2)
-        json = sorted(json, key=lambda k: k["id"])
-
-        self.assertEqual(json[0]["id"], "802ae2ef-f360-440e-a816-8990d6a06667")
-        self.assertIn(json[0]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[0]["created_by"], self.user1.username)
-        self.assertEqual(json[1]["id"], "e4546ec2-6e01-43a1-ab30-a52db9469afd")
-        self.assertIn(json[0]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[1]["created_by"], self.user1.username)
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename=None,
+            token=self.token1.key,
+            final_values=[
+                [
+                    "802ae2ef-f360-440e-a816-8990d6a06667",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "e4546ec2-6e01-43a1-ab30-a52db9469afd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
 
     def test_push_list_multidelta(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_multidelta.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_multidelta.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "736bf2c2-646a-41a2-8c55-28c26aecd68d",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "8adac0df-e1d3-473e-b150-f8c4a91b4781",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "c6c88e78-172c-4f77-b2fd-2ff41f5aa854",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
-        self.assertTrue(status.is_success(response.status_code))
-        json = response.json()
-        json = sorted(json, key=lambda k: k["id"])
-
-        self.assertEqual(json[0]["id"], "736bf2c2-646a-41a2-8c55-28c26aecd68d")
-        self.assertIn(json[0]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[0]["created_by"], self.user1.username)
-        self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
-        self.assertIn(json[1]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[1]["created_by"], self.user1.username)
-        self.assertEqual(json[2]["id"], "c6c88e78-172c-4f77-b2fd-2ff41f5aa854")
-        self.assertIn(json[2]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[2]["created_by"], self.user1.username)
-
-    def test_push_list_deltas_of_deltafile(self):
+    def test_list_all_deltas_and_list_deltas_by_deltafile(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta5.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.assertTrue(
+            self.upload_deltas(self.project1, "singlelayer_singledelta5.json")
         )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Push another deltafile
-        delta_file = testdata_path("delta/deltas/singlelayer_singledelta6.json")
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.assertTrue(
+            self.upload_deltas(self.project1, "singlelayer_singledelta6.json")
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        # Get all deltas
-        response = self.client.get("/api/v1/deltas/{}/".format(self.project1.id))
-        self.assertTrue(status.is_success(response.status_code))
-        json = response.json()
-        self.assertEqual(len(json), 2)
-        json = sorted(json, key=lambda k: k["id"])
-
-        self.assertEqual(json[0]["id"], "ad98634e-509f-4dff-9000-de79b09c5359")
-        self.assertIn(json[0]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[0]["created_by"], self.user1.username)
-        self.assertEqual(json[1]["id"], "df6a19eb-7d61-4c64-9e3b-29bce0a8dfab")
-        self.assertIn(json[1]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[1]["created_by"], self.user1.username)
-
-        # Get only deltas of one deltafile
-        response = self.client.get(
-            "/api/v1/deltas/{}/{}/".format(
-                self.project1.id, "3aab7e58-ea27-4b7c-9bca-c772b6d94820"
-            )
+        # check all the deltas
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename=None,
+            token=self.token1.key,
+            final_values=[
+                [
+                    "ad98634e-509f-4dff-9000-de79b09c5359",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "df6a19eb-7d61-4c64-9e3b-29bce0a8dfab",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        json = response.json()
-        self.assertEqual(len(json), 1)
-        self.assertEqual(json[0]["id"], "ad98634e-509f-4dff-9000-de79b09c5359")
-        self.assertIn(json[0]["status"], ["STATUS_PENDING", "STATUS_BUSY"])
-        self.assertEqual(json[0]["created_by"], self.user1.username)
-        self.assertIn("output", json[0])
+        # check all the deltas from a single file
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename=None,
+            token=self.token1.key,
+            final_values=[
+                [
+                    "ad98634e-509f-4dff-9000-de79b09c5359",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+            deltafile_id="3aab7e58-ea27-4b7c-9bca-c772b6d94820",
+        )
 
     def test_push_apply_delta_file_conflicts_overwrite_false(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
         # Set the overwrite_conflicts flag to False
-        self.project1.overwrite_conflicts = False
-        self.project1.save()
+        project.overwrite_conflicts = False
+        project.save()
 
-        # Push a deltafile
-        delta_file = testdata_path(
-            "delta/deltas/singlelayer_singledelta_conflict2.json"
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta_conflict2.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "bd507a3d-aa7b-42c4-bdb7-23ff34f65d5c",
+                    "STATUS_CONFLICT",
+                    self.user1.username,
+                ]
+            ],
         )
-        response = self.client.post(
-            "/api/v1/deltas/{}/".format(self.project1.id),
-            {"file": open(delta_file, "rb")},
-            format="multipart",
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        # Wait for the worker to finish
-        for _ in range(30):
-            time.sleep(2)
-            response = self.client.get(
-                "/api/v1/deltas/{}/".format(self.project1.id),
-            )
-
-            if response.json()[0]["status"] == "STATUS_BUSY":
-                continue
-
-            self.assertEqual("STATUS_CONFLICT", response.json()[0]["status"])
-            return
-
-        self.fail("Worker didn't finish")
 
     def test_list_deltas_unexisting_project(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        self.upload_project_files(self.project1)
 
         response = self.client.get(
             "/api/v1/deltas/7199612e-7641-48fc-8c11-c25176a9761b/"
@@ -491,89 +367,60 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_push_delta_not_allowed(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
-        # Push a deltafile
-        delta_file = testdata_path(
-            "delta/deltas/singlelayer_multidelta_patch_create.json"
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_multidelta_patch_create.json",
+            token=self.token2.key,
+            final_values=[
+                [
+                    "736bf2c2-646a-41a2-8c55-28c26aecd68d",
+                    "STATUS_UNPERMITTED",
+                    self.user2.username,
+                ],
+                [
+                    "8adac0df-e1d3-473e-b150-f8c4a91b4781",
+                    "STATUS_UNPERMITTED",
+                    self.user2.username,
+                ],
+            ],
         )
-        response = self.client.post(
-            f"/api/v1/deltas/{self.project1.id}/",
-            {"file": open(delta_file, "rb")},
-            format="multipart",
-        )
-        self.assertTrue(status.is_success(response.status_code))
-
-        response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
-        self.assertTrue(status.is_success(response.status_code))
-        json = response.json()
-        json = sorted(json, key=lambda k: k["id"])
-
-        self.assertEqual(json[0]["id"], "736bf2c2-646a-41a2-8c55-28c26aecd68d")
-        self.assertEqual(json[0]["status"], "STATUS_UNPERMITTED")
-        self.assertEqual(json[0]["created_by"], self.user2.username)
-        self.assertEqual(json[1]["id"], "8adac0df-e1d3-473e-b150-f8c4a91b4781")
-        self.assertEqual(json[1]["status"], "STATUS_UNPERMITTED")
-        self.assertEqual(json[1]["created_by"], self.user2.username)
 
     def test_non_spatial_delta(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
         # Push a deltafile
-        delta_file = testdata_path("delta/deltas/nonspatial.json")
-        response = self.client.post(
-            f"/api/v1/deltas/{self.project1.id}/",
-            {"file": open(delta_file, "rb")},
-            format="multipart",
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="nonspatial.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "1270b97d-6a28-49cc-83f3-b827ec574fee",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "f326c3c1-138f-4261-9151-4946237ce714",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
-        self.assertTrue(status.is_success(response.status_code))
-        json = response.json()
-        json = sorted(json, key=lambda k: k["id"])
+        self.assertEqual(
+            self.get_file_contents(project, "nonspatial.csv"), b'fid,col1\n"1",qux\n'
+        )
 
-        self.assertEqual(json[0]["id"], "1270b97d-6a28-49cc-83f3-b827ec574fee")
-        self.assertIn(json[0]["status"], ["STATUS_BUSY", "STATUS_PENDING"])
-        self.assertEqual(json[0]["created_by"], self.user1.username)
-        self.assertEqual(json[1]["id"], "f326c3c1-138f-4261-9151-4946237ce714")
-        self.assertIn(json[1]["status"], ["STATUS_BUSY", "STATUS_PENDING"])
-        self.assertEqual(json[1]["created_by"], self.user1.username)
-
-        for _ in range(30):
-            time.sleep(2)
-            response = self.client.get(f"/api/v1/deltas/{self.project1.id}/")
-            json = response.json()
-            json = sorted(json, key=lambda k: k["id"])
-
-            if json[0]["status"] in ["STATUS_BUSY", "STATUS_PENDING"] or json[1][
-                "status"
-            ] in ["STATUS_BUSY", "STATUS_PENDING"]:
-                continue
-
-            response = self.client.get(
-                f"/api/v1/files/{self.project1.id}/nonspatial.csv/"
-            )
-
-            self.assertIsInstance(response, HttpResponseRedirect)
-
-            response = requests.get(response.url)
-
-            self.assertTrue(status.is_success(response.status_code))
-            self.assertEqual(get_filename(response), "nonspatial.csv")
-
-            self.assertEqual(response.content, b'fid,col1\n"1",qux\n')
-
-            return
-
-    def test_apply222(self):
+    def test_change_and_delete_pushed_only_features(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        self.upload_project_files()
+        project = self.upload_project_files(self.project1)
 
         # 1) client 1 creates a feature
-        self.upload_deltafile(
-            project=self.project1,
+        self.upload_and_check_deltas(
+            project=project,
             delta_filename="multistage_p1_c1_create.json",
             token=self.token1.key,
             final_values=[
@@ -585,7 +432,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -596,8 +443,8 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[3]["properties"]["int"], 1000)
 
         # 2) client 2 creates a feature
-        self.upload_deltafile(
-            project=self.project1,
+        self.upload_and_check_deltas(
+            project=project,
             delta_filename="multistage_p2_c2_create.json",
             token=self.token3.key,
             final_values=[
@@ -609,7 +456,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -621,8 +468,8 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[4]["properties"]["int"], 2000)
 
         # 3) client 1 updates their created feature
-        self.upload_deltafile(
-            project=self.project1,
+        self.upload_and_check_deltas(
+            project=project,
             delta_filename="multistage_p3_c1_patch.json",
             token=self.token3.key,
             final_values=[
@@ -634,7 +481,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -646,8 +493,8 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[4]["properties"]["int"], 2000)
 
         # 4) client 2 updates their created feature
-        self.upload_deltafile(
-            project=self.project1,
+        self.upload_and_check_deltas(
+            project=project,
             delta_filename="multistage_p4_c2_patch.json",
             token=self.token3.key,
             final_values=[
@@ -659,7 +506,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -671,8 +518,8 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[4]["properties"]["int"], 2002)
 
         # 5) client 1 deletes their created feature
-        self.upload_deltafile(
-            project=self.project1,
+        self.upload_and_check_deltas(
+            project=project,
             delta_filename="multistage_p5_c1_delete.json",
             token=self.token3.key,
             final_values=[
@@ -684,7 +531,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -695,8 +542,8 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[3]["properties"]["int"], 2002)
 
         # 6) client 2 deletes their created feature
-        self.upload_deltafile(
-            project=self.project1,
+        self.upload_and_check_deltas(
+            project=project,
             delta_filename="multistage_p6_c2_delete.json",
             token=self.token3.key,
             final_values=[
@@ -708,7 +555,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents("testdata.gpkg"))
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
         with fiona.open(gpkg, "r", layer="points") as layer:
             features = list(layer)
 
@@ -717,8 +564,8 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[1]["properties"]["int"], 2)
             self.assertEqual(features[2]["properties"]["int"], 3)
 
-    def get_file_contents(self, filename):
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/{filename}/")
+    def get_file_contents(self, project, filename):
+        response = self.client.get(f"/api/v1/files/{project.id}/{filename}/")
 
         self.assertIsInstance(response, HttpResponseRedirect)
 
@@ -729,7 +576,17 @@ class QfcTestCase(APITransactionTestCase):
 
         return response.content
 
-    def upload_deltafile(
+    def upload_deltas(self, project, delta_filename):
+        delta_file = testdata_path(f"delta/deltas/{delta_filename}")
+
+        response = self.client.post(
+            f"/api/v1/deltas/{project.id}/",
+            {"file": open(delta_file, "rb")},
+            format="multipart",
+        )
+        return rest_framework.status.is_success(response.status_code)
+
+    def upload_and_check_deltas(
         self,
         project,
         delta_filename,
@@ -738,23 +595,26 @@ class QfcTestCase(APITransactionTestCase):
         wait_status=["STATUS_PENDING", "STATUS_BUSY"],
         failing_status=["STATUS_ERROR"],
         immediate_values=None,
+        deltafile_id=None,
     ):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
-        # Push a deltafile
-        delta_file = testdata_path(f"delta/deltas/{delta_filename}")
-        with open(delta_file) as f:
-            deltafile_id = json.load(f)["id"]
+        uri = f"/api/v1/deltas/{project.id}/"
 
-        response = self.client.post(
-            f"/api/v1/deltas/{project.id}/",
-            {"file": open(delta_file, "rb")},
-            format="multipart",
-        )
-        print(response, response.content)
-        self.assertTrue(rest_framework.status.is_success(response.status_code))
+        if delta_filename is not None:
+            # Push a deltafile
+            self.assertTrue(self.upload_deltas(project, delta_filename))
 
-        response = self.client.get(f"/api/v1/deltas/{project.id}/{deltafile_id}/")
+            delta_file = testdata_path(f"delta/deltas/{delta_filename}")
+
+            if not deltafile_id:
+                with open(delta_file) as f:
+                    deltafile_id = json.load(f)["id"]
+
+        if deltafile_id:
+            uri = f"{uri}{deltafile_id}/"
+
+        response = self.client.get(uri)
         self.assertTrue(rest_framework.status.is_success(response.status_code))
         payload = response.json()
         payload = sorted(payload, key=lambda k: k["id"])
@@ -773,7 +633,7 @@ class QfcTestCase(APITransactionTestCase):
         for _ in range(10):
 
             time.sleep(2)
-            response = self.client.get(f"/api/v1/deltas/{project.id}/{deltafile_id}/")
+            response = self.client.get(uri)
 
             payload = response.json()
             payload = sorted(payload, key=lambda k: k["id"])

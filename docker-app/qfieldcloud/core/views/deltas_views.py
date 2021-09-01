@@ -54,7 +54,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     def post(self, request, projectid):
 
         project_obj = Project.objects.get(id=projectid)
-        project_file = utils.get_qgis_project_file(projectid)
+        project_file = project_obj.project_filename
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
@@ -69,6 +69,19 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             deltafile_projectid = deltafile_json["project"]
 
             deltas = deltafile_json.get("deltas", [])
+            delta_ids = sorted([str(delta["uuid"]) for delta in deltas])
+            existing_delta_ids = [
+                str(delta.id)
+                for delta in Delta.objects.filter(
+                    deltafile_id=deltafile_id,
+                ).order_by("id")
+            ]
+
+            if len(existing_delta_ids) != 0:
+                if delta_ids == existing_delta_ids:
+                    return Response()
+                else:
+                    raise exceptions.DeltafileDuplicationError()
 
             if project_file is None:
                 raise exceptions.NoQGISProjectError()
@@ -101,6 +114,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 # otherwise we upload an empty file
                 request_file.seek(0)
                 utils.get_s3_bucket().upload_fileobj(request_file, key)
+                logger.info(f'Invalid deltafile saved as "{key}"')
 
             logger.exception(err)
 
@@ -108,8 +122,12 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 raise exceptions.DeltafileDuplicationError()
             elif isinstance(err, exceptions.NoQGISProjectError):
                 raise err
+            elif isinstance(err, exceptions.DeltafileDuplicationError):
+                raise err
+            elif isinstance(err, exceptions.DeltafileValidationError):
+                raise err
             else:
-                raise exceptions.DeltafileValidationError()
+                raise exceptions.QFieldCloudException() from err
 
         if not jobs.apply_deltas(
             project_obj,
@@ -160,7 +178,7 @@ class ApplyView(views.APIView):
 
     def post(self, request, projectid):
         project_obj = Project.objects.get(id=projectid)
-        project_file = utils.get_qgis_project_file(projectid)
+        project_file = project_obj.project_filename
 
         if project_file is None:
             raise exceptions.NoQGISProjectError()

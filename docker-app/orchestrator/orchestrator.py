@@ -1,102 +1,232 @@
 import json
 import logging
 import os
+import sys
 import tempfile
+import traceback
 import uuid
 from pathlib import Path
+from typing import Any, Dict, Iterable, Tuple
 
-from qfieldcloud.core.models import ApplyJob, Delta, ExportJob, Job
-
-from .db_utils import use_test_db_if_exists
-from .docker_utils import run_docker
+import docker
+import qfieldcloud.core.utils2.storage
+import requests
+from django.db import transaction
+from django.forms.models import model_to_dict
+from qfieldcloud.core.models import (
+    ApplyJob,
+    ApplyJobDelta,
+    Delta,
+    ExportJob,
+    Job,
+    ProcessProjectfileJob,
+)
 
 logger = logging.getLogger(__name__)
 
 TMP_DIRECTORY = os.environ.get("TMP_DIRECTORY", None)
+QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
+QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 
 assert TMP_DIRECTORY
+assert QGIS_CONTAINER_NAME
+assert QFIELDCLOUD_HOST
 
 
 class QgisException(Exception):
     pass
 
 
-def export_project(job_id, project_file):
-    """Start a QGIS docker container to export the project using libqfieldsync """
+class JobRun:
+    container_timeout_secs = 3 * 60
+    job_class = Job
+    command = ""
 
-    logger.info(f"Starting a new export for project {job_id}")
-
-    with use_test_db_if_exists():
+    def __init__(self, job_id: str) -> None:
         try:
-            job = ExportJob.objects.get(id=job_id)
-        except ExportJob.DoesNotExist:
-            logger.warning(f"ExportJob {job_id} does not exist.")
-            return -1, f"ExportJob {job_id} does not exist."
+            assert TMP_DIRECTORY
 
-        project_id = job.project_id
-        orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
-        qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
+            self.job_id = job_id
+            self.job = self.job_class.objects.select_related().get(id=job_id)
+            self.host_tempdir = Path(tempfile.mkdtemp(dir="/tmp"))
+            self.qgis_tempdir = Path(TMP_DIRECTORY).joinpath(self.host_tempdir)
+        except Exception as err:
+            feedback = {}
+            (_type, _value, tb) = sys.exc_info()
+            feedback["error"] = str(err)
+            feedback["error_origin"] = "orchestrator"
+            feedback["error_stack"] = traceback.format_tb(tb)
 
-        job.status = Job.Status.STARTED
-        job.save()
+            msg = "Uncaught exception when constructing a JobRun:\n"
+            msg += json.dumps(msg, indent=2, sort_keys=True)
 
-        exit_code, output = run_docker(
-            f"xvfb-run python3 entrypoint.py export {project_id} {project_file}",
-            volumes={qgis_tempdir: {"bind": "/io/", "mode": "rw"}},
-        )
+            if self.job:
+                self.job.status = Job.Status.FAILED
+                self.job.feedback = feedback
+                self.job.save()
+                logger.exception(msg, exc_info=err)
+            else:
+                logger.critical(msg, exc_info=err)
 
-        logger.info(
-            "export_project, projectid: {}, project_file: {}, exit_code: {}, output:\n\n{}".format(
-                project_id, project_file, exit_code, output.decode("utf-8")
+    def get_context(self) -> Dict[str, Any]:
+        context = model_to_dict(self.job)
+
+        for key, value in model_to_dict(self.job.project).items():
+            context[f"project__{key}"] = value
+
+        context["project__id"] = self.job.project.id
+
+        return context
+
+    def get_command(self) -> str:
+        # command = f"xvfb-run -e /dev/stdout -w 1 python3 entrypoint.py {self.command}"
+        command = f"python3 entrypoint.py {self.command}"
+        return command % self.get_context()
+
+    def before_docker(self) -> None:
+        pass
+
+    def after_docker(self) -> None:
+        pass
+
+    def run(self):
+        feedback = {}
+
+        try:
+            self.job.status = Job.Status.STARTED
+            self.job.save()
+
+            self.before_docker()
+
+            command = self.get_command()
+            volumes = {}
+            volumes[str(self.qgis_tempdir)] = {"bind": "/io/", "mode": "rw"}
+
+            exit_code, output = self._run_docker(
+                command,
+                volumes=volumes,
             )
+
+            try:
+                with open(self.host_tempdir.joinpath("feedback.json"), "r") as f:
+                    feedback = json.load(f)
+
+                    if feedback.get("error"):
+                        feedback["error_origin"] = "container"
+            except Exception as err:
+                if not isinstance(feedback, dict):
+                    feedback = {"error_feedback": feedback}
+
+                (_type, _value, tb) = sys.exc_info()
+                feedback["error"] = str(err)
+                feedback["error_origin"] = "orchestrator"
+                feedback["error_stack"] = traceback.format_tb(tb)
+
+            feedback["container_exit_code"] = exit_code
+
+            self.job.output = output.decode("utf-8")
+            self.job.feedback = feedback
+
+            if exit_code != 0 or feedback.get("error") is not None:
+                self.job.status = Job.Status.FAILED
+                self.job.save()
+                return
+
+            self.job.status = Job.Status.FINISHED
+            self.job.save()
+
+            self.after_docker()
+
+        except Exception as err:
+            (_type, _value, tb) = sys.exc_info()
+            feedback["error"] = str(err)
+            feedback["error_origin"] = "orchestrator"
+            feedback["error_stack"] = traceback.format_tb(tb)
+
+            if isinstance(err, requests.exceptions.ReadTimeout):
+                feedback["error_timeout"] = True
+
+            logger.error(
+                f"Failed job run:\n{json.dumps(feedback, sort_keys=True)}", exc_info=err
+            )
+
+            try:
+                self.job.status = Job.Status.FAILED
+                self.job.feedback = feedback
+                self.job.save()
+            except Exception as err:
+                logger.error("Failed to handle exception and update the job status")
+                logger.exception(err, exc_info=err)
+
+    def _run_docker(
+        self, command: str, volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
+    ) -> Tuple[int, bytes]:
+        QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
+        QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+
+        assert QGIS_CONTAINER_NAME
+        assert QFIELDCLOUD_HOST
+
+        client = docker.from_env()
+
+        logger.info(f"Execute: {command}")
+
+        container = client.containers.run(
+            QGIS_CONTAINER_NAME,
+            command,
+            environment={
+                "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
+                "STORAGE_SECRET_ACCESS_KEY": os.environ.get(
+                    "STORAGE_SECRET_ACCESS_KEY"
+                ),
+                "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
+                "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
+                "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+                "QT_QPA_PLATFORM": "offscreen",
+            },
+            volumes=volumes,
+            # TODO keep the logs somewhere or even better -> pipe them to redis and store them there
+            # auto_remove=True,
+            network_mode=("host" if QFIELDCLOUD_HOST == "localhost" else "bridge"),
+            detach=True,
         )
 
-        if not exit_code == 0:
-            job.status = Job.Status.FAILED
-            job.output = output.decode("utf-8")
-            job.save()
-            raise QgisException(output)
-
-        exportlog_file = os.path.join(orchestrator_tempdir, "exportlog.json")
+        response = {"StatusCode": -1}
 
         try:
-            with open(exportlog_file, "r") as f:
-                exportlog = json.load(f)
-        except FileNotFoundError:
-            exportlog = "Export log not available"
+            response = container.wait(timeout=self.container_timeout_secs)
+        except Exception as err:
+            logger.exception("Timeout error.", exc_info=err)
 
-        job.status = Job.Status.FINISHED
-        job.output = output.decode("utf-8")
-        job.exportlog = exportlog
-        job.save()
+        logs = container.logs()
+        container.stop()
+        container.remove()
+        logger.info(
+            f"Finished execution with code {response['StatusCode']}, logs:\n{logs}"
+        )
 
-        return exit_code, output.decode("utf-8"), exportlog
+        return response["StatusCode"], logs
 
 
-def apply_deltas(job_id, project_file):
-    """Start a QGIS docker container to apply a deltafile using the
-    apply-delta script"""
+class ExportJobRun(JobRun):
+    job_class = ExportJob
+    command = "export %(project__id)s %(project__project_filename)s"
 
-    logger.info(f"Starting a new delta apply job {job_id}")
 
-    with use_test_db_if_exists():
-        try:
-            job = ApplyJob.objects.get(id=job_id)
-        except ApplyJob.DoesNotExist:
-            logger.warning(f"ApplyJob {job_id} does not exist.")
-            return -1, f"ApplyJob {job_id} does not exist."
+class DeltaApplyJobRun(JobRun):
+    job_class = ApplyJob
+    command = "delta_apply %(project__id)s %(project__project_filename)s"
 
-        project_id = job.project_id
-        overwrite_conflicts = job.overwrite_conflicts
-        orchestrator_tempdir = tempfile.mkdtemp(dir="/tmp")
-        qgis_tempdir = Path(TMP_DIRECTORY).joinpath(orchestrator_tempdir)
+    def get_command(self) -> str:
+        command = super().get_command()
+        command += " --overwrite-conflicts" if self.job.overwrite_conflicts else ""
 
-        deltas = job.deltas_to_apply.all()
-        deltas.update(last_status=Delta.Status.STARTED)
+        return command
 
-        # prepare client id pks
+    def _prepare_deltas(self, deltas: Iterable[Delta]):
         delta_contents = []
         delta_client_ids = []
+
         for delta in deltas:
             delta_contents.append(delta.content)
 
@@ -114,82 +244,81 @@ def apply_deltas(job_id, project_file):
             key = f"{delta['content__clientId']}__{delta['content__localPk']}"
             client_pks_map[key] = delta["last_modified_pk"]
 
-        json_content = {
+        deltafile_contents = {
             "deltas": delta_contents,
             "files": [],
             "id": str(uuid.uuid4()),
-            "project": str(project_id),
+            "project": str(self.job.project.id),
             "version": "1.0",
             "clientPks": client_pks_map,
         }
 
-        with open(qgis_tempdir.joinpath("deltafile.json"), "w") as f:
-            json.dump(json_content, f)
+        return deltafile_contents
 
-        overwrite_conflicts_arg = "--overwrite-conflicts" if overwrite_conflicts else ""
-        exit_code, output = run_docker(
-            f"xvfb-run python3 entrypoint.py apply-delta {project_id} {project_file} {overwrite_conflicts_arg}",
-            volumes={qgis_tempdir: {"bind": "/io/", "mode": "rw"}},
-        )
+    def before_docker(self) -> None:
+        with transaction.atomic():
+            deltas = Delta.objects.select_for_update().filter(
+                last_status=Delta.Status.PENDING
+            )
 
-        logger.info(
-            f"""
-===============================================================================
-| Apply deltas finished
-===============================================================================
-Project ID: {project_id}
-Project file: {project_file}
-Exit code: {exit_code}
-Output:
-------------------------------------------------------------------------------S
-{output.decode('utf-8')}
-------------------------------------------------------------------------------E
-"""
-        )
+            self.job.deltas_to_apply.add(*deltas)
 
-        deltalog_file = os.path.join(orchestrator_tempdir, "deltalog.json")
-        with open(deltalog_file, "r") as f:
-            deltalog = json.load(f)
+            ApplyJobDelta.objects.filter(
+                apply_job_id=self.job_id,
+                delta_id__in=[d.id for d in deltas],
+            ).update(status=Delta.Status.STARTED)
 
-            for feedback in deltalog:
-                delta_id = feedback["delta_id"]
-                status = feedback["status"]
-                modified_pk = feedback["modified_pk"]
+            deltafile_contents = self._prepare_deltas(deltas)
 
-                if status == "status_applied":
-                    status = Delta.Status.APPLIED
-                elif status == "status_conflict":
-                    status = Delta.Status.CONFLICT
-                elif status == "status_apply_failed":
-                    status = Delta.Status.NOT_APPLIED
-                else:
-                    status = Delta.Status.ERROR
+            deltas.update(last_status=Delta.Status.STARTED)
 
-                Delta.objects.filter(pk=delta_id).update(
-                    last_status=status,
-                    last_feedback=feedback,
-                    last_modified_pk=modified_pk,
-                )
+            with open(self.qgis_tempdir.joinpath("deltafile.json"), "w") as f:
+                json.dump(deltafile_contents, f)
 
-        job.status = Job.Status.FINISHED
-        job.output = output.decode("utf-8")
-        job.save()
+    def after_docker(self) -> None:
+        delta_feedback = self.job.feedback["steps"][1]["outputs"]["delta_feedback"]
 
-        return exit_code, output.decode("utf-8")
+        for feedback in delta_feedback:
+            delta_id = feedback["delta_id"]
+            status = feedback["status"]
+            modified_pk = feedback["modified_pk"]
+
+            if status == "status_applied":
+                status = Delta.Status.APPLIED
+            elif status == "status_conflict":
+                status = Delta.Status.CONFLICT
+            elif status == "status_apply_failed":
+                status = Delta.Status.NOT_APPLIED
+            else:
+                status = Delta.Status.ERROR
+
+            Delta.objects.filter(pk=delta_id).update(
+                last_status=status,
+                last_feedback=feedback,
+                last_modified_pk=modified_pk,
+            )
+
+            ApplyJobDelta.objects.filter(
+                apply_job_id=self.job_id,
+                delta_id=delta_id,
+            ).update(
+                status=status,
+                feedback=feedback,
+                modified_pk=modified_pk,
+            )
 
 
-def check_status():
-    """Launch a container to check that everything is working
-    correctly."""
+class ProcessProjectfileJobRun(JobRun):
+    job_class = ProcessProjectfileJob
+    command = "process_projectfile %(project__id)s %(project__project_filename)s"
 
-    exit_code, output = run_docker('echo "QGIS container is running"')
+    def after_docker(self) -> None:
+        thumbnail_filename = self.host_tempdir.joinpath("thumbnail.png")
+        project = self.job.project
 
-    logger.info(
-        "check_status, exit_code: {}, output:\n\n{}".format(
-            exit_code, output.decode("utf-8")
-        )
-    )
-
-    if not exit_code == 0:
-        raise QgisException(output)
-    return exit_code, output.decode("utf-8")
+        with open(thumbnail_filename, "rb") as f:
+            thumbnail_uri = qfieldcloud.core.utils2.storage.upload_project_thumbail(
+                project, f, "image/png", "thumbnail"
+            )
+        project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
+        project.save()
