@@ -7,12 +7,9 @@
     root * /home/app/web/
     file_server
 
-
-    # TODO : this should only be served on local/dev
-    route /minio/* {
-        uri strip_prefix /minio
-        reverse_proxy s3:9000
-    }
+    # On prod, this is an empty file, as we are using a remote S3.
+    # On dev, this contains the config for minio reverse proxy (mounted in docker-compose)
+    import Caddyfile.proxy-minio
 
     @notStatic {
         not {
