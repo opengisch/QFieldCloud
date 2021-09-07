@@ -4,6 +4,13 @@ jobs:
   test:
     name: Code check and tests
     runs-on: ubuntu-18.04
+    env:
+      STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+      STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
+      STORAGE_BUCKET_NAME: qfieldcloud-test
+      STORAGE_REGION_NAME: ${{ secrets.STORAGE_REGION_NAME }}
+      STORAGE_ENDPOINT_URL: ${{ secrets.STORAGE_ENDPOINT_URL }}
+      MINIO_PORT: 8007
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
