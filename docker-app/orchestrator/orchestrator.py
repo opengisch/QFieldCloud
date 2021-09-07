@@ -187,7 +187,7 @@ class JobRun:
             volumes=volumes,
             # TODO keep the logs somewhere or even better -> pipe them to redis and store them there
             # auto_remove=True,
-            network_mode=("host" if QFIELDCLOUD_HOST == "localhost" else "bridge"),
+            network=os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK"),
             detach=True,
         )
 
