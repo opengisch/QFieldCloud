@@ -5,13 +5,13 @@ from time import sleep
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Count, Q
-from orchestrator.orchestrator import (
+from qfieldcloud.core.models import Job
+from qfieldcloud.core.utils2.db import use_test_db_if_exists
+from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
     ExportJobRun,
     ProcessProjectfileJobRun,
 )
-from qfieldcloud.core.models import Job
-from qfieldcloud.core.utils2.db import use_test_db_if_exists
 
 SECONDS = 5
 

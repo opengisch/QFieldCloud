@@ -19,12 +19,12 @@ services:
       - s3
       - smtp4dev
 
-  orchestrator:
+  worker_wrapper:
     command: bash -c 'while true; do python manage.py dequeue --single-shot; sleep 2; done;'
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
-      - ./docker-app/orchestrator:/usr/src/app/orchestrator
+      - ./docker-app/worker_wrapper:/usr/src/app/worker_wrapper
 
   smtp4dev:
     image: rnwood/smtp4dev:v3

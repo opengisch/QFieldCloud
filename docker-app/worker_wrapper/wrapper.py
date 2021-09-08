@@ -54,7 +54,7 @@ class JobRun:
             feedback = {}
             (_type, _value, tb) = sys.exc_info()
             feedback["error"] = str(err)
-            feedback["error_origin"] = "orchestrator"
+            feedback["error_origin"] = "worker_wrapper"
             feedback["error_stack"] = traceback.format_tb(tb)
 
             msg = "Uncaught exception when constructing a JobRun:\n"
@@ -119,7 +119,7 @@ class JobRun:
 
                 (_type, _value, tb) = sys.exc_info()
                 feedback["error"] = str(err)
-                feedback["error_origin"] = "orchestrator"
+                feedback["error_origin"] = "worker_wrapper"
                 feedback["error_stack"] = traceback.format_tb(tb)
 
             feedback["container_exit_code"] = exit_code
@@ -140,7 +140,7 @@ class JobRun:
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
             feedback["error"] = str(err)
-            feedback["error_origin"] = "orchestrator"
+            feedback["error_origin"] = "worker_wrapper"
             feedback["error_stack"] = traceback.format_tb(tb)
 
             if isinstance(err, requests.exceptions.ReadTimeout):
