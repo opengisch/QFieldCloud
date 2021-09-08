@@ -124,8 +124,6 @@ Docker logs are managed by docker in the default way. To read the logs:
 
     docker-compose -f docker-compose.yml logs
 
-Orchestrator logs are stored in the `/var/local/qfieldcloud/` directory
-
 
 ### Geodb
 
