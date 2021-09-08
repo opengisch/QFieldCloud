@@ -12,6 +12,7 @@ services:
     environment:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
+      STORAGE_ENDPOINT_URL_EXTERNAL: https://${QFIELDCLOUD_HOST}/minio
     command: python3 manage.py runserver 0.0.0.0:8000
     depends_on:
       - geodb
@@ -53,8 +54,13 @@ services:
     ports:
       - ${GEODB_PORT}:5432
 
+  web:
+    volumes:
+      # Include config for reverse proxying caddy
+      - ./docker-caddy/Caddyfile.proxy-minio:/etc/caddy/Caddyfile.proxy-minio
+
   s3:
-    image: minio/minio
+    image: minio/minio:RELEASE.2021-07-27T02-40-15Z
     restart: unless-stopped
     volumes:
       - s3_data1:/data1
@@ -64,8 +70,6 @@ services:
     environment:
       MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY_ID}
       MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_ACCESS_KEY}
-    ports:
-      - ${MINIO_PORT}:9000
     command: server /data{1...4}
     healthcheck:
         test: [
@@ -74,7 +78,7 @@ services:
         "-A",
         "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
         "-f",
-        "http://127.0.0.1:9000/minio/index.html"]
+        "${STORAGE_ENDPOINT_URL}/minio/index.html"]
         interval: 5s
         timeout: 20s
         retries: 5
@@ -86,8 +90,9 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc config host add myminio http://s3:9000 ${STORAGE_ACCESS_KEY_ID} ${STORAGE_SECRET_ACCESS_KEY};
+      /usr/bin/mc config host add myminio ${STORAGE_ENDPOINT_URL} ${STORAGE_ACCESS_KEY_ID} ${STORAGE_SECRET_ACCESS_KEY};
       /usr/bin/mc mb myminio/${STORAGE_BUCKET_NAME};
+      /usr/bin/mc policy set download myminio/${STORAGE_BUCKET_NAME}/users;
       /usr/bin/mc version enable myminio/${STORAGE_BUCKET_NAME};
       exit 0;
       "
