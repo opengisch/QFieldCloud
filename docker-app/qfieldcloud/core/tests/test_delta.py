@@ -23,10 +23,6 @@ class QfcTestCase(APITransactionTestCase):
     DJANGO_BASE_URL = "http://localhost:8000/api/v1/"
 
     def setUp(self):
-        # Check if orchestrator is running otherwise skip test
-        if not utils.redis_is_running():
-            self.skipTest("Redis is not running correctly")
-
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
         self.user1.save()

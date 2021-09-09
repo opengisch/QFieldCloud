@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def apply_deltas(
     project, user, project_file, overwrite_conflicts, delta_ids=None
 ) -> Optional[ApplyJob]:
-    """Call the orchestrator API to apply a delta file"""
+    """Apply a deltas"""
 
     logger.info(
         f"Requested apply_deltas on {project} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
