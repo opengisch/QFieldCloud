@@ -65,7 +65,6 @@ services:
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
       # Settings below are specific to worker_wrapper
       # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
-      TMP_DIRECTORY: ${TMP_DIRECTORY}
       QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
     depends_on:
@@ -121,7 +120,6 @@ services:
       - media_volume:/usr/src/app/mediafiles/
       - /var/run/docker.sock:/var/run/docker.sock
       - ${LOG_DIRECTORY}:/log
-      - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
     depends_on:
       - db

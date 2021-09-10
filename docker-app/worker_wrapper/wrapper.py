@@ -24,11 +24,9 @@ from qfieldcloud.core.models import (
 
 logger = logging.getLogger(__name__)
 
-TMP_DIRECTORY = os.environ.get("TMP_DIRECTORY", None)
 QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 
-assert TMP_DIRECTORY
 assert QGIS_CONTAINER_NAME
 assert QFIELDCLOUD_HOST
 
@@ -44,12 +42,9 @@ class JobRun:
 
     def __init__(self, job_id: str) -> None:
         try:
-            assert TMP_DIRECTORY
-
             self.job_id = job_id
             self.job = self.job_class.objects.select_related().get(id=job_id)
-            self.host_tempdir = Path(tempfile.mkdtemp(dir="/tmp"))
-            self.qgis_tempdir = Path(TMP_DIRECTORY).joinpath(self.host_tempdir)
+            self.shared_tempdir = Path(tempfile.mkdtemp(dir="/tmp"))
         except Exception as err:
             feedback = {}
             (_type, _value, tb) = sys.exc_info()
@@ -100,7 +95,7 @@ class JobRun:
 
             command = self.get_command()
             volumes = {}
-            volumes[str(self.qgis_tempdir)] = {"bind": "/io/", "mode": "rw"}
+            volumes[str(self.shared_tempdir)] = {"bind": "/io/", "mode": "rw"}
 
             exit_code, output = self._run_docker(
                 command,
@@ -108,7 +103,7 @@ class JobRun:
             )
 
             try:
-                with open(self.host_tempdir.joinpath("feedback.json"), "r") as f:
+                with open(self.shared_tempdir.joinpath("feedback.json"), "r") as f:
                     feedback = json.load(f)
 
                     if feedback.get("error"):
@@ -272,7 +267,7 @@ class DeltaApplyJobRun(JobRun):
 
             deltas.update(last_status=Delta.Status.STARTED)
 
-            with open(self.qgis_tempdir.joinpath("deltafile.json"), "w") as f:
+            with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
                 json.dump(deltafile_contents, f)
 
     def after_docker(self) -> None:
@@ -313,7 +308,7 @@ class ProcessProjectfileJobRun(JobRun):
     command = "process_projectfile %(project__id)s %(project__project_filename)s"
 
     def after_docker(self) -> None:
-        thumbnail_filename = self.host_tempdir.joinpath("thumbnail.png")
+        thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         project = self.job.project
 
         with open(thumbnail_filename, "rb") as f:
