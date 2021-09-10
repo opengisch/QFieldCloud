@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
+
 class Command(BaseCommand):
     """
     Creates a normal or super user using the CLI.
@@ -14,16 +15,16 @@ class Command(BaseCommand):
     """
 
     def add_arguments(self, parser):
-        parser.add_argument('--username', type=str, required=True)
-        parser.add_argument('--password', type=str, required=True)
-        parser.add_argument('--email', type=str, required=True)
-        parser.add_argument('--superuser', action="store_true")
+        parser.add_argument("--username", type=str, required=True)
+        parser.add_argument("--password", type=str, required=True)
+        parser.add_argument("--email", type=str, required=True)
+        parser.add_argument("--superuser", action="store_true")
 
     def handle(self, *args, **options):
-        username = options.get('username')
-        password = options.get('password')
-        email = options.get('email')
-        is_superuser = options.get('superuser')
+        username = options.get("username")
+        password = options.get("password")
+        email = options.get("email")
+        is_superuser = options.get("superuser")
         try:
             User = get_user_model()
             if not User.objects.filter(username=username).exists():
@@ -33,9 +34,9 @@ class Command(BaseCommand):
                     password=password,
                     is_superuser=is_superuser,
                 )
-                print(f'User {username} has been successfully created\n')
+                print(f"User {username} has been successfully created\n")
             else:
-                print(f'User {username} already exists\n')
+                print(f"User {username} already exists\n")
         except Exception as e:
-            print('ERROR: Unable to create user\n%s\n' % e)
+            print("ERROR: Unable to create user\n%s\n" % e)
             exit(1)
