@@ -23,6 +23,7 @@ jobs:
           fi
           TAG=${VERSION}
           echo ::set-output name=tag::${TAG}
+          git submodule update --init --recursive --depth 1
 
       - name: Set up Docker Buildx
         id: buildx
