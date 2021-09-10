@@ -90,7 +90,9 @@ def check_layer_validity(project: QgsProject) -> List:
             "id": layer.name(),
             "name": layer.name(),
             "is_valid": layer.isValid(),
-            "datasource": layer.dataProvider().uri().uri(),
+            "datasource": layer.dataProvider().uri().uri()
+            if layer.dataProvider()
+            else None,
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
             "filename": get_layer_filename(layer),
