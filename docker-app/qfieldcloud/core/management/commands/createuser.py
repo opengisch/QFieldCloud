@@ -4,20 +4,20 @@ from django.core.management.base import BaseCommand
 class Command(BaseCommand):
     """
     Creates a normal or super user using the CLI.
-    Unline the django's createsuperuser command, here we can pass the password as an argument.
+    Unlike the Django's createsuperuser command, here we can pass the password as an argument.
     This is a utility function that is expected to be used only for testing purposes.
     """
 
     help = """
         Create a user with given username, email and password
-        Usage: python manage.py createuser --username=test --email=test@test.com --password=test --superuser=True
+        Usage: python manage.py createuser --username=test --email=test@test.com --password=test --superuser
     """
 
     def add_arguments(self, parser):
         parser.add_argument('--username', type=str, required=True)
         parser.add_argument('--password', type=str, required=True)
         parser.add_argument('--email', type=str, required=True)
-        parser.add_argument('--superuser', type=bool, required=False, default=False)
+        parser.add_argument('--superuser', action="store_true")
 
     def handle(self, *args, **options):
         username = options.get('username')
