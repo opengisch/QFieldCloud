@@ -3,8 +3,9 @@ from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     """
-    The standard django command to create superuser does not allow to pass the password as argument.
-    With this command this is possible. Please use it only for testing purposes.
+    Creates a normal or super user using the CLI.
+    Unline the django's createsuperuser command, here we can pass the password as an argument.
+    This is a utility function that is expected to be used only for testing purposes.
     """
 
     help = """
