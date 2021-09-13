@@ -31,13 +31,15 @@ class ProjectSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
         owner_username = data.get("owner")
-        try:
-            internal_data["owner"] = User.objects.get(username=owner_username)
-        except User.DoesNotExist:
-            raise ValidationError(
-                {"owner": ["Invalid owner username"]},
-                code="invalid",
-            )
+
+        if owner_username:
+            try:
+                internal_data["owner"] = User.objects.get(username=owner_username)
+            except User.DoesNotExist:
+                raise ValidationError(
+                    {"owner": ["Invalid owner username"]},
+                    code="invalid",
+                )
 
         if "private" in internal_data:
             if internal_data["private"] is not None:
