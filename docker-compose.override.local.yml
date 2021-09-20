@@ -55,6 +55,8 @@ services:
       - ${GEODB_PORT}:5432
 
   web:
+    environment:
+      CADDY_IMPORT_GLOB: Caddyfile.proxy-minio
     volumes:
       # Include config for reverse proxying caddy
       - ./docker-caddy/Caddyfile.proxy-minio:/etc/caddy/Caddyfile.proxy-minio

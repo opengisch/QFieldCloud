@@ -84,6 +84,7 @@ services:
     environment:
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       CADDY_ACME_CA: ${CADDY_ACME_CA}
+      CADDY_IMPORT_GLOB: ${CADDY_IMPORT_GLOB}
       ACME_AGREE: "true"
     volumes:
       - static_volume:/home/app/web/staticfiles/
