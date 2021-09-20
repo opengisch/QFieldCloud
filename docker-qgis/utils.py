@@ -184,7 +184,7 @@ def logger_context(step: Step):
         yield
         step.stage = 2
     finally:
-        print(f"::>>>::{log_uuid}", file=sys.stderr)
+        print(f"::>>>::{log_uuid} {step.stage}", file=sys.stderr)
 
 
 def is_localhost(hostname: str, port: int = None) -> bool:
