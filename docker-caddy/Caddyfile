@@ -7,9 +7,10 @@
     root * /home/app/web/
     file_server
 
-    # On prod, this is an empty file, as we are using a remote S3.
-    # On dev, this contains the config for minio reverse proxy (mounted in docker-compose)
-    import Caddyfile.proxy-minio
+    # Caddy imports. Currently imports the minio configuration from `Caddyfile.proxy-minio`.
+    # PROD Since we are using a remote S3, `CADDY_IMPORT_GLOB` should be an empty glob ("(*(N))").
+    # DEV  Use local minio. The file is mounted in docker-compose and CADDY_IMPORT_GLOB is set to the filename.
+    import {$CADDY_IMPORT_GLOB}
 
     @notStatic {
         not {
