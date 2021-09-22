@@ -24,6 +24,7 @@ from qfieldcloud.core.models import (
 
 logger = logging.getLogger(__name__)
 
+TIMEOUT_ERROR_EXIT_CODE = -1
 QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 
@@ -102,20 +103,25 @@ class JobRun:
                 volumes=volumes,
             )
 
-            try:
-                with open(self.shared_tempdir.joinpath("feedback.json"), "r") as f:
-                    feedback = json.load(f)
+            if exit_code == TIMEOUT_ERROR_EXIT_CODE:
+                feedback["error"] = "Worker timeout error."
+                feedback["error_origin"] = "container"
+                feedback["error_stack"] = ""
+            else:
+                try:
+                    with open(self.shared_tempdir.joinpath("feedback.json"), "r") as f:
+                        feedback = json.load(f)
 
-                    if feedback.get("error"):
-                        feedback["error_origin"] = "container"
-            except Exception as err:
-                if not isinstance(feedback, dict):
-                    feedback = {"error_feedback": feedback}
+                        if feedback.get("error"):
+                            feedback["error_origin"] = "container"
+                except Exception as err:
+                    if not isinstance(feedback, dict):
+                        feedback = {"error_feedback": feedback}
 
-                (_type, _value, tb) = sys.exc_info()
-                feedback["error"] = str(err)
-                feedback["error_origin"] = "worker_wrapper"
-                feedback["error_stack"] = traceback.format_tb(tb)
+                    (_type, _value, tb) = sys.exc_info()
+                    feedback["error"] = str(err)
+                    feedback["error_origin"] = "worker_wrapper"
+                    feedback["error_stack"] = traceback.format_tb(tb)
 
             feedback["container_exit_code"] = exit_code
 
@@ -186,9 +192,10 @@ class JobRun:
             detach=True,
         )
 
-        response = {"StatusCode": -1}
+        response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
 
         try:
+            # will throw an ConnectionError, but the container is still alive
             response = container.wait(timeout=self.container_timeout_secs)
         except Exception as err:
             logger.exception("Timeout error.", exc_info=err)
