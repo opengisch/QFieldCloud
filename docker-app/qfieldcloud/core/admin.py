@@ -104,12 +104,18 @@ class MemberOrganizationInline(admin.TabularInline):
     extra = 0
 
     def has_add_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
     def has_change_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
 
@@ -118,12 +124,18 @@ class MemberTeamInline(admin.TabularInline):
     extra = 0
 
     def has_add_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
     def has_change_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
 
@@ -132,9 +144,13 @@ class UserAccountInline(admin.StackedInline):
     extra = 0
 
     def has_add_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
 
 
@@ -163,12 +179,18 @@ class UserProjectCollaboratorInline(admin.TabularInline):
     extra = 0
 
     def has_add_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type == User.TYPE_USER
 
     def has_delete_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type == User.TYPE_USER
 
     def has_change_permission(self, request, obj):
+        if obj is None:
+            return True
         return obj.user_type == User.TYPE_USER
 
 
