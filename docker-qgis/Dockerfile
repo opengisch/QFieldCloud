@@ -27,4 +27,4 @@ ENV LIBC_FATAL_STDERR_=1
 ENV LANG=C.UTF-8
 ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
 
-ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a $@", ""]
+ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a \"$@\"", ""]

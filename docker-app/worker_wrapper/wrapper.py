@@ -6,7 +6,7 @@ import tempfile
 import traceback
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 import docker
 import qfieldcloud.core.utils2.storage
@@ -38,7 +38,7 @@ class QgisException(Exception):
 class JobRun:
     container_timeout_secs = 3 * 60
     job_class = Job
-    command = ""
+    command = []
 
     def __init__(self, job_id: str) -> None:
         try:
@@ -73,10 +73,10 @@ class JobRun:
 
         return context
 
-    def get_command(self) -> str:
-        # command = f"xvfb-run -e /dev/stdout -w 1 python3 entrypoint.py {self.command}"
-        command = f"python3 entrypoint.py {self.command}"
-        return command % self.get_context()
+    def get_command(self) -> List[str]:
+        return [
+            p % self.get_context() for p in ["python3", "entrypoint.py", *self.command]
+        ]
 
     def before_docker(self) -> None:
         pass
@@ -164,7 +164,7 @@ class JobRun:
 
         client = docker.from_env()
 
-        logger.info(f"Execute: {command}")
+        logger.info(f"Execute: {' '.join(command)}")
 
         container = client.containers.run(
             QGIS_CONTAINER_NAME,
@@ -189,6 +189,7 @@ class JobRun:
         response = {"StatusCode": -1}
 
         try:
+            # will throw an ConnectionError, but the container is still alive
             response = container.wait(timeout=self.container_timeout_secs)
         except Exception as err:
             logger.exception("Timeout error.", exc_info=err)
@@ -205,18 +206,18 @@ class JobRun:
 
 class ExportJobRun(JobRun):
     job_class = ExportJob
-    command = "export %(project__id)s %(project__project_filename)s"
+    command = ["export", "%(project__id)s", "%(project__project_filename)s"]
 
 
 class DeltaApplyJobRun(JobRun):
     job_class = ApplyJob
-    command = "delta_apply %(project__id)s %(project__project_filename)s"
+    command = ["delta_apply", "%(project__id)s", "%(project__project_filename)s"]
 
-    def get_command(self) -> str:
-        command = super().get_command()
-        command += " --overwrite-conflicts" if self.job.overwrite_conflicts else ""
+    def __init__(self, job_id: str) -> None:
+        super().__init__(job_id)
 
-        return command
+        if self.job.overwrite_conflicts:
+            self.command += ["--overwrite-conflicts"]
 
     def _prepare_deltas(self, deltas: Iterable[Delta]):
         delta_contents = []
@@ -305,7 +306,11 @@ class DeltaApplyJobRun(JobRun):
 
 class ProcessProjectfileJobRun(JobRun):
     job_class = ProcessProjectfileJob
-    command = "process_projectfile %(project__id)s %(project__project_filename)s"
+    command = [
+        "process_projectfile",
+        "%(project__id)s",
+        "%(project__project_filename)s",
+    ]
 
     def after_docker(self) -> None:
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
