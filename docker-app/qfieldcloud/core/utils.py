@@ -170,7 +170,11 @@ def check_s3_key(key: str) -> Optional[str]:
         else:
             raise e
 
-    return head["Metadata"]["Sha256sum"]
+    metadata = head["Metadata"]
+    if "sha256sum" in metadata:
+        return metadata["sha256sum"]
+    else:
+        return metadata["Sha256sum"]
 
 
 def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
