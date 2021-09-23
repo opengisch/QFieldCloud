@@ -66,7 +66,7 @@ def get_s3_client() -> mypy_boto3_s3.Client:
 
 def get_sha256(file: IO) -> str:
     """Return the sha256 hash of the file"""
-    if type(file) in [InMemoryUploadedFile, TemporaryUploadedFile]:
+    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
         return _get_sha256_memory_file(file)
     else:
         return _get_sha256_file(file)
