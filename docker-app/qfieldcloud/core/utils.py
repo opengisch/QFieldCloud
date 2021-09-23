@@ -165,7 +165,7 @@ def check_s3_key(key: str) -> Optional[str]:
     try:
         head = client.head_object(Bucket=settings.STORAGE_BUCKET_NAME, Key=key)
     except ClientError as e:
-        if e.response["ResponseMetadata"]["HTTPStatusCode"] == 404:
+        if e.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 404:
             return None
         else:
             raise e
