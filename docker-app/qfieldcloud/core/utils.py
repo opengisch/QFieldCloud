@@ -96,7 +96,7 @@ def _get_sha256_file(file: IO) -> str:
     return hasher.hexdigest()
 
 
-def safe_join(base, *paths):
+def safe_join(base: str, *paths: str) -> str:
     """
     A version of django.utils._os.safe_join for S3 paths.
     Joins one or more path components to the base path component
@@ -108,7 +108,7 @@ def safe_join(base, *paths):
     """
     base_path = base
     base_path = base_path.rstrip("/")
-    paths = [p for p in paths]
+    paths = tuple(paths)
 
     final_path = base_path + "/"
     for path in paths:
