@@ -10,6 +10,7 @@ pyyaml==5.4
 drf-yasg>=1.20.0,<1.21
 coverage==5.3
 boto3>=1.16.28,<1.17
+boto3-stubs[s3]>=1.18.46
 django-storages>=1.10.1,<1.22
 sentry-sdk
 jsonschema>=3.2.0,<3.3

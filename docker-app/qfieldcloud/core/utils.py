@@ -5,10 +5,11 @@ import os
 import posixpath
 from datetime import datetime
 from pathlib import PurePath
-from typing import Dict, List, TypedDict
+from typing import IO, Dict, List, Optional, TypedDict, Union
 
 import boto3
 import jsonschema
+import mypy_boto3_s3
 from botocore.errorfactory import ClientError
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
@@ -17,7 +18,7 @@ from redis import Redis, exceptions
 logger = logging.getLogger(__name__)
 
 
-def redis_is_running():
+def redis_is_running() -> bool:
     try:
         connection = Redis(
             "redis", password=os.environ.get("REDIS_PASSWORD"), port=6379
@@ -29,8 +30,8 @@ def redis_is_running():
     return True
 
 
-def get_s3_session():
-    """Get S3 session"""
+def get_s3_session() -> boto3.Session:
+    """Get a new S3 Session instance using Django settings"""
 
     session = boto3.Session(
         aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
@@ -40,9 +41,8 @@ def get_s3_session():
     return session
 
 
-def get_s3_bucket():
-    """Get S3 Bucket according to the env variable
-    STORAGE_BUCKET_NAME"""
+def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
+    """Get a new S3 Bucket instance using Django settings"""
 
     session = get_s3_session()
 
@@ -51,8 +51,8 @@ def get_s3_bucket():
     return s3.Bucket(settings.STORAGE_BUCKET_NAME)
 
 
-def get_s3_client():
-    """Get S3 client"""
+def get_s3_client() -> mypy_boto3_s3.Client:
+    """Get a new S3 client instance using Django settings"""
 
     s3_client = boto3.client(
         "s3",
@@ -64,7 +64,7 @@ def get_s3_client():
     return s3_client
 
 
-def get_sha256(file):
+def get_sha256(file: IO) -> str:
     """Return the sha256 hash of the file"""
     if type(file) in [InMemoryUploadedFile, TemporaryUploadedFile]:
         return _get_sha256_memory_file(file)
@@ -72,7 +72,9 @@ def get_sha256(file):
         return _get_sha256_file(file)
 
 
-def _get_sha256_memory_file(file):
+def _get_sha256_memory_file(
+    file: Union[InMemoryUploadedFile, TemporaryUploadedFile]
+) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.sha256()
 
@@ -83,7 +85,7 @@ def _get_sha256_memory_file(file):
     return hasher.hexdigest()
 
 
-def _get_sha256_file(file):
+def _get_sha256_file(file: IO) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.sha256()
     with file as f:
@@ -130,6 +132,7 @@ def safe_join(base, *paths):
 
 
 def is_qgis_project_file(filename: str) -> bool:
+    """Returns whether the filename seems to be a QGIS project file by checking the file extension."""
     path = PurePath(filename)
 
     if path.suffix in (".qgs", ".qgz"):
@@ -154,7 +157,7 @@ def get_qgis_project_file(projectid):
     return None
 
 
-def check_s3_key(key):
+def check_s3_key(key: str) -> Optional[str]:
     """Check to see if an object exists on S3. It it exists, the function
     returns the sha256 of the file from the metadata"""
 
@@ -170,9 +173,10 @@ def check_s3_key(key):
     return head["Metadata"]["Sha256sum"]
 
 
-def get_deltafile_schema_validator():
+def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
     """Creates a JSON schema validator to check whether the provided delta
     file is valid.
+
     Returns:
         jsonschema.Draft7Validator -- JSON Schema validator
     """
@@ -220,6 +224,14 @@ class ProjectFile(TypedDict):
 
 
 def get_project_files(project_id: str) -> Dict[str, ProjectFile]:
+    """Returns a list of files and their versions.
+
+    Args:
+        project_id (str): the project id
+
+    Returns:
+        Dict[str, ProjectFile]: the list of files
+    """
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
 
@@ -258,6 +270,7 @@ def get_project_files(project_id: str) -> Dict[str, ProjectFile]:
 
 
 def get_project_files_count(project_id: str) -> int:
+    """Returns the number of files within a project."""
     # there might be more optimal way to get the files count
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
@@ -266,5 +279,16 @@ def get_project_files_count(project_id: str) -> int:
     return len(files)
 
 
-def get_s3_object_url(key: str, bucket=get_s3_bucket()) -> str:
+def get_s3_object_url(
+    key: str, bucket: mypy_boto3_s3.service_resource.Bucket = get_s3_bucket()
+) -> str:
+    """Returns the block storage URL for a given key. The key may not exist in the bucket.
+
+    Args:
+        key (str): the object key
+        bucket (boto3.Bucket, optional): Bucket for that object. Defaults to `get_s3_bucket()`.
+
+    Returns:
+        str: URL
+    """
     return f"{settings.STORAGE_ENDPOINT_URL_EXTERNAL}/{bucket.name}/{key}"
