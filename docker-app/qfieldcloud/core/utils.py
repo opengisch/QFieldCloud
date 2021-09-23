@@ -141,13 +141,13 @@ def is_qgis_project_file(filename: str) -> bool:
     return False
 
 
-def get_qgis_project_file(projectid):
+def get_qgis_project_file(project_id: str) -> Optional[str]:
     """Return the relative path inside the project of the qgs/qgz file or
     None if no qgs/qgz file is present"""
 
     bucket = get_s3_bucket()
 
-    prefix = "projects/{}/files/".format(projectid)
+    prefix = "projects/{}/files/".format(project_id)
 
     for obj in bucket.objects.filter(Prefix=prefix):
         if is_qgis_project_file(obj.key):
@@ -192,13 +192,13 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
     return jsonschema.Draft7Validator(schema_dict)
 
 
-def get_s3_project_size(projectid):
+def get_s3_project_size(project_id: str) -> int:
     """Return the size in MiB of the project on the storage, included the
     exported files"""
 
     bucket = get_s3_bucket()
 
-    prefix = "projects/{}/".format(projectid)
+    prefix = "projects/{}/".format(project_id)
     total_size = 0
 
     for obj in bucket.objects.filter(Prefix=prefix):
