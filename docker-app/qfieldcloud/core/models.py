@@ -542,6 +542,7 @@ class Project(models.Model):
     """
 
     objects = ProjectQueryset.as_manager()
+    _cache_files_count = None
 
     class Meta:
         ordering = ["owner__username", "name"]
@@ -626,7 +627,10 @@ class Project(models.Model):
 
     @property
     def files_count(self):
-        return utils.get_project_files_count(self.id)
+        if self._cache_files_count is None:
+            self._cache_files_count = utils.get_project_files_count(self.id)
+
+        return self._cache_files_count
 
 
 @receiver(pre_delete, sender=Project)
