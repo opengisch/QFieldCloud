@@ -215,6 +215,7 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
         vl_extent_crs,
         offline_editing,
         export_type=ExportType.Cloud,
+        create_basemap=False,
     )
 
     # Disable the basemap generation because it needs the processing
