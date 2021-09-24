@@ -3,7 +3,7 @@ import secrets
 import string
 import uuid
 from enum import Enum
-from typing import Any, Type
+from typing import Any, Iterable, Type
 
 import qfieldcloud.core.utils2.storage
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -622,8 +622,8 @@ class Project(models.Model):
         return not self.is_public
 
     @property
-    def files(self):
-        return utils.get_project_files(self.id)
+    def files(self) -> Iterable[utils.S3ObjectWithVersions]:
+        return utils.get_project_files_with_versions(self.id)
 
     @property
     def files_count(self):
