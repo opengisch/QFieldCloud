@@ -181,12 +181,16 @@ STORAGE_ENDPOINT_URL_EXTERNAL = os.environ.get("STORAGE_ENDPOINT_URL_EXTERNAL")
 
 AUTH_USER_MODEL = "core.User"
 
+# QFieldCloud variables
+AUTH_TOKEN_LENGTH = 100
+AUTH_TOKEN_EXPIRATION_HOURS = 24 * 30
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "qfieldcloud.core.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
