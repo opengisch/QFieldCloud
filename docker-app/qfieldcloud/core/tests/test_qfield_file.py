@@ -366,3 +366,52 @@ class QfcTestCase(APITransactionTestCase):
                 self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish")
+
+    def test_filename_with_whitespace(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Add files to the project
+        file = testdata_path("delta/points.geojson")
+        response = self.client.post(
+            "/api/v1/files/{}/points.geojson/".format(self.project1.id),
+            {"file": open(file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path("delta/polygons.geojson")
+        response = self.client.post(
+            "/api/v1/files/{}/polygons.geojson/".format(self.project1.id),
+            {"file": open(file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        file = testdata_path("delta/project.qgs")
+        response = self.client.post(
+            "/api/v1/files/{}/whitespace project.qgs/".format(self.project1.id),
+            {"file": open(file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Launch the export
+        response = self.client.post(
+            "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Wait for the worker to finish
+        for _ in range(10):
+            time.sleep(3)
+            response = self.client.get(
+                "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+            )
+
+            payload = response.json()
+            if payload["status"] == "STATUS_EXPORTED":
+                return
+            elif payload["status"] == "STATUS_ERROR":
+                self.fail("Worker failed with error")
+
+        self.fail("Worker didn't finish or there was an error")
