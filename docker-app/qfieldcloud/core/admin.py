@@ -215,7 +215,7 @@ class UserAdmin(admin.ModelAdmin):
         "useraccount__account_type",
     )
 
-    search_fields = ("username__icontains", "team_organization__username__iexact")
+    search_fields = ("username__icontains", "owner__username__iexact")
 
     inlines = (
         UserAccountInline,
