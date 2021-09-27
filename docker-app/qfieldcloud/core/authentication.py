@@ -1,11 +1,19 @@
 from datetime import datetime
 
+from django.utils import timezone
 from django.utils.translation import gettext as _
-from qfieldcloud.core.models import AuthToken
+from qfieldcloud.core.models import AuthToken, User
 from rest_framework import exceptions
 from rest_framework.authentication import (
     TokenAuthentication as DjangoRestFrameworkTokenAuthentication,
 )
+
+
+def invalidate_all_tokens(user: User) -> int:
+    now = timezone.now()
+    return AuthToken.objects.filter(user=user, expires_at__gt=now).update(
+        expires_at=now
+    )
 
 
 class TokenAuthentication(DjangoRestFrameworkTokenAuthentication):
