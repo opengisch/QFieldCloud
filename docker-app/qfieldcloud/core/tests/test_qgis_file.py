@@ -6,9 +6,8 @@ import time
 import requests
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.models import AuthToken, Project, User
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import get_filename, testdata_path
@@ -25,7 +24,7 @@ class QfcTestCase(APITransactionTestCase):
         self.user2 = User.objects.create_user(username="user2", password="abc123")
         self.user2.save()
 
-        self.token1 = Token.objects.get_or_create(user=self.user1)[0]
+        self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a project
         self.project1 = Project.objects.create(

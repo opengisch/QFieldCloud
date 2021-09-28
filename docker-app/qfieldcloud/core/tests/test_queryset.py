@@ -2,6 +2,7 @@ import logging
 
 from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
+    AuthToken,
     Organization,
     OrganizationMember,
     Project,
@@ -11,7 +12,6 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 logging.disable(logging.CRITICAL)
@@ -23,17 +23,17 @@ class QfcTestCase(APITestCase):
         # user1 owns o1
         # user1 collaborates on p7
         self.user1 = User.objects.create_user(username="user1", password="abc123")
-        self.token1 = Token.objects.get_or_create(user=self.user1)[0]
+        self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # user2 owns p3 and p4
         # user2 admins o1
         self.user2 = User.objects.create_user(username="user2", password="abc123")
-        self.token2 = Token.objects.get_or_create(user=self.user2)[0]
+        self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # user2 owns p7 and p8
         # user2 is member of o1
         self.user3 = User.objects.create_user(username="user3", password="abc123")
-        self.token3 = Token.objects.get_or_create(user=self.user3)[0]
+        self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
         # organization1 owns p4 and p5
         self.organization1 = Organization.objects.create(

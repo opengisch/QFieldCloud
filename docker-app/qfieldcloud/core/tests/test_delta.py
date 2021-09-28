@@ -8,9 +8,8 @@ import requests
 import rest_framework
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, ProjectCollaborator, User
+from qfieldcloud.core.models import AuthToken, Project, ProjectCollaborator, User
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import get_filename, testdata_path
@@ -31,9 +30,9 @@ class QfcTestCase(APITransactionTestCase):
         self.user3 = User.objects.create_user(username="user3", password="abc123")
         self.user3.save()
 
-        self.token1 = Token.objects.get_or_create(user=self.user1)[0]
-        self.token2 = Token.objects.get_or_create(user=self.user2)[0]
-        self.token3 = Token.objects.get_or_create(user=self.user3)[0]
+        self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
+        self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
+        self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
         # Create a project
         self.project1 = Project.objects.create(
