@@ -245,24 +245,6 @@ class AuthToken(models.Model):
         UNKNOWN = "unknown", _("Unknown")
 
     @staticmethod
-    def create_from_request(request, user: User) -> "AuthToken":
-        user_agent = request.META["HTTP_USER_AGENT"]
-        client_type = AuthToken.guess_client_type(user_agent)
-
-        if client_type == AuthToken.ClientType.QFIELD:
-            # expire all other tokens
-            now = timezone.now()
-            AuthToken.objects.filter(
-                user=user,
-                client_type=client_type,
-                expires_at__gt=now,
-            ).update(expires_at=now)
-
-        return AuthToken.objects.create(
-            user=user, client_type=client_type, user_agent=user_agent
-        )
-
-    @staticmethod
     def guess_client_type(user_agent: str) -> ClientType:
         if not user_agent:
             return AuthToken.ClientType.UNKNOWN
@@ -285,6 +267,8 @@ class AuthToken(models.Model):
             return AuthToken.ClientType.BROWSER
 
         return AuthToken.ClientType.UNKNOWN
+
+    single_token_clients = [ClientType.QFIELD]
 
     user = models.ForeignKey(
         get_user_model(),
@@ -321,6 +305,17 @@ class AuthToken(models.Model):
 
     def __str__(self):
         return self.key
+
+    def save(self, *args, **kwargs) -> None:
+        if self.client_type in self.single_token_clients:
+            # expire all other tokens
+            now = timezone.now()
+            AuthToken.objects.filter(
+                user=self.user,
+                client_type=self.client_type,
+                expires_at__gt=now,
+            ).update(expires_at=now)
+        return super().save(*args, **kwargs)
 
 
 # Automatically create a UserAccount instance when a user is created.

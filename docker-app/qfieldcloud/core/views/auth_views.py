@@ -1,24 +1,89 @@
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.utils.translation import gettext as _
+from django.views.decorators.debug import sensitive_post_parameters
+from qfieldcloud.core.authentication import create_token
 from qfieldcloud.core.models import AuthToken
+from qfieldcloud.core.serializers import LoginSerializer, TokenSerializer
+from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+sensitive_post_parameters_m = method_decorator(
+    sensitive_post_parameters(
+        "password", "old_password", "new_password1", "new_password2"
+    )
+)
 
 
-class AuthTokenView(ObtainAuthToken):
+class LoginView(ObtainAuthToken):
+    """
+    Check the credentials and return the REST Token if the credentials are valid and authenticated.
+    Accept the following POST parameters: username, password
+    Return information about the token and the user.
+
+    Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L33
+    """
+
+    permission_classes = (AllowAny,)
+    serializer_class = LoginSerializer
+    token_model = AuthToken
+
+    @sensitive_post_parameters_m
+    def dispatch(self, *args, **kwargs):
+        return super(LoginView, self).dispatch(*args, **kwargs)
+
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
-            data=request.data, context={"request": request}
+        self.request = request
+        self.serializer = self.get_serializer(
+            data=self.request.data, context={"request": request}
         )
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
-        token = AuthToken.create_from_request(request, user)
-        avatar_url = (
-            user.useraccount.avatar_url if hasattr(user, "useraccount") else None
+        self.serializer.is_valid(raise_exception=True)
+        validated_data = self.serializer.validated_data
+        assert validated_data and "user" in validated_data
+        self.token = create_token(
+            self.token_model, validated_data["user"], self.serializer, self.request
         )
-        return Response(
-            {
-                "token": token.key,
-                "username": user.username,
-                "email": user.email,
-                "avatar_url": avatar_url,
-            }
+
+        serializer = TokenSerializer(
+            instance=self.token, context={"request": self.request}
         )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    """
+    Calls Django logout method and delete the Token object assigned to the current User object.
+    Accepts nothing, returns a detail.
+
+    Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L109
+    """
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request, *args, **kwargs):
+        if getattr(settings, "ACCOUNT_LOGOUT_ON_GET", False):
+            response = self.logout(request)
+        else:
+            response = self.http_method_not_allowed(request, *args, **kwargs)
+
+        return self.finalize_response(request, response, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.logout(request)
+
+    def logout(self, request):
+        try:
+            now = timezone.now()
+            request.user.auth_token.filter(expired_at__gt=now).update(expired_at=now)
+        except (AttributeError, ObjectDoesNotExist):
+            pass
+
+        response = Response(
+            {"detail": _("Successfully logged out.")}, status=status.HTTP_200_OK
+        )
+        return response

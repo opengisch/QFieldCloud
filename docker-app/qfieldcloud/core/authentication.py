@@ -1,5 +1,7 @@
 from datetime import datetime
+from typing import Type
 
+from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from qfieldcloud.core.models import AuthToken, User
@@ -14,6 +16,26 @@ def invalidate_all_tokens(user: User) -> int:
     return AuthToken.objects.filter(user=user, expires_at__gt=now).update(
         expires_at=now
     )
+
+
+def create_token(
+    token_model: Type[AuthToken],
+    user: User,
+    _serializer=None,
+    request: HttpRequest = None,
+) -> AuthToken:
+    user_agent = ""
+    client_type = AuthToken.ClientType.UNKNOWN
+
+    if request:
+        user_agent = request.META["HTTP_USER_AGENT"]
+        client_type = AuthToken.guess_client_type(user_agent)
+
+    token = token_model.objects.create(
+        user=user, client_type=client_type, user_agent=user_agent
+    )
+
+    return token
 
 
 class TokenAuthentication(DjangoRestFrameworkTokenAuthentication):
