@@ -41,7 +41,7 @@ class TokenAuthentication(DjangoRestFrameworkTokenAuthentication):
 
         # update the token last used time
         # NOTE the UPDATE may be performed already on the `token = model.objects.get(key=key)`, but we lose "token has expired" exception.
-        token.updated_at = datetime.now()
+        token.last_used_at = datetime.now()
         token.save()
 
         return (token.user, token)

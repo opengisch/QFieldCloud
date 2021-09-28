@@ -250,7 +250,7 @@ class AuthToken(models.Model):
         client_type = AuthToken.guess_client_type(user_agent)
 
         if client_type == AuthToken.ClientType.QFIELD:
-            # expire all other sessions
+            # expire all other tokens
             now = timezone.now()
             AuthToken.objects.filter(
                 user=user,
@@ -304,6 +304,7 @@ class AuthToken(models.Model):
         _("Expires at"), default=generate_token_expires_at
     )
     updated_at = models.DateTimeField(_("Updated at"), auto_now=True)
+    last_used_at = models.DateTimeField(_("Last used at"), null=True)
     user_agent = models.TextField(_("User-Agent"), blank=True)
     client_type = models.CharField(
         max_length=32, choices=ClientType.choices, default=ClientType.UNKNOWN

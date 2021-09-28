@@ -44,6 +44,10 @@ class Migration(migrations.Migration):
                     models.DateTimeField(auto_now=True, verbose_name="Updated at"),
                 ),
                 (
+                    "last_used_at",
+                    models.DateTimeField(null=True, verbose_name="Last used at"),
+                ),
+                (
                     "expires_at",
                     models.DateTimeField(
                         default=qfieldcloud.core.models.generate_token_expires_at,
