@@ -25,8 +25,116 @@ from qfieldcloud.core.utils import get_s3_object_url
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
 
+class UserQueryset(models.QuerySet):
+    """Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
+
+    Users are annotated with the user's project role (`project_role`) and the origin of this role (`project_role_origin`).
+    If the project is public, it will return only the directly collaborated users.
+
+    Args:
+        project:               project to find users for
+
+    Usage:
+    ```
+    # List all users that are involved in OpenKebabMap.
+    Users.object.for_project(OpenKebabMap)
+    ```
+    """
+
+    def for_project(self, project: "Project"):
+        permissions_config = [
+            # Project owner
+            (
+                Q(pk=project.owner.pk, user_type=User.TYPE_USER),
+                V(ProjectCollaborator.Roles.ADMIN),
+                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
+            ),
+            # Organization memberships - owner
+            (
+                Q(
+                    pk__in=Organization.objects.filter(pk=project.owner).values(
+                        "organization_owner"
+                    )
+                ),
+                V(ProjectCollaborator.Roles.ADMIN),
+                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
+            ),
+            # Organization memberships - admin
+            (
+                Q(
+                    pk__in=OrganizationMember.objects.filter(
+                        organization=project.owner,
+                        role=OrganizationMember.Roles.ADMIN,
+                    ).values("member")
+                ),
+                V(ProjectCollaborator.Roles.ADMIN),
+                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
+            ),
+            # Role through ProjectCollaborator
+            (
+                Exists(
+                    ProjectCollaborator.objects.filter(
+                        project=project,
+                        collaborator=OuterRef("pk"),
+                    ).exclude(
+                        collaborator__user_type=User.TYPE_TEAM,
+                    )
+                ),
+                ProjectCollaborator.objects.filter(
+                    project=project,
+                    collaborator=OuterRef("pk"),
+                )
+                .exclude(
+                    collaborator__user_type=User.TYPE_TEAM,
+                )
+                .values_list("role"),
+                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
+            ),
+            # Role through Team membership
+            (
+                Exists(
+                    ProjectCollaborator.objects.filter(
+                        project=project,
+                        collaborator__team__members__member=OuterRef("pk"),
+                    )
+                ),
+                ProjectCollaborator.objects.filter(
+                    project=project,
+                    collaborator__team__members__member=OuterRef("pk"),
+                ).values_list("role"),
+                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
+            ),
+        ]
+
+        qs = User.objects.annotate(
+            project_role=Case(
+                *[When(perm[0], perm[1]) for perm in permissions_config],
+                default=None,
+                output_field=models.CharField(),
+            ),
+            project_role_origin=Case(
+                *[When(perm[0], perm[2]) for perm in permissions_config],
+                default=None,
+            ),
+        )
+        # Exclude those without role (invisible)
+        qs = qs.exclude(project_role__isnull=True)
+
+        return qs
+
+
+class QFieldCloudUserManager(UserManager):
+    def get_queryset(self):
+        return UserQueryset(self.model, using=self._db)
+
+    def for_project(self, project):
+        return self.get_queryset().for_project(project)
+
+
 # TODO change types to Enum
 class User(AbstractUser):
+    objects = QFieldCloudUserManager()
+
     TYPE_USER = 1
     TYPE_ORGANIZATION = 2
     TYPE_TEAM = 3
@@ -627,6 +735,10 @@ class Project(models.Model):
     @property
     def files_count(self):
         return utils.get_project_files_count(self.id)
+
+    @property
+    def users(self):
+        return User.objects.for_project(self)
 
 
 @receiver(pre_delete, sender=Project)
