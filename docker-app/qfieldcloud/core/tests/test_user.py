@@ -259,7 +259,8 @@ class QfcTestCase(APITestCase):
         )
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.data["token"], self.token1.key)
+        self.assertTrue(isinstance(response.data["token"], str))
+        self.assertNotEqual(response.data["token"], self.token1.key)
         self.assertEqual(response.data["username"], "user1")
 
     def test_api_token_auth_after_logout(self):
@@ -268,7 +269,8 @@ class QfcTestCase(APITestCase):
         )
 
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.data["token"], self.token1.key)
+        self.assertTrue(isinstance(response.data["token"], str))
+        self.assertNotEqual(response.data["token"], self.token1.key)
         self.assertEqual(response.data["username"], "user1")
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
