@@ -1,5 +1,6 @@
 import logging
 
+from django.utils import timezone
 from qfieldcloud.core.models import (
     AuthToken,
     Organization,
@@ -20,19 +21,31 @@ class QfcTestCase(APITestCase):
         self.user1 = User.objects.create_user(
             username="user1", password="abc123", email="user1@example.com"
         )
-        self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
+        self.token1 = AuthToken.objects.get_or_create(
+            user=self.user1,
+            client_type=AuthToken.ClientType.QFIELD,
+            user_agent="qfield|dev",
+        )[0]
 
         # Create a second user
         self.user2 = User.objects.create_user(
             username="user2", password="abc123", email="user2@example.com"
         )
-        self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
+        self.token2 = AuthToken.objects.get_or_create(
+            user=self.user2,
+            client_type=AuthToken.ClientType.QFIELD,
+            user_agent="qfield|dev",
+        )[0]
 
         # Create a second user
         self.user3 = User.objects.create_user(
             username="user3", password="abc123", email="user3@example.com"
         )
-        self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
+        self.token3 = AuthToken.objects.get_or_create(
+            user=self.user3,
+            client_type=AuthToken.ClientType.QFIELD,
+            user_agent="qfield|dev",
+        )[0]
 
         # Create an organization
         self.organization1 = Organization.objects.create(
@@ -66,7 +79,8 @@ class QfcTestCase(APITestCase):
             "/api/v1/auth/login/", {"username": "user1", "password": "abc123"}
         )
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.data["token"], self.token1.key)
+        self.assertTrue(isinstance(response.data["token"], str))
+        self.assertNotEqual(response.data["token"], self.token1.key)
         self.assertEqual(response.data["username"], "user1")
 
     def test_login_with_email(self):
@@ -74,7 +88,21 @@ class QfcTestCase(APITestCase):
             "/api/v1/auth/login/", {"email": "user1@example.com", "password": "abc123"}
         )
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.data["token"], self.token1.key)
+        self.assertTrue(isinstance(response.data["token"], str))
+        self.assertNotEqual(response.data["token"], self.token1.key)
+        self.assertEqual(response.data["username"], "user1")
+
+    def test_login_qfield_expire_other_token(self):
+        self.client.credentials(HTTP_USER_AGENT="qfield|dev")
+        response = self.client.post(
+            "/api/v1/auth/login/", {"username": "user1", "password": "abc123"}
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertTrue(isinstance(response.data["token"], str))
+        self.assertNotEqual(response.data["token"], self.token1.key)
+        self.assertLess(
+            AuthToken.objects.get(key=self.token1.key).expires_at, timezone.now()
+        )
         self.assertEqual(response.data["username"], "user1")
 
     def test_login_wrong_password(self):
