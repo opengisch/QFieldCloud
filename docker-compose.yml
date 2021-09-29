@@ -68,6 +68,7 @@ services:
       TMP_DIRECTORY: ${TMP_DIRECTORY}
       QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
+      QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
     depends_on:
       - db
       - redis
