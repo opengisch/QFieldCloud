@@ -20,7 +20,6 @@ services:
       - smtp4dev
 
   worker_wrapper:
-    command: bash -c 'while true; do python manage.py dequeue --single-shot; sleep 2; done;'
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
