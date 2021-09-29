@@ -40,6 +40,8 @@ class ProjectSerializer(serializers.ModelSerializer):
                     {"owner": ["Invalid owner username"]},
                     code="invalid",
                 )
+        else:
+            internal_data["owner"] = self.context["request"].user
 
         if "private" in internal_data:
             if internal_data["private"] is not None:
