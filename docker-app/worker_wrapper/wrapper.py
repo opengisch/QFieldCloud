@@ -223,7 +223,7 @@ class DeltaApplyJobRun(JobRun):
         super().__init__(job_id)
 
         if self.job.overwrite_conflicts:
-            self.command += ["--overwrite-conflicts"]
+            self.command = [*self.command, "--overwrite-conflicts"]
 
     def _prepare_deltas(self, deltas: Iterable[Delta]):
         delta_contents = []
