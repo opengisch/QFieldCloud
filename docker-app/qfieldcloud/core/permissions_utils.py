@@ -201,6 +201,18 @@ def can_apply_deltas(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_overwrite_deltas(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+        ],
+    )
+
+
 def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     """Whether the user can store given delta."""
     project: Project = delta.project
@@ -232,6 +244,16 @@ def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
         Delta.Status.NOT_APPLIED,
         Delta.Status.ERROR,
     ):
+        return False
+
+    return True
+
+
+def can_overwrite_delta(user: QfcUser, delta: Delta) -> bool:
+    if not can_overwrite_deltas(user, delta.project):
+        return False
+
+    if delta.last_status not in (Delta.Status.CONFLICT):
         return False
 
     return True
