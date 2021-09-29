@@ -61,56 +61,6 @@ class QfcTestCase(APITestCase):
         # Remove credentials
         self.client.credentials()
 
-    def test_register_user(self):
-        response = self.client.post(
-            "/api/v1/auth/registration/",
-            {
-                "username": "pippo",
-                "email": "pippo@topolinia.to",
-                "password1": "secure_pass123",
-                "password2": "secure_pass123",
-            },
-        )
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertTrue("token" in response.data)
-        self.assertTrue(User.objects.get(username="pippo"))
-
-    def test_register_user_invalid_username(self):
-        response = self.client.post(
-            "/api/v1/auth/registration/",
-            {
-                "username": "pippo@topolinia.to",
-                "email": "pippo@topolinia.to",
-                "password1": "secure_pass123",
-                "password2": "secure_pass123",
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_register_non_matching_password(self):
-        response = self.client.post(
-            "/api/v1/auth/registration/",
-            {
-                "username": "pippo",
-                "email": "pippo@topolinia.to",
-                "password1": "secure_pass123",
-                "password2": "secure_pass456",
-            },
-        )
-        self.assertFalse(status.is_success(response.status_code))
-
-    def test_register_user_reserved_word(self):
-        response = self.client.post(
-            "/api/v1/auth/registration/",
-            {
-                "username": "user",
-                "email": "pippo@topolinia.to",
-                "password1": "secure_pass123",
-                "password2": "secure_pass123",
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
     def test_login(self):
         response = self.client.post(
             "/api/v1/auth/login/", {"username": "user1", "password": "abc123"}
