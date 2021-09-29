@@ -27,7 +27,7 @@ def create_token(
     client_type = AuthToken.ClientType.UNKNOWN
 
     if request:
-        user_agent = request.META["HTTP_USER_AGENT"]
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
         client_type = AuthToken.guess_client_type(user_agent)
 
     token = token_model.objects.create(
