@@ -243,3 +243,70 @@ class QfcTestCase(APITestCase):
         self.assertEqual(p(self.project9, self.user3).user_role, ProjectCollaborator.Roles.EDITOR)
         self.assertEqual(p(self.project9, self.user3).user_role_origin, ProjectQueryset.RoleOrigins.TEAMMEMBER.value)
         # fmt: on
+
+    def test_user_roles_and_role_origins(self):
+        """
+        Checks project_role and project_role_origin are correctly defined
+        """
+
+        def p(proj, user):
+            return User.objects.for_project(proj).get(pk=user.pk)
+
+        # fmt: off
+        self.assertEqual(p(self.project1, self.user1).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project1, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        self.assertEqual(p(self.project2, self.user1).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project2, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project3, self.user1)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project4, self.user1)
+        self.assertEqual(p(self.project5, self.user1).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project5, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
+        self.assertEqual(p(self.project6, self.user1).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project6, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
+        self.assertEqual(p(self.project7, self.user1).project_role, ProjectCollaborator.Roles.REPORTER)
+        self.assertEqual(p(self.project7, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.COLLABORATOR.value)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project8, self.user1)
+        self.assertEqual(p(self.project9, self.user1).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project9, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
+
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project1, self.user2)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project2, self.user2)
+        self.assertEqual(p(self.project3, self.user2).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project3, self.user2).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        self.assertEqual(p(self.project4, self.user2).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project4, self.user2).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        self.assertEqual(p(self.project5, self.user2).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project5, self.user2).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN.value)
+        self.assertEqual(p(self.project6, self.user2).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project6, self.user2).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN.value)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project7, self.user2)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project8, self.user2)
+        self.assertEqual(p(self.project9, self.user2).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project9, self.user2).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN.value)
+
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project1, self.user3)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project2, self.user3)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project3, self.user3)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project4, self.user3)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project5, self.user3)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project6, self.user3)
+        self.assertEqual(p(self.project7, self.user3).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project7, self.user3).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        self.assertEqual(p(self.project8, self.user3).project_role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(p(self.project8, self.user3).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        self.assertEqual(p(self.project9, self.user3).project_role, ProjectCollaborator.Roles.EDITOR)
+        self.assertEqual(p(self.project9, self.user3).project_role_origin, ProjectQueryset.RoleOrigins.TEAMMEMBER.value)
+        # fmt: on
