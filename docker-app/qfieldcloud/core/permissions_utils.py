@@ -4,6 +4,7 @@ from qfieldcloud.core.models import (
     Delta,
     Organization,
     OrganizationMember,
+    OrganizationQueryset,
     Project,
     ProjectCollaborator,
     ProjectQueryset,
@@ -39,6 +40,18 @@ def user_has_organization_roles(
     return (
         _organization_of_owner(user, organization)
         .filter(membership_role__in=roles)
+        .exists()
+    )
+
+
+def user_has_organization_role_origins(
+    user: QfcUser,
+    organization: Organization,
+    origins: List[OrganizationQueryset.RoleOrigins],
+):
+    return (
+        _organization_of_owner(user, organization)
+        .filter(membership_role_origin__in=origins)
         .exists()
     )
 
@@ -449,10 +462,13 @@ def can_delete_geodb(user: QfcUser, profile: QfcUser) -> bool:
 
 
 def can_become_member(user: QfcUser, organization: Organization) -> bool:
-    return not user_has_organization_roles(
+    return not user_has_organization_role_origins(
         user,
         organization,
-        [OrganizationMember.Roles.ADMIN, OrganizationMember.Roles.MEMBER],
+        [
+            OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+            OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER,
+        ],
     )
 
 
