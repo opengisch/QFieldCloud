@@ -407,20 +407,16 @@ def can_delete_members(user: QfcUser, organization: Organization) -> bool:
 
 
 def can_become_collaborator(user: QfcUser, project: Project) -> bool:
-    if user_has_project_role_origins(
-        user, project, [ProjectQueryset.RoleOrigins.PUBLIC]
-    ):
-        return True
+    if project.collaborators.filter(collaborator=user).count() > 0:
+        return False
 
-    return not user_has_project_roles(
+    return not user_has_project_role_origins(
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-            ProjectCollaborator.Roles.READER,
+            ProjectQueryset.RoleOrigins.PROJECTOWNER,
+            ProjectQueryset.RoleOrigins.COLLABORATOR,
+            ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER,
         ],
     )
 
