@@ -39,6 +39,9 @@ class UserQueryset(models.QuerySet):
     # List all users that are involved in OpenKebabMap.
     Users.object.for_project(OpenKebabMap)
     ```
+
+    Note:
+    This query is very similar to `ProjectQueryset.for_user`, don't forget to update it too.
     """
 
     def for_project(self, project: "Project"):
@@ -554,6 +557,9 @@ class ProjectQueryset(models.QuerySet):
     # List Olivier's projects that are visible to Ivan (olivier/ivan are User instances)
     olivier.projects.for_user(ivan)
     ```
+
+    Note:
+    This query is very similar to `UserQueryset.for_project`, don't forget to update it too.
     """
 
     class RoleOrigins(models.TextChoices):
