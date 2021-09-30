@@ -85,7 +85,7 @@ MIDDLEWARE = [
 ]
 
 CRON_CLASSES = [
-    "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
+    # "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
