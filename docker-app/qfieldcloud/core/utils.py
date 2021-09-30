@@ -326,18 +326,6 @@ def list_versions(
         yield S3ObjectVersion(name, v)
 
 
-def get_prev_string_for_sorting(s: str) -> str:
-    """Get a string that is one string before the given string, if sorted alphabetically."""
-    if len(s) == 0:
-        return s
-
-    s, c = s[:-1], ord(s[-1])
-    if c > 0:
-        s += chr(c - 1)
-    s += "".join(["\u7FFF" for _ in range(10)])
-    return s
-
-
 def list_files_with_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
