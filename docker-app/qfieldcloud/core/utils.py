@@ -5,7 +5,7 @@ import os
 import posixpath
 from datetime import datetime
 from pathlib import PurePath
-from typing import IO, Dict, List, Optional, TypedDict, Union
+from typing import IO, Iterable, List, NamedTuple, Optional, TypedDict, Union
 
 import boto3
 import jsonschema
@@ -16,6 +16,50 @@ from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUpload
 from redis import Redis, exceptions
 
 logger = logging.getLogger(__name__)
+
+
+class S3PrefixPath(NamedTuple):
+    Key: str
+
+
+class S3Object(NamedTuple):
+    Key: str
+    LastModified: datetime
+    Size: int
+    ETag: str
+
+
+class S3ObjectVersion:
+    def __init__(
+        self, name: str, data: mypy_boto3_s3.service_resource.ObjectVersion
+    ) -> None:
+        self.name = name
+        self._data = data
+
+    @property
+    def key(self) -> str:
+        return self._data.key
+
+    @property
+    def last_modified(self) -> datetime:
+        return self._data.last_modified
+
+    @property
+    def size(self) -> int:
+        return self._data.size
+
+    @property
+    def e_tag(self) -> str:
+        return self._data.e_tag
+
+    @property
+    def is_latest(self) -> bool:
+        return self._data.is_latest
+
+
+class S3ObjectWithVersions(NamedTuple):
+    latest: S3ObjectVersion
+    versions: List[S3ObjectVersion]
 
 
 def redis_is_running() -> bool:
@@ -227,58 +271,26 @@ class ProjectFile(TypedDict):
     versions: List[ProjectFileVersion]
 
 
-def get_project_files(project_id: str) -> Dict[str, ProjectFile]:
+def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVersions]:
     """Returns a list of files and their versions.
 
     Args:
         project_id (str): the project id
 
     Returns:
-        Dict[str, ProjectFile]: the list of files
+        Iterable[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
 
-    files = {}
-    for version in reversed(list(bucket.object_versions.filter(Prefix=prefix))):
-        files[version.key] = files.get(version.key, {"versions": []})
-
-        head = version.head()
-        path = PurePath(version.key)
-        filename = str(path.relative_to(*path.parts[:3]))
-        last_modified = version.last_modified
-
-        metadata = head["Metadata"]
-        if "sha256sum" in metadata:
-            sha256sum = metadata["sha256sum"]
-        else:
-            sha256sum = metadata["Sha256sum"]
-
-        if version.is_latest:
-            files[version.key]["name"] = filename
-            files[version.key]["size"] = version.size
-            files[version.key]["sha256"] = sha256sum
-            files[version.key]["last_modified"] = last_modified
-
-        files[version.key]["versions"].append(
-            {
-                "size": version.size,
-                "sha256": sha256sum,
-                "version_id": version.version_id,
-                "last_modified": last_modified,
-                "is_latest": version.is_latest,
-            }
-        )
-
-    return files
+    return list_files_with_versions(bucket, prefix, strip_prefix=True)
 
 
 def get_project_files_count(project_id: str) -> int:
     """Returns the number of files within a project."""
-    # there might be more optimal way to get the files count
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
-    files = set([v.key for v in bucket.object_versions.filter(Prefix=prefix)])
+    files = list(bucket.objects.filter(Prefix=prefix))
 
     return len(files)
 
@@ -296,3 +308,57 @@ def get_s3_object_url(
         str: URL
     """
     return f"{settings.STORAGE_ENDPOINT_URL_EXTERNAL}/{bucket.name}/{key}"
+
+
+def list_versions(
+    bucket: mypy_boto3_s3.service_resource.Bucket,
+    prefix: str,
+    strip_prefix: bool = True,
+) -> Iterable[S3ObjectVersion]:
+    """Iterator that lists a bucket's objects under prefix."""
+    for v in bucket.object_versions.filter(Prefix=prefix):
+        if strip_prefix:
+            start_idx = len(prefix)
+            name = v.key[start_idx:]
+        else:
+            name = v.key
+
+        yield S3ObjectVersion(name, v)
+
+
+def list_files_with_versions(
+    bucket: mypy_boto3_s3.service_resource.Bucket,
+    prefix: str,
+    strip_prefix: bool = True,
+) -> Iterable[S3ObjectWithVersions]:
+    """Yields an object with all it's versions
+
+    Returns:
+        Iterable[S3ObjectWithVersions]: an iterator with the objects with their versions
+
+    Yields:
+        Iterator[Iterable[S3ObjectWithVersions]]: the object with its versions
+    """
+    last_key = None
+    versions: List[S3ObjectVersion] = []
+    latest: Optional[S3ObjectVersion] = None
+
+    for v in list_versions(bucket, prefix, strip_prefix):
+        if last_key != v.key:
+            if last_key:
+                assert latest
+
+                yield S3ObjectWithVersions(latest, versions)
+
+            latest = None
+            versions = []
+            last_key = v.key
+
+        versions.append(v)
+
+        if v.is_latest:
+            latest = v
+
+    if last_key:
+        assert latest
+        yield S3ObjectWithVersions(latest, versions)
