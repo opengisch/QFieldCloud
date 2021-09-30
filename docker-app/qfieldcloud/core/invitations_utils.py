@@ -1,9 +1,14 @@
 import logging
 
+from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http.request import HttpRequest
+from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext as _
+from invitations.adapters import get_invitations_adapter
+from invitations.signals import invite_url_sent
 from invitations.utils import get_invitation_model
 from qfieldcloud.core import permissions_utils
 from qfieldcloud.core.models import User
@@ -79,3 +84,44 @@ def invite_user_by_email(
         )
 
     return True, _("{} has been added to the QFieldCloud waiting list.").format(email)
+
+
+def send_invitation(invite, **kwargs):
+    """Sends invitation.
+
+    Args:
+        invite (Invitation): the invitation to be sent
+
+    The same as the original Invitation.send_invitation, but without passing the request object.
+    https://github.com/bee-keeper/django-invitations/blob/invitations/models.py#L42
+    """
+    current_site = kwargs.pop("site", Site.objects.get_current())
+    invite_url = reverse("invitations:accept-invite", args=[invite.key])
+    invite_url = f"https://{current_site.domain}/{invite_url}"
+    ctx = kwargs
+    ctx.update(
+        {
+            "invite_url": invite_url,
+            "site_name": current_site.name,
+            "email": invite.email,
+            "key": invite.key,
+            "inviter": invite.inviter,
+        }
+    )
+
+    email_template = "invitations/email/email_invite"
+
+    get_invitations_adapter().send_mail(
+        email_template,
+        invite.email,
+        ctx,
+    )
+    invite.sent = timezone.now()
+    invite.save()
+
+    invite_url_sent.send(
+        sender=invite.__class__,
+        instance=invite,
+        invite_url_sent=invite_url,
+        inviter=invite.inviter,
+    )
