@@ -1,13 +1,17 @@
 from typing import Type
 
+from django.contrib.auth import get_user_model
 from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from qfieldcloud.core.models import AuthToken, User
 from rest_framework import exceptions
 from rest_framework.authentication import (
     TokenAuthentication as DjangoRestFrameworkTokenAuthentication,
 )
+
+from .models import AuthToken
+
+User = get_user_model()
 
 
 def invalidate_all_tokens(user: User) -> int:

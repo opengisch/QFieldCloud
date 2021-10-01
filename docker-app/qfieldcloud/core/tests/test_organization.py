@@ -1,6 +1,7 @@
 import logging
 
-from qfieldcloud.core.models import AuthToken, Organization, OrganizationMember, User
+from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.models import Organization, OrganizationMember, User
 from rest_framework import status
 from rest_framework.test import APITestCase
 

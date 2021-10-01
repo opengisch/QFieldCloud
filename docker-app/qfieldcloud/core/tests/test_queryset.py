@@ -1,8 +1,8 @@
 import logging
 
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
-    AuthToken,
     Organization,
     OrganizationMember,
     Project,

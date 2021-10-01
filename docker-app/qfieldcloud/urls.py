@@ -23,7 +23,7 @@ from django.urls import include, path, re_path
 from django.utils.translation import gettext as _
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
-from qfieldcloud.core.views import auth_views
+from qfieldcloud.authentication import views as auth_views
 from rest_framework import permissions
 
 admin.site.site_header = _("QFieldCloud Admin")

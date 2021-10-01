@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "django_cron",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.authentication",
 ]
 
 MIDDLEWARE = [
@@ -188,7 +189,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "qfieldcloud.core.authentication.TokenAuthentication",
+        "qfieldcloud.authentication.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
@@ -301,3 +302,7 @@ LOGGING = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+
+QFIELDCLOUD_LOGIN_SERIALIZER = "qfieldcloud.authentication.serializers.LoginSerializer"
+QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"

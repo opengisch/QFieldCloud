@@ -7,8 +7,9 @@ import fiona
 import requests
 import rest_framework
 from django.http.response import HttpResponseRedirect
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import AuthToken, Project, ProjectCollaborator, User
+from qfieldcloud.core.models import Project, ProjectCollaborator, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 

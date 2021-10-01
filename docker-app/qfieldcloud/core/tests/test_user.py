@@ -1,8 +1,8 @@
 import logging
 
 from django.utils import timezone
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
-    AuthToken,
     Organization,
     OrganizationMember,
     Project,

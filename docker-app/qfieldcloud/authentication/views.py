@@ -4,14 +4,18 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from django.views.decorators.debug import sensitive_post_parameters
-from qfieldcloud.core.authentication import create_token
-from qfieldcloud.core.models import AuthToken
-from qfieldcloud.core.serializers import LoginSerializer, TokenSerializer
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from .authentication import create_token
+from .models import AuthToken
+from .utils import load_module
+
+LoginSerializer = load_module(settings.QFIELDCLOUD_LOGIN_SERIALIZER)
+TokenSerializer = load_module(settings.QFIELDCLOUD_TOKEN_SERIALIZER)
 
 sensitive_post_parameters_m = method_decorator(
     sensitive_post_parameters(

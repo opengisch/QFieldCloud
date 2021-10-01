@@ -5,8 +5,9 @@ import time
 
 import requests
 from django.http.response import HttpResponseRedirect
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import AuthToken, Project, User
+from qfieldcloud.core.models import Project, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
