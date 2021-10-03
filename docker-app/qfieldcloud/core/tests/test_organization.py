@@ -1,8 +1,8 @@
 import logging
 
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, OrganizationMember, User
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 logging.disable(logging.CRITICAL)
@@ -12,15 +12,15 @@ class QfcTestCase(APITestCase):
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
-        self.token1 = Token.objects.get_or_create(user=self.user1)[0]
+        self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a user
         self.user2 = User.objects.create_user(username="user2", password="abc123")
-        self.token2 = Token.objects.get_or_create(user=self.user2)[0]
+        self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # Create a user
         self.user3 = User.objects.create_user(username="user3", password="abc123")
-        self.token3 = Token.objects.get_or_create(user=self.user3)[0]
+        self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
         # Create an organization
         self.organization1 = Organization.objects.create(

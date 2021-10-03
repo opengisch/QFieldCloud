@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Delta,
     ExportJob,
@@ -10,7 +11,6 @@ from qfieldcloud.core.models import (
     Team,
 )
 from rest_framework import serializers
-from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
@@ -168,6 +168,11 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
 
 class TokenSerializer(serializers.ModelSerializer):
     username = serializers.StringRelatedField(source="user")
+    expires_at = serializers.DateTimeField()
+    user_type = serializers.StringRelatedField(source="user")
+    first_name = serializers.StringRelatedField(source="user")
+    last_name = serializers.StringRelatedField(source="user")
+    full_name = serializers.StringRelatedField(source="user")
     token = serializers.CharField(source="key")
     email = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
@@ -183,8 +188,24 @@ class TokenSerializer(serializers.ModelSerializer):
         )
 
     class Meta:
-        model = Token
-        fields = ("token", "username", "email", "avatar_url")
+        model = AuthToken
+        fields = (
+            "token",
+            "expires_at",
+            "username",
+            "user_type",
+            "email",
+            "avatar_url",
+            "first_name",
+            "last_name",
+            "full_name",
+        )
+        read_only_fields = (
+            "token",
+            "expires_at",
+            "full_name",
+            "avatar_url",
+        )
 
 
 class StatusChoiceField(serializers.ChoiceField):

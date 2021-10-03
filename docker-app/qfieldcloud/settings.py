@@ -63,13 +63,12 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "rest_auth",
-    "rest_auth.registration",
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.authentication",
 ]
 
 MIDDLEWARE = [
@@ -181,12 +180,16 @@ STORAGE_ENDPOINT_URL_EXTERNAL = os.environ.get("STORAGE_ENDPOINT_URL_EXTERNAL")
 
 AUTH_USER_MODEL = "core.User"
 
+# QFieldCloud variables
+AUTH_TOKEN_LENGTH = 100
+AUTH_TOKEN_EXPIRATION_HOURS = 24 * 30
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "qfieldcloud.authentication.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
@@ -200,11 +203,6 @@ SITE_ID = 1
 SWAGGER_SETTINGS = {
     "LOGIN_URL": "rest_framework:login",
     "LOGOUT_URL": "rest_framework:logout",
-}
-
-REST_AUTH_SERIALIZERS = {
-    "TOKEN_SERIALIZER": "qfieldcloud.core.serializers.TokenSerializer",
-    "USER_DETAILS_SERIALIZER": "qfieldcloud.core.serializers.PublicInfoUserSerializer",
 }
 
 LOGIN_URL = "account_login"
@@ -304,3 +302,7 @@ LOGGING = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+
+QFIELDCLOUD_LOGIN_SERIALIZER = "qfieldcloud.authentication.serializers.LoginSerializer"
+QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"

@@ -23,7 +23,7 @@ from django.urls import include, path, re_path
 from django.utils.translation import gettext as _
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
-from qfieldcloud.core.views import auth_views
+from qfieldcloud.authentication import views as auth_views
 from rest_framework import permissions
 
 admin.site.site_header = _("QFieldCloud Admin")
@@ -56,9 +56,9 @@ urlpatterns = [
     ),
     path(os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/"), admin.site.urls),
     path("docs/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-    path("api/v1/auth/registration/", include("rest_auth.registration.urls")),
-    path("api/v1/auth/token/", auth_views.AuthTokenView.as_view()),
-    path("api/v1/auth/", include("rest_auth.urls")),
+    path("api/v1/auth/login/", auth_views.LoginView.as_view()),
+    path("api/v1/auth/token/", auth_views.LoginView.as_view()),
+    path("api/v1/auth/logout/", auth_views.LogoutView.as_view()),
     path("api/v1/", include("qfieldcloud.core.urls")),
     path("auth/", include("rest_framework.urls")),
     path("accounts/", include("allauth.urls")),

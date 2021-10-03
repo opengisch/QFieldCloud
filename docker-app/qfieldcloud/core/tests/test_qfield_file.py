@@ -6,10 +6,10 @@ import time
 import psycopg2
 import requests
 from django.http.response import HttpResponseRedirect
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Project, User
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITransactionTestCase
 
 from .utils import testdata_path
@@ -24,7 +24,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.user2 = User.objects.create_user(username="user2", password="abc123")
 
-        self.token1 = Token.objects.get_or_create(user=self.user1)[0]
+        self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a project
         self.project1 = Project.objects.create(
