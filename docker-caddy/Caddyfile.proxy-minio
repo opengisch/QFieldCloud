@@ -1,7 +1,12 @@
 # This is to be included in the Caddyfile when using local minio S3 (development/testing)
 # On production, an empty file should be included instead
 
-    route /minio/* {
-        uri strip_prefix /minio
-        reverse_proxy s3:9000
+
+    handle_path /minio/* {
+        rewrite * {path}
+        reverse_proxy {
+            to s3:9000
+            header_up Host {upstream_hostport}
+            header_up X-Forwarded-Host {host}
+        }
     }
