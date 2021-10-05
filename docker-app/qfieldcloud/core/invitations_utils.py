@@ -70,6 +70,18 @@ def invite_user_by_email(
                 ).format(email),
             )
 
+    qs = User.objects.filter(email=email, user_type=User.TYPE_USER)
+
+    if len(qs) > 0:
+        assert len(qs) == 1
+
+        return (
+            False,
+            _("{} has already been used by a registered QFieldCloud user.").format(
+                email
+            ),
+        )
+
     invite = Invitation.create(email, inviter=inviter)
 
     # TODO see if we can "pre-attach" this future user to this project, probably to be done
