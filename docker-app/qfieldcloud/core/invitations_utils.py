@@ -3,7 +3,6 @@ import logging
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.http.request import HttpRequest
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -24,15 +23,12 @@ def is_valid_email(email: str) -> bool:
         return False
 
 
-def invite_user_by_email(
-    email: str, request: HttpRequest, inviter: User = None, send: bool = True
-) -> tuple:
+def invite_user_by_email(email: str, inviter: User, send: bool = True) -> tuple:
     """
     Sends an invite for a given email address
 
     Args :
         email:      recipient's email
-        request:    the request (used to build the absolute URL)
         inviter:    inviter
         send:       whether the email should be sent
 
@@ -47,9 +43,6 @@ def invite_user_by_email(
             "The provided email address is not valid. Users can only be invited with a valid email address."
         )
 
-    if not inviter:
-        inviter = request.user
-
     if not permissions_utils.can_send_invitations(inviter, inviter):
         return False, _("Your user cannot send invitations.")
 
@@ -59,6 +52,8 @@ def invite_user_by_email(
 
     if len(qs) > 0:
         invite = qs[0]
+
+        assert len(qs) == 1
 
         if invite.key_expired():
             qs.delete()
@@ -89,7 +84,7 @@ def invite_user_by_email(
     if send and inviter.remaining_invitations > 0:
         inviter.remaining_invitations -= 1
         inviter.save()
-        invite.send_invitation(request)
+        send_invitation(invite)
         return (
             True,
             _("{} has been invited to create a QFieldCloud account.").format(email),
