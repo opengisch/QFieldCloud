@@ -3,7 +3,7 @@
     email info@opengis.ch
 }
 
-{$QFIELDCLOUD_HOST} {
+http://{$QFIELDCLOUD_HOST} https://{$QFIELDCLOUD_HOST} {
     root * /home/app/web/
     file_server
 
