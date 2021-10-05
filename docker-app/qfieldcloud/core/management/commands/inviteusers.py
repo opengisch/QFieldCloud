@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from invitations.utils import get_invitation_model
-from qfieldcloud.core.invitations_utils import is_valid_email, send_invitation
+from qfieldcloud.core.invitations_utils import invite_user_by_email
 
 
 class Command(BaseCommand):
@@ -21,7 +20,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         User = get_user_model()
-        Invitation = get_invitation_model()
 
         inviter_username = options.get("inviter")
         emails = options.get("emails", [])
@@ -33,35 +31,13 @@ class Command(BaseCommand):
             print(f'ERROR: Failed to find user "{inviter_username}"!')
             exit(1)
 
-        invite = None
-        is_invited = False
-
         for email in emails:
-            if is_valid_email(email):
-                qs = Invitation.objects.filter(email=email)
+            success, message = invite_user_by_email(email, inviter)
 
-                if len(qs) > 0:
-                    assert len(qs) == 1
-
-                    if qs[0].key_expired():
-                        qs.delete()
-                    else:
-                        print(f"WARNING: {email} has already been invited.")
-                        continue
-
-                if not is_invited:
-                    invite = Invitation.create(email, inviter=inviter)
-
-                if invite:
-                    try:
-                        send_invitation(invite)
-                        print(f"Sent invitation to {email}")
-                    except Exception as err:
-                        print(f"ERROR: Failed sending an invitation: {err}")
-                        invite = None
+            if success:
+                print(f"SUCCESS: invitation sent to {email}.")
             else:
-                print(f"ERROR: Invalid email address: {email}")
+                print(f"WARNING: invitation not sent to {email}. {message}")
 
-            if not invite:
                 if exit_on_failure:
                     exit(1)
