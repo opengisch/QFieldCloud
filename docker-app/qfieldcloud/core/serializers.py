@@ -266,7 +266,16 @@ class DeltaSerializer(serializers.ModelSerializer):
 
 class ExportJobSerializer(serializers.ModelSerializer):
     layers = serializers.JSONField(source="feedback")
-    status = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField(initial="STATUS_ERROR")
+
+    def get_initial(self):
+        if self.instance is None:
+            return {
+                "layers": None,
+                "output": "",
+                "status": "STATUS_ERROR",
+            }
+        return super().get_initial()
 
     def get_status(self, obj):
         if obj.status == Job.Status.PENDING:
