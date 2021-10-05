@@ -97,7 +97,7 @@ def send_invitation(invite, **kwargs):
     """
     current_site = kwargs.pop("site", Site.objects.get_current())
     invite_url = reverse("invitations:accept-invite", args=[invite.key])
-    invite_url = f"https://{current_site.domain}/{invite_url}"
+    invite_url = f"https://{current_site.domain}{invite_url}"
     ctx = kwargs
     ctx.update(
         {
