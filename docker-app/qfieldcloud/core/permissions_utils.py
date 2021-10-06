@@ -78,8 +78,9 @@ def can_create_project(
     if user == organization:
         return True
 
-    if organization.is_organization and not isinstance(organization, Organization):
-        organization = organization.organization  # type: ignore
+    if organization.is_organization:
+        if not isinstance(organization, Organization):
+            organization = organization.organization  # type: ignore
     else:
         return False
 
