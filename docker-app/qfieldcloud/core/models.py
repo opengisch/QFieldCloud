@@ -136,6 +136,18 @@ class QFieldCloudUserManager(UserManager):
 
 # TODO change types to Enum
 class User(AbstractUser):
+    """User model. Used as base for organizations and teams too.
+
+    Args:
+        AbstractUser (AbstractUser): the django's abstract user base
+
+    Returns:
+        User: the user instance
+
+    Note:
+        If you add validators in the constructor, note they will be added multiple times for each class that extends User.
+    """
+
     objects = QFieldCloudUserManager()
 
     TYPE_USER = 1
@@ -146,6 +158,30 @@ class User(AbstractUser):
         (TYPE_USER, "user"),
         (TYPE_ORGANIZATION, "organization"),
         (TYPE_TEAM, "team"),
+    )
+
+    """Define username here, so we can avoid multiple validators from the constructor. Check the class notes."""
+    username = models.CharField(
+        _("username"),
+        max_length=150,
+        unique=True,
+        help_text=_(
+            "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
+        ),
+        validators=[
+            RegexValidator(
+                r"^[-a-zA-Z0-9_]+$",
+                "Only letters, numbers, underscores or hyphens are allowed.",
+            ),
+            RegexValidator(r"^[a-zA-Z].*$", _("The name must begin with a letter.")),
+            RegexValidator(
+                r"^.{3,}$", _("The name must be at least 3 characters long.")
+            ),
+            validators.reserved_words_validator,
+        ],
+        error_messages={
+            "unique": _("A user with that username already exists."),
+        },
     )
 
     user_type = models.PositiveSmallIntegerField(
@@ -159,21 +195,6 @@ class User(AbstractUser):
 
     has_newsletter_subscription = models.BooleanField(default=False)
     has_accepted_tos = models.BooleanField(default=False)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._meta.get_field("username").validators.append(
-            validators.reserved_words_validator
-        )
-        self._meta.get_field("username").validators.append(
-            validators.allowed_symbols_validator
-        )
-        self._meta.get_field("username").validators.append(
-            validators.min_lenght_validator
-        )
-        self._meta.get_field("username").validators.append(
-            validators.first_symbol_validator
-        )
 
     def __str__(self):
         return self.username
