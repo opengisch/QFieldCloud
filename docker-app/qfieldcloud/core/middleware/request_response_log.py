@@ -10,6 +10,7 @@ import json
 
 # import json
 import logging
+import os
 import socket
 import time
 
@@ -118,9 +119,13 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         """Log data using logger."""
 
-        log_data = self.extract_log_info(request=request, response=response)
+        # use Django logger only in the development environment.
+        if request.META.get("SERVER_PORT") != os.environ.get(
+            "WEB_HTTP_PORT"
+        ) and request.META.get("SERVER_PORT") != os.environ.get("WEB_HTTPS_PORT"):
+            log_data = self.extract_log_info(request=request, response=response)
 
-        logger.info(msg="", extra=log_data)
+            logger.info(msg="", extra=log_data)
 
         return response
 
