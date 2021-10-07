@@ -125,6 +125,61 @@ class UserQueryset(models.QuerySet):
 
         return qs
 
+    def for_organization(self, organization: "Organization"):
+        permissions_config = [
+            # Direct ownership
+            (
+                Exists(
+                    Organization.objects.filter(
+                        pk=organization.pk,
+                        organization_owner=OuterRef("pk"),
+                    )
+                ),
+                V(OrganizationMember.Roles.ADMIN),
+                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER),
+                V(True),
+            ),
+            # Organization membership
+            (
+                Exists(
+                    OrganizationMember.objects.filter(
+                        organization=organization,
+                        member=OuterRef("pk"),
+                    )
+                ),
+                OrganizationMember.objects.filter(
+                    organization=organization,
+                    member=OuterRef("pk"),
+                ).values_list("role"),
+                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER),
+                OrganizationMember.objects.filter(
+                    organization=organization,
+                    member=OuterRef("pk"),
+                ).values_list("is_public"),
+            ),
+        ]
+
+        qs = self.annotate(
+            membership_role=Case(
+                *[When(perm[0], perm[1]) for perm in permissions_config],
+                default=None,
+                output_field=models.CharField(),
+            ),
+            membership_role_origin=Case(
+                *[When(perm[0], perm[2]) for perm in permissions_config],
+                default=None,
+            ),
+            membership_is_public=Case(
+                *[When(perm[0], perm[3]) for perm in permissions_config],
+                default=None,
+            ),
+        )
+
+        qs = qs.filter(user_type=User.TYPE_USER)
+        qs = qs.exclude(membership_role__isnull=True)
+
+        return qs
+
 
 class QFieldCloudUserManager(UserManager):
     def get_queryset(self):
@@ -132,6 +187,9 @@ class QFieldCloudUserManager(UserManager):
 
     def for_project(self, project):
         return self.get_queryset().for_project(project)
+
+    def for_organization(self, organization):
+        return self.get_queryset().for_organization(organization)
 
 
 # TODO change types to Enum
