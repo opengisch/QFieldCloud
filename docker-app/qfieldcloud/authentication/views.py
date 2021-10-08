@@ -28,9 +28,10 @@ sensitive_post_parameters_m = method_decorator(
 
 
 class LoginView(ObtainAuthToken):
-    """
+    """Create a new user session.
+
     Check the credentials and return the REST Token if the credentials are valid and authenticated.
-    Accept the following POST parameters: username, password
+    Accept the following POST parameters: username OR email, password
     Return information about the token and the user.
 
     Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L33
@@ -63,9 +64,10 @@ class LoginView(ObtainAuthToken):
 
 
 class LogoutView(APIView):
-    """
-    Calls Django logout method and delete the Token object assigned to the current User object.
-    Accepts nothing, returns a detail.
+    """Invalidate the user session.
+
+    Calls Django logout method and invalidate the Token object assigned to the current User object.
+    Accepts nothing, returns a details message.
 
     Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L109
     """
