@@ -304,5 +304,5 @@ LOGGING = {
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 
-QFIELDCLOUD_LOGIN_SERIALIZER = "qfieldcloud.authentication.serializers.LoginSerializer"
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
+QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
