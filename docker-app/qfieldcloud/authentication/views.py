@@ -33,9 +33,9 @@ class LoginView(ObtainAuthToken):
     Check the credentials and return the REST Token if the credentials are valid and authenticated.
     Accept the following POST parameters: username OR email, password
     Return information about the token and the user.
-
-    Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L33
     """
+
+    # Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L33
 
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
@@ -68,9 +68,9 @@ class LogoutView(APIView):
 
     Calls Django logout method and invalidate the Token object assigned to the current User object.
     Accepts nothing, returns a details message.
-
-    Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L109
     """
+
+    # Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L109
 
     permission_classes = (AllowAny,)
 
@@ -102,9 +102,9 @@ class UserView(RetrieveAPIView):
     """Read user fields.
 
     Accepts nothing, returns the user fields.
-
-    Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L146
     """
+
+    # Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L146
 
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticated,)
