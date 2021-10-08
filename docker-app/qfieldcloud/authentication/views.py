@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -6,7 +7,8 @@ from django.utils.translation import gettext as _
 from django.views.decorators.debug import sensitive_post_parameters
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.permissions import AllowAny
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -16,6 +18,7 @@ from .utils import load_module
 
 LoginSerializer = load_module(settings.QFIELDCLOUD_LOGIN_SERIALIZER)
 TokenSerializer = load_module(settings.QFIELDCLOUD_TOKEN_SERIALIZER)
+UserSerializer = load_module(settings.QFIELDCLOUD_USER_SERIALIZER)
 
 sensitive_post_parameters_m = method_decorator(
     sensitive_post_parameters(
@@ -25,13 +28,14 @@ sensitive_post_parameters_m = method_decorator(
 
 
 class LoginView(ObtainAuthToken):
-    """
-    Check the credentials and return the REST Token if the credentials are valid and authenticated.
-    Accept the following POST parameters: username, password
-    Return information about the token and the user.
+    """Create a new user session.
 
-    Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L33
+    Check the credentials and return the REST Token if the credentials are valid and authenticated.
+    Accept the following POST parameters: username OR email, password
+    Return information about the token and the user.
     """
+
+    # Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L33
 
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
@@ -60,12 +64,13 @@ class LoginView(ObtainAuthToken):
 
 
 class LogoutView(APIView):
-    """
-    Calls Django logout method and delete the Token object assigned to the current User object.
-    Accepts nothing, returns a detail.
+    """Invalidate the user session.
 
-    Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L109
+    Calls Django logout method and invalidate the Token object assigned to the current User object.
+    Accepts nothing, returns a details message.
     """
+
+    # Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L109
 
     permission_classes = (AllowAny,)
 
@@ -91,3 +96,26 @@ class LogoutView(APIView):
             {"detail": _("Successfully logged out.")}, status=status.HTTP_200_OK
         )
         return response
+
+
+class UserView(RetrieveAPIView):
+    """Read user fields.
+
+    Accepts nothing, returns the user fields.
+    """
+
+    # Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L146
+
+    serializer_class = UserSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        return self.request.user
+
+    def get_queryset(self):
+        """
+        Adding this method since it is sometimes called when using
+        django-rest-swagger
+        https://github.com/Tivix/django-rest-auth/issues/275
+        """
+        return get_user_model().objects.none()

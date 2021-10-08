@@ -120,3 +120,14 @@ class TokenSerializer(serializers.ModelSerializer):
             "token",
             "expires_at",
         )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """
+    User model w/o password
+    """
+
+    class Meta:
+        model = User
+        fields = ("pk", "username", "email", "first_name", "last_name")
+        read_only_fields = ("email",)
