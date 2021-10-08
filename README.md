@@ -142,6 +142,9 @@ users. The template db has the following extensions installed:
 -   postgis<sub>tiger</sub><sub>geocoder</sub>
 -   postgis<sub>topology</sub>
 
+### Storage
+
+You can use either the integrated `minio` object storage, or use an external provider (e. g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
 
 ## Resources
 
