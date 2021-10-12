@@ -300,6 +300,12 @@ class ApplyJobAdmin(admin.ModelAdmin):
         "deltas_to_apply__id__startswith",
         "id",
     )
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "started_at",
+        "finished_at",
+    )
     inlines = [
         DeltaInline,
     ]
@@ -478,6 +484,8 @@ class ExportJobAdmin(admin.ModelAdmin):
         "status",
         "created_at",
         "updated_at",
+        "started_at",
+        "finished_at",
         "output__pre",
         "feedback__pre",
     )
@@ -534,6 +542,8 @@ class ProcessProjectfileJobAdmin(admin.ModelAdmin):
         "status",
         "created_at",
         "updated_at",
+        "started_at",
+        "finished_at",
         "output__pre",
         "feedback__pre",
     )
