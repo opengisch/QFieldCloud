@@ -164,7 +164,7 @@ class JobRun:
                 logger.exception(err, exc_info=err)
 
     def _run_docker(
-        self, command: str, volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
+        self, command: List[str], volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
     ) -> Tuple[int, bytes]:
         QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
