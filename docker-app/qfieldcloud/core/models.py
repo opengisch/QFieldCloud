@@ -512,14 +512,14 @@ class Organization(User):
         verbose_name_plural = "organizations"
 
     def clean(self) -> None:
-        if not OrganizationMember.objects.filter(
-            organization=self.pk, member=self.organization_owner
-        ):
-            raise ValidationError(
-                _(
-                    "Cannot change the owner to a user that is not an organization member."
-                )
-            )
+        # if not OrganizationMember.objects.filter(
+        #     organization=self.pk, member=self.organization_owner
+        # ):
+        #     raise ValidationError(
+        #         _(
+        #             "Cannot change the owner to a user that is not an organization member."
+        #         )
+        #     )
 
         return super().clean()
 
