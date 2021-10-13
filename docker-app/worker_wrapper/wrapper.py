@@ -102,6 +102,10 @@ class JobRun:
             command = self.get_command()
             volumes = {}
             volumes[str(self.shared_tempdir)] = {"bind": "/io/", "mode": "rw"}
+            volumes["/transformation_grids"] = {
+                "bind": "/transformation_grids",
+                "mode": "ro",
+            }
 
             exit_code, output = self._run_docker(
                 command,
@@ -209,6 +213,7 @@ class JobRun:
                 "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
                 "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
                 "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+                "PROJ_DOWNLOAD_DIR": "/transformation_grids",
                 "QT_QPA_PLATFORM": "offscreen",
             },
             volumes=volumes,
