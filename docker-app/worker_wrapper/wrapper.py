@@ -364,12 +364,20 @@ class ProcessProjectfileJobRun(JobRun):
     ]
 
     def after_docker_run(self) -> None:
-        thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         project = self.job.project
 
+        project_details = self.job.feedback["steps"][3]["outputs"]["project_details"]
+        project.project_details = project_details
+
+        thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         with open(thumbnail_filename, "rb") as f:
             thumbnail_uri = qfieldcloud.core.utils2.storage.upload_project_thumbail(
                 project, f, "image/png", "thumbnail"
             )
         project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
+        project.save()
+
+    def after_docker_exception(self) -> None:
+        project = self.job.project
+        project.project_details = None
         project.save()
