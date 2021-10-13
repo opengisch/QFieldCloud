@@ -113,6 +113,8 @@ class ListFilesView(views.APIView):
             .last()
         )
 
+        assert export_job
+
         # Obtain the bucket object
         bucket = utils.get_s3_bucket()
 
@@ -139,7 +141,12 @@ class ListFilesView(views.APIView):
                 }
             )
 
-        layers = export_job.feedback["steps"][1]["outputs"]["layer_checks"]
+        steps = export_job.feedback.get("steps", [])
+        layers = (
+            steps[1]["outputs"]["layer_checks"]
+            if len(steps) > 2 and steps[1].get("stage", 1) == 2
+            else None
+        )
 
         return Response(
             {
