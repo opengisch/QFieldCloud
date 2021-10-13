@@ -80,10 +80,10 @@ class JobRun:
             p % self.get_context() for p in ["python3", "entrypoint.py", *self.command]
         ]
 
-    def before_docker(self) -> None:
+    def before_docker_run(self) -> None:
         pass
 
-    def after_docker(self) -> None:
+    def after_docker_run(self) -> None:
         pass
 
     def run(self):
@@ -94,7 +94,7 @@ class JobRun:
             self.job.started_at = timezone.now()
             self.job.save()
 
-            self.before_docker()
+            self.before_docker_run()
 
             command = self.get_command()
             volumes = {}
@@ -139,7 +139,7 @@ class JobRun:
             self.job.status = Job.Status.FINISHED
             self.job.save()
 
-            self.after_docker()
+            self.after_docker_run()
 
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
@@ -261,7 +261,7 @@ class DeltaApplyJobRun(JobRun):
 
         return deltafile_contents
 
-    def before_docker(self) -> None:
+    def before_docker_run(self) -> None:
         with transaction.atomic():
             deltas = Delta.objects.select_for_update().filter(
                 last_status=Delta.Status.PENDING
@@ -281,7 +281,7 @@ class DeltaApplyJobRun(JobRun):
             with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
                 json.dump(deltafile_contents, f)
 
-    def after_docker(self) -> None:
+    def after_docker_run(self) -> None:
         delta_feedback = self.job.feedback["steps"][1]["outputs"]["delta_feedback"]
 
         for feedback in delta_feedback:
@@ -322,7 +322,7 @@ class ProcessProjectfileJobRun(JobRun):
         "%(project__project_filename)s",
     ]
 
-    def after_docker(self) -> None:
+    def after_docker_run(self) -> None:
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         project = self.job.project
 
