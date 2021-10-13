@@ -431,13 +431,13 @@ class DeltaAdmin(admin.ModelAdmin):
     project__name.admin_order_field = "project__name"
 
     def set_status_pending(self, request, queryset):
-        queryset.update(status=Delta.Status.PENDING)
+        queryset.update(last_status=Delta.Status.PENDING)
 
     def set_status_ignored(self, request, queryset):
-        queryset.update(status=Delta.Status.IGNORED)
+        queryset.update(last_status=Delta.Status.IGNORED)
 
     def set_status_unpermitted(self, request, queryset):
-        queryset.update(status=Delta.Status.UNPERMITTED)
+        queryset.update(last_status=Delta.Status.UNPERMITTED)
 
     def response_change(self, request, delta):
         if "_apply_delta_btn" in request.POST:

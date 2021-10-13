@@ -80,10 +80,13 @@ class JobRun:
             p % self.get_context() for p in ["python3", "entrypoint.py", *self.command]
         ]
 
-    def before_docker(self) -> None:
+    def before_docker_run(self) -> None:
         pass
 
-    def after_docker(self) -> None:
+    def after_docker_run(self) -> None:
+        pass
+
+    def after_docker_exception(self) -> None:
         pass
 
     def run(self):
@@ -94,7 +97,7 @@ class JobRun:
             self.job.started_at = timezone.now()
             self.job.save()
 
-            self.before_docker()
+            self.before_docker_run()
 
             command = self.get_command()
             volumes = {}
@@ -133,13 +136,22 @@ class JobRun:
 
             if exit_code != 0 or feedback.get("error") is not None:
                 self.job.status = Job.Status.FAILED
+
+                try:
+                    self.after_docker_exception()
+                except Exception as err:
+                    logger.error(
+                        "Failed to run the `after_docker_exception` handler.",
+                        exc_info=err,
+                    )
+
                 self.job.save()
                 return
 
             self.job.status = Job.Status.FINISHED
             self.job.save()
 
-            self.after_docker()
+            self.after_docker_run()
 
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
@@ -158,13 +170,23 @@ class JobRun:
                 self.job.status = Job.Status.FAILED
                 self.job.feedback = feedback
                 self.job.finished_at = timezone.now()
+
+                try:
+                    self.after_docker_exception()
+                except Exception as err:
+                    logger.error(
+                        "Failed to run the `after_docker_exception` handler.",
+                        exc_info=err,
+                    )
+
                 self.job.save()
             except Exception as err:
-                logger.error("Failed to handle exception and update the job status")
-                logger.exception(err, exc_info=err)
+                logger.error(
+                    "Failed to handle exception and update the job status", exc_info=err
+                )
 
     def _run_docker(
-        self, command: str, volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
+        self, command: List[str], volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
     ) -> Tuple[int, bytes]:
         QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
@@ -261,17 +283,18 @@ class DeltaApplyJobRun(JobRun):
 
         return deltafile_contents
 
-    def before_docker(self) -> None:
+    def before_docker_run(self) -> None:
         with transaction.atomic():
             deltas = Delta.objects.select_for_update().filter(
                 last_status=Delta.Status.PENDING
             )
 
             self.job.deltas_to_apply.add(*deltas)
+            self.delta_ids = [d.id for d in deltas]
 
             ApplyJobDelta.objects.filter(
                 apply_job_id=self.job_id,
-                delta_id__in=[d.id for d in deltas],
+                delta_id__in=self.delta_ids,
             ).update(status=Delta.Status.STARTED)
 
             deltafile_contents = self._prepare_deltas(deltas)
@@ -281,7 +304,7 @@ class DeltaApplyJobRun(JobRun):
             with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
                 json.dump(deltafile_contents, f)
 
-    def after_docker(self) -> None:
+    def after_docker_run(self) -> None:
         delta_feedback = self.job.feedback["steps"][1]["outputs"]["delta_feedback"]
 
         for feedback in delta_feedback:
@@ -313,6 +336,18 @@ class DeltaApplyJobRun(JobRun):
                 modified_pk=modified_pk,
             )
 
+    def after_docker_exception(self) -> None:
+        Delta.objects.filter(
+            id__in=self.delta_ids,
+        ).update(last_status=Delta.Status.ERROR)
+
+        ApplyJobDelta.objects.filter(
+            apply_job_id=self.job_id,
+            delta_id__in=self.delta_ids,
+        ).update(
+            status=Delta.Status.ERROR,
+        )
+
 
 class ProcessProjectfileJobRun(JobRun):
     job_class = ProcessProjectfileJob
@@ -322,7 +357,7 @@ class ProcessProjectfileJobRun(JobRun):
         "%(project__project_filename)s",
     ]
 
-    def after_docker(self) -> None:
+    def after_docker_run(self) -> None:
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         project = self.job.project
 
