@@ -13,6 +13,7 @@ import qfieldcloud.core.utils2.storage
 import requests
 from django.db import transaction
 from django.forms.models import model_to_dict
+from django.utils import timezone
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -90,6 +91,7 @@ class JobRun:
 
         try:
             self.job.status = Job.Status.STARTED
+            self.job.started_at = timezone.now()
             self.job.save()
 
             self.before_docker()
@@ -127,6 +129,7 @@ class JobRun:
 
             self.job.output = output.decode("utf-8")
             self.job.feedback = feedback
+            self.job.finished_at = timezone.now()
 
             if exit_code != 0 or feedback.get("error") is not None:
                 self.job.status = Job.Status.FAILED
@@ -154,6 +157,7 @@ class JobRun:
             try:
                 self.job.status = Job.Status.FAILED
                 self.job.feedback = feedback
+                self.job.finished_at = timezone.now()
                 self.job.save()
             except Exception as err:
                 logger.error("Failed to handle exception and update the job status")
