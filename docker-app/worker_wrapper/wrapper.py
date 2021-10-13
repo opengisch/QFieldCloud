@@ -86,6 +86,9 @@ class JobRun:
     def after_docker_run(self) -> None:
         pass
 
+    def after_docker_exception(self) -> None:
+        pass
+
     def run(self):
         feedback = {}
 
@@ -133,6 +136,15 @@ class JobRun:
 
             if exit_code != 0 or feedback.get("error") is not None:
                 self.job.status = Job.Status.FAILED
+
+                try:
+                    self.after_docker_exception()
+                except Exception as err:
+                    logger.error(
+                        "Failed to run the `after_docker_exception` handler.",
+                        exc_info=err,
+                    )
+
                 self.job.save()
                 return
 
@@ -158,6 +170,15 @@ class JobRun:
                 self.job.status = Job.Status.FAILED
                 self.job.feedback = feedback
                 self.job.finished_at = timezone.now()
+
+                try:
+                    self.after_docker_exception()
+                except Exception as err:
+                    logger.error(
+                        "Failed to run the `after_docker_exception` handler.",
+                        exc_info=err,
+                    )
+
                 self.job.save()
             except Exception as err:
                 logger.error("Failed to handle exception and update the job status")
@@ -268,10 +289,11 @@ class DeltaApplyJobRun(JobRun):
             )
 
             self.job.deltas_to_apply.add(*deltas)
+            self.delta_ids = [d.id for d in deltas]
 
             ApplyJobDelta.objects.filter(
                 apply_job_id=self.job_id,
-                delta_id__in=[d.id for d in deltas],
+                delta_id__in=self.delta_ids,
             ).update(status=Delta.Status.STARTED)
 
             deltafile_contents = self._prepare_deltas(deltas)
@@ -312,6 +334,18 @@ class DeltaApplyJobRun(JobRun):
                 feedback=feedback,
                 modified_pk=modified_pk,
             )
+
+    def after_docker_exception(self) -> None:
+        Delta.objects.filter(
+            id__in=self.delta_ids,
+        ).update(last_status=Delta.Status.ERROR)
+
+        ApplyJobDelta.objects.filter(
+            apply_job_id=self.job_id,
+            delta_id__in=self.delta_ids,
+        ).update(
+            status=Delta.Status.ERROR,
+        )
 
 
 class ProcessProjectfileJobRun(JobRun):
