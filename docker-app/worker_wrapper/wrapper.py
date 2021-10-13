@@ -181,8 +181,9 @@ class JobRun:
 
                 self.job.save()
             except Exception as err:
-                logger.error("Failed to handle exception and update the job status")
-                logger.exception(err, exc_info=err)
+                logger.error(
+                    "Failed to handle exception and update the job status", exc_info=err
+                )
 
     def _run_docker(
         self, command: List[str], volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
