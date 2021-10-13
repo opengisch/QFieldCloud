@@ -21,4 +21,4 @@ redis==3.5.3
 JSON-log-formatter>=0.3.0<0.4.0
 docker>=4.2,<4.3
 fiona>=1.8.20<2.0.0
-mkdocs==1.2.2
+mkdocs>=1.2.3
