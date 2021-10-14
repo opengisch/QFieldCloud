@@ -142,7 +142,7 @@ class MemberTeamInline(admin.TabularInline):
 
 class UserAccountInline(admin.StackedInline):
     model = UserAccount
-    extra = 0
+    extra = 1
 
     def has_add_permission(self, request, obj):
         if obj is None:
