@@ -61,6 +61,7 @@ def format_pre_json(value):
 
 class GeodbInline(admin.TabularInline):
     model = Geodb
+    extra = 0
 
     def has_add_permission(self, request, obj):
         return False
