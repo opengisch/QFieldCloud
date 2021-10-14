@@ -661,6 +661,11 @@ class OrganizationAdmin(admin.ModelAdmin):
         ProjectInline,
         TeamInline,
     )
+    fields = (
+        "username",
+        "email",
+        "organization_owner",
+    )
     list_display = (
         "username",
         "email",
