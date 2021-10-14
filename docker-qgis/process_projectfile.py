@@ -1,7 +1,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 from xml.etree import ElementTree
 
 from qfieldcloud.qgis.utils import (
@@ -76,6 +76,47 @@ def load_project_file(project_filename: Path) -> QgsProject:
         raise InvalidXmlFileException(error=project.error())
 
     return project
+
+
+def extract_project_details(project: QgsProject) -> Dict[str, str]:
+    """Extract project details"""
+    logging.info("Extract project details...")
+
+    map_settings = QgsMapSettings()
+    details = {}
+
+    def on_project_read(doc):
+        r, _success = project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
+        g, _success = project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
+        b, _success = project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
+        background_color = QColor(r, g, b)
+        map_settings.setBackgroundColor(background_color)
+
+        details["background_color"] = background_color.name()
+
+        nodes = doc.elementsByTagName("mapcanvas")
+
+        for i in range(nodes.size()):
+            node = nodes.item(i)
+            element = node.toElement()
+            if (
+                element.hasAttribute("name")
+                and element.attribute("name") == "theMapCanvas"
+            ):
+                map_settings.readXml(node)
+
+        map_settings.setRotation(0)
+        map_settings.setOutputSize(QSize(1024, 768))
+
+        details["extent"] = map_settings.extent().asWktPolygon()
+
+    project.readProject.connect(on_project_read)
+    project.read(project.fileName())
+
+    details["crs"] = project.crs().authid()
+    details["project_name"] = project.title()
+
+    return details
 
 
 def check_layer_validity(project: QgsProject) -> List:

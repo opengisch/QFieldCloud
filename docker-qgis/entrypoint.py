@@ -388,6 +388,13 @@ def cmd_process_projectfile(args):
             public_returns=["project"],
         ),
         Step(
+            name="Project Details",
+            arg_names=["project"],
+            method=qfieldcloud.qgis.process_projectfile.extract_project_details,
+            return_names=["project_details"],
+            output_names=["project_details"],
+        ),
+        Step(
             name="Layer Validity Check",
             arg_names=["project"],
             method=qfieldcloud.qgis.process_projectfile.check_layer_validity,

@@ -773,6 +773,7 @@ class Project(models.Model):
 
     description = models.TextField(blank=True)
     project_filename = models.TextField(blank=True, null=True)
+    project_details = models.JSONField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
         help_text=_(
