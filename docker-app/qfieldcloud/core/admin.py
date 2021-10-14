@@ -218,6 +218,22 @@ class UserAdmin(admin.ModelAdmin):
 
     search_fields = ("username__icontains", "owner__username__iexact")
 
+    fields = (
+        "username",
+        "password",
+        "email",
+        "first_name",
+        "last_name",
+        "remaining_invitations",
+        "date_joined",
+        "last_login",
+        "is_superuser",
+        "is_staff",
+        "is_active",
+        "has_newsletter_subscription",
+        "has_accepted_tos",
+    )
+
     inlines = (
         UserAccountInline,
         GeodbInline,
