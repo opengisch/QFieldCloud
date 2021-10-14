@@ -13,8 +13,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
-from qgis.core import Qgis, QgsApplication, QgsMapLayer, QgsProviderRegistry
-from qgis.PyQt import QtCore
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsMapLayer,
+    QgsMapSettings,
+    QgsProject,
+    QgsProviderRegistry,
+)
+from qgis.PyQt import QtCore, QtGui
 
 qgs_stderr_logger = logging.getLogger("QGIS_STDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
@@ -227,6 +234,45 @@ def get_layer_filename(layer: QgsMapLayer) -> Optional[str]:
             return decoded["path"]
 
     return None
+
+
+def extract_project_details(project: QgsProject) -> Dict[str, str]:
+    """Extract project details"""
+    map_settings = QgsMapSettings()
+    details = {}
+
+    def on_project_read(doc):
+        r, _success = project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
+        g, _success = project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
+        b, _success = project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
+        background_color = QtGui.QColor(r, g, b)
+        map_settings.setBackgroundColor(background_color)
+
+        details["background_color"] = background_color.name()
+
+        nodes = doc.elementsByTagName("mapcanvas")
+
+        for i in range(nodes.size()):
+            node = nodes.item(i)
+            element = node.toElement()
+            if (
+                element.hasAttribute("name")
+                and element.attribute("name") == "theMapCanvas"
+            ):
+                map_settings.readXml(node)
+
+        map_settings.setRotation(0)
+        map_settings.setOutputSize(QtCore.QSize(1024, 768))
+
+        details["extent"] = map_settings.extent().asWktPolygon()
+
+    project.readProject.connect(on_project_read)
+    project.read(project.fileName())
+
+    details["crs"] = project.crs().authid()
+    details["project_name"] = project.title()
+
+    return details
 
 
 def run_task(

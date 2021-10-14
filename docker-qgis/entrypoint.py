@@ -201,8 +201,34 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
             if layer_extent.isNull() or not layer_extent.isFinite():
                 continue
 
-            transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
-            vl_extent.combineExtentWith(transform.transformBoundingBox(layer_extent))
+            try:
+                transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
+                vl_extent.combineExtentWith(
+                    transform.transformBoundingBox(layer_extent)
+                )
+            except Exception as err:
+                logger.error(
+                    "Failed to transform the bbox for layer {} from {} to {} CRS.".format(
+                        layer.name(), layer.crs(), project.crs()
+                    ),
+                    exc_info=err,
+                )
+
+        if vl_extent.isNull() or not vl_extent.isFinite():
+            logger.info("Failed to obtain the project extent from project layers.")
+
+            try:
+                vl_extent = qfieldcloud.qgis.utils.extract_project_details(project)[
+                    "extent"
+                ]
+            except Exception as err:
+                logger.error(
+                    "Failed to get the project extent from the current map canvas.",
+                    exc_info=err,
+                )
+
+        if vl_extent.isNull() or not vl_extent.isFinite():
+            raise Exception("Failed to obtain the project extent.")
 
         vl_extent = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs().authid()
