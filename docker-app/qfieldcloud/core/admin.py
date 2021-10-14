@@ -261,6 +261,11 @@ class ProjectAdmin(admin.ModelAdmin):
     fields = ("name", "description", "is_public", "owner", "storage_size")
     readonly_fields = ("storage_size",)
     inlines = (ProjectCollaboratorInline,)
+    search_fields = (
+        "id",
+        "name__icontains",
+        "owner__username__iexact",
+    )
 
 
 class DeltaInline(admin.TabularInline):
