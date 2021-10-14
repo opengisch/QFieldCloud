@@ -215,6 +215,19 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
                 )
 
         if vl_extent.isNull() or not vl_extent.isFinite():
+            logger.info("Failed to obtain the project extent from project layers.")
+
+            try:
+                vl_extent = qfieldcloud.qgis.utils.extract_project_details(project)[
+                    "extent"
+                ]
+            except Exception as err:
+                logger.error(
+                    "Failed to get the project extent from the current map canvas.",
+                    exc_info=err,
+                )
+
+        if vl_extent.isNull() or not vl_extent.isFinite():
             raise Exception("Failed to obtain the project extent.")
 
         vl_extent = vl_extent.asWktPolygon()
