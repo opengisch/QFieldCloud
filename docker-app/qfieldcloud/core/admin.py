@@ -701,9 +701,19 @@ class TeamAdmin(admin.ModelAdmin):
         "date_joined",
     )
 
+    fields = (
+        "username",
+        "team_organization",
+    )
+
     search_fields = ("username__icontains", "team_organization__username__iexact")
 
     list_filter = ("date_joined",)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.username.startswith("@"):
+            obj.username = f"@{obj.team_organization.username}/{obj.username}"
+        obj.save()
 
 
 admin.site.register(User, UserAdmin)
