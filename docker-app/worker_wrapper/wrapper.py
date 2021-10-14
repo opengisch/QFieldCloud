@@ -100,8 +100,8 @@ class JobRun:
             self.before_docker_run()
 
             command = self.get_command()
-            volumes = {}
-            volumes[str(self.shared_tempdir)] = {"bind": "/io/", "mode": "rw"}
+            volumes = []
+            volumes.append(f"{str(self.shared_tempdir)}:/io/:rw")
 
             exit_code, output = self._run_docker(
                 command,
@@ -186,17 +186,22 @@ class JobRun:
                 )
 
     def _run_docker(
-        self, command: List[str], volumes: Dict[str, str], run_opts: Dict[str, Any] = {}
+        self, command: List[str], volumes: List[str], run_opts: Dict[str, Any] = {}
     ) -> Tuple[int, bytes]:
         QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+        TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
+            "TRANSFORMATION_GRIDS_VOLUME_NAME", None
+        )
 
         assert QGIS_CONTAINER_NAME
         assert QFIELDCLOUD_HOST
+        assert TRANSFORMATION_GRIDS_VOLUME_NAME
 
         client = docker.from_env()
 
         logger.info(f"Execute: {' '.join(command)}")
+        volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
 
         container = client.containers.run(
             QGIS_CONTAINER_NAME,
@@ -209,6 +214,7 @@ class JobRun:
                 "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
                 "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
                 "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+                "PROJ_DOWNLOAD_DIR": "/transformation_grids",
                 "QT_QPA_PLATFORM": "offscreen",
             },
             volumes=volumes,

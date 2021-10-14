@@ -71,6 +71,7 @@ services:
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
+      TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
     depends_on:
       - db
       - redis
@@ -123,6 +124,7 @@ services:
       # TODO : how can we reuse static/media volumes from default-django to keep things DRY (yaml syntax expert needed)
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
+      - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
       - ${LOG_DIRECTORY}:/log
       - ${TMP_DIRECTORY}:/tmp
@@ -140,8 +142,17 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
+  mirror_transformation_grids:
+    image: k3rnelpan1c/alpine-wget:latest
+    command: |
+      wget --mirror https://cdn.proj.org/ -P /transformation_grids --no-host-directories
+      chmod a+r /transformation_grids/*
+    volumes:
+      - transformation_grids:/transformation_grids
+
 volumes:
   postgres_data:
   static_volume:
   media_volume:
   caddy_data:
+  transformation_grids:
