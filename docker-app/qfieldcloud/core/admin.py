@@ -61,6 +61,7 @@ def format_pre_json(value):
 
 class GeodbInline(admin.TabularInline):
     model = Geodb
+    extra = 0
 
     def has_add_permission(self, request, obj):
         return False
@@ -141,7 +142,7 @@ class MemberTeamInline(admin.TabularInline):
 
 class UserAccountInline(admin.StackedInline):
     model = UserAccount
-    extra = 0
+    extra = 1
 
     def has_add_permission(self, request, obj):
         if obj is None:
@@ -217,6 +218,22 @@ class UserAdmin(admin.ModelAdmin):
 
     search_fields = ("username__icontains", "owner__username__iexact")
 
+    fields = (
+        "username",
+        "password",
+        "email",
+        "first_name",
+        "last_name",
+        "remaining_invitations",
+        "date_joined",
+        "last_login",
+        "is_superuser",
+        "is_staff",
+        "is_active",
+        "has_newsletter_subscription",
+        "has_accepted_tos",
+    )
+
     inlines = (
         UserAccountInline,
         GeodbInline,
@@ -260,6 +277,11 @@ class ProjectAdmin(admin.ModelAdmin):
     fields = ("name", "description", "is_public", "owner", "storage_size")
     readonly_fields = ("storage_size",)
     inlines = (ProjectCollaboratorInline,)
+    search_fields = (
+        "id",
+        "name__icontains",
+        "owner__username__iexact",
+    )
 
 
 class DeltaInline(admin.TabularInline):
@@ -655,6 +677,11 @@ class OrganizationAdmin(admin.ModelAdmin):
         ProjectInline,
         TeamInline,
     )
+    fields = (
+        "username",
+        "email",
+        "organization_owner",
+    )
     list_display = (
         "username",
         "email",
@@ -690,9 +717,19 @@ class TeamAdmin(admin.ModelAdmin):
         "date_joined",
     )
 
+    fields = (
+        "username",
+        "team_organization",
+    )
+
     search_fields = ("username__icontains", "team_organization__username__iexact")
 
     list_filter = ("date_joined",)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.username.startswith("@"):
+            obj.username = f"@{obj.team_organization.username}/{obj.username}"
+        obj.save()
 
 
 admin.site.register(User, UserAdmin)
