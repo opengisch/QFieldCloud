@@ -50,7 +50,7 @@ class AuthToken(models.Model):
 
         return AuthToken.ClientType.UNKNOWN
 
-    single_token_clients = [ClientType.QFIELD]
+    single_token_clients = [ClientType.QFIELD, ClientType.QFIELDSYNC]
 
     user = models.ForeignKey(
         get_user_model(),
