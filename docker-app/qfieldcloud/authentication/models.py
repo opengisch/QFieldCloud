@@ -40,10 +40,10 @@ class AuthToken(models.Model):
         if user_agent.startswith("cli|"):
             return AuthToken.ClientType.CLI
 
-        if re.match(r" QGIS/[34]\d{4}$", user_agent):
+        if re.search(r" QGIS/[34]\d{4}$", user_agent):
             return AuthToken.ClientType.QFIELDSYNC
 
-        if re.match(
+        if re.search(
             r"Mozilla/5.0 .+ AppleWebKit/\d+.\d+ (KHTML, like Gecko)", user_agent
         ):
             return AuthToken.ClientType.BROWSER
