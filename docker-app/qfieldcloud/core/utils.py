@@ -132,11 +132,11 @@ def _get_sha256_memory_file(
 def _get_sha256_file(file: IO) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.sha256()
-    with file as f:
-        buf = f.read(BLOCKSIZE)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = f.read(BLOCKSIZE)
+    buf = file.read(BLOCKSIZE)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = file.read(BLOCKSIZE)
+    file.seek(0)
     return hasher.hexdigest()
 
 
