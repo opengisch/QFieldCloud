@@ -21,6 +21,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils import get_s3_object_url
+from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
@@ -333,6 +334,7 @@ class UserAccount(models.Model):
     twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
     avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
+    timezone = TimeZoneField(default="Europe/Zurich", choices_display="WITH_GMT_OFFSET")
 
     @property
     def avatar_url(self):
