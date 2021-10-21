@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
+    "timezone_field",
     # Local
     "qfieldcloud.core",
     "qfieldcloud.authentication",
@@ -81,6 +82,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
+    "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
 ]
 
 CRON_CLASSES = [
@@ -150,7 +152,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Zurich"
 
 USE_I18N = True
 
