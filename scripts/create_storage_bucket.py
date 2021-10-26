@@ -12,7 +12,8 @@ def load_env_file():
         for line in f:
             if line.strip():
                 splitted = line.rstrip().split("=", maxsplit=1)
-                environment[splitted[0]] = splitted[1]
+                if len(splitted) == 2:
+                    environment[splitted[0]] = splitted[1]
 
     return environment
 
