@@ -2,6 +2,7 @@ import os
 import secrets
 import string
 import uuid
+from datetime import timedelta
 from enum import Enum
 from typing import Any, Iterable, Type
 
@@ -181,6 +182,57 @@ class UserQueryset(models.QuerySet):
 
         return qs
 
+    def for_team(self, team: "Team"):
+        permissions_config = [
+            # Direct ownership of the organization
+            (
+                Exists(
+                    Team.objects.filter(
+                        pk=team.pk,
+                        team_organization__organization_owner=OuterRef("pk"),
+                    )
+                ),
+                V(TeamMember.Roles.ADMIN),
+            ),
+            # Team membership
+            (
+                Exists(
+                    TeamMember.objects.filter(
+                        team=team,
+                        member=OuterRef("pk"),
+                    )
+                ),
+                V(TeamMember.Roles.MEMBER),
+            ),
+        ]
+
+        qs = self.annotate(
+            membership_role=Case(
+                *[When(perm[0], perm[1]) for perm in permissions_config],
+                default=None,
+                output_field=models.CharField(),
+            ),
+        )
+        qs = qs.exclude(membership_role__isnull=True)
+
+        return qs
+
+    def for_entity(self, entity: "User"):
+        """Returns all users grouped in given entity (any type)
+
+        Internally calls for_team or for_organization depending on the entity."""
+
+        if entity.user_type == User.TYPE_USER:
+            return self.filter(pk=entity.pk)
+
+        if entity.user_type == User.TYPE_TEAM:
+            return self.for_team(entity)
+
+        if entity.user_type == User.TYPE_ORGANIZATION:
+            return self.for_organization(entity)
+
+        raise RuntimeError(f"Unsupported entity : {entity}")
+
 
 class QFieldCloudUserManager(UserManager):
     def get_queryset(self):
@@ -191,6 +243,12 @@ class QFieldCloudUserManager(UserManager):
 
     def for_organization(self, organization):
         return self.get_queryset().for_organization(organization)
+
+    def for_team(self, entity):
+        return self.get_queryset().for_team(entity)
+
+    def for_entity(self, entity):
+        return self.get_queryset().for_entity(entity)
 
 
 # TODO change types to Enum
@@ -317,6 +375,19 @@ class UserAccount(models.Model):
         (TYPE_PRO, "pro"),
     )
 
+    NOTIFS_IMMEDIATELY = timedelta(minutes=0)
+    NOTIFS_HOURLY = timedelta(hours=1)
+    NOTIFS_DAILY = timedelta(days=1)
+    NOTIFS_WEEKLY = timedelta(weeks=1)
+    NOTIFS_DISABLED = None
+    NOTIFS_CHOICES = (
+        (NOTIFS_IMMEDIATELY, _("Immediately")),
+        (NOTIFS_HOURLY, _("Hourly")),
+        (NOTIFS_DAILY, _("Daily")),
+        (NOTIFS_WEEKLY, _("Weekly")),
+        (NOTIFS_DISABLED, _("Disabled")),
+    )
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     account_type = models.PositiveSmallIntegerField(
         choices=TYPE_CHOICES, default=TYPE_COMMUNITY
@@ -335,6 +406,14 @@ class UserAccount(models.Model):
     is_email_public = models.BooleanField(default=False)
     avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
     timezone = TimeZoneField(default="Europe/Zurich", choices_display="WITH_GMT_OFFSET")
+
+    notifs_frequency = models.DurationField(
+        verbose_name=_("Email frequency for notifications"),
+        choices=NOTIFS_CHOICES,
+        default=NOTIFS_DISABLED,
+        null=True,
+        blank=True,
+    )
 
     @property
     def avatar_url(self):
@@ -593,6 +672,10 @@ class Team(User):
 
 
 class TeamMember(models.Model):
+    class Roles(models.TextChoices):
+        ADMIN = "admin", _("Admin")
+        MEMBER = "member", _("Member")
+
     class Meta:
         constraints = [
             models.UniqueConstraint(

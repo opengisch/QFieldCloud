@@ -31,7 +31,6 @@ class QfcTestCase(APITestCase):
         )
 
     def tearDown(self):
-        User.objects.all().delete()
         # Remove credentials
         self.client.credentials()
 

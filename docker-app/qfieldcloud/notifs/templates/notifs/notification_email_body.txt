@@ -1,0 +1,11 @@
+Here is what happened recently on QFieldCloud:
+
+{% block body %}
+{% for notif in notifs %}
+- {{notif}}
+{% endfor %}
+{% endblock body %}
+
+{% block footer %}
+{% comment %}You should include an unsubscribe link here in your overrides. You can use {{hostname}} and {{username}}.{% endcomment %}
+{% endblock footer %}

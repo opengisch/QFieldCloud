@@ -69,7 +69,10 @@ INSTALLED_APPS = [
     "timezone_field",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.notifs",
     "qfieldcloud.authentication",
+    # 3rd party - keep at bottom to allow overrides
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -81,11 +84,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_currentuser.middleware.ThreadLocalUserMiddleware",
     "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
 ]
 
 CRON_CLASSES = [
+    "qfieldcloud.notifs.cron.SendNotificationsJob",
     # "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
     "qfieldcloud.core.cron.ResendFailedInvitationsJob",
 ]
