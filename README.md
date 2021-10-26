@@ -37,7 +37,7 @@ To build development images and run the containers:
     docker-compose up -d --build
 
 It will read `docker-compose.yml` and `docker-compose.override.yml`
-and start a django built-in server at `http://localhost:8000`.
+and start a django built-in server at `http://localhost:80`.
 
 Run the django database migrations.
 
