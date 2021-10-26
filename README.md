@@ -11,35 +11,35 @@ If you're interested in quickly getting up and running, we suggest subscribing t
 
 ## Documentation
 
-System documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org)
+System documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org).
 
-Documentation about how QFieldCloud file's storage works is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/storage.org)
+Documentation about how QFieldCloud file's storage works is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/storage.org).
 
-Permissions documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/permissions.org)
+Permissions documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/permissions.org).
 
 
 ## Development
 
-
 ### Launch a local instance
 
 Copy the `.env.example` into `.env` file and configure it to your
-desire with a good editor
+desire with a good editor:
 
     cp .env.example .env
     emacs .env
 
-For a local development instance you don't need to configure
-`supervisord.conf` configuration files.
+Link or copy `docker-compose.local.yaml` into `docker-compose.override.yaml`:
+
+    ln -s docker-compose.local.yaml docker-compose.override.yaml
 
 To build development images and run the containers:
 
     docker-compose up -d --build
 
 It will read `docker-compose.yml` and `docker-compose.override.yml`
-and start a django built-in server at `http://localhost:8000`
+and start a django built-in server at `http://localhost:8000`.
 
-Run the django database migrations
+Run the django database migrations.
 
     docker-compose exec app python manage.py migrate
 
@@ -105,11 +105,11 @@ Run and build the docker containers
     docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
 
     # prod server
-    docker-compose -f docker-compose.yml up -d --build
+    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
 
 Run the django database migrations
 
-    docker-compose -f docker-compose.yml exec app python manage.py migrate
+    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml exec app python manage.py migrate
 
 
 ### Infrastructure
@@ -122,7 +122,7 @@ Based on this example
 
 Docker logs are managed by docker in the default way. To read the logs:
 
-    docker-compose -f docker-compose.yml logs
+    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml logs
 
 
 ### Geodb
