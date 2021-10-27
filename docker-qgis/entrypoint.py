@@ -262,6 +262,7 @@ def cmd_export_project(args):
 
     steps: List[Step] = [
         Step(
+            id="download_project_directory",
             name="Download Project Directory",
             arguments={
                 "tmpdir": tmpdir,
@@ -273,6 +274,7 @@ def cmd_export_project(args):
             public_returns=["tmp_project_dir"],
         ),
         Step(
+            id="export_project",
             name="Export Project",
             arguments={
                 "project_filename": tmpdir.joinpath("files", args.project_file),
@@ -284,6 +286,7 @@ def cmd_export_project(args):
             method=_call_qfieldsync_exporter,
         ),
         Step(
+            id="upload_exported_project",
             name="Upload Exported Project",
             arguments={
                 "project_id": args.projectid,
@@ -306,6 +309,7 @@ def _apply_delta(args):
     files_dir = tmpdir.joinpath("files")
     steps: List[Step] = [
         Step(
+            id="download_project_directory",
             name="Download Project Directory",
             arguments={
                 "project_id": args.projectid,
@@ -317,6 +321,7 @@ def _apply_delta(args):
             public_returns=["tmp_project_dir"],
         ),
         Step(
+            id="apply_deltas",
             name="Apply Deltas",
             arguments={
                 "project_filename": tmpdir.joinpath("files", args.project_file),
@@ -335,6 +340,7 @@ def _apply_delta(args):
             output_names=["delta_feedback"],
         ),
         Step(
+            id="upload_exported_project",
             name="Upload Exported Project",
             arguments={
                 "project_id": args.projectid,
@@ -360,6 +366,7 @@ def cmd_process_projectfile(args):
     project_filename = tmpdir.joinpath("files", project_file)
     steps: List[Step] = [
         Step(
+            id="download_project_directory",
             name="Download Project Directory",
             arguments={
                 "project_id": project_id,
@@ -371,6 +378,7 @@ def cmd_process_projectfile(args):
             public_returns=["tmp_project_dir"],
         ),
         Step(
+            id="project_validity_check",
             name="Project Validity Check",
             arguments={
                 "project_filename": project_filename,
@@ -379,6 +387,7 @@ def cmd_process_projectfile(args):
             method=qfieldcloud.qgis.process_projectfile.check_valid_project_file,
         ),
         Step(
+            id="opening_check",
             name="Opening Check",
             arguments={
                 "project_filename": project_filename,
@@ -389,6 +398,7 @@ def cmd_process_projectfile(args):
             public_returns=["project"],
         ),
         Step(
+            id="project_details",
             name="Project Details",
             arg_names=["project"],
             method=qfieldcloud.qgis.process_projectfile.extract_project_details,
@@ -396,6 +406,7 @@ def cmd_process_projectfile(args):
             output_names=["project_details"],
         ),
         Step(
+            id="layer_validity_check",
             name="Layer Validity Check",
             arg_names=["project"],
             method=qfieldcloud.qgis.process_projectfile.check_layer_validity,
@@ -403,6 +414,7 @@ def cmd_process_projectfile(args):
             output_names=["layers_summary"],
         ),
         Step(
+            id="generate_thumbnail_image",
             name="Generate Thumbnail Image",
             arguments={
                 "thumbnail_filename": Path("/io/thumbnail.png"),
