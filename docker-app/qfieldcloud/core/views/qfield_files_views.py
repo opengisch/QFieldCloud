@@ -6,12 +6,12 @@ from django.http.response import HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, serializers, utils
-from qfieldcloud.core.models import ExportJob, Project
+from qfieldcloud.core.models import PackageJob, Project
 from rest_framework import permissions, views
 from rest_framework.response import Response
 
 
-class ExportViewPermissions(permissions.BasePermission):
+class PackageViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         projectid = permissions_utils.get_param_from_request(request, "projectid")
         try:
@@ -25,20 +25,20 @@ class ExportViewPermissions(permissions.BasePermission):
 @method_decorator(
     name="post",
     decorator=swagger_auto_schema(
-        operation_description="Launch QField export project",
-        operation_id="Launch qfield export",
+        operation_description="Launch QField packaging project",
+        operation_id="Launch qfield packaging",
     ),
 )
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
-        operation_description="Get QField export status",
-        operation_id="Get qfield export status",
+        operation_description="Get QField packaging status",
+        operation_id="Get qfield packaging status",
     ),
 )
-class ExportView(views.APIView):
+class PackageView(views.APIView):
 
-    permission_classes = [permissions.IsAuthenticated, ExportViewPermissions]
+    permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def post(self, request, projectid):
 
@@ -47,22 +47,30 @@ class ExportView(views.APIView):
         if not project_obj.project_filename:
             raise exceptions.NoQGISProjectError()
 
-        # Check if active export job already exists
+        # Check if active packaging job already exists
         # TODO: !!!!!!!!!!!! cache results for some minutes
         query = Q(project=project_obj) & (
-            Q(status=ExportJob.Status.PENDING)
-            | Q(status=ExportJob.Status.QUEUED)
-            | Q(status=ExportJob.Status.STARTED)
+            Q(status=PackageJob.Status.PENDING)
+            | Q(status=PackageJob.Status.QUEUED)
+            | Q(status=PackageJob.Status.STARTED)
         )
 
         # NOTE uncomment to enforce job creation
-        # ExportJob.objects.filter(query).delete()
+        # PackageJob.objects.filter(query).delete()
 
-        if ExportJob.objects.filter(query).exists():
-            serializer = serializers.ExportJobSerializer(ExportJob.objects.get(query))
+        if not project_obj.needs_repackaging:
+            export_job = PackageJob.objects.filter(
+                status=PackageJob.Status.FINISHED
+            ).latest("started_at")
+            if export_job:
+                serializer = serializers.ExportJobSerializer(export_job)
+                return serializers.ExportJobSerializer(serializer.data)
+
+        if PackageJob.objects.filter(query).exists():
+            serializer = serializers.ExportJobSerializer(PackageJob.objects.get(query))
             return Response(serializer.data)
 
-        export_job = ExportJob.objects.create(
+        export_job = PackageJob.objects.create(
             project=project_obj, created_by=self.request.user
         )
 
@@ -75,7 +83,7 @@ class ExportView(views.APIView):
         project_obj = Project.objects.get(id=projectid)
 
         export_job = (
-            ExportJob.objects.filter(project=project_obj).order_by("updated_at").last()
+            PackageJob.objects.filter(project=project_obj).order_by("updated_at").last()
         )
 
         serializer = serializers.ExportJobSerializer(export_job)
@@ -91,23 +99,23 @@ class ExportView(views.APIView):
 )
 class ListFilesView(views.APIView):
 
-    permission_classes = [permissions.IsAuthenticated, ExportViewPermissions]
+    permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, projectid):
 
         project_obj = Project.objects.get(id=projectid)
 
         # Check if the project was exported at least once
-        if not ExportJob.objects.filter(
-            project=project_obj, status=ExportJob.Status.FINISHED
+        if not PackageJob.objects.filter(
+            project=project_obj, status=PackageJob.Status.FINISHED
         ):
             raise exceptions.InvalidJobError(
                 "Project files have not been exported for the provided project id"
             )
 
         export_job = (
-            ExportJob.objects.filter(
-                project=project_obj, status=ExportJob.Status.FINISHED
+            PackageJob.objects.filter(
+                project=project_obj, status=PackageJob.Status.FINISHED
             )
             .order_by("updated_at")
             .last()
@@ -167,16 +175,16 @@ class ListFilesView(views.APIView):
 )
 class DownloadFileView(views.APIView):
 
-    permission_classes = [permissions.IsAuthenticated, ExportViewPermissions]
+    permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, projectid, filename):
 
         project_obj = Project.objects.get(id=projectid)
 
         # Check if the project was exported at least once
-        if not ExportJob.objects.filter(
+        if not PackageJob.objects.filter(
             project=project_obj,
-            status=ExportJob.Status.FINISHED,
+            status=PackageJob.Status.FINISHED,
         ):
             raise exceptions.InvalidJobError(
                 "Project files have not been exported for the provided project id"

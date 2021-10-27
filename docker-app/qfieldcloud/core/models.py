@@ -20,6 +20,7 @@ from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
+from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils import get_s3_object_url
 from timezone_field import TimeZoneField
@@ -866,6 +867,11 @@ class Project(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
+    data_last_updated_at = models.DateTimeField(blank=True, null=True)
+    data_last_packaged_at = models.DateTimeField(blank=True, null=True)
+
     overwrite_conflicts = models.BooleanField(
         default=True,
         help_text=_(
@@ -914,6 +920,40 @@ class Project(models.Model):
     @property
     def users(self):
         return User.objects.for_project(self)
+
+    @property
+    def has_online_vector_data(self) -> bool:
+        if not self.project_details:
+            return False
+
+        layers_by_id = self.project_details.get("layers_by_id", {})
+        has_online_vector_layers = False
+
+        for layer_data in layers_by_id.values():
+            if layer_data.get("type_name") == "VectorLayer" and not layer_data.get(
+                "filename", ""
+            ):
+                has_online_vector_layers = True
+                break
+
+        return has_online_vector_layers
+
+    @property
+    def can_repackage(self) -> bool:
+        return True
+
+    @property
+    def needs_repackaging(self) -> bool:
+        if (
+            not self.has_online_vector_data
+            and self.data_last_updated_at
+            and self.data_last_packaged_at
+        ):
+            # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
+            return self.data_last_packaged_at > self.data_last_updated_at
+        else:
+            # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
+            return True
 
 
 @receiver(pre_delete, sender=Project)
@@ -1057,8 +1097,11 @@ class Delta(models.Model):
 
 
 class Job(models.Model):
+
+    objects = InheritanceManager()
+
     class Type(models.TextChoices):
-        EXPORT = "export", _("Export")
+        PACKAGE = "package", _("Package")
         DELTA_APPLY = "delta_apply", _("Delta Apply")
         PROCESS_PROJECTFILE = "process_projectfile", _("Process QGIS Project File")
 
@@ -1093,14 +1136,14 @@ class Job(models.Model):
         return str(self.id)[0:8]
 
 
-class ExportJob(Job):
+class PackageJob(Job):
     def save(self, *args, **kwargs):
-        self.type = self.Type.EXPORT
+        self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
 
     class Meta:
-        verbose_name = "Job: export"
-        verbose_name_plural = "Jobs: export"
+        verbose_name = "Job: package"
+        verbose_name_plural = "Jobs: package"
 
 
 class ProcessProjectfileJob(Job):

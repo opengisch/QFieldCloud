@@ -104,15 +104,15 @@ def _upload_project_directory(
     """Upload the files in the local_dir to the storage"""
 
     bucket = _get_s3_bucket()
-    # either "files" or "export"
+    # either "files" or "package"
     subdir = local_dir.parts[-1]
     prefix = "/".join(["projects", project_id, subdir])
 
     if should_delete:
-        # Remove existing export directory on the storage
+        # Remove existing package directory on the storage
         bucket.objects.filter(Prefix=prefix).delete()
 
-    # Loop recursively in the local export directory
+    # Loop recursively in the local package directory
     for elem in Path(local_dir).rglob("*.*"):
         # Don't upload .qgs~ and .qgz~ files
         if str(elem).endswith("~"):
@@ -142,8 +142,8 @@ def _upload_project_directory(
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
-def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
-    """Call the function of QFieldSync to export a project for QField"""
+def _call_qfieldsync_packager(project_filepath: Path, package_dir: Path) -> Dict:
+    """Call the function of QFieldSync to package a project for QField"""
 
     argvb = list(map(os.fsencode, [""]))
     qgis_app = QgsApplication(argvb, True)
@@ -237,7 +237,7 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project,
-        str(export_dir),
+        str(package_dir),
         vl_extent,
         vl_extent_crs,
         offline_editing,
@@ -255,10 +255,10 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
     return layer_checks
 
 
-def cmd_export_project(args):
+def cmd_package_project(args):
     tmpdir = Path(tempfile.mkdtemp())
-    exportdir = tmpdir.joinpath("export")
-    exportdir.mkdir()
+    packagedir = tmpdir.joinpath("export")
+    packagedir.mkdir()
 
     steps: List[Step] = [
         Step(
@@ -275,22 +275,22 @@ def cmd_export_project(args):
         ),
         Step(
             id="export_project",
-            name="Export Project",
+            name="Package Project",
             arguments={
                 "project_filename": tmpdir.joinpath("files", args.project_file),
-                "exportdir": exportdir,
+                "exportdir": packagedir,
             },
             arg_names=["project_filename", "exportdir"],
             return_names=["layer_checks"],
             output_names=["layer_checks"],
-            method=_call_qfieldsync_exporter,
+            method=_call_qfieldsync_packager,
         ),
         Step(
             id="upload_exported_project",
-            name="Upload Exported Project",
+            name="Upload Packaged Project",
             arguments={
                 "project_id": args.projectid,
-                "exportdir": exportdir,
+                "exportdir": packagedir,
                 "should_delete": True,
             },
             arg_names=["project_id", "exportdir", "should_delete"],
@@ -341,7 +341,7 @@ def _apply_delta(args):
         ),
         Step(
             id="upload_exported_project",
-            name="Upload Exported Project",
+            name="Upload Project",
             arguments={
                 "project_id": args.projectid,
                 "files_dir": files_dir,
@@ -435,10 +435,10 @@ if __name__ == "__main__":
 
     subparsers = parser.add_subparsers(dest="cmd")
 
-    parser_export = subparsers.add_parser("export", help="Export a project")
-    parser_export.add_argument("projectid", type=str, help="projectid")
-    parser_export.add_argument("project_file", type=str, help="QGIS project file path")
-    parser_export.set_defaults(func=cmd_export_project)
+    parser_package = subparsers.add_parser("package", help="Package a project")
+    parser_package.add_argument("projectid", type=str, help="projectid")
+    parser_package.add_argument("project_file", type=str, help="QGIS project file path")
+    parser_package.set_defaults(func=cmd_package_project)
 
     parser_delta = subparsers.add_parser("delta_apply", help="Apply deltafile")
     parser_delta.add_argument("projectid", type=str, help="projectid")

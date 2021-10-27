@@ -115,51 +115,51 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
 
     logging.info("Extracting layer and datasource details...")
 
-    has_invalid_layers = False
-    has_online_layers = False
-    layers_summary = []
+    ordered_layer_ids = []
+    layers_by_id = {}
 
     for layer in project.mapLayers().values():
         error = layer.error()
+        layer_id = layer.id()
         layer_source = LayerSource(layer)
-        layer_data = {
-            "id": layer.name(),
+        ordered_layer_ids.append(layer_id)
+        layers_by_id[layer_id] = {
+            "id": layer_id,
             "name": layer.name(),
             "is_valid": layer.isValid(),
             "datasource": layer.dataProvider().uri().uri()
             if layer.dataProvider()
             else None,
+            "type": layer.type(),
+            "type_name": layer.type().name,
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
             "filename": layer_source.filename,
             "provider_error_summary": None,
             "provider_error_message": None,
         }
-        layers_summary.append(layer_data)
 
-        if not layer_data["filename"]:
-            has_online_layers = True
-
-        if layer_data["is_valid"]:
+        if layers_by_id[layer_id]["is_valid"]:
             continue
 
-        has_invalid_layers = True
         data_provider = layer.dataProvider()
 
         if data_provider:
             data_provider_error = data_provider.error()
 
-            layer_data["provider_error_summary"] = (
+            layers_by_id[layer_id]["provider_error_summary"] = (
                 data_provider_error.summary()
                 if data_provider_error.messageList()
                 else ""
             )
-            layer_data["provider_error_message"] = data_provider_error.message()
+            layers_by_id[layer_id][
+                "provider_error_message"
+            ] = data_provider_error.message()
 
-            if not layer_data["provider_error_summary"]:
+            if not layers_by_id[layer_id]["provider_error_summary"]:
                 service = data_provider.uri().service()
                 if service:
-                    layer_data[
+                    layers_by_id[layer_id][
                         "provider_error_summary"
                     ] = f'Unable to connect to service "{service}"'
 
@@ -170,19 +170,20 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
                     else None
                 )
                 if host and (is_localhost(host, port) or has_ping(host)):
-                    layer_data[
+                    layers_by_id[layer_id][
                         "provider_error_summary"
                     ] = f'Unable to connect to host "{host}"'
 
             logging.info(
-                f'Layer "{layer.name()}" seems to be invalid: {layer_data["provider_error_summary"]}'
+                f'Layer "{layer.name()}" seems to be invalid: {layers_by_id[layer_id]["provider_error_summary"]}'
             )
         else:
-            layer_data["provider_error_summary"] = "No data provider available"
+            layers_by_id[layer_id][
+                "provider_error_summary"
+            ] = "No data provider available"
 
-    details["layers"] = layers_summary
-    details["has_online_layers"] = has_online_layers
-    details["has_invalid_layers"] = has_invalid_layers
+    details["layers_by_id"] = layers_by_id
+    details["ordered_layer_ids"] = ordered_layer_ids
 
     return details
 

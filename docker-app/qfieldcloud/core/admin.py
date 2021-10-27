@@ -16,10 +16,10 @@ from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
-    ExportJob,
     Geodb,
     Organization,
     OrganizationMember,
+    PackageJob,
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
@@ -487,7 +487,7 @@ class DeltaAdmin(admin.ModelAdmin):
         return super().response_change(request, delta)
 
 
-class ExportJobAdmin(admin.ModelAdmin):
+class PackageJobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "project__owner",
@@ -738,7 +738,7 @@ admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(ApplyJob, ApplyJobAdmin)
-admin.site.register(ExportJob, ExportJobAdmin)
+admin.site.register(PackageJob, PackageJobAdmin)
 admin.site.register(ProcessProjectfileJob, ProcessProjectfileJobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
 
