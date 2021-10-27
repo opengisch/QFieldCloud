@@ -406,14 +406,6 @@ def cmd_process_projectfile(args):
             output_names=["project_details"],
         ),
         Step(
-            id="layer_validity_check",
-            name="Layer Validity Check",
-            arg_names=["project"],
-            method=qfieldcloud.qgis.process_projectfile.check_layer_validity,
-            return_names=["layers_summary"],
-            output_names=["layers_summary"],
-        ),
-        Step(
             id="generate_thumbnail_image",
             name="Generate Thumbnail Image",
             arguments={
