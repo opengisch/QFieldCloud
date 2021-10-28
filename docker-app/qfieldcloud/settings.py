@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -33,6 +34,7 @@ DEBUG = int(os.environ.get("DEBUG", default=0))
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
 
 AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesBackend",
     # Needed to login by username in Django admin, regardless of `allauth`
     "django.contrib.auth.backends.ModelBackend",
     # `allauth` specific authentication methods, such as login by email
@@ -73,6 +75,7 @@ INSTALLED_APPS = [
     "qfieldcloud.authentication",
     # 3rd party - keep at bottom to allow overrides
     "notifications",
+    "axes",
 ]
 
 MIDDLEWARE = [
@@ -87,6 +90,7 @@ MIDDLEWARE = [
     "django_currentuser.middleware.ThreadLocalUserMiddleware",
     "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 CRON_CLASSES = [
@@ -243,6 +247,17 @@ ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_ADAPTER = "invitations.models.InvitationsAdapter"
 ACCOUNT_LOGOUT_ON_GET = True
 
+# Django axes configuration
+# https://django-axes.readthedocs.io/en/latest/4_configuration.html
+###########################
+# The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
+AXES_FAILURE_LIMIT = 5
+# If True, only lock based on username, and never lock based on IP if attempts exceed the limit. Otherwise utilize the existing IP and user locking logic. Default: False
+AXES_ONLY_USER_FAILURES = True
+# If set, defines a period of inactivity after which old failed login attempts will be cleared. If an integer, will be interpreted as a number of hours. Default: None
+AXES_COOLOFF_TIME = timedelta(minutes=30)
+# If True, a successful login will reset the number of failed logins. Default: False
+AXES_RESET_ON_SUCCESS = True
 
 # Django email configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
