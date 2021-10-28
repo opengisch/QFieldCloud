@@ -28,9 +28,9 @@ desire with a good editor:
     cp .env.example .env
     emacs .env
 
-Link or copy `docker-compose.local.yaml` into `docker-compose.override.yaml`:
+Link or copy `docker-compose.override.local.yml` into `docker-compose.override.yml`:
 
-    ln -s docker-compose.local.yaml docker-compose.override.yaml
+    ln -s docker-compose.override.local.yml docker-compose.override.yml
 
 To build development images and run the containers:
 
@@ -43,11 +43,18 @@ Run the django database migrations.
 
     docker-compose exec app python manage.py migrate
 
+And collect the static files (CSS, JS etc):
+
+    docker-compose run app python manage.py collectstatic --noinput
+
 You can check if everything seems to work correctly using the
 `status` command:
 
     docker-compose exec app python manage.py status
 
+Now you can get started by adding the first user that would also be a super user:
+
+    docker-compose run app python manage.py createsuperuser --username super_user --email super@user.com
 
 ### Tests
 
