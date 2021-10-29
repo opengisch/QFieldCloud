@@ -37,6 +37,12 @@ class S3ObjectVersion:
         self._data = data
 
     @property
+    def id(self) -> str:
+        """Returns the version id"""
+        # NOTE id and version_id are the same thing
+        return self._data.id
+
+    @property
     def key(self) -> str:
         return self._data.key
 
