@@ -22,6 +22,10 @@ jobs:
         run: |
           pipenv install pre_commit
           pipenv run python -m pre_commit run --all-files
+      - name: Check environment variables
+        run: |
+          pipenv install pyyaml
+          pipenv run python .github/check_envvars/check_envvars.py .env.example --docker-compose-dir .
       - name: Export the env variables file
         run: |
           cp .env.example .env
