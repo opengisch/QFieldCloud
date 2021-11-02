@@ -8,7 +8,9 @@ class TimezoneMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.user.is_authenticated:
+        if request.user.is_authenticated and hasattr(
+            request.user.useraccount, "useraccount"
+        ):
             user_tz = request.user.useraccount.timezone
         elif settings.TIME_ZONE:
             user_tz = pytz.timezone(settings.TIME_ZONE)
