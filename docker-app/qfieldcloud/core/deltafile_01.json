@@ -119,6 +119,24 @@
                             "ddc41fa4-3961-4127-80f6-7d3e3f3f985b"
                         ]
                     },
+                    "exportId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Export ID",
+                        "description": "A unique identifier of the local data snapshot that the delta was generated from. Each of the export ID is unique for each server export and device. Generated client-side.",
+                        "examples": [
+                            "f7b5230c-d078-4654-9bcc-1adc1646bb28"
+                        ]
+                    },
+                    "clientId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Client Export ID",
+                        "description": "A unique identifier of the client that has exported the project.",
+                        "examples": [
+                            "f7b5230c-d078-4654-9bcc-1adc1646bb28"
+                        ]
+                    },
                     "localPk": {
                         "type": "string",
                         "title": "Local Feature ID",
