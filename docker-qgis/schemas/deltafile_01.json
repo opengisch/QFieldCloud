@@ -55,6 +55,11 @@
                         }
                     ],
                     "additionalProperties": true
+                },
+                "is_snapshot": {
+                    "type": "boolean",
+                    "title": "Is Snapshot",
+                    "description": "If the stored data is a snapshot of the whole feature, or only the modified attributes and geometry."
                 }
             }
         }
