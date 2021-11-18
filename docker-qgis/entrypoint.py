@@ -221,6 +221,7 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
                 vl_extent = qfieldcloud.qgis.utils.extract_project_details(project)[
                     "extent"
                 ]
+                vl_extent = QgsRectangle.fromWkt(vl_extent)
             except Exception as err:
                 logger.error(
                     "Failed to get the project extent from the current map canvas.",
