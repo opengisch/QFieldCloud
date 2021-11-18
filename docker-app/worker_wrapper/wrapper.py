@@ -331,6 +331,8 @@ class DeltaApplyJobRun(JobRun):
                 last_status=status,
                 last_feedback=feedback,
                 last_modified_pk=modified_pk,
+                last_apply_attempt_at=self.job.started_at,
+                last_apply_attempt_by=self.job.created_by,
             )
 
             ApplyJobDelta.objects.filter(
