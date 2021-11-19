@@ -156,20 +156,26 @@ class QfcTestCase(APITestCase):
 
         # should get all the users, that are not members or owner of a project
         queryset = querysets_utils.get_users("", project=self.project1)
-        self.assertEqual(len(queryset), 4)
+        self.assertEqual(len(queryset), 3)
         self.assertTrue(self.user2 in queryset)
         self.assertTrue(self.user3 in queryset)
         self.assertTrue(self.organization1.user_ptr in queryset)
+
+        # should get all the users, that are not members or owner of a project
+        queryset = querysets_utils.get_users("", project=self.project5)
+        self.assertEqual(len(queryset), 4)
+        self.assertTrue(self.user1 in queryset)
+        self.assertTrue(self.user2 in queryset)
+        self.assertTrue(self.user3 in queryset)
         self.assertTrue(self.team1.user_ptr in queryset)
 
         # should get all the users, that are not members or owner of a project and are not an organization
         queryset = querysets_utils.get_users(
             "", project=self.project1, exclude_organizations=True
         )
-        self.assertEqual(len(queryset), 3)
+        self.assertEqual(len(queryset), 2)
         self.assertTrue(self.user2 in queryset)
         self.assertTrue(self.user3 in queryset)
-        self.assertTrue(self.team1.user_ptr in queryset)
 
     def test_projects_roles_and_role_origins(self):
         """
