@@ -89,6 +89,15 @@ def get_users(
 
     if exclude_teams:
         users = users.exclude(user_type=User.TYPE_TEAM)
+    else:
+        if project:
+            users = users.filter(
+                ~Q(user_type=User.TYPE_TEAM)
+                | (
+                    Q(user_type=User.TYPE_TEAM)
+                    & Q(pk__in=Team.objects.filter(team_organization=project.owner))
+                )
+            )
 
     # one day conditions can be more than just pk check, please keep it for now
     conditions = []
