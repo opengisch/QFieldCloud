@@ -20,7 +20,8 @@ jobs:
           ln -s docker-compose.override.local.yml docker-compose.override.yml
       - name: Check code formatting
         run: |
-          pipenv install pre_commit pyyaml
+          pipenv install pre_commit
+          pipenv install pyyaml
           pipenv run python -m pre_commit run --all-files
       - name: Export the env variables file
         run: |

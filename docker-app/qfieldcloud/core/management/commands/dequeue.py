@@ -9,7 +9,7 @@ from qfieldcloud.core.models import Job
 from qfieldcloud.core.utils2.db import use_test_db_if_exists
 from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
-    ExportJobRun,
+    PackageJobRun,
     ProcessProjectfileJobRun,
 )
 
@@ -105,7 +105,7 @@ class Command(BaseCommand):
 
     def _run(self, job: Job):
         job_run_classes = {
-            Job.Type.EXPORT: ExportJobRun,
+            Job.Type.PACKAGE: PackageJobRun,
             Job.Type.DELTA_APPLY: DeltaApplyJobRun,
             Job.Type.PROCESS_PROJECTFILE: ProcessProjectfileJobRun,
         }

@@ -18,8 +18,8 @@ from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
-    ExportJob,
     Job,
+    PackageJob,
     ProcessProjectfileJob,
 )
 
@@ -38,7 +38,7 @@ class QgisException(Exception):
 
 
 class JobRun:
-    container_timeout_secs = 3 * 60
+    container_timeout_secs = 10 * 60
     job_class = Job
     command = []
 
@@ -242,9 +242,20 @@ class JobRun:
         return response["StatusCode"], logs
 
 
-class ExportJobRun(JobRun):
-    job_class = ExportJob
-    command = ["export", "%(project__id)s", "%(project__project_filename)s"]
+class PackageJobRun(JobRun):
+    job_class = PackageJob
+    command = ["package", "%(project__id)s", "%(project__project_filename)s"]
+    data_last_packaged_at = None
+
+    def before_docker_run(self) -> None:
+        # at the start of docker we assume we make the snapshot of the data
+        self.data_last_packaged_at = timezone.now()
+
+    def after_docker_run(self) -> None:
+        # only successfully finished packaging jobs should update the Project.data_last_packaged_at
+        if self.job.status == Job.Status.FINISHED:
+            self.job.project.data_last_packaged_at = self.data_last_packaged_at
+            self.job.project.save()
 
 
 class DeltaApplyJobRun(JobRun):
@@ -312,6 +323,7 @@ class DeltaApplyJobRun(JobRun):
 
     def after_docker_run(self) -> None:
         delta_feedback = self.job.feedback["steps"][1]["outputs"]["delta_feedback"]
+        is_data_modified = True
 
         for feedback in delta_feedback:
             delta_id = feedback["delta_id"]
@@ -320,12 +332,15 @@ class DeltaApplyJobRun(JobRun):
 
             if status == "status_applied":
                 status = Delta.Status.APPLIED
+                is_data_modified = True
             elif status == "status_conflict":
                 status = Delta.Status.CONFLICT
             elif status == "status_apply_failed":
                 status = Delta.Status.NOT_APPLIED
             else:
                 status = Delta.Status.ERROR
+                # not certain what happened
+                is_data_modified = True
 
             Delta.objects.filter(pk=delta_id).update(
                 last_status=status,
@@ -343,6 +358,10 @@ class DeltaApplyJobRun(JobRun):
                 feedback=feedback,
                 modified_pk=modified_pk,
             )
+
+            if is_data_modified:
+                self.job.project.data_last_updated_at = timezone.now()
+                self.job.project.save()
 
     def after_docker_exception(self) -> None:
         Delta.objects.filter(

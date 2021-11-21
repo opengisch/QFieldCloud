@@ -1,6 +1,7 @@
 from pathlib import PurePath
 
 from django.http.response import HttpResponseRedirect
+from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import ProcessProjectfileJob, Project
 from rest_framework import permissions, status, views
@@ -130,20 +131,16 @@ class DownloadPushDeleteFileView(views.APIView):
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
 
+        is_qgis_project_file = utils.is_qgis_project_file(filename)
         # check only one qgs/qgz file per project
-        if utils.is_qgis_project_file(filename):
-            if project.project_filename is not None and PurePath(filename) != PurePath(
-                project.project_filename
-            ):
-                raise exceptions.MultipleProjectsError(
-                    "Only one QGIS project per project allowed"
-                )
-            else:
-                project.project_filename = filename
-                project.save()
-                ProcessProjectfileJob.objects.create(
-                    project=project, created_by=self.request.user
-                )
+        if (
+            is_qgis_project_file
+            and project.project_filename is not None
+            and PurePath(filename) != PurePath(project.project_filename)
+        ):
+            raise exceptions.MultipleProjectsError(
+                "Only one QGIS project per project allowed"
+            )
 
         request_file = request.FILES.get("file")
 
@@ -154,6 +151,15 @@ class DownloadPushDeleteFileView(views.APIView):
         metadata = {"Sha256sum": sha256sum}
 
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
+
+        if is_qgis_project_file:
+            project.project_filename = filename
+            ProcessProjectfileJob.objects.create(
+                project=project, created_by=self.request.user
+            )
+
+        project.data_last_updated_at = timezone.now()
+        project.save()
 
         return Response(status=status.HTTP_201_CREATED)
 

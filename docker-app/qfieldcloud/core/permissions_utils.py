@@ -362,7 +362,7 @@ def can_delete_collaborators(user: QfcUser, project: Project) -> bool:
     )
 
 
-def can_read_exportations(user: QfcUser, project: Project) -> bool:
+def can_read_packages(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,

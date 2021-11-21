@@ -146,6 +146,7 @@ def stop_app():
 class Step:
     def __init__(
         self,
+        id: str,
         name: str,
         method: Callable,
         arguments: Dict[str, Any] = {},
@@ -154,6 +155,7 @@ class Step:
         output_names: List[str] = [],
         public_returns: List[str] = [],
     ):
+        self.id = id
         self.name = name
         self.method = method
         self.arguments = arguments

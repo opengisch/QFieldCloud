@@ -1,7 +1,9 @@
 import logging
 from typing import Optional
 
-from qfieldcloud.core.models import ApplyJob, Delta, Job
+from django.db.models import Q
+from qfieldcloud.core import exceptions
+from qfieldcloud.core.models import ApplyJob, Delta, Job, PackageJob, Project, User
 
 logger = logging.getLogger(__name__)
 
@@ -44,3 +46,41 @@ def apply_deltas(
     )
 
     return apply_job
+
+
+def repackage(project: Project, user: User) -> PackageJob:
+    """Returns an unfinished or freshly created package job.
+
+    Checks if there is already an unfinished package job and returns it,
+    or creates a new package job and returns it.
+    """
+    if not project.project_filename:
+        raise exceptions.NoQGISProjectError()
+
+    # Check if active package job already exists
+    query = Q(project=project) & (
+        Q(status=PackageJob.Status.PENDING)
+        | Q(status=PackageJob.Status.QUEUED)
+        | Q(status=PackageJob.Status.STARTED)
+    )
+
+    if PackageJob.objects.filter(query).count():
+        return PackageJob.objects.get(query)
+
+    package_job = PackageJob.objects.create(project=project, created_by=user)
+
+    return package_job
+
+
+def repackage_if_needed(project: Project, user: User) -> PackageJob:
+    if not project.project_filename:
+        raise exceptions.NoQGISProjectError()
+
+    if project.needs_repackaging:
+        package_job = repackage(project, user)
+    else:
+        package_job = (
+            PackageJob.objects.filter(project=project).order_by("started_at").get()
+        )
+
+    return package_job

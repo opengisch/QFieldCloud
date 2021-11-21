@@ -26,3 +26,4 @@ django-currentuser==0.5.3
 django-axes>=5.26.0,<6.0.0
 mkdocs>=1.2.3
 django-timezone-field>=4.2.1
+django-model-utils>=4.2.0

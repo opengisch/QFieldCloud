@@ -5,7 +5,7 @@ import os
 import posixpath
 from datetime import datetime
 from pathlib import PurePath
-from typing import IO, Iterable, List, NamedTuple, Optional, TypedDict, Union
+from typing import IO, Iterable, List, NamedTuple, Optional, Union
 
 import boto3
 import jsonschema
@@ -23,10 +23,11 @@ class S3PrefixPath(NamedTuple):
 
 
 class S3Object(NamedTuple):
-    Key: str
-    LastModified: datetime
-    Size: int
-    ETag: str
+    name: str
+    key: str
+    last_modified: datetime
+    size: int
+    etag: str
 
 
 class S3ObjectVersion:
@@ -261,22 +262,6 @@ def get_s3_project_size(project_id: str) -> int:
     return round(total_size / (1024 * 1024), 3)
 
 
-class ProjectFileVersion(TypedDict):
-    name: str
-    size: int
-    sha256: str
-    last_modified: datetime
-    is_latest: bool
-
-
-class ProjectFile(TypedDict):
-    name: str
-    size: int
-    sha256: str
-    last_modified: datetime
-    versions: List[ProjectFileVersion]
-
-
 def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVersions]:
     """Returns a list of files and their versions.
 
@@ -292,10 +277,34 @@ def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVer
     return list_files_with_versions(bucket, prefix, strip_prefix=True)
 
 
+def get_project_package_files(project_id: str) -> Iterable[S3Object]:
+    """Returns a list of package files.
+
+    Args:
+        project_id (str): the project id
+
+    Returns:
+        Iterable[S3ObjectWithVersions]: the list of package files
+    """
+    bucket = get_s3_bucket()
+    prefix = f"projects/{project_id}/export/"
+
+    return list_files(bucket, prefix, strip_prefix=True)
+
+
 def get_project_files_count(project_id: str) -> int:
     """Returns the number of files within a project."""
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
+    files = list(bucket.objects.filter(Prefix=prefix))
+
+    return len(files)
+
+
+def get_project_package_files_count(project_id: str) -> int:
+    """Returns the number of package files within a project."""
+    bucket = get_s3_bucket()
+    prefix = f"projects/{project_id}/export/"
     files = list(bucket.objects.filter(Prefix=prefix))
 
     return len(files)
@@ -314,6 +323,28 @@ def get_s3_object_url(
         str: URL
     """
     return f"{settings.STORAGE_ENDPOINT_URL_EXTERNAL}/{bucket.name}/{key}"
+
+
+def list_files(
+    bucket: mypy_boto3_s3.service_resource.Bucket,
+    prefix: str,
+    strip_prefix: bool = True,
+) -> Iterable[S3Object]:
+    """Iterator that lists a bucket's objects under prefix."""
+    for f in bucket.objects.filter(Prefix=prefix):
+        if strip_prefix:
+            start_idx = len(prefix)
+            name = f.key[start_idx:]
+        else:
+            name = f.key
+
+        yield S3Object(
+            name=name,
+            key=f.key,
+            last_modified=f.last_modified,
+            size=f.size,
+            etag=f.e_tag,
+        )
 
 
 def list_versions(

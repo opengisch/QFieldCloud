@@ -1,11 +1,14 @@
 from django.contrib.auth import get_user_model
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
+    ApplyJob,
     Delta,
-    ExportJob,
     Job,
     Organization,
     OrganizationMember,
+    PackageJob,
+    ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
     Team,
@@ -62,6 +65,10 @@ class ProjectSerializer(serializers.ModelSerializer):
             "is_public",
             "created_at",
             "updated_at",
+            "data_last_packaged_at",
+            "data_last_updated_at",
+            "can_repackage",
+            "needs_repackaging",
             "user_role",
             "user_role_origin",
         )
@@ -305,5 +312,125 @@ class ExportJobSerializer(serializers.ModelSerializer):
             return "STATUS_ERROR"
 
     class Meta:
-        model = ExportJob
+        model = PackageJob
         fields = ("status", "layers", "output")
+
+
+class JobMixin:
+    project_id = serializers.PrimaryKeyRelatedField(queryset=Project.objects.all())
+
+    def to_internal_value(self, data):
+        internal_data = super().to_internal_value(data)
+        internal_data["created_by"] = self.context["request"].user
+        internal_data["project"] = Project.objects.get(pk=data.get("project_id"))
+
+        return internal_data
+
+    def check_create_new_job(self):
+        ModelClass: Job = self.Meta.model
+        last_active_job = (
+            ModelClass.objects.filter(
+                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED]
+            )
+            .only("id")
+            .order_by("-started_at", "-created_at")
+            .last()
+        )
+
+        # check if there are other jobs already active
+        if last_active_job:
+            raise exceptions.APIError("Job of this type is already running.")
+
+    class Meta:
+        model = PackageJob
+        fields = (
+            "id",
+            "created_at",
+            "created_by",
+            "finished_at",
+            "project_id",
+            "started_at",
+            "status",
+            "type",
+            "updated_at",
+            "feedback",
+            "output",
+        )
+
+        read_only_fields = (
+            "id",
+            "created_at",
+            "created_by",
+            "finished_at",
+            "started_at",
+            "status",
+            "updated_at",
+            "feedback",
+            "output",
+        )
+
+
+class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
+    def check_create_new_job(self):
+        super().check_create_new_job()
+        internal_value = self.to_internal_value(self.initial_data)
+
+        if not internal_value["project"].project_filename:
+            raise exceptions.NoQGISProjectError()
+
+    class Meta(JobMixin.Meta):
+        model = PackageJob
+
+
+class ApplyJobSerializer(JobMixin, serializers.ModelSerializer):
+    class Meta(JobMixin.Meta):
+        model = ApplyJob
+
+
+class ProcessProjectfileJobSerializer(JobMixin, serializers.ModelSerializer):
+    class Meta(JobMixin.Meta):
+        model = ProcessProjectfileJob
+
+
+class JobSerializer(serializers.ModelSerializer):
+    def check_create_new_job(self):
+        return True
+
+    def get_fields(self, *args, **kwargs):
+        fields = super().get_fields(*args, **kwargs)
+        request = self.context.get("request")
+
+        if request and "job_id" not in request.parser_context.get("kwargs", {}):
+            fields.pop("output", None)
+            fields.pop("feedback", None)
+            fields.pop("layers", None)
+
+        return fields
+
+    class Meta:
+        model = Job
+        fields = (
+            "id",
+            "created_at",
+            "created_by",
+            "finished_at",
+            "project_id",
+            "started_at",
+            "status",
+            "type",
+            "updated_at",
+            "feedback",
+            "output",
+        )
+        read_only_fields = (
+            "id",
+            "created_at",
+            "created_by",
+            "finished_at",
+            "started_at",
+            "status",
+            "updated_at",
+            "feedback",
+            "output",
+        )
+        order_by = "-created_at"
