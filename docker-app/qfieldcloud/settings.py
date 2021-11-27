@@ -128,7 +128,7 @@ WSGI_APPLICATION = "qfieldcloud.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
         "NAME": os.environ.get("SQL_DATABASE"),
         "USER": os.environ.get("SQL_USER"),
         "PASSWORD": os.environ.get("SQL_PASSWORD"),

@@ -14,7 +14,7 @@ ENV PYTHONUNBUFFERED 1
 
 # install dependencies
 RUN apt update \
-    && apt install -y netcat-openbsd
+    && apt install -y netcat python3-gdal
 
 # install dependencies
 COPY ./requirements.txt .

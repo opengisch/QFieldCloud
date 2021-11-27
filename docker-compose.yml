@@ -9,7 +9,7 @@ x-logging:
 
 services:
   db:
-    image: postgres:11
+    image: postgis/postgis:13-3.1-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
