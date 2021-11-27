@@ -130,6 +130,7 @@ def check_layer_validity(project: QgsProject) -> List:
         layer_data = {
             "id": layer.name(),
             "name": layer.name(),
+            "crs": layer.crs().authid() if layer.crs() else None,
             "is_valid": layer.isValid(),
             "datasource": layer.dataProvider().uri().uri()
             if layer.dataProvider()
