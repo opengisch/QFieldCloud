@@ -126,6 +126,7 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
         layers_by_id[layer_id] = {
             "id": layer_id,
             "name": layer.name(),
+            "crs": layer.crs().authid() if layer.crs() else None,
             "is_valid": layer.isValid(),
             "datasource": layer.dataProvider().uri().uri()
             if layer.dataProvider()
