@@ -8,9 +8,9 @@ from typing import Any, Iterable, Type
 
 import qfieldcloud.core.utils2.storage
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from django.db import models
 from django.db.models import Case, Exists, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
@@ -1064,6 +1064,8 @@ class Delta(models.Model):
         on_delete=models.CASCADE,
         related_name="uploaded_deltas",
     )
+    old_geom = models.GeometryField(null=True, srid=0, dim=4)
+    new_geom = models.GeometryField(null=True, srid=0, dim=4)
 
     def __str__(self):
         return str(self.id) + ", project: " + str(self.project.id)
