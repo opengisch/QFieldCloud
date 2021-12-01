@@ -1066,7 +1066,6 @@ class Delta(models.Model):
     )
     old_geom = models.GeometryField(null=True, srid=0, dim=4)
     new_geom = models.GeometryField(null=True, srid=0, dim=4)
-    srid = models.PositiveIntegerField(null=True)
 
     def __str__(self):
         return str(self.id) + ", project: " + str(self.project.id)
