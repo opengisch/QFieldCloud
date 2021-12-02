@@ -30,7 +30,7 @@ services:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
     environment:
-      DJANGO_ALLOWED_HOSTS: ${QFIELDCLOUD_HOST}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG}
@@ -81,23 +81,39 @@ services:
       ofelia.job-exec.runcrons.schedule: 0 * * * * *
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
-  web:
-    build:
-      context: ./docker-caddy
-    restart: unless-stopped
-    environment:
-      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
-      CADDY_ACME_CA: ${CADDY_ACME_CA}
-      CADDY_IMPORT_GLOB: ${CADDY_IMPORT_GLOB}
-      ACME_AGREE: "true"
+  # web:
+  #   build:
+  #     context: ./docker-caddy
+  #   restart: unless-stopped
+  #   environment:
+  #     QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
+  #     CADDY_ACME_CA: ${CADDY_ACME_CA}
+  #     CADDY_IMPORT_GLOB: ${CADDY_IMPORT_GLOB}
+  #     ACME_AGREE: "true"
+  #   volumes:
+  #     - caddy_data:/data
+  #   ports:
+  #     - ${WEB_HTTP_PORT}:80
+  #     - ${WEB_HTTPS_PORT}:443
+  #   logging: *default-logging
+
+  nginx:
+    image: nginx:stable
     volumes:
-      - static_volume:/home/app/web/staticfiles/
-      - media_volume:/home/app/web/mediafiles/
-      - caddy_data:/data
+      - static_volume:/var/www/html/staticfiles/
+      - media_volume:/var/www/html/mediafiles/
+      - ./conf/nginx/conf.d/:/etc/nginx/conf.d/
+      - ./conf/nginx/certs/:/etc/nginx/certs/:ro
     ports:
       - ${WEB_HTTP_PORT}:80
       - ${WEB_HTTPS_PORT}:443
+    command: [nginx-debug, '-g', 'daemon off;']
     logging: *default-logging
+    depends_on:
+      - app
+
+  # certbot:
+  #   image: certbot/certbot
 
   qgis:
     build:
