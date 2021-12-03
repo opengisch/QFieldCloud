@@ -151,6 +151,11 @@ Run the django database migrations
     docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml exec app python manage.py migrate
 
 
+## Create a certificate using Let's Encrypt
+
+
+    ./scripts/init_letsencrypt.sh
+
 ### Infrastructure
 
 Based on this example
