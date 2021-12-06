@@ -4,7 +4,7 @@ services:
 
   app:
     ports:
-      # allow direct access without caddy
+      # allow direct access without nginx
       - "8000:8000"
     volumes:
       # mount the source for live reload
@@ -54,13 +54,6 @@ services:
     ports:
       - ${GEODB_PORT}:5432
 
-  web:
-    environment:
-      CADDY_IMPORT_GLOB: Caddyfile.proxy-minio
-    volumes:
-      # Include config for reverse proxying caddy
-      - ./docker-caddy/Caddyfile.proxy-minio:/etc/caddy/Caddyfile.proxy-minio
-
   s3:
     image: minio/minio:RELEASE.2021-07-27T02-40-15Z
     restart: unless-stopped
@@ -76,12 +69,13 @@ services:
     command: server /data{1...4} --console-address :9001
     healthcheck:
         test: [
-        "CMD",
-        "curl",
-        "-A",
-        "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
-        "-f",
-        "${STORAGE_ENDPOINT_URL}/minio/index.html"]
+          "CMD",
+          "curl",
+          "-A",
+          "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
+          "-f",
+          "${STORAGE_ENDPOINT_URL}/minio/index.html"
+        ]
         interval: 5s
         timeout: 20s
         retries: 5

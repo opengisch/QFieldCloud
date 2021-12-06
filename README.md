@@ -67,6 +67,38 @@ To run only a test module (e.g. `test_permission.py`)
 
     docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
 
+## Add root certificate
+
+QFieldCloud will automatically generate a certificate and it's root certificate in `./config/nginx/certs`. However, you need to trust the root certificate first, so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
+
+On Debian/Ubuntu, copy the root certificate to the directory with trusted certificates. Note the extension has been changed to `.crt`:
+
+    sudo mv ./config/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+
+Trust the newly added certificate:
+
+    sudo update-ca-certificates
+
+Connecting with `curl` should return no errors:
+    curl https://localhost:8002/
+
+### Remove the root certificate
+
+If you want to remove or change the root certificate, you need to remove the root certificate file and refresh the list of certificates:
+
+    rm /usr/local/share/ca-certificates/rootCA.crt
+    sudo update-ca-certificates --fresh
+
+Now connecting with `curl` should fail with a similar error:
+
+    $ curl https://localhost:8002/
+
+    curl: (60) SSL certificate problem: unable to get local issuer certificate
+    More details here: https://curl.haxx.se/docs/sslcerts.html
+
+    curl failed to verify the legitimacy of the server and therefore could not
+    establish a secure connection to it. To learn more about this situation and
+    how to fix it, please visit the web page mentioned above.
 
 ### Code style
 
@@ -118,6 +150,14 @@ Run the django database migrations
 
     docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml exec app python manage.py migrate
 
+
+## Create a certificate using Let's Encrypt
+
+If you are running the server on a server with a public domain, you can install Let's Encrypt certificate by running the following command:
+
+    ./scripts/init_letsencrypt.sh
+
+Note you may want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
 
 ### Infrastructure
 
