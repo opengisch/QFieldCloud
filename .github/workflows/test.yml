@@ -26,7 +26,7 @@ jobs:
       - name: Export the env variables file
         run: |
           cp .env.example .env
-          export $(egrep -v '^#' .env | xargs)
+          set -a; source .env; set +a
       - name: Pull docker containers
         run: docker-compose pull
       - name: Build and run docker containers

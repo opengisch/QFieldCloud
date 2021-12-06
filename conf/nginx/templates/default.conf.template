@@ -2,29 +2,31 @@ upstream django {
   server app:8000 fail_timeout=0;
 }
 
-# server {
-
-#     server_name example.com www.example.com;
-# }
-
 server {
   listen 80;
-  listen 443 ssl;
-
-  ssl_certificate     certs/localhost.pem;
-  ssl_certificate_key certs/localhost-key.pem;
-
-  server_name         localhost;
-  client_max_body_size 10G;
-  keepalive_timeout 5;
-
-  # path for static files (only needed for serving local staticfiles)
-  root /var/www/html/;
+  server_name ${QFIELDCLOUD_HOST};
 
   # cerbot
   location /.well-known/acme-challenge/ {
     root /var/www/certbot;
   }
+
+  # use $WEB_HTTPS_PORT in the configuration, since it might be different from 443 (e.g. localhost)
+  return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
+}
+
+server {
+  listen 443 ssl;
+
+  ssl_certificate     certs/${QFIELDCLOUD_HOST}.pem;
+  ssl_certificate_key certs/${QFIELDCLOUD_HOST}-key.pem;
+
+  server_name ${QFIELDCLOUD_HOST};
+  client_max_body_size 10G;
+  keepalive_timeout 5;
+
+  # path for static files (only needed for serving local staticfiles)
+  root /var/www/html/;
 
   # checks for static file, if not found proxy to app
   location / {

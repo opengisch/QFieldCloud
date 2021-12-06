@@ -86,7 +86,7 @@ services:
     volumes:
       - static_volume:/var/www/html/staticfiles/
       - media_volume:/var/www/html/mediafiles/
-      - ./conf/nginx/conf.d/:/etc/nginx/conf.d/
+      - ./conf/nginx/templates/:/etc/nginx/templates/
       - ./conf/nginx/certs/:/etc/nginx/certs/:ro
       - ./conf/nginx/options-ssl-nginx.conf:/etc/nginx/options-ssl-nginx.conf
       - ./conf/nginx/ssl-dhparams.pem:/etc/nginx/ssl-dhparams.pem
@@ -94,6 +94,13 @@ services:
     ports:
       - ${WEB_HTTP_PORT}:80
       - ${WEB_HTTPS_PORT}:443
+    environment:
+      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
+      WEB_HTTP_PORT: ${WEB_HTTP_PORT}
+      WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+      LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
+      LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
     command: [nginx-debug, '-g', 'daemon off;']
     logging: *default-logging
     depends_on:
