@@ -153,8 +153,11 @@ Run the django database migrations
 
 ## Create a certificate using Let's Encrypt
 
+If you are running the server on a server with a public domain, you can install Let's Encrypt certificate by running the following command:
 
     ./scripts/init_letsencrypt.sh
+
+Note you may want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
 
 ### Infrastructure
 

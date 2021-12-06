@@ -12,7 +12,9 @@ server {
   }
 
   # use $WEB_HTTPS_PORT in the configuration, since it might be different from 443 (e.g. localhost)
-  return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
+  location / {
+    return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
+  }
 }
 
 server {
