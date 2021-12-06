@@ -177,6 +177,5 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
-  caddy_data:
   transformation_grids:
   certbot_www:

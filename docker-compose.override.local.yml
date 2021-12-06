@@ -4,7 +4,7 @@ services:
 
   app:
     ports:
-      # allow direct access without caddy
+      # allow direct access without nginx
       - "8000:8000"
     volumes:
       # mount the source for live reload

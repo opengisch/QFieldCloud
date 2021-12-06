@@ -56,22 +56,6 @@ services:
     depends_on:
       - db
 
-  web:
-    image: opengischprivate/qfieldcloud-caddy:latest
-    restart: unless-stopped
-    environment:
-      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
-      CADDY_ACME_CA: ${CADDY_ACME_CA}
-      CADDY_IMPORT_GLOB: ${CADDY_IMPORT_GLOB}
-      ACME_AGREE: "true"
-    volumes:
-      - static_volume:/home/app/web/staticfiles/
-      - media_volume:/home/app/web/mediafiles/
-      - caddy_data:/data
-    ports:
-      - ${WEB_HTTP_PORT}:80
-      - ${WEB_HTTPS_PORT}:443
-
   qgis:
     image: opengischprivate/qfieldcloud-qgis:latest
     tty: true
@@ -90,4 +74,3 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
-  caddy_data:

@@ -44,25 +44,6 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      # Caddy
-      - name: Docker Test Caddy
-        id: docker_test_caddy
-        uses: docker/build-push-action@v2
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: ./docker-caddy
-          file: ./docker-caddy/Dockerfile
-
-      - name: Docker Build and Push Caddy
-        id: docker_build_and_push_caddy
-        uses: docker/build-push-action@v2
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: ./docker-caddy
-          file: ./docker-caddy/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-caddy:${{ steps.prepare.outputs.tag }}
-
       # Application
       - name: Docker Test Application
         id: docker_test_application
