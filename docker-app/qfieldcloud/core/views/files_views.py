@@ -1,6 +1,6 @@
 from pathlib import PurePath
 
-from django.http.response import HttpResponseRedirect
+from django.http.response import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import ProcessProjectfileJob, Project
@@ -125,7 +125,16 @@ class DownloadPushDeleteFileView(views.APIView):
             HttpMethod="GET",
         )
 
-        return HttpResponseRedirect(url)
+        if request.META["HTTP_HOST"].split(":")[-1] == request.META["WEB_HTTPS_PORT"]:
+            # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
+            response = HttpResponse()
+            response["X-Accel-Redirect"] = "/storage-download/"
+            response["redirect_uri"] = url
+
+            return response
+        else:
+            # requesting the Django development webserver
+            return HttpResponseRedirect(url)
 
     def post(self, request, projectid, filename, format=None):
         project = Project.objects.get(id=projectid)

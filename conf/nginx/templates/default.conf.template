@@ -1,3 +1,8 @@
+log_format upstreamlog  '[$time_local] $remote_addr - $remote_user '
+                        'to: $upstream_addr "$request" $status $body_bytes_sent '
+                        '"$http_referer" "$http_user_agent"'
+                        'rt=$request_time uct="$upstream_connect_time" uht="$upstream_header_time" urt="$upstream_response_time"';
+
 upstream django {
   server app:8000 fail_timeout=0;
 }
@@ -60,4 +65,41 @@ server {
     set $target http://minio1:9000/;
     proxy_pass $target;
   }
+
+  location /storage-download/ {
+    # Only allow internal redirects
+    internal;
+
+    access_log /var/log/nginx/access.log upstreamlog;
+    set $redirect_uri "$upstream_http_redirect_uri";
+
+    # required DNS
+    resolver 8.8.8.8;
+
+    # Stops the local disk from being written to (just forwards data through)
+    proxy_max_temp_file_size 0;
+    proxy_buffering off;
+
+    # does not work with S3 otherwise
+    proxy_ssl_server_name on;
+
+    # remove the authorization and the cookie headers
+    proxy_set_header Authorization '';
+    proxy_set_header Cookie '';
+
+    # hide Object Storage related headers
+    proxy_hide_header Access-Control-Allow-Credentials;
+    proxy_hide_header Access-Control-Allow-Headers;
+    proxy_hide_header Access-Control-Allow-Methods;
+    proxy_hide_header Access-Control-Allow-Origin;
+    proxy_hide_header Access-Control-Expose-Headers;
+    proxy_hide_header X-Amz-Meta-Sha256sum;
+    proxy_hide_header X-Amz-Req-Time-Micros;
+    proxy_hide_header X-Amz-Request-Id;
+    proxy_hide_header X-Amz-Storage-Class;
+    proxy_hide_header X-Amz-Version-Id;
+
+    proxy_pass $redirect_uri;
+  }
+
 }
