@@ -57,6 +57,7 @@ server {
     proxy_set_header Connection "";
     chunked_transfer_encoding off;
 
-    proxy_pass http://minio:9000/;
+    set $target http://minio1:9000/;
+    proxy_pass $target;
   }
 }
