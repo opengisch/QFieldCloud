@@ -18,7 +18,7 @@ from django.utils.deprecation import MiddlewareMixin
 
 logger = logging.getLogger("qfieldcloud.request_response_log")
 
-MAX_RESPONSE_BODY_LENGTH = 100
+MAX_RESPONSE_BODY_LENGTH = 1000
 CENSOR_DATA_KEYS = [
     "password",
     "token",
@@ -68,27 +68,24 @@ class RequestResponseLogMiddleware(MiddlewareMixin):
 
         if response:
             if response.get("content-type") == "application/json":
+                response_string = ""
                 if hasattr(response, "data"):
-                    log_data["response_body"] = response.data
-                else:
-                    # TODO in theory there should be a way without reparsing the response content, should use the content before being returned
                     try:
-                        log_data["response_body"] = json.loads(response.content)
+                        response_string = json.dumps(
+                            response.data, sort_keys=True, indent=1
+                        )
                     except Exception as err:
                         response_string = str(response.content, "utf-8")
-                        log_data["response_body"] = response_string[
-                            :MAX_RESPONSE_BODY_LENGTH
-                        ]
-                        log_data["json_parse_error"] = str(err)
-
-                        if len(response_string) > MAX_RESPONSE_BODY_LENGTH:
-                            log_data["response_trimmed"] = MAX_RESPONSE_BODY_LENGTH
+                        log_data["json_serialize_error"] = str(err)
+                else:
+                    response_string = str(response.content, "utf-8")
             else:
                 response_string = str(response.content, "utf-8")
-                log_data["response_body"] = response_string[:MAX_RESPONSE_BODY_LENGTH]
 
-                if len(response_string) > MAX_RESPONSE_BODY_LENGTH:
-                    log_data["response_trimmed"] = MAX_RESPONSE_BODY_LENGTH
+            log_data["response_body"] = response_string[:MAX_RESPONSE_BODY_LENGTH]
+
+            if len(response_string) > MAX_RESPONSE_BODY_LENGTH:
+                log_data["response_trimmed"] = MAX_RESPONSE_BODY_LENGTH
 
             log_data["response_headers"] = {**response.headers}
             log_data["status_code"] = response.status_code
