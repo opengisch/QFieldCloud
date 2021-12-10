@@ -21,6 +21,7 @@ def wait_for_postgres():
         "password": os.environ.get("SQL_PASSWORD"),
         "host": os.environ.get("SQL_HOST"),
         "port": os.environ.get("SQL_PORT"),
+        "sslmode": os.environ.get("SQL_SSLMODE"),
     }
     start_time = time()
     while time() - start_time < TIMEOUT:
