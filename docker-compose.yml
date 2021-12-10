@@ -8,18 +8,6 @@ x-logging:
     max-file: "10"
 
 services:
-  db:
-    image: postgis/postgis:13-3.1-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    ports:
-      - ${HOST_POSTGRES_PORT}:5432
-    logging: *default-logging
 
   app: &default-django
     build:
@@ -73,7 +61,6 @@ services:
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
     depends_on:
-      - db
       - redis
     logging:
       driver: "json-file"
@@ -157,7 +144,6 @@ services:
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
     depends_on:
-      - db
       - redis
       - app
 
@@ -178,7 +164,6 @@ services:
       - transformation_grids:/transformation_grids
 
 volumes:
-  postgres_data:
   static_volume:
   media_volume:
   transformation_grids:

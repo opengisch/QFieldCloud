@@ -16,6 +16,7 @@ services:
       STORAGE_BROWSER_PORT: ${STORAGE_BROWSER_PORT}
     command: python3 manage.py runserver 0.0.0.0:8000
     depends_on:
+      - db
       - geodb
       - minio
       - smtp4dev
@@ -25,6 +26,10 @@ services:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
       - ./docker-app/worker_wrapper:/usr/src/app/worker_wrapper
+    depends_on:
+      - db
+      - redis
+      - app
 
   smtp4dev:
     image: rnwood/smtp4dev:v3
@@ -41,6 +46,18 @@ services:
     environment:
       # Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
       - ServerOptions__HostName=smtp4dev
+
+  db:
+    image: postgis/postgis:13-3.1-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - ${HOST_POSTGRES_PORT}:5432
 
   geodb:
     image: postgis/postgis:12-3.0
@@ -97,6 +114,7 @@ services:
       "
 
 volumes:
+  postgres_data:
   geodb_data:
   smtp4dev_data:
   minio_data1:
