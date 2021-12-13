@@ -96,5 +96,5 @@ class AuthToken(models.Model):
                 user=self.user,
                 client_type=self.client_type,
                 expires_at__gt=now,
-            ).update(expires_at=now)
+            ).exclude(pk=self.pk).update(expires_at=now)
         return super().save(*args, **kwargs)
