@@ -463,7 +463,7 @@ class DeltaAdmin(admin.ModelAdmin):
 
     def response_change(self, request, delta):
         if "_apply_delta_btn" in request.POST:
-            if delta.project.project_filename:
+            if not delta.project.project_filename:
                 self.message_user(request, "Missing project file")
                 raise exceptions.NoQGISProjectError()
 
