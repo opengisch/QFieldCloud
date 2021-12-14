@@ -404,6 +404,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "project",
         "deltafile_id",
         "last_feedback__pre",
+        "last_modified_pk",
         "created_by",
         "created_at",
         "updated_at",
@@ -417,6 +418,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "updated_at",
         "content",
         "last_feedback__pre",
+        "last_modified_pk",
     )
     search_fields = (
         "project__name__iexact",
