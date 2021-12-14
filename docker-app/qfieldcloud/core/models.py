@@ -1064,8 +1064,8 @@ class Delta(models.Model):
         on_delete=models.CASCADE,
         related_name="uploaded_deltas",
     )
-    old_geom = models.GeometryField(null=True, srid=0, dim=4)
-    new_geom = models.GeometryField(null=True, srid=0, dim=4)
+    old_geom = models.GeometryField(null=True, srid=4326, dim=4)
+    new_geom = models.GeometryField(null=True, srid=4326, dim=4)
 
     def __str__(self):
         return str(self.id) + ", project: " + str(self.project.id)
