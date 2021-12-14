@@ -113,10 +113,17 @@ if __name__ == "__main__":
         type=str,
         help="Directory containing k8s configuration and secret files.",
     )
+    parser.add_argument(
+        "--ignored-varnames",
+        type=str,
+        nargs="*",
+        help="Ignored varnames.",
+    )
     args = parser.parse_args()
 
     problems = []
     envfile_vars = get_env_varnames_from_envfile(args.envfile)
+    ignored_varnames = args.ignored_varnames or []
 
     if args.docker_compose_dir:
         dockercompose_vars = get_env_varnames_from_docker_compose_files(
@@ -124,6 +131,9 @@ if __name__ == "__main__":
         )
 
         for varname in envfile_vars.difference(set(dockercompose_vars.keys())):
+            if varname in ignored_varnames:
+                continue
+
             if varname in envfile_vars:
                 problems.append(
                     f'Envvar "{varname}" is defined in the .env file, but not found in any docker-compose file.'
@@ -141,6 +151,9 @@ if __name__ == "__main__":
         ]
 
         for varname in envfile_vars.difference(set(k8s_vars.keys())):
+            if varname in ignored_varnames:
+                continue
+
             if varname in envfile_vars:
                 problems.append(
                     f'Envvar "{varname}" is defined in the .env file, but not found in the any k8s configuration(s) and secret(s).'
@@ -152,8 +165,12 @@ if __name__ == "__main__":
                 )
 
         for varname, occurrences in k8s_vars.items():
+            if varname in ignored_varnames:
+                continue
+
             for environment in occurrences:
                 if environment not in k8s_environments:
+
                     problems.append(
                         f'Envvar "{varname}" should be in all k8s environments, but missing not found neither in configuration or secrets of "{environment}".'
                     )
