@@ -479,7 +479,7 @@ class DeltaAdmin(admin.ModelAdmin):
 
             self.message_user(request, "Delta application started")
 
-            # we need to sleep 1 second, just to make surethe apply delta started
+            # we need to sleep 1 second, just to make sure the apply delta started
             time.sleep(1)
 
             return HttpResponseRedirect(".")
