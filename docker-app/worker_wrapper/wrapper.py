@@ -22,6 +22,7 @@ from qfieldcloud.core.models import (
     PackageJob,
     ProcessProjectfileJob,
 )
+from qfieldcloud.core.utils import get_qgis_project_file
 
 logger = logging.getLogger(__name__)
 
@@ -383,6 +384,16 @@ class ProcessProjectfileJobRun(JobRun):
         "%(project__id)s",
         "%(project__project_filename)s",
     ]
+
+    def get_context(self, *args) -> Dict[str, Any]:
+        context = super().get_context(*args)
+
+        if not context.get("project__project_filename"):
+            context["project__project_filename"] = get_qgis_project_file(
+                context["project__id"]
+            )
+
+        return context
 
     def after_docker_run(self) -> None:
         project = self.job.project
