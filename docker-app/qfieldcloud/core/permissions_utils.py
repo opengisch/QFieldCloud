@@ -1,5 +1,6 @@
 from typing import List, Union
 
+from deprecated import deprecated
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -202,6 +203,18 @@ def can_read_deltas(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_apply_pending_deltas_for_project(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
+@deprecated("Use `can_set_delta_status_for_project` instead")
 def can_apply_deltas(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
@@ -215,6 +228,7 @@ def can_apply_deltas(user: QfcUser, project: Project) -> bool:
     )
 
 
+@deprecated("Use `can_set_delta_status_for_project` instead")
 def can_overwrite_deltas(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
@@ -225,6 +239,32 @@ def can_overwrite_deltas(user: QfcUser, project: Project) -> bool:
             ProjectCollaborator.Roles.EDITOR,
         ],
     )
+
+
+def can_set_delta_status_for_project(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
+def can_set_delta_status(user: QfcUser, delta: Delta) -> bool:
+    if not can_set_delta_status_for_project(user, delta.project):
+        return False
+
+    if delta.last_status not in (
+        Delta.Status.PENDING,
+        Delta.Status.CONFLICT,
+        Delta.Status.NOT_APPLIED,
+        Delta.Status.ERROR,
+    ):
+        return False
+
+    return True
 
 
 def can_create_delta(user: QfcUser, delta: Delta) -> bool:
@@ -249,6 +289,7 @@ def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     return False
 
 
+@deprecated("Use `can_set_delta_status` instead")
 def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
     if not can_apply_deltas(user, delta.project):
         return False
@@ -263,6 +304,7 @@ def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
     return True
 
 
+@deprecated("Use `can_set_delta_status` instead")
 def can_overwrite_delta(user: QfcUser, delta: Delta) -> bool:
     if not can_overwrite_deltas(user, delta.project):
         return False
@@ -273,6 +315,7 @@ def can_overwrite_delta(user: QfcUser, delta: Delta) -> bool:
     return True
 
 
+@deprecated("Use `can_set_delta_status` instead")
 def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
     if not can_apply_deltas(user, delta.project):
         return False
