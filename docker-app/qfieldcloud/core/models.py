@@ -820,6 +820,12 @@ class Project(models.Model):
     The owner of a project is an Organization.
     """
 
+    # NOTE the status is NOT stored in the db, because it might be refactored
+    class Status(models.TextChoices):
+        OK = "ok", _("Ok")
+        BUSY = "busy", _("Busy")
+        FAILED = "failed", _("Failed")
+
     objects = ProjectQueryset.as_manager()
     _cache_files_count = None
 
@@ -954,6 +960,21 @@ class Project(models.Model):
         else:
             # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
             return True
+
+    @property
+    def status(self) -> Status:
+        # NOTE the status is NOT stored in the db, because it might be refactored
+        if (
+            Job.objects.filter(
+                project=self, status__in=[Job.Status.QUEUED, Job.Status.STARTED]
+            ).count()
+            > 0
+        ):
+            return Project.Status.BUSY
+        elif not self.project_filename:
+            return Project.Status.FAILED
+        else:
+            return Project.Status.OK
 
 
 @receiver(pre_delete, sender=Project)
