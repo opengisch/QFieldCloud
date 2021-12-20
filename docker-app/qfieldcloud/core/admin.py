@@ -404,6 +404,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "project",
         "deltafile_id",
         "last_feedback__pre",
+        "last_modified_pk",
         "created_by",
         "created_at",
         "updated_at",
@@ -417,6 +418,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "updated_at",
         "content",
         "last_feedback__pre",
+        "last_modified_pk",
     )
     search_fields = (
         "project__name__iexact",
@@ -463,7 +465,7 @@ class DeltaAdmin(admin.ModelAdmin):
 
     def response_change(self, request, delta):
         if "_apply_delta_btn" in request.POST:
-            if delta.project.project_filename:
+            if not delta.project.project_filename:
                 self.message_user(request, "Missing project file")
                 raise exceptions.NoQGISProjectError()
 
@@ -479,7 +481,7 @@ class DeltaAdmin(admin.ModelAdmin):
 
             self.message_user(request, "Delta application started")
 
-            # we need to sleep 1 second, just to make surethe apply delta started
+            # we need to sleep 1 second, just to make sure the apply delta started
             time.sleep(1)
 
             return HttpResponseRedirect(".")
