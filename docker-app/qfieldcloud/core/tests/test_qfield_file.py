@@ -307,6 +307,9 @@ class QfcTestCase(APITransactionTestCase):
                     for line in f:
                         if 'name="theMapCanvas"' in line:
                             return
+                self.fail(
+                    'Worker failed, missing .qgs XML attribute: name="theMapCanvas"'
+                )
             elif payload["status"] == "STATUS_ERROR":
                 self.fail("Worker failed with error")
 
