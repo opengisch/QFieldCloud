@@ -231,6 +231,9 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
         if vl_extent.isNull() or not vl_extent.isFinite():
             raise Exception("Failed to obtain the project extent.")
 
+        # sometimes the result is a polygon whose all points are on the same line
+        # this is an invalid polygon and cannot libqfieldsync does not like it
+        vl_extent = vl_extent.buffered(1)
         vl_extent_wkt = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs().authid()
 
