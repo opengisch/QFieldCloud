@@ -185,13 +185,14 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
         }
 
     project_config = ProjectConfiguration(project)
-    vl_extent = QgsRectangle()
+    vl_extent_wkt = QgsRectangle()
     vl_extent_crs = project.crs().authid()
 
     if project_config.area_of_interest and project_config.area_of_interest_crs:
-        vl_extent = project_config.area_of_interest
+        vl_extent_wkt = project_config.area_of_interest
         vl_extent_crs = project_config.area_of_interest_crs
     else:
+        vl_extent = QgsRectangle()
         for layer in layers.values():
             if type(layer) != QgsVectorLayer:
                 continue
@@ -230,14 +231,17 @@ def _call_qfieldsync_exporter(project_filepath: Path, export_dir: Path) -> Dict:
         if vl_extent.isNull() or not vl_extent.isFinite():
             raise Exception("Failed to obtain the project extent.")
 
-        vl_extent = vl_extent.asWktPolygon()
+        # sometimes the result is a polygon whose all points are on the same line
+        # this is an invalid polygon and cannot libqfieldsync does not like it
+        vl_extent = vl_extent.buffered(1)
+        vl_extent_wkt = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs().authid()
 
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project,
         str(export_dir),
-        vl_extent,
+        vl_extent_wkt,
         vl_extent_crs,
         offline_editing,
         export_type=ExportType.Cloud,
