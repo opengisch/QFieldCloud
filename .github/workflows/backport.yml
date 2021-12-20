@@ -11,6 +11,6 @@ jobs:
     name: Backport
     steps:
       - name: Backport
-        uses: m-kuhn/backport@v1.2.4
+        uses: m-kuhn/backport@v1.2.5
         with:
           github_token: ${{ secrets.NYUKI_TOKEN }}
