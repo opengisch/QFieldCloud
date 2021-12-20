@@ -13,4 +13,4 @@ jobs:
       - name: Backport
         uses: m-kuhn/backport@v1.2.4
         with:
-          github_token: ${{ secrets.FAIRY_TOKEN }}
+          github_token: ${{ secrets.NYUKI_TOKEN }}
