@@ -277,6 +277,28 @@ def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVer
     return list_files_with_versions(bucket, prefix, strip_prefix=True)
 
 
+def get_project_file_with_versions(
+    project_id: str, filename: str
+) -> Optional[S3ObjectWithVersions]:
+    """Returns a list of files and their versions.
+
+    Args:
+        project_id (str): the project id
+
+    Returns:
+        Iterable[S3ObjectWithVersions]: the list of files
+    """
+    bucket = get_s3_bucket()
+    prefix = f"projects/{project_id}/files/{filename}"
+    files = [
+        f
+        for f in list_files_with_versions(bucket, prefix, strip_prefix=True)
+        if f.latest.key == prefix
+    ]
+
+    return files[0] if files else None
+
+
 def get_project_package_files(project_id: str) -> Iterable[S3Object]:
     """Returns a list of package files.
 

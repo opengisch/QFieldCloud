@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "invitations",
     "django_cron",
     "timezone_field",
+    "auditlog",
     # Local
     "qfieldcloud.core",
     "qfieldcloud.notifs",
@@ -89,6 +90,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_currentuser.middleware.ThreadLocalUserMiddleware",
+    "auditlog.middleware.AuditlogMiddleware",
     "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
     "axes.middleware.AxesMiddleware",
