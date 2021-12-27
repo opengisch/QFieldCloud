@@ -4,6 +4,8 @@ from django.http.response import HttpResponseRedirect
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import ProcessProjectfileJob, Project
+from qfieldcloud.core.utils import get_project_file_with_versions
+from qfieldcloud.core.utils2.audit import LogEntry, audit
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -143,7 +145,7 @@ class DownloadPushDeleteFileView(views.APIView):
             )
 
         request_file = request.FILES.get("file")
-
+        old_object = get_project_file_with_versions(project.id, filename)
         sha256sum = utils.get_sha256(request_file)
         bucket = utils.get_s3_bucket()
 
@@ -151,6 +153,10 @@ class DownloadPushDeleteFileView(views.APIView):
         metadata = {"Sha256sum": sha256sum}
 
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
+
+        new_object = get_project_file_with_versions(project.id, filename)
+
+        assert new_object
 
         if is_qgis_project_file:
             project.project_filename = filename
@@ -161,6 +167,19 @@ class DownloadPushDeleteFileView(views.APIView):
         project.data_last_updated_at = timezone.now()
         project.save()
 
+        if old_object:
+            audit(
+                project,
+                LogEntry.Action.UPDATE,
+                changes={filename: [old_object.latest.e_tag, new_object.latest.e_tag]},
+            )
+        else:
+            audit(
+                project,
+                LogEntry.Action.CREATE,
+                changes={filename: [None, new_object.latest.e_tag]},
+            )
+
         return Response(status=status.HTTP_201_CREATED)
 
     def delete(self, request, projectid, filename):
@@ -168,10 +187,20 @@ class DownloadPushDeleteFileView(views.APIView):
         key = utils.safe_join(f"projects/{projectid}/files/", filename)
         bucket = utils.get_s3_bucket()
 
+        old_object = get_project_file_with_versions(project.id, filename)
+
+        assert old_object
+
         bucket.object_versions.filter(Prefix=key).delete()
 
         if utils.is_qgis_project_file(filename):
             project.project_filename = None
             project.save()
+
+        audit(
+            project,
+            LogEntry.Action.DELETE,
+            changes={filename: [old_object.latest.e_tag, None]},
+        )
 
         return Response(status=status.HTTP_200_OK)

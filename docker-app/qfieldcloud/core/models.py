@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, Iterable, Type
 
 import qfieldcloud.core.utils2.storage
+from auditlog.registry import auditlog
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
@@ -1212,3 +1213,17 @@ class ApplyJobDelta(models.Model):
 
     def __str__(self):
         return f"{self.apply_job_id}:{self.delta_id}"
+
+
+auditlog.register(User)
+auditlog.register(UserAccount)
+auditlog.register(Organization)
+auditlog.register(OrganizationMember)
+auditlog.register(Team)
+auditlog.register(TeamMember)
+auditlog.register(Project)
+auditlog.register(ProjectCollaborator)
+auditlog.register(Delta)
+auditlog.register(ProcessProjectfileJob)
+auditlog.register(PackageJob)
+auditlog.register(ApplyJob)

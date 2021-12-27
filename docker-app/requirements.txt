@@ -28,3 +28,4 @@ mkdocs>=1.2.3
 django-timezone-field>=4.2.1
 django-model-utils>=4.2.0
 deprecated>=1.2.13
+django-auditlog==1.0a1
