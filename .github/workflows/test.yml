@@ -3,7 +3,7 @@ on: push
 jobs:
   test:
     name: Code check and tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -12,17 +12,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.8
+          python-version: '3.10'
       - name: Install pipenv
         run: pip install pipenv
+      - name: Check code formatting
+        uses: pre-commit/action@v2.0.3
       - name: Prepare docker-compose override file
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
-      - name: Check code formatting
-        run: |
-          pipenv install pre_commit
-          pipenv install pyyaml
-          pipenv run python -m pre_commit run --all-files
       - name: Export the env variables file
         run: |
           cp .env.example .env
