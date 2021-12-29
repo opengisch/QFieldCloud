@@ -64,7 +64,7 @@ class PackageView(views.APIView):
             ).latest("started_at")
             if export_job:
                 serializer = serializers.ExportJobSerializer(export_job)
-                return serializers.ExportJobSerializer(serializer.data)
+                return Response(serializer.data)
 
         if PackageJob.objects.filter(query).exists():
             serializer = serializers.ExportJobSerializer(PackageJob.objects.get(query))
