@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - dispatch_deploy_after_build
     tags:
       - "v*.*.*"
 jobs:
