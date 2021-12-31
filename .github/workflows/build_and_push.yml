@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - build-containers-with-github-actions
+      - dispatch_deploy_after_build
     tags:
       - "v*.*.*"
 jobs:
@@ -100,3 +100,12 @@ jobs:
           file: ./docker-qgis/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.tag }}
+
+      - name: Trigger deployment on private repository
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+          repository: opengisch/qfieldcloud-private
+          event-type: public_dispatch
+          client-payload: '{"version": "${{ steps.prepare.outputs.tag }}"}'
+
