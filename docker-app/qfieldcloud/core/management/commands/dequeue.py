@@ -2,6 +2,8 @@ import logging
 import signal
 from time import sleep
 
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Count, Q
@@ -41,6 +43,11 @@ class Command(BaseCommand):
 
         while killer.alive:
             with use_test_db_if_exists():
+                # the worker wrapper caches outdated ContentType ids during tests since it runs in a separate
+                # container than the tests, which then the tests.
+                if settings.DATABASES["default"]["NAME"].startswith("test_"):
+                    ContentType.objects.clear_cache()
+
                 queued_job = None
 
                 with transaction.atomic():
