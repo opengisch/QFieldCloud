@@ -59,9 +59,11 @@ class PackageView(views.APIView):
         # PackageJob.objects.filter(query).delete()
 
         if not project_obj.needs_repackaging:
-            export_job = PackageJob.objects.filter(
-                status=PackageJob.Status.FINISHED
-            ).latest("started_at")
+            export_job = (
+                PackageJob.objects.filter(status=PackageJob.Status.FINISHED)
+                .filter(project=project_obj)
+                .latest("started_at")
+            )
             if export_job:
                 serializer = serializers.ExportJobSerializer(export_job)
                 return Response(serializer.data)

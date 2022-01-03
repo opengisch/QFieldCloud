@@ -108,4 +108,3 @@ jobs:
           repository: opengisch/qfieldcloud-private
           event-type: public_dispatch
           client-payload: '{"version": "${{ steps.prepare.outputs.tag }}"}'
-
