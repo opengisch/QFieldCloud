@@ -102,8 +102,7 @@ services:
   createbuckets:
     image: minio/mc
     depends_on:
-      minio:
-        condition: service_healthy
+      - minio
     entrypoint: >
       /bin/sh -c "
       /usr/bin/mc config host add myminio ${STORAGE_ENDPOINT_URL} ${STORAGE_ACCESS_KEY_ID} ${STORAGE_SECRET_ACCESS_KEY};
