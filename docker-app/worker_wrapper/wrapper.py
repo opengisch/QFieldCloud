@@ -323,7 +323,7 @@ class DeltaApplyJobRun(JobRun):
                 json.dump(deltafile_contents, f)
 
     def after_docker_run(self) -> None:
-        delta_feedback = self.job.feedback["steps"][1]["outputs"]["delta_feedback"]
+        delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]
         is_data_modified = True
 
         for feedback in delta_feedback:
@@ -397,9 +397,9 @@ class ProcessProjectfileJobRun(JobRun):
 
     def after_docker_run(self) -> None:
         project = self.job.project
-
-        project_details = self.job.feedback["steps"][3]["outputs"]["project_details"]
-        project.project_details = project_details
+        project.project_details = self.job.feedback["outputs"]["project_details"][
+            "project_details"
+        ]
 
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         with open(thumbnail_filename, "rb") as f:

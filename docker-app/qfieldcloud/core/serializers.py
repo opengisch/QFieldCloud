@@ -288,10 +288,15 @@ class ExportJobSerializer(serializers.ModelSerializer):
         if not obj.feedback:
             return None
 
-        steps = obj.feedback.get("steps", [])
+        if obj.status != Job.Status.FINISHED:
+            return None
 
-        if len(steps) > 2 and steps[1].get("stage", 1) == 2:
-            return steps[1]["outputs"]["layer_checks"]
+        if obj.feedback.get("feedback_version") == "2.0":
+            return obj.feedback["outputs"]["package_project"]["layer_checks"]
+        else:
+            steps = obj.feedback.get("steps", [])
+            if len(steps) > 2 and steps[1].get("stage", 1) == 2:
+                return steps[1]["outputs"]["layer_checks"]
 
         return None
 

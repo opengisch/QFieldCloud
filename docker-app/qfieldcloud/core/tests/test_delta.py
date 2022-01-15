@@ -6,10 +6,10 @@ import time
 import fiona
 import requests
 import rest_framework
-from django.http.response import HttpResponseRedirect
+from django.http.response import HttpResponse, HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, ProjectCollaborator, User
+from qfieldcloud.core.models import Job, Project, ProjectCollaborator, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -71,6 +71,36 @@ class QfcTestCase(APITransactionTestCase):
             p.delete()
 
         User.objects.all().delete()
+
+    def fail(self, msg: str, job: Job = None):
+        if job:
+            msg += f"\n\nOutput:\n================\n{job.output}\n================"
+
+            if job.feedback:
+                if "error_stack" in job.feedback:
+                    msg += "\n\nError:\n================"
+                    for single_error_stack in job.feedback["error_stack"]:
+                        msg += "\n"
+                        msg += single_error_stack
+
+                    msg += f"  {job.feedback['error']}\n================"
+
+                feedback = json.dumps(job.feedback, indent=2, sort_keys=True)
+                msg += f"\n\nFeedback:\n================\n{feedback}\n================"
+            else:
+                msg += "\n\nFeedback: None"
+
+        super().fail(msg)
+
+    def assertHttpOk(self, response: HttpResponse):
+        try:
+            self.assertTrue(
+                rest_framework.status.is_success(response.status_code), response.json()
+            )
+        except Exception:
+            self.assertTrue(
+                rest_framework.status.is_success(response.status_code), response.content
+            )
 
     def upload_project_files(self, project) -> Project:
         # Verify the original geojson file
@@ -626,10 +656,14 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
+        job = Job.objects.filter(project=self.project1).latest("updated_at")
+
         for _ in range(10):
 
             time.sleep(2)
             response = self.client.get(uri)
+
+            self.assertHttpOk(response)
 
             payload = response.json()
             payload = sorted(payload, key=lambda k: k["id"])
@@ -641,7 +675,7 @@ class QfcTestCase(APITransactionTestCase):
                     break
 
                 if payload[idx]["status"] in failing_status:
-                    self.fail(f"Got failing status {payload[idx]['status']}")
+                    self.fail(f"Got failing status {payload[idx]['status']}", job=job)
                     return
 
                 delta_id, status, created_by = final_value
@@ -652,4 +686,4 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["created_by"], created_by)
                 return
 
-        self.fail("Worker didn't finish")
+        self.fail("Worker didn't finish", job=job)
