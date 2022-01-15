@@ -13,7 +13,14 @@ services:
     build:
       context: ./docker-app
     restart: unless-stopped
-    command: gunicorn qfieldcloud.wsgi:application --bind 0.0.0.0:8000 -t 300
+    command: >
+      gunicorn
+        qfieldcloud.wsgi:application
+        --bind 0.0.0.0:8000
+        --timeout ${GUNICORN_TIMEOUT_S}
+        --max-requests ${GUNICORN_MAX_REQUESTS}
+        --workers ${GUNICORN_WORKERS}
+        --threads ${GUNICORN_THREADS}
     volumes:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
