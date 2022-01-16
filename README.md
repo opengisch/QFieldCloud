@@ -73,7 +73,7 @@ QFieldCloud will automatically generate a certificate and it's root certificate 
 
 On Debian/Ubuntu, copy the root certificate to the directory with trusted certificates. Note the extension has been changed to `.crt`:
 
-    sudo mv ./config/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+    sudo cp ./conf/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
 
 Trust the newly added certificate:
 
@@ -86,7 +86,7 @@ Connecting with `curl` should return no errors:
 
 If you want to remove or change the root certificate, you need to remove the root certificate file and refresh the list of certificates:
 
-    rm /usr/local/share/ca-certificates/rootCA.crt
+    sudo rm /usr/local/share/ca-certificates/rootCA.crt
     sudo update-ca-certificates --fresh
 
 Now connecting with `curl` should fail with a similar error:
