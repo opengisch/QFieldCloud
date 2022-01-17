@@ -125,7 +125,9 @@ class DownloadPushDeleteFileView(views.APIView):
             HttpMethod="GET",
         )
 
-        if request.META["HTTP_HOST"].split(":")[-1] == request.META["WEB_HTTPS_PORT"]:
+        if request.META.get("HTTP_HOST", "").split(":")[-1] == request.META.get(
+            "WEB_HTTPS_PORT"
+        ):
             # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
             response = HttpResponse()
             response["X-Accel-Redirect"] = "/storage-download/"
