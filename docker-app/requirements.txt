@@ -1,4 +1,4 @@
-Django>=3.2,<3.3
+Django>=3.2.11,<3.3
 djangorestframework>=3.12.2,<3.13
 markdown>=3.3.3,<3.4
 django-filter>=21.1,<22
