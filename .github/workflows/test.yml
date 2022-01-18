@@ -23,7 +23,7 @@ jobs:
       - name: Export the env variables file
         run: |
           cp .env.example .env
-          set -a; source .env; set +a
+          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
       - name: Pull docker containers
         run: docker-compose pull
       - name: Build and run docker containers
