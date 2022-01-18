@@ -19,9 +19,6 @@ logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITransactionTestCase):
-
-    DJANGO_BASE_URL = "http://localhost:8000/api/v1/"
-
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
@@ -593,9 +590,8 @@ class QfcTestCase(APITransactionTestCase):
     def get_file_contents(self, project, filename):
         response = self.client.get(f"/api/v1/files/{project.id}/{filename}/")
 
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url)
+        if isinstance(response, HttpResponseRedirect):
+            response = requests.get(response.url)
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(get_filename(response), filename)

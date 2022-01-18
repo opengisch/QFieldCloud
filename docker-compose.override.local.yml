@@ -5,7 +5,7 @@ services:
   app:
     ports:
       # allow direct access without nginx
-      - "8000:8000"
+      - "5001:8000"
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -102,7 +102,8 @@ services:
   createbuckets:
     image: minio/mc
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     entrypoint: >
       /bin/sh -c "
       /usr/bin/mc config host add myminio ${STORAGE_ENDPOINT_URL} ${STORAGE_ACCESS_KEY_ID} ${STORAGE_SECRET_ACCESS_KEY};

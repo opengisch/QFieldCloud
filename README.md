@@ -164,6 +164,20 @@ Note you may want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` 
 Based on this example
 <https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/>
 
+### Ports
+
+| service       | port | configuration        | local              | development        | production         |
+|---------------|------|----------------------|--------------------|--------------------|--------------------|
+| nginx http    | 80   | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| nginx https   | 443  | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| django http   | 5001 |                      | :white_check_mark: | :x:                | :x:                |
+| postgres      | 5433 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| redis         | 6379 | REDIS_PORT           | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| geodb         | 5432 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :x:                |
+| minio browser | 8010 | STORAGE_BROWSER_PORT | :white_check_mark: | :x:                | :x:                |
+| smtp web      | 5000 |                      | :white_check_mark: | :x:                | :x:                |
+| smtp          | 25   |                      | :white_check_mark: | :x:                | :x:                |
+| imap          | 143  |                      | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
 
