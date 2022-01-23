@@ -69,6 +69,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "data_last_updated_at",
             "can_repackage",
             "needs_repackaging",
+            "status",
             "user_role",
             "user_role_origin",
         )
