@@ -45,6 +45,9 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header Host $http_host;
 
+    proxy_read_timeout 300;
+    proxy_send_timeout 300;
+
     proxy_redirect off;
     proxy_pass http://django;
   }
