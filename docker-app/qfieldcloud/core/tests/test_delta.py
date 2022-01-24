@@ -251,7 +251,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        self.assertFalse(
+        self.assertTrue(
             self.upload_deltas(project, "singlelayer_singledelta_diff_content.json")
         )
 
