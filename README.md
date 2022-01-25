@@ -144,7 +144,7 @@ Run and build the docker containers
     docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
 
     # prod server
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
+    docker-compose -f docker-compose.yml -f docker-compose.override.prod.yml up -d --build
 
 Run the django database migrations
 
