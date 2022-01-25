@@ -101,14 +101,6 @@ class DeltafileValidationError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class DeltafileDuplicationError(QFieldCloudException):
-    """Raised when a deltafile with the same id has already been uploaded"""
-
-    code = "duplicate_deltafile"
-    message = "Deltafile already uploaded"
-    status_code = status.HTTP_400_BAD_REQUEST
-
-
 class NoDeltasToApplyError(QFieldCloudException):
     """Raised when a deltafile validation fails"""
 

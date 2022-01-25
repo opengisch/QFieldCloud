@@ -4,7 +4,6 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.utils import IntegrityError
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, utils
@@ -60,6 +59,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             raise exceptions.EmptyContentError()
 
         request_file = request.data["file"]
+        created_deltas = []
 
         try:
             deltafile_json = json.load(request_file)
@@ -71,17 +71,11 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             deltas = deltafile_json.get("deltas", [])
             delta_ids = sorted([str(delta["uuid"]) for delta in deltas])
             existing_delta_ids = [
-                str(delta.id)
-                for delta in Delta.objects.filter(
-                    deltafile_id=deltafile_id,
-                ).order_by("id")
+                str(v)
+                for v in Delta.objects.filter(id__in=delta_ids)
+                .order_by("id")
+                .values_list("id", flat=True)
             ]
-
-            if len(existing_delta_ids) != 0:
-                if delta_ids == existing_delta_ids:
-                    return Response()
-                else:
-                    raise exceptions.DeltafileDuplicationError()
 
             if project_file is None:
                 raise exceptions.NoQGISProjectError()
@@ -93,6 +87,10 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
             with transaction.atomic():
                 for delta in deltas:
+                    if delta["uuid"] in existing_delta_ids:
+                        logger.warning(f'Duplicate delta id: ${delta["uuid"]}')
+                        continue
+
                     delta_obj = Delta(
                         id=delta["uuid"],
                         deltafile_id=deltafile_id,
@@ -107,6 +105,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                         delta_obj.last_status = Delta.Status.UNPERMITTED
 
                     delta_obj.save(force_insert=True)
+                    created_deltas.append(delta_obj)
 
         except Exception as err:
             if request_file:
@@ -118,18 +117,14 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
             logger.exception(err)
 
-            if isinstance(err, IntegrityError):
-                raise exceptions.DeltafileDuplicationError()
-            elif isinstance(err, exceptions.NoQGISProjectError):
-                raise err
-            elif isinstance(err, exceptions.DeltafileDuplicationError):
+            if isinstance(err, exceptions.NoQGISProjectError):
                 raise err
             elif isinstance(err, exceptions.DeltafileValidationError):
                 raise err
             else:
                 raise exceptions.QFieldCloudException() from err
 
-        if not jobs.apply_deltas(
+        if created_deltas and not jobs.apply_deltas(
             project_obj,
             self.request.user,
             project_file,
