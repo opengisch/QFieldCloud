@@ -6,7 +6,7 @@ QFieldCloud allows seamless synchronization of your field data with your spatial
 
 # Hosted solution
 If you're interested in quickly getting up and running, we suggest subscribing to the version hosted by OPENGIS.ch at https://qfield.cloud. This is also the instance that is integrated by default into QField.
-<a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal.svg" width="100%"/></a>
+<a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal_embedded_font.svg" width="100%"/></a>
 
 
 ## Documentation
@@ -19,6 +19,17 @@ Permissions documentation is [here](https://github.com/opengisch/qfieldcloud/blo
 
 
 ## Development
+
+### Clone the repository
+
+Clone the repository and all its submodules:
+
+    git clone --recurse-submodules git://github.com/opengisch/qfieldcloud.git
+   
+To fetch upstream development, don't forget to update the submodules too:
+
+    git pull --recurse-submodules  && git submodule update --recursive
+
 
 ### Launch a local instance
 
