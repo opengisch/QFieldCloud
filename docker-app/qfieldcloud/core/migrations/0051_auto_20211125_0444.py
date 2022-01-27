@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                             ST_SetSRID(
                                 ST_Force2D(
                                     ST_GeomFromText(
-                                        jsonb_extract_path_text(core_delta.content, 'old', 'geometry')
+                                        REPLACE( jsonb_extract_path_text(core_delta.content, 'old', 'geometry'), 'nan', '0' )
                                     )
                                 ),
                                 subquery.srid
@@ -65,7 +65,7 @@ class Migration(migrations.Migration):
                             ST_SetSRID(
                                 ST_Force2D(
                                     ST_GeomFromText(
-                                        jsonb_extract_path_text(core_delta.content, 'new', 'geometry')
+                                        REPLACE( jsonb_extract_path_text(core_delta.content, 'new', 'geometry'), 'nan', '0' )
                                     )
                                 ),
                                 subquery.srid
@@ -93,8 +93,8 @@ class Migration(migrations.Migration):
                             ELSE
                                 NULL
                             END INTO srid;
-                        NEW.old_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( jsonb_extract_path_text(NEW.content, 'old', 'geometry') ) ), srid ), 4326 );
-                        NEW.new_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( jsonb_extract_path_text(NEW.content, 'new', 'geometry') ) ), srid ), 4326 );
+                        NEW.old_geom := ST_Transform( ST_SetSRID( ST_Force2D( REPLACE( ST_GeomFromText( jsonb_extract_path_text(NEW.content, 'old', 'geometry') ), 'nan', '0' ) ), srid ), 4326 );
+                        NEW.new_geom := ST_Transform( ST_SetSRID( ST_Force2D( REPLACE( ST_GeomFromText( jsonb_extract_path_text(NEW.content, 'new', 'geometry') ), 'nan', '0' ) ), srid ), 4326 );
                         RETURN NEW;
                     END;
                 $$
