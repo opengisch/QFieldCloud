@@ -699,7 +699,10 @@ class TeamMember(models.Model):
     )
 
     def clean(self) -> None:
-        if not self.team.team_organization.members.filter(member=self.member):
+        if (
+            self.team.team_organization.members.filter(member=self.member).count() == 0
+            and self.team.team_organization.organization_owner != self.member
+        ):
             raise ValidationError(
                 _("Cannot add team member that is not an organization member.")
             )
