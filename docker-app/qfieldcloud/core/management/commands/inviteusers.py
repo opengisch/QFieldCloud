@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from qfieldcloud.core.invitations_utils import invite_user_by_email
@@ -15,6 +17,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--inviter", type=str, required=True)
+        parser.add_argument("--limit", type=int, default=30)
         parser.add_argument("--emails", type=str, nargs="+", required=True)
         parser.add_argument("--exit-on-failure", action="store_true")
 
@@ -24,6 +27,7 @@ class Command(BaseCommand):
         inviter_username = options.get("inviter")
         emails = options.get("emails", [])
         exit_on_failure = options.get("exit-on-failure")
+        sent_emails_limit = options.get("limit", 0)
 
         try:
             inviter = User.objects.get(username=inviter_username)
@@ -31,13 +35,23 @@ class Command(BaseCommand):
             print(f'ERROR: Failed to find user "{inviter_username}"!')
             exit(1)
 
+        sent_emails_count = 0
+
         for email in emails:
+            if sent_emails_count >= sent_emails_limit:
+                break
+
             success, message = invite_user_by_email(email, inviter)
 
             if success:
-                print(f"SUCCESS: invitation sent to {email}.")
+                sent_emails_count += 1
+                print(
+                    f"{datetime.now().isoformat()}\tSUCCESS\tinvitation sent to {email}."
+                )
             else:
-                print(f"WARNING: invitation not sent to {email}. {message}")
+                print(
+                    f"{datetime.now().isoformat()}\tWARNING\tinvitation not sent to {email}. {message}"
+                )
 
                 if exit_on_failure:
                     exit(1)
