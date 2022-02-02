@@ -39,14 +39,3 @@ repos:
     rev: "3.9.0"
     hooks:
       - id: flake8
-
-  # Make sure the envvars from the .env.example are available in the docker-compose configurations
-  - repo: local
-    hooks:
-      - id: check_envvars
-        name: Check envvars
-        description: Make sure the envvars from the .env.example are available in the docker-compose configurations
-        entry: scripts/check_envvars.sh
-        language: script
-        pass_filenames: false
-        types: [text]
