@@ -2,15 +2,17 @@ from collections import defaultdict
 
 from django.core.management.base import BaseCommand, CommandError
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import Project, UserAccount
 
 
 class Command(BaseCommand):
-    """
-    Deletes old versions of files
+
+    help = """
+    Deletes old versions of files. Will keep only the 3 most recent versions
+    for COMMUNITY accounts and the 10 most recent for PRO accounts.
     """
 
-    PROMPT_TXT = "This will purge old files for all projects. Type 'yes' to continue, or 'no' to cancel: "
+    PROMPT_TXT = "This will purge old files for all projects. Rerun with --force, or type 'yes' to continue, or 'no' to cancel: "
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -23,35 +25,41 @@ class Command(BaseCommand):
             action="store_true",
             help="Prevent confirmation prompt when purging all projects",
         )
-        parser.add_argument(
-            "--keep_count", type=int, default=10, help="How many versions to keep"
-        )
 
     def handle(self, *args, **options):
 
         # Determine project ids to work on
-        projects_ids = options.get("projects")
-        if not projects_ids:
-            if options.get("force") is not True and input(Command.PROMPT_TXT) != "yes":
-                raise CommandError("Collecting static files cancelled.")
-            projects_ids = Project.objects.values_list("id", flat=True)
-        else:
-            projects_ids = projects_ids.split(",")
+        proj_ids = options.get("projects")
 
         # Get the affected projects
-        projects_qs = Project.objects.all()
-        if projects_ids:
-            projects_qs = projects_qs.filter(pk__in=projects_ids)
+        if not proj_ids:
+            if options.get("force") is not True and input(Command.PROMPT_TXT) != "yes":
+                raise CommandError("Collecting static files cancelled.")
+            proj_instances = Project.objects.all()
+        else:
+            proj_instances = Project.objects.filter(pk__in=proj_ids.split(","))
+
+        # We'll need useraccount type
+        proj_instances = proj_instances.prefetch_related("owner__useraccount")
 
         bucket = utils.get_s3_bucket()
+        for proj_instance in proj_instances:
 
-        for project_id in projects_ids:
-            print(f"Processing project {project_id}")
+            print(f"Processing {proj_instance}")
 
-            prefix = f"projects/{project_id}/files/"
-            keep_count = options.get("keep_count")
+            # Determine account type
+            account_type = proj_instance.owner.useraccount.account_type
+            if account_type == UserAccount.TYPE_COMMUNITY:
+                keep_count = 3
+            elif account_type == UserAccount.TYPE_PRO:
+                keep_count = 10
+            else:
+                print(f"⚠️ Unknown account type - skipping purge ⚠️")
+                continue
+            print(f"Keeping {keep_count} versions")
 
-            # All version under prefix
+            # Get all files versions for that project
+            prefix = f"projects/{proj_instance.pk}/files/"
             all_versions = bucket.object_versions.filter(Prefix=prefix)
 
             # Organize the versions by file in a dict
@@ -75,11 +83,12 @@ class Command(BaseCommand):
                 all_count = len(old_versions)
                 topurge_count = len(old_versions_to_purge)
                 print(
-                    f"{filename}: will purge {topurge_count} out of {all_count} old versions"
+                    f"- {filename}: will purge {topurge_count} out of {all_count} old versions"
                 )
 
                 # Remove the N oldest
                 for old_version in old_versions_to_purge:
+                    # TODO: any way to batch those ? will probaby get slow on production
                     old_version.delete()
                     # TODO: audit ? take implementation from files_views.py:211
 
