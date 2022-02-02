@@ -54,7 +54,7 @@ class Command(BaseCommand):
             elif account_type == UserAccount.TYPE_PRO:
                 keep_count = 10
             else:
-                print(f"⚠️ Unknown account type - skipping purge ⚠️")
+                print("⚠️ Unknown account type - skipping purge ⚠️")
                 continue
             print(f"Keeping {keep_count} versions")
 
