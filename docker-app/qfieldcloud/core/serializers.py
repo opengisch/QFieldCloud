@@ -336,7 +336,8 @@ class JobMixin:
         ModelClass: Job = self.Meta.model
         last_active_job = (
             ModelClass.objects.filter(
-                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED]
+                project=self.initial_data.get("project_id"),
+                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
             )
             .only("id")
             .order_by("-started_at", "-created_at")
