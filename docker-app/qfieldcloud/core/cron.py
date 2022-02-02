@@ -43,7 +43,7 @@ class PurgeOldFileVersions(CronJobBase):
     management command.
     """
 
-    schedule = Schedule(runs_every_mins=60 * 24 * 7)
+    schedule = Schedule(run_every_mins=60 * 24 * 7)
     code = "qfieldcloud.purge_old_file_versions"
 
     def do(self):
