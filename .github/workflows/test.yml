@@ -22,6 +22,9 @@ jobs:
       - name: Prepare docker-compose override file
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
+      - name: Check env vars coniguration
+        run: |
+          scripts/check_envvars.sh
       - name: Export the env variables file
         run: |
           cp .env.example .env
