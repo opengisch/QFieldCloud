@@ -198,8 +198,8 @@ class QfcTestCase(APITestCase):
         self.assertEqual(p(self.project5, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
         self.assertEqual(p(self.project6, self.user1).user_role, ProjectCollaborator.Roles.ADMIN)
         self.assertEqual(p(self.project6, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
-        self.assertEqual(p(self.project7, self.user1).user_role, ProjectCollaborator.Roles.REPORTER)
-        self.assertEqual(p(self.project7, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.COLLABORATOR.value)
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project7, self.user1)
         self.assertEqual(p(self.project8, self.user1).user_role, ProjectCollaborator.Roles.READER)
         self.assertEqual(p(self.project8, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.PUBLIC.value)
         self.assertEqual(p(self.project9, self.user1).user_role, ProjectCollaborator.Roles.ADMIN)

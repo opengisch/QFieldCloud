@@ -9,7 +9,14 @@ import rest_framework
 from django.http.response import HttpResponse, HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Job, Project, ProjectCollaborator, User
+from qfieldcloud.core.models import (
+    Job,
+    Organization,
+    OrganizationMember,
+    Project,
+    ProjectCollaborator,
+    User,
+)
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -32,12 +39,16 @@ class QfcTestCase(APITransactionTestCase):
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
+        self.org1 = Organization.objects.create(
+            username="org1", organization_owner=self.user1
+        )
+
         # Create a project
         self.project1 = Project.objects.create(
             id="e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
             name="project1",
             is_public=False,
-            owner=self.user1,
+            owner=self.org1,
         )
         self.project1.save()
 
@@ -46,10 +57,18 @@ class QfcTestCase(APITransactionTestCase):
             collaborator=self.user2,
             role=ProjectCollaborator.Roles.REPORTER,
         )
+        OrganizationMember.objects.create(
+            organization=self.org1,
+            member=self.user2,
+        )
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user3,
             role=ProjectCollaborator.Roles.ADMIN,
+        )
+        OrganizationMember.objects.create(
+            organization=self.org1,
+            member=self.user3,
         )
 
     def tearDown(self):
