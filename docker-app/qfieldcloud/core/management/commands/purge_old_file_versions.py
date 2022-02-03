@@ -1,14 +1,12 @@
 from django.core.management.base import BaseCommand, CommandError
-from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, UserAccount
+from qfieldcloud.core.models import Project
+from qfieldcloud.core.utils2 import storage
 
 
 class Command(BaseCommand):
+    """Runs purge_old_file_versions as a management command"""
 
-    help = """
-    Deletes old versions of files. Will keep only the 3 most recent versions
-    for COMMUNITY accounts and the 10 most recent for PRO accounts.
-    """
+    help = storage.purge_old_file_versions.__doc__
 
     PROMPT_TXT = "This will purge old files for all projects. Rerun with --force, or type 'yes' to continue, or 'no' to cancel: "
 
@@ -40,47 +38,6 @@ class Command(BaseCommand):
         # Iterate through projects
         proj_instances = proj_instances.prefetch_related("owner__useraccount")
         for proj_instance in proj_instances:
-
-            print(f"Processing {proj_instance}")
-
-            # Determine account type
-            account_type = proj_instance.owner.useraccount.account_type
-            if account_type == UserAccount.TYPE_COMMUNITY:
-                keep_count = 3
-            elif account_type == UserAccount.TYPE_PRO:
-                keep_count = 10
-            else:
-                raise NotImplementedError(f"Unknown account type {account_type}")
-            print(f"Keeping {keep_count} versions")
-
-            # Process file by file
-            for file in utils.get_project_files_with_versions(proj_instance.pk):
-
-                filename = file.latest.name
-                old_versions = file.versions
-
-                # Sort by date (newest first)
-                old_versions.sort(key=lambda i: i.last_modified, reverse=True)
-
-                # Skip the newest N
-                old_versions_to_purge = old_versions[keep_count:]
-
-                # Debug print
-                all_count = len(old_versions)
-                topurge_count = len(old_versions_to_purge)
-                print(
-                    f'Purging {topurge_count} out of {all_count} old versions for "{filename}"...'
-                )
-
-                # Remove the N oldest
-                for old_version in old_versions_to_purge:
-                    if old_version.is_latest:
-                        # This is not supposed to happen, as versions were sorted above,
-                        # but leaving it here as a security measure in case version
-                        # ordering changes for some reason.
-                        raise Exception("Trying to delete latest version")
-                    # TODO: any way to batch those ? will probaby get slow on production
-                    old_version._data.delete()
-                    # TODO: audit ? take implementation from files_views.py:211
+            storage.cleanup_old_file_versions(proj_instance)
 
         print("done !")
