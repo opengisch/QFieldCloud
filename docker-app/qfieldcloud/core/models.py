@@ -909,6 +909,7 @@ class Project(models.Model):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
     def storage_size(self):
+        """Retrieves the storage size from S3"""
         return utils.get_s3_project_size(self.id)
 
     @property
