@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from django.core.management.base import BaseCommand, CommandError
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project, UserAccount
@@ -39,10 +37,8 @@ class Command(BaseCommand):
         else:
             proj_instances = Project.objects.filter(pk__in=proj_ids.split(","))
 
-        # We'll need useraccount type
+        # Iterate through projects
         proj_instances = proj_instances.prefetch_related("owner__useraccount")
-
-        bucket = utils.get_s3_bucket()
         for proj_instance in proj_instances:
 
             print(f"Processing {proj_instance}")
@@ -58,20 +54,11 @@ class Command(BaseCommand):
                 continue
             print(f"Keeping {keep_count} versions")
 
-            # Get all files versions for that project
-            prefix = f"projects/{proj_instance.pk}/files/"
-            all_versions = bucket.object_versions.filter(Prefix=prefix)
-
-            # Organize the versions by file in a dict
-            old_versions_by_file = defaultdict(list)
-            for version in all_versions:
-                # The latest is not an old version
-                if version.is_latest:
-                    continue
-                old_versions_by_file[version.key].append(version)
-
             # Process file by file
-            for filename, old_versions in old_versions_by_file.items():
+            for file in utils.get_project_files_with_versions(proj_instance.pk):
+
+                filename = file.latest.name
+                old_versions = file.versions
 
                 # Sort by date (newest first)
                 old_versions.sort(key=lambda i: i.last_modified, reverse=True)
@@ -89,7 +76,7 @@ class Command(BaseCommand):
                 # Remove the N oldest
                 for old_version in old_versions_to_purge:
                     # TODO: any way to batch those ? will probaby get slow on production
-                    old_version.delete()
+                    old_version._data.delete()
                     # TODO: audit ? take implementation from files_views.py:211
 
         print("done !")
