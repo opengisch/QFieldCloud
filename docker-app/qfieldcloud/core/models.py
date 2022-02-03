@@ -12,7 +12,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from django.db.models import Case, Exists, OuterRef, Q
+from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count
@@ -84,24 +84,13 @@ class UserQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.filter(
+                    ProjectCollaborator.objects.valid_only()
+                    .filter(
                         project=project,
                         collaborator=OuterRef("pk"),
                     )
                     .exclude(
                         collaborator__user_type=User.TYPE_TEAM,
-                    )
-                    .exclude(
-                        # Memberships on private project for non-pro accounts are not allowed.
-                        # Note that this filter could maybe be added on the ProjectCollaborator
-                        # manager directly.
-                        Q(project__private=True)
-                        & ~Q(project__owner__user_type=User.TYPE_ORGANIZATION)
-                        & ~Q(
-                            collaborator__in=User.objects.for_organization(
-                                project.owner
-                            )
-                        ),
                     )
                 ),
                 ProjectCollaborator.objects.filter(
@@ -784,7 +773,7 @@ class ProjectQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.filter(
+                    ProjectCollaborator.objects.valid_only().filter(
                         project=OuterRef("pk"),
                         collaborator=user,
                     )
@@ -1004,6 +993,21 @@ def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> N
         qfieldcloud.core.utils2.storage.remove_project_thumbail(instance)
 
 
+class ProjectCollaboratorQueryset(models.QuerySet):
+    def valid_only(self):
+        """Keep only valid membersips valid.
+
+        A membership to a private project not owned by an organization, or owned by a organization
+        that the member is part of is invalid."""
+
+        public = Q(project__is_public=True)
+        owned_by_org = Q(project__owner__user_type=User.TYPE_ORGANIZATION)
+        user_also_member_of_org = Q(
+            project__owner__organization__members__member=F("collaborator")
+        )
+        return self.filter(public | (owned_by_org & user_also_member_of_org))
+
+
 class ProjectCollaborator(models.Model):
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
@@ -1019,6 +1023,8 @@ class ProjectCollaborator(models.Model):
                 name="projectcollaborator_project_collaborator_uniq",
             )
         ]
+
+    objects = ProjectCollaboratorQueryset.as_manager()
 
     project = models.ForeignKey(
         Project,
