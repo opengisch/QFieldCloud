@@ -425,7 +425,7 @@ class UserAccount(models.Model):
             return None
 
     def __str__(self):
-        return self.TYPE_CHOICES[self.account_type][1]
+        return self.get_account_type_display()
 
 
 class Geodb(models.Model):
