@@ -248,7 +248,7 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
 
 
 def get_s3_project_size(project_id: str) -> int:
-    """Return the size in MiB of the project on the storage, included the
+    """Return the size in MiB of the project on the storage, including the
     exported files and their versions"""
 
     bucket = get_s3_bucket()
