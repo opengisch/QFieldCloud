@@ -49,6 +49,10 @@ class UserQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project"):
+
+        # This is a list of tuples defining project memberships
+        # List[(Condition, Role, RoleOrigin)]
+
         permissions_config = [
             # Project owner
             (
@@ -83,8 +87,21 @@ class UserQueryset(models.QuerySet):
                     ProjectCollaborator.objects.filter(
                         project=project,
                         collaborator=OuterRef("pk"),
-                    ).exclude(
+                    )
+                    .exclude(
                         collaborator__user_type=User.TYPE_TEAM,
+                    )
+                    .exclude(
+                        # Memberships on private project for non-pro accounts are not allowed.
+                        # Note that this filter could maybe be added on the ProjectCollaborator
+                        # manager directly.
+                        Q(project__private=True)
+                        & ~Q(project__owner__user_type=User.TYPE_ORGANIZATION)
+                        & ~Q(
+                            collaborator__in=User.objects.for_organization(
+                                project.owner
+                            )
+                        ),
                     )
                 ),
                 ProjectCollaborator.objects.filter(
