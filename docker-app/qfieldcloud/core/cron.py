@@ -1,6 +1,5 @@
 import logging
 
-from django.core.management import call_command
 from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
 
@@ -36,15 +35,3 @@ class ResendFailedInvitationsJob(CronJobBase):
         logger.info(
             f'Resend {len(invitation_emails)} previously failed invitation(s) to: {", ".join(invitation_emails)}'
         )
-
-
-class PurgeOldFileVersions(CronJobBase):
-    """Purges old version of files of all projects using the purge_old_file_versions
-    management command.
-    """
-
-    schedule = Schedule(run_every_mins=60 * 24 * 7)
-    code = "qfieldcloud.purge_old_file_versions"
-
-    def do(self):
-        call_command("purge_old_file_versions", "--force")

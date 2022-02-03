@@ -565,8 +565,52 @@ class QfcTestCase(APITransactionTestCase):
         self.assertGreater(response.json()[0]["size"], 10000000)
         self.assertLess(response.json()[0]["size"], 11000000)
 
+    def test_purge_old_versions_command(self):
+        """This tests manual purging of old versions with the management command"""
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        def count_versions():
+            """counts the versions in first file of project1"""
+            file = list(self.project1.files)[0]
+            return len(file.versions)
+
+        def read_version(n):
+            """returns the content of version in first file of project1"""
+            file = list(self.project1.files)[0]
+            return file.versions[n]._data.get()["Body"].read().decode()
+
+        # Create 20 versions (direct upload to s3)
+        bucket = utils.get_s3_bucket()
+        key = f"projects/{self.project1.id}/files/file.txt/"
+        for i in range(20):
+            test_file = io.BytesIO(f"v{i}".encode())
+            bucket.upload_fileobj(test_file, key)
+
+        # Ensure it worked
+        self.assertEqual(count_versions(), 20)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(19), "v0")
+
+        # Run management command on other project should have no effect
+        other = Project.objects.create(name="other", owner=self.user1)
+        call_command("purge_old_file_versions", "--force", "--projects", other.pk)
+        self.assertEqual(count_versions(), 20)
+
+        # Run management command should leave 3
+        call_command("purge_old_file_versions", "--force")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(2), "v17")
+
+        # Run management command is idempotent
+        call_command("purge_old_file_versions", "--force")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(2), "v17")
+
     def test_purge_old_versions(self):
-        """This tests manual purging of old versions"""
+        """This tests automated purging of old versions when uploading files"""
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
@@ -582,39 +626,34 @@ class QfcTestCase(APITransactionTestCase):
             file = list(self.project1.files)[0]
             return file.versions[n]._data.get()["Body"].read().decode()
 
-        # Create 20 versions
+        # As PRO account, 10 version should be kept out of 20
+        self.user1.useraccount.account_type = UserAccount.TYPE_PRO
+        self.user1.useraccount.save()
         for i in range(20):
             test_file = io.StringIO(f"v{i}")
             self.client.post(apipath, {"file": test_file}, format="multipart")
-
-        # Ensure it worked
-        self.assertEqual(count_versions(), 20)
-        self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(19), "v0")
-
-        # Purge another project has no effect
-        other = Project.objects.create(name="other", owner=self.user1)
-        call_command("purge_old_file_versions", "--force", "--projects", other.pk)
-        self.assertEqual(count_versions(), 20)
-
-        # Purge pro account keeps 10 versions
-        self.user1.useraccount.account_type = UserAccount.TYPE_PRO
-        self.user1.useraccount.save()
-        call_command("purge_old_file_versions", "--force")
         self.assertEqual(count_versions(), 10)
         self.assertEqual(read_version(0), "v19")
         self.assertEqual(read_version(9), "v10")
 
-        # Purge community account keeps 3 versions
+        # As COMMUNITY account, 3 version should be kept
         self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
         self.user1.useraccount.save()
-        call_command("purge_old_file_versions", "--force")
-        self.assertEqual(count_versions(), 3)
-        self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(2), "v17")
 
-        # Purge is idempotent
-        call_command("purge_old_file_versions", "--force")
-        self.assertEqual(count_versions(), 3)
+        # But first we check that uploading to another project doesn't affect a projct
+        otherproj = Project.objects.create(name="other", owner=self.user1)
+        otherpath = f"/api/v1/files/{otherproj.id}/file.txt/"
+        self.client.post(otherpath, {"file": io.StringIO("v1")}, format="multipart")
+        self.assertEqual(count_versions(), 10)
         self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(2), "v17")
+        self.assertEqual(read_version(9), "v10")
+
+        # As COMMUNITY account, 3 version should be kept out of 20 new ones
+        self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
+        self.user1.useraccount.save()
+        for i in range(20, 40):
+            test_file = io.StringIO(f"v{i}")
+            self.client.post(apipath, {"file": test_file}, format="multipart")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v39")
+        self.assertEqual(read_version(2), "v37")

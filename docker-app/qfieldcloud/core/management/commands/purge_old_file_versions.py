@@ -38,6 +38,6 @@ class Command(BaseCommand):
         # Iterate through projects
         proj_instances = proj_instances.prefetch_related("owner__useraccount")
         for proj_instance in proj_instances:
-            storage.cleanup_old_file_versions(proj_instance)
+            storage.purge_old_file_versions(proj_instance)
 
         print("done !")
