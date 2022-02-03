@@ -75,6 +75,13 @@ class Command(BaseCommand):
 
                 # Remove the N oldest
                 for old_version in old_versions_to_purge:
+                    if old_version.is_latest:
+                        # This is not supposed to happen, as versions were sorted above,
+                        # but leaving it here as a security measure
+                        print(
+                            "⚠️ Unexpected behaviour in purging old files - check sorting of versions ⚠️"
+                        )
+                        continue
                     # TODO: any way to batch those ? will probaby get slow on production
                     old_version._data.delete()
                     # TODO: audit ? take implementation from files_views.py:211
