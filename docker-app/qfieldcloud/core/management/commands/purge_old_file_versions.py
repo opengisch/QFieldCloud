@@ -50,8 +50,7 @@ class Command(BaseCommand):
             elif account_type == UserAccount.TYPE_PRO:
                 keep_count = 10
             else:
-                print("⚠️ Unknown account type - skipping purge ⚠️")
-                continue
+                raise NotImplementedError(f"Unknown account type {account_type}")
             print(f"Keeping {keep_count} versions")
 
             # Process file by file
@@ -77,11 +76,9 @@ class Command(BaseCommand):
                 for old_version in old_versions_to_purge:
                     if old_version.is_latest:
                         # This is not supposed to happen, as versions were sorted above,
-                        # but leaving it here as a security measure
-                        print(
-                            "⚠️ Unexpected behaviour in purging old files - check sorting of versions ⚠️"
-                        )
-                        continue
+                        # but leaving it here as a security measure in case version
+                        # ordering changes for some reason.
+                        raise Exception("Trying to delete latest version")
                     # TODO: any way to batch those ? will probaby get slow on production
                     old_version._data.delete()
                     # TODO: audit ? take implementation from files_views.py:211
