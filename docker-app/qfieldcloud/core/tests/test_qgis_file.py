@@ -1,13 +1,15 @@
 import filecmp
+import io
 import logging
 import tempfile
 import time
 
 import requests
+from django.core.management import call_command
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.models import Project, User, UserAccount
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -562,3 +564,56 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual("bigfile.big", response.json()[0]["name"])
         self.assertGreater(response.json()[0]["size"], 10000000)
         self.assertLess(response.json()[0]["size"], 11000000)
+
+    def test_purge_old_versions(self):
+        """This tests manual purging of old versions"""
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        apipath = f"/api/v1/files/{self.project1.id}/file.txt/"
+
+        def read_version(file, n):
+            """returns the content of version"""
+            return file.versions[n]._data.get()["Body"].read().decode()
+
+        # Create 20 versions
+        for i in range(20):
+            test_file = io.StringIO(f"v{i}")
+            self.client.post(apipath, {"file": test_file}, format="multipart")
+
+        # Ensure it worked
+        files = list(self.project1.files)
+        self.assertEqual(len(files[0].versions), 20)
+        self.assertEqual(read_version(files[0], 0), "v19")
+        self.assertEqual(read_version(files[0], 9), "v0")
+
+        # Purge another project has no effect
+        other = Project.objects.create(name="other")
+        call_command("purge_old_file_versions", "--force", "--projects", other.pk)
+        files = list(self.project1.files)
+        self.assertEqual(len(files[0].versions), 20)
+
+        # Purge pro account keeps 10 versions
+        self.user1.useraccount.account_type = UserAccount.TYPE_PRO
+        self.user1.useraccount.save()
+        call_command("purge_old_file_versions", "--force")
+        files = list(self.project1.files)
+        self.assertEqual(len(files[0].versions), 10)
+        self.assertEqual(read_version(files[0], 0), "v19")
+        self.assertEqual(read_version(files[0], 9), "v10")
+
+        # Purge community account keeps 3 versions
+        self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
+        self.user1.useraccount.save()
+        call_command("purge_old_file_versions", "--force")
+        files = list(self.project1.files)
+        self.assertEqual(len(files[0].versions), 3)
+        self.assertEqual(read_version(files[0], 0), "v19")
+        self.assertEqual(read_version(files[0], 3), "v17")
+
+        # Purge is idempotent
+        call_command("purge_old_file_versions", "--force")
+        files = list(self.project1.files)
+        self.assertEqual(len(files[0].versions), 3)
+        self.assertEqual(read_version(files[0], 0), "v19")
+        self.assertEqual(read_version(files[0], 3), "v17")
