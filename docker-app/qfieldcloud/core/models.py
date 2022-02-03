@@ -84,7 +84,7 @@ class UserQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.valid_only()
+                    ProjectCollaborator.objects.validate()
                     .filter(
                         project=project,
                         collaborator=OuterRef("pk"),
@@ -773,7 +773,7 @@ class ProjectQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.valid_only().filter(
+                    ProjectCollaborator.objects.validate().filter(
                         project=OuterRef("pk"),
                         collaborator=user,
                     )
@@ -994,18 +994,33 @@ def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> N
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
-    def valid_only(self):
-        """Keep only valid membersips valid.
+    def validate(self, keep=False):
+        """Validates memberships, and by default filters out all invalid memberships.
 
         A membership to a private project not owned by an organization, or owned by a organization
-        that the member is part of is invalid."""
+        that the member is not part of is invalid.
 
+        Args:
+            keep:   if true, invalid rows are kept"""
+
+        # Build the conditions with Q objects
         public = Q(project__is_public=True)
         owned_by_org = Q(project__owner__user_type=User.TYPE_ORGANIZATION)
         user_also_member_of_org = Q(
             project__owner__organization__members__member=F("collaborator")
         )
-        return self.filter(public | (owned_by_org & user_also_member_of_org))
+
+        # Assemble the condition
+        condition = public | (owned_by_org & user_also_member_of_org)
+
+        # Annotate the queryset
+        qs = self.annotate(is_valid=Case(When(condition, then=True), default=False))
+
+        # Filter out invalid
+        if not keep:
+            qs = qs.exclude(is_valid=False)
+
+        return qs
 
 
 class ProjectCollaborator(models.Model):
