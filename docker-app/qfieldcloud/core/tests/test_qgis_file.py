@@ -572,8 +572,14 @@ class QfcTestCase(APITransactionTestCase):
 
         apipath = f"/api/v1/files/{self.project1.id}/file.txt/"
 
-        def read_version(file, n):
-            """returns the content of version"""
+        def count_versions():
+            """counts the versions in first file of project1"""
+            file = list(self.project1.files)[0]
+            return len(file.versions)
+
+        def read_version(n):
+            """returns the content of version in first file of project1"""
+            file = list(self.project1.files)[0]
             return file.versions[n]._data.get()["Body"].read().decode()
 
         # Create 20 versions
@@ -582,38 +588,33 @@ class QfcTestCase(APITransactionTestCase):
             self.client.post(apipath, {"file": test_file}, format="multipart")
 
         # Ensure it worked
-        files = list(self.project1.files)
-        self.assertEqual(len(files[0].versions), 20)
-        self.assertEqual(read_version(files[0], 0), "v19")
-        self.assertEqual(read_version(files[0], 9), "v0")
+        self.assertEqual(count_versions(), 20)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(19), "v0")
 
         # Purge another project has no effect
-        other = Project.objects.create(name="other")
+        other = Project.objects.create(name="other", owner=self.user1)
         call_command("purge_old_file_versions", "--force", "--projects", other.pk)
-        files = list(self.project1.files)
-        self.assertEqual(len(files[0].versions), 20)
+        self.assertEqual(count_versions(), 20)
 
         # Purge pro account keeps 10 versions
         self.user1.useraccount.account_type = UserAccount.TYPE_PRO
         self.user1.useraccount.save()
         call_command("purge_old_file_versions", "--force")
-        files = list(self.project1.files)
-        self.assertEqual(len(files[0].versions), 10)
-        self.assertEqual(read_version(files[0], 0), "v19")
-        self.assertEqual(read_version(files[0], 9), "v10")
+        self.assertEqual(count_versions(), 10)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(9), "v10")
 
         # Purge community account keeps 3 versions
         self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
         self.user1.useraccount.save()
         call_command("purge_old_file_versions", "--force")
-        files = list(self.project1.files)
-        self.assertEqual(len(files[0].versions), 3)
-        self.assertEqual(read_version(files[0], 0), "v19")
-        self.assertEqual(read_version(files[0], 3), "v17")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(2), "v17")
 
         # Purge is idempotent
         call_command("purge_old_file_versions", "--force")
-        files = list(self.project1.files)
-        self.assertEqual(len(files[0].versions), 3)
-        self.assertEqual(read_version(files[0], 0), "v19")
-        self.assertEqual(read_version(files[0], 3), "v17")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(2), "v17")
