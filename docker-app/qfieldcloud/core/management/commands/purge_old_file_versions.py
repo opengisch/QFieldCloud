@@ -83,7 +83,7 @@ class Command(BaseCommand):
                 all_count = len(old_versions)
                 topurge_count = len(old_versions_to_purge)
                 print(
-                    f"- {filename}: will purge {topurge_count} out of {all_count} old versions"
+                    f'Purging {topurge_count} out of {all_count} old versions for "{filename}"...'
                 )
 
                 # Remove the N oldest
