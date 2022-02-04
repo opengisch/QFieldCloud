@@ -84,7 +84,7 @@ class UserQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.validate()
+                    ProjectCollaborator.objects.validated()
                     .filter(
                         project=project,
                         collaborator=OuterRef("pk"),
@@ -773,7 +773,7 @@ class ProjectQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.validate().filter(
+                    ProjectCollaborator.objects.validated().filter(
                         project=OuterRef("pk"),
                         collaborator=user,
                     )
@@ -994,14 +994,14 @@ def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> N
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
-    def validate(self, keep=False):
-        """Validates memberships, and by default filters out all invalid memberships.
+    def validated(self, keep_invalid=False):
+        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
 
         A membership to a private project not owned by an organization, or owned by a organization
         that the member is not part of is invalid.
 
         Args:
-            keep:   if true, invalid rows are kept"""
+            keep_invalid:   if true, invalid rows are kept"""
 
         # Build the conditions with Q objects
         public = Q(project__is_public=True)
@@ -1017,7 +1017,7 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         qs = self.annotate(is_valid=Case(When(condition, then=True), default=False))
 
         # Filter out invalid
-        if not keep:
+        if not keep_invalid:
             qs = qs.exclude(is_valid=False)
 
         return qs
