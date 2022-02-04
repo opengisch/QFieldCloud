@@ -324,7 +324,7 @@ class DeltaApplyJobRun(JobRun):
 
     def after_docker_run(self) -> None:
         delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]
-        is_data_modified = True
+        is_data_modified = False
 
         for feedback in delta_feedback:
             delta_id = feedback["delta_id"]
@@ -360,9 +360,9 @@ class DeltaApplyJobRun(JobRun):
                 modified_pk=modified_pk,
             )
 
-            if is_data_modified:
-                self.job.project.data_last_updated_at = timezone.now()
-                self.job.project.save()
+        if is_data_modified:
+            self.job.project.data_last_updated_at = timezone.now()
+            self.job.project.save()
 
     def after_docker_exception(self) -> None:
         Delta.objects.filter(
