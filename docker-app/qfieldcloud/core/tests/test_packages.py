@@ -354,6 +354,70 @@ class QfcTestCase(APITransactionTestCase):
             invalid_layers=["surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16"],
         )
 
+    def test_needs_repackaging_without_online_vector(self):
+        self.project1.refresh_from_db()
+        # newly uploaded project should always need to be packaged at least once
+        self.assertTrue(self.project1.needs_repackaging)
+
+        self.upload_files_and_check_package(
+            token=self.token1.key,
+            project=self.project1,
+            files=[
+                ("delta/nonspatial.csv", "nonspatial.csv"),
+                ("delta/testdata.gpkg", "testdata.gpkg"),
+                ("delta/points.geojson", "points.geojson"),
+                ("delta/polygons.geojson", "polygons.geojson"),
+                ("delta/project.qgs", "project.qgs"),
+            ],
+            expected_files=[
+                "data.gpkg",
+                "project_qfield.qgs",
+            ],
+        )
+
+        self.project1.refresh_from_db()
+        # no longer needs repackaging since geopackage layers cannot change without deltas/reupload
+        self.assertFalse(self.project1.needs_repackaging)
+
+        self.upload_files(
+            self.token1.key,
+            self.project1,
+            files=[
+                ("delta/nonspatial.csv", "nonspatial.csv"),
+            ],
+        )
+
+        self.project1.refresh_from_db()
+        # a layer file changed, so we need to repackage
+        self.assertTrue(self.project1.needs_repackaging)
+
+    def test_needs_repackaging_with_online_vector(self):
+        cur = self.conn.cursor()
+        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        self.conn.commit()
+        cur.execute(
+            "INSERT INTO point(id, geometry) VALUES(1, ST_GeomFromText('POINT(2725505 1121435)', 2056))"
+        )
+        self.conn.commit()
+
+        self.project1.refresh_from_db()
+        # newly uploaded project should always need to be packaged at least once
+        self.assertTrue(self.project1.needs_repackaging)
+
+        self.upload_files_and_check_package(
+            token=self.token1.key,
+            project=self.project1,
+            files=[
+                ("delta/project2.qgs", "project.qgs"),
+                ("delta/points.geojson", "points.geojson"),
+            ],
+            expected_files=["data.gpkg", "project_qfield.qgs"],
+        )
+
+        self.project1.refresh_from_db()
+        # projects with online vector layer should always show as it needs repackaging
+        self.assertTrue(self.project1.needs_repackaging)
+
     def test_has_online_vector_data(self):
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
