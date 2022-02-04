@@ -961,7 +961,7 @@ class Project(models.Model):
             and self.data_last_packaged_at
         ):
             # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
-            return self.data_last_packaged_at > self.data_last_updated_at
+            return self.data_last_packaged_at < self.data_last_updated_at
         else:
             # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
             return True
