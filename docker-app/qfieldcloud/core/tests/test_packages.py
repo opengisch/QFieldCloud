@@ -84,6 +84,39 @@ class QfcTestCase(APITransactionTestCase):
             )
             self.assertTrue(status.is_success(response.status_code))
 
+    def wait_for_project_ok_status(self, project: Project, wait_s: int = 30):
+        jobs = Job.objects.filter(project=project).exclude(
+            status__in=[Job.Status.FAILED, Job.Status.FINISHED]
+        )
+
+        if jobs.count() == 0:
+            return
+
+        has_no_pending_jobs = False
+        for _ in range(wait_s):
+            if (
+                Job.objects.filter(project=project, status=Job.Status.PENDING).count()
+                == 0
+            ):
+                has_no_pending_jobs = True
+
+            time.sleep(1)
+
+        if not has_no_pending_jobs:
+            self.fail(f"Still pending jobs after waiting for {wait_s} seconds")
+
+        for _ in range(wait_s):
+            project.refresh_from_db()
+            if project.status == Project.Status.OK:
+                return
+            if project.status == Project.Status.FAILED:
+                self.fail("Waited for ok status, but got failed")
+                return
+
+            time.sleep(1)
+
+        self.fail(f"Waited for ok status for {wait_s} seconds")
+
     def upload_files_and_check_package(
         self,
         token: str,
@@ -320,6 +353,40 @@ class QfcTestCase(APITransactionTestCase):
             ],
             invalid_layers=["surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16"],
         )
+
+    def test_has_online_vector_data(self):
+        cur = self.conn.cursor()
+        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        self.conn.commit()
+
+        self.upload_files(
+            self.token1.key,
+            self.project1,
+            files=[
+                ("delta/project2.qgs", "project.qgs"),
+            ],
+        )
+
+        self.wait_for_project_ok_status(self.project1)
+
+        self.project1.refresh_from_db()
+
+        self.assertTrue(self.project1.has_online_vector_data)
+
+    def test_has_no_online_vector_data(self):
+        self.upload_files(
+            self.token1.key,
+            self.project1,
+            files=[
+                ("delta/project.qgs", "project.qgs"),
+            ],
+        )
+
+        self.wait_for_project_ok_status(self.project1)
+
+        self.project1.refresh_from_db()
+
+        self.assertTrue(self.project1.has_online_vector_data)
 
     def test_filename_with_whitespace(self):
         self.upload_files_and_check_package(
