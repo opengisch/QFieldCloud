@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from typing import IO
 
+import qfieldcloud.core.models
 import qfieldcloud.core.utils
-from qfieldcloud.core.models import UserAccount
 
 logger = logging.getLogger(__name__)
 
@@ -113,9 +113,9 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
 
     # Determine account type
     account_type = project.owner.useraccount.account_type
-    if account_type == UserAccount.TYPE_COMMUNITY:
+    if account_type == qfieldcloud.core.models.UserAccount.TYPE_COMMUNITY:
         keep_count = 3
-    elif account_type == UserAccount.TYPE_PRO:
+    elif account_type == qfieldcloud.core.models.UserAccount.TYPE_PRO:
         keep_count = 10
     else:
         raise NotImplementedError(f"Unknown account type {account_type}")
