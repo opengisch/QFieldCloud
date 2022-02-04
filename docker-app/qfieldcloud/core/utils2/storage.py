@@ -125,20 +125,14 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
     # Process file by file
     for file in qfieldcloud.core.utils.get_project_files_with_versions(project.pk):
 
-        filename = file.latest.name
-        old_versions = file.versions
-
-        # Sort by date (newest first)
-        old_versions.sort(key=lambda i: i.last_modified, reverse=True)
-
         # Skip the newest N
-        old_versions_to_purge = old_versions[keep_count:]
+        old_versions_to_purge = sorted(
+            file.versions, key=lambda v: v.last_modified, reverse=True
+        )[keep_count:]
 
         # Debug print
-        all_count = len(old_versions)
-        topurge_count = len(old_versions_to_purge)
         logger.debug(
-            f'Purging {topurge_count} out of {all_count} old versions for "{filename}"...'
+            f'Purging {len(old_versions_to_purge)} out of {len(file.versions)} old versions for "{file.latest.name}"...'
         )
 
         # Remove the N oldest

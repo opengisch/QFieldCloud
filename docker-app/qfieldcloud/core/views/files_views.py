@@ -192,7 +192,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 changes={filename: [None, new_object.latest.e_tag]},
             )
 
-        # Delete the old versions if the files
+        # Delete the old file versions
         purge_old_file_versions(project)
 
         return Response(status=status.HTTP_201_CREATED)
