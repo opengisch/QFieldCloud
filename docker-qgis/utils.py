@@ -454,7 +454,6 @@ def run_workflow(
             )
         elif isinstance(feedback_filename, Path):
             with open(feedback_filename, "w") as f:
-                print(feedback)
                 json.dump(feedback, f, indent=2, sort_keys=True, default=json_default)
 
         return feedback
