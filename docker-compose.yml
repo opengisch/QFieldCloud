@@ -82,6 +82,7 @@ services:
 
   nginx:
     image: nginx:stable
+    restart: unless-stopped
     volumes:
       - static_volume:/var/www/html/staticfiles/
       - media_volume:/var/www/html/mediafiles/
@@ -101,8 +102,6 @@ services:
       LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
       LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
     logging: *default-logging
-    depends_on:
-      - app
 
   mkcert:
     image: vishnunair/docker-mkcert
