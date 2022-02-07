@@ -22,6 +22,7 @@ django-allauth==0.44.0
 django-auditlog==1.0a1
 django-axes==5.28.0
 django-bootstrap4==3.0.1
+django-classy-tags==3.0.1
 django-common-helpers==0.9.2
 django-cron==0.5.0
 django-currentuser==0.5.3
