@@ -327,9 +327,12 @@ class QfcTestCase(APITestCase):
         def assert_role(p, u, expected_role, expected_origin):
             """Asserts that user has give role/origin on project"""
             # Test on Users
-            user = User.objects.for_project(p).get(pk=u.pk)
-            self.assertEqual(user.project_role, expected_role)
-            self.assertEqual(user.project_role_origin, expected_origin.value)
+            if expected_origin != origins.PUBLIC:
+                # The User.objects.for_project queryset is not symetric to Project.objects.for_user
+                # because it does not include users that have a role because the project is public.
+                user = User.objects.for_project(p).get(pk=u.pk)
+                self.assertEqual(user.project_role, expected_role)
+                self.assertEqual(user.project_role_origin, expected_origin.value)
 
             # Test on Project
             project = Project.objects.for_user(u).get(pk=p.pk)
@@ -348,8 +351,7 @@ class QfcTestCase(APITestCase):
         u1 = User.objects.create(username="u1")
 
         # A public project is readable
-        # TODO: this fails, is is expected the queryset does not contain public projects ?
-        # assert_role(p, u1, roles.READER, origins.PUBLIC)
+        assert_role(p, u1, roles.READER, origins.PUBLIC)
 
         # Normal collaboration works on a public project
         ProjectCollaborator.objects.create(

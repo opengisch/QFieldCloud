@@ -382,9 +382,7 @@ class QfcTestCase(APITestCase):
             self.assertEqual(json["user_role_origin"], user_role_origin)
 
         # Project is public, we have a public role
-        # TODO: this fails, is is expected the queryset does not contain public projects ?
-        # TODO: if so, it should 404 (or 403) instead of 500
-        # assert_role(user_role="reader", user_role_origin="public")
+        assert_role(user_role="reader", user_role_origin="public")
 
         # Project is public, collaboration membership is valid
         ProjectCollaborator.objects.create(
