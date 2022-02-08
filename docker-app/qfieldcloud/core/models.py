@@ -4,7 +4,7 @@ import string
 import uuid
 from datetime import timedelta
 from enum import Enum
-from typing import Any, Iterable, Type
+from typing import Any, Iterable, List, Type
 
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
@@ -913,7 +913,30 @@ class Project(models.Model):
         return utils.get_s3_project_size(self.id)
 
     @property
-    def private(self):
+    def staticfile_dirs(self) -> List[str]:
+        """Returns a list of configured staticfile dirs for the project.
+
+        Staticfile dir is a special directory in the QField infrastructure that holds static files
+        such as images, pdf etc. By default "DCIM" is considered a staticfile directory.
+
+        TODO this function expects whether `staticfile_dirs` key in project_details. However,
+        neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
+
+        Returns:
+            List[str]: A list configured staticfile dirs for the project.
+        """
+        staticfile_dirs = []
+
+        if self.project_details and self.project_details.get("staticfile_dirs"):
+            staticfile_dirs = self.project_details.get("staticfile_dirs", [])
+
+        if not staticfile_dirs:
+            staticfile_dirs = ["DCIM"]
+
+        return staticfile_dirs
+
+    @property
+    def private(self) -> bool:
         # still used in the project serializer
         return not self.is_public
 

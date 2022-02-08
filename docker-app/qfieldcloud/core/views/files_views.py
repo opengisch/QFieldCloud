@@ -6,7 +6,7 @@ from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
-from qfieldcloud.core.utils2.storage import purge_old_file_versions
+from qfieldcloud.core.utils2.storage import purge_old_file_versions, staticfile_prefix
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -171,8 +171,12 @@ class DownloadPushDeleteFileView(views.APIView):
 
         assert new_object
 
-        if is_qgis_project_file:
-            project.project_filename = filename
+        if staticfile_prefix(project, filename) == "" and (
+            is_qgis_project_file or project.project_filename is not None
+        ):
+            if is_qgis_project_file:
+                project.project_filename = filename
+
             ProcessProjectfileJob.objects.create(
                 project=project, created_by=self.request.user
             )
