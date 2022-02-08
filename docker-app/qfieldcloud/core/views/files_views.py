@@ -4,7 +4,7 @@ from django.http.response import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import ProcessProjectfileJob, Project
-from qfieldcloud.core.utils import get_project_file_with_versions
+from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.core.utils2.storage import purge_old_file_versions
 from rest_framework import permissions, status, views
@@ -69,6 +69,7 @@ class ListFilesView(views.APIView):
                     "version_id": version.version_id,
                     "last_modified": last_modified,
                     "is_latest": version.is_latest,
+                    "display": S3ObjectVersion(version.key, version).display,
                 }
             )
 
