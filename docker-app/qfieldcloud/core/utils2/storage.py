@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import IO
+from typing import IO, List
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
@@ -145,3 +145,55 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
             # TODO: any way to batch those ? will probaby get slow on production
             old_version._data.delete()
             # TODO: audit ? take implementation from files_views.py:211
+
+
+def delete_file_version(
+    project: "Project",  # noqa: F821
+    filename: str,
+    version_id: str,
+    include_older: bool = False,
+) -> List[qfieldcloud.core.utils.S3ObjectVersion]:
+    """Deletes a specific version of given file.
+
+    Args:
+        project (Project): project the file belongs to
+        filename (str): filename the version belongs to
+        version_id (str): version id to delete
+        include_older (bool, optional): when True, versions older than the passed `version` will also be deleted. If the version_id is the latest version of a file, this parameter will treated as False. Defaults to False.
+
+    Returns:
+        int: the number of versions deleted
+    """
+    file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
+
+    if not file:
+        raise Exception("No file with such name in the given project found")
+
+    if file.latest.id == version_id:
+        include_older = False
+
+    versions_to_delete = []
+
+    for file_version in file.versions:
+        if file_version.id == version_id:
+            versions_to_delete.append(file_version)
+
+            if include_older:
+                continue
+            else:
+                break
+
+        if versions_to_delete:
+            assert (
+                include_older
+            ), "We should continue to loop only if `include_older` is True"
+            assert (
+                versions_to_delete[-1].last_modified > file_version.last_modified
+            ), "Assert the other versions are really older than the requested one"
+
+            versions_to_delete.append(file_version)
+
+    for file_version in versions_to_delete:
+        file_version._data.delete()
+
+    return versions_to_delete
