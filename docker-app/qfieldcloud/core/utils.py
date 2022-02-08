@@ -63,6 +63,10 @@ class S3ObjectVersion:
     def is_latest(self) -> bool:
         return self._data.is_latest
 
+    @property
+    def display(self) -> str:
+        return self.last_modified.strftime("v%Y%m%d%H%M%S")
+
 
 class S3ObjectWithVersions(NamedTuple):
     latest: S3ObjectVersion
