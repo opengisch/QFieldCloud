@@ -1,6 +1,7 @@
 import logging
 import sys
 
+from django.conf import settings
 from django.core import exceptions
 from qfieldcloud.core import exceptions as qfieldcloud_exceptions
 from rest_framework import exceptions as rest_exceptions
@@ -36,14 +37,16 @@ def exception_handler(exc, context):
     body = {
         "code": exc.code,
         "message": exc.message,
-        "debug": {
+    }
+
+    if settings.DEBUG:
+        body["debug"] = {
             "view": str(context["view"]),
             "args": context["args"],
             "kwargs": context["kwargs"],
             "request": str(context["request"]),
             "detail": exc.detail,
-        },
-    }
+        }
 
     logging.exception(exc)
 
