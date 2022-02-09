@@ -92,6 +92,11 @@ print("debugpy waiting for debugger... 🐛")
 debugpy.wait_for_client()  # optional
 ```
 
+Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5678`.
+```shell
+docker-compose run app python -m debugpy --listen 0.0.0.0:5678 manage.py test
+```
+
 Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
 ```
 {
