@@ -48,7 +48,7 @@ def exception_handler(exc, context):
             "detail": exc.detail,
         }
 
-    logging.exception(exc)
+    logging.info(exc)
 
     return Response(
         body,
