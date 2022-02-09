@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.http import HttpRequest
 
 
@@ -27,3 +28,8 @@ class SkipLoggingFilter(logging.Filter):
         the `LogRecord`.
         """
         return {attr_name: record.__dict__[attr_name] for attr_name in record.__dict__}
+
+
+class NotOnDebugFilter(logging.Filter):
+    def filter(self, record):
+        return not settings.DEBUG

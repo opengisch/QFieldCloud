@@ -297,6 +297,9 @@ LOGGING = {
         "skip_logging": {
             "()": "qfieldcloud.core.logging.filters.SkipLoggingFilter",
         },
+        "not_on_debug": {
+            "()": "qfieldcloud.core.logging.filters.NotOnDebugFilter",
+        },
     },
     "handlers": {
         "console.json": {
@@ -317,6 +320,7 @@ LOGGING = {
             "level": LOGLEVEL,
             "filters": [
                 "skip_logging",
+                "not_on_debug",
             ],
             "handlers": [
                 # TODO enable console.json once it is clear how we do store the json logs
