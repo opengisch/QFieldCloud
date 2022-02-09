@@ -281,6 +281,8 @@ INVITATIONS_INVITATION_ONLY = True
 INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
 INVITATIONS_GONE_ON_ACCEPT_ERROR = False
 
+TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"
+
 LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
 LOGGING = {
     "version": 1,

@@ -1,9 +1,9 @@
 import logging
-import sys
 
 from django.conf import settings
 from django.core import exceptions
 from qfieldcloud.core import exceptions as qfieldcloud_exceptions
+from qfieldcloud.testing import IN_TEST_SUITE
 from rest_framework import exceptions as rest_exceptions
 from rest_framework.response import Response
 
@@ -29,7 +29,7 @@ def exception_handler(exc, context):
     else:
         # When running tests, we rethrow the exception, so we get a full trace to
         # help with debugging
-        if sys.argv[1] == "test":
+        if IN_TEST_SUITE:
             raise exc
         logging.log(exc, level="exception")
         exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
