@@ -31,7 +31,7 @@ def exception_handler(exc, context):
         # help with debugging
         if IN_TEST_SUITE:
             raise exc
-        logging.log(exc, level="exception")
+        logging.exception(exc)
         exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
 
     body = {
