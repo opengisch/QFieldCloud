@@ -78,6 +78,45 @@ To run only a test module (e.g. `test_permission.py`)
 
     docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
 
+### Debugging
+
+> This section gives examples for VSCode, please adapt to your IDE)
+
+If using the provided docker-compose overrides for developement, `debugpy` is installed.
+
+You can debug interactively by adding this snipped anywhere in the code.
+```python
+import debugpy
+debugpy.listen(("0.0.0.0", 5678))
+print("debugpy waiting for debugger... 🐛")
+debugpy.wait_for_client()  # optional
+```
+
+Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5678`.
+```shell
+docker-compose run app python -m debugpy --listen 0.0.0.0:5678 manage.py test
+```
+
+Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "QFieldCloud - Remote attach",
+            "type": "python",
+            "request": "attach",
+            "connect": {"host": "localhost", "port": 5678},
+            "pathMappings": [{
+                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                "remoteRoot": "/usr/src/app/qfieldcloud"
+            }]
+        }
+    ]
+}
+```
+
+
 ## Add root certificate
 
 QFieldCloud will automatically generate a certificate and it's root certificate in `./config/nginx/certs`. However, you need to trust the root certificate first, so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
