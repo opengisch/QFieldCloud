@@ -140,6 +140,9 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
             old_version._data.delete()
             # TODO: audit ? take implementation from files_views.py:211
 
+    # Update the project size
+    project.save(recompute_storage=True)
+
 
 def delete_file_version(
     project: "Project",  # noqa: F821
