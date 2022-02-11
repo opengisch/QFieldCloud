@@ -3,6 +3,9 @@ version: '3.7'
 services:
 
   app:
+    build:
+      args:
+        - DEBUG_BUILD=1
     ports:
       # allow direct access without nginx
       - "5001:8000"
@@ -24,6 +27,9 @@ services:
       - smtp4dev
 
   worker_wrapper:
+    build:
+      args:
+        - DEBUG_BUILD=1
     ports:
       # debugpy
       - "5679:5679"
