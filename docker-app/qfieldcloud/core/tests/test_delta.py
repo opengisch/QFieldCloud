@@ -4,9 +4,8 @@ import logging
 import time
 
 import fiona
-import requests
 import rest_framework
-from django.http.response import HttpResponse, HttpResponseRedirect
+from django.http.response import FileResponse, HttpResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Job, Project, ProjectCollaborator, User
@@ -590,13 +589,13 @@ class QfcTestCase(APITransactionTestCase):
     def get_file_contents(self, project, filename):
         response = self.client.get(f"/api/v1/files/{project.id}/{filename}/")
 
-        if isinstance(response, HttpResponseRedirect):
-            response = requests.get(response.url)
-
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(get_filename(response), filename)
 
-        return response.content
+        if isinstance(response, FileResponse):
+            return b"".join(response.streaming_content)
+        else:
+            return response.content
 
     def upload_deltas(self, project, delta_filename):
         delta_file = testdata_path(f"delta/deltas/{delta_filename}")
