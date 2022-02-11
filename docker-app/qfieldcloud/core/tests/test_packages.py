@@ -5,8 +5,7 @@ import time
 from typing import List, Tuple
 
 import psycopg2
-import requests
-from django.http.response import HttpResponseRedirect
+from django.http import FileResponse
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
@@ -179,20 +178,15 @@ class QfcTestCase(APITransactionTestCase):
                 if tempdir:
                     for filename in expected_files:
                         response = self.client.get(
-                            f"/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/"
+                            f"/api/v1/packages/{self.project1.id}/latest/files/project_qfield.qgs/"
                         )
                         local_file = os.path.join(tempdir, filename)
 
-                        self.assertIsInstance(response, HttpResponseRedirect)
+                        self.assertIsInstance(response, FileResponse)
 
-                        # We cannot use the self.client HTTP client, since it does not support
-                        # requests outside the current Django App
-                        # Using the rest_api_framework.RequestsClient is not much better, so better
-                        # use the `requests` module
-                        with requests.get(response.url, stream=True) as r:
-                            with open(local_file, "wb") as f:
-                                for chunk in r.iter_content():
-                                    f.write(chunk)
+                        with open(local_file, "wb") as f:
+                            for chunk in response.streaming_content:
+                                f.write(chunk)
 
                 for layer_id in package_payload["layers"]:
                     layer_data = package_payload["layers"][layer_id]
@@ -227,7 +221,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=["data.gpkg", "project_qfield.qgs"],
         )
 
-    def test_list_files_missing_project_filename(self):
+    def test_list_files_missing_qgis_project_file(self):
         self.upload_files_and_check_package(
             token=self.token1.key,
             project=self.project1,
