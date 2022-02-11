@@ -35,6 +35,8 @@ server {
   # path for static files (only needed for serving local staticfiles)
   root /var/www/html/;
 
+  error_page 497 https://$host:${WEB_HTTPS_PORT}$request_uri;
+
   # checks for static file, if not found proxy to app
   location / {
     try_files $uri @proxy_to_app;
