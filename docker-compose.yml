@@ -86,6 +86,7 @@ services:
     volumes:
       - static_volume:/var/www/html/staticfiles/
       - media_volume:/var/www/html/mediafiles/
+      - ./conf/nginx/pages/:/var/www/html/pages/
       - ./conf/nginx/templates/:/etc/nginx/templates/
       - ./conf/nginx/certs/:/etc/nginx/certs/:ro
       - ./conf/nginx/options-ssl-nginx.conf:/etc/nginx/options-ssl-nginx.conf
