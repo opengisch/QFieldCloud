@@ -31,6 +31,8 @@ jobs:
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
       - name: Pull docker containers
         run: docker-compose pull
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
       - name: Build and run docker containers
         run: |
           docker-compose up -d --build
