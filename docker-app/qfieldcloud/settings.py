@@ -285,7 +285,7 @@ TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"
 LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": True,
+    "disable_existing_loggers": False,
     "formatters": {
         "json": {
             "()": "qfieldcloud.core.logging.formatters.CustomisedJSONFormatter",
