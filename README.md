@@ -103,10 +103,22 @@ Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "QFieldCloud - Remote attach",
+            "name": "QFC debug app",
             "type": "python",
             "request": "attach",
+            "justMyCode": false,
             "connect": {"host": "localhost", "port": 5678},
+            "pathMappings": [{
+                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                "remoteRoot": "/usr/src/app/qfieldcloud"
+            }]
+        },
+        {
+            "name": "QFC debug worker_wrapper",
+            "type": "python",
+            "request": "attach",
+            "justMyCode": false,
+            "connect": {"host": "localhost", "port": 5679},
             "pathMappings": [{
                 "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
                 "remoteRoot": "/usr/src/app/qfieldcloud"
