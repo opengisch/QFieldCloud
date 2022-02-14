@@ -76,7 +76,7 @@ def file_response(
         response["redirect_uri"] = url
 
         return response
-    elif settings.DEBUG:
+    elif settings.DEBUG or settings.IN_TEST_SUITE:
         return_file = ContentFile(b"")
         qfieldcloud.core.utils.get_s3_bucket().download_fileobj(
             key,
@@ -91,7 +91,9 @@ def file_response(
             content_type="text/html",
         )
 
-    raise Exception("Expected to either run behind nginx proxy or in debug mode.")
+    raise Exception(
+        "Expected to either run behind nginx proxy, debug mode or within a test suite."
+    )
 
 
 def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821
