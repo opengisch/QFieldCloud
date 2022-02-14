@@ -9,6 +9,23 @@ import qfieldcloud.core.utils
 logger = logging.getLogger(__name__)
 
 
+def staticfile_prefix(project: "Project", filename: str) -> str:  # noqa: F821
+    """Returns the staticfile dir where the file belongs to or empty string if it does not.
+
+    Args:
+        project (Project): project to check
+        filename (str): filename to check
+
+    Returns:
+        str: the staticfile dir or empty string if no match found
+    """
+    for staticfile_dir in project.staticfile_dirs:
+        if filename.startswith(staticfile_dir):
+            return staticfile_dir
+
+    return ""
+
+
 def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
