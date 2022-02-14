@@ -9,8 +9,6 @@ services:
     ports:
       # allow direct access without nginx
       - "5001:8000"
-      # debugpy
-      - "5678:5678"
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -30,9 +28,6 @@ services:
     build:
       args:
         - DEBUG_BUILD=1
-    ports:
-      # debugpy
-      - "5679:5679"
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
