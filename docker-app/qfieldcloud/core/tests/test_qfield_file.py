@@ -52,18 +52,6 @@ class QfcTestCase(APITransactionTestCase):
             port=5432,
         )
 
-    def tearDown(self):
-        self.conn.close()
-
-        # Remove all projects avoiding bulk delete in order to use
-        # the overrided delete() function in the model
-        for p in Project.objects.all():
-            p.delete()
-
-        User.objects.all().delete()
-        # Remove credentials
-        self.client.credentials()
-
     def fail(self, msg: str, job: Job = None):
         if job:
             msg += f"\n\nOutput:\n================\n{job.output}\n================"

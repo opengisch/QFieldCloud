@@ -30,10 +30,6 @@ class QfcTestCase(APITestCase):
             organization_owner=self.user1,
         )
 
-    def tearDown(self):
-        # Remove credentials
-        self.client.credentials()
-
     def test_list_members(self):
 
         # Set user2 as member of organization1

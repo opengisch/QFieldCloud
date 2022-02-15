@@ -34,20 +34,6 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.project1.save()
 
-    def tearDown(self):
-        # Remove all projects avoiding bulk delete in order to use
-        # the overrided delete() function in the model
-        for p in Project.objects.all():
-            bucket = utils.get_s3_bucket()
-            prefix = utils.safe_join("projects/{}/".format(p.id))
-            bucket.objects.filter(Prefix=prefix).delete()
-
-            p.delete()
-
-        User.objects.all().delete()
-        # Remove credentials
-        self.client.credentials()
-
     def get_file_contents(self, project, filename, version=None):
         qs = ""
         if version:
