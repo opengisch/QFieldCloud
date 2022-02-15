@@ -102,7 +102,7 @@ services:
         retries: 5
     ports:
       - ${MINIO_BROWSER_PORT}:9001
-      - 9000:9000
+      - ${MINIO_API_PORT}:9000
 
   createbuckets:
     image: minio/mc
