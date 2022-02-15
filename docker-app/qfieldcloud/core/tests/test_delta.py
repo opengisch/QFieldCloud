@@ -51,23 +51,6 @@ class QfcTestCase(APITransactionTestCase):
             role=ProjectCollaborator.Roles.ADMIN,
         )
 
-    def tearDown(self):
-        # Remove credentials
-        self.client.credentials()
-
-    @classmethod
-    def tearDownClass(cls):
-        # Remove all projects avoiding bulk delete in order to use
-        # the overridden delete() function in the model
-        for p in Project.objects.all():
-            bucket = utils.get_s3_bucket()
-            prefix = utils.safe_join(f"projects/{p.id}/")
-            bucket.objects.filter(Prefix=prefix).delete()
-
-            p.delete()
-
-        User.objects.all().delete()
-
     def fail(self, msg: str, job: Job = None):
         if job:
             msg += f"\n\nOutput:\n================\n{job.output}\n================"
