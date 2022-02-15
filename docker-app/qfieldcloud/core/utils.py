@@ -348,7 +348,7 @@ def get_s3_object_url(
     Returns:
         str: URL
     """
-    return f"{settings.STORAGE_ENDPOINT_URL_EXTERNAL}/{bucket.name}/{key}"
+    return f"{settings.STORAGE_ENDPOINT_URL}/{bucket.name}/{key}"
 
 
 def list_files(

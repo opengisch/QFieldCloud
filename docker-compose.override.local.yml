@@ -15,7 +15,6 @@ services:
     environment:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
-      STORAGE_ENDPOINT_URL_EXTERNAL: ${STORAGE_ENDPOINT_URL_EXTERNAL}
       STORAGE_BROWSER_PORT: ${STORAGE_BROWSER_PORT}
     command: python3 manage.py runserver 0.0.0.0:8000
     depends_on:
@@ -104,6 +103,7 @@ services:
         retries: 5
     ports:
       - ${STORAGE_BROWSER_PORT}:9001
+      - 9000:9000
 
   createbuckets:
     image: minio/mc
