@@ -77,7 +77,7 @@ urlpatterns = [
         package_views.LatestPackageView.as_view(),
     ),
     path(
-        "packages/<uuid:project_id>/latest/files/<path:filename>",
+        "packages/<uuid:project_id>/latest/files/<path:filename>/",
         package_views.LatestPackageDownloadFilesView.as_view(),
     ),
     path("qfield-files/<uuid:projectid>/", qfield_files_views.ListFilesView.as_view()),

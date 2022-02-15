@@ -1,5 +1,5 @@
+import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
-from django.http.response import HttpResponseRedirect
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import PackageJob, Project
 from qfieldcloud.core.utils import check_s3_key, get_project_package_files
@@ -95,17 +95,8 @@ class LatestPackageDownloadFilesView(views.APIView):
                 "Packaging has never been triggered or successful for this project."
             )
 
-        file_key = f"projects/{project_id}/export/{filename}"
-        url = utils.get_s3_client().generate_presigned_url(
-            "get_object",
-            Params={
-                "Key": file_key,
-                "Bucket": utils.get_s3_bucket().name,
-                "ResponseContentType": "application/force-download",
-                "ResponseContentDisposition": f'attachment;filename="{filename}"',
-            },
-            ExpiresIn=60,
-            HttpMethod="GET",
-        )
+        key = utils.safe_join("projects/{}/export/".format(project_id), filename)
 
-        return HttpResponseRedirect(url)
+        return utils2.storage.file_response(
+            request, key, presigned=True, expires=600, as_attachment=True
+        )
