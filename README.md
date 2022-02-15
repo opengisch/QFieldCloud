@@ -39,16 +39,12 @@ desire with a good editor:
     cp .env.example .env
     emacs .env
 
-Link or copy `docker-compose.override.local.yml` into `docker-compose.override.yml`:
-
-    ln -s docker-compose.override.local.yml docker-compose.override.yml
-
 To build development images and run the containers:
 
     docker-compose up -d --build
 
-It will read `docker-compose.yml` and `docker-compose.override.yml`
-and start a django built-in server at `http://localhost:8000`.
+It will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE`
+variable and start a django built-in server at `http://localhost:8000`.
 
 Run the django database migrations.
 
@@ -197,21 +193,20 @@ desire with a good editor
     cp .env.example .env
     emacs .env
 
+Do not forget to set DEBUG=0 and to adapt COMPOSE_FILE to not load local
+development configurations.
+
 Create the directory for qfieldcloud logs and supervisor socket file
 
     mkdir /var/local/qfieldcloud
 
 Run and build the docker containers
 
-    # dev server:
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
-
-    # prod server
-    docker-compose -f docker-compose.yml -f docker-compose.override.prod.yml up -d --build
+    docker-compose up -d --build
 
 Run the django database migrations
 
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml exec app python manage.py migrate
+    docker-compose exec app python manage.py migrate
 
 
 ## Create a certificate using Let's Encrypt
@@ -247,7 +242,7 @@ Based on this example
 
 Docker logs are managed by docker in the default way. To read the logs:
 
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml logs
+    docker-compose logs
 
 
 ### Geodb

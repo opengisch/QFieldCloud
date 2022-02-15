@@ -4,7 +4,7 @@ import string
 import uuid
 from datetime import timedelta
 from enum import Enum
-from typing import Any, Iterable, List, Type
+from typing import Iterable, List
 
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
@@ -17,8 +17,6 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count
 from django.db.models.fields.json import JSONField
-from django.db.models.signals import post_delete, post_save, pre_delete
-from django.dispatch import receiver
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
@@ -359,12 +357,16 @@ class User(AbstractUser):
     def has_geodb(self) -> bool:
         return hasattr(self, "geodb")
 
+    def save(self, *args, **kwargs):
+        created = self._state.adding
+        super().save(*args, **kwargs)
+        if created:
+            UserAccount.objects.create(user=self)
 
-# Automatically create a UserAccount instance when a user is created.
-@receiver(post_save, sender=User)
-def create_account_for_user(sender, instance, created, **kwargs):
-    if created:
-        UserAccount.objects.create(user=instance)
+    def delete(self, *args, **kwargs):
+        if self.user_type != User.TYPE_TEAM:
+            qfieldcloud.core.utils2.storage.remove_user_avatar(self)
+        super().delete(*args, **kwargs)
 
 
 class UserAccount(models.Model):
@@ -490,6 +492,18 @@ class Geodb(models.Model):
             self.user.username, self.dbname, self.username
         )
 
+    def save(self, *args, **kwargs):
+        created = self._state.adding
+        super().save(*args, **kwargs)
+        # Automatically create a role and database when a Geodb object is created.
+        if created:
+            geodb_utils.create_role_and_db(self)
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        # Automatically delete role and database when a Geodb object is deleted.
+        geodb_utils.delete_db_and_role(self.dbname, self.username)
+
 
 class OrganizationQueryset(models.QuerySet):
     """Adds of_user(user) method to the organization's querysets, allowing to filter only organization related to that user.
@@ -570,18 +584,6 @@ class OrganizationManager(UserManager):
         return self.get_queryset().with_roles(user)
 
 
-# Automatically create a role and database when a Geodb object is created.
-@receiver(post_save, sender=Geodb)
-def create_geodb(sender, instance, created, **kwargs):
-    if created:
-        geodb_utils.create_role_and_db(instance)
-
-
-@receiver(post_delete, sender=Geodb)
-def delete_geodb(sender, instance, **kwargs):
-    geodb_utils.delete_db_and_role(instance.dbname, instance.username)
-
-
 class Organization(User):
     objects = OrganizationManager()
 
@@ -599,21 +601,6 @@ class Organization(User):
     def save(self, *args, **kwargs):
         self.user_type = self.TYPE_ORGANIZATION
         return super().save(*args, **kwargs)
-
-
-@receiver(post_save, sender=Organization)
-def create_account_for_organization(sender, instance, created, **kwargs):
-    if created:
-        UserAccount.objects.create(user=instance)
-
-
-@receiver(pre_delete, sender=User)
-@receiver(pre_delete, sender=Organization)
-def delete_user(sender: Type[User], instance: User, **kwargs: Any) -> None:
-    if instance.user_type == User.TYPE_TEAM:
-        return
-
-    qfieldcloud.core.utils2.storage.remove_user_avatar(instance)
 
 
 class OrganizationMember(models.Model):
@@ -1009,11 +996,10 @@ class Project(models.Model):
         else:
             return Project.Status.OK
 
-
-@receiver(pre_delete, sender=Project)
-def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> None:
-    if instance.thumbnail_uri:
-        qfieldcloud.core.utils2.storage.remove_project_thumbail(instance)
+    def delete(self, *args, **kwargs):
+        if self.thumbnail_uri:
+            qfieldcloud.core.utils2.storage.remove_project_thumbail(self)
+        super().delete(*args, **kwargs)
 
 
 class ProjectCollaborator(models.Model):

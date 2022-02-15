@@ -18,7 +18,13 @@ def get_env_varnames_from_envfile(filename: str) -> Set[str]:
             if len(line.strip()) == 0:
                 continue
 
-            result.add(line.strip().split("=")[0])
+            variable_name = line.strip().split("=")[0]
+
+            # not settings
+            if variable_name in ["COMPOSE_FILE", "COMPOSE_PATH_SEPARATOR"]:
+                continue
+
+            result.add(variable_name)
 
         return result
 
