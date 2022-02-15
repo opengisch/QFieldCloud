@@ -237,7 +237,8 @@ Based on this example
 | postgres      | 5433 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | redis         | 6379 | REDIS_PORT           | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | geodb         | 5432 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :x:                |
-| minio browser | 8010 | STORAGE_BROWSER_PORT | :white_check_mark: | :x:                | :x:                |
+| minio API     | 8009 | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
+| minio browser | 8010 | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
 | smtp web      | 5000 |                      | :white_check_mark: | :x:                | :x:                |
 | smtp          | 25   |                      | :white_check_mark: | :x:                | :x:                |
 | imap          | 143  |                      | :white_check_mark: | :x:                | :x:                |
