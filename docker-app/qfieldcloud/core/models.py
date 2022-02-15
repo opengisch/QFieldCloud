@@ -23,7 +23,6 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.utils import get_s3_object_url
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -420,7 +419,10 @@ class UserAccount(models.Model):
     @property
     def avatar_url(self):
         if self.avatar_uri:
-            return get_s3_object_url(self.avatar_uri)
+            return reverse_lazy(
+                "public_files",
+                kwargs={"filename": self.avatar_uri},
+            )
         else:
             return None
 
@@ -895,7 +897,10 @@ class Project(models.Model):
     @property
     def thumbnail_url(self):
         if self.thumbnail_uri:
-            return get_s3_object_url(self.thumbnail_uri)
+            return reverse_lazy(
+                "project_metafiles",
+                kwargs={"projectid": self.id, "filename": self.thumbnail_uri[51:]},
+            )
         else:
             return None
 

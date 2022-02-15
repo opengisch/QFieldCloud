@@ -63,6 +63,16 @@ urlpatterns = [
         name="project_file_download",
     ),
     path(
+        "files/meta/<uuid:projectid>/<path:filename>",
+        files_views.ProjectMetafilesView.as_view(),
+        name="project_metafiles",
+    ),
+    path(
+        "files/public/<path:filename>",
+        files_views.PublicFilesView.as_view(),
+        name="public_files",
+    ),
+    path(
         "packages/<uuid:project_id>/latest/",
         package_views.LatestPackageView.as_view(),
     ),

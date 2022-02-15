@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import logging
+from pathlib import PurePath
 from typing import IO, List
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.http import FileResponse, HttpRequest
+from django.http.response import HttpResponse, HttpResponseBase
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +29,71 @@ def staticfile_prefix(project: "Project", filename: str) -> str:  # noqa: F821
             return staticfile_dir
 
     return ""
+
+
+def file_response(
+    request: HttpRequest,
+    key: str,
+    presigned: bool = False,
+    expires: int = 60,
+    version: str = None,
+    as_attachment: bool = False,
+) -> HttpResponseBase:
+    url = ""
+    filename = PurePath(key).name
+    extra_params = {}
+
+    if version is not None:
+        extra_params["VersionId"] = version
+
+    # check if we are in NGINX proxy
+    if request.META.get("HTTP_HOST", "").split(":")[-1] == request.META.get(
+        "WEB_HTTPS_PORT"
+    ):
+        if presigned:
+            if as_attachment:
+                extra_params["ResponseContentType"] = "application/force-download"
+                extra_params[
+                    "ResponseContentDisposition"
+                ] = f'attachment;filename="{filename}"'
+
+            url = qfieldcloud.core.utils.get_s3_client().generate_presigned_url(
+                "get_object",
+                Params={
+                    **extra_params,
+                    "Key": key,
+                    "Bucket": qfieldcloud.core.utils.get_s3_bucket().name,
+                },
+                ExpiresIn=expires,
+                HttpMethod="GET",
+            )
+        else:
+            url = qfieldcloud.core.utils.get_s3_object_url(key)
+
+        # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
+        response = HttpResponse()
+        response["X-Accel-Redirect"] = "/storage-download/"
+        response["redirect_uri"] = url
+
+        return response
+    elif settings.DEBUG or settings.IN_TEST_SUITE:
+        return_file = ContentFile(b"")
+        qfieldcloud.core.utils.get_s3_bucket().download_fileobj(
+            key,
+            return_file,
+            extra_params,
+        )
+
+        return FileResponse(
+            return_file.open(),
+            as_attachment=as_attachment,
+            filename=filename,
+            content_type="text/html",
+        )
+
+    raise Exception(
+        "Expected to either run behind nginx proxy, debug mode or within a test suite."
+    )
 
 
 def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821

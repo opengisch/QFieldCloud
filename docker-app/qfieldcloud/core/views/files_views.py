@@ -1,6 +1,6 @@
 from pathlib import PurePath
 
-from django.http.response import HttpResponse, HttpResponseRedirect
+import qfieldcloud.core.utils2 as utils2
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import ProcessProjectfileJob, Project
@@ -107,38 +107,19 @@ class DownloadPushDeleteFileView(views.APIView):
     def get(self, request, projectid, filename):
         Project.objects.get(id=projectid)
 
-        extra_args = {}
+        version = None
         if "version" in self.request.query_params:
             version = self.request.query_params["version"]
-            extra_args["VersionId"] = version
 
-        filekey = utils.safe_join("projects/{}/files/".format(projectid), filename)
-
-        url = utils.get_s3_client().generate_presigned_url(
-            "get_object",
-            Params={
-                **extra_args,
-                "Key": filekey,
-                "Bucket": utils.get_s3_bucket().name,
-                "ResponseContentType": "application/force-download",
-                "ResponseContentDisposition": f'attachment;filename="{filename}"',
-            },
-            ExpiresIn=600,
-            HttpMethod="GET",
+        key = utils.safe_join("projects/{}/files/".format(projectid), filename)
+        return utils2.storage.file_response(
+            request,
+            key,
+            presigned=True,
+            expires=600,
+            version=version,
+            as_attachment=True,
         )
-
-        if request.META.get("HTTP_HOST", "").split(":")[-1] == request.META.get(
-            "WEB_HTTPS_PORT"
-        ):
-            # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
-            response = HttpResponse()
-            response["X-Accel-Redirect"] = "/storage-download/"
-            response["redirect_uri"] = url
-
-            return response
-        else:
-            # requesting the Django development webserver
-            return HttpResponseRedirect(url)
 
     def post(self, request, projectid, filename, format=None):
         project = Project.objects.get(id=projectid)
@@ -224,3 +205,25 @@ class DownloadPushDeleteFileView(views.APIView):
         )
 
         return Response(status=status.HTTP_200_OK)
+
+
+class ProjectMetafilesView(views.APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        DownloadPushDeleteFileViewPermissions,
+    ]
+
+    def get(self, request, projectid, filename):
+        key = utils.safe_join("projects/{}/meta/".format(projectid), filename)
+        return utils2.storage.file_response(request, key, presigned=True)
+
+
+class PublicFilesView(views.APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = [
+        permissions.IsAuthenticated,
+    ]
+
+    def get(self, request, filename):
+        return utils2.storage.file_response(request, filename)
