@@ -9,6 +9,7 @@ from qfieldcloud.qgis.utils import BaseException, has_ping, is_localhost, start_
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
+from tabulate import tabulate
 
 logging.basicConfig(
     stream=sys.stderr, level=logging.DEBUG, format="%(asctime)s %(levelname)s %(msg)s"
@@ -133,6 +134,7 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
             else None,
             "type": layer.type(),
             "type_name": layer.type().name,
+            "error_code": "no_error",
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
             "filename": layer_source.filename,
@@ -147,6 +149,12 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
 
         if data_provider:
             data_provider_error = data_provider.error()
+
+            if data_provider.isValid():
+                # there might be another reason why the layer is not valid, other than the data provider
+                layers_by_id[layer_id]["error_code"] = "invalid_layer"
+            else:
+                layers_by_id[layer_id]["error_code"] = "invalid_dataprovider"
 
             layers_by_id[layer_id]["provider_error_summary"] = (
                 data_provider_error.summary()
@@ -179,9 +187,41 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
                 f'Layer "{layer.name()}" seems to be invalid: {layers_by_id[layer_id]["provider_error_summary"]}'
             )
         else:
+            layers_by_id[layer_id]["error_code"] = "missing_dataprovider"
             layers_by_id[layer_id][
                 "provider_error_summary"
             ] = "No data provider available"
+
+    # Print layer check results
+    table = [
+        [
+            d["name"],
+            f'...{d["id"][-6:]}',
+            d["is_valid"],
+            d["error_code"],
+            d["error_summary"],
+            d["provider_error_summary"],
+        ]
+        for d in layers_by_id.values()
+    ]
+    logging.info(
+        "\n".join(
+            [
+                "QGIS project layer checks",
+                tabulate(
+                    table,
+                    headers=[
+                        "Layer Name",
+                        "Layer Id",
+                        "Is Valid",
+                        "Status",
+                        "Error Summary",
+                        "Provider Summary",
+                    ],
+                ),
+            ]
+        )
+    )
 
     details["layers_by_id"] = layers_by_id
     details["ordered_layer_ids"] = ordered_layer_ids
