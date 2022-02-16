@@ -261,7 +261,7 @@ def get_s3_project_size(project_id: str) -> int:
 
     total_size = 0
     for version in bucket.object_versions.filter(Prefix=prefix):
-        total_size += version.size
+        total_size += version.size or 0
 
     return round(total_size / (1024 * 1024), 3)
 
