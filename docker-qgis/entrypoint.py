@@ -68,6 +68,18 @@ def _get_sha256sum(filepath):
     return hasher.hexdigest()
 
 
+def _get_md5sum(filepath):
+    """Calculate sha256sum of a file"""
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+    with filepath as f:
+        buf = f.read(BLOCKSIZE)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = f.read(BLOCKSIZE)
+    return hasher.hexdigest()
+
+
 def _download_project_directory(project_id: str, download_dir: Path = None) -> Path:
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""
@@ -126,6 +138,9 @@ def _upload_project_directory(
         with open(elem, "rb") as e:
             sha256sum = _get_sha256sum(e)
 
+        with open(elem, "rb") as e:
+            md5sum = _get_md5sum(e)
+
         # Create the key
         filename = str(elem.relative_to(*elem.parts[:4]))
         key = "/".join([prefix, filename])
@@ -140,9 +155,10 @@ def _upload_project_directory(
             )
 
         # Check if the file is different on the storage
+        # TODO switch to etag/md5sum comparison
         if metadata["sha256sum"] != storage_metadata["sha256sum"]:
             logging.info(
-                f'Uploading file "{key}", size: {elem.stat().st_size} bytes, sha256sum: "{sha256sum}" '
+                f'Uploading file "{key}", size: {elem.stat().st_size} bytes, md5sum: {md5sum}, sha256sum: "{sha256sum}" '
             )
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
