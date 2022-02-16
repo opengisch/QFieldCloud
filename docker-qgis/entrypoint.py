@@ -13,6 +13,7 @@ import qfieldcloud.qgis.apply_deltas
 import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
+from libqfieldsync.utils.file_utils import get_project_in_folder
 from qfieldcloud.qgis.utils import Step, StepOutput, WorkDirPath, Workflow
 from qgis.core import (
     QgsApplication,
@@ -259,6 +260,9 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict
     offline_converter.convert()
 
     qgis_app.exitQgis()
+
+    if Path(get_project_in_folder(str(package_dir))).stat().st_size == 0:
+        raise Exception("The packaged QGIS project file is empty.")
 
     return layer_checks
 
