@@ -14,6 +14,7 @@ import requests
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
+from docker.models.containers import Container
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -204,7 +205,7 @@ class JobRun:
         logger.info(f"Execute: {' '.join(command)}")
         volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
 
-        container = client.containers.run(
+        container: Container = client.containers.run(  # type:ignore
             QGIS_CONTAINER_NAME,
             command,
             environment={
