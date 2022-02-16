@@ -577,12 +577,12 @@ class QfcTestCase(APITransactionTestCase):
 
         def count_versions():
             """counts the versions in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return len(file.versions)
 
         def read_version(n):
             """returns the content of version in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return file.versions[n]._data.get()["Body"].read().decode()
 
         # Create 20 versions (direct upload to s3)
@@ -623,12 +623,12 @@ class QfcTestCase(APITransactionTestCase):
 
         def count_versions():
             """counts the versions in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return len(file.versions)
 
         def read_version(n):
             """returns the content of version in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return file.versions[n]._data.get()["Body"].read().decode()
 
         # As PRO account, 10 version should be kept out of 20

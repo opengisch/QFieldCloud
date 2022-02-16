@@ -274,8 +274,8 @@ class ProjectAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    fields = ("name", "description", "is_public", "owner", "storage_size")
-    readonly_fields = ("storage_size",)
+    fields = ("name", "description", "is_public", "owner", "storage_size_mb")
+    readonly_fields = ("storage_size_mb",)
     inlines = (ProjectCollaboratorInline,)
     search_fields = (
         "id",
