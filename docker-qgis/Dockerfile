@@ -1,4 +1,4 @@
-FROM qgis/qgis:final-3_22_1
+FROM qgis/qgis:final-3_22_3
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
