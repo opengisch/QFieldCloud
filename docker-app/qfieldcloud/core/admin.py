@@ -274,14 +274,40 @@ class ProjectAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    fields = ("name", "description", "is_public", "owner", "storage_size")
-    readonly_fields = ("storage_size",)
+    fields = (
+        "id",
+        "name",
+        "description",
+        "is_public",
+        "owner",
+        "storage_size",
+        "created_at",
+        "updated_at",
+        "data_last_updated_at",
+        "data_last_packaged_at",
+        "project_details__pre",
+    )
+    readonly_fields = (
+        "id",
+        "storage_size",
+        "created_at",
+        "updated_at",
+        "data_last_updated_at",
+        "data_last_packaged_at",
+        "project_details__pre",
+    )
     inlines = (ProjectCollaboratorInline,)
     search_fields = (
         "id",
         "name__icontains",
         "owner__username__iexact",
     )
+
+    def project_details__pre(self, instance):
+        if instance.project_details is None:
+            return ""
+
+        return format_pre_json(instance.project_details)
 
 
 class DeltaInline(admin.TabularInline):
