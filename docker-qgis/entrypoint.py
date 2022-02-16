@@ -106,6 +106,10 @@ def _download_project_directory(project_id: str, download_dir: Path = None) -> P
         absolute_filename = download_dir.joinpath(relative_filename)
         absolute_filename.parent.mkdir(parents=True, exist_ok=True)
 
+        logging.info(
+            f'Downloading file "{obj.key}", size: {obj.size} bytes, md5sum: "{obj.e_tag}" '
+        )
+
         bucket.download_file(obj.key, str(absolute_filename))
 
     return download_dir
