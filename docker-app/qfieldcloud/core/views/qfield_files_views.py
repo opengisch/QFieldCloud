@@ -151,20 +151,10 @@ class ListFilesView(views.APIView):
                 }
             )
 
-        if export_job.feedback.get("feedback_version") == "2.0":
-            layers = export_job.feedback["outputs"]["package_project"]["layer_checks"]
-        else:
-            steps = export_job.feedback.get("steps", [])
-            layers = (
-                steps[1]["outputs"]["layer_checks"]
-                if len(steps) > 2 and steps[1].get("stage", 1) == 2
-                else None
-            )
-
         return Response(
             {
                 "files": files,
-                "layers": layers,
+                "layers": {},
                 "exported_at": export_job.updated_at,
                 "export_id": export_job.pk,
             }
