@@ -261,7 +261,8 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict
 
     qgis_app.exitQgis()
 
-    if Path(get_project_in_folder(str(package_dir))).stat().st_size == 0:
+    packaged_project_filename = get_project_in_folder(str(package_dir))
+    if Path(packaged_project_filename).stat().st_size == 0:
         raise Exception("The packaged QGIS project file is empty.")
 
     return layer_checks
