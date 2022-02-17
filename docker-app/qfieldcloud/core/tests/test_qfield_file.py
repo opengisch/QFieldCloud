@@ -52,6 +52,9 @@ class QfcTestCase(APITransactionTestCase):
             port=5432,
         )
 
+    def tearDown(self):
+        self.conn.close()
+
     def fail(self, msg: str, job: Job = None):
         if job:
             msg += f"\n\nOutput:\n================\n{job.output}\n================"
