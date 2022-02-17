@@ -6,7 +6,6 @@ import logging
 import os
 import tempfile
 from pathlib import Path, PurePath
-from typing import Dict
 
 import boto3
 import qfieldcloud.qgis.apply_deltas
@@ -167,7 +166,7 @@ def _upload_project_directory(
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
-def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict:
+def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> None:
     """Call the function of QFieldSync to package a project for QField"""
 
     argvb = list(map(os.fsencode, [""]))
@@ -182,33 +181,6 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict
         raise Exception(f"Unable to open file with QGIS: {project_filename}")
 
     layers = project.mapLayers()
-    # Check if the layers are valid (i.e. if the datasources are available)
-    layer_checks = {}
-    for layer in layers.values():
-        is_valid = True
-        status = "ok"
-        if layer:
-            if layer.dataProvider():
-                if not layer.dataProvider().isValid():
-                    is_valid = False
-                    status = "invalid_dataprovider"
-                # there might be another reason why the layer is not valid, other than the data provider
-                elif not layer.isValid():
-                    is_valid = False
-                    status = "invalid_layer"
-            else:
-                is_valid = False
-                status = "missing_dataprovider"
-        else:
-            is_valid = False
-            status = "missing_layer"
-
-        layer_checks[layer.id()] = {
-            "name": layer.name(),
-            "valid": is_valid,
-            "status": status,
-        }
-
     project_config = ProjectConfiguration(project)
     vl_extent_wkt = QgsRectangle()
     vl_extent_crs = project.crs().authid()
@@ -285,8 +257,6 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict
     if Path(packaged_project_filename).stat().st_size == 0:
         raise Exception("The packaged QGIS project file is empty.")
 
-    return layer_checks
-
 
 def cmd_package_project(args):
     workflow = Workflow(
@@ -313,8 +283,6 @@ def cmd_package_project(args):
                     "package_dir": WorkDirPath("export", mkdir=True),
                 },
                 method=_call_qfieldsync_packager,
-                return_names=["layer_checks"],
-                outputs=["layer_checks"],
             ),
             Step(
                 id="upload_packaged_project",
