@@ -52,6 +52,9 @@ class QfcTestCase(APITransactionTestCase):
             port=5432,
         )
 
+    def tearDown(self):
+        self.conn.close()
+
     def upload_files(
         self,
         token: str,
