@@ -6,6 +6,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path, PurePath
+from typing import Dict, Union
 
 import boto3
 import qfieldcloud.qgis.apply_deltas
@@ -13,7 +14,15 @@ import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
 from libqfieldsync.utils.file_utils import get_project_in_folder
-from qfieldcloud.qgis.utils import Step, StepOutput, WorkDirPath, Workflow, start_app
+from qfieldcloud.qgis.utils import (
+    Step,
+    StepOutput,
+    WorkDirPath,
+    Workflow,
+    get_layers_data,
+    layers_data_to_string,
+    start_app,
+)
 from qgis.core import (
     QgsCoordinateTransform,
     QgsOfflineEditing,
@@ -165,7 +174,7 @@ def _upload_project_directory(
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
-def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> None:
+def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     """Call the function of QFieldSync to package a project for QField"""
 
     start_app()
@@ -252,6 +261,23 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> None
     if Path(packaged_project_filename).stat().st_size == 0:
         raise Exception("The packaged QGIS project file is empty.")
 
+    return packaged_project_filename
+
+
+def _extract_layer_data(project_filename: Union[str, Path]) -> Dict:
+    start_app()
+
+    project_filename = str(project_filename)
+    project = QgsProject.instance()
+    project.read(project_filename)
+    layers_by_id = get_layers_data(project)
+
+    logging.info(
+        f"QGIS project layer checks\n{layers_data_to_string(layers_by_id)}",
+    )
+
+    return layers_by_id
+
 
 def cmd_package_project(args):
     workflow = Workflow(
@@ -271,6 +297,16 @@ def cmd_package_project(args):
                 return_names=["tmp_project_dir"],
             ),
             Step(
+                id="qgis_layers_data",
+                name="QGIS Layers Data",
+                arguments={
+                    "project_filename": WorkDirPath("files", args.project_file),
+                },
+                method=_extract_layer_data,
+                return_names=["layers_by_id"],
+                outputs=["layers_by_id"],
+            ),
+            Step(
                 id="package_project",
                 name="Package Project",
                 arguments={
@@ -278,6 +314,19 @@ def cmd_package_project(args):
                     "package_dir": WorkDirPath("export", mkdir=True),
                 },
                 method=_call_qfieldsync_packager,
+                return_names=["qfield_project_filename"],
+            ),
+            Step(
+                id="qfield_layer_data",
+                name="Packaged Layers Data",
+                arguments={
+                    "project_filename": StepOutput(
+                        "package_project", "qfield_project_filename"
+                    ),
+                },
+                method=_extract_layer_data,
+                return_names=["layers_by_id"],
+                outputs=["layers_by_id"],
             ),
             Step(
                 id="upload_packaged_project",
