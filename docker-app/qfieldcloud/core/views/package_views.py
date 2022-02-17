@@ -52,9 +52,20 @@ class LatestPackageView(views.APIView):
         if not files:
             raise exceptions.InvalidJobError("Empty project package.")
 
+        if last_job.feedback.get("feedback_version") == "2.0":
+            layers = last_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
+        else:
+            steps = last_job.feedback.get("steps", [])
+            layers = (
+                steps[1]["outputs"]["layer_checks"]
+                if len(steps) > 2 and steps[1].get("stage", 1) == 2
+                else None
+            )
+
         return Response(
             {
                 "files": files,
+                "layers": layers,
                 "status": last_job.status,
                 "package_id": last_job.pk,
                 "packaged_at": last_job.project.data_last_packaged_at,

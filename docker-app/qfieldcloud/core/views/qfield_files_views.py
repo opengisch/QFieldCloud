@@ -151,10 +151,24 @@ class ListFilesView(views.APIView):
                 }
             )
 
+        if export_job.feedback.get("feedback_version") == "2.0":
+            layers = export_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
+
+            for data in layers.values():
+                data["valid"] = data["is_valid"]
+                data["status"] = data["error_code"]
+        else:
+            steps = export_job.feedback.get("steps", [])
+            layers = (
+                steps[1]["outputs"]["layer_checks"]
+                if len(steps) > 2 and steps[1].get("stage", 1) == 2
+                else None
+            )
+
         return Response(
             {
                 "files": files,
-                "layers": {},
+                "layers": layers,
                 "exported_at": export_job.updated_at,
                 "export_id": export_job.pk,
             }
