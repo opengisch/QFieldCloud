@@ -13,9 +13,8 @@ import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
 from libqfieldsync.utils.file_utils import get_project_in_folder
-from qfieldcloud.qgis.utils import Step, StepOutput, WorkDirPath, Workflow
+from qfieldcloud.qgis.utils import Step, StepOutput, WorkDirPath, Workflow, start_app
 from qgis.core import (
-    QgsApplication,
     QgsCoordinateTransform,
     QgsOfflineEditing,
     QgsProject,
@@ -169,9 +168,7 @@ def _upload_project_directory(
 def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> None:
     """Call the function of QFieldSync to package a project for QField"""
 
-    argvb = list(map(os.fsencode, [""]))
-    qgis_app = QgsApplication(argvb, True)
-    qgis_app.initQgis()
+    start_app()
 
     project = QgsProject.instance()
     if not project_filename.exists():
@@ -250,8 +247,6 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> None
     # plugin to be installed
     offline_converter.project_configuration.create_base_map = False
     offline_converter.convert()
-
-    qgis_app.exitQgis()
 
     packaged_project_filename = get_project_in_folder(str(package_dir))
     if Path(packaged_project_filename).stat().st_size == 0:
