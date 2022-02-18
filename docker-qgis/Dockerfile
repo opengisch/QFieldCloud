@@ -4,6 +4,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pip \
     xvfb \
+    iputils-ping \
     && apt-get clean
 
 COPY ./requirements.txt /tmp/

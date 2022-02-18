@@ -22,6 +22,7 @@ from qfieldcloud.qgis.utils import (
     get_layers_data,
     layers_data_to_string,
     start_app,
+    stop_app,
 )
 from qgis.core import (
     QgsCoordinateTransform,
@@ -126,6 +127,7 @@ def _upload_project_directory(
     project_id: str, local_dir: Path, should_delete: bool = False
 ) -> None:
     """Upload the files in the local_dir to the storage"""
+    stop_app()
 
     bucket = _get_s3_bucket()
     # either "files" or "package"
