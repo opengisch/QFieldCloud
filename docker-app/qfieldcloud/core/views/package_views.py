@@ -53,7 +53,7 @@ class LatestPackageView(views.APIView):
             raise exceptions.InvalidJobError("Empty project package.")
 
         if last_job.feedback.get("feedback_version") == "2.0":
-            layers = last_job.feedback["outputs"]["package_project"]["layer_checks"]
+            layers = last_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
         else:
             steps = last_job.feedback.get("steps", [])
             layers = (

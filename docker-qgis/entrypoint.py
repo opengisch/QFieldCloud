@@ -6,16 +6,25 @@ import logging
 import os
 import tempfile
 from pathlib import Path, PurePath
-from typing import Dict
+from typing import Dict, Union
 
 import boto3
 import qfieldcloud.qgis.apply_deltas
 import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
-from qfieldcloud.qgis.utils import Step, StepOutput, WorkDirPath, Workflow
+from libqfieldsync.utils.file_utils import get_project_in_folder
+from qfieldcloud.qgis.utils import (
+    Step,
+    StepOutput,
+    WorkDirPath,
+    Workflow,
+    get_layers_data,
+    layers_data_to_string,
+    start_app,
+    stop_app,
+)
 from qgis.core import (
-    QgsApplication,
     QgsCoordinateTransform,
     QgsOfflineEditing,
     QgsProject,
@@ -67,6 +76,18 @@ def _get_sha256sum(filepath):
     return hasher.hexdigest()
 
 
+def _get_md5sum(filepath):
+    """Calculate sha256sum of a file"""
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+    with filepath as f:
+        buf = f.read(BLOCKSIZE)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = f.read(BLOCKSIZE)
+    return hasher.hexdigest()
+
+
 def _download_project_directory(project_id: str, download_dir: Path = None) -> Path:
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""
@@ -93,6 +114,10 @@ def _download_project_directory(project_id: str, download_dir: Path = None) -> P
         absolute_filename = download_dir.joinpath(relative_filename)
         absolute_filename.parent.mkdir(parents=True, exist_ok=True)
 
+        logging.info(
+            f'Downloading file "{obj.key}", size: {obj.size} bytes, md5sum: "{obj.e_tag}" '
+        )
+
         bucket.download_file(obj.key, str(absolute_filename))
 
     return download_dir
@@ -102,6 +127,7 @@ def _upload_project_directory(
     project_id: str, local_dir: Path, should_delete: bool = False
 ) -> None:
     """Upload the files in the local_dir to the storage"""
+    stop_app()
 
     bucket = _get_s3_bucket()
     # either "files" or "package"
@@ -125,6 +151,9 @@ def _upload_project_directory(
         with open(elem, "rb") as e:
             sha256sum = _get_sha256sum(e)
 
+        with open(elem, "rb") as e:
+            md5sum = _get_md5sum(e)
+
         # Create the key
         filename = str(elem.relative_to(*elem.parts[:4]))
         key = "/".join([prefix, filename])
@@ -139,19 +168,18 @@ def _upload_project_directory(
             )
 
         # Check if the file is different on the storage
+        # TODO switch to etag/md5sum comparison
         if metadata["sha256sum"] != storage_metadata["sha256sum"]:
             logging.info(
-                f'Uploading file "{key}", size: {elem.stat().st_size} bytes, sha256sum: "{sha256sum}" '
+                f'Uploading file "{key}", size: {elem.stat().st_size} bytes, md5sum: {md5sum}, sha256sum: "{sha256sum}" '
             )
             bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
 
 
-def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict:
+def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     """Call the function of QFieldSync to package a project for QField"""
 
-    argvb = list(map(os.fsencode, [""]))
-    qgis_app = QgsApplication(argvb, True)
-    qgis_app.initQgis()
+    start_app()
 
     project = QgsProject.instance()
     if not project_filename.exists():
@@ -161,33 +189,6 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict
         raise Exception(f"Unable to open file with QGIS: {project_filename}")
 
     layers = project.mapLayers()
-    # Check if the layers are valid (i.e. if the datasources are available)
-    layer_checks = {}
-    for layer in layers.values():
-        is_valid = True
-        status = "ok"
-        if layer:
-            if layer.dataProvider():
-                if not layer.dataProvider().isValid():
-                    is_valid = False
-                    status = "invalid_dataprovider"
-                # there might be another reason why the layer is not valid, other than the data provider
-                elif not layer.isValid():
-                    is_valid = False
-                    status = "invalid_layer"
-            else:
-                is_valid = False
-                status = "missing_dataprovider"
-        else:
-            is_valid = False
-            status = "missing_layer"
-
-        layer_checks[layer.id()] = {
-            "name": layer.name(),
-            "valid": is_valid,
-            "status": status,
-        }
-
     project_config = ProjectConfiguration(project)
     vl_extent_wkt = QgsRectangle()
     vl_extent_crs = project.crs().authid()
@@ -258,9 +259,26 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> Dict
     offline_converter.project_configuration.create_base_map = False
     offline_converter.convert()
 
-    qgis_app.exitQgis()
+    packaged_project_filename = get_project_in_folder(str(package_dir))
+    if Path(packaged_project_filename).stat().st_size == 0:
+        raise Exception("The packaged QGIS project file is empty.")
 
-    return layer_checks
+    return packaged_project_filename
+
+
+def _extract_layer_data(project_filename: Union[str, Path]) -> Dict:
+    start_app()
+
+    project_filename = str(project_filename)
+    project = QgsProject.instance()
+    project.read(project_filename)
+    layers_by_id = get_layers_data(project)
+
+    logging.info(
+        f"QGIS project layer checks\n{layers_data_to_string(layers_by_id)}",
+    )
+
+    return layers_by_id
 
 
 def cmd_package_project(args):
@@ -281,6 +299,16 @@ def cmd_package_project(args):
                 return_names=["tmp_project_dir"],
             ),
             Step(
+                id="qgis_layers_data",
+                name="QGIS Layers Data",
+                arguments={
+                    "project_filename": WorkDirPath("files", args.project_file),
+                },
+                method=_extract_layer_data,
+                return_names=["layers_by_id"],
+                outputs=["layers_by_id"],
+            ),
+            Step(
                 id="package_project",
                 name="Package Project",
                 arguments={
@@ -288,8 +316,19 @@ def cmd_package_project(args):
                     "package_dir": WorkDirPath("export", mkdir=True),
                 },
                 method=_call_qfieldsync_packager,
-                return_names=["layer_checks"],
-                outputs=["layer_checks"],
+                return_names=["qfield_project_filename"],
+            ),
+            Step(
+                id="qfield_layer_data",
+                name="Packaged Layers Data",
+                arguments={
+                    "project_filename": StepOutput(
+                        "package_project", "qfield_project_filename"
+                    ),
+                },
+                method=_extract_layer_data,
+                return_names=["layers_by_id"],
+                outputs=["layers_by_id"],
             ),
             Step(
                 id="upload_packaged_project",

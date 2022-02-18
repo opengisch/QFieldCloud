@@ -273,6 +273,7 @@ class DeltaSerializer(serializers.ModelSerializer):
 
 
 class ExportJobSerializer(serializers.ModelSerializer):
+    # TODO layers used to hold information about layer validity. No longer needed.
     layers = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField(initial="STATUS_ERROR")
 
@@ -293,7 +294,7 @@ class ExportJobSerializer(serializers.ModelSerializer):
             return None
 
         if obj.feedback.get("feedback_version") == "2.0":
-            return obj.feedback["outputs"]["package_project"]["layer_checks"]
+            return obj.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
         else:
             steps = obj.feedback.get("steps", [])
             if len(steps) > 2 and steps[1].get("stage", 1) == 2:

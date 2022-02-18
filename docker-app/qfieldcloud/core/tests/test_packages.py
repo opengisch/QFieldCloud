@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import tempfile
@@ -183,12 +184,18 @@ class QfcTestCase(APITransactionTestCase):
                     layer_data = package_payload["layers"][layer_id]
 
                     if layer_id in invalid_layers:
-                        self.assertFalse(layer_data["valid"], layer_id)
+                        self.assertFalse(layer_data["is_valid"], layer_id)
                     else:
-                        self.assertTrue(layer_data["valid"], layer_id)
+                        self.assertTrue(layer_data["is_valid"], layer_id)
 
                 return
             elif payload["status"] == Job.Status.FAILED:
+                print(
+                    "Job feedback:",
+                    json.dumps(
+                        Job.objects.get(id=job_id).feedback, sort_keys=True, indent=2
+                    ),
+                )
                 self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish")

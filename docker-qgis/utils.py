@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
+from libqfieldsync.layer import LayerSource
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -23,6 +24,7 @@ from qgis.core import (
     QgsProviderRegistry,
 )
 from qgis.PyQt import QtCore, QtGui
+from tabulate import tabulate
 
 qgs_stderr_logger = logging.getLogger("QGIS_STDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
@@ -140,8 +142,9 @@ def stop_app():
     """
     global QGISAPP
 
-    QGISAPP.exitQgis()
-    del QGISAPP
+    if QGISAPP is not None:
+        QGISAPP.exitQgis()
+        del QGISAPP
 
 
 class WorkflowValidationException(Exception):
@@ -282,17 +285,20 @@ def is_localhost(hostname: str, port: int = None) -> bool:
     """returns True if the hostname points to the localhost, otherwise False."""
     if port is None:
         port = 22  # no port specified, lets just use the ssh port
-    hostname = socket.getfqdn(hostname)
-    if hostname in ("localhost", "0.0.0.0"):
-        return True
-    localhost = socket.gethostname()
-    localaddrs = socket.getaddrinfo(localhost, port)
-    targetaddrs = socket.getaddrinfo(hostname, port)
-    for (_family, _socktype, _proto, _canonname, sockaddr) in localaddrs:
-        for (_rfamily, _rsocktype, _rproto, _rcanonname, rsockaddr) in targetaddrs:
-            if rsockaddr[0] == sockaddr[0]:
-                return True
-    return False
+    try:
+        hostname = socket.getfqdn(hostname)
+        if hostname in ("localhost", "0.0.0.0"):
+            return True
+        localhost = socket.gethostname()
+        localaddrs = socket.getaddrinfo(localhost, port)
+        targetaddrs = socket.getaddrinfo(hostname, port)
+        for (_family, _socktype, _proto, _canonname, sockaddr) in localaddrs:
+            for (_rfamily, _rsocktype, _rproto, _rcanonname, rsockaddr) in targetaddrs:
+                if rsockaddr[0] == sockaddr[0]:
+                    return True
+        return False
+    except Exception:
+        return False
 
 
 def has_ping(hostname: str) -> bool:
@@ -457,3 +463,105 @@ def run_workflow(
                 json.dump(feedback, f, indent=2, sort_keys=True, default=json_default)
 
         return feedback
+
+
+def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
+    layers_by_id = {}
+
+    for layer in project.mapLayers().values():
+        error = layer.error()
+        layer_id = layer.id()
+        layer_source = LayerSource(layer)
+        layers_by_id[layer_id] = {
+            "id": layer_id,
+            "name": layer.name(),
+            "crs": layer.crs().authid() if layer.crs() else None,
+            "is_valid": layer.isValid(),
+            "datasource": layer.dataProvider().uri().uri()
+            if layer.dataProvider()
+            else None,
+            "type": layer.type(),
+            "type_name": layer.type().name,
+            "error_code": "no_error",
+            "error_summary": error.summary() if error.messageList() else "",
+            "error_message": layer.error().message(),
+            "filename": layer_source.filename,
+            "provider_error_summary": None,
+            "provider_error_message": None,
+        }
+
+        if layers_by_id[layer_id]["is_valid"]:
+            continue
+
+        data_provider = layer.dataProvider()
+
+        if data_provider:
+            data_provider_error = data_provider.error()
+
+            if data_provider.isValid():
+                # there might be another reason why the layer is not valid, other than the data provider
+                layers_by_id[layer_id]["error_code"] = "invalid_layer"
+            else:
+                layers_by_id[layer_id]["error_code"] = "invalid_dataprovider"
+
+            layers_by_id[layer_id]["provider_error_summary"] = (
+                data_provider_error.summary()
+                if data_provider_error.messageList()
+                else ""
+            )
+            layers_by_id[layer_id][
+                "provider_error_message"
+            ] = data_provider_error.message()
+
+            if not layers_by_id[layer_id]["provider_error_summary"]:
+                service = data_provider.uri().service()
+                if service:
+                    layers_by_id[layer_id][
+                        "provider_error_summary"
+                    ] = f'Unable to connect to service "{service}"'
+
+                host = data_provider.uri().host()
+                port = (
+                    int(data_provider.uri().port())
+                    if data_provider.uri().port()
+                    else None
+                )
+                if host and (is_localhost(host, port) or has_ping(host)):
+                    layers_by_id[layer_id][
+                        "provider_error_summary"
+                    ] = f'Unable to connect to host "{host}"'
+
+        else:
+            layers_by_id[layer_id]["error_code"] = "missing_dataprovider"
+            layers_by_id[layer_id][
+                "provider_error_summary"
+            ] = "No data provider available"
+
+    return layers_by_id
+
+
+def layers_data_to_string(layers_by_id):
+    # Print layer check results
+    table = [
+        [
+            d["name"],
+            f'...{d["id"][-6:]}',
+            d["is_valid"],
+            d["error_code"],
+            d["error_summary"],
+            d["provider_error_summary"],
+        ]
+        for d in layers_by_id.values()
+    ]
+
+    return tabulate(
+        table,
+        headers=[
+            "Layer Name",
+            "Layer Id",
+            "Is Valid",
+            "Status",
+            "Error Summary",
+            "Provider Summary",
+        ],
+    )
