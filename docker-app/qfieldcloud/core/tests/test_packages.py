@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import tempfile
@@ -189,6 +190,12 @@ class QfcTestCase(APITransactionTestCase):
 
                 return
             elif payload["status"] == Job.Status.FAILED:
+                print(
+                    "Job feedback:",
+                    json.dumps(
+                        Job.objects.get(id=job_id).feedback, sort_keys=True, indent=2
+                    ),
+                )
                 self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish")
