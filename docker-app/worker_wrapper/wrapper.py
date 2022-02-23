@@ -227,6 +227,8 @@ class JobRun:
             detach=True,
         )
 
+        logger.info(f"Starting worker {container.id} ...")
+
         response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
 
         try:
