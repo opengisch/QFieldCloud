@@ -949,8 +949,9 @@ class Project(models.Model):
 
     @property
     def has_online_vector_data(self) -> bool:
+        # it's safer to assume there is an online vector layer
         if not self.project_details:
-            return False
+            return True
 
         layers_by_id = self.project_details.get("layers_by_id", {})
         has_online_vector_layers = False

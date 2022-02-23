@@ -99,6 +99,7 @@ CRON_CLASSES = [
     "qfieldcloud.notifs.cron.SendNotificationsJob",
     # "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
     "qfieldcloud.core.cron.ResendFailedInvitationsJob",
+    "qfieldcloud.core.cron.SetTerminatedWorkersToFinalStatusJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
@@ -310,3 +311,5 @@ IN_TEST_SUITE = False
 
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
+
+WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 60))
