@@ -99,6 +99,7 @@ CRON_CLASSES = [
     "qfieldcloud.notifs.cron.SendNotificationsJob",
     # "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
     "qfieldcloud.core.cron.ResendFailedInvitationsJob",
+    "qfieldcloud.core.cron.SetTerminatedWorkersToFinalStatusJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
