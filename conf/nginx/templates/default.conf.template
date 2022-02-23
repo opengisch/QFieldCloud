@@ -54,23 +54,6 @@ server {
     proxy_pass http://django;
   }
 
-  location /minio/ {
-    proxy_buffering off;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Host $http_host;
-
-    proxy_connect_timeout 300;
-    # Default is HTTP/1, keepalive is only enabled in HTTP/1.1
-    proxy_http_version 1.1;
-    proxy_set_header Connection "";
-    chunked_transfer_encoding off;
-
-    set $target http://minio1:9000/;
-    proxy_pass $target;
-  }
-
   location /storage-download/ {
     # Only allow internal redirects
     internal;
