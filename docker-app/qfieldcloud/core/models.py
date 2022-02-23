@@ -953,7 +953,12 @@ class Project(models.Model):
         if not self.project_details:
             return True
 
-        layers_by_id = self.project_details.get("layers_by_id", {})
+        layers_by_id = self.project_details.get("layers_by_id")
+
+        # it's safer to assume there is an online vector layer
+        if layers_by_id is None:
+            return True
+
         has_online_vector_layers = False
 
         for layer_data in layers_by_id.values():
