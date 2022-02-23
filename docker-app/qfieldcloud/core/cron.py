@@ -1,7 +1,8 @@
 import logging
 import os
+from datetime import timedelta
 
-import docker
+from django.conf import settings
 from django.utils import timezone
 from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
@@ -52,16 +53,12 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
     code = "qfieldcloud.set_terminated_workers_to_final_status"
 
     def do(self):
-
-        client = docker.from_env()
-        qgis_containers = client.containers.list(
-            sparse=True, filters={"ancestor": QGIS_CONTAINER_NAME}
-        )
-        qgis_container_ids = [c.id for c in qgis_containers]
-
         jobs = Job.objects.filter(
             status__in=[Job.Status.QUEUED, Job.Status.STARTED],
-        ).exclude(container_id__in=qgis_container_ids)
+            # add extra seconds just to make sure a properly finished job properly updated the status.
+            started_at__lt=timezone.now()
+            - timedelta(seconds=settings.WORKER_TIMEOUT_S + 10),
+        )
 
         for job in jobs:
             capture_message(
