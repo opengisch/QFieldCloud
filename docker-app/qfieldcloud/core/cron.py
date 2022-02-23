@@ -5,6 +5,7 @@ import docker
 from django.utils import timezone
 from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
+from sentry_sdk import capture_message
 
 from ..core.models import Job
 from .invitations_utils import send_invitation
@@ -62,12 +63,17 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
             status__in=[Job.Status.QUEUED, Job.Status.STARTED],
         ).exclude(container_id__in=qgis_container_ids)
 
+        for job in jobs:
+            capture_message(
+                f'Job "{job.id}" was with status "{job.status}", but worker container no longer exists. Job unexpectedly terminated.'
+            )
+
         jobs.update(
             status=Job.Status.FAILED,
             finished_at=timezone.now(),
             feedback={
                 "error_stack": "",
-                "error": "Worker unexpectedly terminated.",
+                "error": "Job unexpectedly terminated.",
                 "error_origin": "worker_wrapper",
                 "container_exit_code": -2,
             },
