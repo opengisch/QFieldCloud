@@ -129,6 +129,7 @@ def start_app():
         QtCore.qInstallMessageHandler(_qt_message_handler)
         QgsApplication.messageLog().messageReceived.connect(_write_log_message)
 
+        # make sure the app is closed, otherwise the container exists with non-zero
         @atexit.register
         def exitQgis():
             stop_app()
@@ -141,6 +142,10 @@ def stop_app():
     Cleans up and exits QGIS
     """
     global QGISAPP
+
+    # note that if this function is called from @atexit.register, the globals are cleaned up
+    if "QGISAPP" not in globals():
+        return
 
     if QGISAPP is not None:
         QGISAPP.exitQgis()
