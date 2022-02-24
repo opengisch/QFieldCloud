@@ -112,7 +112,9 @@ def start_app():
     global QGISAPP
 
     if QGISAPP is None:
-        qgs_stderr_logger.info("Starting QGIS app...")
+        qgs_stderr_logger.info(
+            f"Starting QGIS app version {Qgis.versionInt()} ({Qgis.devVersion()})..."
+        )
         argvb = []
 
         # Note: QGIS_PREFIX_PATH is evaluated in QgsApplication -
@@ -148,6 +150,7 @@ def stop_app():
         return
 
     if QGISAPP is not None:
+        qgs_stderr_logger.info("Stopping QGIS app...")
         QGISAPP.exitQgis()
         del QGISAPP
 
