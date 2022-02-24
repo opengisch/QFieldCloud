@@ -1,4 +1,8 @@
+import os
+from typing import Optional
+
 from django.contrib.auth import get_user_model
+from django.contrib.sites.models import Site
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
@@ -17,6 +21,14 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
+
+
+def get_avatar_url(user: User) -> Optional[str]:
+    if hasattr(user, "useraccount") and user.useraccount.avatar_url:
+        site = Site.objects.get_current()
+        port = os.environ.get("WEB_HTTP_PORT")
+        return f"http://{site.domain}:{port}{user.useraccount.avatar_url}"
+    return None
 
 
 class UserSerializer:
@@ -80,7 +92,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
+        return get_avatar_url(obj)
 
     class Meta:
         model = User
@@ -101,7 +113,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
     username_display = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
+        return get_avatar_url(obj)
 
     def get_username_display(self, obj):
         if obj.user_type == obj.TYPE_TEAM:
@@ -139,7 +151,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         ]
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
+        return get_avatar_url(obj)
 
     class Meta:
         model = Organization
@@ -189,11 +201,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return obj.user.email
 
     def get_avatar_url(self, obj):
-        return (
-            obj.user.useraccount.avatar_url
-            if hasattr(obj.user, "useraccount")
-            else None
-        )
+        return get_avatar_url(obj.user)
 
     class Meta:
         model = AuthToken
