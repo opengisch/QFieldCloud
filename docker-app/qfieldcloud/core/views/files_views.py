@@ -221,9 +221,7 @@ class ProjectMetafilesView(views.APIView):
 
 class PublicFilesView(views.APIView):
     parser_classes = [MultiPartParser]
-    permission_classes = [
-        permissions.IsAuthenticated,
-    ]
+    permission_classes = []
 
     def get(self, request, filename):
         return utils2.storage.file_response(request, filename)
