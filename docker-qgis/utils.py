@@ -123,9 +123,7 @@ def start_app():
         QGISAPP = QgsApplication(argvb, gui_flag)
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
-        os.environ["QGIS_CUSTOM_CONFIG_PATH"] = tempfile.mkdtemp(
-            "", "QGIS-PythonTestConfigPath"
-        )
+        os.environ["QGIS_CUSTOM_CONFIG_PATH"] = tempfile.mkdtemp("", "QGIS_CONFIG")
         QGISAPP.initQgis()
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
