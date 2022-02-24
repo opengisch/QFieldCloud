@@ -112,7 +112,9 @@ def start_app():
     global QGISAPP
 
     if QGISAPP is None:
-        qgs_stderr_logger.info("Starting QGIS app...")
+        qgs_stderr_logger.info(
+            f"Starting QGIS app version {Qgis.versionInt()} ({Qgis.devVersion()})..."
+        )
         argvb = []
 
         # Note: QGIS_PREFIX_PATH is evaluated in QgsApplication -
@@ -121,9 +123,7 @@ def start_app():
         QGISAPP = QgsApplication(argvb, gui_flag)
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
-        os.environ["QGIS_CUSTOM_CONFIG_PATH"] = tempfile.mkdtemp(
-            "", "QGIS-PythonTestConfigPath"
-        )
+        os.environ["QGIS_CUSTOM_CONFIG_PATH"] = tempfile.mkdtemp("", "QGIS_CONFIG")
         QGISAPP.initQgis()
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
@@ -148,6 +148,7 @@ def stop_app():
         return
 
     if QGISAPP is not None:
+        qgs_stderr_logger.info("Stopping QGIS app...")
         QGISAPP.exitQgis()
         del QGISAPP
 
