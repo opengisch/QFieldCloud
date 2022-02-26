@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import PurePath
 from typing import IO, List
 
@@ -12,6 +13,9 @@ from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
 
 logger = logging.getLogger(__name__)
+
+QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 
 
 def staticfile_prefix(project: "Project", filename: str) -> str:  # noqa: F821
@@ -47,9 +51,10 @@ def file_response(
         extra_params["VersionId"] = version
 
     # check if we are in NGINX proxy
-    if request.META.get("HTTP_HOST", "").split(":")[-1] == request.META.get(
-        "WEB_HTTPS_PORT"
-    ):
+    http_host = request.META.get("HTTP_HOST", "")
+    https_port = http_host.split(":")[-1] if ":" in http_host else "443"
+
+    if https_port == WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
         if presigned:
             if as_attachment:
                 extra_params["ResponseContentType"] = "application/force-download"
