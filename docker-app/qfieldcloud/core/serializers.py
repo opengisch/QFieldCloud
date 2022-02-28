@@ -187,12 +187,12 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
 
 
 class TokenSerializer(serializers.ModelSerializer):
-    username = serializers.StringRelatedField(source="user")
+    username = serializers.CharField(source="user.username")
     expires_at = serializers.DateTimeField()
-    user_type = serializers.StringRelatedField(source="user")
-    first_name = serializers.StringRelatedField(source="user")
-    last_name = serializers.StringRelatedField(source="user")
-    full_name = serializers.StringRelatedField(source="user")
+    user_type = serializers.CharField(source="user.user_type")
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
+    full_name = serializers.CharField(source="user.full_name")
     token = serializers.CharField(source="key")
     email = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
