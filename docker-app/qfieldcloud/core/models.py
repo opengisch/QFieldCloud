@@ -342,7 +342,7 @@ class User(AbstractUser):
 
     @property
     def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def username_with_full_name(self) -> str:
