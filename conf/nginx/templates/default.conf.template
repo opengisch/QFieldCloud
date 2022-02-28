@@ -16,6 +16,11 @@ server {
     root /var/www/certbot;
   }
 
+  # prevent access by IP
+  if ($http_host != "${QFIELDCLOUD_HOST}") {
+    return 444;
+  }
+
   # use $WEB_HTTPS_PORT in the configuration, since it might be different from 443 (e.g. localhost)
   location / {
     return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
@@ -35,7 +40,13 @@ server {
   # path for static files (only needed for serving local staticfiles)
   root /var/www/html/;
 
+  # upgrade to https
   error_page 497 https://$host:${WEB_HTTPS_PORT}$request_uri;
+
+  # prevent access by IP
+  if ($http_host != "${QFIELDCLOUD_HOST}") {
+    return 444;
+  }
 
   # checks for static file, if not found proxy to app
   location / {
