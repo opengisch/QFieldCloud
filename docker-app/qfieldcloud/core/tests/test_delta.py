@@ -4,12 +4,11 @@ import logging
 import time
 
 import fiona
-import requests
 import rest_framework
-from django.http.response import HttpResponseRedirect
+from django.http.response import FileResponse, HttpResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, ProjectCollaborator, User
+from qfieldcloud.core.models import Job, Project, ProjectCollaborator, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -19,9 +18,6 @@ logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITransactionTestCase):
-
-    DJANGO_BASE_URL = "http://localhost:8000/api/v1/"
-
     def setUp(self):
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
@@ -55,22 +51,35 @@ class QfcTestCase(APITransactionTestCase):
             role=ProjectCollaborator.Roles.ADMIN,
         )
 
-    def tearDown(self):
-        # Remove credentials
-        self.client.credentials()
+    def fail(self, msg: str, job: Job = None):
+        if job:
+            msg += f"\n\nOutput:\n================\n{job.output}\n================"
 
-    @classmethod
-    def tearDownClass(cls):
-        # Remove all projects avoiding bulk delete in order to use
-        # the overridden delete() function in the model
-        for p in Project.objects.all():
-            bucket = utils.get_s3_bucket()
-            prefix = utils.safe_join(f"projects/{p.id}/")
-            bucket.objects.filter(Prefix=prefix).delete()
+            if job.feedback:
+                if "error_stack" in job.feedback:
+                    msg += "\n\nError:\n================"
+                    for single_error_stack in job.feedback["error_stack"]:
+                        msg += "\n"
+                        msg += single_error_stack
 
-            p.delete()
+                    msg += f"  {job.feedback['error']}\n================"
 
-        User.objects.all().delete()
+                feedback = json.dumps(job.feedback, indent=2, sort_keys=True)
+                msg += f"\n\nFeedback:\n================\n{feedback}\n================"
+            else:
+                msg += "\n\nFeedback: None"
+
+        super().fail(msg)
+
+    def assertHttpOk(self, response: HttpResponse):
+        try:
+            self.assertTrue(
+                rest_framework.status.is_success(response.status_code), response.json()
+            )
+        except Exception:
+            self.assertTrue(
+                rest_framework.status.is_success(response.status_code), response.content
+            )
 
     def upload_project_files(self, project) -> Project:
         # Verify the original geojson file
@@ -563,14 +572,13 @@ class QfcTestCase(APITransactionTestCase):
     def get_file_contents(self, project, filename):
         response = self.client.get(f"/api/v1/files/{project.id}/{filename}/")
 
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url)
-
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(get_filename(response), filename)
 
-        return response.content
+        if isinstance(response, FileResponse):
+            return b"".join(response.streaming_content)
+        else:
+            return response.content
 
     def upload_deltas(self, project, delta_filename):
         delta_file = testdata_path(f"delta/deltas/{delta_filename}")
@@ -626,10 +634,14 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
+        job = Job.objects.filter(project=self.project1).latest("updated_at")
+
         for _ in range(10):
 
             time.sleep(2)
             response = self.client.get(uri)
+
+            self.assertHttpOk(response)
 
             payload = response.json()
             payload = sorted(payload, key=lambda k: k["id"])
@@ -641,7 +653,7 @@ class QfcTestCase(APITransactionTestCase):
                     break
 
                 if payload[idx]["status"] in failing_status:
-                    self.fail(f"Got failing status {payload[idx]['status']}")
+                    self.fail(f"Got failing status {payload[idx]['status']}", job=job)
                     return
 
                 delta_id, status, created_by = final_value
@@ -652,4 +664,4 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["created_by"], created_by)
                 return
 
-        self.fail("Worker didn't finish")
+        self.fail("Worker didn't finish", job=job)

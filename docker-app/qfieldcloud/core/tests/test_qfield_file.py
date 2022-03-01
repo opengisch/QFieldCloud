@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import tempfile
@@ -5,10 +6,10 @@ import time
 
 import psycopg2
 import requests
-from django.http.response import HttpResponseRedirect
+from django.http.response import HttpResponse, HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Geodb, Project, User
+from qfieldcloud.core.models import Geodb, Job, PackageJob, Project, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -54,14 +55,31 @@ class QfcTestCase(APITransactionTestCase):
     def tearDown(self):
         self.conn.close()
 
-        # Remove all projects avoiding bulk delete in order to use
-        # the overrided delete() function in the model
-        for p in Project.objects.all():
-            p.delete()
+    def fail(self, msg: str, job: Job = None):
+        if job:
+            msg += f"\n\nOutput:\n================\n{job.output}\n================"
 
-        User.objects.all().delete()
-        # Remove credentials
-        self.client.credentials()
+            if job.feedback:
+                if "error_stack" in job.feedback:
+                    msg += "\n\nError:\n================"
+                    for single_error_stack in job.feedback["error_stack"]:
+                        msg += "\n"
+                        msg += single_error_stack
+
+                    msg += f"  {job.feedback['error']}\n================"
+
+                feedback = json.dumps(job.feedback, indent=2, sort_keys=True)
+                msg += f"\n\nFeedback:\n================\n{feedback}\n================"
+            else:
+                msg += "\n\nFeedback: None"
+
+        super().fail(msg)
+
+    def assertHttpOk(self, response: HttpResponse):
+        try:
+            self.assertTrue(status.is_success(response.status_code), response.json())
+        except Exception:
+            self.assertTrue(status.is_success(response.status_code), response.content)
 
     def test_list_files_for_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -181,7 +199,10 @@ class QfcTestCase(APITransactionTestCase):
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
+
+            self.assertHttpOk(response)
             payload = response.json()
+
             if payload["status"] == "STATUS_EXPORTED":
                 response = self.client.get(
                     f"/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/"
@@ -209,7 +230,10 @@ class QfcTestCase(APITransactionTestCase):
                     )
                 return
             elif payload["status"] == "STATUS_ERROR":
-                self.fail("Worker failed with error")
+                self.fail(
+                    "Worker failed with error",
+                    job=PackageJob.objects.filter(project=self.project1).last(),
+                )
 
         self.fail("Worker didn't finish")
 
@@ -237,10 +261,15 @@ class QfcTestCase(APITransactionTestCase):
             response = self.client.get(
                 "/api/v1/qfield-files/export/{}/".format(self.project1.id),
             )
+
+            self.assertHttpOk(response)
+
             if response.json()["status"] == "STATUS_ERROR":
                 return
 
-        self.fail("Worker didn't finish")
+        self.fail(
+            "Worker didn't finish", job=Job.objects.filter(project=self.project1).last()
+        )
 
     def test_downloaded_file_has_canvas_name(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -307,6 +336,9 @@ class QfcTestCase(APITransactionTestCase):
                     for line in f:
                         if 'name="theMapCanvas"' in line:
                             return
+                self.fail(
+                    'Worker failed, missing .qgs XML attribute: name="theMapCanvas"'
+                )
             elif payload["status"] == "STATUS_ERROR":
                 self.fail("Worker failed with error")
 
@@ -351,6 +383,8 @@ class QfcTestCase(APITransactionTestCase):
                     "/api/v1/qfield-files/{}/".format(self.project1.id),
                 )
 
+                self.assertHttpOk(response)
+
                 export_payload = response.json()
                 layer_ok = export_payload["layers"][
                     "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c"
@@ -363,7 +397,10 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertFalse(layer_failed["valid"], layer_failed["status"])
                 return
             elif payload["status"] == "STATUS_ERROR":
-                self.fail("Worker failed with error")
+                self.fail(
+                    "Worker failed with error",
+                    job=Job.objects.filter(project=self.project1).last(),
+                )
 
         self.fail("Worker didn't finish")
 

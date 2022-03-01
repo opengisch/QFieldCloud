@@ -1,4 +1,5 @@
 import atexit
+import inspect
 import json
 import logging
 import os
@@ -13,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
+from libqfieldsync.layer import LayerSource
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -22,6 +24,7 @@ from qgis.core import (
     QgsProviderRegistry,
 )
 from qgis.PyQt import QtCore, QtGui
+from tabulate import tabulate
 
 qgs_stderr_logger = logging.getLogger("QGIS_STDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
@@ -109,7 +112,9 @@ def start_app():
     global QGISAPP
 
     if QGISAPP is None:
-        qgs_stderr_logger.info("Starting QGIS app...")
+        qgs_stderr_logger.info(
+            f"Starting QGIS app version {Qgis.versionInt()} ({Qgis.devVersion()})..."
+        )
         argvb = []
 
         # Note: QGIS_PREFIX_PATH is evaluated in QgsApplication -
@@ -118,14 +123,13 @@ def start_app():
         QGISAPP = QgsApplication(argvb, gui_flag)
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
-        os.environ["QGIS_CUSTOM_CONFIG_PATH"] = tempfile.mkdtemp(
-            "", "QGIS-PythonTestConfigPath"
-        )
+        os.environ["QGIS_CUSTOM_CONFIG_PATH"] = tempfile.mkdtemp("", "QGIS_CONFIG")
         QGISAPP.initQgis()
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
         QgsApplication.messageLog().messageReceived.connect(_write_log_message)
 
+        # make sure the app is closed, otherwise the container exists with non-zero
         @atexit.register
         def exitQgis():
             stop_app()
@@ -139,33 +143,122 @@ def stop_app():
     """
     global QGISAPP
 
-    QGISAPP.exitQgis()
-    del QGISAPP
+    # note that if this function is called from @atexit.register, the globals are cleaned up
+    if "QGISAPP" not in globals():
+        return
+
+    if QGISAPP is not None:
+        qgs_stderr_logger.info("Stopping QGIS app...")
+        QGISAPP.exitQgis()
+        del QGISAPP
+
+
+class WorkflowValidationException(Exception):
+    ...
+
+
+class Workflow:
+    def __init__(
+        self,
+        id: str,
+        version: str,
+        name: str,
+        steps: List["Step"],
+        description: str = "",
+    ):
+        self.id = id
+        self.version = version
+        self.name = name
+        self.description = description
+        self.steps = steps
+
+        self.validate()
+
+    def validate(self):
+        if not self.steps:
+            raise WorkflowValidationException(
+                f'The workflow "{self.id}" should contain at least one step.'
+            )
+
+        all_step_returns = {}
+        for step in self.steps:
+            param_names = []
+            sig = inspect.signature(step.method)
+            for param in sig.parameters.values():
+                if (
+                    param.kind != inspect.Parameter.KEYWORD_ONLY
+                    and param.kind != inspect.Parameter.POSITIONAL_OR_KEYWORD
+                ):
+                    raise WorkflowValidationException(
+                        f'The workflow "{self.id}" method "{step.method.__name__}" has a non keyword parameter "{param.name}".'
+                    )
+
+                if param.name not in step.arguments:
+                    raise WorkflowValidationException(
+                        f'The workflow "{self.id}" method "{step.method.__name__}" has an argument "{param.name}" that is not available in the step definition "arguments", expected one of {list(step.arguments.keys())}.'
+                    )
+
+                param_names.append(param.name)
+
+            for name, value in step.arguments.items():
+                if isinstance(value, StepOutput):
+                    if value.step_id not in all_step_returns:
+                        raise WorkflowValidationException(
+                            f'The workflow "{self.id}" has step "{step.id}" that requires a non-existing step return value "{value.step_id}.{value.return_name}" for argument "{name}". Previous step with that id does not exist.'
+                        )
+
+                    if value.return_name not in all_step_returns[value.step_id]:
+                        raise WorkflowValidationException(
+                            f'The workflow "{self.id}" has step "{step.id}" that requires a non-existing step return value "{value.step_id}.{value.return_name}" for argument "{name}". Previous step with that id found, but returns no value with such name.'
+                        )
+
+                if name not in param_names:
+                    raise WorkflowValidationException(
+                        f'The workflow "{self.id}" method "{step.method.__name__}" receives a parameter "{name}" that is not available in the method definition, expected one of {param_names}.'
+                    )
+
+            all_step_returns[step.id] = all_step_returns.get(step.id, step.return_names)
 
 
 class Step:
     def __init__(
         self,
+        id: str,
         name: str,
         method: Callable,
         arguments: Dict[str, Any] = {},
-        arg_names: List[str] = [],
         return_names: List[str] = [],
-        output_names: List[str] = [],
-        public_returns: List[str] = [],
+        outputs: List[str] = [],
     ):
+        self.id = id
         self.name = name
         self.method = method
         self.arguments = arguments
-        self.arg_names = arg_names
         # names of method return values
         self.return_names = return_names
-        # names of method return values that will be part of the outputs
-        self.output_names = output_names
-        # names of method return values that will be available in arg_names for the next steps
-        self.public_returns = public_returns
+        # names of method return values that will be part of the outputs. They are assumed to be safe to be shown to the user.
+        self.outputs = outputs
         self.stage = 0
-        self.outputs = {}
+
+
+class StepOutput:
+    def __init__(self, step_id: str, return_name: str):
+        self.step_id = step_id
+        self.return_name = return_name
+
+
+class WorkDirPath:
+    def __init__(self, *parts: str, mkdir: bool = False) -> None:
+        self.parts = parts
+        self.mkdir = mkdir
+
+    def eval(self, root: Path) -> Path:
+        path = root.joinpath(*self.parts)
+
+        if self.mkdir:
+            path.mkdir(parents=True, exist_ok=True)
+
+        return path
 
 
 class BaseException(Exception):
@@ -198,17 +291,20 @@ def is_localhost(hostname: str, port: int = None) -> bool:
     """returns True if the hostname points to the localhost, otherwise False."""
     if port is None:
         port = 22  # no port specified, lets just use the ssh port
-    hostname = socket.getfqdn(hostname)
-    if hostname in ("localhost", "0.0.0.0"):
-        return True
-    localhost = socket.gethostname()
-    localaddrs = socket.getaddrinfo(localhost, port)
-    targetaddrs = socket.getaddrinfo(hostname, port)
-    for (_family, _socktype, _proto, _canonname, sockaddr) in localaddrs:
-        for (_rfamily, _rsocktype, _rproto, _rcanonname, rsockaddr) in targetaddrs:
-            if rsockaddr[0] == sockaddr[0]:
-                return True
-    return False
+    try:
+        hostname = socket.getfqdn(hostname)
+        if hostname in ("localhost", "0.0.0.0"):
+            return True
+        localhost = socket.gethostname()
+        localaddrs = socket.getaddrinfo(localhost, port)
+        targetaddrs = socket.getaddrinfo(hostname, port)
+        for (_family, _socktype, _proto, _canonname, sockaddr) in localaddrs:
+            for (_rfamily, _rsocktype, _rproto, _rcanonname, rsockaddr) in targetaddrs:
+                if rsockaddr[0] == sockaddr[0]:
+                    return True
+        return False
+    except Exception:
+        return False
 
 
 def has_ping(hostname: str) -> bool:
@@ -275,8 +371,17 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
     return details
 
 
-def run_task(
-    steps: List[Step],
+def json_default(obj):
+    obj_str = type(obj).__qualname__
+    try:
+        obj_str += f" {str(obj)}"
+    except Exception:
+        obj_str += " <non-representable>"
+    return f"<non-serializable: {obj_str}>"
+
+
+def run_workflow(
+    workflow: Workflow,
     feedback_filename: Optional[Union[IO, Path]],
 ) -> Dict:
     """Executes the steps required to run a task and return structured feedback from the execution
@@ -288,55 +393,181 @@ def run_task(
     Some return values can used as arguments for next steps, as defined in `public_returns`.
 
     Args:
-        steps (List[Step]): ordered steps to be executed
+        workflow (Workflow): workflow to be executed
         feedback_filename (Optional[Union[IO, Path]]): write feedback to an IO device, to Path filename, or don't write it
     """
-    feedback = {}
+    feedback: Dict[str, Any] = {
+        "feedback_version": "2.0",
+        "workflow_version": workflow.version,
+        "workflow_id": workflow.id,
+        "workflow_name": workflow.name,
+    }
     # it may be modified after the successful completion of each step.
-    returned_arguments = {}
+    step_returns = {}
 
     try:
-        for step in steps:
+        root_workdir = Path(tempfile.mkdtemp())
+        for step in workflow.steps:
             with logger_context(step):
                 arguments = {
-                    **returned_arguments,
                     **step.arguments,
                 }
-                args = [arguments[arg_name] for arg_name in step.arg_names]
-                return_values = step.method(*args)
+                for name, value in arguments.items():
+                    if isinstance(value, StepOutput):
+                        arguments[name] = step_returns[value.step_id][value.return_name]
+                    elif isinstance(value, WorkDirPath):
+                        arguments[name] = value.eval(root_workdir)
+
+                return_values = step.method(**arguments)
                 return_values = (
                     return_values if len(step.return_names) > 1 else (return_values,)
                 )
 
-                return_map = {}
+                step_returns[step.id] = {}
                 for name, value in zip(step.return_names, return_values):
-                    return_map[name] = value
-
-                for output_name in step.output_names:
-                    step.outputs[output_name] = return_map[output_name]
-
-                for return_name in step.public_returns:
-                    returned_arguments[return_name] = return_map[return_name]
+                    step_returns[step.id][name] = value
 
     except Exception as err:
         feedback["error"] = str(err)
         (_type, _value, tb) = sys.exc_info()
         feedback["error_stack"] = traceback.format_tb(tb)
     finally:
-        feedback["steps"] = [
-            {
+        feedback["steps"] = []
+        feedback["outputs"] = {}
+
+        for step in workflow.steps:
+            step_feedback = {
+                "id": step.id,
                 "name": step.name,
                 "stage": step.stage,
-                "outputs": step.outputs,
+                "returns": {},
             }
-            for step in steps
-        ]
+
+            if step.stage == 2:
+                step_feedback["returns"] = step_returns[step.id]
+                feedback["outputs"][step.id] = {}
+                for output_name in step.outputs:
+                    feedback["outputs"][step.id][output_name] = step_returns[step.id][
+                        output_name
+                    ]
+
+            feedback["steps"].append(step_feedback)
 
         if feedback_filename in [sys.stderr, sys.stdout]:
             print("Feedback:")
-            print(json.dump(feedback, feedback_filename, indent=2, sort_keys=True))
+            print(
+                json.dump(
+                    feedback,
+                    feedback_filename,
+                    indent=2,
+                    sort_keys=True,
+                    default=json_default,
+                )
+            )
         elif isinstance(feedback_filename, Path):
             with open(feedback_filename, "w") as f:
-                json.dump(feedback, f, indent=2, sort_keys=True)
+                json.dump(feedback, f, indent=2, sort_keys=True, default=json_default)
 
         return feedback
+
+
+def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
+    layers_by_id = {}
+
+    for layer in project.mapLayers().values():
+        error = layer.error()
+        layer_id = layer.id()
+        layer_source = LayerSource(layer)
+        layers_by_id[layer_id] = {
+            "id": layer_id,
+            "name": layer.name(),
+            "crs": layer.crs().authid() if layer.crs() else None,
+            "is_valid": layer.isValid(),
+            "datasource": layer.dataProvider().uri().uri()
+            if layer.dataProvider()
+            else None,
+            "type": layer.type(),
+            "type_name": layer.type().name,
+            "error_code": "no_error",
+            "error_summary": error.summary() if error.messageList() else "",
+            "error_message": layer.error().message(),
+            "filename": layer_source.filename,
+            "provider_error_summary": None,
+            "provider_error_message": None,
+        }
+
+        if layers_by_id[layer_id]["is_valid"]:
+            continue
+
+        data_provider = layer.dataProvider()
+
+        if data_provider:
+            data_provider_error = data_provider.error()
+
+            if data_provider.isValid():
+                # there might be another reason why the layer is not valid, other than the data provider
+                layers_by_id[layer_id]["error_code"] = "invalid_layer"
+            else:
+                layers_by_id[layer_id]["error_code"] = "invalid_dataprovider"
+
+            layers_by_id[layer_id]["provider_error_summary"] = (
+                data_provider_error.summary()
+                if data_provider_error.messageList()
+                else ""
+            )
+            layers_by_id[layer_id][
+                "provider_error_message"
+            ] = data_provider_error.message()
+
+            if not layers_by_id[layer_id]["provider_error_summary"]:
+                service = data_provider.uri().service()
+                if service:
+                    layers_by_id[layer_id][
+                        "provider_error_summary"
+                    ] = f'Unable to connect to service "{service}"'
+
+                host = data_provider.uri().host()
+                port = (
+                    int(data_provider.uri().port())
+                    if data_provider.uri().port()
+                    else None
+                )
+                if host and (is_localhost(host, port) or has_ping(host)):
+                    layers_by_id[layer_id][
+                        "provider_error_summary"
+                    ] = f'Unable to connect to host "{host}"'
+
+        else:
+            layers_by_id[layer_id]["error_code"] = "missing_dataprovider"
+            layers_by_id[layer_id][
+                "provider_error_summary"
+            ] = "No data provider available"
+
+    return layers_by_id
+
+
+def layers_data_to_string(layers_by_id):
+    # Print layer check results
+    table = [
+        [
+            d["name"],
+            f'...{d["id"][-6:]}',
+            d["is_valid"],
+            d["error_code"],
+            d["error_summary"],
+            d["provider_error_summary"],
+        ]
+        for d in layers_by_id.values()
+    ]
+
+    return tabulate(
+        table,
+        headers=[
+            "Layer Name",
+            "Layer Id",
+            "Is Valid",
+            "Status",
+            "Error Summary",
+            "Provider Summary",
+        ],
+    )

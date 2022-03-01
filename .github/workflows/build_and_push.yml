@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - build-containers-with-github-actions
+      - dispatch_deploy_after_build
     tags:
       - "v*.*.*"
 jobs:
@@ -43,25 +43,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-      # Caddy
-      - name: Docker Test Caddy
-        id: docker_test_caddy
-        uses: docker/build-push-action@v2
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: ./docker-caddy
-          file: ./docker-caddy/Dockerfile
-
-      - name: Docker Build and Push Caddy
-        id: docker_build_and_push_caddy
-        uses: docker/build-push-action@v2
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: ./docker-caddy
-          file: ./docker-caddy/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-caddy:${{ steps.prepare.outputs.tag }}
 
       # Application
       - name: Docker Test Application
@@ -119,3 +100,11 @@ jobs:
           file: ./docker-qgis/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.tag }}
+
+      - name: Trigger deployment on private repository
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+          repository: opengisch/qfieldcloud-private
+          event-type: public_dispatch
+          client-payload: '{"version": "${{ steps.prepare.outputs.tag }}"}'

@@ -22,17 +22,6 @@ class QfcTestCase(APITestCase):
         self.user3 = User.objects.create_user(username="user3", password="abc123")
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
-    def tearDown(self):
-        # Remove all projects avoiding bulk delete in order to use
-        # the overrided delete() function in the model
-        for p in Project.objects.all():
-            p.delete()
-
-        User.objects.all().delete()
-
-        # Remove credentials
-        self.client.credentials()
-
     def test_create_project(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.post(

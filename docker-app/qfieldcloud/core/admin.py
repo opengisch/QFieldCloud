@@ -16,10 +16,10 @@ from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
-    ExportJob,
     Geodb,
     Organization,
     OrganizationMember,
+    PackageJob,
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
@@ -274,14 +274,40 @@ class ProjectAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    fields = ("name", "description", "is_public", "owner", "storage_size")
-    readonly_fields = ("storage_size",)
+    fields = (
+        "id",
+        "name",
+        "description",
+        "is_public",
+        "owner",
+        "storage_size",
+        "created_at",
+        "updated_at",
+        "data_last_updated_at",
+        "data_last_packaged_at",
+        "project_details__pre",
+    )
+    readonly_fields = (
+        "id",
+        "storage_size",
+        "created_at",
+        "updated_at",
+        "data_last_updated_at",
+        "data_last_packaged_at",
+        "project_details__pre",
+    )
     inlines = (ProjectCollaboratorInline,)
     search_fields = (
         "id",
         "name__icontains",
         "owner__username__iexact",
     )
+
+    def project_details__pre(self, instance):
+        if instance.project_details is None:
+            return ""
+
+        return format_pre_json(instance.project_details)
 
 
 class DeltaInline(admin.TabularInline):
@@ -489,7 +515,7 @@ class DeltaAdmin(admin.ModelAdmin):
         return super().response_change(request, delta)
 
 
-class ExportJobAdmin(admin.ModelAdmin):
+class PackageJobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "project__owner",
@@ -740,7 +766,7 @@ admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(ApplyJob, ApplyJobAdmin)
-admin.site.register(ExportJob, ExportJobAdmin)
+admin.site.register(PackageJob, PackageJobAdmin)
 admin.site.register(ProcessProjectfileJob, ProcessProjectfileJobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
 

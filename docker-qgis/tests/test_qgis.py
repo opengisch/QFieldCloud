@@ -6,7 +6,7 @@ import unittest
 
 
 class QfcTestCase(unittest.TestCase):
-    def test_export(self):
+    def test_package(self):
         project_directory = self.data_directory_path("simple_project")
         output_directory = tempfile.mkdtemp()
 
@@ -21,7 +21,7 @@ class QfcTestCase(unittest.TestCase):
             "qgis",
             "bash",
             "-c",
-            "./entrypoint.sh export /io/project/project.qgs /io/output",
+            "./entrypoint.sh package /io/project/project.qgs /io/output",
         ]
 
         subprocess.check_call(

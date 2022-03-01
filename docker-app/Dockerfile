@@ -14,11 +14,15 @@ ENV PYTHONUNBUFFERED 1
 
 # install dependencies
 RUN apt update \
-    && apt install -y netcat-openbsd
+    && apt install -y netcat python3-gdal
 
 # install dependencies
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt
+
+# install debug dependencies
+ARG DEBUG_BUILD
+RUN if [ "$DEBUG_BUILD" = "1" ]; then pip install debugpy; fi
 
 # copy project
 COPY . .

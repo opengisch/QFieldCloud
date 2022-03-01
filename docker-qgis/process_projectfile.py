@@ -1,14 +1,13 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 from xml.etree import ElementTree
 
 from qfieldcloud.qgis.utils import (
     BaseException,
-    get_layer_filename,
-    has_ping,
-    is_localhost,
+    get_layers_data,
+    layers_data_to_string,
     start_app,
 )
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
@@ -82,8 +81,10 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
     """Extract project details"""
     logging.info("Extract project details...")
 
-    map_settings = QgsMapSettings()
     details = {}
+
+    logging.info("Reading QGIS project file...")
+    map_settings = QgsMapSettings()
 
     def on_project_read(doc):
         r, _success = project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
@@ -116,74 +117,16 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
     details["crs"] = project.crs().authid()
     details["project_name"] = project.title()
 
+    logging.info("Extracting layer and datasource details...")
+
+    details["layers_by_id"] = get_layers_data(project)
+    details["ordered_layer_ids"] = list(details["layers_by_id"].keys())
+
+    logging.info(
+        f'QGIS project layer checks\n{layers_data_to_string(details["layers_by_id"])}',
+    )
+
     return details
-
-
-def check_layer_validity(project: QgsProject) -> List:
-    logging.info("Check layer and datasource validity...")
-
-    has_invalid_layers = False
-    layers_summary = []
-
-    for layer in project.mapLayers().values():
-        error = layer.error()
-        layer_data = {
-            "id": layer.name(),
-            "name": layer.name(),
-            "crs": layer.crs().authid() if layer.crs() else None,
-            "is_valid": layer.isValid(),
-            "datasource": layer.dataProvider().uri().uri()
-            if layer.dataProvider()
-            else None,
-            "error_summary": error.summary() if error.messageList() else "",
-            "error_message": layer.error().message(),
-            "filename": get_layer_filename(layer),
-            "provider_error_summary": None,
-            "provider_error_message": None,
-        }
-        layers_summary.append(layer_data)
-
-        if layer_data["is_valid"]:
-            continue
-
-        has_invalid_layers = True
-        data_provider = layer.dataProvider()
-
-        if data_provider:
-            data_provider_error = data_provider.error()
-
-            layer_data["provider_error_summary"] = (
-                data_provider_error.summary()
-                if data_provider_error.messageList()
-                else ""
-            )
-            layer_data["provider_error_message"] = data_provider_error.message()
-
-            if not layer_data["provider_error_summary"]:
-                service = data_provider.uri().service()
-                if service:
-                    layer_data[
-                        "provider_error_summary"
-                    ] = f'Unable to connect to service "{service}"'
-
-                host = data_provider.uri().host()
-                port = (
-                    int(data_provider.uri().port())
-                    if data_provider.uri().port()
-                    else None
-                )
-                if host and (is_localhost(host, port) or has_ping(host)):
-                    layer_data[
-                        "provider_error_summary"
-                    ] = f'Unable to connect to host "{host}"'
-
-        else:
-            layer_data["provider_error_summary"] = "No data provider available"
-
-    if has_invalid_layers:
-        raise InvalidLayersException(layers_summary=layers_summary)
-
-    return layers_summary
 
 
 def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:

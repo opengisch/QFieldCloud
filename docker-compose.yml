@@ -8,18 +8,6 @@ x-logging:
     max-file: "10"
 
 services:
-  db:
-    image: postgres:11
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    ports:
-      - ${HOST_POSTGRES_PORT}:5432
-    logging: *default-logging
 
   app: &default-django
     build:
@@ -37,7 +25,7 @@ services:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
     environment:
-      DJANGO_ALLOWED_HOSTS: ${QFIELDCLOUD_HOST}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG}
@@ -46,12 +34,12 @@ services:
       SQL_PASSWORD: ${POSTGRES_PASSWORD}
       SQL_HOST: ${POSTGRES_HOST}
       SQL_PORT: ${POSTGRES_PORT}
+      SQL_SSLMODE: ${POSTGRES_SSLMODE}
       STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID}
       STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY}
       STORAGE_BUCKET_NAME: ${STORAGE_BUCKET_NAME}
       STORAGE_REGION_NAME: ${STORAGE_REGION_NAME}
       STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL}
-      STORAGE_ENDPOINT_URL_EXTERNAL: ${STORAGE_ENDPOINT_URL}
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK}
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_SERVER_NAME: ${QFIELDCLOUD_HOST}
@@ -78,9 +66,9 @@ services:
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
+      QFIELDCLOUD_WORKER_TIMEOUT_S: ${QFIELDCLOUD_WORKER_TIMEOUT_S}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
     depends_on:
-      - db
       - redis
     logging:
       driver: "json-file"
@@ -92,23 +80,45 @@ services:
       ofelia.job-exec.runcrons.schedule: 0 * * * * *
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
-  web:
-    build:
-      context: ./docker-caddy
+  nginx:
+    image: nginx:stable
     restart: unless-stopped
-    environment:
-      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
-      CADDY_ACME_CA: ${CADDY_ACME_CA}
-      CADDY_IMPORT_GLOB: ${CADDY_IMPORT_GLOB}
-      ACME_AGREE: "true"
     volumes:
-      - static_volume:/home/app/web/staticfiles/
-      - media_volume:/home/app/web/mediafiles/
-      - caddy_data:/data
+      - static_volume:/var/www/html/staticfiles/
+      - media_volume:/var/www/html/mediafiles/
+      - ./conf/nginx/pages/:/var/www/html/pages/
+      - ./conf/nginx/templates/:/etc/nginx/templates/
+      - ./conf/nginx/certs/:/etc/nginx/certs/:ro
+      - ./conf/nginx/options-ssl-nginx.conf:/etc/nginx/options-ssl-nginx.conf
+      - ./conf/nginx/ssl-dhparams.pem:/etc/nginx/ssl-dhparams.pem
+      - certbot_www:/var/www/certbot
     ports:
       - ${WEB_HTTP_PORT}:80
       - ${WEB_HTTPS_PORT}:443
+    environment:
+      QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
+      WEB_HTTP_PORT: ${WEB_HTTP_PORT}
+      WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+      LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
+      LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
     logging: *default-logging
+
+  mkcert:
+    image: vishnunair/docker-mkcert
+    environment:
+      domain: ${QFIELDCLOUD_HOST}
+    volumes:
+      - ./conf/nginx/certs/:/root/.local/share/mkcert/
+    command: /bin/sh -c 'mkcert -install && for i in $$(echo $$domain | sed "s/,/ /g"); do [ ! -f /root/.local/share/mkcert/$$i.pem ] && mkcert $$i; done && tail -f -n0 /etc/hosts'
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - ./conf/certbot/conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   qgis:
     build:
@@ -141,7 +151,6 @@ services:
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
     depends_on:
-      - db
       - redis
       - app
 
@@ -162,8 +171,7 @@ services:
       - transformation_grids:/transformation_grids
 
 volumes:
-  postgres_data:
   static_volume:
   media_volume:
-  caddy_data:
   transformation_grids:
+  certbot_www:

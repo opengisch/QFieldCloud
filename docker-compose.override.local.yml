@@ -3,28 +3,37 @@ version: '3.7'
 services:
 
   app:
+    build:
+      args:
+        - DEBUG_BUILD=1
     ports:
-      # allow direct access without caddy
-      - "8000:8000"
+      # allow direct access without nginx
+      - "5001:8000"
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
     environment:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
-      STORAGE_ENDPOINT_URL_EXTERNAL: ${STORAGE_ENDPOINT_URL_EXTERNAL}
-      STORAGE_BROWSER_PORT: ${STORAGE_BROWSER_PORT}
     command: python3 manage.py runserver 0.0.0.0:8000
     depends_on:
+      - db
       - geodb
-      - s3
+      - minio
       - smtp4dev
 
   worker_wrapper:
+    build:
+      args:
+        - DEBUG_BUILD=1
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
       - ./docker-app/worker_wrapper:/usr/src/app/worker_wrapper
+    depends_on:
+      - db
+      - redis
+      - app
 
   smtp4dev:
     image: rnwood/smtp4dev:v3
@@ -42,6 +51,18 @@ services:
       # Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
       - ServerOptions__HostName=smtp4dev
 
+  db:
+    image: postgis/postgis:13-3.1-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - ${HOST_POSTGRES_PORT}:5432
+
   geodb:
     image: postgis/postgis:12-3.0
     restart: unless-stopped
@@ -54,44 +75,39 @@ services:
     ports:
       - ${GEODB_PORT}:5432
 
-  web:
-    environment:
-      CADDY_IMPORT_GLOB: Caddyfile.proxy-minio
-    volumes:
-      # Include config for reverse proxying caddy
-      - ./docker-caddy/Caddyfile.proxy-minio:/etc/caddy/Caddyfile.proxy-minio
-
-  s3:
+  minio:
     image: minio/minio:RELEASE.2021-07-27T02-40-15Z
     restart: unless-stopped
     volumes:
-      - s3_data1:/data1
-      - s3_data2:/data2
-      - s3_data3:/data3
-      - s3_data4:/data4
+      - minio_data1:/data1
+      - minio_data2:/data2
+      - minio_data3:/data3
+      - minio_data4:/data4
     environment:
       MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY_ID}
       MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_ACCESS_KEY}
-      MINIO_BROWSER_REDIRECT_URL: http://${QFIELDCLOUD_HOST}:${STORAGE_BROWSER_PORT}
+      MINIO_BROWSER_REDIRECT_URL: http://${QFIELDCLOUD_HOST}:${MINIO_BROWSER_PORT}
     command: server /data{1...4} --console-address :9001
     healthcheck:
         test: [
-        "CMD",
-        "curl",
-        "-A",
-        "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
-        "-f",
-        "${STORAGE_ENDPOINT_URL}/minio/index.html"]
+          "CMD",
+          "curl",
+          "-A",
+          "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
+          "-f",
+          "${STORAGE_ENDPOINT_URL}/minio/index.html"
+        ]
         interval: 5s
         timeout: 20s
         retries: 5
     ports:
-      - ${STORAGE_BROWSER_PORT}:9001
+      - ${MINIO_BROWSER_PORT}:9001
+      - ${MINIO_API_PORT}:9000
 
   createbuckets:
     image: minio/mc
     depends_on:
-      s3:
+      minio:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
@@ -103,9 +119,10 @@ services:
       "
 
 volumes:
+  postgres_data:
   geodb_data:
   smtp4dev_data:
-  s3_data1:
-  s3_data2:
-  s3_data3:
-  s3_data4:
+  minio_data1:
+  minio_data2:
+  minio_data3:
+  minio_data4:

@@ -6,7 +6,7 @@ QFieldCloud allows seamless synchronization of your field data with your spatial
 
 # Hosted solution
 If you're interested in quickly getting up and running, we suggest subscribing to the version hosted by OPENGIS.ch at https://qfield.cloud. This is also the instance that is integrated by default into QField.
-<a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal.svg" width="100%"/></a>
+<a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal_embedded_font.svg" width="100%"/></a>
 
 
 ## Documentation
@@ -20,6 +20,17 @@ Permissions documentation is [here](https://github.com/opengisch/qfieldcloud/blo
 
 ## Development
 
+### Clone the repository
+
+Clone the repository and all its submodules:
+
+    git clone --recurse-submodules git://github.com/opengisch/qfieldcloud.git
+
+To fetch upstream development, don't forget to update the submodules too:
+
+    git pull --recurse-submodules  && git submodule update --recursive
+
+
 ### Launch a local instance
 
 Copy the `.env.example` into `.env` file and configure it to your
@@ -28,16 +39,12 @@ desire with a good editor:
     cp .env.example .env
     emacs .env
 
-Link or copy `docker-compose.override.local.yml` into `docker-compose.override.yml`:
-
-    ln -s docker-compose.override.local.yml docker-compose.override.yml
-
 To build development images and run the containers:
 
     docker-compose up -d --build
 
-It will read `docker-compose.yml` and `docker-compose.override.yml`
-and start a django built-in server at `http://localhost:8000`.
+It will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE`
+variable and start a django built-in server at `http://localhost:8000`.
 
 Run the django database migrations.
 
@@ -67,6 +74,90 @@ To run only a test module (e.g. `test_permission.py`)
 
     docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
 
+### Debugging
+
+> This section gives examples for VSCode, please adapt to your IDE)
+
+If using the provided docker-compose overrides for developement, `debugpy` is installed.
+
+You can debug interactively by adding this snipped anywhere in the code.
+```python
+import debugpy
+debugpy.listen(("0.0.0.0", 5678))
+print("debugpy waiting for debugger... 🐛")
+debugpy.wait_for_client()  # optional
+```
+
+Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5678 --wait-for-client`.
+```shell
+docker-compose run app -p 5678:5678 python -m debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py test
+docker-compose run worker_wrapper -p 5679:5679 python -m debugpy --listen 0.0.0.0:5679 --wait-for-client manage.py test
+```
+
+Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "QFC debug app",
+            "type": "python",
+            "request": "attach",
+            "justMyCode": false,
+            "connect": {"host": "localhost", "port": 5678},
+            "pathMappings": [{
+                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                "remoteRoot": "/usr/src/app/qfieldcloud"
+            }]
+        },
+        {
+            "name": "QFC debug worker_wrapper",
+            "type": "python",
+            "request": "attach",
+            "justMyCode": false,
+            "connect": {"host": "localhost", "port": 5679},
+            "pathMappings": [{
+                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                "remoteRoot": "/usr/src/app/qfieldcloud"
+            }]
+        }
+    ]
+}
+```
+
+
+## Add root certificate
+
+QFieldCloud will automatically generate a certificate and it's root certificate in `./config/nginx/certs`. However, you need to trust the root certificate first, so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
+
+On Debian/Ubuntu, copy the root certificate to the directory with trusted certificates. Note the extension has been changed to `.crt`:
+
+    sudo cp ./conf/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+
+Trust the newly added certificate:
+
+    sudo update-ca-certificates
+
+Connecting with `curl` should return no errors:
+    curl https://localhost:8002/
+
+### Remove the root certificate
+
+If you want to remove or change the root certificate, you need to remove the root certificate file and refresh the list of certificates:
+
+    sudo rm /usr/local/share/ca-certificates/rootCA.crt
+    sudo update-ca-certificates --fresh
+
+Now connecting with `curl` should fail with a similar error:
+
+    $ curl https://localhost:8002/
+
+    curl: (60) SSL certificate problem: unable to get local issuer certificate
+    More details here: https://curl.haxx.se/docs/sslcerts.html
+
+    curl failed to verify the legitimacy of the server and therefore could not
+    establish a secure connection to it. To learn more about this situation and
+    how to fix it, please visit the web page mentioned above.
 
 ### Code style
 
@@ -102,34 +193,56 @@ desire with a good editor
     cp .env.example .env
     emacs .env
 
+Do not forget to set DEBUG=0 and to adapt COMPOSE_FILE to not load local
+development configurations.
+
 Create the directory for qfieldcloud logs and supervisor socket file
 
     mkdir /var/local/qfieldcloud
 
 Run and build the docker containers
 
-    # dev server:
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
-
-    # prod server
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
+    docker-compose up -d --build
 
 Run the django database migrations
 
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml exec app python manage.py migrate
+    docker-compose exec app python manage.py migrate
 
+
+## Create a certificate using Let's Encrypt
+
+If you are running the server on a server with a public domain, you can install Let's Encrypt certificate by running the following command:
+
+    ./scripts/init_letsencrypt.sh
+
+Note you may want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
 
 ### Infrastructure
 
 Based on this example
 <https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/>
 
+### Ports
+
+| service       | port | configuration        | local              | development        | production         |
+|---------------|------|----------------------|--------------------|--------------------|--------------------|
+| nginx http    | 80   | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| nginx https   | 443  | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| django http   | 5001 |                      | :white_check_mark: | :x:                | :x:                |
+| postgres      | 5433 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| redis         | 6379 | REDIS_PORT           | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| geodb         | 5432 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :x:                |
+| minio API     | 8009 | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
+| minio browser | 8010 | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
+| smtp web      | 5000 |                      | :white_check_mark: | :x:                | :x:                |
+| smtp          | 25   |                      | :white_check_mark: | :x:                | :x:                |
+| imap          | 143  |                      | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
 
 Docker logs are managed by docker in the default way. To read the logs:
 
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml logs
+    docker-compose logs
 
 
 ### Geodb

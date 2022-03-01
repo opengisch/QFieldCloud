@@ -40,17 +40,22 @@ class AuthToken(models.Model):
         if user_agent.startswith("cli|"):
             return AuthToken.ClientType.CLI
 
-        if re.search(r" QGIS/[34]\d{4}$", user_agent):
+        if re.search(r" QGIS/[34]\d{4}(\/.*)?$", user_agent):
             return AuthToken.ClientType.QFIELDSYNC
 
         if re.search(
-            r"Mozilla/5.0 .+ AppleWebKit/\d+.\d+ (KHTML, like Gecko)", user_agent
+            r"Mozilla\/5.0 .+(AppleWebKit\/\d+.\d+ \(KHTML, like Gecko\)|Firefox\/[\d\.]+)",
+            user_agent,
         ):
             return AuthToken.ClientType.BROWSER
 
         return AuthToken.ClientType.UNKNOWN
 
-    single_token_clients = [ClientType.QFIELD, ClientType.QFIELDSYNC]
+    single_token_clients = [
+        ClientType.QFIELD,
+        ClientType.QFIELDSYNC,
+        ClientType.UNKNOWN,
+    ]
 
     user = models.ForeignKey(
         get_user_model(),

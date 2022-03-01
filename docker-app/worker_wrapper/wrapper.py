@@ -11,15 +11,17 @@ from typing import Any, Dict, Iterable, List, Tuple
 import docker
 import qfieldcloud.core.utils2.storage
 import requests
+from django.conf import settings
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
+from docker.models.containers import Container
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
-    ExportJob,
     Job,
+    PackageJob,
     ProcessProjectfileJob,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
@@ -39,7 +41,7 @@ class QgisException(Exception):
 
 
 class JobRun:
-    container_timeout_secs = 3 * 60
+    container_timeout_secs = settings.WORKER_TIMEOUT_S
     job_class = Job
     command = []
 
@@ -204,7 +206,7 @@ class JobRun:
         logger.info(f"Execute: {' '.join(command)}")
         volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
 
-        container = client.containers.run(
+        container: Container = client.containers.run(  # type:ignore
             QGIS_CONTAINER_NAME,
             command,
             environment={
@@ -225,6 +227,8 @@ class JobRun:
             detach=True,
         )
 
+        logger.info(f"Starting worker {container.id} ...")
+
         response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
 
         try:
@@ -243,9 +247,20 @@ class JobRun:
         return response["StatusCode"], logs
 
 
-class ExportJobRun(JobRun):
-    job_class = ExportJob
-    command = ["export", "%(project__id)s", "%(project__project_filename)s"]
+class PackageJobRun(JobRun):
+    job_class = PackageJob
+    command = ["package", "%(project__id)s", "%(project__project_filename)s"]
+    data_last_packaged_at = None
+
+    def before_docker_run(self) -> None:
+        # at the start of docker we assume we make the snapshot of the data
+        self.data_last_packaged_at = timezone.now()
+
+    def after_docker_run(self) -> None:
+        # only successfully finished packaging jobs should update the Project.data_last_packaged_at
+        if self.job.status == Job.Status.FINISHED:
+            self.job.project.data_last_packaged_at = self.data_last_packaged_at
+            self.job.project.save()
 
 
 class DeltaApplyJobRun(JobRun):
@@ -312,7 +327,8 @@ class DeltaApplyJobRun(JobRun):
                 json.dump(deltafile_contents, f)
 
     def after_docker_run(self) -> None:
-        delta_feedback = self.job.feedback["steps"][1]["outputs"]["delta_feedback"]
+        delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]
+        is_data_modified = False
 
         for feedback in delta_feedback:
             delta_id = feedback["delta_id"]
@@ -321,17 +337,22 @@ class DeltaApplyJobRun(JobRun):
 
             if status == "status_applied":
                 status = Delta.Status.APPLIED
+                is_data_modified = True
             elif status == "status_conflict":
                 status = Delta.Status.CONFLICT
             elif status == "status_apply_failed":
                 status = Delta.Status.NOT_APPLIED
             else:
                 status = Delta.Status.ERROR
+                # not certain what happened
+                is_data_modified = True
 
             Delta.objects.filter(pk=delta_id).update(
                 last_status=status,
                 last_feedback=feedback,
                 last_modified_pk=modified_pk,
+                last_apply_attempt_at=self.job.started_at,
+                last_apply_attempt_by=self.job.created_by,
             )
 
             ApplyJobDelta.objects.filter(
@@ -342,6 +363,10 @@ class DeltaApplyJobRun(JobRun):
                 feedback=feedback,
                 modified_pk=modified_pk,
             )
+
+        if is_data_modified:
+            self.job.project.data_last_updated_at = timezone.now()
+            self.job.project.save()
 
     def after_docker_exception(self) -> None:
         Delta.objects.filter(
@@ -376,9 +401,9 @@ class ProcessProjectfileJobRun(JobRun):
 
     def after_docker_run(self) -> None:
         project = self.job.project
-
-        project_details = self.job.feedback["steps"][3]["outputs"]["project_details"]
-        project.project_details = project_details
+        project.project_details = self.job.feedback["outputs"]["project_details"][
+            "project_details"
+        ]
 
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         with open(thumbnail_filename, "rb") as f:

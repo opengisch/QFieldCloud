@@ -2,6 +2,8 @@ import logging
 import signal
 from time import sleep
 
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Count, Q
@@ -9,7 +11,7 @@ from qfieldcloud.core.models import Job
 from qfieldcloud.core.utils2.db import use_test_db_if_exists
 from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
-    ExportJobRun,
+    PackageJobRun,
     ProcessProjectfileJobRun,
 )
 
@@ -41,6 +43,11 @@ class Command(BaseCommand):
 
         while killer.alive:
             with use_test_db_if_exists():
+                # the worker-wrapper caches outdated ContentType ids during tests since
+                # the worker-wrapper and the tests reside in different containers
+                if settings.DATABASES["default"]["NAME"].startswith("test_"):
+                    ContentType.objects.clear_cache()
+
                 queued_job = None
 
                 with transaction.atomic():
@@ -105,7 +112,7 @@ class Command(BaseCommand):
 
     def _run(self, job: Job):
         job_run_classes = {
-            Job.Type.EXPORT: ExportJobRun,
+            Job.Type.PACKAGE: PackageJobRun,
             Job.Type.DELTA_APPLY: DeltaApplyJobRun,
             Job.Type.PROCESS_PROJECTFILE: ProcessProjectfileJobRun,
         }

@@ -1,13 +1,14 @@
-import filecmp
+import io
 import logging
 import tempfile
 import time
+from pathlib import PurePath
 
-import requests
-from django.http.response import HttpResponseRedirect
+from django.core.management import call_command
+from django.http import FileResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.models import Project, User, UserAccount
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -33,19 +34,20 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.project1.save()
 
-    def tearDown(self):
-        # Remove all projects avoiding bulk delete in order to use
-        # the overrided delete() function in the model
-        for p in Project.objects.all():
-            bucket = utils.get_s3_bucket()
-            prefix = utils.safe_join("projects/{}/".format(p.id))
-            bucket.objects.filter(Prefix=prefix).delete()
+    def get_file_contents(self, project, filename, version=None):
+        qs = ""
+        if version:
+            qs = f"?version={version}"
 
-            p.delete()
+        response = self.client.get(f"/api/v1/files/{project.id}/{filename}/{qs}")
 
-        User.objects.all().delete()
-        # Remove credentials
-        self.client.credentials()
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(get_filename(response), PurePath(filename).name)
+
+        if isinstance(response, FileResponse):
+            return b"".join(response.streaming_content)
+        else:
+            return response.content
 
     def test_push_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -83,24 +85,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
-        # Pull the file
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/file.txt/")
-
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
+        self.assertEqual(
+            self.get_file_contents(self.project1, "file.txt"),
+            open(testdata_path("file.txt"), "rb").read(),
+        )
 
     def test_push_download_file_with_path(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -122,24 +110,17 @@ class QfcTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            f"/api/v1/files/{self.project1.id}/foo/bar/file.txt/"
+            f"/api/v1/files/{self.project1.id}/foo/bar/file.txt/",
+            stream=True,
         )
 
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "foo/bar/file.txt")
+        self.assertEqual(get_filename(response), "file.txt")
 
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
+        self.assertEqual(
+            self.get_file_contents(self.project1, "foo/bar/file.txt"),
+            open(testdata_path("file.txt"), "rb").read(),
+        )
 
     def test_push_list_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -306,25 +287,15 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
-        # Pull the last file (without version parameter)
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/file.txt/")
+        self.assertNotEqual(
+            self.get_file_contents(self.project1, "file.txt"),
+            open(testdata_path("file.txt"), "rb").read(),
+        )
 
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertFalse(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file2.txt")))
+        self.assertEqual(
+            self.get_file_contents(self.project1, "file.txt"),
+            open(testdata_path("file2.txt"), "rb").read(),
+        )
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -335,48 +306,20 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         # Pull the oldest version
-        response = self.client.get(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            {"version": versions[0]["version_id"]},
+        self.assertEqual(
+            self.get_file_contents(
+                self.project1, "file.txt", versions[0]["version_id"]
+            ),
+            open(testdata_path("file.txt"), "rb").read(),
         )
-
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
 
         # Pull the newest version
-        response = self.client.get(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            {"version": versions[1]["version_id"]},
+        self.assertEqual(
+            self.get_file_contents(
+                self.project1, "file.txt", versions[1]["version_id"]
+            ),
+            open(testdata_path("file2.txt"), "rb").read(),
         )
-
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file2.txt")))
 
     def test_push_delete_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -562,3 +505,96 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual("bigfile.big", response.json()[0]["name"])
         self.assertGreater(response.json()[0]["size"], 10000000)
         self.assertLess(response.json()[0]["size"], 11000000)
+
+    def test_purge_old_versions_command(self):
+        """This tests manual purging of old versions with the management command"""
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        def count_versions():
+            """counts the versions in first file of project1"""
+            file = list(self.project1.files)[0]
+            return len(file.versions)
+
+        def read_version(n):
+            """returns the content of version in first file of project1"""
+            file = list(self.project1.files)[0]
+            return file.versions[n]._data.get()["Body"].read().decode()
+
+        # Create 20 versions (direct upload to s3)
+        bucket = utils.get_s3_bucket()
+        key = f"projects/{self.project1.id}/files/file.txt/"
+        for i in range(20):
+            test_file = io.BytesIO(f"v{i}".encode())
+            bucket.upload_fileobj(test_file, key)
+
+        # Ensure it worked
+        self.assertEqual(count_versions(), 20)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(19), "v0")
+
+        # Run management command on other project should have no effect
+        other = Project.objects.create(name="other", owner=self.user1)
+        call_command("purge_old_file_versions", "--force", "--projects", other.pk)
+        self.assertEqual(count_versions(), 20)
+
+        # Run management command should leave 3
+        call_command("purge_old_file_versions", "--force")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(2), "v17")
+
+        # Run management command is idempotent
+        call_command("purge_old_file_versions", "--force")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(2), "v17")
+
+    def test_purge_old_versions(self):
+        """This tests automated purging of old versions when uploading files"""
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        apipath = f"/api/v1/files/{self.project1.id}/file.txt/"
+
+        def count_versions():
+            """counts the versions in first file of project1"""
+            file = list(self.project1.files)[0]
+            return len(file.versions)
+
+        def read_version(n):
+            """returns the content of version in first file of project1"""
+            file = list(self.project1.files)[0]
+            return file.versions[n]._data.get()["Body"].read().decode()
+
+        # As PRO account, 10 version should be kept out of 20
+        self.user1.useraccount.account_type = UserAccount.TYPE_PRO
+        self.user1.useraccount.save()
+        for i in range(20):
+            test_file = io.StringIO(f"v{i}")
+            self.client.post(apipath, {"file": test_file}, format="multipart")
+        self.assertEqual(count_versions(), 10)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(9), "v10")
+
+        # As COMMUNITY account, 3 version should be kept
+        self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
+        self.user1.useraccount.save()
+
+        # But first we check that uploading to another project doesn't affect a projct
+        otherproj = Project.objects.create(name="other", owner=self.user1)
+        otherpath = f"/api/v1/files/{otherproj.id}/file.txt/"
+        self.client.post(otherpath, {"file": io.StringIO("v1")}, format="multipart")
+        self.assertEqual(count_versions(), 10)
+        self.assertEqual(read_version(0), "v19")
+        self.assertEqual(read_version(9), "v10")
+
+        # As COMMUNITY account, 3 version should be kept out of 20 new ones
+        self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
+        self.user1.useraccount.save()
+        for i in range(20, 40):
+            test_file = io.StringIO(f"v{i}")
+            self.client.post(apipath, {"file": test_file}, format="multipart")
+        self.assertEqual(count_versions(), 3)
+        self.assertEqual(read_version(0), "v39")
+        self.assertEqual(read_version(2), "v37")

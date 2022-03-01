@@ -1,8 +1,12 @@
 from pathlib import PurePath
 
-from django.http.response import HttpResponseRedirect
+import qfieldcloud.core.utils2 as utils2
+from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import ProcessProjectfileJob, Project
+from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
+from qfieldcloud.core.utils2.audit import LogEntry, audit
+from qfieldcloud.core.utils2.storage import purge_old_file_versions, staticfile_prefix
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -65,6 +69,7 @@ class ListFilesView(views.APIView):
                     "version_id": version.version_id,
                     "last_modified": last_modified,
                     "is_latest": version.is_latest,
+                    "display": S3ObjectVersion(version.key, version).display,
                 }
             )
 
@@ -102,27 +107,19 @@ class DownloadPushDeleteFileView(views.APIView):
     def get(self, request, projectid, filename):
         Project.objects.get(id=projectid)
 
-        extra_args = {}
+        version = None
         if "version" in self.request.query_params:
             version = self.request.query_params["version"]
-            extra_args["VersionId"] = version
 
-        filekey = utils.safe_join("projects/{}/files/".format(projectid), filename)
-
-        url = utils.get_s3_client().generate_presigned_url(
-            "get_object",
-            Params={
-                **extra_args,
-                "Key": filekey,
-                "Bucket": utils.get_s3_bucket().name,
-                "ResponseContentType": "application/force-download",
-                "ResponseContentDisposition": f'attachment;filename="{filename}"',
-            },
-            ExpiresIn=600,
-            HttpMethod="GET",
+        key = utils.safe_join("projects/{}/files/".format(projectid), filename)
+        return utils2.storage.file_response(
+            request,
+            key,
+            presigned=True,
+            expires=600,
+            version=version,
+            as_attachment=True,
         )
-
-        return HttpResponseRedirect(url)
 
     def post(self, request, projectid, filename, format=None):
         project = Project.objects.get(id=projectid)
@@ -130,23 +127,19 @@ class DownloadPushDeleteFileView(views.APIView):
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
 
+        is_qgis_project_file = utils.is_qgis_project_file(filename)
         # check only one qgs/qgz file per project
-        if utils.is_qgis_project_file(filename):
-            if project.project_filename is not None and PurePath(filename) != PurePath(
-                project.project_filename
-            ):
-                raise exceptions.MultipleProjectsError(
-                    "Only one QGIS project per project allowed"
-                )
-            else:
-                project.project_filename = filename
-                project.save()
-                ProcessProjectfileJob.objects.create(
-                    project=project, created_by=self.request.user
-                )
+        if (
+            is_qgis_project_file
+            and project.project_filename is not None
+            and PurePath(filename) != PurePath(project.project_filename)
+        ):
+            raise exceptions.MultipleProjectsError(
+                "Only one QGIS project per project allowed"
+            )
 
         request_file = request.FILES.get("file")
-
+        old_object = get_project_file_with_versions(project.id, filename)
         sha256sum = utils.get_sha256(request_file)
         bucket = utils.get_s3_bucket()
 
@@ -155,6 +148,39 @@ class DownloadPushDeleteFileView(views.APIView):
 
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
 
+        new_object = get_project_file_with_versions(project.id, filename)
+
+        assert new_object
+
+        if staticfile_prefix(project, filename) == "" and (
+            is_qgis_project_file or project.project_filename is not None
+        ):
+            if is_qgis_project_file:
+                project.project_filename = filename
+
+            ProcessProjectfileJob.objects.create(
+                project=project, created_by=self.request.user
+            )
+
+        project.data_last_updated_at = timezone.now()
+        project.save()
+
+        if old_object:
+            audit(
+                project,
+                LogEntry.Action.UPDATE,
+                changes={filename: [old_object.latest.e_tag, new_object.latest.e_tag]},
+            )
+        else:
+            audit(
+                project,
+                LogEntry.Action.CREATE,
+                changes={filename: [None, new_object.latest.e_tag]},
+            )
+
+        # Delete the old file versions
+        purge_old_file_versions(project)
+
         return Response(status=status.HTTP_201_CREATED)
 
     def delete(self, request, projectid, filename):
@@ -162,10 +188,40 @@ class DownloadPushDeleteFileView(views.APIView):
         key = utils.safe_join(f"projects/{projectid}/files/", filename)
         bucket = utils.get_s3_bucket()
 
+        old_object = get_project_file_with_versions(project.id, filename)
+
+        assert old_object
+
         bucket.object_versions.filter(Prefix=key).delete()
 
         if utils.is_qgis_project_file(filename):
             project.project_filename = None
             project.save()
 
+        audit(
+            project,
+            LogEntry.Action.DELETE,
+            changes={filename: [old_object.latest.e_tag, None]},
+        )
+
         return Response(status=status.HTTP_200_OK)
+
+
+class ProjectMetafilesView(views.APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        DownloadPushDeleteFileViewPermissions,
+    ]
+
+    def get(self, request, projectid, filename):
+        key = utils.safe_join("projects/{}/meta/".format(projectid), filename)
+        return utils2.storage.file_response(request, key, presigned=True)
+
+
+class PublicFilesView(views.APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = []
+
+    def get(self, request, filename):
+        return utils2.storage.file_response(request, filename)

@@ -1,9 +1,10 @@
-FROM qgis/qgis:final-3_20_2
+FROM qgis/qgis:final-3_22_3
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pip \
     xvfb \
+    iputils-ping \
     && apt-get clean
 
 COPY ./requirements.txt /tmp/
@@ -26,5 +27,7 @@ ENV LIBC_FATAL_STDERR_=1
 # other env
 ENV LANG=C.UTF-8
 ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
+
+ENV XDG_RUNTIME_DIR="/run/user/0"
 
 ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a \"$@\"", ""]

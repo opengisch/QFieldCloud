@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.gis",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -69,6 +70,7 @@ INSTALLED_APPS = [
     "invitations",
     "django_cron",
     "timezone_field",
+    "auditlog",
     # Local
     "qfieldcloud.core",
     "qfieldcloud.notifs",
@@ -88,7 +90,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_currentuser.middleware.ThreadLocalUserMiddleware",
-    "qfieldcloud.core.middleware.request_response_log.RequestResponseLogMiddleware",
+    "auditlog.middleware.AuditlogMiddleware",
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
@@ -97,6 +99,7 @@ CRON_CLASSES = [
     "qfieldcloud.notifs.cron.SendNotificationsJob",
     # "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
     "qfieldcloud.core.cron.ResendFailedInvitationsJob",
+    "qfieldcloud.core.cron.SetTerminatedWorkersToFinalStatusJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
@@ -128,12 +131,13 @@ WSGI_APPLICATION = "qfieldcloud.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
         "NAME": os.environ.get("SQL_DATABASE"),
         "USER": os.environ.get("SQL_USER"),
         "PASSWORD": os.environ.get("SQL_PASSWORD"),
         "HOST": os.environ.get("SQL_HOST"),
         "PORT": os.environ.get("SQL_PORT"),
+        "OPTIONS": {"sslmode": os.environ.get("SQL_SSLMODE")},
     }
 }
 
@@ -188,7 +192,6 @@ STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
 STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
 STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
 STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
-STORAGE_ENDPOINT_URL_EXTERNAL = os.environ.get("STORAGE_ENDPOINT_URL_EXTERNAL")
 
 AUTH_USER_MODEL = "core.User"
 
@@ -273,25 +276,19 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 # Django invitations configurations
 # https://github.com/bee-keeper/django-invitations#additional-configuration
 INVITATIONS_INVITATION_EXPIRY = 365  # integer in days, 0 disables invitations
-INVITATIONS_INVITATION_ONLY = True
+INVITATIONS_INVITATION_ONLY = False
 INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
 INVITATIONS_GONE_ON_ACCEPT_ERROR = False
+
+TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": True,
+    "disable_existing_loggers": False,
     "formatters": {
-        "request.human": {
-            "()": "qfieldcloud.core.logging.formatters.CustomisedRequestHumanFormatter",
-        },
         "json": {
             "()": "qfieldcloud.core.logging.formatters.CustomisedJSONFormatter",
-        },
-    },
-    "filters": {
-        "skip_logging": {
-            "()": "qfieldcloud.core.logging.filters.SkipLoggingFilter",
         },
     },
     "handlers": {
@@ -299,33 +296,20 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "json",
         },
-        "console.human": {
-            "class": "logging.StreamHandler",
-            "formatter": "request.human",
-        },
     },
     "root": {
         "handlers": ["console.json"],
         "level": "INFO",
     },
-    "loggers": {
-        "qfieldcloud.request_response_log": {
-            "level": LOGLEVEL,
-            "filters": [
-                "skip_logging",
-            ],
-            "handlers": [
-                # TODO enable console.json once it is clear how we do store the json logs
-                # 'console.json',
-                "console.human",
-            ],
-            "propagate": False,
-        },
-    },
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
+# Whether we are currently running tests
+# NOTE automatically set when running tests, don't change manually!
+IN_TEST_SUITE = False
 
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
+
+WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 60))
