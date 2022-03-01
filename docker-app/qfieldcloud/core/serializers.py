@@ -26,8 +26,9 @@ User = get_user_model()
 def get_avatar_url(user: User) -> Optional[str]:
     if hasattr(user, "useraccount") and user.useraccount.avatar_url:
         site = Site.objects.get_current()
-        port = os.environ.get("WEB_HTTP_PORT")
-        return f"http://{site.domain}:{port}{user.useraccount.avatar_url}"
+        port = os.environ.get("WEB_HTTPS_PORT")
+        port = f":{port}" if port != "443" else ""
+        return f"https://{site.domain}{port}{user.useraccount.avatar_url}"
     return None
 
 
