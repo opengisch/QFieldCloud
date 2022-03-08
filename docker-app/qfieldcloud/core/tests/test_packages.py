@@ -302,6 +302,36 @@ class QfcTestCase(APITransactionTestCase):
 
         self.fail("Worker didn't finish")
 
+    def test_create_job_twice(self):
+        self.upload_files(
+            token=self.token1.key,
+            project=self.project1,
+            files=[
+                ("delta/project2.qgs", "project.qgs"),
+                ("delta/points.geojson", "points.geojson"),
+            ],
+        )
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.project1.id,
+                "type": Job.Type.PACKAGE,
+            },
+        )
+
+        self.assertTrue(response.status_code, 201)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.project1.id,
+                "type": Job.Type.PACKAGE,
+            },
+        )
+
+        self.assertTrue(response.status_code, 200)
+
     def test_downloaded_file_has_canvas_name(self):
         tempdir = tempfile.mkdtemp()
 
