@@ -38,7 +38,10 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
         kwargs.setdefault("context", self.get_serializer_context())
 
         if self.action in ("create"):
-            job_type = kwargs["data"]["type"]
+            if "data" in kwargs:
+                job_type = kwargs["data"]["type"]
+            else:
+                job_type = args[0].type
 
             return self.get_serializer_by_job_type(job_type, *args, **kwargs)
 
@@ -57,7 +60,10 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
             serializer.save()
         else:
             serializer.is_valid(raise_exception=True)
-            serializer.check_create_new_job()
+            if not serializer.Meta.allow_parallel_jobs:
+                job = serializer.get_lastest_not_finished_job()
+                if job:
+                    return Response(self.get_serializer(job).data)
             serializer.save()
 
         return Response(serializer.data, status=HTTP_201_CREATED)

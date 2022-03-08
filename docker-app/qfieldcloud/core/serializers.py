@@ -342,7 +342,7 @@ class JobMixin:
 
         return internal_data
 
-    def check_create_new_job(self):
+    def get_lastest_not_finished_job(self) -> Optional[Job]:
         ModelClass: Job = self.Meta.model
         last_active_job = (
             ModelClass.objects.filter(
@@ -354,9 +354,7 @@ class JobMixin:
             .last()
         )
 
-        # check if there are other jobs already active
-        if last_active_job:
-            raise exceptions.APIError("Job of this type is already running.")
+        return last_active_job
 
     class Meta:
         model = PackageJob
@@ -388,8 +386,11 @@ class JobMixin:
 
 
 class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
-    def check_create_new_job(self):
-        super().check_create_new_job()
+    def get_lastest_not_finished_job(self) -> Optional[Job]:
+        job = super().get_lastest_not_finished_job()
+        if job:
+            return job
+
         internal_value = self.to_internal_value(self.initial_data)
 
         if not internal_value["project"].project_filename:
@@ -397,21 +398,24 @@ class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
 
     class Meta(JobMixin.Meta):
         model = PackageJob
+        allow_parallel_jobs = False
 
 
 class ApplyJobSerializer(JobMixin, serializers.ModelSerializer):
     class Meta(JobMixin.Meta):
         model = ApplyJob
+        allow_parallel_jobs = True
 
 
 class ProcessProjectfileJobSerializer(JobMixin, serializers.ModelSerializer):
     class Meta(JobMixin.Meta):
         model = ProcessProjectfileJob
+        allow_parallel_jobs = True
 
 
 class JobSerializer(serializers.ModelSerializer):
-    def check_create_new_job(self):
-        return True
+    def get_lastest_not_finished_job(self):
+        return None
 
     def get_fields(self, *args, **kwargs):
         fields = super().get_fields(*args, **kwargs)
@@ -451,3 +455,4 @@ class JobSerializer(serializers.ModelSerializer):
             "output",
         )
         order_by = "-created_at"
+        allow_parallel_jobs = True
