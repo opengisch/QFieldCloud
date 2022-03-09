@@ -11,11 +11,7 @@ If you're interested in quickly getting up and running, we suggest subscribing t
 
 ## Documentation
 
-System documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org).
-
-Documentation about how QFieldCloud file's storage works is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/storage.org).
-
-Permissions documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/permissions.org).
+QField and QFieldCloud documentation is deployed [here](https://docs.qfield.org).
 
 
 ## Development
