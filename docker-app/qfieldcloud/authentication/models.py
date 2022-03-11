@@ -24,6 +24,7 @@ class AuthToken(models.Model):
         SDK = "sdk", _("SDK")
         QFIELD = "qfield", _("QField")
         QFIELDSYNC = "qfieldsync", _("QFieldSync")
+        WORKER = "worker", _("Worker")
         UNKNOWN = "unknown", _("Unknown")
 
     @staticmethod
