@@ -228,7 +228,7 @@ sentry_sdk.init(
     integrations=[DjangoIntegration()],
     # Define how many random events are sent for performance monitoring
     sample_rate=0.05,
-    server_name=os.environ.get("SENTRY_SERVER_NAME"),
+    server_name=os.environ.get("QFIELDCLOUD_HOST"),
     # If you wish to associate users to errors (assuming you are using
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii=True,
