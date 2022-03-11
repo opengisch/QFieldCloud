@@ -5,6 +5,7 @@ import sys
 import tempfile
 import traceback
 import uuid
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -16,6 +17,7 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -201,6 +203,12 @@ class JobRun:
         assert QFIELDCLOUD_HOST
         assert TRANSFORMATION_GRIDS_VOLUME_NAME
 
+        token = AuthToken.objects.create(
+            user=self.job.created_by,
+            client_type=AuthToken.ClientType.WORKER,
+            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+        )
+
         client = docker.from_env()
 
         logger.info(f"Execute: {' '.join(command)}")
@@ -210,13 +218,9 @@ class JobRun:
             QGIS_CONTAINER_NAME,
             command,
             environment={
-                "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
-                "STORAGE_SECRET_ACCESS_KEY": os.environ.get(
-                    "STORAGE_SECRET_ACCESS_KEY"
-                ),
-                "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
-                "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
-                "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+                "QFIELDCLOUD_TOKEN": token.key,
+                "QFIELDCLOUD_URL": "http://app:8000/api/v1/",
+                "JOB_ID": self.job_id,
                 "PROJ_DOWNLOAD_DIR": "/transformation_grids",
                 "QT_QPA_PLATFORM": "offscreen",
             },
@@ -263,6 +267,7 @@ class PackageJobRun(JobRun):
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         if self.job.status == Job.Status.FINISHED:
             self.job.project.data_last_packaged_at = self.data_last_packaged_at
+            self.job.project.last_package_job = self.job
             self.job.project.save()
 
 

@@ -28,6 +28,7 @@ class S3Object(NamedTuple):
     last_modified: datetime
     size: int
     etag: str
+    md5sum: str
 
 
 class S3ObjectVersion:
@@ -58,6 +59,10 @@ class S3ObjectVersion:
     @property
     def e_tag(self) -> str:
         return self._data.e_tag
+
+    @property
+    def md5sum(self) -> str:
+        return self._data.e_tag.replace('"', "")
 
     @property
     def is_latest(self) -> bool:
@@ -335,7 +340,7 @@ def get_project_file_with_versions(
     return files[0] if files else None
 
 
-def get_project_package_files(project_id: str) -> Iterable[S3Object]:
+def get_project_package_files(project_id: str, package_id: str) -> Iterable[S3Object]:
     """Returns a list of package files.
 
     Args:
@@ -345,7 +350,7 @@ def get_project_package_files(project_id: str) -> Iterable[S3Object]:
         Iterable[S3ObjectWithVersions]: the list of package files
     """
     bucket = get_s3_bucket()
-    prefix = f"projects/{project_id}/export/"
+    prefix = f"projects/{project_id}/packages/{package_id}/"
 
     return list_files(bucket, prefix, strip_prefix=True)
 
@@ -402,6 +407,7 @@ def list_files(
             last_modified=f.last_modified,
             size=f.size,
             etag=f.e_tag,
+            md5sum=f.e_tag.replace('"', ""),
         )
 
 

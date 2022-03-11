@@ -51,34 +51,29 @@ class LatestPackageView(views.APIView):
     def get(self, request, project_id):
         """Get last project package status and file list."""
         project = Project.objects.get(id=project_id)
-        last_job = (
-            PackageJob.objects.filter(
-                project=project, status=PackageJob.Status.FINISHED
-            )
-            .order_by("started_at")
-            .last()
-        )
 
         # Check if the project was packaged at least once
-        if not last_job:
+        if not project.last_package_job_id:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
 
         files = []
-        for f in get_project_package_files(project_id):
+        for f in get_project_package_files(project_id, project.last_package_job_id):
             files.append(
                 {
                     "name": f.name,
                     "size": f.size,
                     "last_modified": f.last_modified,
                     "sha256": check_s3_key(f.key),
+                    "md5sum": f.md5sum,
                 }
             )
 
         if not files:
             raise exceptions.InvalidJobError("Empty project package.")
 
+        last_job = project.last_package_job
         if last_job.feedback.get("feedback_version") == "2.0":
             layers = last_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
         else:
@@ -112,17 +107,16 @@ class LatestPackageDownloadFilesView(views.APIView):
             exceptions.InvalidJobError: [description]
         """
         project = Project.objects.get(id=project_id)
-        last_job = PackageJob.objects.filter(
-            project=project, status=PackageJob.Status.FINISHED
-        ).latest("started_at")
 
         # Check if the project was packaged at least once
-        if not last_job:
+        if not project.last_package_job_id:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
 
-        key = utils.safe_join("projects/{}/export/".format(project_id), filename)
+        key = utils.safe_join(
+            f"projects/{project_id}/packages/{project.last_package_job_id}/", filename
+        )
 
         return utils2.storage.file_response(
             request, key, presigned=True, expires=600, as_attachment=True
