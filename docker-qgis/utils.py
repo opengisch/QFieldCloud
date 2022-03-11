@@ -151,8 +151,10 @@ def stop_app():
     if "QGISAPP" not in globals():
         return
 
+    QgsProject.instance().read("")
+
     if QGISAPP is not None:
-        qgs_stderr_logger.info("Stopping QGIS app...")
+        qgs_stderr_logger.info("Stopping QGIS app…")
         QGISAPP.exitQgis()
         del QGISAPP
 
