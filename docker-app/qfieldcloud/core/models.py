@@ -871,6 +871,13 @@ class Project(models.Model):
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
     data_last_packaged_at = models.DateTimeField(blank=True, null=True)
 
+    last_package_job = models.ForeignKey(
+        "PackageJob",
+        on_delete=models.SET_NULL,
+        related_name="last_job_of",
+        null=True,
+    )
+
     overwrite_conflicts = models.BooleanField(
         default=True,
         help_text=_(
