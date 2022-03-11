@@ -151,6 +151,38 @@ def _get_sha256_file(file: IO) -> str:
     return hasher.hexdigest()
 
 
+def get_md5sum(file: IO) -> str:
+    """Return the sha256 hash of the file"""
+    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
+        return _get_md5sum_memory_file(file)
+    else:
+        return _get_md5sum_file(file)
+
+
+def _get_md5sum_memory_file(
+    file: Union[InMemoryUploadedFile, TemporaryUploadedFile]
+) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+
+    for chunk in file.chunks(BLOCKSIZE):
+        hasher.update(chunk)
+
+    file.seek(0)
+    return hasher.hexdigest()
+
+
+def _get_md5sum_file(file: IO) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+    buf = file.read(BLOCKSIZE)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = file.read(BLOCKSIZE)
+    file.seek(0)
+    return hasher.hexdigest()
+
+
 def safe_join(base: str, *paths: str) -> str:
     """
     A version of django.utils._os.safe_join for S3 paths.

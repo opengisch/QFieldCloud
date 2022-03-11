@@ -1,5 +1,6 @@
 import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import PackageJob, Project
 from qfieldcloud.core.utils import check_s3_key, get_project_package_files
@@ -13,6 +14,32 @@ class PackageViewPermissions(permissions.BasePermission):
             project_id = request.parser_context["kwargs"].get("project_id")
             project = Project.objects.get(pk=project_id)
             return permissions_utils.can_read_project(request.user, project)
+        except ObjectDoesNotExist:
+            return False
+
+
+class PackageUploadViewPermissions(permissions.BasePermission):
+    def has_permission(self, request, view):
+        # TODO allow only WORKER tokens here!!!
+
+        if request.auth.client_type != AuthToken.ClientType.WORKER:
+            return False
+
+        try:
+            project_id = request.parser_context["kwargs"].get("project_id")
+            job_id = request.parser_context["kwargs"].get("job_id")
+            project = Project.objects.get(pk=project_id)
+            if not permissions_utils.can_update_project(request.user, project):
+                return False
+
+            # check if the package job exists and it is already started, but not finished yet
+            PackageJob.objects.get(
+                id=job_id,
+                status=PackageJob.Status.STARTED,
+                project=project,
+            )
+
+            return True
         except ObjectDoesNotExist:
             return False
 
@@ -99,4 +126,29 @@ class LatestPackageDownloadFilesView(views.APIView):
 
         return utils2.storage.file_response(
             request, key, presigned=True, expires=600, as_attachment=True
+        )
+
+
+class PackageUploadFilesView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, PackageUploadViewPermissions]
+
+    def post(self, request, project_id, job_id, filename):
+        """Upload the package files."""
+        key = utils.safe_join(f"projects/{project_id}/packages/{job_id}/", filename)
+
+        request_file = request.FILES.get("file")
+        sha256sum = utils.get_sha256(request_file)
+        md5sum = utils.get_md5sum(request_file)
+        metadata = {"Sha256sum": sha256sum}
+
+        bucket = utils.get_s3_bucket()
+        bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
+
+        return Response(
+            {
+                "name": filename,
+                "size": request_file.size,
+                "sha256": sha256sum,
+                "md5sum": md5sum,
+            }
         )
