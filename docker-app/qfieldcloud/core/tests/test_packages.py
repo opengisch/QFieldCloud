@@ -472,7 +472,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
 
-        self.assertTrue(self.project1.has_online_vector_data)
+        self.assertFalse(self.project1.has_online_vector_data)
 
     def test_filename_with_whitespace(self):
         self.upload_files_and_check_package(
