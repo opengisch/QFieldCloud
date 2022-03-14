@@ -989,7 +989,7 @@ class Project(models.Model):
 
     @property
     def status(self) -> Status:
-        # NOTE the status is NOT stored in the db, because it might be refactored
+        # NOTE the status is NOT stored in the db, because it might be outdated
         if (
             Job.objects.filter(
                 project=self, status__in=[Job.Status.QUEUED, Job.Status.STARTED]
@@ -1239,15 +1239,33 @@ class ApplyJobDelta(models.Model):
         return f"{self.apply_job_id}:{self.delta_id}"
 
 
-auditlog.register(User)
+auditlog.register(User, exclude_fields=["last_login", "updated_at"])
 auditlog.register(UserAccount)
 auditlog.register(Organization)
 auditlog.register(OrganizationMember)
 auditlog.register(Team)
 auditlog.register(TeamMember)
-auditlog.register(Project)
+auditlog.register(
+    Project,
+    include_fields=[
+        "id",
+        "name",
+        "description",
+        "owner",
+        "is_public",
+        "owner",
+        "created_at",
+    ],
+)
 auditlog.register(ProjectCollaborator)
-auditlog.register(Delta)
-auditlog.register(ProcessProjectfileJob)
-auditlog.register(PackageJob)
-auditlog.register(ApplyJob)
+auditlog.register(
+    Delta,
+    include_fields=[
+        "id",
+        "deltafile_id",
+        "project",
+        "content",
+        "last_status",
+        "created_by",
+    ],
+)

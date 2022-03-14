@@ -17,7 +17,7 @@ server {
   }
 
   # prevent access by IP
-  if ($http_host != "${QFIELDCLOUD_HOST}") {
+  if ($http_host !~ "${QFIELDCLOUD_HOST}(:{WEB_HTTP_PORT})?") {
     return 444;
   }
 
@@ -44,7 +44,7 @@ server {
   error_page 497 https://$host:${WEB_HTTPS_PORT}$request_uri;
 
   # prevent access by IP
-  if ($http_host != "${QFIELDCLOUD_HOST}") {
+  if ($http_host !~ "${QFIELDCLOUD_HOST}(:{WEB_HTTPS_PORT})?") {
     return 444;
   }
 
@@ -54,6 +54,19 @@ server {
   # checks for static file, if not found proxy to app
   location / {
     try_files $uri @proxy_to_app;
+  }
+
+  location /swagger.yaml {
+    add_header Access-Control-Allow-Origin $http_host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $http_host;
+
+    proxy_read_timeout 300;
+    proxy_send_timeout 300;
+
+    proxy_redirect off;
+    proxy_pass http://django;
   }
 
   location @proxy_to_app {
@@ -86,8 +99,13 @@ server {
     proxy_ssl_server_name on;
 
     # remove the authorization and the cookie headers
+    proxy_set_header Connection '';
     proxy_set_header Authorization '';
     proxy_set_header Cookie '';
+    proxy_set_header Content-Type '';
+    proxy_set_header Accept-Encoding '';
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Real-IP $remote_addr;
 
     # hide Object Storage related headers
     proxy_hide_header Access-Control-Allow-Credentials;
@@ -98,8 +116,13 @@ server {
     proxy_hide_header X-Amz-Meta-Sha256sum;
     proxy_hide_header X-Amz-Req-Time-Micros;
     proxy_hide_header X-Amz-Request-Id;
+    proxy_hide_header A-Amz-Meta-Server-Side-Encryption;
     proxy_hide_header X-Amz-Storage-Class;
     proxy_hide_header X-Amz-Version-Id;
+    proxy_hide_header X-Amz-Id-2;
+    proxy_hide_header X-Amz-Server-Side-Encryption;
+    proxy_hide_header Set-Cookie;
+    proxy_ignore_headers Set-Cookie;
 
     proxy_intercept_errors on;
 

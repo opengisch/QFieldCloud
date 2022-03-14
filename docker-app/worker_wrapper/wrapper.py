@@ -244,6 +244,9 @@ class JobRun:
             f"Finished execution with code {response['StatusCode']}, logs:\n{logs}"
         )
 
+        if response["StatusCode"] == TIMEOUT_ERROR_EXIT_CODE:
+            logs += f"\nTimeout error! The job failed to finish within {self.container_timeout_secs} seconds!\n".encode()
+
         return response["StatusCode"], logs
 
 

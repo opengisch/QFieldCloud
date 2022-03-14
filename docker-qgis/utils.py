@@ -524,7 +524,7 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
                 if service:
                     layers_by_id[layer_id][
                         "provider_error_summary"
-                    ] = f'Unable to connect to service "{service}"'
+                    ] = f'Unable to connect to service "{service}".'
 
                 host = data_provider.uri().host()
                 port = (
@@ -535,7 +535,11 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
                 if host and (is_localhost(host, port) or has_ping(host)):
                     layers_by_id[layer_id][
                         "provider_error_summary"
-                    ] = f'Unable to connect to host "{host}"'
+                    ] = f'Unable to connect to host "{host}".'
+
+                path = layer_source.metadata.get("path")
+                if path and not os.path.exists(path):
+                    layers_by_id[layer_id]["error_summary"] = f'File "{path}" missing.'
 
         else:
             layers_by_id[layer_id]["error_code"] = "missing_dataprovider"
