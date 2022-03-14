@@ -195,12 +195,16 @@ class JobRun:
     ) -> Tuple[int, bytes]:
         QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+        QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ.get(
+            "QFIELDCLOUD_WORKER_QFIELDCLOUD_URL", None
+        )
         TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
             "TRANSFORMATION_GRIDS_VOLUME_NAME", None
         )
 
         assert QGIS_CONTAINER_NAME
         assert QFIELDCLOUD_HOST
+        assert QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
         assert TRANSFORMATION_GRIDS_VOLUME_NAME
 
         token = AuthToken.objects.create(
@@ -219,7 +223,7 @@ class JobRun:
             command,
             environment={
                 "QFIELDCLOUD_TOKEN": token.key,
-                "QFIELDCLOUD_URL": "http://app:8000/api/v1/",
+                "QFIELDCLOUD_URL": QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
                 "JOB_ID": self.job_id,
                 "PROJ_DOWNLOAD_DIR": "/transformation_grids",
                 "QT_QPA_PLATFORM": "offscreen",
