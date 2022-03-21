@@ -1,0 +1,13 @@
+version: '3.7'
+
+services:
+
+  app:
+    environment:
+      # run flush, migrate and collectstatic in entrypoint
+      DEBUG: 1
+    command: python3 manage.py testserver --noinput fixture.json --addrport 0.0.0.0:8000
+networks:
+  default:
+    # Use a custom driver
+    name: ${QFIELDCLOUD_DEFAULT_NETWORK}
