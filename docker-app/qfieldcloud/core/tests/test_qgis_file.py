@@ -8,7 +8,13 @@ from django.core.management import call_command
 from django.http import FileResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, User, UserAccount
+from qfieldcloud.core.models import (
+    Job,
+    ProcessProjectfileJob,
+    Project,
+    User,
+    UserAccount,
+)
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -598,3 +604,32 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(count_versions(), 3)
         self.assertEqual(read_version(0), "v39")
         self.assertEqual(read_version(2), "v37")
+
+    def test_multiple_file_uploads_one_process_job(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).project_filename, None
+        )
+
+        file_path = testdata_path("file.txt")
+        qgis_project_file = "foo/bar/file.qgs"
+
+        for i in range(10):
+            # Push a QGIS project file
+            response = self.client.post(
+                f"/api/v1/files/{self.project1.id}/{qgis_project_file}/",
+                {
+                    "file": open(file_path, "rb"),
+                },
+                format="multipart",
+            )
+            self.assertTrue(status.is_success(response.status_code))
+
+        jobs = ProcessProjectfileJob.objects.filter(
+            project=self.project1,
+            status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
+        )
+
+        self.assertEqual(jobs.count(), 1)
