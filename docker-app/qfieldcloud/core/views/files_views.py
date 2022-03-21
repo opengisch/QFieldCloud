@@ -3,7 +3,7 @@ from pathlib import PurePath
 import qfieldcloud.core.utils2 as utils2
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
-from qfieldcloud.core.models import ProcessProjectfileJob, Project
+from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.core.utils2.storage import purge_old_file_versions, staticfile_prefix
@@ -158,9 +158,16 @@ class DownloadPushDeleteFileView(views.APIView):
             if is_qgis_project_file:
                 project.project_filename = filename
 
-            ProcessProjectfileJob.objects.create(
-                project=project, created_by=self.request.user
+            running_jobs = ProcessProjectfileJob.objects.filter(
+                project=project,
+                created_by=self.request.user,
+                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
             )
+
+            if running_jobs.count() == 0:
+                ProcessProjectfileJob.objects.create(
+                    project=project, created_by=self.request.user
+                )
 
         project.data_last_updated_at = timezone.now()
         project.save()
