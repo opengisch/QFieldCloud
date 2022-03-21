@@ -1067,7 +1067,7 @@ class ProjectCollaborator(models.Model):
 
 
 class Delta(models.Model):
-    class Method(Enum):
+    class Method(str, Enum):
         Create = "create"
         Delete = "delete"
         Patch = "patch"
