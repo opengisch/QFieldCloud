@@ -6,7 +6,9 @@ services:
     environment:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
-    command: python3 manage.py testserver --noinput fixture.json --addrport 0.0.0.0:8000
+      # run the server on the test database (test_* is the default test database name in django)
+      SQL_DATABASE: test_${POSTGRES_DB}
+    command: python3 manage.py runserver 0.0.0.0:8000
 networks:
   default:
     # Use a custom driver
