@@ -6,6 +6,7 @@ from datetime import timedelta
 from enum import Enum
 from typing import Iterable, List
 
+import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -1239,6 +1240,39 @@ class ApplyJobDelta(models.Model):
         return f"{self.apply_job_id}:{self.delta_id}"
 
 
+class Secret(models.Model):
+    class Type(models.TextChoices):
+        PGSERVICE = "pgservice", _("pg_service")
+        ENVVAR = "envvar", _("Environment Variable")
+
+    name = models.TextField(
+        max_length=255,
+        unique=True,
+        validators=[
+            RegexValidator(
+                r"^[A-Z]+[A-Z0-9_]+$",
+                _(
+                    "Must start with a letter and followed by capital letters, numbers or underscores."
+                ),
+            )
+        ],
+        help_text=_(
+            _(
+                "Must start with a letter and followed by capital letters, numbers or underscores."
+            ),
+        ),
+    )
+    type = models.CharField(max_length=32, choices=Type.choices)
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="secrets"
+    )
+    created_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="project_secrets"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    value = django_cryptography.fields.encrypt(models.TextField())
+
+
 auditlog.register(User, exclude_fields=["last_login", "updated_at"])
 auditlog.register(UserAccount)
 auditlog.register(Organization)
@@ -1269,3 +1303,4 @@ auditlog.register(
         "created_by",
     ],
 )
+auditlog.register(Secret, exclude_fields=["value"])
