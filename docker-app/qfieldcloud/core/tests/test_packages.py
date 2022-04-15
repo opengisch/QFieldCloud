@@ -10,7 +10,7 @@ from django.http import FileResponse
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Geodb, Job, Project, User
+from qfieldcloud.core.models import Geodb, Job, Project, Secret, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -439,6 +439,50 @@ class QfcTestCase(APITransactionTestCase):
         self.project1.refresh_from_db()
         # projects with online vector layer should always show as it needs repackaging
         self.assertTrue(self.project1.needs_repackaging)
+
+    def test_connects_via_pgservice(self):
+        cur = self.conn.cursor()
+        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        self.conn.commit()
+
+        Secret.objects.create(
+            name="PG_SERVICE_GEODB",
+            type=Secret.Type.PGSERVICE,
+            project=self.project1,
+            created_by=self.project1.owner,
+            value=(
+                "[geodb]\n"
+                "dbname=test\n"
+                "host=geodb\n"
+                "port=5432\n"
+                f"user={os.environ.get('GEODB_USER')}\n"
+                f"password={os.environ.get('GEODB_PASSWORD')}\n"
+                "sslmode=disable\n"
+            ),
+        )
+
+        self.upload_files(
+            self.token1.key,
+            self.project1,
+            files=[
+                ("delta/project_pgservice.qgs", "project.qgs"),
+            ],
+        )
+
+        self.wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
+
+        last_process_job = Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE).latest(
+            "updated_at"
+        )
+        layers_by_id = last_process_job.feedback["outputs"]["project_details"][
+            "project_details"
+        ]["layers_by_id"]
+
+        self.assertEqual(last_process_job.status, Job.Status.FINISHED)
+        self.assertTrue(
+            layers_by_id["point_6b900fa7_af52_4082_bbff_6077f4a91d02"]["is_valid"]
+        )
 
     def test_has_online_vector_data(self):
         cur = self.conn.cursor()
