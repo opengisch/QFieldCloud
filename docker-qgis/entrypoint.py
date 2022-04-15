@@ -32,6 +32,8 @@ from qgis.core import (
     QgsVectorLayer,
 )
 
+PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
+
 # Get environment variables
 STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
 STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
@@ -477,6 +479,10 @@ if __name__ == "__main__":
     logging.getLogger("nose").setLevel(logging.CRITICAL)
     logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
     logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+
+    if PGSERVICE_FILE_CONTENTS:
+        with open(Path.home().joinpath(".pg_service.conf"), "w") as f:
+            f.write(PGSERVICE_FILE_CONTENTS)
 
     parser = argparse.ArgumentParser(prog="COMMAND")
 
