@@ -1181,8 +1181,39 @@ class Job(models.Model):
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
 
     @property
-    def short_id(self):
+    def short_id(self) -> str:
         return str(self.id)[0:8]
+
+    @property
+    def fallback_output(self) -> str:
+        # show whatever is the output if it is present
+        if self.output:
+            return ""
+
+        if self.status == Job.Status.PENDING:
+            return _(
+                "The job is in pending status, it will be started as soon as there are available server resources."
+            )
+        elif self.status == Job.Status.QUEUED:
+            return _(
+                "The job is in queued status. Server resources are allocated and it will be started soon."
+            )
+        elif self.status == Job.Status.STARTED:
+            return _("The job is in started status. Waiting for it to finish...")
+        elif self.status == Job.Status.FINISHED:
+            return _(
+                "The job is in finished status. It finished successfully without any output."
+            )
+        elif self.status == Job.Status.STOPPED:
+            return _("The job is in stopped status. Waiting to be continued...")
+        elif self.status == Job.Status.FAILED:
+            return _(
+                "The job is in failed status. The execution failed due to server error. Please verify the project is configured properly and try again."
+            )
+        else:
+            return _(
+                "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
+            )
 
 
 class PackageJob(Job):
