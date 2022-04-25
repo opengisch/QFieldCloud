@@ -17,7 +17,7 @@ coverage==5.3
 cryptography==36.0.1
 defusedxml==0.7.1
 Deprecated==1.2.13
-Django==3.2.12
+Django==3.2.13
 django-allauth==0.44.0
 django-auditlog==1.0a1
 django-axes==5.28.0
