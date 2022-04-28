@@ -540,6 +540,15 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
             "id": layer_id,
             "name": layer.name(),
             "crs": layer.crs().authid() if layer.crs() else None,
+            "wkb_type": layer.wkbType()
+            if layer.type() == QgsMapLayer.VectorLayer
+            else None,
+            "qfs_action": layer.customProperty("QFieldSync/action"),
+            "qfs_cloud_action": layer.customProperty("QFieldSync/cloud_action"),
+            "qfs_is_geometry_locked": layer.customProperty(
+                "QFieldSync/is_geometry_locked"
+            ),
+            "qfs_photo_naming": layer.customProperty("QFieldSync/photo_naming"),
             "is_valid": layer.isValid(),
             "datasource": layer.dataProvider().uri().uri()
             if layer.dataProvider()

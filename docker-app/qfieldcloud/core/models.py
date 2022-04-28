@@ -6,6 +6,7 @@ from datetime import timedelta
 from enum import Enum
 from typing import Iterable, List
 
+import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -1074,7 +1075,7 @@ class ProjectCollaborator(models.Model):
 
 
 class Delta(models.Model):
-    class Method(Enum):
+    class Method(str, Enum):
         Create = "create"
         Delete = "delete"
         Patch = "patch"
@@ -1187,8 +1188,39 @@ class Job(models.Model):
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
 
     @property
-    def short_id(self):
+    def short_id(self) -> str:
         return str(self.id)[0:8]
+
+    @property
+    def fallback_output(self) -> str:
+        # show whatever is the output if it is present
+        if self.output:
+            return ""
+
+        if self.status == Job.Status.PENDING:
+            return _(
+                "The job is in pending status, it will be started as soon as there are available server resources."
+            )
+        elif self.status == Job.Status.QUEUED:
+            return _(
+                "The job is in queued status. Server resources are allocated and it will be started soon."
+            )
+        elif self.status == Job.Status.STARTED:
+            return _("The job is in started status. Waiting for it to finish...")
+        elif self.status == Job.Status.FINISHED:
+            return _(
+                "The job is in finished status. It finished successfully without any output."
+            )
+        elif self.status == Job.Status.STOPPED:
+            return _("The job is in stopped status. Waiting to be continued...")
+        elif self.status == Job.Status.FAILED:
+            return _(
+                "The job is in failed status. The execution failed due to server error. Please verify the project is configured properly and try again."
+            )
+        else:
+            return _(
+                "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
+            )
 
 
 class PackageJob(Job):
@@ -1246,6 +1278,39 @@ class ApplyJobDelta(models.Model):
         return f"{self.apply_job_id}:{self.delta_id}"
 
 
+class Secret(models.Model):
+    class Type(models.TextChoices):
+        PGSERVICE = "pgservice", _("pg_service")
+        ENVVAR = "envvar", _("Environment Variable")
+
+    name = models.TextField(
+        max_length=255,
+        unique=True,
+        validators=[
+            RegexValidator(
+                r"^[A-Z]+[A-Z0-9_]+$",
+                _(
+                    "Must start with a letter and followed by capital letters, numbers or underscores."
+                ),
+            )
+        ],
+        help_text=_(
+            _(
+                "Must start with a letter and followed by capital letters, numbers or underscores."
+            ),
+        ),
+    )
+    type = models.CharField(max_length=32, choices=Type.choices)
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="secrets"
+    )
+    created_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="project_secrets"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    value = django_cryptography.fields.encrypt(models.TextField())
+
+
 auditlog.register(User, exclude_fields=["last_login", "updated_at"])
 auditlog.register(UserAccount)
 auditlog.register(Organization)
@@ -1276,3 +1341,4 @@ auditlog.register(
         "created_by",
     ],
 )
+auditlog.register(Secret, exclude_fields=["value"])

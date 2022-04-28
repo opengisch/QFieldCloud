@@ -25,6 +25,7 @@ from qfieldcloud.core.models import (
     Job,
     PackageJob,
     ProcessProjectfileJob,
+    Secret,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
 
@@ -215,6 +216,16 @@ class JobRun:
 
         client = docker.from_env()
 
+        extra_envvars = {}
+        pgservice_file_contents = ""
+        for secret in self.job.project.secrets.all():
+            if secret.type == Secret.Type.ENVVAR:
+                extra_envvars[secret.name] = secret.value
+            elif secret.type == Secret.Type.PGSERVICE:
+                pgservice_file_contents += f"\r\n{secret.value}"
+            else:
+                raise NotImplementedError(f"Unknown secret type: {secret.type}")
+
         logger.info(f"Execute: {' '.join(command)}")
         volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
 
@@ -222,6 +233,7 @@ class JobRun:
             QGIS_CONTAINER_NAME,
             command,
             environment={
+                "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
                 "QFIELDCLOUD_TOKEN": token.key,
                 "QFIELDCLOUD_URL": QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
                 "JOB_ID": self.job_id,

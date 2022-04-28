@@ -26,6 +26,8 @@ from qgis.core import (
     QgsVectorLayer,
 )
 
+PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -342,6 +344,10 @@ if __name__ == "__main__":
     logging.getLogger("nose").setLevel(logging.CRITICAL)
     logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
     logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+
+    if PGSERVICE_FILE_CONTENTS:
+        with open(Path.home().joinpath(".pg_service.conf"), "w") as f:
+            f.write(PGSERVICE_FILE_CONTENTS)
 
     parser = argparse.ArgumentParser(prog="COMMAND")
 
