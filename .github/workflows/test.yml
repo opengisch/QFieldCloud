@@ -35,9 +35,12 @@ jobs:
       - name: Build and run docker containers
         run: |
           docker-compose up -d --build
+      - name: Migrate
+        run: |
+          docker-compose run app python manage.py migrate
       - name: Run unit and integration tests
         run: |
-          docker-compose run app python manage.py test -v2 qfieldcloud
+          docker-compose run app python manage.py test --keepdb -v2 qfieldcloud
 
       - name: "failure logs"
         if: failure()
