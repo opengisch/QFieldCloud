@@ -65,7 +65,6 @@ To run all the unit and functional tests (on a throwaway test
 database and a throwaway test storage directory):
 
     export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
-    docker-compose down --volumes
     docker-compose up -d
     docker-compose run app python manage.py migrate
     docker-compose run app python manage.py test --keepdb
