@@ -8,7 +8,6 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Count, Q
 from qfieldcloud.core.models import Job
-from qfieldcloud.core.utils2.db import use_test_db_if_exists
 from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
     PackageJobRun,
@@ -42,7 +41,7 @@ class Command(BaseCommand):
         killer = GracefulKiller()
 
         while killer.alive:
-            with use_test_db_if_exists():
+            if True:  # TODO: remove this, just reducing diff for now
                 # the worker-wrapper caches outdated ContentType ids during tests since
                 # the worker-wrapper and the tests reside in different containers
                 if settings.DATABASES["default"]["NAME"].startswith("test_"):

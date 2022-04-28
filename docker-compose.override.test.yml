@@ -6,10 +6,28 @@ services:
     environment:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
-      # run the server on the test database (test_* is the default test database name in django)
+      # we must use the same db for test and runserver
       SQL_DATABASE: test_${POSTGRES_DB}
+      SQL_DATABASE_TEST: test_${POSTGRES_DB}
     command: python3 manage.py runserver 0.0.0.0:8000
+
+  worker_wrapper:
+    environment:
+      # we must use the same db for test and runserver
+      SQL_DATABASE: test_${POSTGRES_DB}
+      SQL_DATABASE_TEST: test_${POSTGRES_DB}
+
+  db:
+    environment:
+      POSTGRES_DB: test_${POSTGRES_DB}
+
 networks:
   default:
     # Use a custom driver
     name: ${QFIELDCLOUD_DEFAULT_NETWORK}
+
+volumes:
+  # We use a different volume, just so that the test_ database
+  # gets created in the entrypoint.
+  postgres_data:
+    name: qfieldcloud_postgres_data_test
