@@ -419,6 +419,47 @@ class QfcTestCase(APITransactionTestCase):
             self.get_file_contents(project, "nonspatial.csv"), b'fid,col1\n"1",qux\n'
         )
 
+    def test_delta_pushed_after_job_triggered(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        # Push a deltafile
+        deltafile1_name = "singlelayer_singledelta.json"
+        self.assertTrue(self.upload_deltas(project, deltafile1_name))
+        with open(testdata_path(f"delta/deltas/{deltafile1_name}")) as f:
+            deltafile1_id = json.load(f)["id"]
+
+        deltafile2_name = "singlelayer_singledelta2.json"
+        self.assertTrue(self.upload_deltas(project, deltafile2_name))
+        with open(testdata_path(f"delta/deltas/{deltafile2_name}")) as f:
+            deltafile2_id = json.load(f)["id"]
+
+        self.check_deltas_by_file_id(
+            project,
+            deltafile1_id,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+            token=self.token1.key,
+        )
+
+        self.check_deltas_by_file_id(
+            project,
+            deltafile2_id,
+            final_values=[
+                [
+                    "c8c421cd-e39c-40a0-97d8-a319c245ba14",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+            token=self.token1.key,
+        )
+
     def test_change_and_delete_pushed_only_features(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -617,6 +658,30 @@ class QfcTestCase(APITransactionTestCase):
 
         if deltafile_id:
             uri = f"{uri}{deltafile_id}/"
+
+        self.check_deltas_by_file_id(
+            project,
+            deltafile_id,
+            final_values,
+            token,
+            wait_status,
+            failing_status,
+            immediate_values,
+        )
+
+    def check_deltas_by_file_id(
+        self,
+        project,
+        deltafile_id,
+        final_values,
+        token,
+        wait_status=["STATUS_PENDING", "STATUS_BUSY"],
+        failing_status=["STATUS_ERROR"],
+        immediate_values=None,
+    ):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
+
+        uri = f"/api/v1/deltas/{project.id}/{deltafile_id}/"
 
         response = self.client.get(uri)
         self.assertTrue(rest_framework.status.is_success(response.status_code))
