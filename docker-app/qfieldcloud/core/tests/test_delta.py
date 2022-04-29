@@ -40,6 +40,14 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.project1.save()
 
+        self.project2 = Project.objects.create(
+            id="2f221069-59f6-40d2-b7d6-0f454380c2ed",
+            name="project2",
+            is_public=False,
+            owner=self.user2,
+        )
+        self.project1.save()
+
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
@@ -458,6 +466,53 @@ class QfcTestCase(APITransactionTestCase):
                 ]
             ],
             token=self.token1.key,
+        )
+
+    def test_delta_pushed_after_job_triggered_two_projects(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project1 = self.upload_project_files(self.project1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        project2 = self.upload_project_files(self.project2)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Push a deltafile
+        deltafile1_name = "singlelayer_singledelta.json"
+        self.assertTrue(self.upload_deltas(project1, deltafile1_name))
+        with open(testdata_path(f"delta/deltas/{deltafile1_name}")) as f:
+            deltafile1_id = json.load(f)["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        deltafile2_name = "singlelayer_singledelta_project2.json"
+        self.assertTrue(self.upload_deltas(project2, deltafile2_name))
+        with open(testdata_path(f"delta/deltas/{deltafile2_name}")) as f:
+            deltafile2_id = json.load(f)["id"]
+
+        self.check_deltas_by_file_id(
+            project1,
+            deltafile1_id,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+            token=self.token1.key,
+        )
+
+        self.check_deltas_by_file_id(
+            project2,
+            deltafile2_id,
+            final_values=[
+                [
+                    "f2af4942-e4ab-446e-bd97-5aab17e7ccc1",
+                    "STATUS_APPLIED",
+                    self.user2.username,
+                ]
+            ],
+            token=self.token2.key,
         )
 
     def test_change_and_delete_pushed_only_features(self):
