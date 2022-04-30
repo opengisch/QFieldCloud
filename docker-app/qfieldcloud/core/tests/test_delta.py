@@ -634,8 +634,6 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
-        job = Job.objects.filter(project=self.project1).latest("updated_at")
-
         for _ in range(10):
 
             time.sleep(2)
@@ -647,6 +645,11 @@ class QfcTestCase(APITransactionTestCase):
             payload = sorted(payload, key=lambda k: k["id"])
 
             self.assertEqual(len(payload), len(final_values))
+
+            job = Job.objects.filter(
+                project=self.project1,
+                type=Job.Type.DELTA_APPLY,
+            ).latest("updated_at")
 
             for idx, final_value in enumerate(final_values):
                 if payload[idx]["status"] in wait_status:
