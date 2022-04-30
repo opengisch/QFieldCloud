@@ -51,6 +51,24 @@ class QfcTestCase(APITransactionTestCase):
             role=ProjectCollaborator.Roles.ADMIN,
         )
 
+    def tearDown(self):
+        while True:
+            # make sure there are no active jobs in the queue
+            if (
+                Job.objects.all()
+                .filter(
+                    status__in=[
+                        Job.Status.PENDING,
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ]
+                )
+                .count()
+                == 0
+            ):
+                time.sleep(1)
+                return
+
     def fail(self, msg: str, job: Job = None):
         if job:
             msg += f"\n\nOutput:\n================\n{job.output}\n================"
