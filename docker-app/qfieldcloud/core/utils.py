@@ -392,8 +392,9 @@ def list_files(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: bool = True,
-) -> Iterable[S3Object]:
+) -> List[S3Object]:
     """Iterator that lists a bucket's objects under prefix."""
+    files = []
     for f in bucket.objects.filter(Prefix=prefix):
         if strip_prefix:
             start_idx = len(prefix)
@@ -401,22 +402,29 @@ def list_files(
         else:
             name = f.key
 
-        yield S3Object(
-            name=name,
-            key=f.key,
-            last_modified=f.last_modified,
-            size=f.size,
-            etag=f.e_tag,
-            md5sum=f.e_tag.replace('"', ""),
+        files.append(
+            S3Object(
+                name=name,
+                key=f.key,
+                last_modified=f.last_modified,
+                size=f.size,
+                etag=f.e_tag,
+                md5sum=f.e_tag.replace('"', ""),
+            )
         )
+
+    files.sort(key=lambda f: f.name)
+
+    return files
 
 
 def list_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: bool = True,
-) -> Iterable[S3ObjectVersion]:
+) -> List[S3ObjectVersion]:
     """Iterator that lists a bucket's objects under prefix."""
+    versions = []
     for v in bucket.object_versions.filter(Prefix=prefix):
         if strip_prefix:
             start_idx = len(prefix)
@@ -424,7 +432,13 @@ def list_versions(
         else:
             name = v.key
 
-        yield S3ObjectVersion(name, v)
+        versions.append(S3ObjectVersion(name, v))
+
+    versions.sort(
+        key=lambda v: f"{v.key}{v.last_modified.isoformat()}{int(v.is_latest)}"
+    )
+
+    return versions
 
 
 def list_files_with_versions(
