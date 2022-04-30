@@ -652,6 +652,11 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
+        job = Job.objects.filter(
+            project=self.project1,
+            type=Job.Type.DELTA_APPLY,
+        ).latest("updated_at")
+
         for _ in range(10):
 
             time.sleep(2)
@@ -664,16 +669,12 @@ class QfcTestCase(APITransactionTestCase):
 
             self.assertEqual(len(payload), len(final_values))
 
-            job = Job.objects.filter(
-                project=self.project1,
-                type=Job.Type.DELTA_APPLY,
-            ).latest("updated_at")
-
             for idx, final_value in enumerate(final_values):
                 if payload[idx]["status"] in wait_status:
                     break
 
                 if payload[idx]["status"] in failing_status:
+                    job.refresh_from_db()
                     self.fail(f"Got failing status {payload[idx]['status']}", job=job)
                     return
 
@@ -684,6 +685,7 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
-            return
+                if len(final_values) == idx + 1:
+                    return
 
         self.fail("Worker didn't finish", job=job)
