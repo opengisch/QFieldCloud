@@ -92,6 +92,7 @@ MIDDLEWARE = [
     "django_currentuser.middleware.ThreadLocalUserMiddleware",
     "auditlog.middleware.AuditlogMiddleware",
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
+    "qfieldcloud.core.middleware.test.TestMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
 
