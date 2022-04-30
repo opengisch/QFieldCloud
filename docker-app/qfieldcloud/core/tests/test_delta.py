@@ -665,6 +665,7 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["id"], delta_id)
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
-                return
+
+            return
 
         self.fail("Worker didn't finish", job=job)
