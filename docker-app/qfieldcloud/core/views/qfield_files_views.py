@@ -138,7 +138,7 @@ class ListFilesView(views.APIView):
             files.append(
                 {
                     # Get the path of the file relative to the export directory
-                    "name": str(path.relative_to(*path.parts[:3])),
+                    "name": str(path.relative_to(*path.parts[:4])),
                     "size": obj.size,
                     "sha256": sha256sum,
                 }
