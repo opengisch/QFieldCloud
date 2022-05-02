@@ -33,7 +33,6 @@ class QfcTestCase(APITransactionTestCase):
 
         # Create a project
         self.project1 = Project.objects.create(
-            id="e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
             name="project1",
             is_public=False,
             owner=self.user1,
@@ -679,9 +678,15 @@ class QfcTestCase(APITransactionTestCase):
     def upload_deltas(self, project, delta_filename):
         delta_file = testdata_path(f"delta/deltas/{delta_filename}")
 
+        # Replace the hardcoded project UUID from the deltafile
+        file = io.StringIO(
+            open(delta_file)
+            .read()
+            .replace("e02d02cc-af1b-414c-a14c-e2ed5dfee52f", str(self.project1.id))
+        )
         response = self.client.post(
             f"/api/v1/deltas/{project.id}/",
-            {"file": open(delta_file, "rb")},
+            {"file": file},
             format="multipart",
         )
         return rest_framework.status.is_success(response.status_code)
