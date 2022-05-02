@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("subscription", "0002_populate_account_types"),
-        ("core", "0051_auto_20211125_0444"),
+        ("core", "0052_secret"),
     ]
 
     operations = [
@@ -44,5 +44,10 @@ class Migration(migrations.Migration):
                 to="subscription.accounttype",
                 default=qfieldcloud.subscription.models.AccountType.get_or_create_default,
             ),
+        ),
+        migrations.AddField(
+            model_name="project",
+            name="storage_size_mb",
+            field=models.FloatField(default=0),
         ),
     ]
