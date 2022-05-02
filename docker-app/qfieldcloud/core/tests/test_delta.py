@@ -179,13 +179,21 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(wrong_deltas), len(wrong_deltas_before) + 1)
 
         f = self.get_delta_file_with_project_id(self.project1, delta_file)
-        self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
+        self.assertEqual(wrong_deltas[-1].get()["Body"].read().decode(), f.read())
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
 
-        self.assertFalse(self.upload_deltas(project, "../../file.txt"))
+        delta_file = testdata_path("file.txt")
+
+        response = self.client.post(
+            f"/api/v1/deltas/{project.id}/",
+            {"file": open(delta_file, "r")},
+            format="multipart",
+        )
+
+        self.assertFalse(rest_framework.status.is_success(response.status_code))
 
     def test_push_apply_delta_file_conflicts_overwrite_true(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -678,7 +686,7 @@ class QfcTestCase(APITransactionTestCase):
         """Retrieves a delta json file with the project id replaced by the project.id"""
         with open(delta_filename, "r") as f:
             deltafile = json.load(f)
-            deltafile["id"] = str(project.id)
+            deltafile["project"] = str(project.id)
             json_str = json.dumps(deltafile)
             return io.StringIO(json_str)
 
