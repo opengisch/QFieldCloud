@@ -179,8 +179,8 @@ class QfcTestCase(APITransactionTestCase):
         # TODO : cleanup buckets before in setUp so tests are completely independent
         self.assertEqual(len(wrong_deltas), len(wrong_deltas_before) + 1)
 
-        with open(delta_file, "rb") as f:
-            self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
+        f = self.get_delta_file_with_project_id(delta_file)
+        self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -675,18 +675,20 @@ class QfcTestCase(APITransactionTestCase):
         else:
             return response.content
 
-    def upload_deltas(self, project, delta_filename):
-        delta_file = testdata_path(f"delta/deltas/{delta_filename}")
-
-        # Replace the hardcoded project UUID from the deltafile
-        file = io.StringIO(
-            open(delta_file)
+    def get_delta_file_with_project_id(self, delta_filename):
+        """Retrieves a delta json file with the project id replaced by self.project1.id"""
+        return io.StringIO(
+            open(delta_filename)
             .read()
             .replace("e02d02cc-af1b-414c-a14c-e2ed5dfee52f", str(self.project1.id))
         )
+
+    def upload_deltas(self, project, delta_filename):
+        delta_file = testdata_path(f"delta/deltas/{delta_filename}")
+
         response = self.client.post(
             f"/api/v1/deltas/{project.id}/",
-            {"file": file},
+            {"file": self.get_delta_file_with_project_id(delta_file)},
             format="multipart",
         )
         return rest_framework.status.is_success(response.status_code)
