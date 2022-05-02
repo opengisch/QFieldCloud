@@ -40,7 +40,6 @@ class QfcTestCase(APITransactionTestCase):
         self.project1.save()
 
         self.project2 = Project.objects.create(
-            id="2f221069-59f6-40d2-b7d6-0f454380c2ed",
             name="project2",
             is_public=False,
             owner=self.user2,
@@ -179,7 +178,7 @@ class QfcTestCase(APITransactionTestCase):
         # TODO : cleanup buckets before in setUp so tests are completely independent
         self.assertEqual(len(wrong_deltas), len(wrong_deltas_before) + 1)
 
-        f = self.get_delta_file_with_project_id(delta_file)
+        f = self.get_delta_file_with_project_id(self.project1, delta_file)
         self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
 
     def test_push_apply_delta_file_not_json(self):
@@ -675,20 +674,20 @@ class QfcTestCase(APITransactionTestCase):
         else:
             return response.content
 
-    def get_delta_file_with_project_id(self, delta_filename):
-        """Retrieves a delta json file with the project id replaced by self.project1.id"""
-        return io.StringIO(
-            open(delta_filename)
-            .read()
-            .replace("e02d02cc-af1b-414c-a14c-e2ed5dfee52f", str(self.project1.id))
-        )
+    def get_delta_file_with_project_id(self, project, delta_filename):
+        """Retrieves a delta json file with the project id replaced by the project.id"""
+        with open(delta_filename, "r") as f:
+            deltafile = json.load(f)
+            deltafile["id"] = str(project.id)
+            json_str = json.dumps(deltafile)
+            return io.StringIO(json_str)
 
     def upload_deltas(self, project, delta_filename):
         delta_file = testdata_path(f"delta/deltas/{delta_filename}")
 
         response = self.client.post(
             f"/api/v1/deltas/{project.id}/",
-            {"file": self.get_delta_file_with_project_id(delta_file)},
+            {"file": self.get_delta_file_with_project_id(project, delta_file)},
             format="multipart",
         )
         return rest_framework.status.is_success(response.status_code)
