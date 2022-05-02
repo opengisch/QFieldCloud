@@ -404,7 +404,7 @@ class QfcTestCase(APITransactionTestCase):
                 ],
                 [
                     "8adac0df-e1d3-473e-b150-f8c4a91b4781",
-                    "STATUS_UNPERMITTED",
+                    "STATUS_APPLIED",
                     self.user2.username,
                 ],
             ],
