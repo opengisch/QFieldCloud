@@ -1,15 +1,14 @@
-import filecmp
 import io
 import logging
 import tempfile
 import time
+from pathlib import PurePath
 
-import requests
 from django.core.management import call_command
-from django.http.response import HttpResponseRedirect
+from django.http import FileResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project, User
 from qfieldcloud.subscription.models import AccountType
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -36,19 +35,20 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.project1.save()
 
-    def tearDown(self):
-        # Remove all projects avoiding bulk delete in order to use
-        # the overrided delete() function in the model
-        for p in Project.objects.all():
-            bucket = utils.get_s3_bucket()
-            prefix = utils.safe_join("projects/{}/".format(p.id))
-            bucket.objects.filter(Prefix=prefix).delete()
+    def get_file_contents(self, project, filename, version=None):
+        qs = ""
+        if version:
+            qs = f"?version={version}"
 
-            p.delete()
+        response = self.client.get(f"/api/v1/files/{project.id}/{filename}/{qs}")
 
-        User.objects.all().delete()
-        # Remove credentials
-        self.client.credentials()
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(get_filename(response), PurePath(filename).name)
+
+        if isinstance(response, FileResponse):
+            return b"".join(response.streaming_content)
+        else:
+            return response.content
 
     def test_push_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -86,24 +86,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
-        # Pull the file
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/file.txt/")
-
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
+        self.assertEqual(
+            self.get_file_contents(self.project1, "file.txt"),
+            open(testdata_path("file.txt"), "rb").read(),
+        )
 
     def test_push_download_file_with_path(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -125,24 +111,17 @@ class QfcTestCase(APITransactionTestCase):
 
         # Pull the file
         response = self.client.get(
-            f"/api/v1/files/{self.project1.id}/foo/bar/file.txt/"
+            f"/api/v1/files/{self.project1.id}/foo/bar/file.txt/",
+            stream=True,
         )
 
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "foo/bar/file.txt")
+        self.assertEqual(get_filename(response), "file.txt")
 
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
+        self.assertEqual(
+            self.get_file_contents(self.project1, "foo/bar/file.txt"),
+            open(testdata_path("file.txt"), "rb").read(),
+        )
 
     def test_push_list_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -309,25 +288,15 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
-        # Pull the last file (without version parameter)
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/file.txt/")
+        self.assertNotEqual(
+            self.get_file_contents(self.project1, "file.txt"),
+            open(testdata_path("file.txt"), "rb").read(),
+        )
 
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertFalse(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file2.txt")))
+        self.assertEqual(
+            self.get_file_contents(self.project1, "file.txt"),
+            open(testdata_path("file2.txt"), "rb").read(),
+        )
 
         # List files
         response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
@@ -338,48 +307,20 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         # Pull the oldest version
-        response = self.client.get(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            {"version": versions[0]["version_id"]},
+        self.assertEqual(
+            self.get_file_contents(
+                self.project1, "file.txt", versions[0]["version_id"]
+            ),
+            open(testdata_path("file.txt"), "rb").read(),
         )
-
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file.txt")))
 
         # Pull the newest version
-        response = self.client.get(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            {"version": versions[1]["version_id"]},
+        self.assertEqual(
+            self.get_file_contents(
+                self.project1, "file.txt", versions[1]["version_id"]
+            ),
+            open(testdata_path("file2.txt"), "rb").read(),
         )
-
-        self.assertIsInstance(response, HttpResponseRedirect)
-
-        response = requests.get(response.url, stream=True)
-
-        self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(get_filename(response), "file.txt")
-
-        temp_file = tempfile.NamedTemporaryFile()
-
-        with open(temp_file.name, "wb") as f:
-            for chunk in response.iter_content():
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        self.assertTrue(filecmp.cmp(temp_file.name, testdata_path("file2.txt")))
 
     def test_push_delete_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -662,3 +603,32 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(count_versions(), 3)
         self.assertEqual(read_version(0), "v39")
         self.assertEqual(read_version(2), "v37")
+
+    def test_multiple_file_uploads_one_process_job(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).project_filename, None
+        )
+
+        file_path = testdata_path("file.txt")
+        qgis_project_file = "foo/bar/file.qgs"
+
+        for i in range(10):
+            # Push a QGIS project file
+            response = self.client.post(
+                f"/api/v1/files/{self.project1.id}/{qgis_project_file}/",
+                {
+                    "file": open(file_path, "rb"),
+                },
+                format="multipart",
+            )
+            self.assertTrue(status.is_success(response.status_code))
+
+        jobs = ProcessProjectfileJob.objects.filter(
+            project=self.project1,
+            status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
+        )
+
+        self.assertEqual(jobs.count(), 1)

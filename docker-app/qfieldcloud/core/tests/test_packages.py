@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import tempfile
@@ -5,12 +6,11 @@ import time
 from typing import List, Tuple
 
 import psycopg2
-import requests
-from django.http.response import HttpResponseRedirect
+from django.http import FileResponse
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Geodb, Job, Project, User
+from qfieldcloud.core.models import Geodb, Job, Project, Secret, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -55,15 +55,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def tearDown(self):
         self.conn.close()
-
-        # Remove all projects avoiding bulk delete in order to use
-        # the overrided delete() function in the model
-        for p in Project.objects.all():
-            p.delete()
-
-        User.objects.all().delete()
-        # Remove credentials
-        self.client.credentials()
 
     def upload_files(
         self,
@@ -179,31 +170,32 @@ class QfcTestCase(APITransactionTestCase):
                 if tempdir:
                     for filename in expected_files:
                         response = self.client.get(
-                            f"/api/v1/qfield-files/{self.project1.id}/project_qfield.qgs/"
+                            f"/api/v1/packages/{self.project1.id}/latest/files/project_qfield.qgs/"
                         )
                         local_file = os.path.join(tempdir, filename)
 
-                        self.assertIsInstance(response, HttpResponseRedirect)
+                        self.assertIsInstance(response, FileResponse)
 
-                        # We cannot use the self.client HTTP client, since it does not support
-                        # requests outside the current Django App
-                        # Using the rest_api_framework.RequestsClient is not much better, so better
-                        # use the `requests` module
-                        with requests.get(response.url, stream=True) as r:
-                            with open(local_file, "wb") as f:
-                                for chunk in r.iter_content():
-                                    f.write(chunk)
+                        with open(local_file, "wb") as f:
+                            for chunk in response.streaming_content:
+                                f.write(chunk)
 
                 for layer_id in package_payload["layers"]:
                     layer_data = package_payload["layers"][layer_id]
 
                     if layer_id in invalid_layers:
-                        self.assertFalse(layer_data["valid"], layer_id)
+                        self.assertFalse(layer_data["is_valid"], layer_id)
                     else:
-                        self.assertTrue(layer_data["valid"], layer_id)
+                        self.assertTrue(layer_data["is_valid"], layer_id)
 
                 return
             elif payload["status"] == Job.Status.FAILED:
+                print(
+                    "Job feedback:",
+                    json.dumps(
+                        Job.objects.get(id=job_id).feedback, sort_keys=True, indent=2
+                    ),
+                )
                 self.fail("Worker failed with error")
 
         self.fail("Worker didn't finish")
@@ -227,7 +219,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=["data.gpkg", "project_qfield.qgs"],
         )
 
-    def test_list_files_missing_project_filename(self):
+    def test_list_files_missing_qgis_project_file(self):
         self.upload_files_and_check_package(
             token=self.token1.key,
             project=self.project1,
@@ -309,6 +301,36 @@ class QfcTestCase(APITransactionTestCase):
                 return
 
         self.fail("Worker didn't finish")
+
+    def test_create_job_twice(self):
+        self.upload_files(
+            token=self.token1.key,
+            project=self.project1,
+            files=[
+                ("delta/project2.qgs", "project.qgs"),
+                ("delta/points.geojson", "points.geojson"),
+            ],
+        )
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.project1.id,
+                "type": Job.Type.PACKAGE,
+            },
+        )
+
+        self.assertTrue(response.status_code, 201)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.project1.id,
+                "type": Job.Type.PACKAGE,
+            },
+        )
+
+        self.assertTrue(response.status_code, 200)
 
     def test_downloaded_file_has_canvas_name(self):
         tempdir = tempfile.mkdtemp()
@@ -418,6 +440,50 @@ class QfcTestCase(APITransactionTestCase):
         # projects with online vector layer should always show as it needs repackaging
         self.assertTrue(self.project1.needs_repackaging)
 
+    def test_connects_via_pgservice(self):
+        cur = self.conn.cursor()
+        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        self.conn.commit()
+
+        Secret.objects.create(
+            name="PG_SERVICE_GEODB",
+            type=Secret.Type.PGSERVICE,
+            project=self.project1,
+            created_by=self.project1.owner,
+            value=(
+                "[geodb]\n"
+                "dbname=test\n"
+                "host=geodb\n"
+                "port=5432\n"
+                f"user={os.environ.get('GEODB_USER')}\n"
+                f"password={os.environ.get('GEODB_PASSWORD')}\n"
+                "sslmode=disable\n"
+            ),
+        )
+
+        self.upload_files(
+            self.token1.key,
+            self.project1,
+            files=[
+                ("delta/project_pgservice.qgs", "project.qgs"),
+            ],
+        )
+
+        self.wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
+
+        last_process_job = Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE).latest(
+            "updated_at"
+        )
+        layers_by_id = last_process_job.feedback["outputs"]["project_details"][
+            "project_details"
+        ]["layers_by_id"]
+
+        self.assertEqual(last_process_job.status, Job.Status.FINISHED)
+        self.assertTrue(
+            layers_by_id["point_6b900fa7_af52_4082_bbff_6077f4a91d02"]["is_valid"]
+        )
+
     def test_has_online_vector_data(self):
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
@@ -450,7 +516,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
 
-        self.assertTrue(self.project1.has_online_vector_data)
+        self.assertFalse(self.project1.has_online_vector_data)
 
     def test_filename_with_whitespace(self):
         self.upload_files_and_check_package(

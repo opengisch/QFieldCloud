@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, List, Type
 
+import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
 from deprecated import deprecated
@@ -18,14 +19,13 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
-from django.db.models.signals import post_delete, post_save, pre_delete
+from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.urls import reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.utils import get_s3_object_url
 from qfieldcloud.subscription.models import AccountType
 from timezone_field import TimeZoneField
 
@@ -348,7 +348,7 @@ class User(AbstractUser):
 
     @property
     def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def username_with_full_name(self) -> str:
@@ -363,12 +363,16 @@ class User(AbstractUser):
     def has_geodb(self) -> bool:
         return hasattr(self, "geodb")
 
+    def save(self, *args, **kwargs):
+        created = self._state.adding
+        super().save(*args, **kwargs)
+        if created:
+            UserAccount.objects.create(user=self)
 
-# Automatically create a UserAccount instance when a user is created.
-@receiver(post_save, sender=User)
-def create_account_for_user(sender, instance, created, **kwargs):
-    if created:
-        UserAccount.objects.create(user=instance)
+    def delete(self, *args, **kwargs):
+        if self.user_type != User.TYPE_TEAM:
+            qfieldcloud.core.utils2.storage.remove_user_avatar(self)
+        super().delete(*args, **kwargs)
 
 
 class UserAccount(models.Model):
@@ -421,7 +425,10 @@ class UserAccount(models.Model):
     @property
     def avatar_url(self):
         if self.avatar_uri:
-            return get_s3_object_url(self.avatar_uri)
+            return reverse_lazy(
+                "public_files",
+                kwargs={"filename": self.avatar_uri},
+            )
         else:
             return None
 
@@ -511,6 +518,18 @@ class Geodb(models.Model):
             self.user.username, self.dbname, self.username
         )
 
+    def save(self, *args, **kwargs):
+        created = self._state.adding
+        super().save(*args, **kwargs)
+        # Automatically create a role and database when a Geodb object is created.
+        if created:
+            geodb_utils.create_role_and_db(self)
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        # Automatically delete role and database when a Geodb object is deleted.
+        geodb_utils.delete_db_and_role(self.dbname, self.username)
+
 
 class OrganizationQueryset(models.QuerySet):
     """Adds of_user(user) method to the organization's querysets, allowing to filter only organization related to that user.
@@ -591,18 +610,6 @@ class OrganizationManager(UserManager):
         return self.get_queryset().with_roles(user)
 
 
-# Automatically create a role and database when a Geodb object is created.
-@receiver(post_save, sender=Geodb)
-def create_geodb(sender, instance, created, **kwargs):
-    if created:
-        geodb_utils.create_role_and_db(instance)
-
-
-@receiver(post_delete, sender=Geodb)
-def delete_geodb(sender, instance, **kwargs):
-    geodb_utils.delete_db_and_role(instance.dbname, instance.username)
-
-
 class Organization(User):
     objects = OrganizationManager()
 
@@ -620,21 +627,6 @@ class Organization(User):
     def save(self, *args, **kwargs):
         self.user_type = self.TYPE_ORGANIZATION
         return super().save(*args, **kwargs)
-
-
-@receiver(post_save, sender=Organization)
-def create_account_for_organization(sender, instance, created, **kwargs):
-    if created:
-        UserAccount.objects.create(user=instance)
-
-
-@receiver(pre_delete, sender=User)
-@receiver(pre_delete, sender=Organization)
-def delete_user(sender: Type[User], instance: User, **kwargs: Any) -> None:
-    if instance.user_type == User.TYPE_TEAM:
-        return
-
-    qfieldcloud.core.utils2.storage.remove_user_avatar(instance)
 
 
 class OrganizationMember(models.Model):
@@ -926,7 +918,10 @@ class Project(models.Model):
     @property
     def thumbnail_url(self):
         if self.thumbnail_uri:
-            return get_s3_object_url(self.thumbnail_uri)
+            return reverse_lazy(
+                "project_metafiles",
+                kwargs={"projectid": self.id, "filename": self.thumbnail_uri[51:]},
+            )
         else:
             return None
 
@@ -940,7 +935,30 @@ class Project(models.Model):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
     @property
-    def private(self):
+    def staticfile_dirs(self) -> List[str]:
+        """Returns a list of configured staticfile dirs for the project.
+
+        Staticfile dir is a special directory in the QField infrastructure that holds static files
+        such as images, pdf etc. By default "DCIM" is considered a staticfile directory.
+
+        TODO this function expects whether `staticfile_dirs` key in project_details. However,
+        neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
+
+        Returns:
+            List[str]: A list configured staticfile dirs for the project.
+        """
+        staticfile_dirs = []
+
+        if self.project_details and self.project_details.get("staticfile_dirs"):
+            staticfile_dirs = self.project_details.get("staticfile_dirs", [])
+
+        if not staticfile_dirs:
+            staticfile_dirs = ["DCIM"]
+
+        return staticfile_dirs
+
+    @property
+    def private(self) -> bool:
         # still used in the project serializer
         return not self.is_public
 
@@ -960,10 +978,16 @@ class Project(models.Model):
 
     @property
     def has_online_vector_data(self) -> bool:
+        # it's safer to assume there is an online vector layer
         if not self.project_details:
-            return False
+            return True
 
-        layers_by_id = self.project_details.get("layers_by_id", {})
+        layers_by_id = self.project_details.get("layers_by_id")
+
+        # it's safer to assume there is an online vector layer
+        if layers_by_id is None:
+            return True
+
         has_online_vector_layers = False
 
         for layer_data in layers_by_id.values():
@@ -994,7 +1018,7 @@ class Project(models.Model):
 
     @property
     def status(self) -> Status:
-        # NOTE the status is NOT stored in the db, because it might be refactored
+        # NOTE the status is NOT stored in the db, because it might be outdated
         if (
             Job.objects.filter(
                 project=self, status__in=[Job.Status.QUEUED, Job.Status.STARTED]
@@ -1078,7 +1102,7 @@ class ProjectCollaborator(models.Model):
 
 
 class Delta(models.Model):
-    class Method(Enum):
+    class Method(str, Enum):
         Create = "create"
         Delete = "delete"
         Patch = "patch"
@@ -1191,8 +1215,39 @@ class Job(models.Model):
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
 
     @property
-    def short_id(self):
+    def short_id(self) -> str:
         return str(self.id)[0:8]
+
+    @property
+    def fallback_output(self) -> str:
+        # show whatever is the output if it is present
+        if self.output:
+            return ""
+
+        if self.status == Job.Status.PENDING:
+            return _(
+                "The job is in pending status, it will be started as soon as there are available server resources."
+            )
+        elif self.status == Job.Status.QUEUED:
+            return _(
+                "The job is in queued status. Server resources are allocated and it will be started soon."
+            )
+        elif self.status == Job.Status.STARTED:
+            return _("The job is in started status. Waiting for it to finish...")
+        elif self.status == Job.Status.FINISHED:
+            return _(
+                "The job is in finished status. It finished successfully without any output."
+            )
+        elif self.status == Job.Status.STOPPED:
+            return _("The job is in stopped status. Waiting to be continued...")
+        elif self.status == Job.Status.FAILED:
+            return _(
+                "The job is in failed status. The execution failed due to server error. Please verify the project is configured properly and try again."
+            )
+        else:
+            return _(
+                "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
+            )
 
 
 class PackageJob(Job):
@@ -1250,15 +1305,67 @@ class ApplyJobDelta(models.Model):
         return f"{self.apply_job_id}:{self.delta_id}"
 
 
-auditlog.register(User)
+class Secret(models.Model):
+    class Type(models.TextChoices):
+        PGSERVICE = "pgservice", _("pg_service")
+        ENVVAR = "envvar", _("Environment Variable")
+
+    name = models.TextField(
+        max_length=255,
+        unique=True,
+        validators=[
+            RegexValidator(
+                r"^[A-Z]+[A-Z0-9_]+$",
+                _(
+                    "Must start with a letter and followed by capital letters, numbers or underscores."
+                ),
+            )
+        ],
+        help_text=_(
+            _(
+                "Must start with a letter and followed by capital letters, numbers or underscores."
+            ),
+        ),
+    )
+    type = models.CharField(max_length=32, choices=Type.choices)
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="secrets"
+    )
+    created_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="project_secrets"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    value = django_cryptography.fields.encrypt(models.TextField())
+
+
+auditlog.register(User, exclude_fields=["last_login", "updated_at"])
 auditlog.register(UserAccount)
 auditlog.register(Organization)
 auditlog.register(OrganizationMember)
 auditlog.register(Team)
 auditlog.register(TeamMember)
-auditlog.register(Project)
+auditlog.register(
+    Project,
+    include_fields=[
+        "id",
+        "name",
+        "description",
+        "owner",
+        "is_public",
+        "owner",
+        "created_at",
+    ],
+)
 auditlog.register(ProjectCollaborator)
-auditlog.register(Delta)
-auditlog.register(ProcessProjectfileJob)
-auditlog.register(PackageJob)
-auditlog.register(ApplyJob)
+auditlog.register(
+    Delta,
+    include_fields=[
+        "id",
+        "deltafile_id",
+        "project",
+        "content",
+        "last_status",
+        "created_by",
+    ],
+)
+auditlog.register(Secret, exclude_fields=["value"])

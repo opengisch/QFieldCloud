@@ -5,9 +5,6 @@ services:
   app:
     depends_on:
       - geodb
-    ports:
-      # debugpy
-      - "5678:5678"
     build:
       args:
         DEBUG_BUILD: ${DEBUG}
