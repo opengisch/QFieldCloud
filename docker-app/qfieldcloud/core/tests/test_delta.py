@@ -699,8 +699,6 @@ class QfcTestCase(APITransactionTestCase):
     ):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
-        uri = f"/api/v1/deltas/{project.id}/"
-
         if delta_filename is not None:
             # Push a deltafile
             self.assertTrue(self.upload_deltas(project, delta_filename))
@@ -710,9 +708,6 @@ class QfcTestCase(APITransactionTestCase):
             if not deltafile_id:
                 with open(delta_file) as f:
                     deltafile_id = json.load(f)["id"]
-
-        if deltafile_id:
-            uri = f"{uri}{deltafile_id}/"
 
         self.check_deltas_by_file_id(
             project,
@@ -736,7 +731,9 @@ class QfcTestCase(APITransactionTestCase):
     ):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
-        uri = f"/api/v1/deltas/{project.id}/{deltafile_id}/"
+        uri = f"/api/v1/deltas/{project.id}/"
+        if deltafile_id:
+            uri = f"{uri}{deltafile_id}/"
 
         response = self.client.get(uri)
         self.assertTrue(rest_framework.status.is_success(response.status_code))
