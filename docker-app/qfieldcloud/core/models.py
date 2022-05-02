@@ -1114,6 +1114,11 @@ class Delta(models.Model):
     old_geom = models.GeometryField(null=True, srid=4326, dim=4)
     new_geom = models.GeometryField(null=True, srid=4326, dim=4)
 
+    jobs_to_apply = models.ManyToManyField(
+        to="ApplyJob",
+        through="ApplyJobDelta",
+    )
+
     def __str__(self):
         return str(self.id) + ", project: " + str(self.project.id)
 
