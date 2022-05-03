@@ -94,6 +94,8 @@ def _download_project_directory(project_id: str, download_dir: Path = None) -> P
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""
 
+    raise Exception("test0")
+
     bucket = _get_s3_bucket()
 
     # Prefix of the working directory on the Storages
