@@ -166,7 +166,7 @@ services:
   mirror_transformation_grids:
     image: k3rnelpan1c/alpine-wget:latest
     command: |
-      wget --mirror https://cdn.proj.org/ -P /transformation_grids --no-host-directories
+      wget --no-verbose --mirror https://cdn.proj.org/ -P /transformation_grids --no-host-directories
       chmod a+r /transformation_grids/*
     volumes:
       - transformation_grids:/transformation_grids
