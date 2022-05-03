@@ -513,6 +513,7 @@ if __name__ == "__main__":
     parser_process_projectfile.add_argument(
         "--nongpkg_supported",
         action="store_true",
+        default=False,
         help="Whether non-geopackages layers are supported",
     )
     parser_process_projectfile.set_defaults(func=cmd_process_projectfile)

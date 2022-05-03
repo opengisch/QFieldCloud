@@ -108,7 +108,7 @@ class JobRun:
             volumes.append(f"{str(self.shared_tempdir)}:/io/:rw")
 
             exit_code, output = self._run_docker(
-                command,
+                [c for c in command if c != ""],  # ignore empty values
                 volumes=volumes,
             )
 
