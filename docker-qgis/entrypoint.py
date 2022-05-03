@@ -448,6 +448,7 @@ def cmd_process_projectfile(args):
                 name="Project Details",
                 arguments={
                     "project": StepOutput("opening_check", "project"),
+                    "nongpkg_supported": args.nongpkg_supported,
                 },
                 method=qfieldcloud.qgis.process_projectfile.extract_project_details,
                 return_names=["project_details"],
@@ -508,6 +509,11 @@ if __name__ == "__main__":
     parser_process_projectfile.add_argument("projectid", type=str, help="projectid")
     parser_process_projectfile.add_argument(
         "project_file", type=str, help="QGIS project file path"
+    )
+    parser_process_projectfile.add_argument(
+        "--nongpkg_supported",
+        action="store_true",
+        help="Whether non-geopackages layers are supported",
     )
     parser_process_projectfile.set_defaults(func=cmd_process_projectfile)
 

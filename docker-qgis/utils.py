@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
-from libqfieldsync.layer import LayerSource
+from libqfieldsync.layer import LayerSource, SyncAction
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -471,7 +471,7 @@ def run_workflow(
         return feedback
 
 
-def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
+def get_layers_data(project: QgsProject, nongpkg_supported: bool) -> Dict[str, Dict]:
     layers_by_id = {}
 
     for layer in project.mapLayers().values():
@@ -506,6 +506,20 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
         }
 
         if layers_by_id[layer_id]["is_valid"]:
+
+            # Some accounts types don't support non-geopackage offline layers
+            if (
+                not nongpkg_supported
+                and layers_by_id[layer_id]["qfs_cloud_action"] == SyncAction.OFFLINE
+                and layer.dataProvider().name() != "gpkg"
+            ):
+                layers_by_id[layer_id][
+                    "error_code"
+                ] = "nongpkg_not_supported_by_account"
+                layers_by_id[layer_id][
+                    "provider_error_summary"
+                ] = "Your account type only supports geopackage offline layers"
+
             continue
 
         data_provider = layer.dataProvider()

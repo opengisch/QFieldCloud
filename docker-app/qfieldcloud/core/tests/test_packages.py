@@ -11,6 +11,7 @@ from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Job, Project, Secret, User
+from qfieldcloud.subscription.models import AccountType
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -76,6 +77,13 @@ class QfcTestCase(APITransactionTestCase):
             self.assertTrue(status.is_success(response.status_code))
 
     def wait_for_project_ok_status(self, project: Project, wait_s: int = 30):
+        status = self.wait_for_project_status(project, wait_s)
+        if self.wait_for_project_status() != Project.Status.OK:
+            self.fail(f"Waited for ok status, but got {status}")
+
+    def wait_for_project_status(self, project: Project, wait_s: int = 30) -> Job.Status:
+        """Retrieve the project status (waiting until the processing completes)"""
+
         jobs = Job.objects.filter(project=project).exclude(
             status__in=[Job.Status.FAILED, Job.Status.FINISHED]
         )
@@ -98,12 +106,12 @@ class QfcTestCase(APITransactionTestCase):
 
         for _ in range(wait_s):
             project.refresh_from_db()
-            if project.status == Project.Status.OK:
-                return
-            if project.status == Project.Status.FAILED:
-                self.fail("Waited for ok status, but got failed")
-                return
-
+            if project.status not in [
+                Job.Status.PENDING,
+                Job.Status.QUEUED,
+                Job.Status.STARTED,
+            ]:
+                return project.status
             time.sleep(1)
 
         self.fail(f"Waited for ok status for {wait_s} seconds")
@@ -534,3 +542,35 @@ class QfcTestCase(APITransactionTestCase):
                 "project_qfield.qgs",
             ],
         )
+
+    def test_offline_non_geopackage(self):
+        exts = ["qgs", "shp", "cpg", "dbf", "prj", "shx"]
+        files = [
+            (
+                f"delta/project_with_offline_nongpkg.{ext}",
+                f"project_with_offline_nongpkg.{ext}",
+            )
+            for ext in exts
+        ]
+
+        # When user has an account that supports non-geopackages layers, it works
+        self.user1.useraccount.account_type = AccountType.objects.create(
+            code="with_nongpkg",
+            display_name="with_nongpkg",
+            is_nongpkg_supported=True,
+        )
+        self.user1.useraccount.save()
+        self.upload_files(self.token1.key, self.project1, files=files)
+        status = self.wait_for_project_status(self.project1)
+        self.assertEqual(status, Project.Status.OK)
+
+        # When user has an account that does not supports non-geopackages layers, it fails
+        self.user1.useraccount.account_type = AccountType.objects.create(
+            code="without_nongpkg",
+            display_name="without_nongpkg",
+            is_nongpkg_supported=False,
+        )
+        self.user1.useraccount.save()
+        self.upload_files(self.token1.key, self.project1, files=files)
+        status = self.wait_for_project_status(self.project1)
+        self.assertEqual(status, Project.Status.FAILED)

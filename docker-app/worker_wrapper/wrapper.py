@@ -404,6 +404,7 @@ class ProcessProjectfileJobRun(JobRun):
         "process_projectfile",
         "%(project__id)s",
         "%(project__project_filename)s",
+        "%(nongpkg_supported_flag)s",
     ]
 
     def get_context(self, *args) -> Dict[str, Any]:
@@ -413,6 +414,11 @@ class ProcessProjectfileJobRun(JobRun):
             context["project__project_filename"] = get_qgis_project_file(
                 context["project__id"]
             )
+
+        if self.job.project.owner.useraccount.account_type.is_nongpkg_supported:
+            context["nongpkg_supported_flag"] = "--nongpkg_supported"
+        else:
+            context["nongpkg_supported_flag"] = ""
 
         return context
 

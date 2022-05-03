@@ -77,7 +77,9 @@ def load_project_file(project_filename: Path) -> QgsProject:
     return project
 
 
-def extract_project_details(project: QgsProject) -> Dict[str, str]:
+def extract_project_details(
+    project: QgsProject, nongpkg_supported: bool
+) -> Dict[str, str]:
     """Extract project details"""
     logging.info("Extract project details...")
 
@@ -119,12 +121,19 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
 
     logging.info("Extracting layer and datasource details...")
 
-    details["layers_by_id"] = get_layers_data(project)
+    details["layers_by_id"] = get_layers_data(project, nongpkg_supported)
     details["ordered_layer_ids"] = list(details["layers_by_id"].keys())
 
     logging.info(
         f'QGIS project layer checks\n{layers_data_to_string(details["layers_by_id"])}',
     )
+
+    # TODO: REVIEW: this only checks against "nongpkg_not_supported" error, not other types of errors,
+    # yet the InvalidLayersException was already in the code (but never used). Is it so that we
+    # ignore invalid layers for any other invalidity ?
+    for details in details["layers_by_id"].values():
+        if details["error_code"] == "nongpkg_not_supported_by_account":
+            raise InvalidLayersException()
 
     return details
 

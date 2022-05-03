@@ -31,6 +31,7 @@ class AccountType(models.Model):
     can_add_storage = models.BooleanField(default=False)
     can_add_job_minutes = models.BooleanField(default=False)
     is_external_db_supported = models.BooleanField(default=False)
+    is_nongpkg_supported = models.BooleanField(default=False)
     has_priority_support = models.BooleanField(default=False)
     can_configure_repackaging_cache_expire = models.BooleanField(default=False)
     min_repackaging_cache_expire = models.DurationField(
