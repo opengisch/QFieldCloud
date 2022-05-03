@@ -78,7 +78,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def wait_for_project_ok_status(self, project: Project, wait_s: int = 30):
         status = self.wait_for_project_status(project, wait_s)
-        if self.wait_for_project_status() != Project.Status.OK:
+        if status != Project.Status.OK:
             self.fail(f"Waited for ok status, but got {status}")
 
     def wait_for_project_status(self, project: Project, wait_s: int = 30) -> Job.Status:
