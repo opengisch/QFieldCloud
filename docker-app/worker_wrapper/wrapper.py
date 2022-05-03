@@ -322,26 +322,22 @@ class DeltaApplyJobRun(JobRun):
 
         return deltafile_contents
 
+    @transaction.atomic()
     def before_docker_run(self) -> None:
-        with transaction.atomic():
-            deltas = Delta.objects.select_for_update().filter(
-                last_status=Delta.Status.PENDING
-            )
+        deltas = self.job.deltas_to_apply.all()
+        deltafile_contents = self._prepare_deltas(deltas)
 
-            self.job.deltas_to_apply.add(*deltas)
-            self.delta_ids = [d.id for d in deltas]
+        self.delta_ids = [d.id for d in deltas]
 
-            ApplyJobDelta.objects.filter(
-                apply_job_id=self.job_id,
-                delta_id__in=self.delta_ids,
-            ).update(status=Delta.Status.STARTED)
+        ApplyJobDelta.objects.filter(
+            apply_job_id=self.job_id,
+            delta_id__in=self.delta_ids,
+        ).update(status=Delta.Status.STARTED)
 
-            deltafile_contents = self._prepare_deltas(deltas)
+        self.job.deltas_to_apply.update(last_status=Delta.Status.STARTED)
 
-            deltas.update(last_status=Delta.Status.STARTED)
-
-            with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
-                json.dump(deltafile_contents, f)
+        with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
+            json.dump(deltafile_contents, f)
 
     def after_docker_run(self) -> None:
         delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]
