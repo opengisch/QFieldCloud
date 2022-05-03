@@ -48,8 +48,6 @@ class FailedThumbnailGenerationException(BaseException):
 def check_valid_project_file(project_filename: Path) -> None:
     logging.info("Check QGIS project file validity...")
 
-    raise Exception("test1")
-
     if not project_filename.exists():
         raise ProjectFileNotFoundException(project_filename=project_filename)
 
@@ -70,8 +68,6 @@ def check_valid_project_file(project_filename: Path) -> None:
 def load_project_file(project_filename: Path) -> QgsProject:
     logging.info("Open QGIS project file...")
 
-    raise Exception("test2")
-
     start_app()
 
     project = QgsProject.instance()
@@ -85,8 +81,6 @@ def extract_project_details(
     project: QgsProject, nongpkg_supported: bool
 ) -> Dict[str, str]:
     """Extract project details"""
-
-    raise Exception(f"test3: {nongpkg_supported}")
 
     logging.info("Extract project details...")
 
