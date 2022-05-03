@@ -266,8 +266,23 @@ class JobRun:
 
 class PackageJobRun(JobRun):
     job_class = PackageJob
-    command = ["package", "%(project__id)s", "%(project__project_filename)s"]
+    command = [
+        "package",
+        "%(project__id)s",
+        "%(project__project_filename)s",
+        "%(nongpkg_supported_flag)s",
+    ]
     data_last_packaged_at = None
+
+    def get_context(self, *args) -> Dict[str, Any]:
+        context = super().get_context(*args)
+
+        if self.job.project.owner.useraccount.account_type.is_nongpkg_supported:
+            context["nongpkg_supported_flag"] = "--nongpkg_supported"
+        else:
+            context["nongpkg_supported_flag"] = ""
+
+        return context
 
     def before_docker_run(self) -> None:
         # at the start of docker we assume we make the snapshot of the data

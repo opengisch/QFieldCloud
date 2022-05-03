@@ -279,13 +279,15 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     return packaged_project_filename
 
 
-def _extract_layer_data(project_filename: Union[str, Path]) -> Dict:
+def _extract_layer_data(
+    project_filename: Union[str, Path], nongpkg_supported: bool
+) -> Dict:
     start_app()
 
     project_filename = str(project_filename)
     project = QgsProject.instance()
     project.read(project_filename)
-    layers_by_id = get_layers_data(project)
+    layers_by_id = get_layers_data(project, nongpkg_supported)
 
     logging.info(
         f"QGIS project layer checks\n{layers_data_to_string(layers_by_id)}",
@@ -316,6 +318,7 @@ def cmd_package_project(args):
                 name="QGIS Layers Data",
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
+                    "nongpkg_supported": args.nongpkg_supported,
                 },
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
@@ -338,6 +341,7 @@ def cmd_package_project(args):
                     "project_filename": StepOutput(
                         "package_project", "qfield_project_filename"
                     ),
+                    "nongpkg_supported": args.nongpkg_supported,
                 },
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
@@ -492,6 +496,12 @@ if __name__ == "__main__":
     parser_package = subparsers.add_parser("package", help="Package a project")
     parser_package.add_argument("projectid", type=str, help="projectid")
     parser_package.add_argument("project_file", type=str, help="QGIS project file path")
+    parser_package.add_argument(
+        "--nongpkg_supported",
+        action="store_true",
+        default=False,
+        help="Whether non-geopackages layers are supported",
+    )
     parser_package.set_defaults(func=cmd_package_project)
 
     parser_delta = subparsers.add_parser("delta_apply", help="Apply deltafile")
