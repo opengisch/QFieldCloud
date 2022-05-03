@@ -67,11 +67,8 @@ class QfcTestCase(APITestCase):
             is_public=True,
         ).save()
 
-    def tearDown(self):
-        # Remove credentials
-        self.client.credentials()
-
     def test_login(self):
+
         response = self.client.post(
             "/api/v1/auth/login/", {"username": "user1", "password": "abc123"}
         )

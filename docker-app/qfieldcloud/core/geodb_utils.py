@@ -122,7 +122,7 @@ def delete_db_and_role(dbname, username):
 
 
 def get_db_size(geodb):
-    """ Return the size of the database in bytes"""
+    """Return the size of the database in bytes"""
 
     with GeodbConnection() as conn:
         cur = conn.cursor()

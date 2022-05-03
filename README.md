@@ -11,11 +11,7 @@ If you're interested in quickly getting up and running, we suggest subscribing t
 
 ## Documentation
 
-System documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/system_documentation.org).
-
-Documentation about how QFieldCloud file's storage works is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/storage.org).
-
-Permissions documentation is [here](https://github.com/opengisch/qfieldcloud/blob/master/docs/permissions.org).
+QField and QFieldCloud documentation is deployed [here](https://docs.qfield.org).
 
 
 ## Development
@@ -39,16 +35,12 @@ desire with a good editor:
     cp .env.example .env
     emacs .env
 
-Link or copy `docker-compose.override.local.yml` into `docker-compose.override.yml`:
-
-    ln -s docker-compose.override.local.yml docker-compose.override.yml
-
 To build development images and run the containers:
 
     docker-compose up -d --build
 
-It will read `docker-compose.yml` and `docker-compose.override.yml`
-and start a django built-in server at `http://localhost:8000`.
+It will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE`
+variable and start a django built-in server at `http://localhost:8000`.
 
 Run the django database migrations.
 
@@ -77,6 +69,58 @@ database and a throwaway test storage directory):
 To run only a test module (e.g. `test_permission.py`)
 
     docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
+
+### Debugging
+
+> This section gives examples for VSCode, please adapt to your IDE)
+
+If using the provided docker-compose overrides for developement, `debugpy` is installed.
+
+You can debug interactively by adding this snipped anywhere in the code.
+```python
+import debugpy
+debugpy.listen(("0.0.0.0", 5678))
+print("debugpy waiting for debugger... 🐛")
+debugpy.wait_for_client()  # optional
+```
+
+Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5678 --wait-for-client`.
+```shell
+docker-compose run app -p 5678:5678 python -m debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py test
+docker-compose run worker_wrapper -p 5679:5679 python -m debugpy --listen 0.0.0.0:5679 --wait-for-client manage.py test
+```
+
+Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "QFC debug app",
+            "type": "python",
+            "request": "attach",
+            "justMyCode": false,
+            "connect": {"host": "localhost", "port": 5678},
+            "pathMappings": [{
+                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                "remoteRoot": "/usr/src/app/qfieldcloud"
+            }]
+        },
+        {
+            "name": "QFC debug worker_wrapper",
+            "type": "python",
+            "request": "attach",
+            "justMyCode": false,
+            "connect": {"host": "localhost", "port": 5679},
+            "pathMappings": [{
+                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                "remoteRoot": "/usr/src/app/qfieldcloud"
+            }]
+        }
+    ]
+}
+```
+
 
 ## Add root certificate
 
@@ -145,21 +189,20 @@ desire with a good editor
     cp .env.example .env
     emacs .env
 
+Do not forget to set DEBUG=0 and to adapt COMPOSE_FILE to not load local
+development configurations.
+
 Create the directory for qfieldcloud logs and supervisor socket file
 
     mkdir /var/local/qfieldcloud
 
 Run and build the docker containers
 
-    # dev server:
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d --build
-
-    # prod server
-    docker-compose -f docker-compose.yml -f docker-compose.override.prod.yml up -d --build
+    docker-compose up -d --build
 
 Run the django database migrations
 
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml exec app python manage.py migrate
+    docker-compose exec app python manage.py migrate
 
 
 ## Create a certificate using Let's Encrypt
@@ -181,20 +224,21 @@ Based on this example
 |---------------|------|----------------------|--------------------|--------------------|--------------------|
 | nginx http    | 80   | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | nginx https   | 443  | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| django http   | 5001 |                      | :white_check_mark: | :x:                | :x:                |
+| django http   | 8011 | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
 | postgres      | 5433 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | redis         | 6379 | REDIS_PORT           | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | geodb         | 5432 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :x:                |
-| minio browser | 8010 | STORAGE_BROWSER_PORT | :white_check_mark: | :x:                | :x:                |
-| smtp web      | 5000 |                      | :white_check_mark: | :x:                | :x:                |
-| smtp          | 25   |                      | :white_check_mark: | :x:                | :x:                |
-| imap          | 143  |                      | :white_check_mark: | :x:                | :x:                |
+| minio API     | 8009 | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
+| minio browser | 8010 | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
+| smtp web      | 8012 | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
+| smtp          | 25   | SMTP4DEV_SMTP_PORT   | :white_check_mark: | :x:                | :x:                |
+| imap          | 143  | SMTP4DEV_IMAP_PORT   | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
 
 Docker logs are managed by docker in the default way. To read the logs:
 
-    docker-compose -f docker-compose.yml -f docker-compose.override.dev.yml logs
+    docker-compose logs
 
 
 ### Geodb

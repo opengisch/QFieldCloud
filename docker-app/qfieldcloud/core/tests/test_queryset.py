@@ -115,10 +115,6 @@ class QfcTestCase(APITestCase):
             role=ProjectCollaborator.Roles.EDITOR,
         )
 
-    def tearDown(self):
-        # Remove credentials
-        self.client.credentials()
-
     def test_get_users(self):
         # should get all the available users
         queryset = querysets_utils.get_users("")

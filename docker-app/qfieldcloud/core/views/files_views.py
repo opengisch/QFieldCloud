@@ -1,11 +1,12 @@
 from pathlib import PurePath
 
-from django.http.response import HttpResponse, HttpResponseRedirect
+import qfieldcloud.core.utils2 as utils2
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
-from qfieldcloud.core.models import ProcessProjectfileJob, Project
-from qfieldcloud.core.utils import get_project_file_with_versions
+from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
+from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
+from qfieldcloud.core.utils2.storage import purge_old_file_versions, staticfile_prefix
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -68,6 +69,7 @@ class ListFilesView(views.APIView):
                     "version_id": version.version_id,
                     "last_modified": last_modified,
                     "is_latest": version.is_latest,
+                    "display": S3ObjectVersion(version.key, version).display,
                 }
             )
 
@@ -105,38 +107,19 @@ class DownloadPushDeleteFileView(views.APIView):
     def get(self, request, projectid, filename):
         Project.objects.get(id=projectid)
 
-        extra_args = {}
+        version = None
         if "version" in self.request.query_params:
             version = self.request.query_params["version"]
-            extra_args["VersionId"] = version
 
-        filekey = utils.safe_join("projects/{}/files/".format(projectid), filename)
-
-        url = utils.get_s3_client().generate_presigned_url(
-            "get_object",
-            Params={
-                **extra_args,
-                "Key": filekey,
-                "Bucket": utils.get_s3_bucket().name,
-                "ResponseContentType": "application/force-download",
-                "ResponseContentDisposition": f'attachment;filename="{filename}"',
-            },
-            ExpiresIn=600,
-            HttpMethod="GET",
+        key = utils.safe_join("projects/{}/files/".format(projectid), filename)
+        return utils2.storage.file_response(
+            request,
+            key,
+            presigned=True,
+            expires=600,
+            version=version,
+            as_attachment=True,
         )
-
-        if request.META.get("HTTP_HOST", "").split(":")[-1] == request.META.get(
-            "WEB_HTTPS_PORT"
-        ):
-            # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
-            response = HttpResponse()
-            response["X-Accel-Redirect"] = "/storage-download/"
-            response["redirect_uri"] = url
-
-            return response
-        else:
-            # requesting the Django development webserver
-            return HttpResponseRedirect(url)
 
     def post(self, request, projectid, filename, format=None):
         project = Project.objects.get(id=projectid)
@@ -169,11 +152,22 @@ class DownloadPushDeleteFileView(views.APIView):
 
         assert new_object
 
-        if is_qgis_project_file:
-            project.project_filename = filename
-            ProcessProjectfileJob.objects.create(
-                project=project, created_by=self.request.user
+        if staticfile_prefix(project, filename) == "" and (
+            is_qgis_project_file or project.project_filename is not None
+        ):
+            if is_qgis_project_file:
+                project.project_filename = filename
+
+            running_jobs = ProcessProjectfileJob.objects.filter(
+                project=project,
+                created_by=self.request.user,
+                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
             )
+
+            if running_jobs.count() == 0:
+                ProcessProjectfileJob.objects.create(
+                    project=project, created_by=self.request.user
+                )
 
         project.data_last_updated_at = timezone.now()
         project.save()
@@ -190,6 +184,9 @@ class DownloadPushDeleteFileView(views.APIView):
                 LogEntry.Action.CREATE,
                 changes={filename: [None, new_object.latest.e_tag]},
             )
+
+        # Delete the old file versions
+        purge_old_file_versions(project)
 
         return Response(status=status.HTTP_201_CREATED)
 
@@ -215,3 +212,23 @@ class DownloadPushDeleteFileView(views.APIView):
         )
 
         return Response(status=status.HTTP_200_OK)
+
+
+class ProjectMetafilesView(views.APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        DownloadPushDeleteFileViewPermissions,
+    ]
+
+    def get(self, request, projectid, filename):
+        key = utils.safe_join("projects/{}/meta/".format(projectid), filename)
+        return utils2.storage.file_response(request, key, presigned=True)
+
+
+class PublicFilesView(views.APIView):
+    parser_classes = [MultiPartParser]
+    permission_classes = []
+
+    def get(self, request, filename):
+        return utils2.storage.file_response(request, filename)

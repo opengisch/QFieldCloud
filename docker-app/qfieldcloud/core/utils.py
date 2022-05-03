@@ -63,6 +63,10 @@ class S3ObjectVersion:
     def is_latest(self) -> bool:
         return self._data.is_latest
 
+    @property
+    def display(self) -> str:
+        return self.last_modified.strftime("v%Y%m%d%H%M%S")
+
 
 class S3ObjectWithVersions(NamedTuple):
     latest: S3ObjectVersion
@@ -248,16 +252,16 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
 
 
 def get_s3_project_size(project_id: str) -> int:
-    """Return the size in MiB of the project on the storage, included the
-    exported files"""
+    """Return the size in MiB of the project on the storage, including the
+    exported files and their versions"""
 
     bucket = get_s3_bucket()
 
-    prefix = "projects/{}/".format(project_id)
-    total_size = 0
+    prefix = f"projects/{project_id}/"
 
-    for obj in bucket.objects.filter(Prefix=prefix):
-        total_size += obj.size
+    total_size = 0
+    for version in bucket.object_versions.filter(Prefix=prefix):
+        total_size += version.size or 0
 
     return round(total_size / (1024 * 1024), 3)
 
@@ -344,7 +348,7 @@ def get_s3_object_url(
     Returns:
         str: URL
     """
-    return f"{settings.STORAGE_ENDPOINT_URL_EXTERNAL}/{bucket.name}/{key}"
+    return f"{settings.STORAGE_ENDPOINT_URL}/{bucket.name}/{key}"
 
 
 def list_files(

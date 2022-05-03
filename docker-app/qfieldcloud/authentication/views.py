@@ -88,7 +88,7 @@ class LogoutView(APIView):
     def logout(self, request):
         try:
             now = timezone.now()
-            request.user.auth_token.filter(expired_at__gt=now).update(expired_at=now)
+            request.user.auth_tokens.filter(expires_at__gt=now).update(expires_at=now)
         except (AttributeError, ObjectDoesNotExist):
             pass
 
