@@ -1,4 +1,8 @@
+import os
+from typing import Optional
+
 from django.contrib.auth import get_user_model
+from django.contrib.sites.models import Site
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
@@ -17,6 +21,15 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
+
+
+def get_avatar_url(user: User) -> Optional[str]:
+    if hasattr(user, "useraccount") and user.useraccount.avatar_url:
+        site = Site.objects.get_current()
+        port = os.environ.get("WEB_HTTPS_PORT")
+        port = f":{port}" if port != "443" else ""
+        return f"https://{site.domain}{port}{user.useraccount.avatar_url}"
+    return None
 
 
 class UserSerializer:
@@ -80,7 +93,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
+        return get_avatar_url(obj)
 
     class Meta:
         model = User
@@ -101,7 +114,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
     username_display = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
+        return get_avatar_url(obj)
 
     def get_username_display(self, obj):
         if obj.user_type == obj.TYPE_TEAM:
@@ -139,7 +152,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         ]
 
     def get_avatar_url(self, obj):
-        return obj.useraccount.avatar_url if hasattr(obj, "useraccount") else None
+        return get_avatar_url(obj)
 
     class Meta:
         model = Organization
@@ -175,12 +188,12 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
 
 
 class TokenSerializer(serializers.ModelSerializer):
-    username = serializers.StringRelatedField(source="user")
+    username = serializers.CharField(source="user.username")
     expires_at = serializers.DateTimeField()
-    user_type = serializers.StringRelatedField(source="user")
-    first_name = serializers.StringRelatedField(source="user")
-    last_name = serializers.StringRelatedField(source="user")
-    full_name = serializers.StringRelatedField(source="user")
+    user_type = serializers.CharField(source="user.user_type")
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
+    full_name = serializers.CharField(source="user.full_name")
     token = serializers.CharField(source="key")
     email = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
@@ -189,11 +202,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return obj.user.email
 
     def get_avatar_url(self, obj):
-        return (
-            obj.user.useraccount.avatar_url
-            if hasattr(obj.user, "useraccount")
-            else None
-        )
+        return get_avatar_url(obj.user)
 
     class Meta:
         model = AuthToken
@@ -273,6 +282,7 @@ class DeltaSerializer(serializers.ModelSerializer):
 
 
 class ExportJobSerializer(serializers.ModelSerializer):
+    # TODO layers used to hold information about layer validity. No longer needed.
     layers = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField(initial="STATUS_ERROR")
 
@@ -293,7 +303,7 @@ class ExportJobSerializer(serializers.ModelSerializer):
             return None
 
         if obj.feedback.get("feedback_version") == "2.0":
-            return obj.feedback["outputs"]["package_project"]["layer_checks"]
+            return obj.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
         else:
             steps = obj.feedback.get("steps", [])
             if len(steps) > 2 and steps[1].get("stage", 1) == 2:
@@ -332,7 +342,7 @@ class JobMixin:
 
         return internal_data
 
-    def check_create_new_job(self):
+    def get_lastest_not_finished_job(self) -> Optional[Job]:
         ModelClass: Job = self.Meta.model
         last_active_job = (
             ModelClass.objects.filter(
@@ -344,9 +354,7 @@ class JobMixin:
             .last()
         )
 
-        # check if there are other jobs already active
-        if last_active_job:
-            raise exceptions.APIError("Job of this type is already running.")
+        return last_active_job
 
     class Meta:
         model = PackageJob
@@ -378,8 +386,11 @@ class JobMixin:
 
 
 class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
-    def check_create_new_job(self):
-        super().check_create_new_job()
+    def get_lastest_not_finished_job(self) -> Optional[Job]:
+        job = super().get_lastest_not_finished_job()
+        if job:
+            return job
+
         internal_value = self.to_internal_value(self.initial_data)
 
         if not internal_value["project"].project_filename:
@@ -387,21 +398,24 @@ class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
 
     class Meta(JobMixin.Meta):
         model = PackageJob
+        allow_parallel_jobs = False
 
 
 class ApplyJobSerializer(JobMixin, serializers.ModelSerializer):
     class Meta(JobMixin.Meta):
         model = ApplyJob
+        allow_parallel_jobs = True
 
 
 class ProcessProjectfileJobSerializer(JobMixin, serializers.ModelSerializer):
     class Meta(JobMixin.Meta):
         model = ProcessProjectfileJob
+        allow_parallel_jobs = True
 
 
 class JobSerializer(serializers.ModelSerializer):
-    def check_create_new_job(self):
-        return True
+    def get_lastest_not_finished_job(self):
+        return None
 
     def get_fields(self, *args, **kwargs):
         fields = super().get_fields(*args, **kwargs)
@@ -441,3 +455,4 @@ class JobSerializer(serializers.ModelSerializer):
             "output",
         )
         order_by = "-created_at"
+        allow_parallel_jobs = True

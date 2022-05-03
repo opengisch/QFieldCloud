@@ -45,6 +45,3 @@ class QfcTestCase(unittest.TestCase):
         )
 
         conn.commit()
-
-    def tearDown(self):
-        User.objects.all().delete()

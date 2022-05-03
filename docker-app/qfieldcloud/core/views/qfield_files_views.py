@@ -152,7 +152,11 @@ class ListFilesView(views.APIView):
             )
 
         if export_job.feedback.get("feedback_version") == "2.0":
-            layers = export_job.feedback["outputs"]["package_project"]["layer_checks"]
+            layers = export_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
+
+            for data in layers.values():
+                data["valid"] = data["is_valid"]
+                data["status"] = data["error_code"]
         else:
             steps = export_job.feedback.get("steps", [])
             layers = (

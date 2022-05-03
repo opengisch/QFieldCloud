@@ -193,14 +193,11 @@ def delta_apply(
 
     start_app()
     project = QgsProject.instance()
-    logging.info(project_filename)
-    logging.info(delta_filename)
+    logging.info(f'Loading project file "{project_filename}"...')
     project.read(str(project_filename))
-    logging.info(project.mapLayers())
 
+    logging.info(f'Loading delta file "{delta_filename}"...')
     delta_file = delta_file_file_loader({"delta_file": delta_filename})  # type: ignore
-
-    logging.info(delta_file)
 
     if not delta_file:
         raise Exception("Missing delta file")

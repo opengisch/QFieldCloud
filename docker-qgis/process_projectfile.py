@@ -4,8 +4,12 @@ from pathlib import Path
 from typing import Dict
 from xml.etree import ElementTree
 
-from libqfieldsync.layer import LayerSource
-from qfieldcloud.qgis.utils import BaseException, has_ping, is_localhost, start_app
+from qfieldcloud.qgis.utils import (
+    BaseException,
+    get_layers_data,
+    layers_data_to_string,
+    start_app,
+)
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
@@ -115,76 +119,12 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
 
     logging.info("Extracting layer and datasource details...")
 
-    ordered_layer_ids = []
-    layers_by_id = {}
+    details["layers_by_id"] = get_layers_data(project)
+    details["ordered_layer_ids"] = list(details["layers_by_id"].keys())
 
-    for layer in project.mapLayers().values():
-        error = layer.error()
-        layer_id = layer.id()
-        layer_source = LayerSource(layer)
-        ordered_layer_ids.append(layer_id)
-        layers_by_id[layer_id] = {
-            "id": layer_id,
-            "name": layer.name(),
-            "crs": layer.crs().authid() if layer.crs() else None,
-            "is_valid": layer.isValid(),
-            "datasource": layer.dataProvider().uri().uri()
-            if layer.dataProvider()
-            else None,
-            "type": layer.type(),
-            "type_name": layer.type().name,
-            "error_summary": error.summary() if error.messageList() else "",
-            "error_message": layer.error().message(),
-            "filename": layer_source.filename,
-            "provider_error_summary": None,
-            "provider_error_message": None,
-        }
-
-        if layers_by_id[layer_id]["is_valid"]:
-            continue
-
-        data_provider = layer.dataProvider()
-
-        if data_provider:
-            data_provider_error = data_provider.error()
-
-            layers_by_id[layer_id]["provider_error_summary"] = (
-                data_provider_error.summary()
-                if data_provider_error.messageList()
-                else ""
-            )
-            layers_by_id[layer_id][
-                "provider_error_message"
-            ] = data_provider_error.message()
-
-            if not layers_by_id[layer_id]["provider_error_summary"]:
-                service = data_provider.uri().service()
-                if service:
-                    layers_by_id[layer_id][
-                        "provider_error_summary"
-                    ] = f'Unable to connect to service "{service}"'
-
-                host = data_provider.uri().host()
-                port = (
-                    int(data_provider.uri().port())
-                    if data_provider.uri().port()
-                    else None
-                )
-                if host and (is_localhost(host, port) or has_ping(host)):
-                    layers_by_id[layer_id][
-                        "provider_error_summary"
-                    ] = f'Unable to connect to host "{host}"'
-
-            logging.info(
-                f'Layer "{layer.name()}" seems to be invalid: {layers_by_id[layer_id]["provider_error_summary"]}'
-            )
-        else:
-            layers_by_id[layer_id][
-                "provider_error_summary"
-            ] = "No data provider available"
-
-    details["layers_by_id"] = layers_by_id
-    details["ordered_layer_ids"] = ordered_layer_ids
+    logging.info(
+        f'QGIS project layer checks\n{layers_data_to_string(details["layers_by_id"])}',
+    )
 
     return details
 

@@ -261,7 +261,7 @@ def get_s3_project_size(project_id: str) -> int:
 
     total_size = 0
     for version in bucket.object_versions.filter(Prefix=prefix):
-        total_size += version.size
+        total_size += version.size or 0
 
     return round(total_size / (1024 * 1024), 3)
 
@@ -348,7 +348,7 @@ def get_s3_object_url(
     Returns:
         str: URL
     """
-    return f"{settings.STORAGE_ENDPOINT_URL_EXTERNAL}/{bucket.name}/{key}"
+    return f"{settings.STORAGE_ENDPOINT_URL}/{bucket.name}/{key}"
 
 
 def list_files(
