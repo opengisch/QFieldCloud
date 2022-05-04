@@ -132,8 +132,8 @@ def extract_project_details(
     # TODO: REVIEW: this only checks against "nongpkg_not_supported" error, not other types of errors,
     # yet the InvalidLayersException was already in the code (but never used). Is it so that we
     # ignore invalid layers for any other invalidity ?
-    for details in details["layers_by_id"].values():
-        if details["error_code"] == "nongpkg_not_supported_by_account":
+    for detail in details["layers_by_id"].values():
+        if detail["error_code"] == "nongpkg_not_supported_by_account":
             raise InvalidLayersException()
 
     return details
