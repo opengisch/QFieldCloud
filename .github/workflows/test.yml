@@ -51,8 +51,8 @@ jobs:
       - name: Remove images not worth caching
         run: |
           docker kill $(docker ps -q);
-          docker image ls -qa > all_images.txt;
-          docker image ls -qa --filter=reference='qfield*' > our_images.txt;
+          docker image ls -qa | sort > all_images.txt;
+          docker image ls -qa --filter=reference='qfield*' | sort > our_images.txt;
           comm -23 all_images.txt our_images.txt > not_our_images.txt;
           docker image rm --force $(cat not_our_images.txt);
           docker buildx prune --force;
