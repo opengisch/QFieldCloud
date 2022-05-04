@@ -519,7 +519,6 @@ def get_layers_data(project: QgsProject, nongpkg_supported: bool) -> Dict[str, D
                 layers_by_id[layer_id][
                     "provider_error_summary"
                 ] = "Your account type only supports geopackage offline layers"
-                layers_by_id[layer_id]["is_valid"] = False
 
             continue
 

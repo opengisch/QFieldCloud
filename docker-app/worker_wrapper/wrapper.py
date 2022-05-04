@@ -108,8 +108,7 @@ class JobRun:
             volumes.append(f"{str(self.shared_tempdir)}:/io/:rw")
 
             exit_code, output = self._run_docker(
-                # [c for c in command if c != ""],  # ignore empty (for flag arguments)
-                command,
+                [c for c in command if c != ""],  # ignore empty values
                 volumes=volumes,
             )
 
@@ -271,18 +270,17 @@ class PackageJobRun(JobRun):
         "package",
         "%(project__id)s",
         "%(project__project_filename)s",
-        "%(nongpkg_supported)s",
+        "%(nongpkg_supported_flag)s",
     ]
     data_last_packaged_at = None
 
     def get_context(self, *args) -> Dict[str, Any]:
         context = super().get_context(*args)
 
-        context["nongpkg_supported"] = (
-            "yes"
-            if self.job.project.owner.useraccount.account_type.is_nongpkg_supported
-            else "no"
-        )
+        if self.job.project.owner.useraccount.account_type.is_nongpkg_supported:
+            context["nongpkg_supported_flag"] = "--nongpkg_supported"
+        else:
+            context["nongpkg_supported_flag"] = ""
 
         return context
 
@@ -417,7 +415,7 @@ class ProcessProjectfileJobRun(JobRun):
         "process_projectfile",
         "%(project__id)s",
         "%(project__project_filename)s",
-        "%(nongpkg_supported)s",
+        "%(nongpkg_supported_flag)s",
     ]
 
     def get_context(self, *args) -> Dict[str, Any]:
@@ -428,11 +426,10 @@ class ProcessProjectfileJobRun(JobRun):
                 context["project__id"]
             )
 
-        context["nongpkg_supported"] = (
-            "yes"
-            if self.job.project.owner.useraccount.account_type.is_nongpkg_supported
-            else "no"
-        )
+        if self.job.project.owner.useraccount.account_type.is_nongpkg_supported:
+            context["nongpkg_supported_flag"] = "--nongpkg_supported"
+        else:
+            context["nongpkg_supported_flag"] = ""
 
         return context
 
