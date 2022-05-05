@@ -446,12 +446,28 @@ class QfcTestCase(APITransactionTestCase):
         self.conn.commit()
 
         Secret.objects.create(
-            name="PG_SERVICE_GEODB",
+            name="PG_SERVICE_GEODB1",
             type=Secret.Type.PGSERVICE,
             project=self.project1,
             created_by=self.project1.owner,
             value=(
-                "[geodb]\n"
+                "[geodb1]\n"
+                "dbname=test\n"
+                "host=geodb\n"
+                "port=5432\n"
+                f"user={os.environ.get('GEODB_USER')}\n"
+                f"password={os.environ.get('GEODB_PASSWORD')}\n"
+                "sslmode=disable\n"
+            ),
+        )
+
+        Secret.objects.create(
+            name="PG_SERVICE_GEODB2",
+            type=Secret.Type.PGSERVICE,
+            project=self.project1,
+            created_by=self.project1.owner,
+            value=(
+                "[geodb2]\n"
                 "dbname=test\n"
                 "host=geodb\n"
                 "port=5432\n"
