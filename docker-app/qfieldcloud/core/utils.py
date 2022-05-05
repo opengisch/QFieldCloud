@@ -434,8 +434,7 @@ def list_versions(
 
         versions.append(S3ObjectVersion(name, v))
 
-    versions.sort(key=lambda v: v.last_modified)
-    versions.sort(key=lambda v: v.key)
+    versions.sort(key=lambda v: (v.key, v.last_modified))
 
     return versions
 
