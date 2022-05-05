@@ -4,7 +4,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, List, Type
+from typing import Any, List, Optional, Type
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
@@ -979,15 +979,22 @@ class Project(models.Model):
 
     @property
     def has_online_vector_data(self) -> bool:
+        """Will return true if project_details are not available"""
         # it's safer to assume there is an online vector layer
-        if not self.project_details:
+        value = self._has_online_vector_data
+        if value is None:
             return True
+        return value
+
+    @property
+    def _has_online_vector_data(self) -> Optional[bool]:
+        if not self.project_details:
+            return None
 
         layers_by_id = self.project_details.get("layers_by_id")
 
-        # it's safer to assume there is an online vector layer
         if layers_by_id is None:
-            return True
+            return None
 
         has_online_vector_layers = False
 
@@ -1002,9 +1009,12 @@ class Project(models.Model):
 
     def validate_according_to_owner_account(self) -> bool:
         if (
-            self.has_online_vector_data
+            self._has_online_vector_data
             and not self.owner.useraccount.account_type.is_external_db_supported
         ):
+            raise Exception(
+                f"Supported : {self.owner.useraccount.account_type.is_external_db_supported}"
+            )
             raise QuotaError(
                 _(
                     "This project contains invalid layers which is not supported by the project owner's account type."
