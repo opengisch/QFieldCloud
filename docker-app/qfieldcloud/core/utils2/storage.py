@@ -104,7 +104,7 @@ def file_response(
 def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
-    NOTE you need to set the URI to the user account manually
+    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
 
     Args:
         user (User):
@@ -138,6 +138,13 @@ def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F
 
 
 def remove_user_avatar(user: "User") -> None:  # noqa: F821
+    """Removes the user's avatar file.
+
+    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
+
+    Args:
+        user (User):
+    """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = user.useraccount.avatar_uri
     bucket.object_versions.filter(Prefix=key).delete()
@@ -148,7 +155,7 @@ def upload_project_thumbail(
 ) -> str:
     """Uploads a picture as a project thumbnail.
 
-    NOTE you need to set the URI to the project manually
+    NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     Args:
         project (Project):
@@ -187,7 +194,8 @@ def upload_project_thumbail(
 def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     """Uploads a picture as a project thumbnail.
 
-    NOTE you need to remove the URI to the project manually
+    NOTE this function does NOT modify the `Project.thumbnail_uri` field
+
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = project.thumbnail_uri
