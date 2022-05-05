@@ -877,6 +877,7 @@ class Project(models.Model):
         on_delete=models.SET_NULL,
         related_name="last_job_of",
         null=True,
+        blank=True,
     )
 
     overwrite_conflicts = models.BooleanField(
