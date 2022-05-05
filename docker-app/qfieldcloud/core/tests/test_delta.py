@@ -57,6 +57,24 @@ class QfcTestCase(APITransactionTestCase):
             role=ProjectCollaborator.Roles.ADMIN,
         )
 
+    def tearDown(self):
+        while True:
+            # make sure there are no active jobs in the queue
+            if (
+                Job.objects.all()
+                .filter(
+                    status__in=[
+                        Job.Status.PENDING,
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ]
+                )
+                .count()
+                == 0
+            ):
+                time.sleep(1)
+                return
+
     def fail(self, msg: str, job: Job = None):
         if job:
             msg += f"\n\nOutput:\n================\n{job.output}\n================"
@@ -400,7 +418,7 @@ class QfcTestCase(APITransactionTestCase):
                 ],
                 [
                     "8adac0df-e1d3-473e-b150-f8c4a91b4781",
-                    "STATUS_UNPERMITTED",
+                    "STATUS_APPLIED",
                     self.user2.username,
                 ],
             ],
@@ -765,7 +783,10 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
-        job = Job.objects.filter(project=self.project1).latest("updated_at")
+        job = Job.objects.filter(
+            project=self.project1,
+            type=Job.Type.DELTA_APPLY,
+        ).latest("updated_at")
 
         for _ in range(10):
 
@@ -784,6 +805,7 @@ class QfcTestCase(APITransactionTestCase):
                     break
 
                 if payload[idx]["status"] in failing_status:
+                    job.refresh_from_db()
                     self.fail(f"Got failing status {payload[idx]['status']}", job=job)
                     return
 
@@ -793,6 +815,8 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["id"], delta_id)
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
-                return
+
+                if len(final_values) == idx + 1:
+                    return
 
         self.fail("Worker didn't finish", job=job)

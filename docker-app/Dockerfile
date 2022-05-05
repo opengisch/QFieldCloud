@@ -42,6 +42,9 @@ USER app
 
 EXPOSE 8000
 
+# create an empty JSON fixture for the sole purpose of Django's testserver
+RUN echo '{}' > fixture.json
+
 # run entrypoint.prod.sh
 COPY ./entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

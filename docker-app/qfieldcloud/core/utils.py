@@ -28,6 +28,7 @@ class S3Object(NamedTuple):
     last_modified: datetime
     size: int
     etag: str
+    md5sum: str
 
 
 class S3ObjectVersion:
@@ -58,6 +59,10 @@ class S3ObjectVersion:
     @property
     def e_tag(self) -> str:
         return self._data.e_tag
+
+    @property
+    def md5sum(self) -> str:
+        return self._data.e_tag.replace('"', "")
 
     @property
     def is_latest(self) -> bool:
@@ -143,6 +148,38 @@ def _get_sha256_memory_file(
 def _get_sha256_file(file: IO) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.sha256()
+    buf = file.read(BLOCKSIZE)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = file.read(BLOCKSIZE)
+    file.seek(0)
+    return hasher.hexdigest()
+
+
+def get_md5sum(file: IO) -> str:
+    """Return the md5sum hash of the file"""
+    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
+        return _get_md5sum_memory_file(file)
+    else:
+        return _get_md5sum_file(file)
+
+
+def _get_md5sum_memory_file(
+    file: Union[InMemoryUploadedFile, TemporaryUploadedFile]
+) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+
+    for chunk in file.chunks(BLOCKSIZE):
+        hasher.update(chunk)
+
+    file.seek(0)
+    return hasher.hexdigest()
+
+
+def _get_md5sum_file(file: IO) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
     buf = file.read(BLOCKSIZE)
     while len(buf) > 0:
         hasher.update(buf)
@@ -303,7 +340,7 @@ def get_project_file_with_versions(
     return files[0] if files else None
 
 
-def get_project_package_files(project_id: str) -> Iterable[S3Object]:
+def get_project_package_files(project_id: str, package_id: str) -> Iterable[S3Object]:
     """Returns a list of package files.
 
     Args:
@@ -313,7 +350,7 @@ def get_project_package_files(project_id: str) -> Iterable[S3Object]:
         Iterable[S3ObjectWithVersions]: the list of package files
     """
     bucket = get_s3_bucket()
-    prefix = f"projects/{project_id}/export/"
+    prefix = f"projects/{project_id}/packages/{package_id}/"
 
     return list_files(bucket, prefix, strip_prefix=True)
 
@@ -355,8 +392,9 @@ def list_files(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: bool = True,
-) -> Iterable[S3Object]:
+) -> List[S3Object]:
     """Iterator that lists a bucket's objects under prefix."""
+    files = []
     for f in bucket.objects.filter(Prefix=prefix):
         if strip_prefix:
             start_idx = len(prefix)
@@ -364,21 +402,29 @@ def list_files(
         else:
             name = f.key
 
-        yield S3Object(
-            name=name,
-            key=f.key,
-            last_modified=f.last_modified,
-            size=f.size,
-            etag=f.e_tag,
+        files.append(
+            S3Object(
+                name=name,
+                key=f.key,
+                last_modified=f.last_modified,
+                size=f.size,
+                etag=f.e_tag,
+                md5sum=f.e_tag.replace('"', ""),
+            )
         )
+
+    files.sort(key=lambda f: f.name)
+
+    return files
 
 
 def list_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: bool = True,
-) -> Iterable[S3ObjectVersion]:
+) -> List[S3ObjectVersion]:
     """Iterator that lists a bucket's objects under prefix."""
+    versions = []
     for v in bucket.object_versions.filter(Prefix=prefix):
         if strip_prefix:
             start_idx = len(prefix)
@@ -386,7 +432,11 @@ def list_versions(
         else:
             name = v.key
 
-        yield S3ObjectVersion(name, v)
+        versions.append(S3ObjectVersion(name, v))
+
+    versions.sort(key=lambda v: (v.key, v.last_modified))
+
+    return versions
 
 
 def list_files_with_versions(

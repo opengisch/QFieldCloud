@@ -64,7 +64,10 @@ Now you can get started by adding the first user that would also be a super user
 To run all the unit and functional tests (on a throwaway test
 database and a throwaway test storage directory):
 
-    docker-compose run app python manage.py test
+    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
+    docker-compose up -d
+    docker-compose run app python manage.py migrate
+    docker-compose run app python manage.py test --keepdb
 
 To run only a test module (e.g. `test_permission.py`)
 

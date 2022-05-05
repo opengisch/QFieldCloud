@@ -5,6 +5,7 @@ import sys
 import tempfile
 import traceback
 import uuid
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -16,6 +17,7 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -194,13 +196,23 @@ class JobRun:
     ) -> Tuple[int, bytes]:
         QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+        QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ.get(
+            "QFIELDCLOUD_WORKER_QFIELDCLOUD_URL", None
+        )
         TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
             "TRANSFORMATION_GRIDS_VOLUME_NAME", None
         )
 
         assert QGIS_CONTAINER_NAME
         assert QFIELDCLOUD_HOST
+        assert QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
         assert TRANSFORMATION_GRIDS_VOLUME_NAME
+
+        token = AuthToken.objects.create(
+            user=self.job.created_by,
+            client_type=AuthToken.ClientType.WORKER,
+            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+        )
 
         client = docker.from_env()
 
@@ -221,16 +233,10 @@ class JobRun:
             QGIS_CONTAINER_NAME,
             command,
             environment={
-                # NOTE the envvars below will overwrite the ones provided via `extra_envvars`
-                **extra_envvars,
                 "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
-                "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
-                "STORAGE_SECRET_ACCESS_KEY": os.environ.get(
-                    "STORAGE_SECRET_ACCESS_KEY"
-                ),
-                "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
-                "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
-                "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+                "QFIELDCLOUD_TOKEN": token.key,
+                "QFIELDCLOUD_URL": QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+                "JOB_ID": self.job_id,
                 "PROJ_DOWNLOAD_DIR": "/transformation_grids",
                 "QT_QPA_PLATFORM": "offscreen",
             },
@@ -277,6 +283,7 @@ class PackageJobRun(JobRun):
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         if self.job.status == Job.Status.FINISHED:
             self.job.project.data_last_packaged_at = self.data_last_packaged_at
+            self.job.project.last_package_job = self.job
             self.job.project.save()
 
 
