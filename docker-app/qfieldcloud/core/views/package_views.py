@@ -20,8 +20,6 @@ class PackageViewPermissions(permissions.BasePermission):
 
 class PackageUploadViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        # TODO allow only WORKER tokens here!!!
-
         if request.auth.client_type != AuthToken.ClientType.WORKER:
             return False
 
@@ -32,7 +30,8 @@ class PackageUploadViewPermissions(permissions.BasePermission):
             if not permissions_utils.can_update_project(request.user, project):
                 return False
 
-            # check if the package job exists and it is already started, but not finished yet
+            # Check if the package job exists and it is already started, but not finished yet.
+            # This is extra check that the request is coming from a currently active job.
             PackageJob.objects.get(
                 id=job_id,
                 status=PackageJob.Status.STARTED,

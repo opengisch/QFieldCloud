@@ -157,7 +157,7 @@ def _get_sha256_file(file: IO) -> str:
 
 
 def get_md5sum(file: IO) -> str:
-    """Return the sha256 hash of the file"""
+    """Return the md5sum hash of the file"""
     if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
         return _get_md5sum_memory_file(file)
     else:
