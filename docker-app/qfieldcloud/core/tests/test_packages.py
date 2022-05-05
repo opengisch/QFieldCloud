@@ -200,6 +200,10 @@ class QfcTestCase(APITransactionTestCase):
         self.fail("Worker didn't finish")
 
     def test_list_files_for_qfield(self):
+        # This requires is_external_db_supported
+        self.user1.useraccount.account_type.is_external_db_supported = True
+        self.user1.useraccount.account_type.save()
+
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
         self.conn.commit()
@@ -413,6 +417,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(self.project1.needs_repackaging)
 
     def test_needs_repackaging_with_online_vector(self):
+        # This requires is_external_db_supported
+        self.user1.useraccount.account_type.is_external_db_supported = True
+        self.user1.useraccount.account_type.save()
+
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
         self.conn.commit()
