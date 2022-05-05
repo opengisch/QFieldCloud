@@ -497,10 +497,10 @@ if __name__ == "__main__":
     parser_package.add_argument("projectid", type=str, help="projectid")
     parser_package.add_argument("project_file", type=str, help="QGIS project file path")
     parser_package.add_argument(
-        "--nongpkg_supported",
-        action="store_true",
-        default=False,
-        help="Whether non-geopackages layers are supported",
+        "nongpkg_supported",
+        type=str,
+        choices=["yes", "no"],
+        help="Whether non-geopackages layers are supported by the project owner's account",
     )
     parser_package.set_defaults(func=cmd_package_project)
 
