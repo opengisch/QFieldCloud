@@ -79,7 +79,6 @@ def load_project_file(project_filename: Path) -> QgsProject:
 
 def extract_project_details(project: QgsProject) -> Dict[str, str]:
     """Extract project details"""
-
     logging.info("Extract project details...")
 
     details = {}

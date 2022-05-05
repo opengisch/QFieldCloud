@@ -266,11 +266,7 @@ class JobRun:
 
 class PackageJobRun(JobRun):
     job_class = PackageJob
-    command = [
-        "package",
-        "%(project__id)s",
-        "%(project__project_filename)s",
-    ]
+    command = ["package", "%(project__id)s", "%(project__project_filename)s"]
     data_last_packaged_at = None
 
     def before_docker_run(self) -> None:

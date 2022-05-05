@@ -1002,7 +1002,7 @@ class Project(models.Model):
 
     def validate_according_to_owner_account(self) -> bool:
         if (
-            self.has_online_vector_layers
+            self.has_online_vector_data
             and not self.owner.useraccount.account_type.is_external_db_supported
         ):
             raise QuotaError(

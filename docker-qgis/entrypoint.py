@@ -314,7 +314,9 @@ def cmd_package_project(args):
             Step(
                 id="qgis_layers_data",
                 name="QGIS Layers Data",
-                arguments={"project_filename": WorkDirPath("files", args.project_file)},
+                arguments={
+                    "project_filename": WorkDirPath("files", args.project_file),
+                },
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
                 outputs=["layers_by_id"],
@@ -335,7 +337,7 @@ def cmd_package_project(args):
                 arguments={
                     "project_filename": StepOutput(
                         "package_project", "qfield_project_filename"
-                    )
+                    ),
                 },
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
@@ -444,7 +446,9 @@ def cmd_process_projectfile(args):
             Step(
                 id="project_details",
                 name="Project Details",
-                arguments={"project": StepOutput("opening_check", "project")},
+                arguments={
+                    "project": StepOutput("opening_check", "project"),
+                },
                 method=qfieldcloud.qgis.process_projectfile.extract_project_details,
                 return_names=["project_details"],
                 outputs=["project_details"],
