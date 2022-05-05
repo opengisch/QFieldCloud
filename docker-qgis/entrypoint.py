@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import ast
 import hashlib
 import logging
 import os
@@ -280,15 +279,13 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     return packaged_project_filename
 
 
-def _extract_layer_data(
-    project_filename: Union[str, Path], nongpkg_supported: bool
-) -> Dict:
+def _extract_layer_data(project_filename: Union[str, Path]) -> Dict:
     start_app()
 
     project_filename = str(project_filename)
     project = QgsProject.instance()
     project.read(project_filename)
-    layers_by_id = get_layers_data(project, nongpkg_supported)
+    layers_by_id = get_layers_data(project)
 
     logging.info(
         f"QGIS project layer checks\n{layers_data_to_string(layers_by_id)}",
@@ -317,10 +314,7 @@ def cmd_package_project(args):
             Step(
                 id="qgis_layers_data",
                 name="QGIS Layers Data",
-                arguments={
-                    "project_filename": WorkDirPath("files", args.project_file),
-                    "nongpkg_supported": args.nongpkg_supported,
-                },
+                arguments={"project_filename": WorkDirPath("files", args.project_file)},
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
                 outputs=["layers_by_id"],
@@ -341,8 +335,7 @@ def cmd_package_project(args):
                 arguments={
                     "project_filename": StepOutput(
                         "package_project", "qfield_project_filename"
-                    ),
-                    "nongpkg_supported": args.nongpkg_supported,
+                    )
                 },
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
@@ -451,10 +444,7 @@ def cmd_process_projectfile(args):
             Step(
                 id="project_details",
                 name="Project Details",
-                arguments={
-                    "project": StepOutput("opening_check", "project"),
-                    "nongpkg_supported": args.nongpkg_supported,
-                },
+                arguments={"project": StepOutput("opening_check", "project")},
                 method=qfieldcloud.qgis.process_projectfile.extract_project_details,
                 return_names=["project_details"],
                 outputs=["project_details"],
@@ -497,11 +487,6 @@ if __name__ == "__main__":
     parser_package = subparsers.add_parser("package", help="Package a project")
     parser_package.add_argument("projectid", type=str, help="projectid")
     parser_package.add_argument("project_file", type=str, help="QGIS project file path")
-    parser_package.add_argument(
-        "nongpkg_supported",
-        type=ast.literal_eval,
-        help="Whether non-geopackages layers are supported by the project owner's account (truethy value)",
-    )
     parser_package.set_defaults(func=cmd_package_project)
 
     parser_delta = subparsers.add_parser("delta_apply", help="Apply deltafile")
@@ -519,11 +504,6 @@ if __name__ == "__main__":
     parser_process_projectfile.add_argument("projectid", type=str, help="projectid")
     parser_process_projectfile.add_argument(
         "project_file", type=str, help="QGIS project file path"
-    )
-    parser_process_projectfile.add_argument(
-        "nongpkg_supported",
-        type=ast.literal_eval,
-        help="Whether non-geopackages layers are supported by the project owner's account (truethy value)",
     )
     parser_process_projectfile.set_defaults(func=cmd_process_projectfile)
 

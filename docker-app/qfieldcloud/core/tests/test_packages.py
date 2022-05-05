@@ -542,21 +542,16 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    def test_offline_non_geopackage(self):
-        exts = ["qgs", "shp", "cpg", "dbf", "prj", "shx"]
+    def test_external_db_supported(self):
         files = [
-            (
-                f"delta/project_with_offline_nongpkg.{ext}",
-                f"project_with_offline_nongpkg.{ext}",
-            )
-            for ext in exts
+            ("delta/project_with_external_db.qgs", "project_with_external_db.qgs"),
         ]
 
         # When user has an account that supports non-geopackages layers, it works
         self.user1.useraccount.account_type = AccountType.objects.create(
-            code="with_nongpkg",
-            display_name="with_nongpkg",
-            is_nongpkg_supported=True,
+            code="with_external_db",
+            display_name="with_external_db",
+            is_external_db_supported=True,
         )
         self.user1.useraccount.save()
         self.upload_files(self.token1.key, self.project1, files=files)
@@ -569,9 +564,9 @@ class QfcTestCase(APITransactionTestCase):
 
         # When user has an account that does not supports non-geopackages layers, it fails
         self.user1.useraccount.account_type = AccountType.objects.create(
-            code="without_nongpkg",
-            display_name="without_nongpkg",
-            is_nongpkg_supported=False,
+            code="without_external_db",
+            display_name="without_external_db",
+            is_external_db_supported=False,
         )
         self.user1.useraccount.save()
         self.upload_files(self.token1.key, self.project1, files=files)

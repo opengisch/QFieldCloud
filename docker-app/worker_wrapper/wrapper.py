@@ -270,20 +270,8 @@ class PackageJobRun(JobRun):
         "package",
         "%(project__id)s",
         "%(project__project_filename)s",
-        "%(nongpkg_supported)s",
     ]
     data_last_packaged_at = None
-
-    def get_context(self, *args) -> Dict[str, Any]:
-        context = super().get_context(*args)
-
-        context["nongpkg_supported"] = (
-            "1"
-            if self.job.project.owner.useraccount.account_type.is_nongpkg_supported
-            else "0"
-        )
-
-        return context
 
     def before_docker_run(self) -> None:
         # at the start of docker we assume we make the snapshot of the data
@@ -416,7 +404,6 @@ class ProcessProjectfileJobRun(JobRun):
         "process_projectfile",
         "%(project__id)s",
         "%(project__project_filename)s",
-        "%(nongpkg_supported)s",
     ]
 
     def get_context(self, *args) -> Dict[str, Any]:
@@ -426,12 +413,6 @@ class ProcessProjectfileJobRun(JobRun):
             context["project__project_filename"] = get_qgis_project_file(
                 context["project__id"]
             )
-
-        context["nongpkg_supported"] = (
-            "1"
-            if self.job.project.owner.useraccount.account_type.is_nongpkg_supported
-            else "0"
-        )
 
         return context
 
