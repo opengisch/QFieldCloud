@@ -1296,13 +1296,13 @@ class Secret(models.Model):
             RegexValidator(
                 r"^[A-Z]+[A-Z0-9_]+$",
                 _(
-                    "Must start with a letter and followed by capital letters, numbers or underscores."
+                    "Must start with a capital letter and followed by capital letters, numbers or underscores."
                 ),
             )
         ],
         help_text=_(
             _(
-                "Must start with a letter and followed by capital letters, numbers or underscores."
+                "Must start with a capital letter and followed by capital letters, numbers or underscores."
             ),
         ),
     )

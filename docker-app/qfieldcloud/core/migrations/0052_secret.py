@@ -28,13 +28,13 @@ class Migration(migrations.Migration):
                 (
                     "name",
                     models.TextField(
-                        help_text="Must start with a letter and followed by capital letters, numbers or underscores.",
+                        help_text="Must start with a capital letter and followed by capital letters, numbers or underscores.",
                         max_length=255,
                         unique=True,
                         validators=[
                             django.core.validators.RegexValidator(
                                 "^[A-Z]+[A-Z0-9_]+$",
-                                "Must start with a letter and followed by capital letters, numbers or underscores.",
+                                "Must start with a capital letter and followed by capital letters, numbers or underscores.",
                             )
                         ],
                     ),
