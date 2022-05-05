@@ -104,17 +104,8 @@ class QfcTestCase(APITransactionTestCase):
         if not has_no_pending_jobs:
             self.fail(f"Still pending jobs after waiting for {wait_s} seconds")
 
-        for _ in range(wait_s):
-            project.refresh_from_db()
-            if project.status not in [
-                Job.Status.PENDING,
-                Job.Status.QUEUED,
-                Job.Status.STARTED,
-            ]:
-                return project.status
-            time.sleep(1)
-
-        self.fail(f"Waited for ok status for {wait_s} seconds")
+        project.refresh_from_db()
+        return project.status
 
     def upload_files_and_check_package(
         self,
