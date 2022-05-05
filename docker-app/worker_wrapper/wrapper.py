@@ -278,9 +278,9 @@ class PackageJobRun(JobRun):
         context = super().get_context(*args)
 
         context["nongpkg_supported"] = (
-            "yes"
+            "1"
             if self.job.project.owner.useraccount.account_type.is_nongpkg_supported
-            else "no"
+            else "0"
         )
 
         return context
@@ -428,9 +428,9 @@ class ProcessProjectfileJobRun(JobRun):
             )
 
         context["nongpkg_supported"] = (
-            "yes"
+            "1"
             if self.job.project.owner.useraccount.account_type.is_nongpkg_supported
-            else "no"
+            else "0"
         )
 
         return context

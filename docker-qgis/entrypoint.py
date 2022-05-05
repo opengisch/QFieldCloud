@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import ast
 import hashlib
 import logging
 import os
@@ -498,9 +499,8 @@ if __name__ == "__main__":
     parser_package.add_argument("project_file", type=str, help="QGIS project file path")
     parser_package.add_argument(
         "nongpkg_supported",
-        type=str,
-        choices=["yes", "no"],
-        help="Whether non-geopackages layers are supported by the project owner's account",
+        type=ast.literal_eval,
+        help="Whether non-geopackages layers are supported by the project owner's account (truethy value)",
     )
     parser_package.set_defaults(func=cmd_package_project)
 
@@ -522,9 +522,8 @@ if __name__ == "__main__":
     )
     parser_process_projectfile.add_argument(
         "nongpkg_supported",
-        type=str,
-        choices=["yes", "no"],
-        help="Whether non-geopackages layers are supported by the project owner's account",
+        type=ast.literal_eval,
+        help="Whether non-geopackages layers are supported by the project owner's account (truethy value)",
     )
     parser_process_projectfile.set_defaults(func=cmd_process_projectfile)
 
