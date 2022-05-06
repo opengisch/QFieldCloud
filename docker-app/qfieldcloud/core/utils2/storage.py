@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import PurePath
-from typing import IO, List
+from typing import IO, List, Set
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
@@ -297,3 +297,24 @@ def delete_file_version(
         file_version._data.delete()
 
     return versions_to_delete
+
+
+def get_stored_package_ids(project_id: str) -> Set[str]:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/packages/"
+    root_path = PurePath(prefix)
+    package_ids = set()
+
+    for file in bucket.objects.filter(Prefix=prefix):
+        file_path = PurePath(file.key)
+        parts = file_path.relative_to(root_path).parts
+        package_ids.add(parts[0])
+
+    return package_ids
+
+
+def delete_stored_package(project_id: str, package_id: str) -> None:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/packages/{package_id}/"
+
+    bucket.objects.filter(Prefix=prefix).delete()

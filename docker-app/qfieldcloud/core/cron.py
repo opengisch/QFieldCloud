@@ -8,7 +8,8 @@ from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
 from sentry_sdk import capture_message
 
-from ..core.models import Job
+from ..core.models import Job, Project
+from ..core.utils2 import storage
 from .invitations_utils import send_invitation
 
 logger = logging.getLogger(__name__)
@@ -76,3 +77,27 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
             },
             output="Job unexpectedly terminated.",
         )
+
+
+class DeleteDanglingProjectPackagesJob(CronJobBase):
+    schedule = Schedule(run_every_mins=60)
+    code = "qfieldcloud.delete_dangling_project_packages"
+
+    def do(self):
+        # get only the projects updated in the last a little more than an hour,
+        # as we assume the rest of the projects have been cleaned from dangling
+        # packages in the previous CRON run
+        projects = Project.objects.filter(
+            updated_at__gt=timezone.now() - timedelta(minutes=65)
+        )
+
+        for project in projects:
+            project_id = str(project.id)
+            package_ids = storage.get_stored_package_ids(project_id)
+
+            for package_id in package_ids:
+                # keep the last package
+                if package_id == str(project.last_package_job_id):
+                    continue
+
+                storage.delete_stored_package(project_id, package_id)
