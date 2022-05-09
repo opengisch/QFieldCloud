@@ -1019,12 +1019,9 @@ class Project(models.Model):
             self._has_online_vector_data
             and not self.owner.useraccount.account_type.is_external_db_supported
         ):
-            raise Exception(
-                f"Supported : {self.owner.useraccount.account_type.is_external_db_supported}"
-            )
             raise QuotaError(
                 _(
-                    "This project contains invalid layers which is not supported by the project owner's account type."
+                    "This project contains online layers which is not supported by the project owner's account type."
                 )
             )
         return True
