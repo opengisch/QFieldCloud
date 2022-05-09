@@ -10,6 +10,7 @@ from django.http.response import HttpResponse, HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Job, PackageJob, Project, User
+from qfieldcloud.subscription.models import AccountType
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -81,7 +82,12 @@ class QfcTestCase(APITransactionTestCase):
         except Exception:
             self.assertTrue(status.is_success(response.status_code), response.content)
 
+    def enable_external_db_support(self, support=True):
+        """Set is_external_supported for all user types"""
+        AccountType.objects.update(is_external_db_supported=support)
+
     def test_list_files_for_qfield(self):
+        self.enable_external_db_support()
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         cur = self.conn.cursor()
@@ -345,6 +351,8 @@ class QfcTestCase(APITransactionTestCase):
         self.fail("Worker didn't finish or there was an error")
 
     def test_download_project_with_broken_layer_datasources(self):
+        self.enable_external_db_support()
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Add files to the project

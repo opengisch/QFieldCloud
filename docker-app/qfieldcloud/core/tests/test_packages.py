@@ -11,6 +11,7 @@ from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Job, Project, Secret, User
+from qfieldcloud.subscription.models import AccountType
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -55,6 +56,10 @@ class QfcTestCase(APITransactionTestCase):
 
     def tearDown(self):
         self.conn.close()
+
+    def enable_external_db_support(self, support=True):
+        """Set is_external_supported for all user types"""
+        AccountType.objects.update(is_external_db_supported=support)
 
     def upload_files(
         self,
@@ -205,9 +210,7 @@ class QfcTestCase(APITransactionTestCase):
         self.fail("Worker didn't finish")
 
     def test_list_files_for_qfield(self):
-        # This requires is_external_db_supported
-        self.user1.useraccount.account_type.is_external_db_supported = True
-        self.user1.useraccount.account_type.save()
+        self.enable_external_db_support()
 
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
@@ -367,6 +370,8 @@ class QfcTestCase(APITransactionTestCase):
                     return
 
     def test_download_project_with_broken_layer_datasources(self):
+        self.user1.useraccount.account_type.is_external_db_supported = True
+        self.user1.useraccount.account_type.save()
         self.upload_files_and_check_package(
             token=self.token1.key,
             project=self.project1,
