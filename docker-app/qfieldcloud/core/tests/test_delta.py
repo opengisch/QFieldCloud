@@ -33,7 +33,6 @@ class QfcTestCase(APITransactionTestCase):
 
         # Create a project
         self.project1 = Project.objects.create(
-            id="e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
             name="project1",
             is_public=False,
             owner=self.user1,
@@ -41,7 +40,6 @@ class QfcTestCase(APITransactionTestCase):
         self.project1.save()
 
         self.project2 = Project.objects.create(
-            id="2f221069-59f6-40d2-b7d6-0f454380c2ed",
             name="project2",
             is_public=False,
             owner=self.user2,
@@ -58,6 +56,24 @@ class QfcTestCase(APITransactionTestCase):
             collaborator=self.user3,
             role=ProjectCollaborator.Roles.ADMIN,
         )
+
+    def tearDown(self):
+        while True:
+            # make sure there are no active jobs in the queue
+            if (
+                Job.objects.all()
+                .filter(
+                    status__in=[
+                        Job.Status.PENDING,
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ]
+                )
+                .count()
+                == 0
+            ):
+                time.sleep(1)
+                return
 
     def fail(self, msg: str, job: Job = None):
         if job:
@@ -180,14 +196,22 @@ class QfcTestCase(APITransactionTestCase):
         # TODO : cleanup buckets before in setUp so tests are completely independent
         self.assertEqual(len(wrong_deltas), len(wrong_deltas_before) + 1)
 
-        with open(delta_file, "rb") as f:
-            self.assertEqual(wrong_deltas[-1].get()["Body"].read(), f.read())
+        f = self.get_delta_file_with_project_id(self.project1, delta_file)
+        self.assertEqual(wrong_deltas[-1].get()["Body"].read().decode(), f.read())
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
 
-        self.assertFalse(self.upload_deltas(project, "../../file.txt"))
+        delta_file = testdata_path("file.txt")
+
+        response = self.client.post(
+            f"/api/v1/deltas/{project.id}/",
+            {"file": open(delta_file, "r")},
+            format="multipart",
+        )
+
+        self.assertFalse(rest_framework.status.is_success(response.status_code))
 
     def test_push_apply_delta_file_conflicts_overwrite_true(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -394,7 +418,7 @@ class QfcTestCase(APITransactionTestCase):
                 ],
                 [
                     "8adac0df-e1d3-473e-b150-f8c4a91b4781",
-                    "STATUS_UNPERMITTED",
+                    "STATUS_APPLIED",
                     self.user2.username,
                 ],
             ],
@@ -676,12 +700,20 @@ class QfcTestCase(APITransactionTestCase):
         else:
             return response.content
 
+    def get_delta_file_with_project_id(self, project, delta_filename):
+        """Retrieves a delta json file with the project id replaced by the project.id"""
+        with open(delta_filename, "r") as f:
+            deltafile = json.load(f)
+            deltafile["project"] = str(project.id)
+            json_str = json.dumps(deltafile)
+            return io.StringIO(json_str)
+
     def upload_deltas(self, project, delta_filename):
         delta_file = testdata_path(f"delta/deltas/{delta_filename}")
 
         response = self.client.post(
             f"/api/v1/deltas/{project.id}/",
-            {"file": open(delta_file, "rb")},
+            {"file": self.get_delta_file_with_project_id(project, delta_file)},
             format="multipart",
         )
         return rest_framework.status.is_success(response.status_code)
@@ -751,7 +783,10 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
-        job = Job.objects.filter(project=self.project1).latest("updated_at")
+        job = Job.objects.filter(
+            project=self.project1,
+            type=Job.Type.DELTA_APPLY,
+        ).latest("updated_at")
 
         for _ in range(10):
 
@@ -770,6 +805,7 @@ class QfcTestCase(APITransactionTestCase):
                     break
 
                 if payload[idx]["status"] in failing_status:
+                    job.refresh_from_db()
                     self.fail(f"Got failing status {payload[idx]['status']}", job=job)
                     return
 
@@ -779,6 +815,8 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["id"], delta_id)
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
-                return
+
+                if len(final_values) == idx + 1:
+                    return
 
         self.fail("Worker didn't finish", job=job)

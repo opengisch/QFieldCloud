@@ -4,12 +4,7 @@ from pathlib import Path
 from typing import Dict
 from xml.etree import ElementTree
 
-from qfieldcloud.qgis.utils import (
-    BaseException,
-    get_layers_data,
-    layers_data_to_string,
-    start_app,
-)
+from qfieldcloud.qgis.utils import BaseException, get_layers_data, layers_data_to_string
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
@@ -67,8 +62,6 @@ def check_valid_project_file(project_filename: Path) -> None:
 
 def load_project_file(project_filename: Path) -> QgsProject:
     logging.info("Open QGIS project file...")
-
-    start_app()
 
     project = QgsProject.instance()
     if not project.read(str(project_filename)):

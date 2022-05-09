@@ -80,6 +80,10 @@ urlpatterns = [
         "packages/<uuid:project_id>/latest/files/<path:filename>/",
         package_views.LatestPackageDownloadFilesView.as_view(),
     ),
+    path(
+        "packages/<uuid:project_id>/<uuid:job_id>/files/<path:filename>/",
+        package_views.PackageUploadFilesView.as_view(),
+    ),
     path("qfield-files/<uuid:projectid>/", qfield_files_views.ListFilesView.as_view()),
     path(
         "qfield-files/<uuid:projectid>/<path:filename>/",

@@ -115,20 +115,13 @@ class ListFilesView(views.APIView):
                 "Project files have not been exported for the provided project id"
             )
 
-        export_job = (
-            PackageJob.objects.filter(
-                project=project_obj, status=PackageJob.Status.FINISHED
-            )
-            .order_by("updated_at")
-            .last()
-        )
-
-        assert export_job
+        package_job = project_obj.last_package_job
+        assert package_job
 
         # Obtain the bucket object
         bucket = utils.get_s3_bucket()
 
-        export_prefix = "projects/{}/export/".format(projectid)
+        export_prefix = f"projects/{projectid}/packages/{package_job.id}/"
 
         files = []
         for obj in bucket.objects.filter(Prefix=export_prefix):
@@ -145,20 +138,20 @@ class ListFilesView(views.APIView):
             files.append(
                 {
                     # Get the path of the file relative to the export directory
-                    "name": str(path.relative_to(*path.parts[:3])),
+                    "name": str(path.relative_to(*path.parts[:4])),
                     "size": obj.size,
                     "sha256": sha256sum,
                 }
             )
 
-        if export_job.feedback.get("feedback_version") == "2.0":
-            layers = export_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
+        if package_job.feedback.get("feedback_version") == "2.0":
+            layers = package_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
 
             for data in layers.values():
                 data["valid"] = data["is_valid"]
                 data["status"] = data["error_code"]
         else:
-            steps = export_job.feedback.get("steps", [])
+            steps = package_job.feedback.get("steps", [])
             layers = (
                 steps[1]["outputs"]["layer_checks"]
                 if len(steps) > 2 and steps[1].get("stage", 1) == 2
@@ -169,8 +162,8 @@ class ListFilesView(views.APIView):
             {
                 "files": files,
                 "layers": layers,
-                "exported_at": export_job.updated_at,
-                "export_id": export_job.pk,
+                "exported_at": package_job.updated_at,
+                "export_id": package_job.pk,
             }
         )
 
@@ -189,17 +182,17 @@ class DownloadFileView(views.APIView):
     def get(self, request, projectid, filename):
 
         project_obj = Project.objects.get(id=projectid)
+        package_job = project_obj.last_package_job
 
         # Check if the project was exported at least once
-        if not PackageJob.objects.filter(
-            project=project_obj,
-            status=PackageJob.Status.FINISHED,
-        ):
+        if not package_job:
             raise exceptions.InvalidJobError(
                 "Project files have not been exported for the provided project id"
             )
 
-        filekey = utils.safe_join("projects/{}/export/".format(projectid), filename)
+        filekey = utils.safe_join(
+            f"projects/{projectid}/packages/{package_job.id}/", filename
+        )
 
         url = utils.get_s3_client().generate_presigned_url(
             "get_object",

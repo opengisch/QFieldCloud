@@ -535,8 +535,8 @@ class QfcTestCase(APITransactionTestCase):
 
         # Ensure it worked
         self.assertEqual(count_versions(), 20)
-        self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(19), "v0")
+        self.assertEqual(read_version(0), "v0")
+        self.assertEqual(read_version(19), "v19")
 
         # Run management command on other project should have no effect
         other = Project.objects.create(name="other", owner=self.user1)
@@ -546,14 +546,14 @@ class QfcTestCase(APITransactionTestCase):
         # Run management command should leave 3
         call_command("purge_old_file_versions", "--force")
         self.assertEqual(count_versions(), 3)
-        self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(2), "v17")
+        self.assertEqual(read_version(0), "v17")
+        self.assertEqual(read_version(2), "v19")
 
         # Run management command is idempotent
         call_command("purge_old_file_versions", "--force")
         self.assertEqual(count_versions(), 3)
-        self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(2), "v17")
+        self.assertEqual(read_version(0), "v17")
+        self.assertEqual(read_version(2), "v19")
 
     def test_purge_old_versions(self):
         """This tests automated purging of old versions when uploading files"""
@@ -580,8 +580,8 @@ class QfcTestCase(APITransactionTestCase):
             test_file = io.StringIO(f"v{i}")
             self.client.post(apipath, {"file": test_file}, format="multipart")
         self.assertEqual(count_versions(), 10)
-        self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(9), "v10")
+        self.assertEqual(read_version(0), "v10")
+        self.assertEqual(read_version(9), "v19")
 
         # As COMMUNITY account, 3 version should be kept
         acctype_3 = AccountType.objects.create(storage_keep_versions=3, code="acc3")
@@ -593,16 +593,16 @@ class QfcTestCase(APITransactionTestCase):
         otherpath = f"/api/v1/files/{otherproj.id}/file.txt/"
         self.client.post(otherpath, {"file": io.StringIO("v1")}, format="multipart")
         self.assertEqual(count_versions(), 10)
-        self.assertEqual(read_version(0), "v19")
-        self.assertEqual(read_version(9), "v10")
+        self.assertEqual(read_version(0), "v10")
+        self.assertEqual(read_version(9), "v19")
 
         # As COMMUNITY account, 3 version should be kept out of 20 new ones
         for i in range(20, 40):
             test_file = io.StringIO(f"v{i}")
             self.client.post(apipath, {"file": test_file}, format="multipart")
         self.assertEqual(count_versions(), 3)
-        self.assertEqual(read_version(0), "v39")
-        self.assertEqual(read_version(2), "v37")
+        self.assertEqual(read_version(0), "v37")
+        self.assertEqual(read_version(2), "v39")
 
     def test_multiple_file_uploads_one_process_job(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
