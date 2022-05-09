@@ -143,6 +143,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 "Project storage too large for recipient's quota."
             )
 
+        # Enforce validation on the user
+        serializer.instance.validate_according_to_owner_account()
+
     def destroy(self, request, projectid):
         # Delete files from storage
         bucket = utils.get_s3_bucket()

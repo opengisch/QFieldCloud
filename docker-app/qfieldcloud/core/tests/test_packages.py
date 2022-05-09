@@ -11,7 +11,6 @@ from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Job, Project, Secret, User
-from qfieldcloud.subscription.models import AccountType
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -62,6 +61,7 @@ class QfcTestCase(APITransactionTestCase):
         token: str,
         project: Project,
         files: List[Tuple[str, str]],
+        expect_fail: bool = False,
     ):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
         for local_filename, remote_filename in files:
@@ -74,7 +74,7 @@ class QfcTestCase(APITransactionTestCase):
                 {"file": open(file, "rb")},
                 format="multipart",
             )
-            self.assertTrue(status.is_success(response.status_code))
+            self.assertEqual(status.is_success(response.status_code), not expect_fail)
 
     def wait_for_project_ok_status(self, project: Project, wait_s: int = 30):
         status = self.wait_for_project_status(project, wait_s)
@@ -104,8 +104,13 @@ class QfcTestCase(APITransactionTestCase):
         if not has_no_pending_jobs:
             self.fail(f"Still pending jobs after waiting for {wait_s} seconds")
 
-        project.refresh_from_db()
-        return project.status
+        for _ in range(wait_s):
+            project.refresh_from_db()
+            if project.status != Project.Status.BUSY:
+                return project.status
+            time.sleep(1)
+
+        self.fail(f"Waited for ok status for {wait_s} seconds")
 
     def upload_files_and_check_package(
         self,
@@ -541,40 +546,3 @@ class QfcTestCase(APITransactionTestCase):
                 "project_qfield.qgs",
             ],
         )
-
-    def test_external_db_supported(self):
-        files = [
-            ("delta/project_with_external_db.qgs", "project_with_external_db.qgs"),
-        ]
-
-        # When user has an account that supports non-geopackages layers, it works
-        self.user1.useraccount.account_type = AccountType.objects.create(
-            code="with_external_db",
-            display_name="with_external_db",
-            is_external_db_supported=True,
-        )
-        self.user1.useraccount.save()
-        self.upload_files(self.token1.key, self.project1, files=files)
-        status = self.wait_for_project_status(self.project1)
-        self.assertEqual(status, Project.Status.OK)
-        last_process_job = Job.objects.filter(
-            project=self.project1, type=Job.Type.PROCESS_PROJECTFILE
-        ).latest("updated_at")
-        self.assertEqual(last_process_job.status, Job.Status.FINISHED)
-
-        # When user has an account that does not supports non-geopackages layers, it fails
-        self.user1.useraccount.account_type = AccountType.objects.create(
-            code="without_external_db",
-            display_name="without_external_db",
-            is_external_db_supported=False,
-        )
-        self.user1.useraccount.save()
-        self.upload_files(self.token1.key, self.project1, files=files)
-        status = self.wait_for_project_status(self.project1)
-        # TODO: REVIEW: the job fails (see below), but the project status is still ok !
-        # Is this expected ? What does project.status actually represent ?
-        # self.assertEqual(status, Project.Status.FAILED)
-        last_process_job = Job.objects.filter(
-            project=self.project1, type=Job.Type.PROCESS_PROJECTFILE
-        ).latest("updated_at")
-        self.assertEqual(last_process_job.status, Job.Status.FAILED)

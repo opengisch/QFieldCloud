@@ -24,6 +24,10 @@ class LatestPackageView(views.APIView):
     def get(self, request, project_id):
         """Get last project package status and file list."""
         project = Project.objects.get(id=project_id)
+
+        # Enforce validation on the user
+        project.validate_according_to_owner_account()
+
         last_job = (
             PackageJob.objects.filter(
                 project=project, status=PackageJob.Status.FINISHED
@@ -85,6 +89,10 @@ class LatestPackageDownloadFilesView(views.APIView):
             exceptions.InvalidJobError: [description]
         """
         project = Project.objects.get(id=project_id)
+
+        # Enforce validation on the user
+        project.validate_according_to_owner_account()
+
         last_job = PackageJob.objects.filter(
             project=project, status=PackageJob.Status.FINISHED
         ).latest("started_at")
