@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("subscription", "0002_populate_account_types"),
-        ("core", "0052_secret"),
+        ("core", "0053_project_last_package.py"),
     ]
 
     operations = [
