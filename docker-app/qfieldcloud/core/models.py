@@ -1324,18 +1324,17 @@ class Secret(models.Model):
 
     name = models.TextField(
         max_length=255,
-        unique=True,
         validators=[
             RegexValidator(
                 r"^[A-Z]+[A-Z0-9_]+$",
                 _(
-                    "Must start with a letter and followed by capital letters, numbers or underscores."
+                    "Must start with a capital letter and followed by capital letters, numbers or underscores."
                 ),
             )
         ],
         help_text=_(
             _(
-                "Must start with a letter and followed by capital letters, numbers or underscores."
+                "Must start with a capital letter and followed by capital letters, numbers or underscores."
             ),
         ),
     )
@@ -1348,6 +1347,14 @@ class Secret(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     value = django_cryptography.fields.encrypt(models.TextField())
+
+    class Meta:
+        ordering = ["project", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "name"], name="secret_project_name_uniq"
+            )
+        ]
 
 
 auditlog.register(User, exclude_fields=["last_login", "updated_at"])
