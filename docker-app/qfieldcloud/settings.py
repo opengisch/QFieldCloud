@@ -93,6 +93,7 @@ MIDDLEWARE = [
     "django_currentuser.middleware.ThreadLocalUserMiddleware",
     "auditlog.middleware.AuditlogMiddleware",
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
+    "qfieldcloud.core.middleware.test.TestMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
 
@@ -139,6 +140,9 @@ DATABASES = {
         "HOST": os.environ.get("SQL_HOST"),
         "PORT": os.environ.get("SQL_PORT"),
         "OPTIONS": {"sslmode": os.environ.get("SQL_SSLMODE")},
+        "TEST": {
+            "NAME": os.environ.get("SQL_DATABASE_TEST"),
+        },
     }
 }
 

@@ -63,12 +63,14 @@ class ListFilesView(views.APIView):
                 files[version.key]["name"] = filename
                 files[version.key]["size"] = version.size
                 files[version.key]["sha256"] = sha256sum
+                files[version.key]["md5sum"] = version.e_tag.replace('"', "")
                 files[version.key]["last_modified"] = last_modified
 
             files[version.key]["versions"].append(
                 {
                     "size": version.size,
                     "sha256": sha256sum,
+                    "md5sum": version.e_tag.replace('"', ""),
                     "version_id": version.version_id,
                     "last_modified": last_modified,
                     "is_latest": version.is_latest,

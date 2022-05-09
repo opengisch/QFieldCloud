@@ -900,6 +900,13 @@ class Project(models.Model):
     # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
     data_last_packaged_at = models.DateTimeField(blank=True, null=True)
+    last_package_job = models.ForeignKey(
+        "PackageJob",
+        on_delete=models.SET_NULL,
+        related_name="last_job_of",
+        null=True,
+        blank=True,
+    )
 
     repackaging_cache_expire = models.DurationField(
         default=timedelta(minutes=60),
