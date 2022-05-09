@@ -55,7 +55,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         project_obj = Project.objects.get(id=projectid)
 
         # Enforce validation on the user
-        project_obj.instance.validate_according_to_owner_account()
+        project_obj.validate_according_to_owner_account()
 
         project_file = project_obj.project_filename
 

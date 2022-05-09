@@ -74,7 +74,10 @@ class QfcTestCase(APITransactionTestCase):
         for requests_to_check in [
             # TODO: list all endpoints that we wish would fail here
             ["GET", f"/api/v1/packages/{p1.pk}/latest/"],
-            ["GET", f"/api/v1/packages/{p1.pk}/latest/files/project.qgs/"],
+            [
+                "GET",
+                f"/api/v1/packages/{p1.pk}/latest/files/project_with_external_db.qgs/",
+            ],
             # ["GET", f"/api/v1/deltas/{p1.pk}/"],
         ]:
             # If account type has external db permission, endpoint works
