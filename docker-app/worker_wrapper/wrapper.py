@@ -222,7 +222,7 @@ class JobRun:
             if secret.type == Secret.Type.ENVVAR:
                 extra_envvars[secret.name] = secret.value
             elif secret.type == Secret.Type.PGSERVICE:
-                pgservice_file_contents += f"\r\n{secret.value}"
+                pgservice_file_contents += f"\n{secret.value}"
             else:
                 raise NotImplementedError(f"Unknown secret type: {secret.type}")
 
