@@ -194,8 +194,8 @@ class QfcTestCase(APITestCase):
         self.assertEqual(p(self.project5, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
         self.assertEqual(p(self.project6, self.user1).user_role, ProjectCollaborator.Roles.ADMIN)
         self.assertEqual(p(self.project6, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
-        self.assertEqual(p(self.project7, self.user1).user_role, ProjectCollaborator.Roles.REPORTER)
-        self.assertEqual(p(self.project7, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.COLLABORATOR.value)
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project7, self.user1)
         self.assertEqual(p(self.project8, self.user1).user_role, ProjectCollaborator.Roles.READER)
         self.assertEqual(p(self.project8, self.user1).user_role_origin, ProjectQueryset.RoleOrigins.PUBLIC.value)
         self.assertEqual(p(self.project9, self.user1).user_role, ProjectCollaborator.Roles.ADMIN)
@@ -261,8 +261,8 @@ class QfcTestCase(APITestCase):
         self.assertEqual(p(self.project5, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
         self.assertEqual(p(self.project6, self.user1).project_role, ProjectCollaborator.Roles.ADMIN)
         self.assertEqual(p(self.project6, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER.value)
-        self.assertEqual(p(self.project7, self.user1).project_role, ProjectCollaborator.Roles.REPORTER)
-        self.assertEqual(p(self.project7, self.user1).project_role_origin, ProjectQueryset.RoleOrigins.COLLABORATOR.value)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project7, self.user1)
         with self.assertRaises(User.DoesNotExist):
             p(self.project8, self.user1)
         self.assertEqual(p(self.project9, self.user1).project_role, ProjectCollaborator.Roles.ADMIN)
@@ -306,3 +306,65 @@ class QfcTestCase(APITestCase):
         self.assertEqual(p(self.project9, self.user3).project_role, ProjectCollaborator.Roles.EDITOR)
         self.assertEqual(p(self.project9, self.user3).project_role_origin, ProjectQueryset.RoleOrigins.TEAMMEMBER.value)
         # fmt: on
+
+    def test_private_project_memberships(self):
+        """Tests for QF-1553 - limit collaboration on private projects"""
+
+        def assert_no_role(p, u):
+            """Asserts that user has no role on project"""
+            # Test on Users
+            with self.assertRaises(User.DoesNotExist):
+                User.objects.for_project(p).get(pk=u.pk)
+
+            # Test on Project
+            with self.assertRaises(Project.DoesNotExist):
+                Project.objects.for_user(u).get(pk=p.pk)
+
+        def assert_role(p, u, expected_role, expected_origin):
+            """Asserts that user has give role/origin on project"""
+            # Test on Users
+            if expected_origin != origins.PUBLIC:
+                # The User.objects.for_project queryset is not symetric to Project.objects.for_user
+                # because it does not include users that have a role because the project is public.
+                user = User.objects.for_project(p).get(pk=u.pk)
+                self.assertEqual(user.project_role, expected_role)
+                self.assertEqual(user.project_role_origin, expected_origin.value)
+
+            # Test on Project
+            project = Project.objects.for_user(u).get(pk=p.pk)
+            self.assertEqual(project.user_role, expected_role)
+            self.assertEqual(project.user_role_origin, expected_origin.value)
+
+        # Shorthands
+        roles = ProjectCollaborator.Roles
+        origins = ProjectQueryset.RoleOrigins
+
+        # Initial user setup
+        u = User.objects.create(username="u")
+        o = Organization.objects.create(username="o", organization_owner=u)
+        p = Project.objects.create(name="p", owner=u, is_public=True)
+
+        u1 = User.objects.create(username="u1")
+
+        # A public project is readable
+        assert_role(p, u1, roles.READER, origins.PUBLIC)
+
+        # Normal collaboration works on a public project
+        ProjectCollaborator.objects.create(
+            project=p, collaborator=u1, role=roles.MANAGER
+        )
+        assert_role(p, u1, roles.MANAGER, origins.COLLABORATOR)
+
+        # If project is made private, the collaboration is invalid
+        p.is_public = False
+        p.save()
+        assert_no_role(p, u1)
+
+        # Making the owner an organisation is not enough as user is not member of that org
+        p.owner = o
+        p.save()
+        assert_no_role(p, u1)
+
+        # As the user must be member of the organisation
+        OrganizationMember.objects.create(organization=o, member=u1)
+        assert_role(p, u1, roles.MANAGER, origins.COLLABORATOR)

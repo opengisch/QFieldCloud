@@ -1,7 +1,13 @@
 import logging
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Organization, Project, ProjectCollaborator, User
+from qfieldcloud.core.models import (
+    Organization,
+    OrganizationMember,
+    Project,
+    ProjectCollaborator,
+    User,
+)
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -46,22 +52,26 @@ class QfcTestCase(APITestCase):
 
         response = self.client.patch(
             f"/api/v1/projects/{project.pk}/",
-            {"name": "renamed-project", "owner": "user1"},
+            {"name": "renamed-project", "owner": "organization1"},
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        # user2 doesn't get to see user1's project
+        # user2 doesn't get to see user1's organization's project
         self.client.logout()
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
         response = self.client.get("/api/v1/projects/", format="json")
         self.assertEqual(0, len(response.data))
 
-        # user2 is added to the org
+        # user2 is added to the project and the organization
         ProjectCollaborator.objects.create(
             project=project,
             collaborator=self.user2,
             role=ProjectCollaborator.Roles.READER,
+        )
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
         )
         response = self.client.get("/api/v1/projects/", format="json")
         self.assertEqual(1, len(response.data))
@@ -100,11 +110,17 @@ class QfcTestCase(APITestCase):
         # Connect as user2
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
 
-        # Set user2 as a collaborator REPORTER of project1
+        # Set user2 as a collaborator REPORTER of project1, and as part of the org owning the project
+        self.project1.owner = self.organization1
+        self.project1.save()
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
             role=ProjectCollaborator.Roles.REPORTER,
+        )
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
         )
 
         file_path = testdata_path("file.txt")

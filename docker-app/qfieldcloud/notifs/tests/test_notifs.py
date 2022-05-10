@@ -163,7 +163,7 @@ class QfcTestCase(TestCase):
         _set_current_user(self.otheruser)
 
         # create a project
-        proj1 = Project.objects.create(name="proj1", owner=org1)
+        proj1 = Project.objects.create(name="proj1", owner=org1, is_public=True)
         self.assertNotifs(1, {"recipient": self.user1})
         self.assertNotifs(0, {"recipient": self.user2})
         self.assertNotifs(0, {"recipient": self.user3})
