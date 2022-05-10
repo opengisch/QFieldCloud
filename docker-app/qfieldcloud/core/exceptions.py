@@ -135,3 +135,11 @@ class QGISPackageError(QFieldCloudException):
 
     if "Unable to open file with QGIS" in message:
         message = "QGIS is unable to open the QGIS project"
+
+
+class QuotaError(QFieldCloudException):
+    """Raised when a quota limitation is hit"""
+
+    code = "over_quota"
+    message = "Quota error"
+    status_code = status.HTTP_402_PAYMENT_REQUIRED

@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils, utils
+from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from rest_framework import generics, permissions, viewsets
@@ -114,6 +115,33 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
             )
         return projects
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        # Here we do an additional check if the owner has changed. If so, the reciever
+        # of the project must have enough storage quota, otherwise the transfer is
+        # not permitted.
+
+        # TODO: this should be moved to some more reusable place. Maybe in Project.clean() ?
+        # But then it would also be enforced by admin, which we don't want I guess...
+
+        old_owner = serializer.instance.owner
+        super().perform_update(serializer)
+        new_owner = serializer.instance.owner
+
+        # If owner has not changed, no additional check is made
+        if old_owner == new_owner:
+            return
+
+        # Owner has changed, we must ensure he has enough quota for that
+        # (in this transaction, the project is his already, so we just need to
+        # check his quota)
+        if new_owner.useraccount.storage_quota_left_mb < 0:
+            # If not, we rollback the transaction
+            # (don't give away numbers in message as it's potentially private)
+            raise exceptions.QuotaError(
+                "Project storage too large for recipient's quota."
+            )
 
     def destroy(self, request, projectid):
         # Delete files from storage
