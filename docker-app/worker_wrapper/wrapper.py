@@ -23,6 +23,7 @@ from qfieldcloud.core.models import (
     Job,
     PackageJob,
     ProcessProjectfileJob,
+    Secret,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
 
@@ -203,6 +204,16 @@ class JobRun:
 
         client = docker.from_env()
 
+        extra_envvars = {}
+        pgservice_file_contents = ""
+        for secret in self.job.project.secrets.all():
+            if secret.type == Secret.Type.ENVVAR:
+                extra_envvars[secret.name] = secret.value
+            elif secret.type == Secret.Type.PGSERVICE:
+                pgservice_file_contents += f"\r\n{secret.value}"
+            else:
+                raise NotImplementedError(f"Unknown secret type: {secret.type}")
+
         logger.info(f"Execute: {' '.join(command)}")
         volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
 
@@ -210,6 +221,9 @@ class JobRun:
             QGIS_CONTAINER_NAME,
             command,
             environment={
+                # NOTE the envvars below will overwrite the ones provided via `extra_envvars`
+                **extra_envvars,
+                "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
                 "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
                 "STORAGE_SECRET_ACCESS_KEY": os.environ.get(
                     "STORAGE_SECRET_ACCESS_KEY"
@@ -308,26 +322,22 @@ class DeltaApplyJobRun(JobRun):
 
         return deltafile_contents
 
+    @transaction.atomic()
     def before_docker_run(self) -> None:
-        with transaction.atomic():
-            deltas = Delta.objects.select_for_update().filter(
-                last_status=Delta.Status.PENDING
-            )
+        deltas = self.job.deltas_to_apply.all()
+        deltafile_contents = self._prepare_deltas(deltas)
 
-            self.job.deltas_to_apply.add(*deltas)
-            self.delta_ids = [d.id for d in deltas]
+        self.delta_ids = [d.id for d in deltas]
 
-            ApplyJobDelta.objects.filter(
-                apply_job_id=self.job_id,
-                delta_id__in=self.delta_ids,
-            ).update(status=Delta.Status.STARTED)
+        ApplyJobDelta.objects.filter(
+            apply_job_id=self.job_id,
+            delta_id__in=self.delta_ids,
+        ).update(status=Delta.Status.STARTED)
 
-            deltafile_contents = self._prepare_deltas(deltas)
+        self.job.deltas_to_apply.update(last_status=Delta.Status.STARTED)
 
-            deltas.update(last_status=Delta.Status.STARTED)
-
-            with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
-                json.dump(deltafile_contents, f)
+        with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
+            json.dump(deltafile_contents, f)
 
     def after_docker_run(self) -> None:
         delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]

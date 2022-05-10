@@ -8,7 +8,7 @@ services:
         - DEBUG_BUILD=1
     ports:
       # allow direct access without nginx
-      - "5001:8000"
+      - ${DJANGO_DEV_PORT}:8000
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -40,11 +40,11 @@ services:
     restart: always
     ports:
       # Web interface
-      - '5000:80'
+      - ${SMTP4DEV_WEB_PORT}:80
       # SMTP server
-      - '25:25'
+      - ${SMTP4DEV_SMTP_PORT}:25
       # IMAP
-      - '143:143'
+      - ${SMTP4DEV_IMAP_PORT}:143
     volumes:
         - smtp4dev_data:/smtp4dev
     environment:

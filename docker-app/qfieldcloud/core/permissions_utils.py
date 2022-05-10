@@ -330,6 +330,28 @@ def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
     return True
 
 
+def can_create_secrets(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
+def can_delete_secrets(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+        ],
+    )
+
+
 def can_list_users_organizations(user: QfcUser) -> bool:
     """Return True if the `user` can list users and organizations.
     Return False otherwise."""

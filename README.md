@@ -224,15 +224,15 @@ Based on this example
 |---------------|------|----------------------|--------------------|--------------------|--------------------|
 | nginx http    | 80   | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | nginx https   | 443  | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| django http   | 5001 |                      | :white_check_mark: | :x:                | :x:                |
+| django http   | 8011 | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
 | postgres      | 5433 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | redis         | 6379 | REDIS_PORT           | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | geodb         | 5432 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :x:                |
 | minio API     | 8009 | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
 | minio browser | 8010 | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
-| smtp web      | 5000 |                      | :white_check_mark: | :x:                | :x:                |
-| smtp          | 25   |                      | :white_check_mark: | :x:                | :x:                |
-| imap          | 143  |                      | :white_check_mark: | :x:                | :x:                |
+| smtp web      | 8012 | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
+| smtp          | 25   | SMTP4DEV_SMTP_PORT   | :white_check_mark: | :x:                | :x:                |
+| imap          | 143  | SMTP4DEV_IMAP_PORT   | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
 
