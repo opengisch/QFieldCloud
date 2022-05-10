@@ -8,7 +8,8 @@ from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
 from sentry_sdk import capture_message
 
-from ..core.models import Job
+from ..core.models import Job, Project
+from ..core.utils2 import storage
 from .invitations_utils import send_invitation
 
 logger = logging.getLogger(__name__)
@@ -76,3 +77,44 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
             },
             output="Job unexpectedly terminated.",
         )
+
+
+class DeleteObsoleteProjectPackagesJob(CronJobBase):
+    schedule = Schedule(run_every_mins=60)
+    code = "qfieldcloud.delete_obsolete_project_packages"
+
+    def do(self):
+        # get only the projects updated in the last a little more than an hour,
+        # as we assume the rest of the projects have been cleaned from obsolete
+        # packages in the previous CRON run. Also give 5 minute offset from now,
+        # so there is no overlap and errors with the deletion happening from the
+        # worker-wrapper.
+        projects = Project.objects.filter(
+            updated_at__gt=timezone.now() - timedelta(minutes=70),
+            updated_at__lt=timezone.now() - timedelta(minutes=5),
+        )
+        job_ids = [
+            str(job["id"])
+            for job in Job.objects.filter(
+                type=Job.Type.PACKAGE,
+            )
+            .exclude(
+                status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+            )
+            .values("id")
+        ]
+
+        for project in projects:
+            project_id = str(project.id)
+            package_ids = storage.get_stored_package_ids(project_id)
+
+            for package_id in package_ids:
+                # keep the last package
+                if package_id == str(project.last_package_job_id):
+                    continue
+
+                # the job is still active, so it might be one of the new packages
+                if package_id in job_ids:
+                    continue
+
+                storage.delete_stored_package(project_id, package_id)
