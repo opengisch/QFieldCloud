@@ -13,7 +13,6 @@ services:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
     environment:
-      # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
     command: python3 manage.py runserver 0.0.0.0:8000
     depends_on:

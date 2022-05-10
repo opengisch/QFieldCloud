@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-import hashlib
 import logging
 import os
-import tempfile
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import Dict, Union
 
-import boto3
 import qfieldcloud.qgis.apply_deltas
 import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
@@ -21,8 +18,6 @@ from qfieldcloud.qgis.utils import (
     Workflow,
     get_layers_data,
     layers_data_to_string,
-    start_app,
-    stop_app,
 )
 from qgis.core import (
     QgsCoordinateTransform,
@@ -34,165 +29,12 @@ from qgis.core import (
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
-# Get environment variables
-STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
-STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
-STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
-STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
-STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def _get_s3_resource():
-    """Get S3 Service Resource object"""
-    # Create session
-    session = boto3.Session(
-        aws_access_key_id=STORAGE_ACCESS_KEY_ID,
-        aws_secret_access_key=STORAGE_SECRET_ACCESS_KEY,
-        region_name=STORAGE_REGION_NAME,
-    )
-
-    return session.resource("s3", endpoint_url=STORAGE_ENDPOINT_URL)
-
-
-def _get_s3_bucket():
-    """Get S3 Bucket according to the env variable
-    STORAGE_BUCKET_NAME"""
-
-    s3 = _get_s3_resource()
-    bucket = s3.Bucket(STORAGE_BUCKET_NAME)
-    return bucket
-
-
-def _get_sha256sum(filepath):
-    """Calculate sha256sum of a file"""
-    BLOCKSIZE = 65536
-    hasher = hashlib.sha256()
-    with filepath as f:
-        buf = f.read(BLOCKSIZE)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = f.read(BLOCKSIZE)
-    return hasher.hexdigest()
-
-
-def _get_md5sum(filepath):
-    """Calculate sha256sum of a file"""
-    BLOCKSIZE = 65536
-    hasher = hashlib.md5()
-    with filepath as f:
-        buf = f.read(BLOCKSIZE)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = f.read(BLOCKSIZE)
-    return hasher.hexdigest()
-
-
-def _download_project_directory(project_id: str, download_dir: Path = None) -> Path:
-    """Download the files in the project "working" directory from the S3
-    Storage into a temporary directory. Returns the directory path"""
-
-    bucket = _get_s3_bucket()
-
-    # Prefix of the working directory on the Storages
-    working_prefix = "/".join(["projects", project_id, "files"])
-
-    if not download_dir:
-        # Create a temporary directory
-        download_dir = Path(tempfile.mkdtemp())
-
-    # Create a local working directory
-    working_dir = download_dir.joinpath("files")
-    working_dir.mkdir(parents=True)
-
-    # Download the files
-    for obj in bucket.objects.filter(Prefix=working_prefix):
-        key_filename = PurePath(obj.key)
-
-        # Get the path of the file relative to the project directory
-        relative_filename = key_filename.relative_to(*key_filename.parts[:2])
-        absolute_filename = download_dir.joinpath(relative_filename)
-        absolute_filename.parent.mkdir(parents=True, exist_ok=True)
-
-        # NOTE the E_TAG already is surrounded by double quotes
-        logging.info(
-            f'Downloading file "{obj.key}", size: {obj.size} bytes, md5sum: {obj.e_tag} '
-        )
-
-        bucket.download_file(obj.key, str(absolute_filename))
-
-    return download_dir
-
-
-def _upload_project_directory(
-    project_id: str, local_dir: Path, should_delete: bool = False
-) -> None:
-    """Upload the files in the local_dir to the storage"""
-    stop_app()
-
-    bucket = _get_s3_bucket()
-    # either "files" or "package"
-    subdir = local_dir.parts[-1]
-    prefix = "/".join(["projects", project_id, subdir])
-
-    if should_delete:
-        logging.info("Deleting older file versions...")
-
-        # Remove existing package directory on the storage
-        bucket.objects.filter(Prefix=prefix).delete()
-
-    uploaded_files_count = 0
-
-    # Loop recursively in the local package directory
-    for elem in Path(local_dir).rglob("*.*"):
-        # Don't upload .qgs~ and .qgz~ files
-        if str(elem).endswith("~"):
-            continue
-        # Don't upload qfieldcloud backup files
-        if str(elem).endswith(".qfieldcloudbackup"):
-            continue
-
-        # Calculate sha256sum
-        with open(elem, "rb") as e:
-            sha256sum = _get_sha256sum(e)
-
-        with open(elem, "rb") as e:
-            md5sum = _get_md5sum(e)
-
-        # Create the key
-        filename = str(elem.relative_to(*elem.parts[:4]))
-        key = "/".join([prefix, filename])
-        metadata = {"sha256sum": sha256sum}
-
-        if should_delete:
-            storage_metadata = {"sha256sum": None}
-        else:
-            storage_metadata = bucket.Object(key).metadata
-            storage_metadata["sha256sum"] = storage_metadata.get(
-                "sha256sum", storage_metadata.get("Sha256sum", None)
-            )
-
-        # Check if the file is different on the storage
-        # TODO switch to etag/md5sum comparison
-        if metadata["sha256sum"] != storage_metadata["sha256sum"]:
-            uploaded_files_count += 1
-            logging.info(
-                f'Uploading file "{key}", size: {elem.stat().st_size} bytes, md5sum: {md5sum}, sha256sum: "{sha256sum}" '
-            )
-            bucket.upload_file(str(elem), key, ExtraArgs={"Metadata": metadata})
-
-    if uploaded_files_count == 0:
-        logging.info("No files need to be uploaded.")
-    else:
-        logging.info(f"{uploaded_files_count} file(s) uploaded.")
-
-
 def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     """Call the function of QFieldSync to package a project for QField"""
-
-    start_app()
 
     project = QgsProject.instance()
     if not project_filename.exists():
@@ -280,8 +122,6 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
 
 
 def _extract_layer_data(project_filename: Union[str, Path]) -> Dict:
-    start_app()
-
     project_filename = str(project_filename)
     project = QgsProject.instance()
     project.read(project_filename)
@@ -302,13 +142,18 @@ def cmd_package_project(args):
         description="Packages a QGIS project to be used on QField. Converts layers for offline editing if configured.",
         steps=[
             Step(
+                id="start_qgis_app",
+                name="Start QGIS Application",
+                method=qfieldcloud.qgis.utils.start_app,
+            ),
+            Step(
                 id="download_project_directory",
                 name="Download Project Directory",
                 arguments={
                     "project_id": args.projectid,
-                    "download_dir": WorkDirPath(mkdir=True),
+                    "destination": WorkDirPath(mkdir=True),
                 },
-                method=_download_project_directory,
+                method=qfieldcloud.qgis.utils.download_project,
                 return_names=["tmp_project_dir"],
             ),
             Step(
@@ -344,14 +189,18 @@ def cmd_package_project(args):
                 outputs=["layers_by_id"],
             ),
             Step(
+                id="stop_qgis_app",
+                name="Stop QGIS Application",
+                method=qfieldcloud.qgis.utils.stop_app,
+            ),
+            Step(
                 id="upload_packaged_project",
                 name="Upload Packaged Project",
                 arguments={
                     "project_id": args.projectid,
-                    "local_dir": WorkDirPath("export", mkdir=True),
-                    "should_delete": True,
+                    "package_dir": WorkDirPath("export", mkdir=True),
                 },
-                method=_upload_project_directory,
+                method=qfieldcloud.qgis.utils.upload_package,
             ),
         ],
     )
@@ -362,20 +211,25 @@ def cmd_package_project(args):
     )
 
 
-def _apply_delta(args):
+def cmd_apply_deltas(args):
     workflow = Workflow(
         id="apply_changes",
         name="Apply Changes",
         version="2.0",
         steps=[
             Step(
+                id="start_qgis_app",
+                name="Start QGIS Application",
+                method=qfieldcloud.qgis.utils.start_app,
+            ),
+            Step(
                 id="download_project_directory",
                 name="Download Project Directory",
                 arguments={
                     "project_id": args.projectid,
-                    "download_dir": WorkDirPath(mkdir=True),
+                    "destination": WorkDirPath(mkdir=True),
                 },
-                method=_download_project_directory,
+                method=qfieldcloud.qgis.utils.download_project,
                 return_names=["tmp_project_dir"],
             ),
             Step(
@@ -392,14 +246,18 @@ def _apply_delta(args):
                 outputs=["delta_feedback"],
             ),
             Step(
+                id="stop_qgis_app",
+                name="Stop QGIS Application",
+                method=qfieldcloud.qgis.utils.stop_app,
+            ),
+            Step(
                 id="upload_exported_project",
                 name="Upload Project",
                 arguments={
                     "project_id": args.projectid,
-                    "local_dir": WorkDirPath("files"),
-                    "should_delete": False,
+                    "project_dir": WorkDirPath("files"),
                 },
-                method=_upload_project_directory,
+                method=qfieldcloud.qgis.utils.upload_project,
             ),
         ],
     )
@@ -417,13 +275,18 @@ def cmd_process_projectfile(args):
         version="2.0",
         steps=[
             Step(
+                id="start_qgis_app",
+                name="Start QGIS Application",
+                method=qfieldcloud.qgis.utils.start_app,
+            ),
+            Step(
                 id="download_project_directory",
                 name="Download Project Directory",
                 arguments={
                     "project_id": args.projectid,
-                    "download_dir": WorkDirPath(mkdir=True),
+                    "destination": WorkDirPath(mkdir=True),
                 },
-                method=_download_project_directory,
+                method=qfieldcloud.qgis.utils.download_project,
                 return_names=["tmp_project_dir"],
             ),
             Step(
@@ -462,6 +325,11 @@ def cmd_process_projectfile(args):
                 },
                 method=qfieldcloud.qgis.process_projectfile.generate_thumbnail,
             ),
+            Step(
+                id="stop_qgis_app",
+                name="Stop QGIS Application",
+                method=qfieldcloud.qgis.utils.stop_app,
+            ),
         ],
     )
 
@@ -474,8 +342,6 @@ def cmd_process_projectfile(args):
 if __name__ == "__main__":
 
     # Set S3 logging levels
-    logging.getLogger("boto3").setLevel(logging.CRITICAL)
-    logging.getLogger("botocore").setLevel(logging.CRITICAL)
     logging.getLogger("nose").setLevel(logging.CRITICAL)
     logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
     logging.getLogger("urllib3").setLevel(logging.CRITICAL)
@@ -500,7 +366,7 @@ if __name__ == "__main__":
         "--overwrite-conflicts", dest="overwrite_conflicts", action="store_true"
     )
     parser_delta.add_argument("--inverse", dest="inverse", action="store_true")
-    parser_delta.set_defaults(func=_apply_delta)
+    parser_delta.set_defaults(func=cmd_apply_deltas)
 
     parser_process_projectfile = subparsers.add_parser(
         "process_projectfile", help="Process QGIS project file"

@@ -20,7 +20,6 @@ from functools import lru_cache
 from pathlib import Path
 
 import jsonschema
-from qfieldcloud.qgis.utils import start_app
 
 # pylint: disable=no-name-in-module
 from qgis.core import (
@@ -173,7 +172,6 @@ delta_log = []
 
 def project_decorator(f):
     def wrapper(opts: BaseOptions, *args, **kw):
-        start_app()
         project = QgsProject.instance()
         project.setAutoTransaction(opts["transaction"])
         project.read(opts.get("project_filename", opts["project"]))
@@ -191,7 +189,6 @@ def delta_apply(
 ):
     del delta_log[:]
 
-    start_app()
     project = QgsProject.instance()
     logging.info(f'Loading project file "{project_filename}"...')
     project.read(str(project_filename))

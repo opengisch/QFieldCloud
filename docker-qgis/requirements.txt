@@ -1,5 +1,5 @@
 jsonschema>=3.2.0,<3.3
 typing-extensions>=3.7.4.3,<3.7.5
-boto3>=1.16.28,<1.17
 tabulate==v0.8.9
 sentry-sdk
+qfieldcloud-sdk==0.5.1

@@ -336,7 +336,6 @@ def can_create_secrets(user: QfcUser, project: Project) -> bool:
         project,
         [
             ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
         ],
     )
 
@@ -347,7 +346,6 @@ def can_delete_secrets(user: QfcUser, project: Project) -> bool:
         project,
         [
             ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
         ],
     )
 
