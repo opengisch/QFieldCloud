@@ -85,10 +85,13 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
 
     def do(self):
         # get only the projects updated in the last a little more than an hour,
-        # as we assume the rest of the projects have been cleaned from dangling
-        # packages in the previous CRON run
+        # as we assume the rest of the projects have been cleaned from obsolete
+        # packages in the previous CRON run. Also give 5 minute offset from now,
+        # so there is no overlap and errors with the deletion happening from the
+        # worker-wrapper.
         projects = Project.objects.filter(
-            updated_at__gt=timezone.now() - timedelta(minutes=65)
+            updated_at__gt=timezone.now() - timedelta(minutes=70),
+            updated_at__lt=timezone.now() - timedelta(minutes=5),
         )
         job_ids = [
             str(job["id"])
