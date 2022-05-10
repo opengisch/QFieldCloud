@@ -4,7 +4,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, List, Optional, Type
+from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
@@ -19,8 +19,6 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
-from django.db.models.signals import pre_delete
-from django.dispatch import receiver
 from django.urls import reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
@@ -1070,17 +1068,6 @@ class Project(models.Model):
         super().save(*args, **kwargs)
 
 
-@receiver(pre_delete, sender=Project)
-def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> None:
-    if instance.thumbnail_uri:
-        qfieldcloud.core.utils2.storage.remove_project_thumbail(instance)
-
-    def save(self, recompute_storage=False, *args, **kwargs):
-        if recompute_storage:
-            self.storage_size_mb = utils.get_s3_project_size(self.id)
-        super().save(*args, **kwargs)
-
-
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, keep_invalid=False):
         """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
@@ -1109,6 +1096,11 @@ class ProjectCollaboratorQueryset(models.QuerySet):
             qs = qs.exclude(is_valid=False)
 
         return qs
+
+    def save(self, recompute_storage=False, *args, **kwargs):
+        if recompute_storage:
+            self.storage_size_mb = utils.get_s3_project_size(self.id)
+        super().save(*args, **kwargs)
 
 
 class ProjectCollaborator(models.Model):
