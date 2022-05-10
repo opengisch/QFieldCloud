@@ -12,7 +12,7 @@ from auditlog.registry import auditlog
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db.models import Case, Exists, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
@@ -22,6 +22,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.subscription.models import AccountType
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -371,13 +372,6 @@ class User(AbstractUser):
 
 
 class UserAccount(models.Model):
-    TYPE_COMMUNITY = 1
-    TYPE_PRO = 2
-
-    TYPE_CHOICES = (
-        (TYPE_COMMUNITY, "community"),
-        (TYPE_PRO, "pro"),
-    )
 
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
@@ -393,16 +387,21 @@ class UserAccount(models.Model):
     )
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    account_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_COMMUNITY
+
+    account_type = models.ForeignKey(
+        "subscription.AccountType",
+        on_delete=models.PROTECT,
+        default=AccountType.get_or_create_default,
     )
-    storage_limit_mb = models.PositiveIntegerField(default=100)
+
+    # These will be moved one day to extrapackage. We don't touch for now (they are only used
+    # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
     is_geodb_enabled = models.BooleanField(
         default=False,
         help_text=_("Whether the account has the option to create a GeoDB."),
     )
-    synchronizations_per_months = models.PositiveIntegerField(default=30)
+
     bio = models.CharField(max_length=255, default="", blank=True)
     company = models.CharField(max_length=255, default="", blank=True)
     location = models.CharField(max_length=255, default="", blank=True)
@@ -430,7 +429,7 @@ class UserAccount(models.Model):
             return None
 
     def __str__(self):
-        return self.get_account_type_display()
+        return f"Account {self.account_type}"
 
 
 class Geodb(models.Model):
@@ -878,6 +877,11 @@ class Project(models.Model):
         related_name="last_job_of",
         null=True,
         blank=True,
+    )
+
+    repackaging_cache_expire = models.DurationField(
+        default=timedelta(minutes=60),
+        validators=[MinValueValidator(timedelta(minutes=1))],
     )
 
     overwrite_conflicts = models.BooleanField(
