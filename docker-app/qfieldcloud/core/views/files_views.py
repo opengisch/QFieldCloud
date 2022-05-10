@@ -31,6 +31,8 @@ class ListFilesView(views.APIView):
 
     def get(self, request, projectid):
 
+        Project.objects.get(id=projectid)
+
         bucket = utils.get_s3_bucket()
 
         prefix = "projects/{}/files/".format(projectid)
@@ -84,7 +86,6 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
 
         projectid = request.parser_context["kwargs"]["projectid"]
         project = Project.objects.get(id=projectid)
-
         user = request.user
 
         if request.method == "GET":
@@ -106,6 +107,7 @@ class DownloadPushDeleteFileView(views.APIView):
     ]
 
     def get(self, request, projectid, filename):
+        Project.objects.get(id=projectid)
 
         version = None
         if "version" in self.request.query_params:

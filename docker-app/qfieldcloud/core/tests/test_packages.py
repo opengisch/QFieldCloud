@@ -11,7 +11,6 @@ from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Job, Project, Secret, User
-from qfieldcloud.subscription.models import AccountType
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -57,16 +56,11 @@ class QfcTestCase(APITransactionTestCase):
     def tearDown(self):
         self.conn.close()
 
-    def enable_external_db_support(self, support=True):
-        """Set is_external_supported for all user types"""
-        AccountType.objects.update(is_external_db_supported=support)
-
     def upload_files(
         self,
         token: str,
         project: Project,
         files: List[Tuple[str, str]],
-        expect_fail: bool = False,
     ):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
         for local_filename, remote_filename in files:
@@ -79,16 +73,9 @@ class QfcTestCase(APITransactionTestCase):
                 {"file": open(file, "rb")},
                 format="multipart",
             )
-            self.assertEqual(status.is_success(response.status_code), not expect_fail)
+            self.assertTrue(status.is_success(response.status_code))
 
     def wait_for_project_ok_status(self, project: Project, wait_s: int = 30):
-        status = self.wait_for_project_status(project, wait_s)
-        if status != Project.Status.OK:
-            self.fail(f"Waited for ok status, but got {status}")
-
-    def wait_for_project_status(self, project: Project, wait_s: int = 30) -> Job.Status:
-        """Retrieve the project status (waiting until the processing completes)"""
-
         jobs = Job.objects.filter(project=project).exclude(
             status__in=[Job.Status.FAILED, Job.Status.FINISHED]
         )
@@ -111,8 +98,12 @@ class QfcTestCase(APITransactionTestCase):
 
         for _ in range(wait_s):
             project.refresh_from_db()
-            if project.status != Project.Status.BUSY:
-                return project.status
+            if project.status == Project.Status.OK:
+                return
+            if project.status == Project.Status.FAILED:
+                self.fail("Waited for ok status, but got failed")
+                return
+
             time.sleep(1)
 
         self.fail(f"Waited for ok status for {wait_s} seconds")
@@ -210,8 +201,6 @@ class QfcTestCase(APITransactionTestCase):
         self.fail("Worker didn't finish")
 
     def test_list_files_for_qfield(self):
-        self.enable_external_db_support()
-
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
         self.conn.commit()
@@ -370,8 +359,6 @@ class QfcTestCase(APITransactionTestCase):
                     return
 
     def test_download_project_with_broken_layer_datasources(self):
-        self.user1.useraccount.account_type.is_external_db_supported = True
-        self.user1.useraccount.account_type.save()
         self.upload_files_and_check_package(
             token=self.token1.key,
             project=self.project1,
@@ -427,10 +414,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(self.project1.needs_repackaging)
 
     def test_needs_repackaging_with_online_vector(self):
-        # This requires is_external_db_supported
-        self.user1.useraccount.account_type.is_external_db_supported = True
-        self.user1.useraccount.account_type.save()
-
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
         self.conn.commit()

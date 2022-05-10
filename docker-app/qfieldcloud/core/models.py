@@ -903,6 +903,7 @@ class Project(models.Model):
     # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
     data_last_packaged_at = models.DateTimeField(blank=True, null=True)
+
     last_package_job = models.ForeignKey(
         "PackageJob",
         on_delete=models.SET_NULL,
@@ -1051,6 +1052,11 @@ class Project(models.Model):
         else:
             return Project.Status.OK
 
+    def delete(self, *args, **kwargs):
+        if self.thumbnail_uri:
+            qfieldcloud.core.utils2.storage.remove_project_thumbail(self)
+        super().delete(*args, **kwargs)
+
     def save(self, recompute_storage=False, *args, **kwargs):
         if recompute_storage:
             self.storage_size_mb = utils.get_s3_project_size(self.id)
@@ -1085,11 +1091,6 @@ class ProjectCollaboratorQueryset(models.QuerySet):
             qs = qs.exclude(is_valid=False)
 
         return qs
-
-    def save(self, recompute_storage=False, *args, **kwargs):
-        if recompute_storage:
-            self.storage_size_mb = utils.get_s3_project_size(self.id)
-        super().save(*args, **kwargs)
 
 
 class ProjectCollaborator(models.Model):

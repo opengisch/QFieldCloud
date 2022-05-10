@@ -53,7 +53,6 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     def post(self, request, projectid):
 
         project_obj = Project.objects.get(id=projectid)
-
         project_file = project_obj.project_filename
 
         if "file" not in request.data:
@@ -155,9 +154,7 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
 
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]
-
         project_obj = Project.objects.get(id=project_id)
-
         deltafile_id = self.request.parser_context["kwargs"]["deltafileid"]
         return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
 
@@ -176,7 +173,6 @@ class ApplyView(views.APIView):
 
     def post(self, request, projectid):
         project_obj = Project.objects.get(id=projectid)
-
         project_file = project_obj.project_filename
 
         if project_file is None:
