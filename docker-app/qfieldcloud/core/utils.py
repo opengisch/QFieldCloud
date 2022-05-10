@@ -77,6 +77,12 @@ class S3ObjectWithVersions(NamedTuple):
     latest: S3ObjectVersion
     versions: List[S3ObjectVersion]
 
+    @property
+    def total_size(self) -> int:
+        """Total size of all versions"""
+        # lastest is also in versions
+        return sum(v.size for v in self.versions)
+
 
 def redis_is_running() -> bool:
     try:

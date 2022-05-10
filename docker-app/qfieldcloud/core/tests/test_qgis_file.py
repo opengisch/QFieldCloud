@@ -8,13 +8,8 @@ from django.core.management import call_command
 from django.http import FileResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import (
-    Job,
-    ProcessProjectfileJob,
-    Project,
-    User,
-    UserAccount,
-)
+from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project, User
+from qfieldcloud.subscription.models import AccountType
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -517,14 +512,18 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
+        acctype_3 = AccountType.objects.create(storage_keep_versions=3, code="acc3")
+        self.user1.useraccount.account_type = acctype_3
+        self.user1.useraccount.save()
+
         def count_versions():
             """counts the versions in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return len(file.versions)
 
         def read_version(n):
             """returns the content of version in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return file.versions[n]._data.get()["Body"].read().decode()
 
         # Create 20 versions (direct upload to s3)
@@ -565,16 +564,17 @@ class QfcTestCase(APITransactionTestCase):
 
         def count_versions():
             """counts the versions in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return len(file.versions)
 
         def read_version(n):
             """returns the content of version in first file of project1"""
-            file = list(self.project1.files)[0]
+            file = Project.objects.get(pk=self.project1.pk).files[0]
             return file.versions[n]._data.get()["Body"].read().decode()
 
         # As PRO account, 10 version should be kept out of 20
-        self.user1.useraccount.account_type = UserAccount.TYPE_PRO
+        acctype_10 = AccountType.objects.create(storage_keep_versions=10, code="acc10")
+        self.user1.useraccount.account_type = acctype_10
         self.user1.useraccount.save()
         for i in range(20):
             test_file = io.StringIO(f"v{i}")
@@ -584,7 +584,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(read_version(9), "v19")
 
         # As COMMUNITY account, 3 version should be kept
-        self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
+        acctype_3 = AccountType.objects.create(storage_keep_versions=3, code="acc3")
+        self.user1.useraccount.account_type = acctype_3
         self.user1.useraccount.save()
 
         # But first we check that uploading to another project doesn't affect a projct
@@ -596,8 +597,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(read_version(9), "v19")
 
         # As COMMUNITY account, 3 version should be kept out of 20 new ones
-        self.user1.useraccount.account_type = UserAccount.TYPE_COMMUNITY
-        self.user1.useraccount.save()
         for i in range(20, 40):
             test_file = io.StringIO(f"v{i}")
             self.client.post(apipath, {"file": test_file}, format="multipart")

@@ -2,26 +2,29 @@ import os
 import secrets
 import string
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import Iterable, List
+from typing import List
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
+from deprecated import deprecated
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
-from django.db.models.aggregates import Count
+from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
+from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.subscription.models import AccountType
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -377,13 +380,6 @@ class User(AbstractUser):
 
 
 class UserAccount(models.Model):
-    TYPE_COMMUNITY = 1
-    TYPE_PRO = 2
-
-    TYPE_CHOICES = (
-        (TYPE_COMMUNITY, "community"),
-        (TYPE_PRO, "pro"),
-    )
 
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
@@ -399,16 +395,21 @@ class UserAccount(models.Model):
     )
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    account_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_COMMUNITY
+
+    account_type = models.ForeignKey(
+        "subscription.AccountType",
+        on_delete=models.PROTECT,
+        default=AccountType.get_or_create_default,
     )
-    storage_limit_mb = models.PositiveIntegerField(default=100)
+
+    # These will be moved one day to extrapackage. We don't touch for now (they are only used
+    # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
     is_geodb_enabled = models.BooleanField(
         default=False,
         help_text=_("Whether the account has the option to create a GeoDB."),
     )
-    synchronizations_per_months = models.PositiveIntegerField(default=30)
+
     bio = models.CharField(max_length=255, default="", blank=True)
     company = models.CharField(max_length=255, default="", blank=True)
     location = models.CharField(max_length=255, default="", blank=True)
@@ -435,8 +436,30 @@ class UserAccount(models.Model):
         else:
             return None
 
+    @property
+    def storage_quota_left_mb(self) -> float:
+        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
+
+        base_quota = self.account_type.storage_mb
+
+        extra_quota = (
+            self.extra_packages.filter(
+                Q(start_date__lte=datetime.now())
+                & (Q(end_date__isnull=True) | Q(end_date__gte=datetime.now()))
+            ).aggregate(sum_mb=Sum("type__extrapackagetypestorage__megabytes"))[
+                "sum_mb"
+            ]
+            or 0
+        )
+
+        used_quota = (
+            self.user.projects.aggregate(sum_mb=Sum("storage_size_mb"))["sum_mb"] or 0
+        )
+
+        return base_quota + extra_quota - used_quota
+
     def __str__(self):
-        return self.get_account_type_display()
+        return f"Account {self.account_type}"
 
 
 class Geodb(models.Model):
@@ -827,7 +850,6 @@ class Project(models.Model):
         FAILED = "failed", _("Failed")
 
     objects = ProjectQueryset.as_manager()
-    _cache_files_count = None
 
     class Meta:
         ordering = ["owner__username", "name"]
@@ -874,6 +896,10 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # These cache stats of the S3 storage. These can be out of sync, and should be
+    # refreshed whenever retrieving/uploading files by passing `project.save(recompute_storage=True)`
+    storage_size_mb = models.FloatField(default=0)
+
     # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
     data_last_packaged_at = models.DateTimeField(blank=True, null=True)
@@ -884,6 +910,11 @@ class Project(models.Model):
         related_name="last_job_of",
         null=True,
         blank=True,
+    )
+
+    repackaging_cache_expire = models.DurationField(
+        default=timedelta(minutes=60),
+        validators=[MinValueValidator(timedelta(minutes=1))],
     )
 
     overwrite_conflicts = models.BooleanField(
@@ -915,10 +946,6 @@ class Project(models.Model):
     def __str__(self):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
-    def storage_size(self):
-        """Retrieves the storage size from S3"""
-        return utils.get_s3_project_size(self.id)
-
     @property
     def staticfile_dirs(self) -> List[str]:
         """Returns a list of configured staticfile dirs for the project.
@@ -947,16 +974,15 @@ class Project(models.Model):
         # still used in the project serializer
         return not self.is_public
 
-    @property
-    def files(self) -> Iterable[utils.S3ObjectWithVersions]:
-        return utils.get_project_files_with_versions(self.id)
+    @cached_property
+    def files(self) -> List[utils.S3ObjectWithVersions]:
+        """Gets all the files from S3 storage. This is potentially slow. Results are cached on the instance."""
+        return list(utils.get_project_files_with_versions(self.id))
 
     @property
+    @deprecated("Use `len(project.files)` instead")
     def files_count(self):
-        if self._cache_files_count is None:
-            self._cache_files_count = utils.get_project_files_count(self.id)
-
-        return self._cache_files_count
+        return len(self.files)
 
     @property
     def users(self):
@@ -1021,6 +1047,11 @@ class Project(models.Model):
         if self.thumbnail_uri:
             qfieldcloud.core.utils2.storage.remove_project_thumbail(self)
         super().delete(*args, **kwargs)
+
+    def save(self, recompute_storage=False, *args, **kwargs):
+        if recompute_storage:
+            self.storage_size_mb = utils.get_s3_project_size(self.id)
+        super().save(*args, **kwargs)
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):

@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "auditlog",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.subscription",
     "qfieldcloud.notifs",
     "qfieldcloud.authentication",
     # 3rd party - keep at bottom to allow overrides
