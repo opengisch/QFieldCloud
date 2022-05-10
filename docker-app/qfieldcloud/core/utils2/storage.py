@@ -211,14 +211,8 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
 
     logger.info(f"Cleaning up old files for {project}")
 
-    # Determine account type
-    account_type = project.owner.useraccount.account_type
-    if account_type == qfieldcloud.core.models.UserAccount.TYPE_COMMUNITY:
-        keep_count = 3
-    elif account_type == qfieldcloud.core.models.UserAccount.TYPE_PRO:
-        keep_count = 10
-    else:
-        raise NotImplementedError(f"Unknown account type {account_type}")
+    # Number of versions to keep is determined by the account type
+    keep_count = project.owner.useraccount.account_type.storage_keep_versions
 
     logger.debug(f"Keeping {keep_count} versions")
 
