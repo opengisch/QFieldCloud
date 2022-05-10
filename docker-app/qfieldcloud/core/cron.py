@@ -90,6 +90,16 @@ class DeleteDanglingProjectPackagesJob(CronJobBase):
         projects = Project.objects.filter(
             updated_at__gt=timezone.now() - timedelta(minutes=65)
         )
+        job_ids = [
+            str(job["id"])
+            for job in Job.objects.filter(
+                type=Job.Type.PACKAGE,
+            )
+            .exclude(
+                status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+            )
+            .values("id")
+        ]
 
         for project in projects:
             project_id = str(project.id)
@@ -98,6 +108,10 @@ class DeleteDanglingProjectPackagesJob(CronJobBase):
             for package_id in package_ids:
                 # keep the last package
                 if package_id == str(project.last_package_job_id):
+                    continue
+
+                # the job is still active, so it might be one of the new packages
+                if package_id in job_ids:
                     continue
 
                 storage.delete_stored_package(project_id, package_id)

@@ -290,10 +290,24 @@ class PackageJobRun(JobRun):
             try:
                 project_id = str(self.job.project.id)
                 package_ids = storage.get_stored_package_ids(project_id)
+                job_ids = [
+                    str(job["id"])
+                    for job in Job.objects.filter(
+                        type=Job.Type.PACKAGE,
+                    )
+                    .exclude(
+                        status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+                    )
+                    .values("id")
+                ]
 
                 for package_id in package_ids:
                     # keep the last package
                     if package_id == str(self.job.project.last_package_job_id):
+                        continue
+
+                    # the job is still active, so it might be one of the new packages
+                    if package_id in job_ids:
                         continue
 
                     storage.delete_stored_package(project_id, package_id)
