@@ -271,6 +271,12 @@ def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     """Whether the user can store given delta."""
     project: Project = delta.project
 
+    if (
+        project._has_online_vector_data
+        and not project.owner.useraccount.account_type.is_external_db_supported
+    ):
+        return False
+
     if user_has_project_roles(
         user,
         project,

@@ -54,9 +54,6 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
         project_obj = Project.objects.get(id=projectid)
 
-        # Enforce validation on the user
-        project_obj.validate_according_to_owner_account()
-
         project_file = project_obj.project_filename
 
         if "file" not in request.data:
@@ -161,9 +158,6 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
 
         project_obj = Project.objects.get(id=project_id)
 
-        # Enforce validation on the user
-        project_obj.validate_according_to_owner_account()
-
         deltafile_id = self.request.parser_context["kwargs"]["deltafileid"]
         return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
 
@@ -182,9 +176,6 @@ class ApplyView(views.APIView):
 
     def post(self, request, projectid):
         project_obj = Project.objects.get(id=projectid)
-
-        # Enforce validation on the user
-        project_obj.validate_according_to_owner_account()
 
         project_file = project_obj.project_filename
 

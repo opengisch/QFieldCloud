@@ -24,7 +24,6 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.exceptions import QuotaError
 from qfieldcloud.subscription.models import AccountType
 from timezone_field import TimeZoneField
 
@@ -999,6 +998,8 @@ class Project(models.Model):
 
     @property
     def _has_online_vector_data(self) -> Optional[bool]:
+        """Will return None if project_details are not available"""
+
         if not self.project_details:
             return None
 
@@ -1017,18 +1018,6 @@ class Project(models.Model):
                 break
 
         return has_online_vector_layers
-
-    def validate_according_to_owner_account(self) -> bool:
-        if (
-            self._has_online_vector_data
-            and not self.owner.useraccount.account_type.is_external_db_supported
-        ):
-            raise QuotaError(
-                _(
-                    "This project contains online layers which is not supported by the project owner's account type."
-                )
-            )
-        return True
 
     @property
     def can_repackage(self) -> bool:

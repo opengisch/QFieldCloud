@@ -51,9 +51,6 @@ class LatestPackageView(views.APIView):
         """Get last project package status and file list."""
         project = Project.objects.get(id=project_id)
 
-        # Enforce validation on the user
-        project.validate_according_to_owner_account()
-
         # Check if the project was packaged at least once
         if not project.last_package_job_id:
             raise exceptions.InvalidJobError(
@@ -109,9 +106,6 @@ class LatestPackageDownloadFilesView(views.APIView):
             exceptions.InvalidJobError: [description]
         """
         project = Project.objects.get(id=project_id)
-
-        # Enforce validation on the user
-        project.validate_according_to_owner_account()
 
         # Check if the project was packaged at least once
         if not project.last_package_job_id:

@@ -1,8 +1,9 @@
+import io
 from pathlib import Path
 from time import sleep
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Job, Project, User
+from qfieldcloud.core.models import Delta, Job, Project, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -12,6 +13,38 @@ DATA_FOLDER = Path(__file__).parent / "data"
 
 
 class QfcTestCase(APITransactionTestCase):
+
+    DELTA_CONTENT = """
+    {
+        "deltas": [
+            {
+                "uuid": "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+                "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+                "localPk": "1",
+                "sourcePk": "1",
+                "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+                "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+                "method": "patch",
+                "new": {
+                    "attributes": {
+                        "int": 666
+                    }
+                },
+                "old": {
+                    "attributes": {
+                        "int": 1
+                    }
+                }
+            }
+        ],
+        "files": [],
+        "id": "6f109cd3-f44c-41db-b134-5f38468b9fda",
+        "project": "00000000-0000-0000-0000-000000000000",
+        "version": "1.0"
+    }
+    """
+
     def _login(self, user):
         token = AuthToken.objects.get_or_create(user=user)[0]
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
@@ -50,75 +83,52 @@ class QfcTestCase(APITransactionTestCase):
         p1 = Project.objects.create(name="p1", owner=u1)
         self._login(u1)
 
-        # Set external db supported
+        # Upload a projet
+        response = self.client.post(
+            f"/api/v1/files/{p1.id}/project.qgs/",
+            {"file": open(DATA_FOLDER / "project_with_external_db.qgs", "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+        self._wait(p1, Job.Type.PROCESS_PROJECTFILE)
+
+        # When external db supported, we can apply deltas
         AccountType.objects.all().update(is_external_db_supported=True)
-
-        # Upload a projet
         response = self.client.post(
-            f"/api/v1/files/{p1.id}/project.qgs/",
-            {"file": open(DATA_FOLDER / "project_with_external_db.qgs", "rb")},
+            f"/api/v1/deltas/{p1.id}/",
+            {
+                "file": io.StringIO(
+                    self.DELTA_CONTENT.replace(
+                        "00000000-0000-0000-0000-000000000000", str(p1.id)
+                    )
+                )
+            },
             format="multipart",
         )
-        self.assertTrue(status.is_success(response.status_code))
-        self._wait(p1, Job.Type.PROCESS_PROJECTFILE)
-
-        # Package it
-        response = self.client.post(
-            "/api/v1/jobs/",
-            {"project_id": p1.id, "type": Job.Type.PACKAGE},
+        self.assertEqual(
+            Delta.objects.filter(project=p1).latest("created_at").last_status,
+            Delta.Status.PENDING,
         )
-        self.assertTrue(response.status_code, 201)
-        self._wait(p1, Job.Type.PACKAGE)
+        self._wait(p1, Job.Type.DELTA_APPLY)
+        self.assertEqual(
+            Delta.objects.filter(project=p1).latest("created_at").last_status,
+            Delta.Status.APPLIED,
+        )
 
-        # Test various endpoints
-        for requests_to_check in [
-            # TODO: list all endpoints that we wish would fail here
-            ["GET", f"/api/v1/packages/{p1.pk}/latest/"],
-            [
-                "GET",
-                f"/api/v1/packages/{p1.pk}/latest/files/project_with_external_db.qgs/",
-            ],
-            # ["GET", f"/api/v1/deltas/{p1.pk}/"],
-        ]:
-            # If account type has external db permission, endpoint works
-            AccountType.objects.all().update(is_external_db_supported=True)
-            response = self.client.generic(*requests_to_check)
-            self.assertTrue(
-                status.is_success(response.status_code),
-                f"Unexpected failure: {requests_to_check}",
-            )
-
-            # If account type has not external db permission, endpoint fails
-            AccountType.objects.all().update(is_external_db_supported=False)
-            response = self.client.generic(*requests_to_check)
-            self.assertFalse(
-                status.is_success(response.status_code),
-                f"Unexpected success: {requests_to_check}",
-            )
-
-    def test_is_external_db_notsupported(self):
-        """This tests is_external_db_supported property of accounts types"""
-
-        u1 = User.objects.create(username="u1")
-        p1 = Project.objects.create(name="p1", owner=u1)
-        self._login(u1)
-
-        # Set external db not supported
+        # When external db is NOT supported, we can NOT apply deltas
         AccountType.objects.all().update(is_external_db_supported=False)
-
-        # Upload a projet
         response = self.client.post(
-            f"/api/v1/files/{p1.id}/project.qgs/",
-            {"file": open(DATA_FOLDER / "project_with_external_db.qgs", "rb")},
+            f"/api/v1/deltas/{p1.id}/",
+            {
+                "file": io.StringIO(
+                    self.DELTA_CONTENT.replace(
+                        "00000000-0000-0000-0000-000000000000", str(p1.id)
+                    )
+                )
+            },
             format="multipart",
         )
-        self.assertTrue(status.is_success(response.status_code))
-        self._wait(p1, Job.Type.PROCESS_PROJECTFILE)
-
-        # Package it (this should fail)
-        response = self.client.post(
-            "/api/v1/jobs/",
-            {"project_id": p1.id, "type": Job.Type.PACKAGE},
+        self.assertEqual(
+            Delta.objects.filter(project=p1).latest("created_at").last_status,
+            Delta.Status.UNPERMITTED,
         )
-        self.assertTrue(response.status_code, 201)
-        self._wait(p1, Job.Type.PACKAGE, Job.Status.FAILED)
