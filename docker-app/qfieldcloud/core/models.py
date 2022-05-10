@@ -4,7 +4,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import List
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
@@ -990,24 +990,15 @@ class Project(models.Model):
 
     @property
     def has_online_vector_data(self) -> bool:
-        """Will return true if project_details are not available"""
         # it's safer to assume there is an online vector layer
-        value = self._has_online_vector_data
-        if value is None:
-            return True
-        return value
-
-    @property
-    def _has_online_vector_data(self) -> Optional[bool]:
-        """Will return None if project_details are not available"""
-
         if not self.project_details:
-            return None
+            return True
 
         layers_by_id = self.project_details.get("layers_by_id")
 
+        # it's safer to assume there is an online vector layer
         if layers_by_id is None:
-            return None
+            return True
 
         has_online_vector_layers = False
 
