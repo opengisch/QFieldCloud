@@ -28,6 +28,7 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
+from qfieldcloud.core.utils2 import storage
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +286,36 @@ class PackageJobRun(JobRun):
             self.job.project.data_last_packaged_at = self.data_last_packaged_at
             self.job.project.last_package_job = self.job
             self.job.project.save()
+
+            try:
+                project_id = str(self.job.project.id)
+                package_ids = storage.get_stored_package_ids(project_id)
+                job_ids = [
+                    str(job["id"])
+                    for job in Job.objects.filter(
+                        type=Job.Type.PACKAGE,
+                    )
+                    .exclude(
+                        status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+                    )
+                    .values("id")
+                ]
+
+                for package_id in package_ids:
+                    # keep the last package
+                    if package_id == str(self.job.project.last_package_job_id):
+                        continue
+
+                    # the job is still active, so it might be one of the new packages
+                    if package_id in job_ids:
+                        continue
+
+                    storage.delete_stored_package(project_id, package_id)
+            except Exception as err:
+                logger.error(
+                    "Failed to delete dangling packages, will be deleted via CRON later.",
+                    exc_info=err,
+                )
 
 
 class DeltaApplyJobRun(JobRun):

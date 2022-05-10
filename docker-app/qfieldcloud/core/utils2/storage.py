@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import PurePath
-from typing import IO, List
+from typing import IO, List, Set
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
@@ -104,7 +104,7 @@ def file_response(
 def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
-    NOTE you need to set the URI to the user account manually
+    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
 
     Args:
         user (User):
@@ -138,6 +138,13 @@ def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F
 
 
 def remove_user_avatar(user: "User") -> None:  # noqa: F821
+    """Removes the user's avatar file.
+
+    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
+
+    Args:
+        user (User):
+    """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = user.useraccount.avatar_uri
     bucket.object_versions.filter(Prefix=key).delete()
@@ -148,7 +155,7 @@ def upload_project_thumbail(
 ) -> str:
     """Uploads a picture as a project thumbnail.
 
-    NOTE you need to set the URI to the project manually
+    NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     Args:
         project (Project):
@@ -187,7 +194,8 @@ def upload_project_thumbail(
 def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     """Uploads a picture as a project thumbnail.
 
-    NOTE you need to remove the URI to the project manually
+    NOTE this function does NOT modify the `Project.thumbnail_uri` field
+
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = project.thumbnail_uri
@@ -286,3 +294,24 @@ def delete_file_version(
         file_version._data.delete()
 
     return versions_to_delete
+
+
+def get_stored_package_ids(project_id: str) -> Set[str]:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/packages/"
+    root_path = PurePath(prefix)
+    package_ids = set()
+
+    for file in bucket.objects.filter(Prefix=prefix):
+        file_path = PurePath(file.key)
+        parts = file_path.relative_to(root_path).parts
+        package_ids.add(parts[0])
+
+    return package_ids
+
+
+def delete_stored_package(project_id: str, package_id: str) -> None:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/packages/{package_id}/"
+
+    bucket.objects.filter(Prefix=prefix).delete()

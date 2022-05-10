@@ -14,7 +14,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
-from django.db.models import Case, Exists, OuterRef, Q
+from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
@@ -53,6 +53,10 @@ class UserQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project"):
+
+        # This is a list of tuples defining project memberships
+        # List[(Condition, Role, RoleOrigin)]
+
         permissions_config = [
             # Project owner
             (
@@ -84,10 +88,12 @@ class UserQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.filter(
+                    ProjectCollaborator.objects.validated()
+                    .filter(
                         project=project,
                         collaborator=OuterRef("pk"),
-                    ).exclude(
+                    )
+                    .exclude(
                         collaborator__user_type=User.TYPE_TEAM,
                     )
                 ),
@@ -783,7 +789,7 @@ class ProjectQueryset(models.QuerySet):
             # Role through ProjectCollaborator
             (
                 Exists(
-                    ProjectCollaborator.objects.filter(
+                    ProjectCollaborator.objects.validated().filter(
                         project=OuterRef("pk"),
                         collaborator=user,
                     )
@@ -1069,6 +1075,41 @@ def delete_project(sender: Type[Project], instance: Project, **kwargs: Any) -> N
     if instance.thumbnail_uri:
         qfieldcloud.core.utils2.storage.remove_project_thumbail(instance)
 
+    def save(self, recompute_storage=False, *args, **kwargs):
+        if recompute_storage:
+            self.storage_size_mb = utils.get_s3_project_size(self.id)
+        super().save(*args, **kwargs)
+
+
+class ProjectCollaboratorQueryset(models.QuerySet):
+    def validated(self, keep_invalid=False):
+        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
+
+        A membership to a private project not owned by an organization, or owned by a organization
+        that the member is not part of is invalid.
+
+        Args:
+            keep_invalid:   if true, invalid rows are kept"""
+
+        # Build the conditions with Q objects
+        public = Q(project__is_public=True)
+        owned_by_org = Q(project__owner__user_type=User.TYPE_ORGANIZATION)
+        user_also_member_of_org = Q(
+            project__owner__organization__members__member=F("collaborator")
+        )
+
+        # Assemble the condition
+        condition = public | (owned_by_org & user_also_member_of_org)
+
+        # Annotate the queryset
+        qs = self.annotate(is_valid=Case(When(condition, then=True), default=False))
+
+        # Filter out invalid
+        if not keep_invalid:
+            qs = qs.exclude(is_valid=False)
+
+        return qs
+
 
 class ProjectCollaborator(models.Model):
     class Roles(models.TextChoices):
@@ -1085,6 +1126,8 @@ class ProjectCollaborator(models.Model):
                 name="projectcollaborator_project_collaborator_uniq",
             )
         ]
+
+    objects = ProjectCollaboratorQueryset.as_manager()
 
     project = models.ForeignKey(
         Project,
