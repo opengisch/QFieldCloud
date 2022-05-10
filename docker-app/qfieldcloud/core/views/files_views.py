@@ -141,6 +141,15 @@ class DownloadPushDeleteFileView(views.APIView):
             )
 
         request_file = request.FILES.get("file")
+
+        file_size_mb = request_file.size / 1024 / 1024
+        quota_left_mb = project.owner.useraccount.storage_quota_left_mb
+
+        if file_size_mb > quota_left_mb:
+            raise exceptions.QuotaError(
+                f"Requiring {file_size_mb}MB of storage but only {quota_left_mb}MB available."
+            )
+
         old_object = get_project_file_with_versions(project.id, filename)
         sha256sum = utils.get_sha256(request_file)
         bucket = utils.get_s3_bucket()
@@ -205,7 +214,7 @@ class DownloadPushDeleteFileView(views.APIView):
 
         if utils.is_qgis_project_file(filename):
             project.project_filename = None
-            project.save()
+        project.save(recompute_storage=True)
 
         audit(
             project,

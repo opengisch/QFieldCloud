@@ -45,4 +45,9 @@ class Migration(migrations.Migration):
                 default=qfieldcloud.subscription.models.AccountType.get_or_create_default,
             ),
         ),
+        migrations.AddField(
+            model_name="project",
+            name="storage_size_mb",
+            field=models.FloatField(default=0),
+        ),
     ]
