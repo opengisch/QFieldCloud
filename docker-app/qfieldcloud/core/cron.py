@@ -79,9 +79,9 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
         )
 
 
-class DeleteDanglingProjectPackagesJob(CronJobBase):
+class DeleteObsoleteProjectPackagesJob(CronJobBase):
     schedule = Schedule(run_every_mins=60)
-    code = "qfieldcloud.delete_dangling_project_packages"
+    code = "qfieldcloud.delete_obsolete_project_packages"
 
     def do(self):
         # get only the projects updated in the last a little more than an hour,
