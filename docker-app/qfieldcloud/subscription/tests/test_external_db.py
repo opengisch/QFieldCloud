@@ -40,7 +40,9 @@ class QfcTestCase(APITransactionTestCase):
                     break
                 else:
                     print(f" got unexpected result ! ({job.status})")
+                    print("~~~~~~~~~~~~~~~~~~~~~~")
                     print(job.feedback)
+                    print("~~~~~~~~~~~~~~~~~~~~~~")
                     raise Exception("Unexpected result failed !")
             # print(".", end="")
             sleep(1)
@@ -81,7 +83,7 @@ class QfcTestCase(APITransactionTestCase):
             host="geodb",
             port=5432,
         )
-        conn.cursor().execute("CREATE TABLE point (id integer, name text)")
+        conn.cursor().execute("CREATE TABLE point (id integer PRIMARY KEY, name text)")
         conn.commit()
 
         # Upload the project file and ensure it loaded
@@ -94,6 +96,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self._wait(p1, Job.Type.PROCESS_PROJECTFILE)
 
+        # Ensure we start without delta
+
+        self.assertEqual(Delta.objects.filter(project=p1).count(), 0)
+
         # When external db supported, we can apply deltas
 
         AccountType.objects.all().update(is_external_db_supported=True)
@@ -101,11 +107,12 @@ class QfcTestCase(APITransactionTestCase):
             f"/api/v1/deltas/{p1.id}/",
             {
                 "file": self._get_delta_file_with_project_id(
-                    p1, DATA_FOLDER / "project_pgservice_delta.json"
+                    p1, DATA_FOLDER / "project_pgservice_delta_1.json"
                 )
             },
             format="multipart",
         )
+        self.assertEqual(Delta.objects.filter(project=p1).count(), 1)
         self.assertEqual(
             Delta.objects.filter(project=p1).latest("created_at").last_status,
             Delta.Status.PENDING,
@@ -123,11 +130,15 @@ class QfcTestCase(APITransactionTestCase):
             f"/api/v1/deltas/{p1.id}/",
             {
                 "file": self._get_delta_file_with_project_id(
-                    p1, DATA_FOLDER / "project_pgservice_delta.json"
+                    p1, DATA_FOLDER / "project_pgservice_delta_2.json"
                 )
             },
             format="multipart",
         )
+        self.assertEqual(Delta.objects.filter(project=p1).count(), 2)
+        print("-------------------")
+        for delta in Delta.objects.filter(project=p1):
+            print(delta)
         self.assertEqual(
             Delta.objects.filter(project=p1).latest("created_at").last_status,
             Delta.Status.UNPERMITTED,

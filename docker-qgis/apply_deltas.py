@@ -588,9 +588,7 @@ def apply_deltas_without_transaction(
                 f"An unknown error has been encountered while applying delta: {err}"
             )
 
-            raise Exception(
-                f"An unknown error has been encountered while applying delta: {err}"
-            ) from err
+            raise err
 
     return has_applied_all_deltas
 
