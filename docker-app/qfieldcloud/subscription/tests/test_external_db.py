@@ -63,7 +63,7 @@ class QfcTestCase(APITransactionTestCase):
         u1 = User.objects.create(username="u1")
         self._login(u1)
 
-        # Create a projet with a writable remote DB
+        # Create a project with a writable remote DB
 
         p1 = Project.objects.create(name="p1", owner=u1)
 
