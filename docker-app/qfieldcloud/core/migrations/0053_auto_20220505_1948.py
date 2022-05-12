@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0053_project_last_package"),
+        ("core", "0052_secret"),
     ]
 
     operations = [
