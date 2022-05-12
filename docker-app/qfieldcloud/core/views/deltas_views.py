@@ -99,10 +99,15 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                         created_by=self.request.user,
                     )
 
-                    if permissions_utils.can_create_delta(self.request.user, delta_obj):
-                        delta_obj.last_status = Delta.Status.PENDING
-                    else:
+                    if (
+                        not permissions_utils.can_create_delta(
+                            self.request.user, delta_obj
+                        )
+                        or not delta_obj.is_supported_regarding_owner_account
+                    ):
                         delta_obj.last_status = Delta.Status.UNPERMITTED
+                    else:
+                        delta_obj.last_status = Delta.Status.PENDING
 
                     delta_obj.save(force_insert=True)
                     created_deltas.append(delta_obj)

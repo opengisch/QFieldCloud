@@ -1230,6 +1230,13 @@ class Delta(models.Model):
     def method(self):
         return self.content.get("method")
 
+    @property
+    def is_supported_regarding_owner_account(self):
+        return (
+            not self.project.has_online_vector_data
+            or self.project.owner.useraccount.account_type.is_external_db_supported
+        )
+
 
 class Job(models.Model):
 
