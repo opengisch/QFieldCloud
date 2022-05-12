@@ -272,7 +272,7 @@ def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     project: Project = delta.project
 
     if (
-        project._has_online_vector_data
+        project.has_online_vector_data
         and not project.owner.useraccount.account_type.is_external_db_supported
     ):
         return False

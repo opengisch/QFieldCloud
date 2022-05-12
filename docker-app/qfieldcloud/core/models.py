@@ -4,7 +4,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
@@ -989,16 +989,18 @@ class Project(models.Model):
         return User.objects.for_project(self)
 
     @property
-    def has_online_vector_data(self) -> bool:
+    def has_online_vector_data(self) -> Optional[bool]:
+        """Returns None if project details or layers details are not available"""
+
         # it's safer to assume there is an online vector layer
         if not self.project_details:
-            return True
+            return None
 
         layers_by_id = self.project_details.get("layers_by_id")
 
         # it's safer to assume there is an online vector layer
         if layers_by_id is None:
-            return True
+            return None
 
         has_online_vector_layers = False
 
@@ -1018,7 +1020,9 @@ class Project(models.Model):
     @property
     def needs_repackaging(self) -> bool:
         if (
-            not self.has_online_vector_data
+            # if has_online_vector_data is None (happens when the project details are missing)
+            # we assume there might be
+            self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
         ):
