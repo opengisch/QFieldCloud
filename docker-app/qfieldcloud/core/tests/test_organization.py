@@ -1,7 +1,18 @@
+import calendar
 import logging
+import uuid
+from datetime import timedelta
 
+from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Organization, OrganizationMember, User
+from qfieldcloud.core.models import (
+    Delta,
+    Job,
+    Organization,
+    OrganizationMember,
+    Project,
+    User,
+)
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -154,3 +165,72 @@ class QfcTestCase(APITestCase):
         )
 
         self.assertTrue(status.is_success(response.status_code))
+
+    def test_billable_users_count(self):
+        """Tests billable users calculations"""
+
+        # Set user1 and user2 as member of organization1
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user1,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+
+        # Create a project owned by the organization
+        project1 = Project.objects.create(name="p1", owner=self.organization1)
+
+        def _billable_users_count(base_date=None):
+            """Helper to get count of billable users"""
+            if base_date is None:
+                base_date = now()
+
+            # Note: we can't easily mock dates as the worker can update jobs in the background
+            # with the current date
+            start_date = base_date.replace(day=1)
+            end_date = base_date.replace(
+                day=calendar.monthrange(base_date.year, base_date.month)[1]
+            )
+            return self.organization1.billable_users(start_date, end_date).count()
+
+        # Initially, there is no billable user
+        self.assertEqual(_billable_users_count(), 0)
+
+        # User 1 creates a job
+        Job.objects.create(
+            project=project1,
+            created_by=self.user1,
+        )
+        # There is now 1 billable user
+        self.assertEqual(_billable_users_count(), 1)
+
+        # User 1 creates a delta
+        Delta.objects.create(
+            deltafile_id=uuid.uuid4(),
+            project=project1,
+            content="delta",
+            created_by=self.user1,
+        )
+        # There is still 1 billable user
+        self.assertEqual(_billable_users_count(), 1)
+
+        # User 2 creates a job
+        Job.objects.create(
+            project=project1,
+            created_by=self.user2,
+        )
+        # There is 2 billable user
+        self.assertEqual(_billable_users_count(), 2)
+
+        # User 2 leaves the organization
+        OrganizationMember.objects.filter(member=self.user2).delete()
+
+        # There is now 1 billable user
+        self.assertEqual(_billable_users_count(), 1)
+
+        # Report at a different time is empty
+        self.assertEqual(_billable_users_count(now() + timedelta(days=365)), 0)

@@ -1,10 +1,11 @@
+import calendar
 import os
 import secrets
 import string
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
@@ -627,6 +628,39 @@ class Organization(User):
     class Meta:
         verbose_name = "organization"
         verbose_name_plural = "organizations"
+
+    def billable_users(self, from_date: date, to_date: Optional[date] = None):
+        """Returns the queryset of billable users in the given time interval.
+
+        Bilable users are users triggering a job or pushing a delta on a project owned by the organization.
+
+        Args:
+            from_date (datetime.date): inclusive beginning of the interval
+            to_date (Optional[datetime.date], optional): inclusive end of the interval (if None, will default to the last day of the month of the start date)
+        """
+
+        if to_date is None:
+            to_date = from_date.replace(
+                day=calendar.monthrange(from_date.year, from_date.month)[1]
+            )
+
+        users_with_delta = Delta.objects.filter(
+            project__in=self.projects.all(),
+            updated_at__gte=from_date,
+            updated_at__lte=to_date,
+        ).values_list("created_by_id", flat=True)
+        users_with_jobs = Job.objects.filter(
+            project__in=self.projects.all(),
+            updated_at__gte=from_date,
+            updated_at__lte=to_date,
+        ).values_list("created_by_id", flat=True)
+
+        print(f"with deltas: {users_with_delta}")
+        print(f"with jobs: {users_with_jobs}")
+
+        return User.objects.filter(organizationmember__organization=self).filter(
+            Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
+        )
 
     def save(self, *args, **kwargs):
         self.user_type = self.TYPE_ORGANIZATION
