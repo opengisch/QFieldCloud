@@ -378,6 +378,21 @@ class User(AbstractUser):
             qfieldcloud.core.utils2.storage.remove_user_avatar(self)
         super().delete(*args, **kwargs)
 
+    class Meta:
+        verbose_name = "user"
+        verbose_name_plural = "users"
+
+    #     # TODO Django 4.0 convert to functional unique constraint, see https://docs.djangoproject.com/en/4.0/ref/models/constraints/#expressions
+    #     constraints = [
+    #         # the uniqueness is guaranteed by username's unqiue index anyway
+    #         # since Django has some annoying checks if `username` is unique, better sacrifice
+    #         # some megabytes with two separate indexes for `username` and `UPPER(username)`
+    #         UniqueConstraint(
+    #             Upper("username"),
+    #             name="core_user_username_uppercase"
+    #         )
+    #     ]
+
 
 class UserAccount(models.Model):
 
