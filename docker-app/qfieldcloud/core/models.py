@@ -648,7 +648,7 @@ class Organization(User):
             project__in=self.projects.all(),
             updated_at__gte=from_date,
             updated_at__lte=to_date,
-        ).values_list("created_by_id", flat=True)
+        ).values_list("created_by_id", flat=True).distinct()
         users_with_jobs = Job.objects.filter(
             project__in=self.projects.all(),
             updated_at__gte=from_date,
