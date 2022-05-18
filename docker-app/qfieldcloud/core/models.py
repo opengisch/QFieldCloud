@@ -644,16 +644,24 @@ class Organization(User):
                 day=calendar.monthrange(from_date.year, from_date.month)[1]
             )
 
-        users_with_delta = Delta.objects.filter(
-            project__in=self.projects.all(),
-            updated_at__gte=from_date,
-            updated_at__lte=to_date,
-        ).values_list("created_by_id", flat=True).distinct()
-        users_with_jobs = Job.objects.filter(
-            project__in=self.projects.all(),
-            updated_at__gte=from_date,
-            updated_at__lte=to_date,
-        ).values_list("created_by_id", flat=True).distinct()
+        users_with_delta = (
+            Delta.objects.filter(
+                project__in=self.projects.all(),
+                updated_at__gte=from_date,
+                updated_at__lte=to_date,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
+        users_with_jobs = (
+            Job.objects.filter(
+                project__in=self.projects.all(),
+                updated_at__gte=from_date,
+                updated_at__lte=to_date,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
 
         return User.objects.filter(organizationmember__organization=self).filter(
             Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
