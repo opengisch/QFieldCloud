@@ -29,6 +29,19 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = int(os.environ.get("DEBUG", default=0))
 
+# if we are in debug, we need to update the internal IPS to make the
+# debug toolbar work within docker
+if DEBUG:
+    import socket  # only if you haven't already imported this
+
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + [
+        "127.0.0.1",
+        "10.0.2.2",
+    ]
+
+ENVIRONMENT = os.environ.get("ENVIRONMENT")
+
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
@@ -58,6 +71,8 @@ INSTALLED_APPS = [
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
     "django_tables2",
     "django_filters",
+    # debug
+    "debug_toolbar",
     # style
     "bootstrap4",
     "rest_framework",
@@ -82,6 +97,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -319,3 +335,7 @@ QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
 
 WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 60))
+
+DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
+}

@@ -15,11 +15,6 @@ services:
     environment:
       DEBUG: 1
     command: python3 manage.py runserver 0.0.0.0:8000
-    depends_on:
-      - db
-      - geodb
-      - minio
-      - smtp4dev
 
   worker_wrapper:
     build:
