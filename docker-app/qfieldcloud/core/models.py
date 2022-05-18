@@ -655,9 +655,6 @@ class Organization(User):
             updated_at__lte=to_date,
         ).values_list("created_by_id", flat=True)
 
-        print(f"with deltas: {users_with_delta}")
-        print(f"with jobs: {users_with_jobs}")
-
         return User.objects.filter(organizationmember__organization=self).filter(
             Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
         )
