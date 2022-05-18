@@ -500,7 +500,8 @@ def apply_deltas_without_transaction(
             if feature.isValid():
                 _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
 
-                assert pk_attr_name
+                if not pk_attr_name:
+                    raise DeltaException(f"Layer {layer.name()} has not primary key")
 
                 modified_pk = feature.attribute(pk_attr_name)
 
