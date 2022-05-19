@@ -106,7 +106,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                         delta_obj.last_status = Delta.Status.UNPERMITTED
                         delta_obj.last_feedback = {
                             "msg": _(
-                                "User has no rights to create delta on this project. Try inviting him as a collaborator and try again."
+                                "User has no rights to create delta on this project. Try inviting him as a collaborator with proper permissions and try again."
                             )
                         }
                     elif not delta_obj.is_supported_regarding_owner_account:
