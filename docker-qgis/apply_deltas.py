@@ -501,7 +501,7 @@ def apply_deltas_without_transaction(
                 _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
 
                 if not pk_attr_name:
-                    raise DeltaException(f"Layer {layer.name()} has not primary key")
+                    raise DeltaException(f'Layer "{layer.name()}" has no primary key.')
 
                 modified_pk = feature.attribute(pk_attr_name)
 
