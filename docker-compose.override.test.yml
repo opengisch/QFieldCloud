@@ -9,6 +9,8 @@ services:
       # we must use the same db for test and runserver
       SQL_DATABASE: test_${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
+    ports:
+      - 5678:5678
     command: python3 manage.py runserver 0.0.0.0:8000
 
   worker_wrapper:
