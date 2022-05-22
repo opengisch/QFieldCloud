@@ -64,4 +64,5 @@ urlpatterns = [
     path("auth/", include("rest_framework.urls")),
     path("accounts/", include("allauth.urls")),
     re_path(r"^invitations/", include("invitations.urls", namespace="invitations")),
+    path("__debug__/", include("debug_toolbar.urls")),
 ]
