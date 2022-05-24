@@ -36,7 +36,7 @@ def populate_account_types(apps, schema_editor):
         job_minutes=100,
         can_add_storage=False,
         can_add_job_minutes=False,
-        is_external_db_supported=False,
+        is_external_db_supported=True,
         has_priority_support=False,
         can_configure_repackaging_cache_expire=True,
         min_repackaging_cache_expire=timedelta(minutes=1),
@@ -55,7 +55,7 @@ def populate_account_types(apps, schema_editor):
         job_minutes=100,  # TODO: QF-234 says per should be per user !
         can_add_storage=False,
         can_add_job_minutes=False,
-        is_external_db_supported=False,
+        is_external_db_supported=True,
         has_priority_support=False,
         can_configure_repackaging_cache_expire=True,
         min_repackaging_cache_expire=timedelta(minutes=1),
