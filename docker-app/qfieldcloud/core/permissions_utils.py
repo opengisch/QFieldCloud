@@ -9,6 +9,7 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     ProjectQueryset,
+    Team,
 )
 from qfieldcloud.core.models import User as QfcUser
 
@@ -536,6 +537,12 @@ def can_delete_geodb(user: QfcUser, profile: QfcUser) -> bool:
 
 
 def can_become_member(user: QfcUser, organization: Organization) -> bool:
+    if user.user_type == QfcUser.TYPE_ORGANIZATION:
+        return False
+
+    if user.user_type == QfcUser.TYPE_TEAM:
+        return Team.objects.get(pk=user.pk).team_organization == organization
+
     return not user_has_organization_role_origins(
         user,
         organization,
