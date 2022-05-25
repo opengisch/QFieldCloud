@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="ProjectPermissionsView",
+            name="ProjectRolesView",
             fields=[
                 (
                     "id",
@@ -151,22 +151,10 @@ class Migration(migrations.Migration):
                         INNER JOIN "core_team" T1 ON (U1."id" = T1."user_ptr_id")
                         INNER JOIN "core_teammember" TM1 ON (T1."user_ptr_id" = TM1."team_id")
                         INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")
-                ),
-                public_project AS (
-                    SELECT
-                        P1."id" AS "project_id",
-                        NULL::int AS "user_id",
-                        'reader' AS "name",
-                        'public' AS "origin",
-                        TRUE AS "is_valid"
-                    FROM
-                        "core_project" P1
-                    WHERE
-                        is_public = TRUE
                 )
                 SELECT DISTINCT ON(project_id, user_id)
                     row_number() OVER () AS id,
-                    roles.*
+                    R1.*
                 FROM (
                     SELECT * FROM project_owner
                     UNION
@@ -177,9 +165,7 @@ class Migration(migrations.Migration):
                     SELECT * FROM project_collaborator
                     UNION
                     SELECT * FROM project_collaborator_team
-                    UNION
-                    SELECT * FROM public_project
-                ) roles
+                ) R1
             """,
             reverse_sql="""
                 DROP VIEW projects_with_roles_vw

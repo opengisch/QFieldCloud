@@ -20,10 +20,10 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
-from django.db.models.functions import Coalesce
 from django.urls import reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
+from django_delayed_union import DelayedUnionQuerySet
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.subscription.models import AccountType
@@ -814,16 +814,25 @@ class ProjectQueryset(models.QuerySet):
         PUBLIC = "public", _("Public")
 
     def for_user(self, user):
-        qs = (
+        qs = DelayedUnionQuerySet(
             Project.objects.select_related("user_role")
             .defer("user_role__user_id", "user_role__project_id")
-            .annotate(user_role__user_id=Coalesce("user_role__user_id", None))
             .filter(
-                Q(user_role__user=user)
-                | Q(user_role__origin=ProjectQueryset.RoleOrigins.PUBLIC),
+                Q(user_role__user=user),
                 user_role__is_valid=True,
+            ),
+            Project.objects.annotate(
+                user_role__id=V(user.id),
+                user_role__name=V(ProjectCollaborator.Roles.READER),
+                user_role__origin=V(ProjectQueryset.RoleOrigins.PUBLIC),
+                user_role__is_valid=V(True),
             )
-            .distinct("owner__username", "name")
+            .filter(is_public=True)
+            .exclude(
+                id__in=ProjectRolesView.objects.filter(user=user).values_list(
+                    "project_id"
+                ),
+            ),
         )
 
         return qs
@@ -1141,11 +1150,11 @@ class ProjectCollaborator(models.Model):
         return super().clean()
 
 
-class ProjectPermissionsView(models.Model):
+class ProjectRolesView(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.DO_NOTHING,
-        related_name="related_projects",
+        related_name="project_roles",
     )
     project = models.OneToOneField(
         "Project",
