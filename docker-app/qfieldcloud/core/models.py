@@ -14,6 +14,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
+from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
@@ -648,7 +649,26 @@ class Organization(User):
         return super().save(*args, **kwargs)
 
 
+class OrganizationMemberQueryset(models.QuerySet):
+    @transaction.atomic
+    def delete(self, *args, **kwargs):
+        team_total, team_summary = TeamMember.objects.filter(
+            team__team_organization__in=self.values_list("organization"),
+            member__in=self.values_list("member"),
+        ).delete()
+
+        org_total, org_summary = super().delete(*args, **kwargs)
+
+        total = org_total + team_total
+        summary = {**org_summary, **team_summary}
+
+        return total, summary
+
+
 class OrganizationMember(models.Model):
+
+    objects = OrganizationMemberQueryset.as_manager()
+
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
         MEMBER = "member", _("Member")
@@ -684,6 +704,15 @@ class OrganizationMember(models.Model):
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
         return super().clean()
+
+    @transaction.atomic
+    def delete(self, *args, **kwargs) -> None:
+        super().delete(*args, **kwargs)
+
+        TeamMember.objects.filter(
+            team__team_organization=self.organization,
+            member=self.member,
+        ).delete()
 
 
 class Team(User):

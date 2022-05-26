@@ -439,3 +439,29 @@ class QfcTestCase(APITestCase):
         # add team member if not already an org members
         OrganizationMember.objects.create(organization=o1, member=u2)
         TeamMember.objects.create(team=t1, member=u2)
+
+    def test_delete_org_member_should_delete_team_membership(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        t1 = Team.objects.create(username="t1", team_organization=o1)
+
+        # deleting an organization member via queryset should also delete team membership
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        TeamMember.objects.create(team=t1, member=u2)
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 1)
+
+        OrganizationMember.objects.filter(organization=o1, member=u2).delete()
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 0)
+
+        # deleting an organization member via model should also delete team membership
+        om1 = OrganizationMember.objects.create(organization=o1, member=u2)
+        TeamMember.objects.create(team=t1, member=u2)
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 1)
+
+        om1.delete()
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 0)
