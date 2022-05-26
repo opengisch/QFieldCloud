@@ -1136,6 +1136,23 @@ class ProjectCollaborator(models.Model):
         if self.project.owner == self.collaborator:
             raise ValidationError(_("Cannot add the project owner as a collaborator."))
 
+        if self.project.owner.is_organization:
+            organization = Organization.objects.get(pk=self.project.owner.pk)
+            if self.collaborator.is_user:
+                members_qs = organization.members.filter(member=self.collaborator)
+
+                if members_qs.count() == 0:
+                    raise ValidationError(
+                        _(
+                            "Cannot add a user who is not a member of the organization as a project collaborator."
+                        )
+                    )
+            elif self.collaborator.is_team:
+                team_qs = organization.teams.filter(pk=self.collaborator)
+                if team_qs.count() == 0:
+
+                    raise ValidationError(_("Team does not exist."))
+
         return super().clean()
 
 
