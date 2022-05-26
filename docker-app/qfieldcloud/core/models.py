@@ -1136,26 +1136,6 @@ class ProjectCollaborator(models.Model):
         if self.project.owner == self.collaborator:
             raise ValidationError(_("Cannot add the project owner as a collaborator."))
 
-        if self.project.owner.is_organization:
-            organization = Organization.objects.get(pk=self.project.owner.pk)
-
-            if organization.organization_owner == self.collaborator:
-                raise ValidationError(
-                    _(
-                        "Cannot add the owner of the owning organization of the project as a collaborator."
-                    )
-                )
-            elif OrganizationMember.objects.filter(
-                organization=organization,
-                member=self.collaborator,
-                role=OrganizationMember.Roles.ADMIN,
-            ).exists():
-                raise ValidationError(
-                    _(
-                        "Cannot add an admin of the owning organization of the project as a collaborator."
-                    )
-                )
-
         return super().clean()
 
 
