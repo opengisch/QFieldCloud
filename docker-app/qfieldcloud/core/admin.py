@@ -6,7 +6,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.db.models.fields.json import JSONField
-from django.forms import widgets
+from django.forms import ModelForm, widgets
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.html import escape, format_html
@@ -259,7 +259,15 @@ class ProjectCollaboratorInline(admin.TabularInline):
     extra = 0
 
 
+class ProjectForm(ModelForm):
+    class Meta:
+        model = Project
+        widgets = {"project_filename": widgets.TextInput()}
+        fields = "__all__"  # required for Django 3.x
+
+
 class ProjectAdmin(admin.ModelAdmin):
+    form = ProjectForm
     list_display = (
         "id",
         "name",
@@ -280,6 +288,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "description",
         "is_public",
         "owner",
+        "project_filename",
         "storage_size_mb",
         "created_at",
         "updated_at",
