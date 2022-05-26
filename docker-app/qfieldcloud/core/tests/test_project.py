@@ -1,11 +1,14 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Project,
     ProjectCollaborator,
+    Team,
+    TeamMember,
     User,
 )
 from rest_framework import status
@@ -392,3 +395,47 @@ class QfcTestCase(APITestCase):
         # As the user must be member of the organisation
         OrganizationMember.objects.create(organization=o, member=self.user1)
         assert_role(user_role="manager", user_role_origin="collaborator")
+
+    def test_add_project_collaborator_without_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+
+        # cannot add project collaborator if not already an org member
+        with self.assertRaises(ValidationError):
+            ProjectCollaborator.objects.create(
+                project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
+            )
+
+    def test_add_project_collaborator_and_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+
+        # add project collaborator if the user is already an organization member
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
+        )
+
+    def test_add_team_member_without_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        t1 = Team.objects.create(username="t1", team_organization=o1)
+
+        # cannot add team member if not already an org members
+        with self.assertRaises(ValidationError):
+            TeamMember.objects.create(team=t1, member=u2)
+
+    def test_add_team_member_and_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        t1 = Team.objects.create(username="t1", team_organization=o1)
+
+        # add team member if not already an org members
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        TeamMember.objects.create(team=t1, member=u2)

@@ -743,6 +743,10 @@ class TeamMember(models.Model):
 
         return super().clean()
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return self.team.username + ": " + self.member.username
 
@@ -1125,7 +1129,7 @@ class ProjectCollaborator(models.Model):
     collaborator = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(user_type__in=[User.TYPE_USER, User.TYPE_TEAM]),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
 
@@ -1154,6 +1158,10 @@ class ProjectCollaborator(models.Model):
                     raise ValidationError(_("Team does not exist."))
 
         return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class Delta(models.Model):

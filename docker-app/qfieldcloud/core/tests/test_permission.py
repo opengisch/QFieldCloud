@@ -113,14 +113,14 @@ class QfcTestCase(APITestCase):
         # Set user2 as a collaborator REPORTER of project1, and as part of the org owning the project
         self.project1.owner = self.organization1
         self.project1.save()
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+        )
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
             role=ProjectCollaborator.Roles.REPORTER,
-        )
-        OrganizationMember.objects.create(
-            organization=self.organization1,
-            member=self.user2,
         )
 
         file_path = testdata_path("file.txt")
