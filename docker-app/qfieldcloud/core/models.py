@@ -20,7 +20,6 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
-from django.db.models.functions import Coalesce
 from django.urls import reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
@@ -648,7 +647,7 @@ class Organization(User):
     def billable_users(self, from_date: date, to_date: Optional[date] = None):
         """Returns the queryset of billable users in the given time interval.
 
-        Bilable users are users triggering a job or pushing a delta on a project owned by the organization.
+        Billable users are users triggering a job or pushing a delta on a project owned by the organization.
 
         Args:
             from_date (datetime.date): inclusive beginning of the interval
@@ -817,13 +816,10 @@ class ProjectQueryset(models.QuerySet):
         qs = (
             Project.objects.select_related("user_role")
             .defer("user_role__user_id", "user_role__project_id")
-            .annotate(user_role__user_id=Coalesce("user_role__user_id", None))
             .filter(
-                Q(user_role__user=user)
-                | Q(user_role__origin=ProjectQueryset.RoleOrigins.PUBLIC),
+                user_role__user=user,
                 user_role__is_valid=True,
             )
-            .distinct("owner__username", "name")
         )
 
         return qs
@@ -1141,7 +1137,7 @@ class ProjectCollaborator(models.Model):
         return super().clean()
 
 
-class ProjectPermissionsView(models.Model):
+class ProjectRolesView(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.DO_NOTHING,

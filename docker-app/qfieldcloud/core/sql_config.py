@@ -23,12 +23,22 @@ sql_items = [
         """,
     ),
     SQLItem(
+        "projects_with_roles_vw_seq",
+        """
+            CREATE SEQUENCE IF NOT EXISTS projects_with_roles_vw_seq CACHE 5000 CYCLE
+        """,
+        """
+            DROP SEQUENCE IF EXISTS projects_with_roles_vw_seq
+        """,
+    ),
+    SQLItem(
         "projects_with_roles_vw",
         """
             CREATE OR REPLACE VIEW projects_with_roles_vw AS
 
             WITH project_owner AS (
                 SELECT
+                    1 AS rank,
                     P1."id" AS "project_id",
                     P1."owner_id" AS "user_id",
                     'admin' AS "name",
@@ -42,6 +52,7 @@ sql_items = [
             ),
             organization_owner AS (
                 SELECT
+                    2 AS rank,
                     P1."id" AS "project_id",
                     O1."organization_owner_id" AS "user_id",
                     'admin' AS "name",
@@ -53,6 +64,7 @@ sql_items = [
             ),
             organization_admin AS (
                 SELECT
+                    3 AS rank,
                     P1."id" AS "project_id",
                     OM1."member_id" AS "user_id",
                     'admin' AS "name",
@@ -68,6 +80,7 @@ sql_items = [
             ),
             project_collaborator AS (
                 SELECT
+                    4 AS rank,
                     C1."project_id",
                     C1."collaborator_id" AS "user_id",
                     C1."role" AS "name",
@@ -82,6 +95,7 @@ sql_items = [
             ),
             project_collaborator_team AS (
                 SELECT
+                    5 AS rank,
                     C1."project_id",
                     TM1."member_id" AS "user_id",
                     C1."role" AS "name",
@@ -96,19 +110,21 @@ sql_items = [
             ),
             public_project AS (
                 SELECT
+                    6 AS rank,
                     P1."id" AS "project_id",
-                    NULL::int AS "user_id",
+                    U1."id" AS "user_id",
                     'reader' AS "name",
                     'public' AS "origin",
                     TRUE AS "is_valid"
                 FROM
                     "core_project" P1
+                    CROSS JOIN "core_user" U1
                 WHERE
                     is_public = TRUE
             )
             SELECT DISTINCT ON(project_id, user_id)
-                row_number() OVER () AS id,
-                roles.*
+                nextval('projects_with_roles_vw_seq') id,
+                R1.*
             FROM (
                 SELECT * FROM project_owner
                 UNION
@@ -121,11 +137,11 @@ sql_items = [
                 SELECT * FROM project_collaborator_team
                 UNION
                 SELECT * FROM public_project
-            ) roles
+            ) R1
+            ORDER BY project_id, user_id, rank
         """,
         """
             DROP VIEW projects_with_roles_vw;
         """,
-        dependencies=["project_user_collaborators_vw"],
     ),
 ]

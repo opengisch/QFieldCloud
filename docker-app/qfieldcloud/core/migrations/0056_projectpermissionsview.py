@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="ProjectPermissionsView",
+            name="ProjectRolesView",
             fields=[
                 (
                     "id",
@@ -62,127 +62,17 @@ class Migration(migrations.Migration):
         ),
         migrate_sql.operations.CreateSQL(
             name="project_user_collaborators_vw",
-            sql="""
-                CREATE OR REPLACE VIEW project_user_collaborators_vw AS
-                SELECT
-                    C1.*,
-                    (
-                        O1.user_ptr_id IS NULL AND P1.is_public
-                        OR OM1.id IS NOT NULL
-                    ) AS "is_valid"
-                FROM
-                    core_projectcollaborator C1
-                    INNER JOIN core_project P1 ON P1.id = C1.project_id
-                    LEFT JOIN core_organization O1 ON O1.user_ptr_id = P1.owner_id
-                    LEFT JOIN core_organizationmember OM1 ON OM1.organization_id = O1.user_ptr_id
-            """,
-            reverse_sql="""
-                DROP VIEW project_user_collaborators_vw
-            """,
+            sql='\n            CREATE OR REPLACE VIEW project_user_collaborators_vw AS\n\n            SELECT\n                C1.*,\n                (\n                    O1.user_ptr_id IS NULL AND P1.is_public\n                    OR OM1.id IS NOT NULL\n                ) AS "is_valid"\n            FROM\n                core_projectcollaborator C1\n                INNER JOIN core_project P1 ON P1.id = C1.project_id\n                LEFT JOIN core_organization O1 ON O1.user_ptr_id = P1.owner_id\n                LEFT JOIN core_organizationmember OM1 ON OM1.organization_id = O1.user_ptr_id\n        ',
+            reverse_sql="\n            DROP VIEW project_user_collaborators_vw;\n        ",
+        ),
+        migrate_sql.operations.CreateSQL(
+            name="projects_with_roles_vw_seq",
+            sql="\n            CREATE SEQUENCE IF NOT EXISTS projects_with_roles_vw_seq CACHE 5000 CYCLE\n        ",
+            reverse_sql="\n            DROP SEQUENCE IF EXISTS projects_with_roles_vw_seq\n        ",
         ),
         migrate_sql.operations.CreateSQL(
             name="projects_with_roles_vw",
-            sql="""
-                CREATE OR REPLACE VIEW projects_with_roles_vw AS
-
-                WITH project_owner AS (
-                    SELECT
-                        P1."id" AS "project_id",
-                        P1."owner_id" AS "user_id",
-                        'admin' AS "name",
-                        'project_owner' AS "origin",
-                        TRUE AS "is_valid"
-                    FROM
-                        "core_project" P1
-                        INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
-                    WHERE
-                        U1."user_type" = 1
-                ),
-                organization_owner AS (
-                    SELECT
-                        P1."id" AS "project_id",
-                        O1."organization_owner_id" AS "user_id",
-                        'admin' AS "name",
-                        'organization_owner' AS "origin",
-                        TRUE AS "is_valid"
-                    FROM
-                        "core_organization" O1
-                        INNER JOIN "core_project" P1 ON (P1."owner_id" = O1."user_ptr_id")
-                ),
-                organization_admin AS (
-                    SELECT
-                        P1."id" AS "project_id",
-                        OM1."member_id" AS "user_id",
-                        'admin' AS "name",
-                        'organization_admin' AS "origin",
-                        TRUE AS "is_valid"
-                    FROM
-                        "core_organizationmember" OM1
-                        INNER JOIN "core_project" P1 ON (P1."owner_id" = OM1."organization_id")
-                    WHERE
-                        (
-                            OM1."role" = 'admin'
-                        )
-                ),
-                project_collaborator AS (
-                    SELECT
-                        C1."project_id",
-                        C1."collaborator_id" AS "user_id",
-                        C1."role" AS "name",
-                        'collaborator' AS "origin",
-                        P1.is_public OR U1.user_type = 2 AS "is_valid"
-                    FROM
-                        "project_user_collaborators_vw" C1
-                        INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")
-                        INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
-                    WHERE
-                        C1."is_valid" = TRUE
-                ),
-                project_collaborator_team AS (
-                    SELECT
-                        C1."project_id",
-                        TM1."member_id" AS "user_id",
-                        C1."role" AS "name",
-                        'team_member' AS "origin",
-                        TRUE AS "is_valid"
-                    FROM
-                        "core_projectcollaborator" C1
-                        INNER JOIN "core_user" U1 ON (C1."collaborator_id" = U1."id")
-                        INNER JOIN "core_team" T1 ON (U1."id" = T1."user_ptr_id")
-                        INNER JOIN "core_teammember" TM1 ON (T1."user_ptr_id" = TM1."team_id")
-                        INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")
-                ),
-                public_project AS (
-                    SELECT
-                        P1."id" AS "project_id",
-                        NULL::int AS "user_id",
-                        'reader' AS "name",
-                        'public' AS "origin",
-                        TRUE AS "is_valid"
-                    FROM
-                        "core_project" P1
-                    WHERE
-                        is_public = TRUE
-                )
-                SELECT DISTINCT ON(project_id, user_id)
-                    row_number() OVER () AS id,
-                    roles.*
-                FROM (
-                    SELECT * FROM project_owner
-                    UNION
-                    SELECT * FROM organization_owner
-                    UNION
-                    SELECT * FROM organization_admin
-                    UNION
-                    SELECT * FROM project_collaborator
-                    UNION
-                    SELECT * FROM project_collaborator_team
-                    UNION
-                    SELECT * FROM public_project
-                ) roles
-            """,
-            reverse_sql="""
-                DROP VIEW projects_with_roles_vw
-            """,
+            sql='\n            CREATE OR REPLACE VIEW projects_with_roles_vw AS\n\n            WITH project_owner AS (\n                SELECT\n                    1 AS rank,\n                    P1."id" AS "project_id",\n                    P1."owner_id" AS "user_id",\n                    \'admin\' AS "name",\n                    \'project_owner\' AS "origin",\n                    TRUE AS "is_valid"\n                FROM\n                    "core_project" P1\n                    INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")\n                WHERE\n                    U1."user_type" = 1\n            ),\n            organization_owner AS (\n                SELECT\n                    2 AS rank,\n                    P1."id" AS "project_id",\n                    O1."organization_owner_id" AS "user_id",\n                    \'admin\' AS "name",\n                    \'organization_owner\' AS "origin",\n                    TRUE AS "is_valid"\n                FROM\n                    "core_organization" O1\n                    INNER JOIN "core_project" P1 ON (P1."owner_id" = O1."user_ptr_id")\n            ),\n            organization_admin AS (\n                SELECT\n                    3 AS rank,\n                    P1."id" AS "project_id",\n                    OM1."member_id" AS "user_id",\n                    \'admin\' AS "name",\n                    \'organization_admin\' AS "origin",\n                    TRUE AS "is_valid"\n                FROM\n                    "core_organizationmember" OM1\n                    INNER JOIN "core_project" P1 ON (P1."owner_id" = OM1."organization_id")\n                WHERE\n                    (\n                        OM1."role" = \'admin\'\n                    )\n            ),\n            project_collaborator AS (\n                SELECT\n                    4 AS rank,\n                    C1."project_id",\n                    C1."collaborator_id" AS "user_id",\n                    C1."role" AS "name",\n                    \'collaborator\' AS "origin",\n                    P1.is_public OR U1.user_type = 2 AS "is_valid"\n                FROM\n                    "project_user_collaborators_vw" C1\n                    INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")\n                    INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")\n                WHERE\n                    C1."is_valid" = TRUE\n            ),\n            project_collaborator_team AS (\n                SELECT\n                    5 AS rank,\n                    C1."project_id",\n                    TM1."member_id" AS "user_id",\n                    C1."role" AS "name",\n                    \'team_member\' AS "origin",\n                    TRUE AS "is_valid"\n                FROM\n                    "core_projectcollaborator" C1\n                    INNER JOIN "core_user" U1 ON (C1."collaborator_id" = U1."id")\n                    INNER JOIN "core_team" T1 ON (U1."id" = T1."user_ptr_id")\n                    INNER JOIN "core_teammember" TM1 ON (T1."user_ptr_id" = TM1."team_id")\n                    INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")\n            ),\n            public_project AS (\n                SELECT\n                    6 AS rank,\n                    P1."id" AS "project_id",\n                    U1."id" AS "user_id",\n                    \'reader\' AS "name",\n                    \'public\' AS "origin",\n                    TRUE AS "is_valid"\n                FROM\n                    "core_project" P1\n                    CROSS JOIN "core_user" U1\n                WHERE\n                    is_public = TRUE\n            )\n            SELECT DISTINCT ON(project_id, user_id)\n                nextval(\'projects_with_roles_vw_seq\') id,\n                R1.*\n            FROM (\n                SELECT * FROM project_owner\n                UNION\n                SELECT * FROM organization_owner\n                UNION\n                SELECT * FROM organization_admin\n                UNION\n                SELECT * FROM project_collaborator\n                UNION\n                SELECT * FROM project_collaborator_team\n                UNION\n                SELECT * FROM public_project\n            ) R1\n            ORDER BY project_id, user_id, rank\n        ',
+            reverse_sql="\n            DROP VIEW projects_with_roles_vw;\n        ",
         ),
     ]
