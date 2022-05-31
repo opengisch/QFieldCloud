@@ -96,9 +96,6 @@ def can_create_project(
 
 
 def can_read_project(user: QfcUser, project: Project) -> bool:
-    if project.is_public:
-        return True
-
     return user_has_project_roles(
         user,
         project,
@@ -156,9 +153,6 @@ def can_read_public_projects(user: QfcUser) -> bool:
 
 
 def can_read_files(user: QfcUser, project: Project) -> bool:
-    if project.is_public:
-        return True
-
     return user_has_project_roles(
         user,
         project,
@@ -434,9 +428,6 @@ def can_delete_collaborators(user: QfcUser, project: Project) -> bool:
 
 
 def can_read_packages(user: QfcUser, project: Project) -> bool:
-    if project.is_public:
-        return True
-
     return user_has_project_roles(
         user,
         project,
