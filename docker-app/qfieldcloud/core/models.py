@@ -56,67 +56,35 @@ class UserQueryset(models.QuerySet):
             self.prefetch_related("project_roles")
             .defer("project_roles__project_id", "project_roles__project_id")
             .filter(
+                user_type=User.TYPE_USER,
                 project_roles__project=project,
                 project_roles__is_valid=True,
             )
-            .annotate(project_role=F("project_roles__name"))
-            .annotate(project_role_origin=F("project_roles__origin"))
+            .annotate(
+                project_role=F("project_roles__name"),
+                project_role_origin=F("project_roles__origin"),
+            )
         )
 
         return qs
 
     def for_organization(self, organization: "Organization"):
-        permissions_config = [
-            # Direct ownership
-            (
-                Exists(
-                    Organization.objects.filter(
-                        pk=organization.pk,
-                        organization_owner=OuterRef("pk"),
-                    )
-                ),
-                V(OrganizationMember.Roles.ADMIN),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER),
-                V(True),
-            ),
-            # Organization membership
-            (
-                Exists(
-                    OrganizationMember.objects.filter(
-                        organization=organization,
-                        member=OuterRef("pk"),
-                    )
-                ),
-                OrganizationMember.objects.filter(
-                    organization=organization,
-                    member=OuterRef("pk"),
-                ).values_list("role"),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER),
-                OrganizationMember.objects.filter(
-                    organization=organization,
-                    member=OuterRef("pk"),
-                ).values_list("is_public"),
-            ),
-        ]
-
-        qs = self.annotate(
-            membership_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            membership_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
-            membership_is_public=Case(
-                *[When(perm[0], perm[3]) for perm in permissions_config],
-                default=None,
-            ),
+        qs = (
+            self.prefetch_related("organization_roles")
+            .defer(
+                "organization_roles__user_id",
+                "organization_roles__organization_id",
+            )
+            .filter(
+                user_type=User.TYPE_USER,
+                organization_roles__organization=organization,
+            )
+            .annotate(
+                organization_role=F("organization_roles__name"),
+                organization_role_origin=F("organization_roles__origin"),
+                organization_role_is_public=F("organization_roles__is_public"),
+            )
         )
-
-        qs = qs.filter(user_type=User.TYPE_USER)
-        qs = qs.exclude(membership_role__isnull=True)
 
         return qs
 
@@ -491,58 +459,21 @@ class OrganizationQueryset(models.QuerySet):
 
     class RoleOrigins(models.TextChoices):
         ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
-        ORGANIZATIONMEMBER = "organization_admin", _("Organization admin")
-
-    def with_roles(self, user):
-        permissions_config = [
-            # Direct ownership
-            (
-                Q(organization_owner=user),
-                V(OrganizationMember.Roles.ADMIN),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER),
-                V(True),
-            ),
-            # Organization membership
-            (
-                Exists(
-                    OrganizationMember.objects.filter(
-                        organization=OuterRef("pk"),
-                        member=user,
-                    )
-                ),
-                OrganizationMember.objects.filter(
-                    organization=OuterRef("pk"),
-                    member=user,
-                ).values_list("role"),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER),
-                OrganizationMember.objects.filter(
-                    organization=OuterRef("pk"),
-                    member=user,
-                ).values_list("is_public"),
-            ),
-        ]
-
-        qs = self.annotate(
-            membership_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            membership_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
-            membership_is_public=Case(
-                *[When(perm[0], perm[3]) for perm in permissions_config],
-                default=None,
-            ),
-        )
-
-        return qs
+        ORGANIZATIONMEMBER = "organization_member", _("Organization member")
 
     def of_user(self, user):
-        # Exclude those without role (invisible)
-        qs = self.with_roles(user).exclude(membership_role__isnull=True)
+        qs = (
+            self.prefetch_related("membership_roles")
+            .defer("membership_roles__user_id", "membership_roles__organization_id")
+            .filter(
+                membership_roles__user=user,
+            )
+            .annotate(
+                membership_role=F("membership_roles__name"),
+                membership_role_origin=F("membership_roles__origin"),
+                membership_role_is_public=F("membership_roles__is_public"),
+            )
+        )
 
         return qs
 
@@ -553,9 +484,6 @@ class OrganizationManager(UserManager):
 
     def of_user(self, user):
         return self.get_queryset().of_user(user)
-
-    def with_roles(self, user):
-        return self.get_queryset().with_roles(user)
 
 
 class Organization(User):
@@ -681,6 +609,28 @@ class OrganizationMember(models.Model):
         ).delete()
 
 
+class OrganizationRolesView(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        related_name="organization_roles",
+    )
+    organization = models.ForeignKey(
+        "Organization",
+        on_delete=models.DO_NOTHING,
+        related_name="membership_roles",
+    )
+    name = models.CharField(max_length=100, choices=OrganizationMember.Roles.choices)
+    origin = models.CharField(
+        max_length=100, choices=OrganizationQueryset.RoleOrigins.choices
+    )
+    is_public = models.BooleanField()
+
+    class Meta:
+        db_table = "organizations_with_roles_vw"
+        managed = False
+
+
 class Team(User):
 
     team_organization = models.ForeignKey(
@@ -780,8 +730,10 @@ class ProjectQueryset(models.QuerySet):
                 user_roles__user=user,
                 user_roles__is_valid=True,
             )
-            .annotate(user_role=F("user_roles__name"))
-            .annotate(user_role_origin=F("user_roles__origin"))
+            .annotate(
+                user_role=F("user_roles__name"),
+                user_role_origin=F("user_roles__origin"),
+            )
         )
 
         return qs
