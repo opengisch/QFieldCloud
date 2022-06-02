@@ -1,10 +1,11 @@
+import calendar
 import os
 import secrets
 import string
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
@@ -644,6 +645,44 @@ class Organization(User):
         verbose_name = "organization"
         verbose_name_plural = "organizations"
 
+    def billable_users(self, from_date: date, to_date: Optional[date] = None):
+        """Returns the queryset of billable users in the given time interval.
+
+        Billable users are users triggering a job or pushing a delta on a project owned by the organization.
+
+        Args:
+            from_date (datetime.date): inclusive beginning of the interval
+            to_date (Optional[datetime.date], optional): inclusive end of the interval (if None, will default to the last day of the month of the start date)
+        """
+
+        if to_date is None:
+            to_date = from_date.replace(
+                day=calendar.monthrange(from_date.year, from_date.month)[1]
+            )
+
+        users_with_delta = (
+            Delta.objects.filter(
+                project__in=self.projects.all(),
+                updated_at__gte=from_date,
+                updated_at__lte=to_date,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
+        users_with_jobs = (
+            Job.objects.filter(
+                project__in=self.projects.all(),
+                updated_at__gte=from_date,
+                updated_at__lte=to_date,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
+
+        return User.objects.filter(organizationmember__organization=self).filter(
+            Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
+        )
+
     def save(self, *args, **kwargs):
         self.user_type = self.TYPE_ORGANIZATION
         return super().save(*args, **kwargs)
@@ -807,79 +846,14 @@ class ProjectQueryset(models.QuerySet):
         PUBLIC = "public", _("Public")
 
     def for_user(self, user):
-
-        # orderd list of 3-uples : (condition, role, role origin)
-        permissions_config = [
-            # Direct ownership
-            (
-                Q(owner=user),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
-            ),
-            # Organization memberships - admin
-            (
-                Q(owner__in=Organization.objects.filter(organization_owner=user)),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
-            ),
-            (
-                Q(
-                    owner__in=OrganizationMember.objects.filter(
-                        member=user, role=OrganizationMember.Roles.ADMIN
-                    ).values("organization")
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
-            ),
-            # Role through ProjectCollaborator
-            (
-                Exists(
-                    ProjectCollaborator.objects.validated().filter(
-                        project=OuterRef("pk"),
-                        collaborator=user,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=OuterRef("pk"),
-                    collaborator=user,
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
-            ),
-            # Role through Team membership
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator__team__members__member=user,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=OuterRef("pk"),
-                    collaborator__team__members__member=user,
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
-            ),
-            # Public
-            (
-                Q(is_public=True),
-                V(ProjectCollaborator.Roles.READER),
-                V(ProjectQueryset.RoleOrigins.PUBLIC),
-            ),
-        ]
-
-        qs = self.annotate(
-            user_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            user_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
+        qs = (
+            Project.objects.select_related("user_role")
+            .defer("user_role__user_id", "user_role__project_id")
+            .filter(
+                user_role__user=user,
+                user_role__is_valid=True,
+            )
         )
-        # Exclude those without role (invisible)
-        qs = qs.exclude(user_role__isnull=True)
 
         return qs
 
@@ -1037,16 +1011,18 @@ class Project(models.Model):
         return User.objects.for_project(self)
 
     @property
-    def has_online_vector_data(self) -> bool:
+    def has_online_vector_data(self) -> Optional[bool]:
+        """Returns None if project details or layers details are not available"""
+
         # it's safer to assume there is an online vector layer
         if not self.project_details:
-            return True
+            return None
 
         layers_by_id = self.project_details.get("layers_by_id")
 
         # it's safer to assume there is an online vector layer
         if layers_by_id is None:
-            return True
+            return None
 
         has_online_vector_layers = False
 
@@ -1066,7 +1042,9 @@ class Project(models.Model):
     @property
     def needs_repackaging(self) -> bool:
         if (
-            not self.has_online_vector_data
+            # if has_online_vector_data is None (happens when the project details are missing)
+            # we assume there might be
+            self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
         ):
@@ -1193,6 +1171,28 @@ class ProjectCollaborator(models.Model):
         return super().save(*args, **kwargs)
 
 
+class ProjectRolesView(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        related_name="related_projects",
+    )
+    project = models.OneToOneField(
+        "Project",
+        on_delete=models.DO_NOTHING,
+        related_name="user_role",
+    )
+    name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
+    origin = models.CharField(
+        max_length=100, choices=ProjectQueryset.RoleOrigins.choices
+    )
+    is_valid = models.BooleanField()
+
+    class Meta:
+        db_table = "projects_with_roles_vw"
+        managed = False
+
+
 class Delta(models.Model):
     class Method(str, Enum):
         Create = "create"
@@ -1274,6 +1274,13 @@ class Delta(models.Model):
     @property
     def method(self):
         return self.content.get("method")
+
+    @property
+    def is_supported_regarding_owner_account(self):
+        return (
+            not self.project.has_online_vector_data
+            or self.project.owner.useraccount.account_type.is_external_db_supported
+        )
 
 
 class Job(models.Model):

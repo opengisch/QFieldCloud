@@ -500,7 +500,8 @@ def apply_deltas_without_transaction(
             if feature.isValid():
                 _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
 
-                assert pk_attr_name
+                if not pk_attr_name:
+                    raise DeltaException(f'Layer "{layer.name()}" has no primary key.')
 
                 modified_pk = feature.attribute(pk_attr_name)
 
@@ -588,9 +589,7 @@ def apply_deltas_without_transaction(
                 f"An unknown error has been encountered while applying delta: {err}"
             )
 
-            raise Exception(
-                f"An unknown error has been encountered while applying delta: {err}"
-            ) from err
+            raise err
 
     return has_applied_all_deltas
 

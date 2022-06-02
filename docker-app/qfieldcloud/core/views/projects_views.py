@@ -117,7 +117,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
             if not include_public:
                 projects = projects.exclude(
-                    user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
+                    user_role__origin=ProjectQueryset.RoleOrigins.PUBLIC
                 )
 
         return projects

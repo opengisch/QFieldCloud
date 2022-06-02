@@ -366,21 +366,21 @@ class QfcTestCase(APITestCase):
             response = self.client.get(apiurl, follow=True)
             self.assertEqual(response.status_code, 403)
 
-        def assert_role(user_role, user_role_origin):
+        def assert_role(role, origin):
             response = self.client.get(apiurl, follow=True)
             self.assertEqual(response.status_code, 200)
             json = response.json()
-            self.assertEqual(json["user_role"], user_role)
-            self.assertEqual(json["user_role_origin"], user_role_origin)
+            self.assertEqual(json["user_role"], role)
+            self.assertEqual(json["user_role_origin"], origin)
 
         # Project is public, we have a public role
-        assert_role(user_role="reader", user_role_origin="public")
+        assert_role("reader", "public")
 
         # Project is public, collaboration membership is valid
         ProjectCollaborator.objects.create(
             project=p, collaborator=self.user1, role=ProjectCollaborator.Roles.MANAGER
         )
-        assert_role(user_role="manager", user_role_origin="collaborator")
+        assert_role("manager", "collaborator")
 
         # If project is made private, the collaboration is invalid
         p.is_public = False
@@ -394,7 +394,7 @@ class QfcTestCase(APITestCase):
 
         # As the user must be member of the organisation
         OrganizationMember.objects.create(organization=o, member=self.user1)
-        assert_role(user_role="manager", user_role_origin="collaborator")
+        assert_role("manager", "collaborator")
 
     def test_add_project_collaborator_without_being_org_member(self):
         u1 = User.objects.create(username="u1")
