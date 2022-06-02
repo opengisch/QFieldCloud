@@ -647,7 +647,7 @@ class Organization(User):
     def billable_users(self, from_date: date, to_date: Optional[date] = None):
         """Returns the queryset of billable users in the given time interval.
 
-        Bilable users are users triggering a job or pushing a delta on a project owned by the organization.
+        Billable users are users triggering a job or pushing a delta on a project owned by the organization.
 
         Args:
             from_date (datetime.date): inclusive beginning of the interval
@@ -813,79 +813,14 @@ class ProjectQueryset(models.QuerySet):
         PUBLIC = "public", _("Public")
 
     def for_user(self, user):
-
-        # orderd list of 3-uples : (condition, role, role origin)
-        permissions_config = [
-            # Direct ownership
-            (
-                Q(owner=user),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
-            ),
-            # Organization memberships - admin
-            (
-                Q(owner__in=Organization.objects.filter(organization_owner=user)),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
-            ),
-            (
-                Q(
-                    owner__in=OrganizationMember.objects.filter(
-                        member=user, role=OrganizationMember.Roles.ADMIN
-                    ).values("organization")
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
-            ),
-            # Role through ProjectCollaborator
-            (
-                Exists(
-                    ProjectCollaborator.objects.validated().filter(
-                        project=OuterRef("pk"),
-                        collaborator=user,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=OuterRef("pk"),
-                    collaborator=user,
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
-            ),
-            # Role through Team membership
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator__team__members__member=user,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=OuterRef("pk"),
-                    collaborator__team__members__member=user,
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
-            ),
-            # Public
-            (
-                Q(is_public=True),
-                V(ProjectCollaborator.Roles.READER),
-                V(ProjectQueryset.RoleOrigins.PUBLIC),
-            ),
-        ]
-
-        qs = self.annotate(
-            user_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            user_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
+        qs = (
+            Project.objects.select_related("user_role")
+            .defer("user_role__user_id", "user_role__project_id")
+            .filter(
+                user_role__user=user,
+                user_role__is_valid=True,
+            )
         )
-        # Exclude those without role (invisible)
-        qs = qs.exclude(user_role__isnull=True)
 
         return qs
 
@@ -1200,6 +1135,28 @@ class ProjectCollaborator(models.Model):
                 )
 
         return super().clean()
+
+
+class ProjectRolesView(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        related_name="related_projects",
+    )
+    project = models.OneToOneField(
+        "Project",
+        on_delete=models.DO_NOTHING,
+        related_name="user_role",
+    )
+    name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
+    origin = models.CharField(
+        max_length=100, choices=ProjectQueryset.RoleOrigins.choices
+    )
+    is_valid = models.BooleanField()
+
+    class Meta:
+        db_table = "projects_with_roles_vw"
+        managed = False
 
 
 class Delta(models.Model):

@@ -191,7 +191,9 @@ class QfcTestCase(APITestCase):
 
             # Note: we can't easily mock dates as the worker can update jobs in the background
             # with the current date
-            start_date = base_date.replace(day=1)
+            start_date = base_date.replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0
+            )
             end_date = base_date.replace(
                 day=calendar.monthrange(base_date.year, base_date.month)[1]
             )

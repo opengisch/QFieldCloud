@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     # 3rd party - keep at bottom to allow overrides
     "notifications",
     "axes",
+    "migrate_sql",
 ]
 
 MIDDLEWARE = [

@@ -1,4 +1,3 @@
-import warnings
 from functools import reduce
 from operator import and_, or_
 
@@ -14,33 +13,6 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-
-
-def get_available_projects(
-    user,
-    owner,
-    ownerships=False,
-    collaborations=False,
-    memberships=False,
-    public=False,
-):
-    """Return a queryset with all projects that are available to the `user`.
-    The param `user` is meant to be the user that did the request and the `owner`
-    is the user that has access to them.
-    - owned `owner` or organization he belongs to and collaborated with `user`
-    """
-
-    warnings.warn(
-        "`get_available_projects()` is deprecated. Use `owner.projects.for_user(user)` instead.",
-        DeprecationWarning,
-    )
-
-    if not ownerships or not collaborations or not memberships or not public:
-        raise Exception(
-            "`get_available_projects()` was reimplemented and doesn't support excluding permissions from ownerships/collaborations/memberships anymore. Use `owner.projects.for_user(user)` instead and do the required filtering yourself."
-        )
-
-    return owner.projects.for_user(user, include_public=public)
 
 
 def get_organization_teams(organization):
