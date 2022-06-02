@@ -83,6 +83,12 @@ def get_users(
 
     # exclude the already existing members, the organization owner and the organization itself from the returned users
     elif organization:
+        # exclude all teams that are not of the current organization
+        users = users.filter(
+            ~Q(user_type=User.TYPE_TEAM)
+            | Q(pk__in=Team.objects.filter(team_organization=organization))
+        )
+
         member_ids = OrganizationMember.objects.filter(
             organization=organization
         ).values_list("member", flat=True)
