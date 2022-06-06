@@ -6,7 +6,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.db.models.fields.json import JSONField
-from django.forms import ModelForm, widgets
+from django.forms import ModelForm, fields, widgets
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.html import escape, format_html
@@ -259,7 +259,15 @@ class ProjectCollaboratorInline(admin.TabularInline):
     extra = 0
 
 
+class ProjectFilesWidget(widgets.Input):
+    template_name = "admin/project_files_widget.html"
+
+
 class ProjectForm(ModelForm):
+    project_files = fields.CharField(
+        disabled=True, required=False, widget=ProjectFilesWidget
+    )
+
     class Meta:
         model = Project
         widgets = {"project_filename": widgets.TextInput()}
@@ -295,6 +303,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
+        "project_files",
     )
     readonly_fields = (
         "id",
@@ -311,6 +320,9 @@ class ProjectAdmin(admin.ModelAdmin):
         "name__icontains",
         "owner__username__iexact",
     )
+
+    def project_files(self, instance):
+        return instance.pk
 
     def project_details__pre(self, instance):
         if instance.project_details is None:

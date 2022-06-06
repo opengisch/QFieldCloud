@@ -23,6 +23,7 @@ from django.utils.translation import gettext as _
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from qfieldcloud.authentication import views as auth_views
+from qfieldcloud.core.views import files_views
 from rest_framework import permissions
 
 admin.site.site_header = _("QFieldCloud Admin")
@@ -52,6 +53,17 @@ urlpatterns = [
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),
         name="schema-swagger-ui",
+    ),
+    path(
+        settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/",
+        files_views.ListFilesView.as_view(permission_classes=[permissions.IsAdminUser]),
+    ),
+    path(
+        settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/<path:filename>/",
+        files_views.DownloadPushDeleteFileView.as_view(
+            permission_classes=[permissions.IsAdminUser]
+        ),
+        name="project_file_download",
     ),
     path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
     path("docs/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
