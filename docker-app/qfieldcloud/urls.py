@@ -16,8 +16,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path(
         'blog/', include('blog.urls'))
 """
-import os
-
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
 from django.utils.translation import gettext as _
@@ -54,7 +53,7 @@ urlpatterns = [
         schema_view.with_ui("swagger", cache_timeout=0),
         name="schema-swagger-ui",
     ),
-    path(os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/"), admin.site.urls),
+    path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
     path("docs/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
     path("api/v1/auth/login/", auth_views.LoginView.as_view()),
     path("api/v1/auth/token/", auth_views.LoginView.as_view()),
