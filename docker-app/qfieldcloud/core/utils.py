@@ -80,8 +80,13 @@ class S3ObjectWithVersions(NamedTuple):
     @property
     def total_size(self) -> int:
         """Total size of all versions"""
-        # lastest is also in versions
+        # latest is also in versions
         return sum(v.size for v in self.versions)
+
+    def delete(self):
+        bucket = get_s3_bucket()
+
+        return bucket.object_versions.filter(Prefix=self.latest.key).delete()
 
 
 def redis_is_running() -> bool:

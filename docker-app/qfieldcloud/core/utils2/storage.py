@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
+from qfieldcloud.core.utils2.audit import LogEntry, audit
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +245,25 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
     project.save(recompute_storage=True)
 
 
+def delete_file(project: "Project", filename: str):  # noqa: F821
+    file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
+
+    if not file:
+        raise Exception("No file with such name in the given project found")
+
+    file.delete()
+
+    if qfieldcloud.core.utils.is_qgis_project_file(filename):
+        project.project_filename = None
+        project.save(recompute_storage=True)
+
+    audit(
+        project,
+        LogEntry.Action.DELETE,
+        changes={f"{filename} ALL": [file.latest.e_tag, None]},
+    )
+
+
 def delete_file_version(
     project: "Project",  # noqa: F821
     filename: str,
@@ -266,10 +286,14 @@ def delete_file_version(
     if not file:
         raise Exception("No file with such name in the given project found")
 
+    is_deleting_all_versions = False
     if file.latest.id == version_id:
         include_older = False
 
-    versions_to_delete = []
+        if len(file.versions) == 1:
+            is_deleting_all_versions = True
+
+    versions_to_delete: List[qfieldcloud.core.utils.S3ObjectVersion] = []
 
     for file_version in file.versions:
         if file_version.id == version_id:
@@ -292,6 +316,20 @@ def delete_file_version(
 
     for file_version in versions_to_delete:
         file_version._data.delete()
+
+        audit_suffix = "ALL" if is_deleting_all_versions else file_version.display
+
+        audit(
+            project,
+            LogEntry.Action.DELETE,
+            changes={f"{filename} {audit_suffix}": [file_version.e_tag, None]},
+        )
+
+    if is_deleting_all_versions and qfieldcloud.core.utils.is_qgis_project_file(
+        filename
+    ):
+        project.project_filename = None
+        project.save(recompute_storage=True)
 
     return versions_to_delete
 
