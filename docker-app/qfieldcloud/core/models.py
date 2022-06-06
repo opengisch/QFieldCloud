@@ -15,6 +15,7 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
+from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
@@ -687,7 +688,26 @@ class Organization(User):
         return super().save(*args, **kwargs)
 
 
+class OrganizationMemberQueryset(models.QuerySet):
+    @transaction.atomic
+    def delete(self, *args, **kwargs):
+        team_total, team_summary = TeamMember.objects.filter(
+            team__team_organization__in=self.values_list("organization"),
+            member__in=self.values_list("member"),
+        ).delete()
+
+        org_total, org_summary = super().delete(*args, **kwargs)
+
+        total = org_total + team_total
+        summary = {**org_summary, **team_summary}
+
+        return total, summary
+
+
 class OrganizationMember(models.Model):
+
+    objects = OrganizationMemberQueryset.as_manager()
+
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
         MEMBER = "member", _("Member")
@@ -723,6 +743,15 @@ class OrganizationMember(models.Model):
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
         return super().clean()
+
+    @transaction.atomic
+    def delete(self, *args, **kwargs) -> None:
+        super().delete(*args, **kwargs)
+
+        TeamMember.objects.filter(
+            team__team_organization=self.organization,
+            member=self.member,
+        ).delete()
 
 
 class Team(User):
@@ -781,6 +810,10 @@ class TeamMember(models.Model):
             )
 
         return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.team.username + ": " + self.member.username
@@ -1103,7 +1136,7 @@ class ProjectCollaborator(models.Model):
     collaborator = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(user_type__in=[User.TYPE_USER, User.TYPE_TEAM]),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
 
@@ -1116,25 +1149,26 @@ class ProjectCollaborator(models.Model):
 
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
+            if self.collaborator.is_user:
+                members_qs = organization.members.filter(member=self.collaborator)
 
-            if organization.organization_owner == self.collaborator:
-                raise ValidationError(
-                    _(
-                        "Cannot add the owner of the owning organization of the project as a collaborator."
+                if members_qs.count() == 0:
+                    raise ValidationError(
+                        _(
+                            "Cannot add a user who is not a member of the organization as a project collaborator."
+                        )
                     )
-                )
-            elif OrganizationMember.objects.filter(
-                organization=organization,
-                member=self.collaborator,
-                role=OrganizationMember.Roles.ADMIN,
-            ).exists():
-                raise ValidationError(
-                    _(
-                        "Cannot add an admin of the owning organization of the project as a collaborator."
-                    )
-                )
+            elif self.collaborator.is_team:
+                team_qs = organization.teams.filter(pk=self.collaborator)
+                if team_qs.count() == 0:
+
+                    raise ValidationError(_("Team does not exist."))
 
         return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class ProjectRolesView(models.Model):

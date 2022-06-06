@@ -57,6 +57,10 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.project1.save()
 
+        OrganizationMember.objects.create(
+            organization=self.org1,
+            member=self.user2,
+        )
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
@@ -64,16 +68,12 @@ class QfcTestCase(APITransactionTestCase):
         )
         OrganizationMember.objects.create(
             organization=self.org1,
-            member=self.user2,
+            member=self.user3,
         )
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user3,
             role=ProjectCollaborator.Roles.ADMIN,
-        )
-        OrganizationMember.objects.create(
-            organization=self.org1,
-            member=self.user3,
         )
 
     def tearDown(self):
