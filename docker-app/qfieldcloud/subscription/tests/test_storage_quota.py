@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import date, timedelta
 
+from django_currentuser.middleware import _set_current_user
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project, User
@@ -30,6 +31,12 @@ class QfcTestCase(APITransactionTestCase):
 
         u1 = User.objects.create(username="u1")
         p1 = Project.objects.create(name="p1", owner=u1)
+
+        # NOTE since we do not login via the API, the django_currentuser module is unable to set
+        # the current user from the request object. Therefore the user set from another test
+        # remains in the internal django_currentuser cache and causes the test to fail. So we have
+        # to manually reset the current user to None.
+        _set_current_user(None)
 
         default = AccountType.get_or_create_default()
 
