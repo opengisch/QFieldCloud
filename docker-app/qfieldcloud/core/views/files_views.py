@@ -203,24 +203,12 @@ class DownloadPushDeleteFileView(views.APIView):
 
     def delete(self, request, projectid, filename):
         project = Project.objects.get(id=projectid)
-        key = utils.safe_join(f"projects/{projectid}/files/", filename)
-        bucket = utils.get_s3_bucket()
+        version_id = request.META.get("HTTP_X_FILE_VERSION")
 
-        old_object = get_project_file_with_versions(project.id, filename)
-
-        assert old_object
-
-        bucket.object_versions.filter(Prefix=key).delete()
-
-        if utils.is_qgis_project_file(filename):
-            project.project_filename = None
-        project.save(recompute_storage=True)
-
-        audit(
-            project,
-            LogEntry.Action.DELETE,
-            changes={filename: [old_object.latest.e_tag, None]},
-        )
+        if version_id:
+            utils2.storage.delete_file_version(project, filename, version_id, False)
+        else:
+            utils2.storage.delete_file(project, filename)
 
         return Response(status=status.HTTP_200_OK)
 

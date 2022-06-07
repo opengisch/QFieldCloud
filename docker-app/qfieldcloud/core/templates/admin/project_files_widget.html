@@ -1,0 +1,282 @@
+{% load i18n %}
+
+<div class="qfc-admin-project-files-load-wrapper">
+    <dialog class="qfc-admin-project-files-dialog">
+        <pre></pre>
+
+        <button type="button">OK</button>
+    </dialog>
+
+    <button class="qfc-admin-projects-files-actions-reload-btn" type="button">
+        {% trans 'Refresh Files List' %}
+    </button>
+    <span class="qfc-admin-project-files-count"></span>
+    <div>
+        <table class="qfc-admin-project-files-table">
+            <thead>
+                <tr>
+                    <th>{% trans 'Filename' %}</th>
+                    <th>{% trans 'Last modified' %}</th>
+                    <th>{% trans 'Version' %}</th>
+                    <th>{% trans 'Actions' %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="5">{% trans 'Click the "Refresh Files List" button to get the files list.' %}</td></tr>
+
+                <template class="qfc-admin-project-files-table-loading-row-template">
+                    <tr><td colspan="5">{% trans 'Loading...' %}</td></tr>
+                </template>
+
+                <template class="qfc-admin-project-files-table-empty-row-template">
+                    <tr><td colspan="5">{% trans 'No files uploaded!' %}</td></tr>
+                </template>
+
+                <template class="qfc-admin-project-files-table-error-row-template">
+                    <tr><td colspan="5">{% trans 'Error!' %}</td></tr>
+                </template>
+
+                <template class="qfc-admin-project-files-table-data-row-template">
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td>
+                            <select>
+                                <option value="">{% trans 'Download latest/Delete all version(s)' %}</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Info' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete' %}</button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .qfc-admin-project-files-load-wrapper {
+        max-height: 75vh;
+        overflow-y: auto;
+    }
+
+    .qfc-admin-projects-files-actions-reload-btn,
+    .qfc-admin-projects-files-actions-info-btn,
+    .qfc-admin-projects-files-actions-delete-btn,
+    .qfc-admin-projects-files-actions-download-btn {
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.15s;
+        vertical-align: middle;
+        font-family: "Roboto", "Lucida Grande", Verdana, Arial, sans-serif;
+        font-weight: normal;
+        font-size: 13px;
+        border: none;
+        background: var(--button-bg);
+        color: var(--button-fg);
+    }
+
+    .qfc-admin-projects-files-actions-delete-btn {
+        background: var(--delete-button-bg);
+    }
+
+    .qfc-admin-project-files-modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+
+    /* Modal Content/Box */
+    .qfc-admin-project-files-modal .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto; /* 15% from the top and centered */
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%; /* Could be more or less, depending on screen size */
+    }
+
+    /* The Close Button */
+    .qfc-admin-project-files-modal .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .qfc-admin-project-files-modal .close:hover,
+    .qfc-admin-project-files-modal .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .qfc-admin-projects-files-status-deleting {
+        opacity: 0.3;
+    }
+</style>
+<script>
+    (() => {
+        const $wrappers = document.querySelectorAll('.qfc-admin-project-files-load-wrapper:not([data-qfc-admin-project-files-wrapper])');
+        const urlParts = new URL(window.location.href).pathname.split('/');
+        const adminPrefix = urlParts[1];
+        const projectId = urlParts[4];
+        const csrfmiddlewaretoken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+        const buildApiUrl = (url, params) => {
+            const queryString = params ? '?' + (new URLSearchParams(params)).toString() : '';
+
+            return `/${adminPrefix}/api/${url}${queryString}`
+        };
+        const apiCall = (url, { params, ...options} = {}) => {
+            return fetch(buildApiUrl(url, params), options);
+        };
+
+        $wrappers.forEach(($wrapper) => {
+            $wrapper.setAttribute('data-qfc-admin-project-files-wrapper', 1);
+
+            const $dialog = $wrapper.querySelector('.qfc-admin-project-files-dialog');
+            const $dialogPre = $dialog.querySelector('pre');
+            const $dialogBtn = $dialog.querySelector('button');
+            const $btn = $wrapper.querySelector('.qfc-admin-projects-files-actions-reload-btn');
+            const $count = $wrapper.querySelector('.qfc-admin-project-files-count');
+            const $table = $wrapper.querySelector('.qfc-admin-project-files-table');
+            const $tbody = $table.tBodies[0];
+            const $loadingRowTmpl = $wrapper.querySelector('.qfc-admin-project-files-table-loading-row-template');
+            const $emptyRowTmpl = $wrapper.querySelector('.qfc-admin-project-files-table-empty-row-template');
+            const $errorRowTmpl = $wrapper.querySelector('.qfc-admin-project-files-table-error-row-template');
+            const $dataRowTmpl = $wrapper.querySelector('.qfc-admin-project-files-table-data-row-template');
+            const refreshFiles = () => {
+                refreshTableContents({ isLoading: true });
+
+                return apiCall(`files/${projectId}/`)
+                    .then((resp) => resp.json())
+                    .then((files) => refreshTableContents({ files }))
+                    .catch((error) => refreshTableContents({ error }));
+            };
+            const refreshTableContents = ({ error, isLoading = false, files = [] }) => {
+                $tbody.innerHTML = '';
+                $count.innerHTML = '';
+
+                if ( error ) {
+                    const $errorRow = $loadingRowTmpl.content.cloneNode(true);
+                    const $errorEl = $errorRow.querySelector('td');
+
+                    $errorEl.innerHTML = error.message || 'Unknown error!';
+
+                    $tbody.appendChild($errorRow);
+                } else if ( isLoading ) {
+                    $tbody.appendChild($loadingRowTmpl.content.cloneNode(true));
+                } else if (files.length === 0) {
+                    $tbody.appendChild($emptyRowTmpl.content.cloneNode(true));
+                } else if (files) {
+                    $count.innerHTML = `${files.length} file(s)`;
+
+                    for (const file of files) {
+                        const $trow = $dataRowTmpl.content.cloneNode(true);
+                        const $versionsSelect = $trow.querySelector('select');
+                        const $infoBtn = $trow.querySelector('.qfc-admin-projects-files-actions-info-btn');
+                        const $downloadBtn = $trow.querySelector('.qfc-admin-projects-files-actions-download-btn');
+                        const $deleteBtn = $trow.querySelector('.qfc-admin-projects-files-actions-delete-btn');
+
+                        $trow.querySelector('td:nth-child(1)').innerHTML = file.name;
+                        $trow.querySelector('td:nth-child(2)').innerHTML = file.last_modified;
+
+                        for (const version of file.versions) {
+                            const $option = document.createElement('option');
+
+                            $option.value = version.version_id;
+                            $option.innerHTML = `${version.display} (${version.size} bytes)`;
+
+                            $versionsSelect.appendChild($option);
+                        }
+
+                        $tbody.appendChild($trow);
+                        const $row = $tbody.lastElementChild;
+
+                        $dialogBtn.addEventListener('click', () => {
+                            $dialog.close();
+                        });
+
+                        $infoBtn.addEventListener('click', () => {
+                            $dialog.showModal();
+                            $dialogPre.innerHTML = JSON.stringify(file, null, 2);
+                        });
+
+                        $downloadBtn.addEventListener('click', () => {
+                            window.open(buildApiUrl(`files/${projectId}/${file.name}/`, {
+                                version: $versionsSelect.value,
+                            }));
+                        });
+
+                        $deleteBtn.addEventListener('click', () => {
+                            const passPhrase = 'Here be dragons!';
+                            const confirmation = prompt(`Are you sure you want to delete file "${file.name}"? This operation is irreversible, the file is deleted forever and the project may be damaged forever! Type "${passPhrase}" to confirm your destructive action!`);
+
+                            if (confirmation !== passPhrase) {
+                                $dialog.close();
+
+                                if (confirmation !== null) {
+                                    alert(`Wrong pass phrase! File "${file.name}" will not be deleted.`);
+                                }
+
+                                return;
+                            };
+
+                            $row.classList.add('qfc-admin-projects-files-status-deleting');
+                            $versionsSelect.disabled = true;
+                            $downloadBtn.disabled = true;
+                            $deleteBtn.disabled = true;
+
+                            apiCall(`files/${projectId}/${file.name}/`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-File-Version': $versionsSelect.value,
+                                    'X-CSRFToken': csrfmiddlewaretoken,
+                                },
+                            })
+                            .then(
+                                async (resp) => {
+                                    $row.classList.remove('qfc-admin-projects-files-status-deleting');
+                                    $versionsSelect.disabled = false;
+                                    $downloadBtn.disabled = false;
+                                    $deleteBtn.disabled = false;
+
+                                    if (resp.ok) {
+                                        refreshFiles();
+                                    } else {
+                                        const payload = await resp.json();
+                                        // log the error in the console
+                                        console.error("Server responded with error: ", payload);
+
+                                        let message = `[${payload.code}] ${payload.message}`;
+                                        if (payload.debug && payload.debug.detail) {
+                                            message = `${message}\n${payload.debug.detail}`;
+                                        }
+
+                                        throw new Error(message);
+                                    }
+                                },
+                            )
+                            .catch( (error) => alert(`Error while deleting file "${file.name}".\n${error.message}`) );
+                        });
+                    }
+                }
+
+            };
+
+            $btn.addEventListener('click', () => {
+                refreshFiles();
+            });
+        });
+    })()
+</script>
