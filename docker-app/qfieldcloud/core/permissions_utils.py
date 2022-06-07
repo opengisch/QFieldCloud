@@ -32,9 +32,7 @@ def user_has_project_role_origins(
     user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
 ):
     return (
-        _project_for_owner(user, project)
-        .filter(user_role_origin__name__in=origins)
-        .exists()
+        _project_for_owner(user, project).filter(user_role__origin__in=origins).exists()
     )
 
 
