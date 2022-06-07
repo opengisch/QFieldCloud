@@ -35,7 +35,7 @@ from timezone_field import TimeZoneField
 class UserQueryset(models.QuerySet):
     """Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
 
-    Users are annotated with the user's project role (`project_role`) and the origin of this role (`project_role_origin`).
+    Users are annotated with the user's project role (`project_role.name`) and the origin of this role (`project_role.origin`).
     If the project is public, it will return only the directly collaborated users.
 
     Args:
@@ -52,89 +52,15 @@ class UserQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project"):
-
-        # This is a list of tuples defining project memberships
-        # List[(Condition, Role, RoleOrigin)]
-
-        permissions_config = [
-            # Project owner
-            (
-                Q(pk=project.owner.pk, user_type=User.TYPE_USER),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
-            ),
-            # Organization memberships - owner
-            (
-                Q(
-                    pk__in=Organization.objects.filter(pk=project.owner).values(
-                        "organization_owner"
-                    )
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
-            ),
-            # Organization memberships - admin
-            (
-                Q(
-                    pk__in=OrganizationMember.objects.filter(
-                        organization=project.owner,
-                        role=OrganizationMember.Roles.ADMIN,
-                    ).values("member")
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
-            ),
-            # Role through ProjectCollaborator
-            (
-                Exists(
-                    ProjectCollaborator.objects.validated()
-                    .filter(
-                        project=project,
-                        collaborator=OuterRef("pk"),
-                    )
-                    .exclude(
-                        collaborator__user_type=User.TYPE_TEAM,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=project,
-                    collaborator=OuterRef("pk"),
-                )
-                .exclude(
-                    collaborator__user_type=User.TYPE_TEAM,
-                )
-                .values_list("role"),
-                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
-            ),
-            # Role through Team membership
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=project,
-                        collaborator__team__members__member=OuterRef("pk"),
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=project,
-                    collaborator__team__members__member=OuterRef("pk"),
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
-            ),
-        ]
-
-        qs = User.objects.annotate(
-            project_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            project_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
+        qs = (
+            self.select_related("project_role")
+            .defer("project_role__user_id", "project_role__project_id")
+            .filter(
+                user_type=User.TYPE_USER,
+                project_role__project=project,
+                project_role__is_valid=True,
+            )
         )
-        # Exclude those without role (invisible)
-        qs = qs.exclude(project_role__isnull=True)
 
         return qs
 
@@ -1172,10 +1098,10 @@ class ProjectCollaborator(models.Model):
 
 
 class ProjectRolesView(models.Model):
-    user = models.ForeignKey(
+    user = models.OneToOneField(
         User,
         on_delete=models.DO_NOTHING,
-        related_name="related_projects",
+        related_name="project_role",
     )
     project = models.OneToOneField(
         "Project",
