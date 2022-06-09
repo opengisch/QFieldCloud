@@ -1098,15 +1098,37 @@ class ProjectCollaborator(models.Model):
 
 
 class ProjectRolesView(models.Model):
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         User,
         on_delete=models.DO_NOTHING,
-        related_name="project_role",
+        related_name="+",
     )
     project = models.OneToOneField(
         "Project",
         on_delete=models.DO_NOTHING,
         related_name="user_role",
+    )
+    name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
+    origin = models.CharField(
+        max_length=100, choices=ProjectQueryset.RoleOrigins.choices
+    )
+    is_valid = models.BooleanField()
+
+    class Meta:
+        db_table = "projects_with_roles_vw"
+        managed = False
+
+
+class ProjectRolesView2(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.DO_NOTHING,
+        related_name="project_role",
+    )
+    project = models.ForeignKey(
+        "Project",
+        on_delete=models.DO_NOTHING,
+        related_name="+",
     )
     name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
     origin = models.CharField(
