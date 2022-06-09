@@ -209,7 +209,7 @@ class QfcTestCase(APITestCase):
 
     def test_projects_roles_and_role_origins(self):
         """
-        Checks user_role and user_role_origin are correctly defined
+        Checks user_role.name and user_role.origin are correctly defined
         """
 
         def p(proj, user):
