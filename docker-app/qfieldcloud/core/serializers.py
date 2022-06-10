@@ -167,7 +167,6 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "organization_owner",
             "membership_role",
             "membership_role_origin",
-            "membership_role_is_public",
             "membership_is_public",
         )
 
