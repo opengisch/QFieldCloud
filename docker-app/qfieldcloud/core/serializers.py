@@ -141,7 +141,9 @@ class OrganizationSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
     membership_role = serializers.CharField(read_only=True)
     membership_role_origin = serializers.CharField(read_only=True)
-    membership_is_public = serializers.BooleanField()
+    membership_is_public = serializers.BooleanField(
+        read_only=True, source="membership_role_is_public"
+    )
 
     def get_members(self, obj):
         return [

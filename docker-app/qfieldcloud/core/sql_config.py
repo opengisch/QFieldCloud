@@ -144,4 +144,53 @@ sql_items = [
             DROP VIEW projects_with_roles_vw;
         """,
     ),
+    SQLItem(
+        "organizations_with_roles_vw_seq",
+        """
+            CREATE SEQUENCE IF NOT EXISTS organizations_with_roles_vw_seq CACHE 5000 CYCLE
+        """,
+        """
+            DROP SEQUENCE IF EXISTS organizations_with_roles_vw_seq
+        """,
+    ),
+    SQLItem(
+        "organizations_with_roles_vw",
+        """
+            CREATE OR REPLACE VIEW organizations_with_roles_vw AS
+            WITH organization_owner AS (
+                SELECT
+                    1 AS rank,
+                    ORG1."user_ptr_id" AS "organization_id",
+                    ORG1."organization_owner_id" AS "user_id",
+                    'admin' AS "name",
+                    'organization_owner' AS "origin",
+                    TRUE AS "is_public"
+                FROM
+                    "core_organization" ORG1
+            ),
+            organization_member AS (
+                SELECT
+                    2 AS rank,
+                    M1."organization_id" AS "organization_id",
+                    M1."member_id" AS "user_id",
+                    M1.role AS "name",
+                    'organization_member' AS "origin",
+                    M1."is_public" AS "is_public"
+                FROM
+                    "core_organizationmember" M1
+            )
+            SELECT DISTINCT ON(organization_id, user_id)
+                nextval('organizations_with_roles_vw_seq') id,
+                R1.*
+            FROM (
+                SELECT * FROM organization_owner
+                UNION
+                SELECT * FROM organization_member
+            ) R1
+            ORDER BY organization_id, user_id, rank
+        """,
+        """
+            DROP VIEW IF EXISTS "organizations_with_roles_vw";
+        """,
+    ),
 ]

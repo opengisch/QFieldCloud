@@ -5,6 +5,7 @@ import datetime
 import django.core.validators
 import django.db.models.deletion
 import qfieldcloud.subscription.models
+from django.conf import settings
 from django.db import migrations, models
 
 
@@ -49,5 +50,14 @@ class Migration(migrations.Migration):
             model_name="project",
             name="storage_size_mb",
             field=models.FloatField(default=0),
+        ),
+        migrations.AlterField(
+            model_name="projectcollaborator",
+            name="collaborator",
+            field=models.ForeignKey(
+                limit_choices_to=models.Q(("user_type__in", [1, 3])),
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]
