@@ -307,4 +307,4 @@ class QfcTestCase(APITestCase):
         self.assertEquals(
             organization.get("membership_role_origin", None), "organization_owner"
         )
-        self.assertEquals(organization.get("membership_is_public", None), True)
+        self.assertEquals(organization.get("membership_role_is_public", None), True)
