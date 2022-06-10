@@ -52,89 +52,16 @@ class UserQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project"):
-
-        # This is a list of tuples defining project memberships
-        # List[(Condition, Role, RoleOrigin)]
-
-        permissions_config = [
-            # Project owner
-            (
-                Q(pk=project.owner.pk, user_type=User.TYPE_USER),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
-            ),
-            # Organization memberships - owner
-            (
-                Q(
-                    pk__in=Organization.objects.filter(pk=project.owner).values(
-                        "organization_owner"
-                    )
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
-            ),
-            # Organization memberships - admin
-            (
-                Q(
-                    pk__in=OrganizationMember.objects.filter(
-                        organization=project.owner,
-                        role=OrganizationMember.Roles.ADMIN,
-                    ).values("member")
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
-            ),
-            # Role through ProjectCollaborator
-            (
-                Exists(
-                    ProjectCollaborator.objects.validated()
-                    .filter(
-                        project=project,
-                        collaborator=OuterRef("pk"),
-                    )
-                    .exclude(
-                        collaborator__user_type=User.TYPE_TEAM,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=project,
-                    collaborator=OuterRef("pk"),
-                )
-                .exclude(
-                    collaborator__user_type=User.TYPE_TEAM,
-                )
-                .values_list("role"),
-                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
-            ),
-            # Role through Team membership
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=project,
-                        collaborator__team__members__member=OuterRef("pk"),
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=project,
-                    collaborator__team__members__member=OuterRef("pk"),
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
-            ),
-        ]
-
-        qs = User.objects.annotate(
-            project_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            project_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
+        qs = (
+            self.prefetch_related("project_roles")
+            .defer("project_roles__project_id", "project_roles__project_id")
+            .filter(
+                project_roles__project=project,
+                project_roles__is_valid=True,
+            )
+            .annotate(project_role=F("project_roles__name"))
+            .annotate(project_role_origin=F("project_roles__origin"))
         )
-        # Exclude those without role (invisible)
-        qs = qs.exclude(project_role__isnull=True)
 
         return qs
 
@@ -847,12 +774,14 @@ class ProjectQueryset(models.QuerySet):
 
     def for_user(self, user):
         qs = (
-            Project.objects.select_related("user_role")
-            .defer("user_role__user_id", "user_role__project_id")
+            self.prefetch_related("user_roles")
+            .defer("user_roles__user_id", "user_roles__project_id")
             .filter(
-                user_role__user=user,
-                user_role__is_valid=True,
+                user_roles__user=user,
+                user_roles__is_valid=True,
             )
+            .annotate(user_role=F("user_roles__name"))
+            .annotate(user_role_origin=F("user_roles__origin"))
         )
 
         return qs
@@ -1175,12 +1104,12 @@ class ProjectRolesView(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.DO_NOTHING,
-        related_name="related_projects",
+        related_name="project_roles",
     )
-    project = models.OneToOneField(
+    project = models.ForeignKey(
         "Project",
         on_delete=models.DO_NOTHING,
-        related_name="user_role",
+        related_name="user_roles",
     )
     name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
     origin = models.CharField(

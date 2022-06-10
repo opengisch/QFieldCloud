@@ -40,8 +40,8 @@ class UserSerializer:
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
-    user_role = serializers.CharField(read_only=True, source="user_role.name")
-    user_role_origin = serializers.CharField(read_only=True, source="user_role.origin")
+    user_role = serializers.CharField(read_only=True)
+    user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
 
     def to_internal_value(self, data):
