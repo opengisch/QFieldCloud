@@ -25,14 +25,14 @@ def _organization_of_owner(user: QfcUser, organization: Organization):
 def user_has_project_roles(
     user: QfcUser, project: Project, roles: List[ProjectCollaborator.Roles]
 ):
-    return _project_for_owner(user, project).filter(user_role__name__in=roles).exists()
+    return _project_for_owner(user, project).filter(user_role__in=roles).exists()
 
 
 def user_has_project_role_origins(
     user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
 ):
     return (
-        _project_for_owner(user, project).filter(user_role__origin__in=origins).exists()
+        _project_for_owner(user, project).filter(user_role_origin__in=origins).exists()
     )
 
 
