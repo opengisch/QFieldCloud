@@ -265,10 +265,13 @@ class User(AbstractUser):
         return hasattr(self, "geodb")
 
     def save(self, *args, **kwargs):
-        created = self._state.adding
-        super().save(*args, **kwargs)
-        if created:
-            UserAccount.objects.create(user=self)
+        # if the user is created, we need to create a user account
+        if self._state.adding and self.user_type != User.TYPE_TEAM:
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+                UserAccount.objects.create(user=self)
+        else:
+            super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         if self.user_type != User.TYPE_TEAM:
