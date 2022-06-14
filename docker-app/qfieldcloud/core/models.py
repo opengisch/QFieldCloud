@@ -1481,7 +1481,9 @@ class Secret(models.Model):
         User, on_delete=models.CASCADE, related_name="project_secrets"
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    value = django_cryptography.fields.encrypt(models.TextField())
+    value = django_cryptography.fields.encrypt(
+        models.TextField(), key=os.environ.get("CRYPTOGRAPHY_KEY_20220612").encode()
+    )
 
     class Meta:
         ordering = ["project", "name"]

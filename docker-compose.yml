@@ -69,6 +69,7 @@ services:
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
+      CRYPTOGRAPHY_KEY_20220612: ${CRYPTOGRAPHY_KEY_20220612}
     depends_on:
       - redis
     logging:
