@@ -336,9 +336,10 @@ QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
 
 WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 60))
+APPLY_DELTAS_LIMIT = 1000
 
 DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development1",
+    "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
 }
 
 QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
