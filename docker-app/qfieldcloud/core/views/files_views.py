@@ -1,6 +1,7 @@
 from pathlib import PurePath
 
 import qfieldcloud.core.utils2 as utils2
+from django.db import transaction
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
@@ -166,25 +167,38 @@ class DownloadPushDeleteFileView(views.APIView):
 
         assert new_object
 
-        if get_attachment_dir_prefix(project, filename) == "" and (
-            is_qgis_project_file or project.project_filename is not None
-        ):
-            if is_qgis_project_file:
-                project.project_filename = filename
+        with transaction.atomic():
+            # we only enter a transaction after the file is uploaded above because we do not
+            # want to lock the project row for way too long. If we reselect for update the
+            # project and update it now, it guarantees there will be no other file upload editing
+            # the same project row.
+            project = Project.objects.select_for_update().get(id=projectid)
+            update_fields = ["data_last_updated_at"]
 
-            running_jobs = ProcessProjectfileJob.objects.filter(
-                project=project,
-                created_by=self.request.user,
-                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
-            )
+            if get_attachment_dir_prefix(project, filename) == "" and (
+                is_qgis_project_file or project.project_filename is not None
+            ):
+                if is_qgis_project_file:
+                    project.project_filename = filename
+                    update_fields.append("project_filename")
 
-            if running_jobs.count() == 0:
-                ProcessProjectfileJob.objects.create(
-                    project=project, created_by=self.request.user
+                running_jobs = ProcessProjectfileJob.objects.filter(
+                    project=project,
+                    created_by=self.request.user,
+                    status__in=[
+                        Job.Status.PENDING,
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ],
                 )
 
-        project.data_last_updated_at = timezone.now()
-        project.save()
+                if running_jobs.count() == 0:
+                    ProcessProjectfileJob.objects.create(
+                        project=project, created_by=self.request.user
+                    )
+
+            project.data_last_updated_at = timezone.now()
+            project.save(update_fields=update_fields)
 
         if old_object:
             audit(
