@@ -6,7 +6,10 @@ from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
-from qfieldcloud.core.utils2.storage import purge_old_file_versions, staticfile_prefix
+from qfieldcloud.core.utils2.storage import (
+    get_attachment_dir_prefix,
+    purge_old_file_versions,
+)
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -163,7 +166,7 @@ class DownloadPushDeleteFileView(views.APIView):
 
         assert new_object
 
-        if staticfile_prefix(project, filename) == "" and (
+        if get_attachment_dir_prefix(project, filename) == "" and (
             is_qgis_project_file or project.project_filename is not None
         ):
             if is_qgis_project_file:
