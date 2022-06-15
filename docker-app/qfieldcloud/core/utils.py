@@ -238,7 +238,7 @@ def is_qgis_project_file(filename: str) -> bool:
     """Returns whether the filename seems to be a QGIS project file by checking the file extension."""
     path = PurePath(filename)
 
-    if path.suffix in (".qgs", ".qgz"):
+    if path.suffix.lower() in (".qgs", ".qgz"):
         return True
 
     return False
