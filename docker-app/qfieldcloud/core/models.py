@@ -1,4 +1,5 @@
 import calendar
+import contextlib
 import os
 import secrets
 import string
@@ -276,7 +277,9 @@ class User(AbstractUser):
     def delete(self, *args, **kwargs):
         if self.user_type != User.TYPE_TEAM:
             qfieldcloud.core.utils2.storage.remove_user_avatar(self)
-        super().delete(*args, **kwargs)
+
+        with no_audits([User, UserAccount, Project]):
+            super().delete(*args, **kwargs)
 
     class Meta:
         verbose_name = "user"
@@ -1333,34 +1336,64 @@ class Secret(models.Model):
         ]
 
 
-auditlog.register(User, exclude_fields=["last_login", "updated_at"])
-auditlog.register(UserAccount)
-auditlog.register(Organization)
-auditlog.register(OrganizationMember)
-auditlog.register(Team)
-auditlog.register(TeamMember)
-auditlog.register(
-    Project,
-    include_fields=[
-        "id",
-        "name",
-        "description",
-        "owner",
-        "is_public",
-        "owner",
-        "created_at",
-    ],
-)
-auditlog.register(ProjectCollaborator)
-auditlog.register(
-    Delta,
-    include_fields=[
-        "id",
-        "deltafile_id",
-        "project",
-        "content",
-        "last_status",
-        "created_by",
-    ],
-)
-auditlog.register(Secret, exclude_fields=["value"])
+audited_models = [
+    (User, {"exclude_fields": ["last_login", "updated_at"]}),
+    (UserAccount, {}),
+    (Organization, {}),
+    (OrganizationMember, {}),
+    (Team, {}),
+    (TeamMember, {}),
+    (
+        Project,
+        {
+            "include_fields": [
+                "id",
+                "name",
+                "description",
+                "owner",
+                "is_public",
+                "owner",
+                "created_at",
+            ],
+        },
+    ),
+    (ProjectCollaborator, {}),
+    (
+        Delta,
+        {
+            "include_fields": [
+                "id",
+                "deltafile_id",
+                "project",
+                "content",
+                "last_status",
+                "created_by",
+            ],
+        },
+    ),
+    (Secret, {"exclude_fields": ["value"]}),
+]
+
+
+def register_model_audits(subset: List[models.Model] = []) -> None:
+    for model, kwargs in audited_models:
+        if subset and model not in subset:
+            continue
+        auditlog.register(model, **kwargs)
+
+
+def deregister_model_audits(subset: List[models.Model] = []) -> None:
+    for model, _kwargs in audited_models:
+        if subset and model not in subset:
+            continue
+
+        auditlog.unregister(model)
+
+
+@contextlib.contextmanager
+def no_audits(subset: List[models.Model] = []):
+    try:
+        deregister_model_audits(subset)
+        yield
+    finally:
+        register_model_audits(subset)
