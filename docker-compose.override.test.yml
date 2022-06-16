@@ -18,6 +18,9 @@ services:
       # we must use the same db for test and runserver
       SQL_DATABASE: test_${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
+    command: python -m debugpy --listen 0.0.0.0:5679 manage.py dequeue
+    ports:
+      - 5679:5679
 
   db:
     environment:

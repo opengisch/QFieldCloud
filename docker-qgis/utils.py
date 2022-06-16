@@ -159,7 +159,9 @@ def stop_app():
         del QGISAPP
 
 
-def download_project(project_id: str, destination: Path = None) -> Path:
+def download_project(
+    project_id: str, destination: Path = None, skip_attachments: bool = True
+) -> Path:
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""
     if not destination:
@@ -172,6 +174,10 @@ def download_project(project_id: str, destination: Path = None) -> Path:
 
     client = sdk.Client()
     files = client.list_remote_files(project_id)
+
+    if skip_attachments:
+        files = [file for file in files if not file["is_attachment"]]
+
     client.download_files(
         files,
         project_id,
