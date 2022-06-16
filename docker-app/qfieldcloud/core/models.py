@@ -856,27 +856,27 @@ class Project(models.Model):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
     @property
-    def staticfile_dirs(self) -> List[str]:
-        """Returns a list of configured staticfile dirs for the project.
+    def attachment_dirs(self) -> List[str]:
+        """Returns a list of configured attachment dirs for the project.
 
-        Staticfile dir is a special directory in the QField infrastructure that holds static files
-        such as images, pdf etc. By default "DCIM" is considered a staticfile directory.
+        Attachment dir is a special directory in the QField infrastructure that holds attachment files
+        such as images, pdf etc. By default "DCIM" is considered a attachment directory.
 
-        TODO this function expects whether `staticfile_dirs` key in project_details. However,
+        TODO this function expects whether `attachment_dirs` key in project_details. However,
         neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
 
         Returns:
-            List[str]: A list configured staticfile dirs for the project.
+            List[str]: A list configured attachment dirs for the project.
         """
-        staticfile_dirs = []
+        attachment_dirs = []
 
-        if self.project_details and self.project_details.get("staticfile_dirs"):
-            staticfile_dirs = self.project_details.get("staticfile_dirs", [])
+        if self.project_details and self.project_details.get("attachment_dirs"):
+            attachment_dirs = self.project_details.get("attachment_dirs", [])
 
-        if not staticfile_dirs:
-            staticfile_dirs = ["DCIM"]
+        if not attachment_dirs:
+            attachment_dirs = ["DCIM"]
 
-        return staticfile_dirs
+        return attachment_dirs
 
     @property
     def private(self) -> bool:

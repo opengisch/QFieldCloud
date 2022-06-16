@@ -19,19 +19,19 @@ QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 
 
-def staticfile_prefix(project: "Project", filename: str) -> str:  # noqa: F821
-    """Returns the staticfile dir where the file belongs to or empty string if it does not.
+def get_attachment_dir_prefix(project: "Project", filename: str) -> str:  # noqa: F821
+    """Returns the attachment dir where the file belongs to or empty string if it does not.
 
     Args:
         project (Project): project to check
         filename (str): filename to check
 
     Returns:
-        str: the staticfile dir or empty string if no match found
+        str: the attachment dir or empty string if no match found
     """
-    for staticfile_dir in project.staticfile_dirs:
-        if filename.startswith(staticfile_dir):
-            return staticfile_dir
+    for attachment_dir in project.attachment_dirs:
+        if filename.startswith(attachment_dir):
+            return attachment_dir
 
     return ""
 
