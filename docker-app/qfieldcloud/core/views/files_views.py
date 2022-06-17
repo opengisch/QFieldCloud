@@ -35,7 +35,7 @@ class ListFilesView(views.APIView):
 
     def get(self, request, projectid):
 
-        Project.objects.get(id=projectid)
+        project = Project.objects.get(id=projectid)
 
         bucket = utils.get_s3_bucket()
 
@@ -61,11 +61,14 @@ class ListFilesView(views.APIView):
                 sha256sum = metadata["Sha256sum"]
 
             if version.is_latest:
+                is_attachment = get_attachment_dir_prefix(project, filename) != ""
+
                 files[version.key]["name"] = filename
                 files[version.key]["size"] = version.size
                 files[version.key]["sha256"] = sha256sum
                 files[version.key]["md5sum"] = version.e_tag.replace('"', "")
                 files[version.key]["last_modified"] = last_modified
+                files[version.key]["is_attachment"] = is_attachment
 
             files[version.key]["versions"].append(
                 {

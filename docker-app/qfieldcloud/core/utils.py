@@ -314,6 +314,22 @@ def get_s3_project_size(project_id: str) -> int:
     return round(total_size / (1024 * 1024), 3)
 
 
+def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:
+    """Returns a list of files and their versions.
+
+    Args:
+        project_id (str): the project id
+        path (str): additional filter prefix
+
+    Returns:
+        Iterable[S3ObjectWithVersions]: the list of files
+    """
+    bucket = get_s3_bucket()
+    prefix = f"projects/{project_id}/files/{path}"
+
+    return list_files(bucket, prefix, strip_prefix=True)
+
+
 def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVersions]:
     """Returns a list of files and their versions.
 

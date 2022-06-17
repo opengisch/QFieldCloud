@@ -152,6 +152,7 @@ def cmd_package_project(args):
                 arguments={
                     "project_id": args.projectid,
                     "destination": WorkDirPath(mkdir=True),
+                    "skip_attachments": True,
                 },
                 method=qfieldcloud.qgis.utils.download_project,
                 return_names=["tmp_project_dir"],
@@ -228,6 +229,7 @@ def cmd_apply_deltas(args):
                 arguments={
                     "project_id": args.projectid,
                     "destination": WorkDirPath(mkdir=True),
+                    "skip_attachments": True,
                 },
                 method=qfieldcloud.qgis.utils.download_project,
                 return_names=["tmp_project_dir"],
@@ -285,6 +287,7 @@ def cmd_process_projectfile(args):
                 arguments={
                     "project_id": args.projectid,
                     "destination": WorkDirPath(mkdir=True),
+                    "skip_attachments": True,
                 },
                 method=qfieldcloud.qgis.utils.download_project,
                 return_names=["tmp_project_dir"],
