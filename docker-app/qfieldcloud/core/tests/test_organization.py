@@ -172,12 +172,12 @@ class QfcTestCase(APITestCase):
         # Set user1 and user2 as member of organization1
         OrganizationMember.objects.create(
             organization=self.organization1,
-            member=self.user1,
+            member=self.user2,
             role=OrganizationMember.Roles.MEMBER,
         )
         OrganizationMember.objects.create(
             organization=self.organization1,
-            member=self.user2,
+            member=self.user3,
             role=OrganizationMember.Roles.MEMBER,
         )
 
@@ -205,7 +205,7 @@ class QfcTestCase(APITestCase):
         # User 1 creates a job
         Job.objects.create(
             project=project1,
-            created_by=self.user1,
+            created_by=self.user2,
         )
         # There is now 1 billable user
         self.assertEqual(_billable_users_count(), 1)
@@ -215,7 +215,7 @@ class QfcTestCase(APITestCase):
             deltafile_id=uuid.uuid4(),
             project=project1,
             content="delta",
-            created_by=self.user1,
+            created_by=self.user2,
         )
         # There is still 1 billable user
         self.assertEqual(_billable_users_count(), 1)
@@ -223,13 +223,13 @@ class QfcTestCase(APITestCase):
         # User 2 creates a job
         Job.objects.create(
             project=project1,
-            created_by=self.user2,
+            created_by=self.user3,
         )
         # There is 2 billable user
         self.assertEqual(_billable_users_count(), 2)
 
         # User 2 leaves the organization
-        OrganizationMember.objects.filter(member=self.user2).delete()
+        OrganizationMember.objects.filter(member=self.user3).delete()
 
         # There is now 1 billable user
         self.assertEqual(_billable_users_count(), 1)
