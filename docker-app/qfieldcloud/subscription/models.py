@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils.translation import gettext as _
 
 
 class AccountType(models.Model):
@@ -38,8 +39,21 @@ class AccountType(models.Model):
         validators=[MinValueValidator(timedelta(minutes=1))],
     )
     synchronizations_per_months = models.PositiveIntegerField(default=30)
+
+    # the account type is visible option for non-admin users
     is_public = models.BooleanField(default=False)
+
+    # the account type is set by default for new users
     is_default = models.BooleanField(default=False)
+
+    # if the organization subscription is changed from unlimited to limited organization members,
+    # the existing members that are over the max_organization_members configuration remain active.
+    max_organization_members = models.PositiveIntegerField(
+        default=0,
+        help_text=_(
+            "Maximum organization members allowed for particular subscription plan. Set 0 to allow unlimited organization members."
+        ),
+    )
 
     def save(self, *args, **kwargs):
         # If default is set to true, we unset default on all other account types
