@@ -55,6 +55,9 @@ class AccountType(models.Model):
         ),
     )
 
+    # if true, the billing for this account type should NOT happen automatically
+    has_custom_billing = models.BooleanField(default=False)
+
     def save(self, *args, **kwargs):
         # If default is set to true, we unset default on all other account types
         if self.is_default:

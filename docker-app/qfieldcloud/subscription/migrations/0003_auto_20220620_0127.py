@@ -18,4 +18,9 @@ class Migration(migrations.Migration):
                 help_text="Maximum organization members allowed for particular subscription plan. Set 0 to allow unlimited organization members.",
             ),
         ),
+        migrations.AddField(
+            model_name="accounttype",
+            name="has_custom_billing",
+            field=models.BooleanField(default=False),
+        ),
     ]
