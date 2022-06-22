@@ -603,6 +603,19 @@ class OrganizationMember(models.Model):
         if self.organization.organization_owner == self.member:
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
+        max_organization_members = (
+            self.organization.useraccount.account_type.max_organization_members
+        )
+        if (
+            max_organization_members > 0
+            and self.organization.members.count() >= max_organization_members
+        ):
+            raise ValidationError(
+                _(
+                    "Cannot add new organization members, account limit has been reached."
+                )
+            )
+
         return super().clean()
 
     @transaction.atomic
@@ -613,6 +626,10 @@ class OrganizationMember(models.Model):
             team__team_organization=self.organization,
             member=self.member,
         ).delete()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class OrganizationRolesView(models.Model):
