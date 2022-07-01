@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import logging
 import os
@@ -191,12 +192,47 @@ def _get_md5sum_memory_file(
 def _get_md5sum_file(file: IO) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.md5()
+
     buf = file.read(BLOCKSIZE)
     while len(buf) > 0:
         hasher.update(buf)
         buf = file.read(BLOCKSIZE)
     file.seek(0)
     return hasher.hexdigest()
+
+
+def strip_json_null_bytes(file: IO) -> IO:
+    """Return JSON string stream without NULL chars."""
+    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
+        return _strip_json_null_bytes_memory_file(file)
+    else:
+        return _strip_json_null_bytes_file(file)
+
+
+def _strip_json_null_bytes_memory_file(file: IO) -> IO:
+    result = io.BytesIO()
+    BLOCKSIZE = 65536
+
+    for chunk in file.chunks(BLOCKSIZE):
+        result.write(chunk.decode().replace(r"\u0000", "").encode())
+    file.seek(0)
+    result.seek(0)
+
+    return result
+
+
+def _strip_json_null_bytes_file(file: IO) -> IO:
+    result = io.BytesIO()
+    BLOCKSIZE = 65536
+
+    buf = file.read(BLOCKSIZE)
+    while len(buf) > 0:
+        result.write(buf.decode().replace(r"\u0000", "").encode())
+        buf = file.read(BLOCKSIZE)
+    file.seek(0)
+    result.seek(0)
+
+    return result
 
 
 def safe_join(base: str, *paths: str) -> str:
