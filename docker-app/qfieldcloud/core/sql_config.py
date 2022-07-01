@@ -3,7 +3,7 @@ from migrate_sql.config import SQLItem
 sql_items = [
     SQLItem(
         "project_user_collaborators_vw",
-        """
+        r"""
             CREATE OR REPLACE VIEW project_user_collaborators_vw AS
 
             SELECT
@@ -18,22 +18,22 @@ sql_items = [
                 LEFT JOIN core_organization O1 ON O1.user_ptr_id = P1.owner_id
                 LEFT JOIN core_organizationmember OM1 ON OM1.organization_id = O1.user_ptr_id
         """,
-        """
+        r"""
             DROP VIEW project_user_collaborators_vw;
         """,
     ),
     SQLItem(
         "projects_with_roles_vw_seq",
-        """
+        r"""
             CREATE SEQUENCE IF NOT EXISTS projects_with_roles_vw_seq CACHE 5000 CYCLE
         """,
-        """
+        r"""
             DROP SEQUENCE IF EXISTS projects_with_roles_vw_seq
         """,
     ),
     SQLItem(
         "projects_with_roles_vw",
-        """
+        r"""
             CREATE OR REPLACE VIEW projects_with_roles_vw AS
 
             WITH project_owner AS (
@@ -140,22 +140,22 @@ sql_items = [
             ) R1
             ORDER BY project_id, user_id, rank
         """,
-        """
+        r"""
             DROP VIEW projects_with_roles_vw;
         """,
     ),
     SQLItem(
         "organizations_with_roles_vw_seq",
-        """
+        r"""
             CREATE SEQUENCE IF NOT EXISTS organizations_with_roles_vw_seq CACHE 5000 CYCLE
         """,
-        """
+        r"""
             DROP SEQUENCE IF EXISTS organizations_with_roles_vw_seq
         """,
     ),
     SQLItem(
         "organizations_with_roles_vw",
-        """
+        r"""
             CREATE OR REPLACE VIEW organizations_with_roles_vw AS
             WITH organization_owner AS (
                 SELECT
@@ -189,8 +189,67 @@ sql_items = [
             ) R1
             ORDER BY organization_id, user_id, rank
         """,
-        """
+        r"""
             DROP VIEW IF EXISTS "organizations_with_roles_vw";
+        """,
+    ),
+    SQLItem(
+        r"""
+            CREATE OR REPLACE FUNCTION core_delta_geom_trigger_func()
+            RETURNS trigger
+            AS
+            $$
+                DECLARE
+                    srid int;
+                BEGIN
+                    SELECT CASE
+                        WHEN jsonb_extract_path_text(NEW.content, 'localLayerCrs') ~ '^EPSG:\d{1,10}$'
+                        THEN
+                            REGEXP_REPLACE(jsonb_extract_path_text(NEW.content, 'localLayerCrs'), '\D*', '', 'g')::int
+                        ELSE
+                            NULL
+                        END INTO srid;
+                    NEW.old_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( jsonb_extract_path_text(NEW.content, 'old', 'geometry'), 'nan', '0' ) ) ), srid ), 4326 );
+                    NEW.new_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( jsonb_extract_path_text(NEW.content, 'new', 'geometry'), 'nan', '0' ) ) ), srid ), 4326 );
+
+                    IF ST_GeometryType(NEW.old_geom) IN ('ST_CircularString', 'ST_CompoundCurve', 'ST_CurvePolygon', 'ST_MultiCurve', 'ST_MultiSurface')
+                    THEN
+                        NEW.old_geom := ST_CurveToLine(NEW.old_geom);
+                    END IF;
+
+                    IF ST_GeometryType(NEW.new_geom) IN ('ST_CircularString', 'ST_CompoundCurve', 'ST_CurvePolygon', 'ST_MultiCurve', 'ST_MultiSurface')
+                    THEN
+                        NEW.new_geom := ST_CurveToLine(NEW.new_geom);
+                    END IF;
+
+                    RETURN NEW;
+                END;
+            $$
+            LANGUAGE PLPGSQL
+        """,
+        r"""
+            DROP FUNCTION IF EXISTS core_delta_geom_trigger_func()
+        """,
+    ),
+    SQLItem(
+        r"""
+            CREATE TRIGGER core_delta_geom_update_trigger BEFORE UPDATE ON core_delta
+            FOR EACH ROW
+            WHEN (OLD.content IS DISTINCT FROM NEW.content)
+            EXECUTE FUNCTION core_delta_geom_trigger_func()
+        """,
+        r"""
+            DROP TRIGGER IF EXISTS core_delta_geom_update_trigger ON core_delta
+        """,
+    ),
+    SQLItem(
+        r"""
+            CREATE TRIGGER core_delta_geom_insert_trigger BEFORE INSERT ON core_delta
+            FOR EACH ROW
+            EXECUTE FUNCTION core_delta_geom_trigger_func()
+        """,
+        r"""
+            DROP TRIGGER IF EXISTS core_delta_geom_insert_trigger ON core_delta
         """,
     ),
 ]
