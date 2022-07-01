@@ -59,7 +59,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
 
-        request_file = request.data["file"]
+        request_file = utils.strip_json_null_bytes(request.data["file"])
         created_deltas = []
 
         try:
