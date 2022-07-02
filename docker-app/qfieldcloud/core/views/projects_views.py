@@ -109,10 +109,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # included with the `include-public` query parameter.
         if self.action == "list":
             include_public = False
-            include_public_param = self.request.query_params.get(
-                "include-public", default=None
-            )
-            if include_public_param and include_public_param.lower() == "true":
+            include_public_param = self.request.query_params.get("include-public")
+            if include_public_param and include_public_param.lower() == "1":
                 include_public = True
 
             if not include_public:

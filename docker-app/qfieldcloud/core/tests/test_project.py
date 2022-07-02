@@ -75,11 +75,23 @@ class QfcTestCase(APITestCase):
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        response = self.client.get("/api/v1/projects/?include-public=true")
+
+        # 1) do not list the public projects by default
+        response = self.client.get("/api/v1/projects/")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 0)
+
+        # 1) list the public projects on request
+        response = self.client.get("/api/v1/projects/?include-public=1")
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["name"], "project1")
         self.assertEqual(response.data[0]["owner"], "user2")
+
+        # 1) do not list the public projects for any other value than 1
+        response = self.client.get("/api/v1/projects/?include-public=true")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 0)
 
     def test_list_collaborators_of_project(self):
 
