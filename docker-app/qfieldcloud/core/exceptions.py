@@ -4,8 +4,8 @@ from rest_framework import status
 class QFieldCloudException(Exception):
     """Generic QFieldCloud Exception"""
 
-    code = ("unknown_error",)
-    message = ("QFieldcloud Unknown Error",)
+    code = "unknown_error"
+    message = "QFieldcloud Unknown Error"
     status_code = None
 
     def __init__(self, detail="", status_code=None):

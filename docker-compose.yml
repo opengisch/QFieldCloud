@@ -80,6 +80,7 @@ services:
         max-file: "5"
     labels:
       ofelia.enabled: "true"
+      ofelia.job-exec.runcrons.no-overlap: "true"
       ofelia.job-exec.runcrons.schedule: '@every 1m'
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
