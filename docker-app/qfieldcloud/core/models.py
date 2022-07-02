@@ -54,8 +54,7 @@ class UserQueryset(models.QuerySet):
 
     def for_project(self, project: "Project"):
         qs = (
-            self.prefetch_related("project_roles")
-            .defer("project_roles__project_id", "project_roles__project_id")
+            self.defer("project_roles__project_id", "project_roles__project_id")
             .filter(
                 user_type=User.TYPE_USER,
                 project_roles__project=project,
@@ -71,8 +70,7 @@ class UserQueryset(models.QuerySet):
 
     def for_organization(self, organization: "Organization"):
         qs = (
-            self.prefetch_related("organization_roles")
-            .defer(
+            self.defer(
                 "organization_roles__user_id",
                 "organization_roles__organization_id",
             )
@@ -469,8 +467,7 @@ class OrganizationQueryset(models.QuerySet):
 
     def of_user(self, user):
         qs = (
-            self.prefetch_related("membership_roles")
-            .defer("membership_roles__user_id", "membership_roles__organization_id")
+            self.defer("membership_roles__user_id", "membership_roles__organization_id")
             .filter(
                 membership_roles__user=user,
             )
@@ -747,8 +744,7 @@ class ProjectQueryset(models.QuerySet):
 
     def for_user(self, user):
         qs = (
-            self.prefetch_related("user_roles")
-            .defer("user_roles__user_id", "user_roles__project_id")
+            self.defer("user_roles__user_id", "user_roles__project_id")
             .filter(
                 user_roles__user=user,
                 user_roles__is_valid=True,
