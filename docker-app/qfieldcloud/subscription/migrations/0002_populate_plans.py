@@ -11,6 +11,7 @@ def populate_plans(apps, schema_editor):
     Plan.objects.create(
         id=1,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_COMMUNITY
         code="community",
+        user_type=1,
         display_name="community",
         storage_mb=100,
         storage_keep_versions=3,
@@ -30,6 +31,7 @@ def populate_plans(apps, schema_editor):
     Plan.objects.create(
         id=2,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_PRO
         code="pro",
+        user_type=1,
         display_name="pro",
         storage_mb=1000,
         storage_keep_versions=10,
@@ -49,6 +51,7 @@ def populate_plans(apps, schema_editor):
     Plan.objects.create(
         id=3,
         code="organization",
+        user_type=2,
         display_name="organization",
         storage_mb=100,  # we probably mean 1000 ?
         storage_keep_versions=10,

@@ -29,6 +29,12 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("code", models.CharField(max_length=30, unique=True)),
+                (
+                    "user_type",
+                    models.PositiveSmallIntegerField(
+                        choices=[(1, "User"), (2, "Organization")], default=1
+                    ),
+                ),
                 ("display_name", models.CharField(max_length=100)),
                 ("storage_mb", models.PositiveIntegerField(default=10)),
                 ("storage_keep_versions", models.PositiveIntegerField(default=10)),

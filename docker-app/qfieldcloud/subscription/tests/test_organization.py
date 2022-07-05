@@ -27,10 +27,12 @@ class QfcTestCase(APITransactionTestCase):
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         unlimited_plan = Plan.objects.create(
             code="max_organization_members0",
+            user_type=Plan.UserType.ORGANIZATION,
             max_organization_members=0,
         )
         limited_plan = Plan.objects.create(
             code="max_organization_members1",
+            user_type=Plan.UserType.ORGANIZATION,
             max_organization_members=1,
         )
 
