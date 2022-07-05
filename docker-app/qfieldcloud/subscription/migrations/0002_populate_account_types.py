@@ -104,5 +104,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_account_types),
+        migrations.RunPython(populate_account_types, migrations.RunPython.noop),
     ]
