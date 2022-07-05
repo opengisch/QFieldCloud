@@ -35,6 +35,13 @@ class Migration(migrations.Migration):
                         choices=[(1, "User"), (2, "Organization")], default=1
                     ),
                 ),
+                (
+                    "ordering",
+                    models.PositiveIntegerField(
+                        default=0,
+                        help_text='Relative ordering of the record. Lower values have higher priority (will be first in the list). Records with same ordering will be sorted by "Display name" and "Code". Please set with gaps for different records for easy reordering (e.g. 5, 10, 15, but not 5, 6, 7).',
+                    ),
+                ),
                 ("display_name", models.CharField(max_length=100)),
                 ("storage_mb", models.PositiveIntegerField(default=10)),
                 ("storage_keep_versions", models.PositiveIntegerField(default=10)),
@@ -65,6 +72,13 @@ class Migration(migrations.Migration):
                 ("is_public", models.BooleanField(default=False)),
                 ("is_default", models.BooleanField(default=False)),
             ],
+            options={
+                "ordering": (
+                    "ordering",
+                    "display_name",
+                    "code",
+                )
+            },
         ),
         migrations.CreateModel(
             name="ExtraPackageType",

@@ -42,6 +42,14 @@ class Plan(models.Model):
         choices=UserType.choices, default=UserType.USER
     )
 
+    # relative ordering of the record
+    ordering = models.PositiveIntegerField(
+        default=0,
+        help_text=_(
+            'Relative ordering of the record. Lower values have higher priority (will be first in the list). Records with same ordering will be sorted by "Display name" and "Code". Please set with gaps for different records for easy reordering (e.g. 5, 10, 15, but not 5, 6, 7).'
+        ),
+    )
+
     # TODO: match requirements in QF-234 (fields like automatic old versions)
     # TODO: decide how to localize display_name. Possible approaches:
     # - django-vinaigrette (never tried, but like the name, and seems to to exactly what we want)
@@ -86,6 +94,13 @@ class Plan(models.Model):
 
     def __str__(self):
         return f"{self.display_name} ({self.code})"
+
+    class Meta:
+        ordering = (
+            "ordering",
+            "display_name",
+            "code",
+        )
 
 
 class ExtraPackageType(models.Model):
