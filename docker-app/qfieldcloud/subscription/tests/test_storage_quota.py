@@ -12,7 +12,7 @@ from qfieldcloud.core.utils2.storage import delete_file_version
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from ..models import AccountType, ExtraPackage, ExtraPackageTypeStorage
+from ..models import ExtraPackage, ExtraPackageTypeStorage, Plan
 
 logging.disable(logging.CRITICAL)
 
@@ -38,16 +38,14 @@ class QfcTestCase(APITransactionTestCase):
         # to manually reset the current user to None.
         _set_current_user(None)
 
-        default = AccountType.get_or_create_default()
+        default = Plan.get_or_create_default()
 
         # Initially, we have the default account type storage
         self.assertEqual(u1.useraccount.storage_quota_left_mb, default.storage_mb)
 
         # Changing account type changes the quota
-        account_type_1mb = AccountType.objects.create(
-            code="account_type_1mb", storage_mb=1
-        )
-        u1.useraccount.account_type = account_type_1mb
+        plan_1mb = Plan.objects.create(code="plan_1mb", storage_mb=1)
+        u1.useraccount.plan = plan_1mb
         u1.useraccount.save()
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 1)
 
@@ -112,10 +110,8 @@ class QfcTestCase(APITransactionTestCase):
     def test_api_enforces_storage_limit(self):
         u1 = User.objects.create(username="u1")
         p1 = Project.objects.create(name="p1", owner=u1)
-        account_type_1mb = AccountType.objects.create(
-            code="account_type_1mb", storage_mb=1
-        )
-        u1.useraccount.account_type = account_type_1mb
+        plan_1mb = Plan.objects.create(code="plan_1mb", storage_mb=1)
+        u1.useraccount.plan = plan_1mb
         u1.useraccount.save()
 
         self._login(u1)
@@ -135,22 +131,18 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, 402)
 
     def test_api_enforces_storage_limit_for_reparenting(self):
-        account_type_1mb = AccountType.objects.create(
-            code="account_type_1mb", storage_mb=1
-        )
-        account_type_2mb = AccountType.objects.create(
-            code="account_type_2mb", storage_mb=2
-        )
+        plan_1mb = Plan.objects.create(code="plan_1mb", storage_mb=1)
+        plan_2mb = Plan.objects.create(code="plan_2mb", storage_mb=2)
         extra_1mb = ExtraPackageTypeStorage.objects.create(
             code="extra_1mb", display_name="extra_1mb", megabytes=1
         )
 
         u1 = User.objects.create(username="u1")
-        u1.useraccount.account_type = account_type_1mb
+        u1.useraccount.plan = plan_1mb
         u1.useraccount.save()
 
         u2 = User.objects.create(username="u2")
-        u2.useraccount.account_type = account_type_2mb
+        u2.useraccount.plan = plan_2mb
         u2.useraccount.save()
 
         p1 = Project.objects.create(name="p1", owner=u2)

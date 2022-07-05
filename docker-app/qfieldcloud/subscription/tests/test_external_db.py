@@ -10,7 +10,7 @@ from qfieldcloud.core.models import Delta, Geodb, Job, Project, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from ..models import AccountType
+from ..models import Plan
 
 DATA_FOLDER = Path(__file__).parent / "data"
 
@@ -102,7 +102,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # When external db supported, we can apply deltas
 
-        AccountType.objects.all().update(is_external_db_supported=True)
+        Plan.objects.all().update(is_external_db_supported=True)
         response = self.client.post(
             f"/api/v1/deltas/{p1.id}/",
             {
@@ -125,7 +125,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # When external db is NOT supported, we can NOT apply deltas
 
-        AccountType.objects.all().update(is_external_db_supported=False)
+        Plan.objects.all().update(is_external_db_supported=False)
         response = self.client.post(
             f"/api/v1/deltas/{p1.id}/",
             {

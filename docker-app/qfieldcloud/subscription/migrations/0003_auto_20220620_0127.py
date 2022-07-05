@@ -6,12 +6,12 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("subscription", "0002_populate_account_types"),
+        ("subscription", "0002_populate_plans"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="accounttype",
+            model_name="plan",
             name="max_organization_members",
             field=models.PositiveIntegerField(
                 default=0,

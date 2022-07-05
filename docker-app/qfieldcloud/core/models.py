@@ -27,7 +27,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.subscription.models import AccountType
+from qfieldcloud.subscription.models import Plan
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -312,10 +312,10 @@ class UserAccount(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
-    account_type = models.ForeignKey(
-        "subscription.AccountType",
+    plan = models.ForeignKey(
+        "subscription.Plan",
         on_delete=models.PROTECT,
-        default=AccountType.get_or_create_default,
+        default=Plan.get_or_create_default,
     )
 
     # These will be moved one day to extrapackage. We don't touch for now (they are only used
@@ -356,7 +356,7 @@ class UserAccount(models.Model):
     def storage_quota_left_mb(self) -> float:
         """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
 
-        base_quota = self.account_type.storage_mb
+        base_quota = self.plan.storage_mb
 
         extra_quota = (
             self.extra_packages.filter(
@@ -375,7 +375,7 @@ class UserAccount(models.Model):
         return base_quota + extra_quota - used_quota
 
     def __str__(self):
-        return f"Account {self.account_type}"
+        return f"Account {self.plan}"
 
 
 class Geodb(models.Model):
@@ -601,7 +601,7 @@ class OrganizationMember(models.Model):
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
         max_organization_members = (
-            self.organization.useraccount.account_type.max_organization_members
+            self.organization.useraccount.plan.max_organization_members
         )
         if (
             max_organization_members > 0
@@ -1179,7 +1179,7 @@ class Delta(models.Model):
     def is_supported_regarding_owner_account(self):
         return (
             not self.project.has_online_vector_data
-            or self.project.owner.useraccount.account_type.is_external_db_supported
+            or self.project.owner.useraccount.plan.is_external_db_supported
         )
 
 

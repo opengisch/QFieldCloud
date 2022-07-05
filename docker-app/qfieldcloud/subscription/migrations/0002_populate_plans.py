@@ -4,11 +4,11 @@ from django.core.management.color import no_style
 from django.db import connection, migrations
 
 
-def populate_account_types(apps, schema_editor):
-    AccountType = apps.get_model("subscription", "AccountType")
+def populate_plans(apps, schema_editor):
+    Plan = apps.get_model("subscription", "Plan")
 
     # TODO: match requirements in QF-234
-    AccountType.objects.create(
+    Plan.objects.create(
         id=1,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_COMMUNITY
         code="community",
         display_name="community",
@@ -27,7 +27,7 @@ def populate_account_types(apps, schema_editor):
     )
 
     # TODO: match requirements in QF-234
-    AccountType.objects.create(
+    Plan.objects.create(
         id=2,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_PRO
         code="pro",
         display_name="pro",
@@ -46,7 +46,7 @@ def populate_account_types(apps, schema_editor):
     )
 
     # TODO: match requirements in QF-234
-    AccountType.objects.create(
+    Plan.objects.create(
         id=3,
         code="organization",
         display_name="organization",
@@ -65,7 +65,7 @@ def populate_account_types(apps, schema_editor):
     )
 
     # Reset the Postgres sequences due to hardcoded ids
-    sequence_sql = connection.ops.sequence_reset_sql(no_style(), [AccountType])
+    sequence_sql = connection.ops.sequence_reset_sql(no_style(), [Plan])
     with connection.cursor() as cursor:
         for sql in sequence_sql:
             cursor.execute(sql)
@@ -104,5 +104,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_account_types, migrations.RunPython.noop),
+        migrations.RunPython(populate_plans, migrations.RunPython.noop),
     ]

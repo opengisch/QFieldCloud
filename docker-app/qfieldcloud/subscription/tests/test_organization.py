@@ -5,7 +5,7 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, OrganizationMember, User
 from rest_framework.test import APITransactionTestCase
 
-from ..models import AccountType
+from ..models import Plan
 
 logging.disable(logging.CRITICAL)
 
@@ -25,29 +25,29 @@ class QfcTestCase(APITransactionTestCase):
         self._login(u1)
 
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
-        unlimited_account_type = AccountType.objects.create(
+        unlimited_plan = Plan.objects.create(
             code="max_organization_members0",
             max_organization_members=0,
         )
-        limited_account_type = AccountType.objects.create(
+        limited_plan = Plan.objects.create(
             code="max_organization_members1",
             max_organization_members=1,
         )
 
-        o1.useraccount.account_type = unlimited_account_type
+        o1.useraccount.plan = unlimited_plan
         o1.useraccount.save()
 
         OrganizationMember.objects.create(member=u2, organization=o1)
         OrganizationMember.objects.create(member=u3, organization=o1)
 
-        o1.useraccount.account_type = limited_account_type
+        o1.useraccount.plan = limited_plan
         o1.useraccount.save()
 
         with self.assertRaises(ValidationError):
             OrganizationMember.objects.create(member=u4, organization=o1)
 
         o2 = Organization.objects.create(username="o2", organization_owner=u1)
-        o2.useraccount.account_type = limited_account_type
+        o2.useraccount.plan = limited_plan
         o2.useraccount.save()
 
         OrganizationMember.objects.create(member=u2, organization=o2)

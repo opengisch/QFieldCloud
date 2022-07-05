@@ -5,9 +5,9 @@ from django.db import models
 from django.utils.translation import gettext as _
 
 
-class AccountType(models.Model):
+class Plan(models.Model):
     @classmethod
-    def get_or_create_default(cls) -> "AccountType":
+    def get_or_create_default(cls) -> "Plan":
         """Returns the default account type, creating one if none exists.
         To be used as a default value for UserAccount.type"""
         if cls.objects.count() == 0:
@@ -58,7 +58,7 @@ class AccountType(models.Model):
     def save(self, *args, **kwargs):
         # If default is set to true, we unset default on all other account types
         if self.is_default:
-            AccountType.objects.update(is_default=False)
+            Plan.objects.update(is_default=False)
         super().save(*args, **kwargs)
 
     def __str__(self):

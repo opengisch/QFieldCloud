@@ -213,7 +213,7 @@ class UserAdmin(admin.ModelAdmin):
         "date_joined",
         "is_active",
         "is_staff",
-        "useraccount__account_type",
+        "useraccount__plan",
     )
 
     search_fields = ("username__icontains", "owner__username__iexact")

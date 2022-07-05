@@ -12,7 +12,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("subscription", "0002_populate_account_types"),
+        ("subscription", "0002_populate_plans"),
         ("core", "0054_project_last_package"),
     ]
 
@@ -37,13 +37,18 @@ class Migration(migrations.Migration):
                 ],
             ),
         ),
+        migrations.RenameField(
+            model_name="useraccount",
+            old_name="account_type",
+            new_name="plan",
+        ),
         migrations.AlterField(
             model_name="useraccount",
-            name="account_type",
+            name="plan",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.PROTECT,
-                to="subscription.accounttype",
-                default=qfieldcloud.subscription.models.AccountType.get_or_create_default,
+                to="subscription.plan",
+                default=qfieldcloud.subscription.models.Plan.get_or_create_default,
             ),
         ),
         migrations.AddField(
