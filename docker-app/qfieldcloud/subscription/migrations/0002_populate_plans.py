@@ -25,7 +25,7 @@ def populate_plans(apps, schema_editor):
         min_repackaging_cache_expire=timedelta(minutes=60),
         synchronizations_per_months=30,
         is_public=True,
-        is_default=True,
+        is_default=False,
     )
 
     # TODO: match requirements in QF-234
@@ -46,7 +46,7 @@ def populate_plans(apps, schema_editor):
         min_repackaging_cache_expire=timedelta(minutes=1),
         synchronizations_per_months=30,
         is_public=True,
-        is_default=False,
+        is_default=True,
     )
 
     # TODO: match requirements in QF-234
@@ -56,7 +56,7 @@ def populate_plans(apps, schema_editor):
         user_type=2,
         ordering=5100,
         display_name="organization",
-        storage_mb=100,  # we probably mean 1000 ?
+        storage_mb=5000,
         storage_keep_versions=10,
         job_minutes=100,  # TODO: QF-234 says per should be per user !
         can_add_storage=False,
@@ -67,7 +67,7 @@ def populate_plans(apps, schema_editor):
         min_repackaging_cache_expire=timedelta(minutes=1),
         synchronizations_per_months=30,
         is_public=True,
-        is_default=False,
+        is_default=True,
     )
 
     # Reset the Postgres sequences due to hardcoded ids
@@ -79,13 +79,13 @@ def populate_plans(apps, schema_editor):
     ExtraPackageTypeStorage = apps.get_model("subscription", "ExtraPackageTypeStorage")
     ExtraPackageTypeStorage.objects.create(
         code="storage_basic",
-        display_name="storage_basic",
-        megabytes=100,
+        display_name="Medium +1000MB",
+        megabytes=1000,
     )
     ExtraPackageTypeStorage.objects.create(
         code="storage_large",
-        display_name="storage_large",
-        megabytes=1000,
+        display_name="Large +5000MB",
+        megabytes=5000,
     )
 
     ExtraPackageTypeJobMinutes = apps.get_model(

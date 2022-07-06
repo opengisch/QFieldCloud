@@ -268,7 +268,8 @@ class User(AbstractUser):
         if self._state.adding and self.user_type != User.TYPE_TEAM:
             with transaction.atomic():
                 super().save(*args, **kwargs)
-                UserAccount.objects.create(user=self)
+                plan = Plan.objects.get(user_type=self.user_type, is_default=True)
+                UserAccount.objects.create(user=self, plan=plan)
         else:
             super().save(*args, **kwargs)
 
