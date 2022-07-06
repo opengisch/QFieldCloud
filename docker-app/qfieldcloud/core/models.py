@@ -4,7 +4,7 @@ import os
 import secrets
 import string
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from enum import Enum
 from typing import List, Optional
 
@@ -23,6 +23,7 @@ from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
@@ -353,26 +354,44 @@ class UserAccount(models.Model):
             return None
 
     @property
-    def storage_quota_left_mb(self) -> float:
+    def storage_quota_total_mb(self) -> float:
         """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
 
         base_quota = self.plan.storage_mb
 
         extra_quota = (
             self.extra_packages.filter(
-                Q(start_date__lte=datetime.now())
-                & (Q(end_date__isnull=True) | Q(end_date__gte=datetime.now()))
+                Q(start_date__lte=timezone.now())
+                & (Q(end_date__isnull=True) | Q(end_date__gte=timezone.now()))
             ).aggregate(sum_mb=Sum("type__extrapackagetypestorage__megabytes"))[
                 "sum_mb"
             ]
             or 0
         )
 
+        return base_quota + extra_quota
+
+    @property
+    def storage_quota_used_mb(self) -> float:
+        """Returns the storage used in MB"""
         used_quota = (
             self.user.projects.aggregate(sum_mb=Sum("storage_size_mb"))["sum_mb"] or 0
         )
 
-        return base_quota + extra_quota - used_quota
+        return used_quota
+
+    @property
+    def storage_quota_left_mb(self) -> float:
+        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
+
+        return self.storage_quota_total_mb - self.storage_quota_used_mb
+
+    @property
+    def storage_quota_used_perc(self) -> float:
+        """Returns the storage used in percentage (%) of the total storage"""
+        return max(
+            0, min(self.storage_quota_used_mb / self.storage_quota_total_mb * 100, 100)
+        )
 
     def __str__(self):
         return f"Account {self.plan}"
@@ -968,6 +987,12 @@ class Project(models.Model):
             return Project.Status.FAILED
         else:
             return Project.Status.OK
+
+    @property
+    def storage_size_perc(self) -> float:
+        return (
+            self.storage_size_mb / self.owner.useraccount.storage_quota_total_mb * 100
+        )
 
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
