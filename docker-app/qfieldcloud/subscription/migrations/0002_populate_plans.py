@@ -4,13 +4,15 @@ from django.core.management.color import no_style
 from django.db import connection, migrations
 
 
-def populate_account_types(apps, schema_editor):
-    AccountType = apps.get_model("subscription", "AccountType")
+def populate_plans(apps, schema_editor):
+    Plan = apps.get_model("subscription", "Plan")
 
     # TODO: match requirements in QF-234
-    AccountType.objects.create(
+    Plan.objects.create(
         id=1,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_COMMUNITY
         code="community",
+        user_type=1,
+        ordering=1100,
         display_name="community",
         storage_mb=100,
         storage_keep_versions=3,
@@ -23,13 +25,15 @@ def populate_account_types(apps, schema_editor):
         min_repackaging_cache_expire=timedelta(minutes=60),
         synchronizations_per_months=30,
         is_public=True,
-        is_default=True,
+        is_default=False,
     )
 
     # TODO: match requirements in QF-234
-    AccountType.objects.create(
+    Plan.objects.create(
         id=2,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_PRO
         code="pro",
+        user_type=1,
+        ordering=1200,
         display_name="pro",
         storage_mb=1000,
         storage_keep_versions=10,
@@ -42,15 +46,17 @@ def populate_account_types(apps, schema_editor):
         min_repackaging_cache_expire=timedelta(minutes=1),
         synchronizations_per_months=30,
         is_public=True,
-        is_default=False,
+        is_default=True,
     )
 
     # TODO: match requirements in QF-234
-    AccountType.objects.create(
+    Plan.objects.create(
         id=3,
         code="organization",
+        user_type=2,
+        ordering=5100,
         display_name="organization",
-        storage_mb=100,  # we probably mean 1000 ?
+        storage_mb=5000,
         storage_keep_versions=10,
         job_minutes=100,  # TODO: QF-234 says per should be per user !
         can_add_storage=False,
@@ -61,11 +67,11 @@ def populate_account_types(apps, schema_editor):
         min_repackaging_cache_expire=timedelta(minutes=1),
         synchronizations_per_months=30,
         is_public=True,
-        is_default=False,
+        is_default=True,
     )
 
     # Reset the Postgres sequences due to hardcoded ids
-    sequence_sql = connection.ops.sequence_reset_sql(no_style(), [AccountType])
+    sequence_sql = connection.ops.sequence_reset_sql(no_style(), [Plan])
     with connection.cursor() as cursor:
         for sql in sequence_sql:
             cursor.execute(sql)
@@ -73,13 +79,13 @@ def populate_account_types(apps, schema_editor):
     ExtraPackageTypeStorage = apps.get_model("subscription", "ExtraPackageTypeStorage")
     ExtraPackageTypeStorage.objects.create(
         code="storage_basic",
-        display_name="storage_basic",
-        megabytes=100,
+        display_name="Medium +1000MB",
+        megabytes=1000,
     )
     ExtraPackageTypeStorage.objects.create(
         code="storage_large",
-        display_name="storage_large",
-        megabytes=1000,
+        display_name="Large +5000MB",
+        megabytes=5000,
     )
 
     ExtraPackageTypeJobMinutes = apps.get_model(
@@ -104,5 +110,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_account_types),
+        migrations.RunPython(populate_plans, migrations.RunPython.noop),
     ]

@@ -194,6 +194,7 @@ sql_items = [
         """,
     ),
     SQLItem(
+        "core_delta_geom_trigger_func",
         r"""
             CREATE OR REPLACE FUNCTION core_delta_geom_trigger_func()
             RETURNS trigger
@@ -232,6 +233,7 @@ sql_items = [
         """,
     ),
     SQLItem(
+        "core_delta_geom_update_trigger",
         r"""
             CREATE TRIGGER core_delta_geom_update_trigger BEFORE UPDATE ON core_delta
             FOR EACH ROW
@@ -243,6 +245,7 @@ sql_items = [
         """,
     ),
     SQLItem(
+        "core_delta_geom_insert_trigger",
         r"""
             CREATE TRIGGER core_delta_geom_insert_trigger BEFORE INSERT ON core_delta
             FOR EACH ROW

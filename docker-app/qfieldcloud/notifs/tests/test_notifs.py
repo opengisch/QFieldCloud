@@ -16,6 +16,7 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 
 
 class QfcTestCase(TestCase):
@@ -50,6 +51,8 @@ class QfcTestCase(TestCase):
             )
 
     def setUp(self):
+        setup_subscription_plans()
+
         # Without current user, no notifications are sent
         # (one day, maybe we could create them as AnonymousUser, see https://github.com/django-notifications/django-notifications/issues/13)
         _set_current_user(None)

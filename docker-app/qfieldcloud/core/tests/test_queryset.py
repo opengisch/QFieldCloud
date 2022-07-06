@@ -14,11 +14,15 @@ from qfieldcloud.core.models import (
 )
 from rest_framework.test import APITestCase
 
+from .utils import setup_subscription_plans
+
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # user1 owns p1 and p2
         # user1 owns o1
         # user1 collaborates on p7

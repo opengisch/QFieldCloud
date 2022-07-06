@@ -7,10 +7,11 @@ import psycopg2
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Delta, Geodb, Job, Project, User
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from ..models import AccountType
+from ..models import Plan
 
 DATA_FOLDER = Path(__file__).parent / "data"
 
@@ -57,6 +58,9 @@ class QfcTestCase(APITransactionTestCase):
             json_str = json.dumps(deltafile)
             return io.StringIO(json_str)
 
+    def setUp(self):
+        setup_subscription_plans()
+
     def test_is_external_db_supported(self):
         """This tests is_external_db_supported property of accounts types"""
 
@@ -102,7 +106,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # When external db supported, we can apply deltas
 
-        AccountType.objects.all().update(is_external_db_supported=True)
+        Plan.objects.all().update(is_external_db_supported=True)
         response = self.client.post(
             f"/api/v1/deltas/{p1.id}/",
             {
@@ -125,7 +129,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # When external db is NOT supported, we can NOT apply deltas
 
-        AccountType.objects.all().update(is_external_db_supported=False)
+        Plan.objects.all().update(is_external_db_supported=False)
         response = self.client.post(
             f"/api/v1/deltas/{p1.id}/",
             {

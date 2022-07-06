@@ -1,11 +1,11 @@
 from django.contrib import admin
 from django.contrib.admin import register
 
-from .models import AccountType, ExtraPackageTypeJobMinutes, ExtraPackageTypeStorage
+from .models import ExtraPackageTypeJobMinutes, ExtraPackageTypeStorage, Plan
 
 
-@register(AccountType)
-class AccountTypeAdmin(admin.ModelAdmin):
+@register(Plan)
+class PlanAdmin(admin.ModelAdmin):
     list_display = [
         "code",
         "is_default",

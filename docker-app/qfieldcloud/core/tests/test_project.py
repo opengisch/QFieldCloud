@@ -14,11 +14,15 @@ from qfieldcloud.core.models import (
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from .utils import setup_subscription_plans
+
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
