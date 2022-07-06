@@ -86,8 +86,8 @@ class Plan(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # If default is set to true, we unset default on all other account types
         with transaction.atomic():
+            # If default is set to true, we unset default on all other account types
             if self.is_default:
                 Plan.objects.filter(user_type=self.user_type).update(is_default=False)
             return super().save(*args, **kwargs)

@@ -7,6 +7,7 @@ from django_currentuser.middleware import _set_current_user
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 from qfieldcloud.core.utils import list_versions
 from qfieldcloud.core.utils2.storage import delete_file_version
 from rest_framework import status
@@ -25,6 +26,9 @@ class QfcTestCase(APITransactionTestCase):
     def _make_file(self, mb):
         """Helper that returns a file of given size in megabytes"""
         return io.BytesIO(os.urandom(1024 * int(mb * 1024)))
+
+    def setUp(self):
+        setup_subscription_plans()
 
     def test_storage_quota_calculation(self):
         """This tests quotas"""

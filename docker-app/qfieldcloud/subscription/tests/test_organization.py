@@ -3,6 +3,7 @@ import logging
 from django.core.exceptions import ValidationError
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, OrganizationMember, User
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 from rest_framework.test import APITransactionTestCase
 
 from ..models import Plan
@@ -14,6 +15,9 @@ class QfcTestCase(APITransactionTestCase):
     def _login(self, user):
         token = AuthToken.objects.get_or_create(user=user)[0]
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+
+    def setUp(self):
+        setup_subscription_plans()
 
     def test_max_organization_members(self):
         """This tests quotas"""

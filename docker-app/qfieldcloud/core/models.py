@@ -316,7 +316,6 @@ class UserAccount(models.Model):
     plan = models.ForeignKey(
         "subscription.Plan",
         on_delete=models.PROTECT,
-        default=Plan.get_or_create_default,
     )
 
     # These will be moved one day to extrapackage. We don't touch for now (they are only used

@@ -3,6 +3,7 @@ import logging
 from django.utils.timezone import datetime, now
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import User
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
@@ -10,6 +11,8 @@ logging.disable(logging.CRITICAL)
 
 class QfcTestCase(APITransactionTestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
 
