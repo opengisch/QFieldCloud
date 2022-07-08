@@ -4,7 +4,6 @@ import datetime
 
 import django.core.validators
 import django.db.models.deletion
-import qfieldcloud.subscription.models
 from django.conf import settings
 from django.db import migrations, models
 
@@ -48,7 +47,6 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.PROTECT,
                 to="subscription.plan",
-                default=qfieldcloud.subscription.models.Plan.get_or_create_default,
             ),
         ),
         migrations.AddField(
