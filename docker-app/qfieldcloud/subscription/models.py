@@ -126,6 +126,8 @@ class ExtraPackage(models.Model):
         on_delete=models.CASCADE,
         related_name="extra_packages",
     )
-    type = models.ForeignKey(ExtraPackageType, on_delete=models.CASCADE)
+    type = models.ForeignKey(
+        ExtraPackageType, on_delete=models.CASCADE, related_name="packages"
+    )
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)

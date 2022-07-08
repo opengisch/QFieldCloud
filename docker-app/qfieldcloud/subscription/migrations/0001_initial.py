@@ -150,6 +150,7 @@ class Migration(migrations.Migration):
                     "type",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
+                        related_name="packages",
                         to="subscription.extrapackagetype",
                     ),
                 ),
