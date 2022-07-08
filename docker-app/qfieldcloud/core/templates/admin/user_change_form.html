@@ -1,0 +1,15 @@
+{% extends 'admin/change_form.html' %}
+
+{% block submit_buttons_bottom %}
+  {{ block.super }}
+
+  <div class="submit-row">
+    <a href="{% url 'admin:core_project_changelist' %}?q=owner:{{original.username}}">Owned projects</a>
+    |
+    <a href="{% url 'admin:core_project_changelist' %}?q=collaborator:{{original.username}}">Projects collaborations</a>
+    |
+    <a href="{% url 'admin:core_organization_changelist' %}?q=owner:{{original.username}}">Owned organizations</a>
+    |
+    <a href="{% url 'admin:core_organization_changelist' %}?q=member:{{original.username}}">Organization memberships</a>
+  </div>
+{% endblock %}
