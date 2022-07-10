@@ -7,49 +7,28 @@ from django.db import connection, migrations
 def populate_plans(apps, schema_editor):
     Plan = apps.get_model("subscription", "Plan")
 
-    # TODO: match requirements in QF-234
     Plan.objects.create(
         id=1,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_COMMUNITY
         code="community",
         user_type=1,
         ordering=1100,
         display_name="community",
-        storage_mb=100,
-        storage_keep_versions=3,
-        job_minutes=30,
+        storage_mb=10000,
+        storage_keep_versions=10,
+        job_minutes=10000,
         can_add_storage=False,
         can_add_job_minutes=False,
         is_external_db_supported=False,
         can_configure_repackaging_cache_expire=False,
         min_repackaging_cache_expire=timedelta(minutes=60),
         synchronizations_per_months=30,
-        is_public=True,
-        is_default=False,
-    )
-
-    # TODO: match requirements in QF-234
-    Plan.objects.create(
-        id=2,  # DO NOT CHANGE! Must match legacy UserAccount.TYPE_PRO
-        code="pro",
-        user_type=1,
-        ordering=1200,
-        display_name="pro",
-        storage_mb=1000,
-        storage_keep_versions=10,
-        job_minutes=100,
-        can_add_storage=False,
-        can_add_job_minutes=False,
-        is_external_db_supported=True,
-        can_configure_repackaging_cache_expire=True,
-        min_repackaging_cache_expire=timedelta(minutes=1),
-        synchronizations_per_months=30,
+        max_organization_members=0,
         is_public=True,
         is_default=True,
     )
 
-    # TODO: match requirements in QF-234
     Plan.objects.create(
-        id=3,
+        id=2,
         code="organization",
         user_type=2,
         ordering=5100,
@@ -63,6 +42,7 @@ def populate_plans(apps, schema_editor):
         can_configure_repackaging_cache_expire=True,
         min_repackaging_cache_expire=timedelta(minutes=1),
         synchronizations_per_months=30,
+        max_organization_members=0,
         is_public=True,
         is_default=True,
     )

@@ -70,6 +70,13 @@ class Migration(migrations.Migration):
                 ),
                 ("is_public", models.BooleanField(default=False)),
                 ("is_default", models.BooleanField(default=False)),
+                (
+                    "max_organization_members",
+                    models.PositiveIntegerField(
+                        default=0,
+                        help_text="Maximum organization members allowed for particular subscription plan. Set 0 to allow unlimited organization members.",
+                    ),
+                ),
             ],
             options={
                 "ordering": (
@@ -150,6 +157,7 @@ class Migration(migrations.Migration):
                     "type",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
+                        related_name="packages",
                         to="subscription.extrapackagetype",
                     ),
                 ),
