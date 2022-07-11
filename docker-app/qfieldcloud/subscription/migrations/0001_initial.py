@@ -70,11 +70,19 @@ class Migration(migrations.Migration):
                 ),
                 ("is_public", models.BooleanField(default=False)),
                 ("is_default", models.BooleanField(default=False)),
+                ("is_premium", models.BooleanField(default=False)),
                 (
                     "max_organization_members",
                     models.IntegerField(
                         default=-1,
                         help_text="Maximum organization members allowed. Set -1 to allow unlimited organization members.",
+                    ),
+                ),
+                (
+                    "max_premium_collaborators_per_private_project",
+                    models.IntegerField(
+                        default=-1,
+                        help_text="Maximum premium collaborators per private project. Set -1 to allow unlimited project collaborators.",
                     ),
                 ),
             ],

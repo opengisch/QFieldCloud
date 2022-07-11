@@ -14,7 +14,7 @@ class Plan(models.Model):
 
     @classmethod
     def get_or_create_default(cls) -> "Plan":
-        """Returns the default account type, creating one if none exists.
+        """Returns the default plan, creating one if none exists.
         To be used as a default value for UserAccount.type"""
         if cls.objects.count() == 0:
             with transaction.atomic():
@@ -69,11 +69,14 @@ class Plan(models.Model):
     )
     synchronizations_per_months = models.PositiveIntegerField(default=30)
 
-    # the account type is visible option for non-admin users
+    # the plan is visible option for non-admin users
     is_public = models.BooleanField(default=False)
 
-    # the account type is set by default for new users
+    # the plan is set by default for new users
     is_default = models.BooleanField(default=False)
+
+    # the plan is marked as premium which assumes it has premium access
+    is_premium = models.BooleanField(default=False)
 
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
@@ -88,9 +91,19 @@ class Plan(models.Model):
         ),
     )
 
+    # The maximum number of premium collaborators that are allowed to be added per project.
+    # If the project owner's plan is changed from unlimited to limited organization members,
+    # the existing members that are over the `max_premium_collaborators_per_private_project` configuration remain active.
+    max_premium_collaborators_per_private_project = models.IntegerField(
+        default=-1,
+        help_text=_(
+            "Maximum premium collaborators per private project. Set -1 to allow unlimited project collaborators."
+        ),
+    )
+
     def save(self, *args, **kwargs):
         with transaction.atomic():
-            # If default is set to true, we unset default on all other account types
+            # If default is set to true, we unset default on all other plans
             if self.is_default:
                 Plan.objects.filter(user_type=self.user_type).update(is_default=False)
             return super().save(*args, **kwargs)
