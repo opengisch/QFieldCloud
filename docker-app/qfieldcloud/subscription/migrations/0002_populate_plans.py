@@ -55,28 +55,20 @@ def populate_plans(apps, schema_editor):
 
     ExtraPackageTypeStorage = apps.get_model("subscription", "ExtraPackageTypeStorage")
     ExtraPackageTypeStorage.objects.create(
-        code="storage_basic",
+        code="storage_medium",
         display_name="Medium +1000MB",
+        is_public=True,
         megabytes=1000,
-    )
-    ExtraPackageTypeStorage.objects.create(
-        code="storage_large",
-        display_name="Large +5000MB",
-        megabytes=5000,
     )
 
     ExtraPackageTypeJobMinutes = apps.get_model(
         "subscription", "ExtraPackageTypeJobMinutes"
     )
     ExtraPackageTypeJobMinutes.objects.create(
-        code="minutes_basic",
-        display_name="minutes_basic",
+        code="minutes_medium",
+        display_name="minutes_medium",
+        is_public=True,
         minutes=30,
-    )
-    ExtraPackageTypeJobMinutes.objects.create(
-        code="minutes_large",
-        display_name="minutes_large",
-        minutes=600,
     )
 
 
