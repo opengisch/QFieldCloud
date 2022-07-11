@@ -994,6 +994,19 @@ class Project(models.Model):
             self.storage_size_mb / self.owner.useraccount.storage_quota_total_mb * 100
         )
 
+    @property
+    def direct_collaborators(self):
+        if self.owner.is_organization:
+            exclude_pks = [self.owner.organization.organization_owner_id]
+        else:
+            exclude_pks = [self.owner_id]
+
+        return self.collaborators.filter(
+            collaborator__user_type=User.TYPE_USER,
+        ).exclude(
+            collaborator_id__in=exclude_pks,
+        )
+
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
             qfieldcloud.core.utils2.storage.remove_project_thumbail(self)
