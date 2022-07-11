@@ -35,7 +35,7 @@ class Plan(models.Model):
         return cls.objects.order_by("-is_default").first()
 
     # unique identifier of the subscription plan
-    code = models.CharField(max_length=30, unique=True)
+    code = models.CharField(max_length=100, unique=True)
 
     # the plan would be applicable only to user of that `user_type`
     user_type = models.PositiveSmallIntegerField(
@@ -75,12 +75,16 @@ class Plan(models.Model):
     # the account type is set by default for new users
     is_default = models.BooleanField(default=False)
 
-    # if the organization subscription is changed from unlimited to limited organization members,
+    # The maximum number of organizations members that are allowed to be added per organization
+    # This constraint is useful for public administrations with limited resources who want to cap
+    # the maximum amount of money that they are going to pay.
+    # Only makes sense when the user_type == UserType.ORGANIZATION
+    # If the organization subscription is changed from unlimited to limited organization members,
     # the existing members that are over the max_organization_members configuration remain active.
-    max_organization_members = models.PositiveIntegerField(
-        default=0,
+    max_organization_members = models.IntegerField(
+        default=-1,
         help_text=_(
-            "Maximum organization members allowed for particular subscription plan. Set 0 to allow unlimited organization members."
+            "Maximum organization members allowed. Set -1 to allow unlimited organization members."
         ),
     )
 
@@ -103,7 +107,7 @@ class Plan(models.Model):
 
 
 class ExtraPackageType(models.Model):
-    code = models.CharField(max_length=30, unique=True)
+    code = models.CharField(max_length=100, unique=True)
     # TODO: decide how to localize display_name. Possible approaches:
     # - django-vinaigrette (never tried, but like the name, and seems to to exactly what we want)
     # - django-modeltranslation (tried, works well, but maybe overkill as it creates new database columns for each locale)

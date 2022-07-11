@@ -623,7 +623,7 @@ class OrganizationMember(models.Model):
             self.organization.useraccount.plan.max_organization_members
         )
         if (
-            max_organization_members > 0
+            max_organization_members > -1
             and self.organization.members.count() >= max_organization_members
         ):
             raise ValidationError(

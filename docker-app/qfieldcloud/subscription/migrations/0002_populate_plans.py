@@ -22,7 +22,7 @@ def populate_plans(apps, schema_editor):
         can_configure_repackaging_cache_expire=False,
         min_repackaging_cache_expire=timedelta(minutes=60),
         synchronizations_per_months=30,
-        max_organization_members=0,
+        max_organization_members=-1,
         is_public=True,
         is_default=True,
     )
@@ -42,7 +42,7 @@ def populate_plans(apps, schema_editor):
         can_configure_repackaging_cache_expire=True,
         min_repackaging_cache_expire=timedelta(minutes=1),
         synchronizations_per_months=30,
-        max_organization_members=0,
+        max_organization_members=-1,
         is_public=True,
         is_default=True,
     )

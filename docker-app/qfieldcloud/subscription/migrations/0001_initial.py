@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
-                ("code", models.CharField(max_length=30, unique=True)),
+                ("code", models.CharField(max_length=100, unique=True)),
                 (
                     "user_type",
                     models.PositiveSmallIntegerField(
@@ -72,9 +72,9 @@ class Migration(migrations.Migration):
                 ("is_default", models.BooleanField(default=False)),
                 (
                     "max_organization_members",
-                    models.PositiveIntegerField(
-                        default=0,
-                        help_text="Maximum organization members allowed for particular subscription plan. Set 0 to allow unlimited organization members.",
+                    models.IntegerField(
+                        default=-1,
+                        help_text="Maximum organization members allowed. Set -1 to allow unlimited organization members.",
                     ),
                 ),
             ],
@@ -98,7 +98,7 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
-                ("code", models.CharField(max_length=30, unique=True)),
+                ("code", models.CharField(max_length=100, unique=True)),
                 ("display_name", models.CharField(max_length=100)),
                 ("is_public", models.BooleanField(default=False)),
             ],
