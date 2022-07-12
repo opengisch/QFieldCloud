@@ -790,7 +790,16 @@ class Project(models.Model):
         BUSY = "busy", _("Busy")
         FAILED = "failed", _("Failed")
 
+    class StatusCode(models.TextChoices):
+        OK = "ok", _("Ok")
+        FAILED_PROCESS_PROJECTFILE = "failed_process_projectfile", _(
+            "Failed process projectfile"
+        )
+        TOO_MANY_COLLABORATORS = "too_many_collaborators", _("Too many collaborators")
+
     objects = ProjectQueryset.as_manager()
+
+    _status_code = StatusCode.OK
 
     class Meta:
         ordering = ["owner__username", "name"]
@@ -983,10 +992,30 @@ class Project(models.Model):
             > 0
         ):
             return Project.Status.BUSY
-        elif not self.project_filename:
-            return Project.Status.FAILED
         else:
-            return Project.Status.OK
+            status = Project.Status.OK
+            status_code = Project.StatusCode.OK
+            max_premium_collaborators_per_private_project = (
+                self.owner.useraccount.plan.max_premium_collaborators_per_private_project
+            )
+
+            if not self.project_filename:
+                status = Project.Status.FAILED
+                status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
+            elif self.is_public or (
+                max_premium_collaborators_per_private_project != -1
+                and max_premium_collaborators_per_private_project
+                < self.direct_collaborators.count()
+            ):
+                status = Project.Status.FAILED
+                status_code = Project.StatusCode.TOO_MANY_COLLABORATORS
+
+            self._status_code = status_code
+            return status
+
+    @property
+    def status_code(self) -> StatusCode:
+        return self._status_code
 
     @property
     def storage_size_perc(self) -> float:
