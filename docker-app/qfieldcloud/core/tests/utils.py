@@ -21,22 +21,22 @@ def get_filename(response):
 
 
 def setup_subscription_plans():
-    if Plan.objects.count() == 0:
-        Plan.objects.bulk_create(
-            [
-                Plan(
-                    code="default_user",
-                    display_name="default user (autocreated)",
-                    is_default=True,
-                    is_public=False,
-                    user_type=Plan.UserType.USER,
-                ),
-                Plan(
-                    code="default_org",
-                    display_name="default organization (autocreated)",
-                    is_default=True,
-                    is_public=False,
-                    user_type=Plan.UserType.ORGANIZATION,
-                ),
-            ]
-        )
+    Plan.objects.all().delete()
+    Plan.objects.bulk_create(
+        [
+            Plan(
+                code="default_user",
+                display_name="default user (autocreated)",
+                is_default=True,
+                is_public=False,
+                user_type=Plan.UserType.USER,
+            ),
+            Plan(
+                code="default_org",
+                display_name="default organization (autocreated)",
+                is_default=True,
+                is_public=False,
+                user_type=Plan.UserType.ORGANIZATION,
+            ),
+        ]
+    )
