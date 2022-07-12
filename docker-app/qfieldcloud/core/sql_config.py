@@ -2,27 +2,6 @@ from migrate_sql.config import SQLItem
 
 sql_items = [
     SQLItem(
-        "project_user_collaborators_vw",
-        r"""
-            CREATE OR REPLACE VIEW project_user_collaborators_vw AS
-
-            SELECT
-                C1.*,
-                (
-                    O1.user_ptr_id IS NULL AND P1.is_public
-                    OR OM1.id IS NOT NULL
-                ) AS "is_valid"
-            FROM
-                core_projectcollaborator C1
-                INNER JOIN core_project P1 ON P1.id = C1.project_id
-                LEFT JOIN core_organization O1 ON O1.user_ptr_id = P1.owner_id
-                LEFT JOIN core_organizationmember OM1 ON OM1.organization_id = O1.user_ptr_id
-        """,
-        r"""
-            DROP VIEW project_user_collaborators_vw;
-        """,
-    ),
-    SQLItem(
         "projects_with_roles_vw_seq",
         r"""
             CREATE SEQUENCE IF NOT EXISTS projects_with_roles_vw_seq CACHE 5000 CYCLE
@@ -42,8 +21,7 @@ sql_items = [
                     P1."id" AS "project_id",
                     P1."owner_id" AS "user_id",
                     'admin' AS "name",
-                    'project_owner' AS "origin",
-                    TRUE AS "is_valid"
+                    'project_owner' AS "origin"
                 FROM
                     "core_project" P1
                     INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
@@ -56,8 +34,7 @@ sql_items = [
                     P1."id" AS "project_id",
                     O1."organization_owner_id" AS "user_id",
                     'admin' AS "name",
-                    'organization_owner' AS "origin",
-                    TRUE AS "is_valid"
+                    'organization_owner' AS "origin"
                 FROM
                     "core_organization" O1
                     INNER JOIN "core_project" P1 ON (P1."owner_id" = O1."user_ptr_id")
@@ -68,8 +45,7 @@ sql_items = [
                     P1."id" AS "project_id",
                     OM1."member_id" AS "user_id",
                     'admin' AS "name",
-                    'organization_admin' AS "origin",
-                    TRUE AS "is_valid"
+                    'organization_admin' AS "origin"
                 FROM
                     "core_organizationmember" OM1
                     INNER JOIN "core_project" P1 ON (P1."owner_id" = OM1."organization_id")
@@ -84,14 +60,11 @@ sql_items = [
                     C1."project_id",
                     C1."collaborator_id" AS "user_id",
                     C1."role" AS "name",
-                    'collaborator' AS "origin",
-                    P1.is_public OR U1.user_type = 2 AS "is_valid"
+                    'collaborator' AS "origin"
                 FROM
-                    "project_user_collaborators_vw" C1
+                    "core_projectcollaborator" C1
                     INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")
                     INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
-                WHERE
-                    C1."is_valid" = TRUE
             ),
             project_collaborator_team AS (
                 SELECT
@@ -99,8 +72,7 @@ sql_items = [
                     C1."project_id",
                     TM1."member_id" AS "user_id",
                     C1."role" AS "name",
-                    'team_member' AS "origin",
-                    TRUE AS "is_valid"
+                    'team_member' AS "origin"
                 FROM
                     "core_projectcollaborator" C1
                     INNER JOIN "core_user" U1 ON (C1."collaborator_id" = U1."id")
@@ -114,8 +86,7 @@ sql_items = [
                     P1."id" AS "project_id",
                     U1."id" AS "user_id",
                     'reader' AS "name",
-                    'public' AS "origin",
-                    TRUE AS "is_valid"
+                    'public' AS "origin"
                 FROM
                     "core_project" P1
                     CROSS JOIN "core_user" U1

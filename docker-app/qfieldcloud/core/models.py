@@ -59,7 +59,6 @@ class UserQueryset(models.QuerySet):
             .filter(
                 user_type=User.TYPE_USER,
                 project_roles__project=project,
-                project_roles__is_valid=True,
             )
             .annotate(
                 project_role=F("project_roles__name"),
@@ -766,7 +765,6 @@ class ProjectQueryset(models.QuerySet):
             self.defer("user_roles__user_id", "user_roles__project_id")
             .filter(
                 user_roles__user=user,
-                user_roles__is_valid=True,
             )
             .annotate(
                 user_role=F("user_roles__name"),
@@ -1048,30 +1046,36 @@ class Project(models.Model):
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
-    def validated(self, keep_invalid=False):
+    def validated(self, skip_invalid=False):
         """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
 
-        A membership to a private project not owned by an organization, or owned by a organization
-        that the member is not part of is invalid.
+        A membership to a private project is valid when the owning user plan has a
+        `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
 
         Args:
-            keep_invalid:   if true, invalid rows are kept"""
+            skip_invalid:   if true, invalid rows are removed"""
 
         # Build the conditions with Q objects
         public = Q(project__is_public=True)
-        owned_by_org = Q(project__owner__user_type=User.TYPE_ORGANIZATION)
-        user_also_member_of_org = Q(
-            project__owner__organization__members__member=F("collaborator")
+        count = Count(
+            "project__collaborators", filter=Q(collaborator__user_type=User.TYPE_USER)
+        )
+        max_premium_collaborators_per_private_project = Q(
+            project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+                -1
+            )
+        ) | Q(
+            project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
-        condition = public | (owned_by_org & user_also_member_of_org)
+        condition = public | max_premium_collaborators_per_private_project
 
         # Annotate the queryset
         qs = self.annotate(is_valid=Case(When(condition, then=True), default=False))
 
         # Filter out invalid
-        if not keep_invalid:
+        if skip_invalid:
             qs = qs.exclude(is_valid=False)
 
         return qs
@@ -1153,7 +1157,6 @@ class ProjectRolesView(models.Model):
     origin = models.CharField(
         max_length=100, choices=ProjectQueryset.RoleOrigins.choices
     )
-    is_valid = models.BooleanField()
 
     class Meta:
         db_table = "projects_with_roles_vw"
