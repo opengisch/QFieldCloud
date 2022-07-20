@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.utils.translation import gettext as _
 
@@ -145,6 +145,12 @@ class ExtraPackage(models.Model):
     )
     type = models.ForeignKey(
         ExtraPackageType, on_delete=models.CASCADE, related_name="packages"
+    )
+    quantity = models.PositiveIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(25),
+        ],
     )
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)

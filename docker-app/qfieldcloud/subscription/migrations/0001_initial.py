@@ -162,6 +162,15 @@ class Migration(migrations.Migration):
                 ("start_date", models.DateField()),
                 ("end_date", models.DateField(blank=True, null=True)),
                 (
+                    "quantity",
+                    models.PositiveIntegerField(
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(25),
+                        ],
+                    ),
+                ),
+                (
                     "type",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
