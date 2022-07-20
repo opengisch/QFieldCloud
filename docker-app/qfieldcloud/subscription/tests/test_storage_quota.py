@@ -60,6 +60,7 @@ class QfcTestCase(APITransactionTestCase):
         ExtraPackage.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
+            quantity=1,
             start_date=date.today() - timedelta(days=3),
             end_date=date.today() + timedelta(days=3),
         )
@@ -69,6 +70,7 @@ class QfcTestCase(APITransactionTestCase):
         ExtraPackage.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
+            quantity=1,
             start_date=date.today() - timedelta(days=3),
             end_date=date.today() - timedelta(days=2),
         )
@@ -78,6 +80,7 @@ class QfcTestCase(APITransactionTestCase):
         ExtraPackage.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
+            quantity=1,
             start_date=date.today() + timedelta(days=2),
             end_date=date.today() + timedelta(days=3),
         )
@@ -87,6 +90,7 @@ class QfcTestCase(APITransactionTestCase):
         ExtraPackage.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
+            quantity=1,
             start_date=date.today() - timedelta(days=3),
             end_date=None,
         )
@@ -173,6 +177,7 @@ class QfcTestCase(APITransactionTestCase):
         ExtraPackage.objects.create(
             account=u1.useraccount,
             type=extra_1mb,
+            quantity=1,
             start_date=date.today() - timedelta(days=3),
             end_date=None,
         )
