@@ -25,7 +25,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def _make_file(self, mb):
         """Helper that returns a file of given size in megabytes"""
-        return io.BytesIO(os.urandom(1024 * int(mb * 1024)))
+        return io.BytesIO(os.urandom(1000 * int(mb * 1000)))
 
     def setUp(self):
         setup_subscription_plans()
@@ -46,12 +46,18 @@ class QfcTestCase(APITransactionTestCase):
 
         # Initially, we have the default account type storage
         self.assertEqual(u1.useraccount.storage_quota_left_mb, default.storage_mb)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 0)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, default.storage_mb)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Changing account type changes the quota
         plan_1mb = Plan.objects.create(code="plan_1mb", storage_mb=1)
         u1.useraccount.plan = plan_1mb
         u1.useraccount.save()
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 1)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 0)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 1)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Adding an extra package increases the quota
         extra_2mb = ExtraPackageTypeStorage.objects.create(
@@ -65,6 +71,9 @@ class QfcTestCase(APITransactionTestCase):
             end_date=date.today() + timedelta(days=3),
         )
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 3)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 0)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 3)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Adding an obsolete package does not count
         ExtraPackage.objects.create(
@@ -75,6 +84,9 @@ class QfcTestCase(APITransactionTestCase):
             end_date=date.today() - timedelta(days=2),
         )
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 3)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 0)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 3)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Adding a future package does not count
         ExtraPackage.objects.create(
@@ -85,6 +97,9 @@ class QfcTestCase(APITransactionTestCase):
             end_date=date.today() + timedelta(days=3),
         )
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 3)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 0)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 3)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Adding a timeless package increases the quota
         ExtraPackage.objects.create(
@@ -95,6 +110,9 @@ class QfcTestCase(APITransactionTestCase):
             end_date=None,
         )
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 5)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 0)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 5)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Uploading a file decreases the quota
         storage_path = f"projects/{p1.id}/files/test.data"
@@ -102,18 +120,27 @@ class QfcTestCase(APITransactionTestCase):
         bucket.upload_fileobj(self._make_file(mb=1), storage_path)
         p1.save(recompute_storage=True)
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 4)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 1)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 5)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 20)
 
         # Uploading a new version decreases the quota
         bucket = utils.get_s3_bucket()
         bucket.upload_fileobj(self._make_file(mb=1), storage_path)
         p1.save(recompute_storage=True)
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 3)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 2)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 5)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 40)
 
         # Deleting a version increases the quota
         version = list(list_versions(bucket, storage_path))[0]
         delete_file_version(p1, "test.data", version.id)
         p1.save(recompute_storage=True)
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 4)
+        self.assertEqual(u1.useraccount.storage_quota_used_mb, 1)
+        self.assertEqual(u1.useraccount.storage_quota_total_mb, 5)
+        self.assertEqual(u1.useraccount.storage_quota_used_perc, 20)
 
     def test_api_enforces_storage_limit(self):
         u1 = User.objects.create(username="u1")
