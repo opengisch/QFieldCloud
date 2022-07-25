@@ -54,6 +54,23 @@ class UserQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project"):
+        public = Q(project_roles__project__is_public=True)
+        count = Count(
+            "project_roles__project__collaborators",
+            filter=Q(
+                project_roles__project__collaborators__collaborator__user_type=User.TYPE_USER
+            ),
+        )
+
+        max_premium_collaborators_per_private_project = Q(
+            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+                -1
+            )
+        ) | Q(
+            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+        )
+        condition = public | max_premium_collaborators_per_private_project
+
         qs = (
             self.defer("project_roles__project_id", "project_roles__project_id")
             .filter(
@@ -63,6 +80,8 @@ class UserQueryset(models.QuerySet):
             .annotate(
                 project_role=F("project_roles__name"),
                 project_role_origin=F("project_roles__origin"),
+                project_role_count=count,
+                project_role_is_valid=Case(When(condition, then=True), default=False),
             )
         )
 
@@ -761,6 +780,22 @@ class ProjectQueryset(models.QuerySet):
         PUBLIC = "public", _("Public")
 
     def for_user(self, user):
+        public = Q(is_public=True)
+        count = Count(
+            "collaborators",
+            filter=Q(collaborators__collaborator__user_type=User.TYPE_USER),
+        )
+        max_premium_collaborators_per_private_project = Q(
+            owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+                -1
+            )
+        ) | Q(
+            owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+        )
+
+        # Assemble the condition
+        condition = public | max_premium_collaborators_per_private_project
+
         qs = (
             self.defer("user_roles__user_id", "user_roles__project_id")
             .filter(
@@ -769,6 +804,7 @@ class ProjectQueryset(models.QuerySet):
             .annotate(
                 user_role=F("user_roles__name"),
                 user_role_origin=F("user_roles__origin"),
+                user_role_is_valid=Case(When(condition, then=True), default=False),
             )
         )
 
