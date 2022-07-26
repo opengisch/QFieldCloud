@@ -245,6 +245,33 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
     project.save(recompute_storage=True)
 
 
+def upload_file(file: IO, key: str):
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    bucket.upload_fileobj(
+        file,
+        key,
+    )
+    return key
+
+
+def upload_project_file(
+    project: "Project", file: IO, filename: str  # noqa: F821
+) -> str:
+    key = f"projects/{project.id}/files/{filename}"
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    bucket.upload_fileobj(
+        file,
+        key,
+    )
+    return key
+
+
+def delete_project_files(project_id: str) -> None:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/"
+    bucket.objects.filter(Prefix=prefix).delete()
+
+
 def delete_file(project: "Project", filename: str):  # noqa: F821
     file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
 
