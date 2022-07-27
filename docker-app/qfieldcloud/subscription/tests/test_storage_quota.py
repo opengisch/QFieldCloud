@@ -1,13 +1,11 @@
-import io
 import logging
-import os
 from datetime import date, timedelta
 
 from django_currentuser.middleware import _set_current_user
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Project, User
-from qfieldcloud.core.tests.utils import setup_subscription_plans
+from qfieldcloud.core.tests.utils import get_random_file, setup_subscription_plans
 from qfieldcloud.core.utils import list_versions
 from qfieldcloud.core.utils2.storage import delete_file_version
 from rest_framework import status
@@ -22,10 +20,6 @@ class QfcTestCase(APITransactionTestCase):
     def _login(self, user):
         token = AuthToken.objects.get_or_create(user=user)[0]
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
-
-    def _make_file(self, mb):
-        """Helper that returns a file of given size in megabytes"""
-        return io.BytesIO(os.urandom(1000 * int(mb * 1000)))
 
     def setUp(self):
         setup_subscription_plans()
@@ -117,7 +111,7 @@ class QfcTestCase(APITransactionTestCase):
         # Uploading a file decreases the quota
         storage_path = f"projects/{p1.id}/files/test.data"
         bucket = utils.get_s3_bucket()
-        bucket.upload_fileobj(self._make_file(mb=1), storage_path)
+        bucket.upload_fileobj(get_random_file(mb=1), storage_path)
         p1.save(recompute_storage=True)
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 4)
         self.assertEqual(u1.useraccount.storage_quota_used_mb, 1)
@@ -126,7 +120,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Uploading a new version decreases the quota
         bucket = utils.get_s3_bucket()
-        bucket.upload_fileobj(self._make_file(mb=1), storage_path)
+        bucket.upload_fileobj(get_random_file(mb=1), storage_path)
         p1.save(recompute_storage=True)
         self.assertEqual(u1.useraccount.storage_quota_left_mb, 3)
         self.assertEqual(u1.useraccount.storage_quota_used_mb, 2)
@@ -155,13 +149,13 @@ class QfcTestCase(APITransactionTestCase):
 
         # One file of 750kb is under quota of 1mb
         response = self.client.post(
-            apipath, {"file": self._make_file(mb=0.75)}, format="multipart"
+            apipath, {"file": get_random_file(mb=0.75)}, format="multipart"
         )
         self.assertTrue(status.is_success(response.status_code))
 
         # A second file of 750kb is over quota of 1mb
         response = self.client.post(
-            apipath, {"file": self._make_file(mb=0.75)}, format="multipart"
+            apipath, {"file": get_random_file(mb=0.75)}, format="multipart"
         )
         self.assertEqual(response.status_code, 402)
 
@@ -187,7 +181,7 @@ class QfcTestCase(APITransactionTestCase):
         # User 2 uploads a 1.5mb file
         apipath = f"/api/v1/files/{p1.id}/file.data/"
         response = self.client.post(
-            apipath, {"file": self._make_file(mb=1.5)}, format="multipart"
+            apipath, {"file": get_random_file(mb=1.5)}, format="multipart"
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertFalse(Project.objects.filter(owner=u1).exists())
