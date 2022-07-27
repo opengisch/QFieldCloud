@@ -1,4 +1,6 @@
+import io
 import os
+from typing import IO
 
 from qfieldcloud.subscription.models import Plan
 
@@ -40,3 +42,8 @@ def setup_subscription_plans():
             ),
         ]
     )
+
+
+def get_random_file(mb: int) -> IO:
+    """Helper that returns a file of given size in megabytes"""
+    return io.BytesIO(os.urandom(1000 * int(mb * 1000)))
