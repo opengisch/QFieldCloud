@@ -95,6 +95,8 @@ INSTALLED_APPS = [
     "notifications",
     "axes",
     "migrate_sql",
+    "constance",
+    "constance.backends.database",
 ]
 
 MIDDLEWARE = [
@@ -343,3 +345,15 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
+
+CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
+CONSTANCE_CONFIG = {}
+CONSTANCE_ADDITIONAL_FIELDS = {
+    "textarea": [
+        "django.forms.CharField",
+        {
+            "widget": "django.forms.Textarea",
+        },
+    ]
+}
+CONSTANCE_CONFIG_FIELDSETS = {}
