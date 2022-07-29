@@ -140,32 +140,12 @@ class QfcTestCase(APITestCase):
             name="project3", is_public=False, owner=self.user2
         )
 
-        # Create a project of user2 with invalid access to user1
-        # (invalid because project is not owned by an organization the user is part of)
         self.project4 = Project.objects.create(
             name="project4", is_public=False, owner=self.user2
         )
 
         ProjectCollaborator.objects.create(
             project=self.project4,
-            collaborator=self.user1,
-            role=ProjectCollaborator.Roles.MANAGER,
-        )
-
-        # Create a project of user2 with valid access to user1
-        org1 = Organization.objects.create(
-            username="org1", organization_owner=self.user2
-        )
-        self.project5 = Project.objects.create(
-            name="project5", is_public=False, owner=org1
-        )
-
-        OrganizationMember.objects.create(
-            organization=org1,
-            member=self.user1,
-        )
-        ProjectCollaborator.objects.create(
-            project=self.project5,
             collaborator=self.user1,
             role=ProjectCollaborator.Roles.MANAGER,
         )
@@ -187,8 +167,6 @@ class QfcTestCase(APITestCase):
         self.assertEqual(json[1]["owner"], "user1")
         self.assertEqual(json[1]["user_role"], "admin")
         self.assertEqual(json[1]["user_role_origin"], "project_owner")
-        self.assertEqual(json[2]["name"], "project5")
-        self.assertEqual(json[2]["owner"], "org1")
         self.assertEqual(json[2]["user_role"], "manager")
         self.assertEqual(json[2]["user_role_origin"], "collaborator")
 
@@ -373,6 +351,9 @@ class QfcTestCase(APITestCase):
         u = User.objects.create(username="u")
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
+
+        u.useraccount.plan.max_premium_collaborators_per_private_project = 0
+        u.useraccount.plan.save()
 
         apiurl = f"/api/v1/projects/{p.pk}/"
 

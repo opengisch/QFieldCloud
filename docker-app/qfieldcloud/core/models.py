@@ -53,7 +53,7 @@ class UserQueryset(models.QuerySet):
     This query is very similar to `ProjectQueryset.for_user`, don't forget to update it too.
     """
 
-    def for_project(self, project: "Project"):
+    def for_project(self, project: "Project", skip_invalid: bool):
         public = Q(project_roles__project__is_public=True)
         count = Count(
             "project_roles__project__collaborators",
@@ -69,7 +69,22 @@ class UserQueryset(models.QuerySet):
         ) | Q(
             project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
         )
-        condition = public | max_premium_collaborators_per_private_project
+
+        org_member_condition = Q(
+            project_roles__project__owner__user_type=User.TYPE_USER
+        ) | (
+            Q(project_roles__project__owner__user_type=User.TYPE_ORGANIZATION)
+            & Exists(
+                Organization.objects.of_user(OuterRef("project_roles__user")).filter(
+                    id=OuterRef("project_roles__project__owner")
+                )
+            )
+        )
+        org_member = Case(When(org_member_condition, then=True), default=False)
+
+        project_role_is_valid_condition = public | (
+            max_premium_collaborators_per_private_project & org_member
+        )
 
         qs = (
             self.defer("project_roles__project_id", "project_roles__project_id")
@@ -80,10 +95,14 @@ class UserQueryset(models.QuerySet):
             .annotate(
                 project_role=F("project_roles__name"),
                 project_role_origin=F("project_roles__origin"),
-                project_role_count=count,
-                project_role_is_valid=Case(When(condition, then=True), default=False),
+                project_role_is_valid=Case(
+                    When(project_role_is_valid_condition, then=True), default=False
+                ),
             )
         )
+
+        if skip_invalid:
+            qs = qs.filter(project_role_is_valid=True)
 
         return qs
 
@@ -162,8 +181,8 @@ class QFieldCloudUserManager(UserManager):
     def get_queryset(self):
         return UserQueryset(self.model, using=self._db)
 
-    def for_project(self, project):
-        return self.get_queryset().for_project(project)
+    def for_project(self, project: "Project", skip_invalid: bool = True):
+        return self.get_queryset().for_project(project, skip_invalid)
 
     def for_organization(self, organization):
         return self.get_queryset().for_organization(organization)
@@ -779,7 +798,7 @@ class ProjectQueryset(models.QuerySet):
         TEAMMEMBER = "team_member", _("Team member")
         PUBLIC = "public", _("Public")
 
-    def for_user(self, user):
+    def for_user(self, user: "User", skip_invalid: bool = True):
         public = Q(is_public=True)
         count = Count(
             "collaborators",
@@ -793,8 +812,16 @@ class ProjectQueryset(models.QuerySet):
             owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
+        org_member_condition = Q(owner__user_type=User.TYPE_USER) | (
+            Q(owner__user_type=User.TYPE_ORGANIZATION)
+            & Exists(Organization.objects.of_user(user).filter(id=OuterRef("owner")))
+        )
+        org_member = Case(When(org_member_condition, then=True), default=False)
+
         # Assemble the condition
-        condition = public | max_premium_collaborators_per_private_project
+        user_role_is_valid_condition = public | (
+            max_premium_collaborators_per_private_project & org_member
+        )
 
         qs = (
             self.defer("user_roles__user_id", "user_roles__project_id")
@@ -804,9 +831,14 @@ class ProjectQueryset(models.QuerySet):
             .annotate(
                 user_role=F("user_roles__name"),
                 user_role_origin=F("user_roles__origin"),
-                user_role_is_valid=Case(When(condition, then=True), default=False),
+                user_role_is_valid=Case(
+                    When(user_role_is_valid_condition, then=True), default=False
+                ),
             )
         )
+
+        if skip_invalid:
+            qs = qs.filter(user_role_is_valid=True)
 
         return qs
 

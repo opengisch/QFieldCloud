@@ -139,6 +139,10 @@ class QfcTestCase(APITestCase):
             role=ProjectCollaborator.Roles.EDITOR,
         )
 
+        # update user default plan to disable collaborations
+        self.user1.useraccount.plan.max_premium_collaborators_per_private_project = 0
+        self.user1.useraccount.plan.save()
+
     def test_get_users(self):
         # should get all the available users
         queryset = querysets_utils.get_users("")
@@ -270,8 +274,8 @@ class QfcTestCase(APITestCase):
             p(self.project5, self.user3)
         self.assertEqual(p(self.project6, self.user3).user_role, ProjectCollaborator.Roles.READER)
         self.assertEqual(p(self.project6, self.user3).user_role_origin, ProjectQueryset.RoleOrigins.PUBLIC.value)
-        self.assertEqual(p(self.project7, self.user3).user_role, ProjectCollaborator.Roles.ADMIN)
-        self.assertEqual(p(self.project7, self.user3).user_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        with self.assertRaises(Project.DoesNotExist):
+            p(self.project7, self.user3)
         self.assertEqual(p(self.project8, self.user3).user_role, ProjectCollaborator.Roles.ADMIN)
         self.assertEqual(p(self.project8, self.user3).user_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
         self.assertEqual(p(self.project9, self.user3).user_role, ProjectCollaborator.Roles.EDITOR)
@@ -337,8 +341,8 @@ class QfcTestCase(APITestCase):
             p(self.project5, self.user3)
         self.assertEqual(p(self.project6, self.user3).project_role, ProjectCollaborator.Roles.READER)
         self.assertEqual(p(self.project6, self.user3).project_role_origin, ProjectQueryset.RoleOrigins.PUBLIC.value)
-        self.assertEqual(p(self.project7, self.user3).project_role, ProjectCollaborator.Roles.ADMIN)
-        self.assertEqual(p(self.project7, self.user3).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
+        with self.assertRaises(User.DoesNotExist):
+            p(self.project7, self.user3)
         self.assertEqual(p(self.project8, self.user3).project_role, ProjectCollaborator.Roles.ADMIN)
         self.assertEqual(p(self.project8, self.user3).project_role_origin, ProjectQueryset.RoleOrigins.PROJECTOWNER.value)
         self.assertEqual(p(self.project9, self.user3).project_role, ProjectCollaborator.Roles.EDITOR)

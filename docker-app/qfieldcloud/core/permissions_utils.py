@@ -40,7 +40,7 @@ class ExpectedPremiumUserError(CheckPermError):
 
 
 def _project_for_owner(user: QfcUser, project: Project):
-    return Project.objects.for_user(user).filter(pk=project.pk)
+    return Project.objects.for_user(user).filter(pk=project.pk, user_role_is_valid=True)
 
 
 def _organization_of_owner(user: QfcUser, organization: Organization):

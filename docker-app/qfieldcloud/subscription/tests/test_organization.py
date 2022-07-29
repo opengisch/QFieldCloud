@@ -43,10 +43,10 @@ class QfcTestCase(APITransactionTestCase):
         # Assert user does not have any role
         if role is None:
             with self.assertRaises(User.DoesNotExist):
-                User.objects.for_project(project).get(pk=user.pk)
+                User.objects.for_project(project, False).get(pk=user.pk)
 
             with self.assertRaises(Project.DoesNotExist):
-                Project.objects.for_user(user).get(pk=project.pk)
+                Project.objects.for_user(user, False).get(pk=project.pk)
 
             return
 
@@ -54,13 +54,13 @@ class QfcTestCase(APITransactionTestCase):
         if origin != ProjectQueryset.RoleOrigins.PUBLIC:
             # The User.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
-            u = User.objects.for_project(project).get(pk=user.pk)
+            u = User.objects.for_project(project, False).get(pk=user.pk)
             self.assertEqual(u.project_role, role)
             self.assertEqual(u.project_role_origin, origin)
             self.assertEqual(u.project_role_is_valid, is_valid)
 
         # Test on Project
-        p = Project.objects.for_user(user).get(pk=project.pk)
+        p = Project.objects.for_user(user, False).get(pk=project.pk)
         self.assertEqual(p.user_role, role)
         self.assertEqual(p.user_role_origin, origin)
         self.assertEqual(p.user_role_is_valid, is_valid)
