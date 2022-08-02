@@ -32,7 +32,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         project = Project.objects.get(id=projectid)
 
         if view.action == "retrieve":
-            return permissions_utils.can_read_project(user, project)
+            return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "destroy":
             return permissions_utils.can_delete_project(user, project)
         elif view.action in ["update", "partial_update"]:

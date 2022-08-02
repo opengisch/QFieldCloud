@@ -17,7 +17,7 @@ class PackageViewPermissions(permissions.BasePermission):
         try:
             project_id = request.parser_context["kwargs"].get("project_id")
             project = Project.objects.get(pk=project_id)
-            return permissions_utils.can_read_project(request.user, project)
+            return permissions_utils.can_access_project(request.user, project)
         except ObjectDoesNotExist:
             return False
 
