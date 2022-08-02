@@ -114,6 +114,9 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
 
     details["layers_by_id"] = get_layers_data(project)
     details["ordered_layer_ids"] = list(details["layers_by_id"].keys())
+    details["attachment_dirs"], _ = project.readListEntry(
+        "QFieldSync", "attachmentDirs", ["DCIM"]
+    )
 
     logging.info(
         f'QGIS project layer checks\n{layers_data_to_string(details["layers_by_id"])}',
