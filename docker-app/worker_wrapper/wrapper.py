@@ -155,6 +155,9 @@ class JobRun:
                 self.job.save()
                 return
 
+            # make sure we have reloaded the project, since someone might have changed it already
+            self.job.project.refresh_from_db()
+
             self.job.status = Job.Status.FINISHED
             self.job.save()
 
@@ -285,7 +288,12 @@ class PackageJobRun(JobRun):
         if self.job.status == Job.Status.FINISHED:
             self.job.project.data_last_packaged_at = self.data_last_packaged_at
             self.job.project.last_package_job = self.job
-            self.job.project.save()
+            self.job.project.save(
+                update_fields=(
+                    "data_last_packaged_at",
+                    "last_package_job",
+                )
+            )
 
             try:
                 project_id = str(self.job.project.id)
@@ -417,7 +425,7 @@ class DeltaApplyJobRun(JobRun):
 
         if is_data_modified:
             self.job.project.data_last_updated_at = timezone.now()
-            self.job.project.save()
+            self.job.project.save(update_fields=("data_last_updated_at",))
 
     def after_docker_exception(self) -> None:
         Delta.objects.filter(
@@ -462,9 +470,14 @@ class ProcessProjectfileJobRun(JobRun):
                 project, f, "image/png", "thumbnail"
             )
         project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
-        project.save()
+        project.save(
+            update_fields=(
+                "project_details",
+                "thumbnail_uri",
+            )
+        )
 
     def after_docker_exception(self) -> None:
         project = self.job.project
         project.project_details = None
-        project.save()
+        project.save(update_fields=("project_details",))

@@ -310,6 +310,8 @@ class ProjectAdmin(admin.ModelAdmin):
         "owner__username__iexact",
     )
 
+    ordering = ("-updated_at",)
+
     def get_search_results(self, request, queryset, search_term):
         filters = search_parser(
             request,
