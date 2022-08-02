@@ -39,7 +39,7 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write("Dry run, no files will be deleted.")
 
-        for f in utils.list_files(bucket, "projects/", True):
+        for f in utils.list_files(bucket, "projects/", "projects/"):
             project_id = f.name[:36]
 
             try:

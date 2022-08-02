@@ -361,9 +361,10 @@ def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:
         Iterable[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
+    root_prefix = f"projects/{project_id}/files/"
     prefix = f"projects/{project_id}/files/{path}"
 
-    return list_files(bucket, prefix, strip_prefix=True)
+    return list_files(bucket, prefix, root_prefix)
 
 
 def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVersions]:
@@ -378,7 +379,7 @@ def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVer
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
 
-    return list_files_with_versions(bucket, prefix, strip_prefix=True)
+    return list_files_with_versions(bucket, prefix, prefix)
 
 
 def get_project_file_with_versions(
@@ -393,10 +394,11 @@ def get_project_file_with_versions(
         Iterable[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
+    root_prefix = f"projects/{project_id}/files/"
     prefix = f"projects/{project_id}/files/{filename}"
     files = [
         f
-        for f in list_files_with_versions(bucket, prefix, strip_prefix=True)
+        for f in list_files_with_versions(bucket, prefix, root_prefix)
         if f.latest.key == prefix
     ]
 
@@ -415,7 +417,7 @@ def get_project_package_files(project_id: str, package_id: str) -> Iterable[S3Ob
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
-    return list_files(bucket, prefix, strip_prefix=True)
+    return list_files(bucket, prefix, prefix)
 
 
 def get_project_files_count(project_id: str) -> int:
@@ -454,13 +456,13 @@ def get_s3_object_url(
 def list_files(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
-    strip_prefix: bool = True,
+    strip_prefix: str = "",
 ) -> List[S3Object]:
     """Iterator that lists a bucket's objects under prefix."""
     files = []
     for f in bucket.objects.filter(Prefix=prefix):
         if strip_prefix:
-            start_idx = len(prefix)
+            start_idx = len(strip_prefix)
             name = f.key[start_idx:]
         else:
             name = f.key
@@ -484,7 +486,7 @@ def list_files(
 def list_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
-    strip_prefix: bool = True,
+    strip_prefix: str = "",
 ) -> List[S3ObjectVersion]:
     """Iterator that lists a bucket's objects under prefix."""
     versions = []
@@ -505,7 +507,7 @@ def list_versions(
 def list_files_with_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
-    strip_prefix: bool = True,
+    strip_prefix: str = "",
 ) -> Iterable[S3ObjectWithVersions]:
     """Yields an object with all it's versions
 
