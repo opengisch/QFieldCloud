@@ -400,7 +400,11 @@ class UserAccount(models.Model):
             self.extra_packages.filter(
                 Q(start_date__lte=timezone.now())
                 & (Q(end_date__isnull=True) | Q(end_date__gte=timezone.now()))
-            ).aggregate(sum_mb=Sum("type__extrapackagetypestorage__megabytes"))[
+            ).aggregate(
+                sum_mb=Sum(
+                    F("type__extrapackagetypestorage__megabytes") * F("quantity")
+                )
+            )[
                 "sum_mb"
             ]
             or 0

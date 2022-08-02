@@ -98,12 +98,14 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
         vl_extent_wkt = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs().authid()
 
+    attachment_dirs, _ = project.readListEntry("QFieldSync", "attachmentDirs", ["DCIM"])
     offline_editing = QgsOfflineEditing()
     offline_converter = OfflineConverter(
         project,
         str(package_dir),
         vl_extent_wkt,
         vl_extent_crs,
+        attachment_dirs,
         offline_editing,
         export_type=ExportType.Cloud,
         create_basemap=False,
