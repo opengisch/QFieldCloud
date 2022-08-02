@@ -39,8 +39,8 @@ class ExpectedPremiumUserError(CheckPermError):
     ...
 
 
-def _project_for_owner(user: QfcUser, project: Project):
-    return Project.objects.for_user(user).filter(pk=project.pk, user_role_is_valid=True)
+def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
+    return Project.objects.for_user(user, skip_invalid).filter(pk=project.pk)
 
 
 def _organization_of_owner(user: QfcUser, organization: Organization):
@@ -48,15 +48,26 @@ def _organization_of_owner(user: QfcUser, organization: Organization):
 
 
 def user_has_project_roles(
-    user: QfcUser, project: Project, roles: List[ProjectCollaborator.Roles]
+    user: QfcUser,
+    project: Project,
+    roles: List[ProjectCollaborator.Roles],
+    skip_invalid: bool = False,
 ):
-    return _project_for_owner(user, project).filter(user_role__in=roles).exists()
+    return (
+        _project_for_owner(user, project, skip_invalid)
+        .filter(user_role__in=roles)
+        .exists()
+    )
 
 
 def check_user_has_project_role_origins(
     user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
 ) -> Literal[True]:
-    if _project_for_owner(user, project).filter(user_role_origin__in=origins).exists():
+    if (
+        _project_for_owner(user, project, skip_invalid=False)
+        .filter(user_role_origin__in=origins)
+        .exists()
+    ):
         return True
 
     raise UserHasProjectRoleOrigins(
@@ -153,7 +164,7 @@ def can_create_project(
     return False
 
 
-def can_read_project(user: QfcUser, project: Project) -> bool:
+def can_access_project(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -164,6 +175,21 @@ def can_read_project(user: QfcUser, project: Project) -> bool:
             ProjectCollaborator.Roles.REPORTER,
             ProjectCollaborator.Roles.READER,
         ],
+    )
+
+
+def can_retrieve_project(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaborator.Roles.READER,
+        ],
+        True,
     )
 
 
