@@ -67,6 +67,19 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         return internal_data
 
+    def validate(self, data):
+        if data.get("name") is not None:
+            owner = self.instance.owner if self.instance else data["owner"]
+            matching_projects = Project.objects.filter(
+                owner=owner,
+                name=data["name"],
+            ).count()
+
+            if matching_projects != 0:
+                raise exceptions.ProjectAlreadyExistsError()
+
+        return data
+
     class Meta:
         fields = (
             "id",

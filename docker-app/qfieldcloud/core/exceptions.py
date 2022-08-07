@@ -143,3 +143,11 @@ class QuotaError(QFieldCloudException):
     code = "over_quota"
     message = "Quota error"
     status_code = status.HTTP_402_PAYMENT_REQUIRED
+
+
+class ProjectAlreadyExistsError(QFieldCloudException):
+    """Raised when a quota limitation is hit"""
+
+    code = "project_already_exists"
+    message = "This user already owns a project with the same name."
+    status_code = status.HTTP_400_BAD_REQUEST
