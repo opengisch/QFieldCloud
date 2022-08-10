@@ -341,10 +341,14 @@ def get_s3_project_size(project_id: str) -> int:
 
     bucket = get_s3_bucket()
 
-    prefix = f"projects/{project_id}/"
-
     total_size = 0
-    for version in bucket.object_versions.filter(Prefix=prefix):
+
+    files_prefix = f"projects/{project_id}/files/"
+    for version in bucket.object_versions.filter(Prefix=files_prefix):
+        total_size += version.size or 0
+
+    packages_prefix = f"projects/{project_id}/packages/"
+    for version in bucket.object_versions.filter(Prefix=packages_prefix):
         total_size += version.size or 0
 
     return round(total_size / (1000 * 1000), 3)
