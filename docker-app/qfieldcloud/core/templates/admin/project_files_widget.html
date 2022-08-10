@@ -17,6 +17,7 @@
                 <tr>
                     <th>{% trans 'Filename' %}</th>
                     <th>{% trans 'Last modified' %}</th>
+                    <th class="qfc-admin-project-files-text-right">{% trans 'Last size' %}</th>
                     <th>{% trans 'Version' %}</th>
                     <th>{% trans 'Actions' %}</th>
                 </tr>
@@ -40,6 +41,7 @@
                     <tr>
                         <td></td>
                         <td></td>
+                        <td class="qfc-admin-project-files-text-right"></td>
                         <td>
                             <select>
                                 <option value="">{% trans 'Download latest/Delete all version(s)' %}</option>
@@ -124,6 +126,10 @@
     .qfc-admin-projects-files-status-deleting {
         opacity: 0.3;
     }
+
+    .qfc-admin-project-files-text-right {
+        text-align: right;;
+    }
 </style>
 <script>
     (() => {
@@ -190,6 +196,7 @@
 
                         $trow.querySelector('td:nth-child(1)').innerHTML = file.name;
                         $trow.querySelector('td:nth-child(2)').innerHTML = file.last_modified;
+                        $trow.querySelector('td:nth-child(3)').innerHTML = file.size;
 
                         for (const version of file.versions) {
                             const $option = document.createElement('option');
