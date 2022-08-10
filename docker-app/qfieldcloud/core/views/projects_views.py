@@ -3,9 +3,10 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import exceptions, permissions_utils, utils
+from qfieldcloud.core import exceptions, permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
+from qfieldcloud.core.utils2 import storage
 from rest_framework import generics, permissions, viewsets
 
 User = get_user_model()
@@ -149,9 +150,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, projectid):
         # Delete files from storage
-        bucket = utils.get_s3_bucket()
-        prefix = utils.safe_join("projects/{}/".format(projectid))
-        bucket.objects.filter(Prefix=prefix).delete()
+        storage.delete_project_files(projectid)
 
         return super().destroy(request, projectid)
 
