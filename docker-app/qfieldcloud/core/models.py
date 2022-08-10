@@ -181,7 +181,7 @@ class QFieldCloudUserManager(UserManager):
     def get_queryset(self):
         return UserQueryset(self.model, using=self._db)
 
-    def for_project(self, project: "Project", skip_invalid: bool = True):
+    def for_project(self, project: "Project", skip_invalid: bool = False):
         return self.get_queryset().for_project(project, skip_invalid)
 
     def for_organization(self, organization):
@@ -802,7 +802,7 @@ class ProjectQueryset(models.QuerySet):
         TEAMMEMBER = "team_member", _("Team member")
         PUBLIC = "public", _("Public")
 
-    def for_user(self, user: "User", skip_invalid: bool = True):
+    def for_user(self, user: "User", skip_invalid: bool = False):
         public = Q(is_public=True)
         count = Count(
             "collaborators",
