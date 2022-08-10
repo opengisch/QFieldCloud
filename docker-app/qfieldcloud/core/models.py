@@ -1045,6 +1045,7 @@ class Project(models.Model):
             self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
+            and self.last_package_job is not None
         ):
             # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
             return self.data_last_packaged_at < self.data_last_updated_at
