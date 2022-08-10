@@ -269,7 +269,7 @@ def upload_project_file(
 def delete_project_files(project_id: str) -> None:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/"
-    bucket.objects.filter(Prefix=prefix).delete()
+    bucket.object_versions.filter(Prefix=prefix).delete()
 
 
 def delete_file(project: "Project", filename: str):  # noqa: F821
@@ -379,4 +379,4 @@ def delete_stored_package(project_id: str, package_id: str) -> None:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
-    bucket.objects.filter(Prefix=prefix).delete()
+    bucket.object_versions.filter(Prefix=prefix).delete()
