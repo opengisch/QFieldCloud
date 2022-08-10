@@ -35,6 +35,10 @@ class UserOrganizationRoleError(CheckPermError):
     ...
 
 
+class TeamOrganizationRoleError(CheckPermError):
+    ...
+
+
 class ExpectedPremiumUserError(CheckPermError):
     ...
 
@@ -584,26 +588,52 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
 
     # Rules for organization projects
     if project.owner.is_organization:
-        # And only members of these organizations can join
-        check_user_has_organization_roles(
-            user,
-            project.owner,
-            [OrganizationMember.Roles.MEMBER, OrganizationMember.Roles.ADMIN],
-        )
-
-    # Rules for private projects
-    if not project.is_public:
-        if not user.useraccount.plan.is_premium:
-            raise ExpectedPremiumUserError(
-                _('User "{}" must be a premium user.').format(user.username)
+        if user.is_team:
+            if (
+                Team.objects.filter(
+                    pk=user.pk,
+                    team_organization=project.owner,
+                ).count()
+                != 1
+            ):
+                raise TeamOrganizationRoleError(
+                    _(
+                        'The team "{}" is not owned by the "{}" organization that owns the project.'
+                    ).format(
+                        user.username,
+                        project.owner.username,
+                    )
+                )
+        else:
+            # And only members of these organizations can join
+            check_user_has_organization_roles(
+                user,
+                project.owner,
+                [OrganizationMember.Roles.MEMBER, OrganizationMember.Roles.ADMIN],
             )
+    else:
+        if user.is_team:
+            raise TeamOrganizationRoleError(
+                _(
+                    "Teams can be added as collaborators only in projects owned by organizations."
+                )
+            )
+
+        # Rules for private projects
+        if not project.is_public:
+            if not user.useraccount.plan.is_premium:
+                raise ExpectedPremiumUserError(
+                    _(
+                        "Only premium users can be added as collaborators on private projects."
+                    ).format(user.username)
+                )
 
     return True
 
 
 def can_become_collaborator(user: QfcUser, project: Project) -> bool:
     try:
-        return check_can_become_collaborator()
+        return check_can_become_collaborator(user, project)
     except CheckPermError:
         return False
 
