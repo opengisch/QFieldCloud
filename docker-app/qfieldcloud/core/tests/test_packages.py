@@ -234,7 +234,11 @@ class QfcTestCase(APITransactionTestCase):
                 ("delta/project2.qgs", "project.qgs"),
                 ("delta/points.geojson", "points.geojson"),
             ],
-            expected_files=["data.gpkg", "project_qfield.qgs"],
+            expected_files=[
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
         )
 
     def test_list_files_missing_qgis_project_file(self):
@@ -278,6 +282,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
             tempdir=tempdir,
         )
@@ -366,6 +371,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
             tempdir=tempdir,
         )
@@ -390,6 +396,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_broken_datasource_qfield.qgs",
+                "project_broken_datasource_qfield_attachments.zip",
             ],
             invalid_layers=["surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16"],
         )
@@ -412,6 +419,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
         )
 
@@ -451,7 +459,11 @@ class QfcTestCase(APITransactionTestCase):
                 ("delta/project2.qgs", "project.qgs"),
                 ("delta/points.geojson", "points.geojson"),
             ],
-            expected_files=["data.gpkg", "project_qfield.qgs"],
+            expected_files=[
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
         )
 
         self.project1.refresh_from_db()
@@ -566,6 +578,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
         )
 
@@ -594,5 +607,6 @@ class QfcTestCase(APITransactionTestCase):
                 expected_files=[
                     "data.gpkg",
                     "project_qfield.qgs",
+                    "project_qfield_attachments.zip",
                 ],
             )
