@@ -70,10 +70,15 @@ class ProjectSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data.get("name") is not None:
             owner = self.instance.owner if self.instance else data["owner"]
-            matching_projects = Project.objects.filter(
+            projects_qs = Project.objects.filter(
                 owner=owner,
                 name=data["name"],
-            ).count()
+            )
+
+            if self.instance:
+                projects_qs = projects_qs.exclude(id=self.instance.id)
+
+            matching_projects = projects_qs.count()
 
             if matching_projects != 0:
                 raise exceptions.ProjectAlreadyExistsError()
