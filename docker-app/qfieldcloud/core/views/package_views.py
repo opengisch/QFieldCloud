@@ -1,6 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core import exceptions, permissions_utils, utils
+from qfieldcloud.core import exceptions
+from qfieldcloud.core import permissions_utils as perms
+from qfieldcloud.core import utils
 from qfieldcloud.core.models import PackageJob, Project
 from qfieldcloud.core.utils import (
     check_s3_key,
@@ -17,7 +19,7 @@ class PackageViewPermissions(permissions.BasePermission):
         try:
             project_id = request.parser_context["kwargs"].get("project_id")
             project = Project.objects.get(pk=project_id)
-            return permissions_utils.can_access_project(request.user, project)
+            return perms.can_access_project(request.user, project)
         except ObjectDoesNotExist:
             return False
 
@@ -31,7 +33,8 @@ class PackageUploadViewPermissions(permissions.BasePermission):
             project_id = request.parser_context["kwargs"].get("project_id")
             job_id = request.parser_context["kwargs"].get("job_id")
             project = Project.objects.get(pk=project_id)
-            if not permissions_utils.can_update_project(request.user, project):
+
+            if not perms.can_retrieve_project(request.user, project):
                 return False
 
             # Check if the package job exists and it is already started, but not finished yet.
