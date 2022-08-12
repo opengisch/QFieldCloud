@@ -24,11 +24,16 @@ class Command(BaseCommand):
         if not project_id and not force_recalculate:
             extra_filters["storage_size_mb"] = 0
 
-        for project in Project.objects.filter(
+        projects_qs = Project.objects.filter(
             project_filename__isnull=False,
             **extra_filters,
-        ).order_by("-updated_at"):
-            print(f'Calculating project files storage size for "{project.id}"...')
+        ).order_by("-updated_at")
+        total_count = projects_qs.count()
+
+        for idx, project in enumerate(projects_qs):
+            print(
+                f'Calculating project files storage size for "{project.id}" {idx}/{total_count}...'
+            )
             project.save(recompute_storage=True)
             print(
                 f'Project files storage size for "{project.id}" is {project.storage_size_mb}MB'
