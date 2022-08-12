@@ -1,12 +1,13 @@
 import json
 import time
+from typing import Any, Dict
 
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.db.models.fields.json import JSONField
-from django.forms import widgets
+from django.forms import ModelForm, fields, widgets
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.html import escape, format_html
@@ -42,6 +43,24 @@ class PrettyJSONWidget(widgets.Textarea):
         return SafeText(text_value)
 
 
+def search_parser(
+    _request, _queryset, search_term: str, filter_config: Dict[str, Dict[str, str]]
+) -> Dict[str, Any]:
+    custom_filter = {}
+    CUSTOM_SEARCH_DIVIDER = ":"
+    if CUSTOM_SEARCH_DIVIDER in search_term:
+        prefix, search = search_term.split(CUSTOM_SEARCH_DIVIDER, 1)
+        prefix_config = filter_config.get(prefix)
+        if prefix_config:
+            extra_filters = prefix_config.get("extra_filters", {})
+            filter_keyword = prefix_config["filter"]
+
+            custom_filter = {**custom_filter, **extra_filters}
+            custom_filter[filter_keyword] = search
+
+    return custom_filter
+
+
 def model_admin_url(obj, name: str = None) -> str:
     url = resolve_url(admin_urlname(obj._meta, SafeText("change")), obj.pk)
     return format_html('<a href="{}">{}</a>', url, name or str(obj))
@@ -62,33 +81,6 @@ def format_pre_json(value):
 class GeodbInline(admin.TabularInline):
     model = Geodb
     extra = 0
-
-    def has_add_permission(self, request, obj):
-        return False
-
-    def has_delete_permission(self, request, obj):
-        return False
-
-    def has_change_permission(self, request, obj):
-        return False
-
-
-class OwnedOrganizationInline(admin.TabularInline):
-    model = Organization
-    fk_name = "organization_owner"
-    extra = 0
-
-    fields = (
-        "owned_organization",
-        "email",
-    )
-    readonly_fields = (
-        "owned_organization",
-        "email",
-    )
-
-    def owned_organization(self, obj):
-        return model_admin_url(obj, obj.username)
 
     def has_add_permission(self, request, obj):
         return False
@@ -213,7 +205,7 @@ class UserAdmin(admin.ModelAdmin):
         "date_joined",
         "is_active",
         "is_staff",
-        "useraccount__account_type",
+        "useraccount__plan",
     )
 
     search_fields = ("username__icontains", "owner__username__iexact")
@@ -237,12 +229,9 @@ class UserAdmin(admin.ModelAdmin):
     inlines = (
         UserAccountInline,
         GeodbInline,
-        OwnedOrganizationInline,
-        MemberOrganizationInline,
-        MemberTeamInline,
-        ProjectInline,
-        UserProjectCollaboratorInline,
     )
+
+    change_form_template = "admin/user_change_form.html"
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -259,7 +248,23 @@ class ProjectCollaboratorInline(admin.TabularInline):
     extra = 0
 
 
+class ProjectFilesWidget(widgets.Input):
+    template_name = "admin/project_files_widget.html"
+
+
+class ProjectForm(ModelForm):
+    project_files = fields.CharField(
+        disabled=True, required=False, widget=ProjectFilesWidget
+    )
+
+    class Meta:
+        model = Project
+        widgets = {"project_filename": widgets.TextInput()}
+        fields = "__all__"  # required for Django 3.x
+
+
 class ProjectAdmin(admin.ModelAdmin):
+    form = ProjectForm
     list_display = (
         "id",
         "name",
@@ -280,16 +285,18 @@ class ProjectAdmin(admin.ModelAdmin):
         "description",
         "is_public",
         "owner",
-        "storage_size",
+        "project_filename",
+        "storage_size_mb",
         "created_at",
         "updated_at",
         "data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
+        "project_files",
     )
     readonly_fields = (
         "id",
-        "storage_size",
+        "storage_size_mb",
         "created_at",
         "updated_at",
         "data_last_updated_at",
@@ -302,6 +309,38 @@ class ProjectAdmin(admin.ModelAdmin):
         "name__icontains",
         "owner__username__iexact",
     )
+
+    ordering = ("-updated_at",)
+
+    def get_search_results(self, request, queryset, search_term):
+        filters = search_parser(
+            request,
+            queryset,
+            search_term,
+            {
+                "owner": {
+                    "filter": "owner__username__iexact",
+                },
+                "collaborator": {
+                    "filter": "user_roles__user__username__iexact",
+                    "extra_filters": {
+                        "is_public": False,
+                    },
+                },
+            },
+        )
+
+        if filters:
+            return queryset.filter(**filters), True
+
+        queryset, use_distinct = super().get_search_results(
+            request, queryset, search_term
+        )
+
+        return queryset, use_distinct
+
+    def project_files(self, instance):
+        return instance.pk
 
     def project_details__pre(self, instance):
         if instance.project_details is None:
@@ -720,7 +759,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
     search_fields = (
         "username__icontains",
-        "owner__username__icontains",
+        "organization_owner__username__icontains",
     )
 
     list_filter = ("date_joined",)
@@ -729,6 +768,30 @@ class OrganizationAdmin(admin.ModelAdmin):
         return model_admin_url(
             instance.organization_owner, instance.organization_owner.username
         )
+
+    def get_search_results(self, request, queryset, search_term):
+        filters = search_parser(
+            request,
+            queryset,
+            search_term,
+            {
+                "owner": {
+                    "filter": "organization_owner__username__iexact",
+                },
+                "member": {
+                    "filter": "membership_roles__user__username__iexact",
+                },
+            },
+        )
+
+        if filters:
+            return queryset.filter(**filters), True
+
+        queryset, use_distinct = super().get_search_results(
+            request, queryset, search_term
+        )
+
+        return queryset, use_distinct
 
 
 class TeamMemberInline(admin.TabularInline):

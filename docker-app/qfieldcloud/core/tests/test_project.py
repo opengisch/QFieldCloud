@@ -1,15 +1,28 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Project, ProjectCollaborator, User
+from qfieldcloud.core.models import (
+    Organization,
+    OrganizationMember,
+    Project,
+    ProjectCollaborator,
+    Team,
+    TeamMember,
+    User,
+)
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from .utils import setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
@@ -66,11 +79,23 @@ class QfcTestCase(APITestCase):
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        response = self.client.get("/api/v1/projects/?include-public=true")
+
+        # 1) do not list the public projects by default
+        response = self.client.get("/api/v1/projects/")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 0)
+
+        # 1) list the public projects on request
+        response = self.client.get("/api/v1/projects/?include-public=1")
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["name"], "project1")
         self.assertEqual(response.data[0]["owner"], "user2")
+
+        # 1) do not list the public projects for any other value than 1
+        response = self.client.get("/api/v1/projects/?include-public=true")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 0)
 
     def test_list_collaborators_of_project(self):
 
@@ -115,7 +140,6 @@ class QfcTestCase(APITestCase):
             name="project3", is_public=False, owner=self.user2
         )
 
-        # Create a project of user2 with access to user1
         self.project4 = Project.objects.create(
             name="project4", is_public=False, owner=self.user2
         )
@@ -143,8 +167,6 @@ class QfcTestCase(APITestCase):
         self.assertEqual(json[1]["owner"], "user1")
         self.assertEqual(json[1]["user_role"], "admin")
         self.assertEqual(json[1]["user_role_origin"], "project_owner")
-        self.assertEqual(json[2]["name"], "project4")
-        self.assertEqual(json[2]["owner"], "user2")
         self.assertEqual(json[2]["user_role"], "manager")
         self.assertEqual(json[2]["user_role_origin"], "collaborator")
 
@@ -319,3 +341,124 @@ class QfcTestCase(APITestCase):
         self.assertEqual(json[1]["owner"], "user2")
         self.assertEqual(json[1]["user_role"], "reader")
         self.assertEqual(json[1]["user_role_origin"], "public")
+
+    def test_private_project_memberships(self):
+        """Tests for QF-1553 - limit collaboration on private projects"""
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create a project with a collaborator
+        u = User.objects.create(username="u")
+        o = Organization.objects.create(username="o", organization_owner=u)
+        p = Project.objects.create(name="p", owner=u, is_public=True)
+
+        u.useraccount.plan.max_premium_collaborators_per_private_project = 0
+        u.useraccount.plan.save()
+
+        apiurl = f"/api/v1/projects/{p.pk}/"
+
+        self.client.raise_request_exception = True
+
+        def assert_no_role():
+            response = self.client.get(apiurl, follow=True)
+            self.assertEqual(response.status_code, 403)
+
+        def assert_role(role, origin):
+            response = self.client.get(apiurl, follow=True)
+            self.assertEqual(response.status_code, 200)
+            json = response.json()
+            self.assertEqual(json["user_role"], role)
+            self.assertEqual(json["user_role_origin"], origin)
+
+        # Project is public, we have a public role
+        assert_role("reader", "public")
+
+        # Project is public, collaboration membership is valid
+        ProjectCollaborator.objects.create(
+            project=p, collaborator=self.user1, role=ProjectCollaborator.Roles.MANAGER
+        )
+        assert_role("manager", "collaborator")
+
+        # If project is made private, the collaboration is invalid
+        p.is_public = False
+        p.save()
+        assert_no_role()
+
+        # Making the owner an organisation is not enough as user is not member of that org
+        p.owner = o
+        p.save()
+        assert_no_role()
+
+        # As the user must be member of the organisation
+        OrganizationMember.objects.create(organization=o, member=self.user1)
+        assert_role("manager", "collaborator")
+
+    def test_add_project_collaborator_without_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+
+        # cannot add project collaborator if not already an org member
+        with self.assertRaises(ValidationError):
+            ProjectCollaborator.objects.create(
+                project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
+            )
+
+    def test_add_project_collaborator_and_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+
+        # add project collaborator if the user is already an organization member
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        ProjectCollaborator.objects.create(
+            project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
+        )
+
+    def test_add_team_member_without_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        t1 = Team.objects.create(username="t1", team_organization=o1)
+
+        # cannot add team member if not already an org members
+        with self.assertRaises(ValidationError):
+            TeamMember.objects.create(team=t1, member=u2)
+
+    def test_add_team_member_and_being_org_member(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        t1 = Team.objects.create(username="t1", team_organization=o1)
+
+        # add team member if not already an org members
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        TeamMember.objects.create(team=t1, member=u2)
+
+    def test_delete_org_member_should_delete_team_membership(self):
+        u1 = User.objects.create(username="u1")
+        u2 = User.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        t1 = Team.objects.create(username="t1", team_organization=o1)
+
+        # deleting an organization member via queryset should also delete team membership
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        TeamMember.objects.create(team=t1, member=u2)
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 1)
+
+        OrganizationMember.objects.filter(organization=o1, member=u2).delete()
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 0)
+
+        # deleting an organization member via model should also delete team membership
+        om1 = OrganizationMember.objects.create(organization=o1, member=u2)
+        TeamMember.objects.create(team=t1, member=u2)
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 1)
+
+        om1.delete()
+
+        self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 0)

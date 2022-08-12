@@ -29,6 +29,19 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = int(os.environ.get("DEBUG", default=0))
 
+# if we are in debug, we need to update the internal IPS to make the
+# debug toolbar work within docker
+if DEBUG:
+    import socket  # only if you haven't already imported this
+
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + [
+        "127.0.0.1",
+        "10.0.2.2",
+    ]
+
+ENVIRONMENT = os.environ.get("ENVIRONMENT")
+
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
@@ -58,6 +71,8 @@ INSTALLED_APPS = [
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
     "django_tables2",
     "django_filters",
+    # debug
+    "debug_toolbar",
     # style
     "bootstrap4",
     "rest_framework",
@@ -73,14 +88,19 @@ INSTALLED_APPS = [
     "auditlog",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.subscription",
     "qfieldcloud.notifs",
     "qfieldcloud.authentication",
     # 3rd party - keep at bottom to allow overrides
     "notifications",
     "axes",
+    "migrate_sql",
+    "constance",
+    "constance.backends.database",
 ]
 
 MIDDLEWARE = [
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -92,6 +112,7 @@ MIDDLEWARE = [
     "django_currentuser.middleware.ThreadLocalUserMiddleware",
     "auditlog.middleware.AuditlogMiddleware",
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
+    "qfieldcloud.core.middleware.test.TestMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
 
@@ -100,6 +121,7 @@ CRON_CLASSES = [
     # "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
     "qfieldcloud.core.cron.ResendFailedInvitationsJob",
     "qfieldcloud.core.cron.SetTerminatedWorkersToFinalStatusJob",
+    "qfieldcloud.core.cron.DeleteObsoleteProjectPackagesJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
@@ -138,6 +160,9 @@ DATABASES = {
         "HOST": os.environ.get("SQL_HOST"),
         "PORT": os.environ.get("SQL_PORT"),
         "OPTIONS": {"sslmode": os.environ.get("SQL_SSLMODE")},
+        "TEST": {
+            "NAME": os.environ.get("SQL_DATABASE_TEST"),
+        },
     }
 }
 
@@ -313,3 +338,22 @@ QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
 
 WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 60))
+APPLY_DELTAS_LIMIT = 1000
+
+DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
+}
+
+QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
+
+CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
+CONSTANCE_CONFIG = {}
+CONSTANCE_ADDITIONAL_FIELDS = {
+    "textarea": [
+        "django.forms.CharField",
+        {
+            "widget": "django.forms.Textarea",
+        },
+    ]
+}
+CONSTANCE_CONFIG_FIELDSETS = {}

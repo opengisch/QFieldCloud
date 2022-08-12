@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import PurePath
-from typing import IO, List
+from typing import IO, List, Set
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
+from qfieldcloud.core.utils2.audit import LogEntry, audit
 
 logger = logging.getLogger(__name__)
 
@@ -18,19 +19,19 @@ QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 
 
-def staticfile_prefix(project: "Project", filename: str) -> str:  # noqa: F821
-    """Returns the staticfile dir where the file belongs to or empty string if it does not.
+def get_attachment_dir_prefix(project: "Project", filename: str) -> str:  # noqa: F821
+    """Returns the attachment dir where the file belongs to or empty string if it does not.
 
     Args:
         project (Project): project to check
         filename (str): filename to check
 
     Returns:
-        str: the staticfile dir or empty string if no match found
+        str: the attachment dir or empty string if no match found
     """
-    for staticfile_dir in project.staticfile_dirs:
-        if filename.startswith(staticfile_dir):
-            return staticfile_dir
+    for attachment_dir in project.attachment_dirs:
+        if filename.startswith(attachment_dir):
+            return attachment_dir
 
     return ""
 
@@ -104,7 +105,7 @@ def file_response(
 def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
-    NOTE you need to set the URI to the user account manually
+    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
 
     Args:
         user (User):
@@ -138,6 +139,13 @@ def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F
 
 
 def remove_user_avatar(user: "User") -> None:  # noqa: F821
+    """Removes the user's avatar file.
+
+    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
+
+    Args:
+        user (User):
+    """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = user.useraccount.avatar_uri
     bucket.object_versions.filter(Prefix=key).delete()
@@ -148,7 +156,7 @@ def upload_project_thumbail(
 ) -> str:
     """Uploads a picture as a project thumbnail.
 
-    NOTE you need to set the URI to the project manually
+    NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     Args:
         project (Project):
@@ -187,7 +195,8 @@ def upload_project_thumbail(
 def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     """Uploads a picture as a project thumbnail.
 
-    NOTE you need to remove the URI to the project manually
+    NOTE this function does NOT modify the `Project.thumbnail_uri` field
+
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = project.thumbnail_uri
@@ -203,14 +212,8 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
 
     logger.info(f"Cleaning up old files for {project}")
 
-    # Determine account type
-    account_type = project.owner.useraccount.account_type
-    if account_type == qfieldcloud.core.models.UserAccount.TYPE_COMMUNITY:
-        keep_count = 3
-    elif account_type == qfieldcloud.core.models.UserAccount.TYPE_PRO:
-        keep_count = 10
-    else:
-        raise NotImplementedError(f"Unknown account type {account_type}")
+    # Number of versions to keep is determined by the account type
+    keep_count = project.owner.useraccount.plan.storage_keep_versions
 
     logger.debug(f"Keeping {keep_count} versions")
 
@@ -238,6 +241,55 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
             old_version._data.delete()
             # TODO: audit ? take implementation from files_views.py:211
 
+    # Update the project size
+    project.save(recompute_storage=True)
+
+
+def upload_file(file: IO, key: str):
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    bucket.upload_fileobj(
+        file,
+        key,
+    )
+    return key
+
+
+def upload_project_file(
+    project: "Project", file: IO, filename: str  # noqa: F821
+) -> str:
+    key = f"projects/{project.id}/files/{filename}"
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    bucket.upload_fileobj(
+        file,
+        key,
+    )
+    return key
+
+
+def delete_project_files(project_id: str) -> None:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/"
+    bucket.object_versions.filter(Prefix=prefix).delete()
+
+
+def delete_file(project: "Project", filename: str):  # noqa: F821
+    file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
+
+    if not file:
+        raise Exception("No file with such name in the given project found")
+
+    file.delete()
+
+    if qfieldcloud.core.utils.is_qgis_project_file(filename):
+        project.project_filename = None
+        project.save(recompute_storage=True)
+
+    audit(
+        project,
+        LogEntry.Action.DELETE,
+        changes={f"{filename} ALL": [file.latest.e_tag, None]},
+    )
+
 
 def delete_file_version(
     project: "Project",  # noqa: F821
@@ -261,10 +313,14 @@ def delete_file_version(
     if not file:
         raise Exception("No file with such name in the given project found")
 
+    is_deleting_all_versions = False
     if file.latest.id == version_id:
         include_older = False
 
-    versions_to_delete = []
+        if len(file.versions) == 1:
+            is_deleting_all_versions = True
+
+    versions_to_delete: List[qfieldcloud.core.utils.S3ObjectVersion] = []
 
     for file_version in file.versions:
         if file_version.id == version_id:
@@ -288,4 +344,39 @@ def delete_file_version(
     for file_version in versions_to_delete:
         file_version._data.delete()
 
+        audit_suffix = "ALL" if is_deleting_all_versions else file_version.display
+
+        audit(
+            project,
+            LogEntry.Action.DELETE,
+            changes={f"{filename} {audit_suffix}": [file_version.e_tag, None]},
+        )
+
+    if is_deleting_all_versions and qfieldcloud.core.utils.is_qgis_project_file(
+        filename
+    ):
+        project.project_filename = None
+        project.save(recompute_storage=True)
+
     return versions_to_delete
+
+
+def get_stored_package_ids(project_id: str) -> Set[str]:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/packages/"
+    root_path = PurePath(prefix)
+    package_ids = set()
+
+    for file in bucket.objects.filter(Prefix=prefix):
+        file_path = PurePath(file.key)
+        parts = file_path.relative_to(root_path).parts
+        package_ids.add(parts[0])
+
+    return package_ids
+
+
+def delete_stored_package(project_id: str, package_id: str) -> None:
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    prefix = f"projects/{project_id}/packages/{package_id}/"
+
+    bucket.object_versions.filter(Prefix=prefix).delete()

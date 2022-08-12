@@ -12,12 +12,11 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Project,
-    ProjectCollaborator,
     Team,
-    TeamMember,
     User,
     UserAccount,
 )
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 
 
 class QfcTestCase(TestCase):
@@ -52,6 +51,8 @@ class QfcTestCase(TestCase):
             )
 
     def setUp(self):
+        setup_subscription_plans()
+
         # Without current user, no notifications are sent
         # (one day, maybe we could create them as AnonymousUser, see https://github.com/django-notifications/django-notifications/issues/13)
         _set_current_user(None)
@@ -122,63 +123,59 @@ class QfcTestCase(TestCase):
         org1 = Organization.objects.create(
             username="org1", organization_owner=self.user1
         )
-        team1 = Team.objects.create(username="team1", team_organization=org1)
+        memb2 = org1.members.create(member=self.user2)
+        org1.members.create(member=self.user3)
+        t1 = org1.teams.create(username="t1")
 
         _set_current_user(self.otheruser)
 
-        # Set user2, user3 as team of team1
-        TeamMember.objects.create(
-            team=team1,
-            member=self.user2,
-        )
-        memb2 = TeamMember.objects.create(
-            team=team1,
-            member=self.user3,
-        )
+        # Set user2, user3 as members of team1
+        t1.members.create(member=self.user2)
+        t1.members.create(member=self.user3)
+
         self.assertNotifs(2, {"recipient": self.user1})
         self.assertNotifs(2, {"recipient": self.user2})
         self.assertNotifs(1, {"recipient": self.user3})
 
         memb2.delete()
-        self.assertNotifs(3, {"recipient": self.user1})
-        self.assertNotifs(3, {"recipient": self.user2})
-        self.assertNotifs(2, {"recipient": self.user3})
+        self.assertNotifs(4, {"recipient": self.user1})
+        self.assertNotifs(4, {"recipient": self.user2})
+        self.assertNotifs(3, {"recipient": self.user3})
 
-        team1.delete()
-        self.assertNotifs(5, {"recipient": self.user1})
-        self.assertNotifs(5, {"recipient": self.user2})
-        self.assertNotifs(2, {"recipient": self.user3})
+        t1.delete()
+        self.assertNotifs(6, {"recipient": self.user1})
+        self.assertNotifs(4, {"recipient": self.user2})
+        self.assertNotifs(5, {"recipient": self.user3})
 
     def test_projects(self):
 
         org1 = Organization.objects.create(
             username="org1", organization_owner=self.user1
         )
-        team1 = Team.objects.create(username="team1", team_organization=org1)
-        TeamMember.objects.create(
-            team=team1,
-            member=self.user2,
-        )
+        org1.members.create(member=self.user2)
+        t1 = Team.objects.create(username="t1", team_organization=org1)
+        t1.members.create(member=self.user2)
 
         _set_current_user(self.otheruser)
 
         # create a project
-        proj1 = Project.objects.create(name="proj1", owner=org1)
+        p1 = Project.objects.create(name="p1", owner=org1, is_public=True)
         self.assertNotifs(1, {"recipient": self.user1})
         self.assertNotifs(0, {"recipient": self.user2})
         self.assertNotifs(0, {"recipient": self.user3})
 
         # add a collaborator (team)
-        ProjectCollaborator.objects.create(project=proj1, collaborator=team1)
+        p1.collaborators.create(collaborator=t1)
         self.assertNotifs(2, {"recipient": self.user1})
         self.assertNotifs(1, {"recipient": self.user2})
         self.assertNotifs(0, {"recipient": self.user3})
 
         # add a collaborator (user)
-        ProjectCollaborator.objects.create(project=proj1, collaborator=self.user3)
-        self.assertNotifs(3, {"recipient": self.user1})
-        self.assertNotifs(2, {"recipient": self.user2})
-        self.assertNotifs(1, {"recipient": self.user3})
+        org1.members.create(member=self.user3)
+        p1.collaborators.create(collaborator=self.user3)
+        self.assertNotifs(4, {"recipient": self.user1})
+        self.assertNotifs(3, {"recipient": self.user2})
+        self.assertNotifs(2, {"recipient": self.user3})
 
     def test_cron(self):
         # Ensuring cron works

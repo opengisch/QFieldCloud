@@ -5,6 +5,7 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
@@ -58,7 +59,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
 
-        request_file = request.data["file"]
+        request_file = utils.strip_json_null_bytes(request.data["file"])
         created_deltas = []
 
         try:
@@ -99,10 +100,24 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                         created_by=self.request.user,
                     )
 
-                    if permissions_utils.can_create_delta(self.request.user, delta_obj):
-                        delta_obj.last_status = Delta.Status.PENDING
-                    else:
+                    if not permissions_utils.can_create_delta(
+                        self.request.user, delta_obj
+                    ):
                         delta_obj.last_status = Delta.Status.UNPERMITTED
+                        delta_obj.last_feedback = {
+                            "msg": _(
+                                "User has no rights to create delta on this project. Try inviting him as a collaborator with proper permissions and try again."
+                            )
+                        }
+                    elif not delta_obj.is_supported_regarding_owner_account:
+                        delta_obj.last_status = Delta.Status.UNPERMITTED
+                        delta_obj.last_feedback = {
+                            "msg": _(
+                                "Some features of this project are not supported by the owner's account. Either upgrade the account or ensure you're not using features such as remote layers, then try again."
+                            )
+                        }
+                    else:
+                        delta_obj.last_status = Delta.Status.PENDING
 
                     delta_obj.save(force_insert=True)
                     created_deltas.append(delta_obj)

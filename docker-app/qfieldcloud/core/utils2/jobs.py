@@ -1,7 +1,8 @@
 import logging
-from typing import List, Optional
+from typing import List
 
 import qfieldcloud.core.models as models
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from qfieldcloud.core import exceptions
@@ -16,7 +17,7 @@ def apply_deltas(
     project_file: str,
     overwrite_conflicts: bool,
     delta_ids: List[str] = [],
-) -> Optional["models.ApplyJob"]:
+) -> List["models.ApplyJob"]:
     """Apply a deltas"""
 
     logger.info(
@@ -55,28 +56,39 @@ def apply_deltas(
         pending_deltas = pending_deltas.exclude(jobs_to_apply__in=apply_jobs)
 
     # 5. If there are no pending deltas, do not create a new job and return.
-    if pending_deltas.count() == 0:
+    deltas_count = pending_deltas.count()
+    if deltas_count == 0:
         return None
 
     # 6. There are pending deltas that are not part of any pending job. So we create one.
-    apply_job = models.ApplyJob.objects.create(
-        project=project,
-        created_by=user,
-        overwrite_conflicts=overwrite_conflicts,
-    )
+    apply_jobs = []
+    for i in range(deltas_count // settings.APPLY_DELTAS_LIMIT + 1):
+        offset = settings.APPLY_DELTAS_LIMIT * i
+        limit = max(settings.APPLY_DELTAS_LIMIT * (i + 1), deltas_count)
 
-    models.ApplyJobDelta.objects.bulk_create(
-        [
-            models.ApplyJobDelta(
-                apply_job=apply_job,
-                delta=delta,
-            )
-            for delta in pending_deltas
-        ]
-    )
+        if offset == limit:
+            break
+
+        apply_job = models.ApplyJob.objects.create(
+            project=project,
+            created_by=user,
+            overwrite_conflicts=overwrite_conflicts,
+        )
+
+        models.ApplyJobDelta.objects.bulk_create(
+            [
+                models.ApplyJobDelta(
+                    apply_job=apply_job,
+                    delta=delta,
+                )
+                for delta in pending_deltas.order_by("created_at")[offset:limit]
+            ]
+        )
+
+        apply_jobs.append(apply_job)
 
     # 7. return the created job
-    return apply_job
+    return apply_jobs
 
 
 def repackage(project: "models.Project", user: "models.User") -> "models.PackageJob":

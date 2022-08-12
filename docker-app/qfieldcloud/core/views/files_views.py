@@ -1,12 +1,16 @@
 from pathlib import PurePath
 
 import qfieldcloud.core.utils2 as utils2
+from django.db import transaction
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
-from qfieldcloud.core.utils2.storage import purge_old_file_versions, staticfile_prefix
+from qfieldcloud.core.utils2.storage import (
+    get_attachment_dir_prefix,
+    purge_old_file_versions,
+)
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -31,7 +35,7 @@ class ListFilesView(views.APIView):
 
     def get(self, request, projectid):
 
-        Project.objects.get(id=projectid)
+        project = Project.objects.get(id=projectid)
 
         bucket = utils.get_s3_bucket()
 
@@ -57,15 +61,20 @@ class ListFilesView(views.APIView):
                 sha256sum = metadata["Sha256sum"]
 
             if version.is_latest:
+                is_attachment = get_attachment_dir_prefix(project, filename) != ""
+
                 files[version.key]["name"] = filename
                 files[version.key]["size"] = version.size
                 files[version.key]["sha256"] = sha256sum
+                files[version.key]["md5sum"] = version.e_tag.replace('"', "")
                 files[version.key]["last_modified"] = last_modified
+                files[version.key]["is_attachment"] = is_attachment
 
             files[version.key]["versions"].append(
                 {
                     "size": version.size,
                     "sha256": sha256sum,
+                    "md5sum": version.e_tag.replace('"', ""),
                     "version_id": version.version_id,
                     "last_modified": last_modified,
                     "is_latest": version.is_latest,
@@ -139,6 +148,15 @@ class DownloadPushDeleteFileView(views.APIView):
             )
 
         request_file = request.FILES.get("file")
+
+        file_size_mb = request_file.size / 1024 / 1024
+        quota_left_mb = project.owner.useraccount.storage_quota_left_mb
+
+        if file_size_mb > quota_left_mb:
+            raise exceptions.QuotaError(
+                f"Requiring {file_size_mb}MB of storage but only {quota_left_mb}MB available."
+            )
+
         old_object = get_project_file_with_versions(project.id, filename)
         sha256sum = utils.get_sha256(request_file)
         bucket = utils.get_s3_bucket()
@@ -152,25 +170,38 @@ class DownloadPushDeleteFileView(views.APIView):
 
         assert new_object
 
-        if staticfile_prefix(project, filename) == "" and (
-            is_qgis_project_file or project.project_filename is not None
-        ):
-            if is_qgis_project_file:
-                project.project_filename = filename
+        with transaction.atomic():
+            # we only enter a transaction after the file is uploaded above because we do not
+            # want to lock the project row for way too long. If we reselect for update the
+            # project and update it now, it guarantees there will be no other file upload editing
+            # the same project row.
+            project = Project.objects.select_for_update().get(id=projectid)
+            update_fields = ["data_last_updated_at"]
 
-            running_jobs = ProcessProjectfileJob.objects.filter(
-                project=project,
-                created_by=self.request.user,
-                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
-            )
+            if get_attachment_dir_prefix(project, filename) == "" and (
+                is_qgis_project_file or project.project_filename is not None
+            ):
+                if is_qgis_project_file:
+                    project.project_filename = filename
+                    update_fields.append("project_filename")
 
-            if running_jobs.count() == 0:
-                ProcessProjectfileJob.objects.create(
-                    project=project, created_by=self.request.user
+                running_jobs = ProcessProjectfileJob.objects.filter(
+                    project=project,
+                    created_by=self.request.user,
+                    status__in=[
+                        Job.Status.PENDING,
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ],
                 )
 
-        project.data_last_updated_at = timezone.now()
-        project.save()
+                if running_jobs.count() == 0:
+                    ProcessProjectfileJob.objects.create(
+                        project=project, created_by=self.request.user
+                    )
+
+            project.data_last_updated_at = timezone.now()
+            project.save(update_fields=update_fields)
 
         if old_object:
             audit(
@@ -192,24 +223,12 @@ class DownloadPushDeleteFileView(views.APIView):
 
     def delete(self, request, projectid, filename):
         project = Project.objects.get(id=projectid)
-        key = utils.safe_join(f"projects/{projectid}/files/", filename)
-        bucket = utils.get_s3_bucket()
+        version_id = request.META.get("HTTP_X_FILE_VERSION")
 
-        old_object = get_project_file_with_versions(project.id, filename)
-
-        assert old_object
-
-        bucket.object_versions.filter(Prefix=key).delete()
-
-        if utils.is_qgis_project_file(filename):
-            project.project_filename = None
-            project.save()
-
-        audit(
-            project,
-            LogEntry.Action.DELETE,
-            changes={filename: [old_object.latest.e_tag, None]},
-        )
+        if version_id:
+            utils2.storage.delete_file_version(project, filename, version_id, False)
+        else:
+            utils2.storage.delete_file(project, filename)
 
         return Response(status=status.HTTP_200_OK)
 

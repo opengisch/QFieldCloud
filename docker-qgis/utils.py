@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
 from libqfieldsync.layer import LayerSource
+from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -25,6 +26,9 @@ from qgis.core import (
 )
 from qgis.PyQt import QtCore, QtGui
 from tabulate import tabulate
+
+# Get environment variables
+JOB_ID = os.environ.get("JOB_ID")
 
 qgs_stderr_logger = logging.getLogger("QGIS_STDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
@@ -147,10 +151,70 @@ def stop_app():
     if "QGISAPP" not in globals():
         return
 
+    QgsProject.instance().read("")
+
     if QGISAPP is not None:
-        qgs_stderr_logger.info("Stopping QGIS app...")
+        qgs_stderr_logger.info("Stopping QGIS app…")
         QGISAPP.exitQgis()
         del QGISAPP
+
+
+def download_project(
+    project_id: str, destination: Path = None, skip_attachments: bool = True
+) -> Path:
+    """Download the files in the project "working" directory from the S3
+    Storage into a temporary directory. Returns the directory path"""
+    if not destination:
+        # Create a temporary directory
+        destination = Path(tempfile.mkdtemp())
+
+    # Create a local working directory
+    working_dir = destination.joinpath("files")
+    working_dir.mkdir(parents=True)
+
+    client = sdk.Client()
+    files = client.list_remote_files(project_id)
+
+    if skip_attachments:
+        files = [file for file in files if not file["is_attachment"]]
+
+    client.download_files(
+        files,
+        project_id,
+        sdk.FileTransferType.PROJECT,
+        str(working_dir),
+        filter_glob="*",
+        throw_on_error=True,
+        show_progress=False,
+    )
+
+    return destination
+
+
+def upload_package(project_id: str, package_dir: Path) -> None:
+    client = sdk.Client()
+    client.upload_files(
+        project_id,
+        sdk.FileTransferType.PACKAGE,
+        str(package_dir),
+        filter_glob="*",
+        throw_on_error=True,
+        show_progress=False,
+        job_id=JOB_ID,
+    )
+
+
+def upload_project(project_id: str, project_dir: Path) -> None:
+    """Upload the files from the `project_dir` to the permanent file storage."""
+    client = sdk.Client()
+    client.upload_files(
+        project_id,
+        sdk.FileTransferType.PROJECT,
+        str(project_dir),
+        filter_glob="*",
+        throw_on_error=True,
+        show_progress=False,
+    )
 
 
 class WorkflowValidationException(Exception):

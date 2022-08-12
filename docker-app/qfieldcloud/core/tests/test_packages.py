@@ -10,22 +10,28 @@ from django.http import FileResponse
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Geodb, Job, Project, Secret, User
+from qfieldcloud.core.models import (
+    Geodb,
+    Job,
+    Project,
+    ProjectCollaborator,
+    Secret,
+    User,
+)
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import testdata_path
+from .utils import setup_subscription_plans, testdata_path
 
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITransactionTestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
-
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
-
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a project
@@ -118,9 +124,21 @@ class QfcTestCase(APITransactionTestCase):
         tempdir: str = None,
         invalid_layers: List[str] = [],
     ):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
-
         self.upload_files(token, project, files)
+        self.check_package(
+            token, project, expected_files, job_create_error, tempdir, invalid_layers
+        )
+
+    def check_package(
+        self,
+        token: str,
+        project: Project,
+        expected_files: List[str],
+        job_create_error: Tuple[int, str] = None,
+        tempdir: str = None,
+        invalid_layers: List[str] = [],
+    ):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
 
         before_started_ts = timezone.now()
 
@@ -216,7 +234,11 @@ class QfcTestCase(APITransactionTestCase):
                 ("delta/project2.qgs", "project.qgs"),
                 ("delta/points.geojson", "points.geojson"),
             ],
-            expected_files=["data.gpkg", "project_qfield.qgs"],
+            expected_files=[
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
         )
 
     def test_list_files_missing_qgis_project_file(self):
@@ -260,6 +282,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
             tempdir=tempdir,
         )
@@ -348,6 +371,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
             tempdir=tempdir,
         )
@@ -372,6 +396,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_broken_datasource_qfield.qgs",
+                "project_broken_datasource_qfield_attachments.zip",
             ],
             invalid_layers=["surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16"],
         )
@@ -394,6 +419,7 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
         )
 
@@ -433,7 +459,11 @@ class QfcTestCase(APITransactionTestCase):
                 ("delta/project2.qgs", "project.qgs"),
                 ("delta/points.geojson", "points.geojson"),
             ],
-            expected_files=["data.gpkg", "project_qfield.qgs"],
+            expected_files=[
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
         )
 
         self.project1.refresh_from_db()
@@ -548,5 +578,35 @@ class QfcTestCase(APITransactionTestCase):
             expected_files=[
                 "data.gpkg",
                 "project_qfield.qgs",
+                "project_qfield_attachments.zip",
             ],
         )
+
+    def test_collaborator_can_package(self):
+        self.upload_files(
+            token=self.token1,
+            project=self.project1,
+            files=[
+                ("delta/nonspatial.csv", "nonspatial.csv"),
+                ("delta/testdata.gpkg", "testdata.gpkg"),
+                ("delta/points.geojson", "points.geojson"),
+                ("delta/polygons.geojson", "polygons.geojson"),
+                ("delta/project.qgs", "project.qgs"),
+            ],
+        )
+
+        for idx, role in enumerate(ProjectCollaborator.Roles):
+            reader = User.objects.create(username=f"user_with_role_{idx}")
+            ProjectCollaborator.objects.create(
+                collaborator=reader, project=self.project1, role=role
+            )
+
+            self.check_package(
+                token=AuthToken.objects.get_or_create(user=reader)[0],
+                project=self.project1,
+                expected_files=[
+                    "data.gpkg",
+                    "project_qfield.qgs",
+                    "project_qfield_attachments.zip",
+                ],
+            )

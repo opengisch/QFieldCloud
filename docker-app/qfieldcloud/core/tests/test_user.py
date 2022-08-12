@@ -12,11 +12,15 @@ from qfieldcloud.core.models import (
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from .utils import setup_subscription_plans
+
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # Create a user
         self.user1 = User.objects.create_user(
             username="user1", password="abc123", email="user1@example.com"
@@ -299,12 +303,8 @@ class QfcTestCase(APITestCase):
 
         organization = payload[0]
 
-        self.assertEquals(
-            organization.get("username", None), self.organization1.username
-        )
-        self.assertEquals(organization.get("user_type", None), User.TYPE_ORGANIZATION)
-        self.assertEquals(organization.get("membership_role", None), "admin")
-        self.assertEquals(
-            organization.get("membership_role_origin", None), "organization_owner"
-        )
-        self.assertEquals(organization.get("membership_is_public", None), True)
+        self.assertEquals(organization["username"], self.organization1.username)
+        self.assertEquals(organization["user_type"], User.TYPE_ORGANIZATION)
+        self.assertEquals(organization["membership_role"], "admin")
+        self.assertEquals(organization["membership_role_origin"], "organization_owner")
+        self.assertEquals(organization["membership_is_public"], True)

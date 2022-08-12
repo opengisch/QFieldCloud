@@ -20,7 +20,6 @@ from functools import lru_cache
 from pathlib import Path
 
 import jsonschema
-from qfieldcloud.qgis.utils import start_app
 
 # pylint: disable=no-name-in-module
 from qgis.core import (
@@ -173,7 +172,6 @@ delta_log = []
 
 def project_decorator(f):
     def wrapper(opts: BaseOptions, *args, **kw):
-        start_app()
         project = QgsProject.instance()
         project.setAutoTransaction(opts["transaction"])
         project.read(opts.get("project_filename", opts["project"]))
@@ -191,7 +189,6 @@ def delta_apply(
 ):
     del delta_log[:]
 
-    start_app()
     project = QgsProject.instance()
     logging.info(f'Loading project file "{project_filename}"...')
     project.read(str(project_filename))
@@ -503,7 +500,8 @@ def apply_deltas_without_transaction(
             if feature.isValid():
                 _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
 
-                assert pk_attr_name
+                if not pk_attr_name:
+                    raise DeltaException(f'Layer "{layer.name()}" has no primary key.')
 
                 modified_pk = feature.attribute(pk_attr_name)
 
@@ -591,9 +589,7 @@ def apply_deltas_without_transaction(
                 f"An unknown error has been encountered while applying delta: {err}"
             )
 
-            raise Exception(
-                f"An unknown error has been encountered while applying delta: {err}"
-            ) from err
+            raise err
 
     return has_applied_all_deltas
 

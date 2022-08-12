@@ -8,17 +8,26 @@ import rest_framework
 from django.http.response import FileResponse, HttpResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Job, Project, ProjectCollaborator, User
+from qfieldcloud.core.models import (
+    Job,
+    Organization,
+    OrganizationMember,
+    Project,
+    ProjectCollaborator,
+    User,
+)
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import get_filename, testdata_path
+from .utils import get_filename, setup_subscription_plans, testdata_path
 
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITransactionTestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
         self.user1.save()
@@ -31,11 +40,15 @@ class QfcTestCase(APITransactionTestCase):
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
+        self.org1 = Organization.objects.create(
+            username="org1", organization_owner=self.user1
+        )
+
         # Create a project
         self.project1 = Project.objects.create(
             name="project1",
             is_public=False,
-            owner=self.user1,
+            owner=self.org1,
         )
         self.project1.save()
 
@@ -46,16 +59,42 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.project1.save()
 
+        OrganizationMember.objects.create(
+            organization=self.org1,
+            member=self.user2,
+        )
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
             role=ProjectCollaborator.Roles.REPORTER,
+        )
+        OrganizationMember.objects.create(
+            organization=self.org1,
+            member=self.user3,
         )
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user3,
             role=ProjectCollaborator.Roles.ADMIN,
         )
+
+    def tearDown(self):
+        while True:
+            # make sure there are no active jobs in the queue
+            if (
+                Job.objects.all()
+                .filter(
+                    status__in=[
+                        Job.Status.PENDING,
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ]
+                )
+                .count()
+                == 0
+            ):
+                time.sleep(1)
+                return
 
     def fail(self, msg: str, job: Job = None):
         if job:
@@ -143,6 +182,28 @@ class QfcTestCase(APITransactionTestCase):
         with fiona.open(gpkg, layer="points") as layer:
             features = list(layer)
             self.assertEqual(666, features[0]["properties"]["int"])
+
+    def test_push_apply_delta_file_with_null_char(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta_null.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
+        with fiona.open(gpkg, layer="points") as layer:
+            features = list(layer)
+            self.assertEqual("", features[0]["properties"]["str"])
 
     def test_push_apply_delta_file_with_error(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -400,7 +461,7 @@ class QfcTestCase(APITransactionTestCase):
                 ],
                 [
                     "8adac0df-e1d3-473e-b150-f8c4a91b4781",
-                    "STATUS_UNPERMITTED",
+                    "STATUS_APPLIED",
                     self.user2.username,
                 ],
             ],
@@ -765,7 +826,10 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
-        job = Job.objects.filter(project=self.project1).latest("updated_at")
+        job = Job.objects.filter(
+            project=self.project1,
+            type=Job.Type.DELTA_APPLY,
+        ).latest("updated_at")
 
         for _ in range(10):
 
@@ -784,6 +848,7 @@ class QfcTestCase(APITransactionTestCase):
                     break
 
                 if payload[idx]["status"] in failing_status:
+                    job.refresh_from_db()
                     self.fail(f"Got failing status {payload[idx]['status']}", job=job)
                     return
 
@@ -793,6 +858,8 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["id"], delta_id)
                 self.assertIn(payload[idx]["status"], status)
                 self.assertEqual(payload[idx]["created_by"], created_by)
-                return
+
+                if len(final_values) == idx + 1:
+                    return
 
         self.fail("Worker didn't finish", job=job)

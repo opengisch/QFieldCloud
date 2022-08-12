@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import logging
 import os
@@ -28,6 +29,7 @@ class S3Object(NamedTuple):
     last_modified: datetime
     size: int
     etag: str
+    md5sum: str
 
 
 class S3ObjectVersion:
@@ -60,6 +62,10 @@ class S3ObjectVersion:
         return self._data.e_tag
 
     @property
+    def md5sum(self) -> str:
+        return self._data.e_tag.replace('"', "")
+
+    @property
     def is_latest(self) -> bool:
         return self._data.is_latest
 
@@ -71,6 +77,17 @@ class S3ObjectVersion:
 class S3ObjectWithVersions(NamedTuple):
     latest: S3ObjectVersion
     versions: List[S3ObjectVersion]
+
+    @property
+    def total_size(self) -> int:
+        """Total size of all versions"""
+        # latest is also in versions
+        return sum(v.size for v in self.versions)
+
+    def delete(self):
+        bucket = get_s3_bucket()
+
+        return bucket.object_versions.filter(Prefix=self.latest.key).delete()
 
 
 def redis_is_running() -> bool:
@@ -151,6 +168,73 @@ def _get_sha256_file(file: IO) -> str:
     return hasher.hexdigest()
 
 
+def get_md5sum(file: IO) -> str:
+    """Return the md5sum hash of the file"""
+    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
+        return _get_md5sum_memory_file(file)
+    else:
+        return _get_md5sum_file(file)
+
+
+def _get_md5sum_memory_file(
+    file: Union[InMemoryUploadedFile, TemporaryUploadedFile]
+) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+
+    for chunk in file.chunks(BLOCKSIZE):
+        hasher.update(chunk)
+
+    file.seek(0)
+    return hasher.hexdigest()
+
+
+def _get_md5sum_file(file: IO) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+
+    buf = file.read(BLOCKSIZE)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = file.read(BLOCKSIZE)
+    file.seek(0)
+    return hasher.hexdigest()
+
+
+def strip_json_null_bytes(file: IO) -> IO:
+    """Return JSON string stream without NULL chars."""
+    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
+        return _strip_json_null_bytes_memory_file(file)
+    else:
+        return _strip_json_null_bytes_file(file)
+
+
+def _strip_json_null_bytes_memory_file(file: IO) -> IO:
+    result = io.BytesIO()
+    BLOCKSIZE = 65536
+
+    for chunk in file.chunks(BLOCKSIZE):
+        result.write(chunk.decode().replace(r"\u0000", "").encode())
+    file.seek(0)
+    result.seek(0)
+
+    return result
+
+
+def _strip_json_null_bytes_file(file: IO) -> IO:
+    result = io.BytesIO()
+    BLOCKSIZE = 65536
+
+    buf = file.read(BLOCKSIZE)
+    while len(buf) > 0:
+        result.write(buf.decode().replace(r"\u0000", "").encode())
+        buf = file.read(BLOCKSIZE)
+    file.seek(0)
+    result.seek(0)
+
+    return result
+
+
 def safe_join(base: str, *paths: str) -> str:
     """
     A version of django.utils._os.safe_join for S3 paths.
@@ -190,7 +274,7 @@ def is_qgis_project_file(filename: str) -> bool:
     """Returns whether the filename seems to be a QGIS project file by checking the file extension."""
     path = PurePath(filename)
 
-    if path.suffix in (".qgs", ".qgz"):
+    if path.suffix.lower() in (".qgs", ".qgz"):
         return True
 
     return False
@@ -252,18 +336,39 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
 
 
 def get_s3_project_size(project_id: str) -> int:
-    """Return the size in MiB of the project on the storage, including the
+    """Return the size in MB of the project on the storage, including the
     exported files and their versions"""
 
     bucket = get_s3_bucket()
 
-    prefix = f"projects/{project_id}/"
-
     total_size = 0
-    for version in bucket.object_versions.filter(Prefix=prefix):
+
+    files_prefix = f"projects/{project_id}/files/"
+    for version in bucket.object_versions.filter(Prefix=files_prefix):
         total_size += version.size or 0
 
-    return round(total_size / (1024 * 1024), 3)
+    packages_prefix = f"projects/{project_id}/packages/"
+    for version in bucket.object_versions.filter(Prefix=packages_prefix):
+        total_size += version.size or 0
+
+    return round(total_size / (1000 * 1000), 3)
+
+
+def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:
+    """Returns a list of files and their versions.
+
+    Args:
+        project_id (str): the project id
+        path (str): additional filter prefix
+
+    Returns:
+        Iterable[S3ObjectWithVersions]: the list of files
+    """
+    bucket = get_s3_bucket()
+    root_prefix = f"projects/{project_id}/files/"
+    prefix = f"projects/{project_id}/files/{path}"
+
+    return list_files(bucket, prefix, root_prefix)
 
 
 def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVersions]:
@@ -278,7 +383,7 @@ def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVer
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
 
-    return list_files_with_versions(bucket, prefix, strip_prefix=True)
+    return list_files_with_versions(bucket, prefix, prefix)
 
 
 def get_project_file_with_versions(
@@ -293,17 +398,18 @@ def get_project_file_with_versions(
         Iterable[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
+    root_prefix = f"projects/{project_id}/files/"
     prefix = f"projects/{project_id}/files/{filename}"
     files = [
         f
-        for f in list_files_with_versions(bucket, prefix, strip_prefix=True)
+        for f in list_files_with_versions(bucket, prefix, root_prefix)
         if f.latest.key == prefix
     ]
 
     return files[0] if files else None
 
 
-def get_project_package_files(project_id: str) -> Iterable[S3Object]:
+def get_project_package_files(project_id: str, package_id: str) -> Iterable[S3Object]:
     """Returns a list of package files.
 
     Args:
@@ -313,9 +419,9 @@ def get_project_package_files(project_id: str) -> Iterable[S3Object]:
         Iterable[S3ObjectWithVersions]: the list of package files
     """
     bucket = get_s3_bucket()
-    prefix = f"projects/{project_id}/export/"
+    prefix = f"projects/{project_id}/packages/{package_id}/"
 
-    return list_files(bucket, prefix, strip_prefix=True)
+    return list_files(bucket, prefix, prefix)
 
 
 def get_project_files_count(project_id: str) -> int:
@@ -354,31 +460,40 @@ def get_s3_object_url(
 def list_files(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
-    strip_prefix: bool = True,
-) -> Iterable[S3Object]:
+    strip_prefix: str = "",
+) -> List[S3Object]:
     """Iterator that lists a bucket's objects under prefix."""
+    files = []
     for f in bucket.objects.filter(Prefix=prefix):
         if strip_prefix:
-            start_idx = len(prefix)
+            start_idx = len(strip_prefix)
             name = f.key[start_idx:]
         else:
             name = f.key
 
-        yield S3Object(
-            name=name,
-            key=f.key,
-            last_modified=f.last_modified,
-            size=f.size,
-            etag=f.e_tag,
+        files.append(
+            S3Object(
+                name=name,
+                key=f.key,
+                last_modified=f.last_modified,
+                size=f.size,
+                etag=f.e_tag,
+                md5sum=f.e_tag.replace('"', ""),
+            )
         )
+
+    files.sort(key=lambda f: f.name)
+
+    return files
 
 
 def list_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
-    strip_prefix: bool = True,
-) -> Iterable[S3ObjectVersion]:
+    strip_prefix: str = "",
+) -> List[S3ObjectVersion]:
     """Iterator that lists a bucket's objects under prefix."""
+    versions = []
     for v in bucket.object_versions.filter(Prefix=prefix):
         if strip_prefix:
             start_idx = len(prefix)
@@ -386,13 +501,17 @@ def list_versions(
         else:
             name = v.key
 
-        yield S3ObjectVersion(name, v)
+        versions.append(S3ObjectVersion(name, v))
+
+    versions.sort(key=lambda v: (v.key, v.last_modified))
+
+    return versions
 
 
 def list_files_with_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
-    strip_prefix: bool = True,
+    strip_prefix: str = "",
 ) -> Iterable[S3ObjectWithVersions]:
     """Yields an object with all it's versions
 

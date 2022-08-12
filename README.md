@@ -40,7 +40,7 @@ To build development images and run the containers:
     docker-compose up -d --build
 
 It will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE`
-variable and start a django built-in server at `http://localhost:8000`.
+variable and start a django built-in server at `http://localhost:8111`.
 
 Run the django database migrations.
 
@@ -64,7 +64,10 @@ Now you can get started by adding the first user that would also be a super user
 To run all the unit and functional tests (on a throwaway test
 database and a throwaway test storage directory):
 
-    docker-compose run app python manage.py test
+    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
+    docker-compose up -d
+    docker-compose run app python manage.py migrate
+    docker-compose run app python manage.py test --keepdb
 
 To run only a test module (e.g. `test_permission.py`)
 
@@ -79,15 +82,15 @@ If using the provided docker-compose overrides for developement, `debugpy` is in
 You can debug interactively by adding this snipped anywhere in the code.
 ```python
 import debugpy
-debugpy.listen(("0.0.0.0", 5678))
+debugpy.listen(("0.0.0.0", 5680))
 print("debugpy waiting for debugger... 🐛")
 debugpy.wait_for_client()  # optional
 ```
 
-Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5678 --wait-for-client`.
+Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`.
 ```shell
-docker-compose run app -p 5678:5678 python -m debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py test
-docker-compose run worker_wrapper -p 5679:5679 python -m debugpy --listen 0.0.0.0:5679 --wait-for-client manage.py test
+docker-compose run app -p 5680:5680 python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
+docker-compose run worker_wrapper -p 5681:5681 python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
 ```
 
 Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
@@ -100,7 +103,7 @@ Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.
             "type": "python",
             "request": "attach",
             "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5678},
+            "connect": {"host": "localhost", "port": 5680},
             "pathMappings": [{
                 "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
                 "remoteRoot": "/usr/src/app/qfieldcloud"
@@ -111,7 +114,7 @@ Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.
             "type": "python",
             "request": "attach",
             "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5679},
+            "connect": {"host": "localhost", "port": 5681},
             "pathMappings": [{
                 "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
                 "remoteRoot": "/usr/src/app/qfieldcloud"
@@ -120,6 +123,8 @@ Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.
     ]
 }
 ```
+
+Note if you run tests using the `docker-compose.test.yml` configuration, the `app` and `worker-wrapper` containers expose ports `5680` and `5681` respectively.
 
 
 ## Add root certificate

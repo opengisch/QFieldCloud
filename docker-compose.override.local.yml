@@ -13,14 +13,8 @@ services:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
     environment:
-      # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
     command: python3 manage.py runserver 0.0.0.0:8000
-    depends_on:
-      - db
-      - geodb
-      - minio
-      - smtp4dev
 
   worker_wrapper:
     build:
@@ -62,6 +56,7 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     ports:
       - ${HOST_POSTGRES_PORT}:5432
+    command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
 
   geodb:
     image: postgis/postgis:12-3.0

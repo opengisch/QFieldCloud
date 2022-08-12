@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict, List, Union
 
 from auditlog.models import LogEntry
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django_currentuser.middleware import get_current_authenticated_user
 
 
@@ -24,6 +24,8 @@ def audit(
 
     if actor is None:
         actor = get_current_authenticated_user()
+    elif isinstance(actor, AnonymousUser):
+        actor = None
 
     actor_id = actor.pk if actor else None
 

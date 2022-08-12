@@ -13,13 +13,15 @@ from qfieldcloud.core.models import Geodb, Job, PackageJob, Project, User
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import testdata_path
+from .utils import setup_subscription_plans, testdata_path
 
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(APITransactionTestCase):
     def setUp(self):
+        setup_subscription_plans()
+
         # Create a user
         self.user1 = User.objects.create_user(username="user1", password="abc123")
 

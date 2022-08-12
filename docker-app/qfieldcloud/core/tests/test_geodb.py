@@ -4,12 +4,14 @@ import unittest
 import psycopg2
 from qfieldcloud.core.models import Geodb, User
 
+from .utils import setup_subscription_plans
+
 logging.disable(logging.CRITICAL)
 
 
 class QfcTestCase(unittest.TestCase):
     def setUp(self):
-        pass
+        setup_subscription_plans()
 
     def test_create_db(self):
         # Create a user

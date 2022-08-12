@@ -1,27 +1,34 @@
+import calendar
+import contextlib
 import os
 import secrets
 import string
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from enum import Enum
-from typing import Iterable, List
+from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
+from deprecated import deprecated
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
-from django.db.models import Case, Exists, OuterRef, Q
+from django.core.validators import MinValueValidator, RegexValidator
+from django.db import transaction
+from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
 from django.db.models import When
-from django.db.models.aggregates import Count
+from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.subscription.models import Plan
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -46,139 +53,75 @@ class UserQueryset(models.QuerySet):
     This query is very similar to `ProjectQueryset.for_user`, don't forget to update it too.
     """
 
-    def for_project(self, project: "Project"):
-        permissions_config = [
-            # Project owner
-            (
-                Q(pk=project.owner.pk, user_type=User.TYPE_USER),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
-            ),
-            # Organization memberships - owner
-            (
-                Q(
-                    pk__in=Organization.objects.filter(pk=project.owner).values(
-                        "organization_owner"
-                    )
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
-            ),
-            # Organization memberships - admin
-            (
-                Q(
-                    pk__in=OrganizationMember.objects.filter(
-                        organization=project.owner,
-                        role=OrganizationMember.Roles.ADMIN,
-                    ).values("member")
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
-            ),
-            # Role through ProjectCollaborator
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=project,
-                        collaborator=OuterRef("pk"),
-                    ).exclude(
-                        collaborator__user_type=User.TYPE_TEAM,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=project,
-                    collaborator=OuterRef("pk"),
-                )
-                .exclude(
-                    collaborator__user_type=User.TYPE_TEAM,
-                )
-                .values_list("role"),
-                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
-            ),
-            # Role through Team membership
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=project,
-                        collaborator__team__members__member=OuterRef("pk"),
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=project,
-                    collaborator__team__members__member=OuterRef("pk"),
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
-            ),
-        ]
-
-        qs = User.objects.annotate(
-            project_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            project_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
+    def for_project(self, project: "Project", skip_invalid: bool):
+        public = Q(project_roles__project__is_public=True)
+        count = Count(
+            "project_roles__project__collaborators",
+            filter=Q(
+                project_roles__project__collaborators__collaborator__user_type=User.TYPE_USER
             ),
         )
-        # Exclude those without role (invisible)
-        qs = qs.exclude(project_role__isnull=True)
+
+        max_premium_collaborators_per_private_project = Q(
+            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+                -1
+            )
+        ) | Q(
+            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+        )
+
+        org_member_condition = Q(
+            project_roles__project__owner__user_type=User.TYPE_USER
+        ) | (
+            Q(project_roles__project__owner__user_type=User.TYPE_ORGANIZATION)
+            & Exists(
+                Organization.objects.of_user(OuterRef("project_roles__user")).filter(
+                    id=OuterRef("project_roles__project__owner")
+                )
+            )
+        )
+        org_member = Case(When(org_member_condition, then=True), default=False)
+
+        project_role_is_valid_condition = public | (
+            max_premium_collaborators_per_private_project & org_member
+        )
+
+        qs = (
+            self.defer("project_roles__project_id", "project_roles__project_id")
+            .filter(
+                user_type=User.TYPE_USER,
+                project_roles__project=project,
+            )
+            .annotate(
+                project_role=F("project_roles__name"),
+                project_role_origin=F("project_roles__origin"),
+                project_role_is_valid=Case(
+                    When(project_role_is_valid_condition, then=True), default=False
+                ),
+            )
+        )
+
+        if skip_invalid:
+            qs = qs.filter(project_role_is_valid=True)
 
         return qs
 
     def for_organization(self, organization: "Organization"):
-        permissions_config = [
-            # Direct ownership
-            (
-                Exists(
-                    Organization.objects.filter(
-                        pk=organization.pk,
-                        organization_owner=OuterRef("pk"),
-                    )
-                ),
-                V(OrganizationMember.Roles.ADMIN),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER),
-                V(True),
-            ),
-            # Organization membership
-            (
-                Exists(
-                    OrganizationMember.objects.filter(
-                        organization=organization,
-                        member=OuterRef("pk"),
-                    )
-                ),
-                OrganizationMember.objects.filter(
-                    organization=organization,
-                    member=OuterRef("pk"),
-                ).values_list("role"),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER),
-                OrganizationMember.objects.filter(
-                    organization=organization,
-                    member=OuterRef("pk"),
-                ).values_list("is_public"),
-            ),
-        ]
-
-        qs = self.annotate(
-            membership_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            membership_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
-            membership_is_public=Case(
-                *[When(perm[0], perm[3]) for perm in permissions_config],
-                default=None,
-            ),
+        qs = (
+            self.defer(
+                "organization_roles__user_id",
+                "organization_roles__organization_id",
+            )
+            .filter(
+                user_type=User.TYPE_USER,
+                organization_roles__organization=organization,
+            )
+            .annotate(
+                organization_role=F("organization_roles__name"),
+                organization_role_origin=F("organization_roles__origin"),
+                organization_role_is_public=F("organization_roles__is_public"),
+            )
         )
-
-        qs = qs.filter(user_type=User.TYPE_USER)
-        qs = qs.exclude(membership_role__isnull=True)
 
         return qs
 
@@ -238,8 +181,8 @@ class QFieldCloudUserManager(UserManager):
     def get_queryset(self):
         return UserQueryset(self.model, using=self._db)
 
-    def for_project(self, project):
-        return self.get_queryset().for_project(project)
+    def for_project(self, project: "Project", skip_invalid: bool = False):
+        return self.get_queryset().for_project(project, skip_invalid)
 
     def for_organization(self, organization):
         return self.get_queryset().for_organization(organization)
@@ -359,25 +302,39 @@ class User(AbstractUser):
         return hasattr(self, "geodb")
 
     def save(self, *args, **kwargs):
-        created = self._state.adding
-        super().save(*args, **kwargs)
-        if created:
-            UserAccount.objects.create(user=self)
+        # if the user is created, we need to create a user account
+        if self._state.adding and self.user_type != User.TYPE_TEAM:
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+                plan = Plan.objects.get(user_type=self.user_type, is_default=True)
+                UserAccount.objects.create(user=self, plan=plan)
+        else:
+            super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         if self.user_type != User.TYPE_TEAM:
             qfieldcloud.core.utils2.storage.remove_user_avatar(self)
-        super().delete(*args, **kwargs)
+
+        with no_audits([User, UserAccount, Project]):
+            super().delete(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "user"
+        verbose_name_plural = "users"
+
+    #     # TODO Django 4.0 convert to functional unique constraint, see https://docs.djangoproject.com/en/4.0/ref/models/constraints/#expressions
+    #     constraints = [
+    #         # the uniqueness is guaranteed by username's unqiue index anyway
+    #         # since Django has some annoying checks if `username` is unique, better sacrifice
+    #         # some megabytes with two separate indexes for `username` and `UPPER(username)`
+    #         UniqueConstraint(
+    #             Upper("username"),
+    #             name="core_user_username_uppercase"
+    #         )
+    #     ]
 
 
 class UserAccount(models.Model):
-    TYPE_COMMUNITY = 1
-    TYPE_PRO = 2
-
-    TYPE_CHOICES = (
-        (TYPE_COMMUNITY, "community"),
-        (TYPE_PRO, "pro"),
-    )
 
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
@@ -393,16 +350,20 @@ class UserAccount(models.Model):
     )
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    account_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_COMMUNITY
+
+    plan = models.ForeignKey(
+        "subscription.Plan",
+        on_delete=models.PROTECT,
     )
-    storage_limit_mb = models.PositiveIntegerField(default=100)
+
+    # These will be moved one day to extrapackage. We don't touch for now (they are only used
+    # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
     is_geodb_enabled = models.BooleanField(
         default=False,
         help_text=_("Whether the account has the option to create a GeoDB."),
     )
-    synchronizations_per_months = models.PositiveIntegerField(default=30)
+
     bio = models.CharField(max_length=255, default="", blank=True)
     company = models.CharField(max_length=255, default="", blank=True)
     location = models.CharField(max_length=255, default="", blank=True)
@@ -429,8 +390,52 @@ class UserAccount(models.Model):
         else:
             return None
 
+    @property
+    def storage_quota_total_mb(self) -> float:
+        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
+
+        base_quota = self.plan.storage_mb
+
+        extra_quota = (
+            self.extra_packages.filter(
+                Q(start_date__lte=timezone.now())
+                & (Q(end_date__isnull=True) | Q(end_date__gte=timezone.now()))
+            ).aggregate(
+                sum_mb=Sum(
+                    F("type__extrapackagetypestorage__megabytes") * F("quantity")
+                )
+            )[
+                "sum_mb"
+            ]
+            or 0
+        )
+
+        return base_quota + extra_quota
+
+    @property
+    def storage_quota_used_mb(self) -> float:
+        """Returns the storage used in MB"""
+        used_quota = (
+            self.user.projects.aggregate(sum_mb=Sum("storage_size_mb"))["sum_mb"] or 0
+        )
+
+        return used_quota
+
+    @property
+    def storage_quota_left_mb(self) -> float:
+        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
+
+        return self.storage_quota_total_mb - self.storage_quota_used_mb
+
+    @property
+    def storage_quota_used_perc(self) -> float:
+        """Returns the storage used in percentage (%) of the total storage"""
+        return max(
+            0, min(self.storage_quota_used_mb / self.storage_quota_total_mb * 100, 100)
+        )
+
     def __str__(self):
-        return self.get_account_type_display()
+        return f"Account {self.plan}"
 
 
 class Geodb(models.Model):
@@ -518,58 +523,20 @@ class OrganizationQueryset(models.QuerySet):
 
     class RoleOrigins(models.TextChoices):
         ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
-        ORGANIZATIONMEMBER = "organization_admin", _("Organization admin")
-
-    def with_roles(self, user):
-        permissions_config = [
-            # Direct ownership
-            (
-                Q(organization_owner=user),
-                V(OrganizationMember.Roles.ADMIN),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER),
-                V(True),
-            ),
-            # Organization membership
-            (
-                Exists(
-                    OrganizationMember.objects.filter(
-                        organization=OuterRef("pk"),
-                        member=user,
-                    )
-                ),
-                OrganizationMember.objects.filter(
-                    organization=OuterRef("pk"),
-                    member=user,
-                ).values_list("role"),
-                V(OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER),
-                OrganizationMember.objects.filter(
-                    organization=OuterRef("pk"),
-                    member=user,
-                ).values_list("is_public"),
-            ),
-        ]
-
-        qs = self.annotate(
-            membership_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            membership_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
-            membership_is_public=Case(
-                *[When(perm[0], perm[3]) for perm in permissions_config],
-                default=None,
-            ),
-        )
-
-        return qs
+        ORGANIZATIONMEMBER = "organization_member", _("Organization member")
 
     def of_user(self, user):
-        # Exclude those without role (invisible)
-        qs = self.with_roles(user).exclude(membership_role__isnull=True)
+        qs = (
+            self.defer("membership_roles__user_id", "membership_roles__organization_id")
+            .filter(
+                membership_roles__user=user,
+            )
+            .annotate(
+                membership_role=F("membership_roles__name"),
+                membership_role_origin=F("membership_roles__origin"),
+                membership_role_is_public=F("membership_roles__is_public"),
+            )
+        )
 
         return qs
 
@@ -580,9 +547,6 @@ class OrganizationManager(UserManager):
 
     def of_user(self, user):
         return self.get_queryset().of_user(user)
-
-    def with_roles(self, user):
-        return self.get_queryset().with_roles(user)
 
 
 class Organization(User):
@@ -599,12 +563,69 @@ class Organization(User):
         verbose_name = "organization"
         verbose_name_plural = "organizations"
 
+    def billable_users(self, from_date: date, to_date: Optional[date] = None):
+        """Returns the queryset of billable users in the given time interval.
+
+        Billable users are users triggering a job or pushing a delta on a project owned by the organization.
+
+        Args:
+            from_date (datetime.date): inclusive beginning of the interval
+            to_date (Optional[datetime.date], optional): inclusive end of the interval (if None, will default to the last day of the month of the start date)
+        """
+
+        if to_date is None:
+            to_date = from_date.replace(
+                day=calendar.monthrange(from_date.year, from_date.month)[1]
+            )
+
+        users_with_delta = (
+            Delta.objects.filter(
+                project__in=self.projects.all(),
+                updated_at__gte=from_date,
+                updated_at__lte=to_date,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
+        users_with_jobs = (
+            Job.objects.filter(
+                project__in=self.projects.all(),
+                updated_at__gte=from_date,
+                updated_at__lte=to_date,
+            )
+            .values_list("created_by_id", flat=True)
+            .distinct()
+        )
+
+        return User.objects.filter(organizationmember__organization=self).filter(
+            Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
+        )
+
     def save(self, *args, **kwargs):
         self.user_type = self.TYPE_ORGANIZATION
         return super().save(*args, **kwargs)
 
 
+class OrganizationMemberQueryset(models.QuerySet):
+    @transaction.atomic
+    def delete(self, *args, **kwargs):
+        team_total, team_summary = TeamMember.objects.filter(
+            team__team_organization__in=self.values_list("organization"),
+            member__in=self.values_list("member"),
+        ).delete()
+
+        org_total, org_summary = super().delete(*args, **kwargs)
+
+        total = org_total + team_total
+        summary = {**org_summary, **team_summary}
+
+        return total, summary
+
+
 class OrganizationMember(models.Model):
+
+    objects = OrganizationMemberQueryset.as_manager()
+
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
         MEMBER = "member", _("Member")
@@ -639,7 +660,55 @@ class OrganizationMember(models.Model):
         if self.organization.organization_owner == self.member:
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
+        max_organization_members = (
+            self.organization.useraccount.plan.max_organization_members
+        )
+        if (
+            max_organization_members > -1
+            and self.organization.members.count() >= max_organization_members
+        ):
+            raise ValidationError(
+                _(
+                    "Cannot add new organization members, account limit has been reached."
+                )
+            )
+
         return super().clean()
+
+    @transaction.atomic
+    def delete(self, *args, **kwargs) -> None:
+        super().delete(*args, **kwargs)
+
+        TeamMember.objects.filter(
+            team__team_organization=self.organization,
+            member=self.member,
+        ).delete()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class OrganizationRolesView(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        related_name="organization_roles",
+    )
+    organization = models.ForeignKey(
+        "Organization",
+        on_delete=models.DO_NOTHING,
+        related_name="membership_roles",
+    )
+    name = models.CharField(max_length=100, choices=OrganizationMember.Roles.choices)
+    origin = models.CharField(
+        max_length=100, choices=OrganizationQueryset.RoleOrigins.choices
+    )
+    is_public = models.BooleanField()
+
+    class Meta:
+        db_table = "organizations_with_roles_vw"
+        managed = False
 
 
 class Team(User):
@@ -699,6 +768,10 @@ class TeamMember(models.Model):
 
         return super().clean()
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return self.team.username + ": " + self.member.username
 
@@ -729,80 +802,47 @@ class ProjectQueryset(models.QuerySet):
         TEAMMEMBER = "team_member", _("Team member")
         PUBLIC = "public", _("Public")
 
-    def for_user(self, user):
-
-        # orderd list of 3-uples : (condition, role, role origin)
-        permissions_config = [
-            # Direct ownership
-            (
-                Q(owner=user),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.PROJECTOWNER),
-            ),
-            # Organization memberships - admin
-            (
-                Q(owner__in=Organization.objects.filter(organization_owner=user)),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER),
-            ),
-            (
-                Q(
-                    owner__in=OrganizationMember.objects.filter(
-                        member=user, role=OrganizationMember.Roles.ADMIN
-                    ).values("organization")
-                ),
-                V(ProjectCollaborator.Roles.ADMIN),
-                V(ProjectQueryset.RoleOrigins.ORGANIZATIONADMIN),
-            ),
-            # Role through ProjectCollaborator
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator=user,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=OuterRef("pk"),
-                    collaborator=user,
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.COLLABORATOR),
-            ),
-            # Role through Team membership
-            (
-                Exists(
-                    ProjectCollaborator.objects.filter(
-                        project=OuterRef("pk"),
-                        collaborator__team__members__member=user,
-                    )
-                ),
-                ProjectCollaborator.objects.filter(
-                    project=OuterRef("pk"),
-                    collaborator__team__members__member=user,
-                ).values_list("role"),
-                V(ProjectQueryset.RoleOrigins.TEAMMEMBER),
-            ),
-            # Public
-            (
-                Q(is_public=True),
-                V(ProjectCollaborator.Roles.READER),
-                V(ProjectQueryset.RoleOrigins.PUBLIC),
-            ),
-        ]
-
-        qs = self.annotate(
-            user_role=Case(
-                *[When(perm[0], perm[1]) for perm in permissions_config],
-                default=None,
-                output_field=models.CharField(),
-            ),
-            user_role_origin=Case(
-                *[When(perm[0], perm[2]) for perm in permissions_config],
-                default=None,
-            ),
+    def for_user(self, user: "User", skip_invalid: bool = False):
+        public = Q(is_public=True)
+        count = Count(
+            "collaborators",
+            filter=Q(collaborators__collaborator__user_type=User.TYPE_USER),
         )
-        # Exclude those without role (invisible)
-        qs = qs.exclude(user_role__isnull=True)
+        max_premium_collaborators_per_private_project = Q(
+            owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+                -1
+            )
+        ) | Q(
+            owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+        )
+
+        org_member_condition = Q(owner__user_type=User.TYPE_USER) | (
+            Q(owner__user_type=User.TYPE_ORGANIZATION)
+            & Exists(Organization.objects.of_user(user).filter(id=OuterRef("owner")))
+        )
+        org_member = Case(When(org_member_condition, then=True), default=False)
+
+        # Assemble the condition
+        user_role_is_valid_condition = public | (
+            max_premium_collaborators_per_private_project & org_member
+        )
+
+        qs = (
+            self.defer("user_roles__user_id", "user_roles__project_id")
+            .filter(
+                user_roles__user=user,
+            )
+            .annotate(
+                user_role=F("user_roles__name"),
+                user_role_origin=F("user_roles__origin"),
+                user_role_is_valid=Case(
+                    When(user_role_is_valid_condition, then=True), default=False
+                ),
+            )
+        )
+
+        if skip_invalid:
+            qs = qs.filter(user_role_is_valid=True)
 
         return qs
 
@@ -820,8 +860,16 @@ class Project(models.Model):
         BUSY = "busy", _("Busy")
         FAILED = "failed", _("Failed")
 
+    class StatusCode(models.TextChoices):
+        OK = "ok", _("Ok")
+        FAILED_PROCESS_PROJECTFILE = "failed_process_projectfile", _(
+            "Failed process projectfile"
+        )
+        TOO_MANY_COLLABORATORS = "too_many_collaborators", _("Too many collaborators")
+
     objects = ProjectQueryset.as_manager()
-    _cache_files_count = None
+
+    _status_code = StatusCode.OK
 
     class Meta:
         ordering = ["owner__username", "name"]
@@ -868,9 +916,26 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # These cache stats of the S3 storage. These can be out of sync, and should be
+    # refreshed whenever retrieving/uploading files by passing `project.save(recompute_storage=True)`
+    storage_size_mb = models.FloatField(default=0)
+
     # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
     data_last_packaged_at = models.DateTimeField(blank=True, null=True)
+
+    last_package_job = models.ForeignKey(
+        "PackageJob",
+        on_delete=models.SET_NULL,
+        related_name="last_job_of",
+        null=True,
+        blank=True,
+    )
+
+    repackaging_cache_expire = models.DurationField(
+        default=timedelta(minutes=60),
+        validators=[MinValueValidator(timedelta(minutes=1))],
+    )
 
     overwrite_conflicts = models.BooleanField(
         default=True,
@@ -901,64 +966,61 @@ class Project(models.Model):
     def __str__(self):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
-    def storage_size(self):
-        """Retrieves the storage size from S3"""
-        return utils.get_s3_project_size(self.id)
-
     @property
-    def staticfile_dirs(self) -> List[str]:
-        """Returns a list of configured staticfile dirs for the project.
+    def attachment_dirs(self) -> List[str]:
+        """Returns a list of configured attachment dirs for the project.
 
-        Staticfile dir is a special directory in the QField infrastructure that holds static files
-        such as images, pdf etc. By default "DCIM" is considered a staticfile directory.
+        Attachment dir is a special directory in the QField infrastructure that holds attachment files
+        such as images, pdf etc. By default "DCIM" is considered a attachment directory.
 
-        TODO this function expects whether `staticfile_dirs` key in project_details. However,
+        TODO this function expects whether `attachment_dirs` key in project_details. However,
         neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
 
         Returns:
-            List[str]: A list configured staticfile dirs for the project.
+            List[str]: A list configured attachment dirs for the project.
         """
-        staticfile_dirs = []
+        attachment_dirs = []
 
-        if self.project_details and self.project_details.get("staticfile_dirs"):
-            staticfile_dirs = self.project_details.get("staticfile_dirs", [])
+        if self.project_details and self.project_details.get("attachment_dirs"):
+            attachment_dirs = self.project_details.get("attachment_dirs", [])
 
-        if not staticfile_dirs:
-            staticfile_dirs = ["DCIM"]
+        if not attachment_dirs:
+            attachment_dirs = ["DCIM"]
 
-        return staticfile_dirs
+        return attachment_dirs
 
     @property
     def private(self) -> bool:
         # still used in the project serializer
         return not self.is_public
 
-    @property
-    def files(self) -> Iterable[utils.S3ObjectWithVersions]:
-        return utils.get_project_files_with_versions(self.id)
+    @cached_property
+    def files(self) -> List[utils.S3ObjectWithVersions]:
+        """Gets all the files from S3 storage. This is potentially slow. Results are cached on the instance."""
+        return list(utils.get_project_files_with_versions(self.id))
 
     @property
+    @deprecated("Use `len(project.files)` instead")
     def files_count(self):
-        if self._cache_files_count is None:
-            self._cache_files_count = utils.get_project_files_count(self.id)
-
-        return self._cache_files_count
+        return len(self.files)
 
     @property
     def users(self):
         return User.objects.for_project(self)
 
     @property
-    def has_online_vector_data(self) -> bool:
+    def has_online_vector_data(self) -> Optional[bool]:
+        """Returns None if project details or layers details are not available"""
+
         # it's safer to assume there is an online vector layer
         if not self.project_details:
-            return True
+            return None
 
         layers_by_id = self.project_details.get("layers_by_id")
 
         # it's safer to assume there is an online vector layer
         if layers_by_id is None:
-            return True
+            return None
 
         has_online_vector_layers = False
 
@@ -978,9 +1040,12 @@ class Project(models.Model):
     @property
     def needs_repackaging(self) -> bool:
         if (
-            not self.has_online_vector_data
+            # if has_online_vector_data is None (happens when the project details are missing)
+            # we assume there might be
+            self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
+            and self.last_package_job is not None
         ):
             # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
             return self.data_last_packaged_at < self.data_last_updated_at
@@ -998,15 +1063,95 @@ class Project(models.Model):
             > 0
         ):
             return Project.Status.BUSY
-        elif not self.project_filename:
-            return Project.Status.FAILED
         else:
-            return Project.Status.OK
+            status = Project.Status.OK
+            status_code = Project.StatusCode.OK
+            max_premium_collaborators_per_private_project = (
+                self.owner.useraccount.plan.max_premium_collaborators_per_private_project
+            )
+
+            if not self.project_filename:
+                status = Project.Status.FAILED
+                status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
+            elif self.is_public or (
+                max_premium_collaborators_per_private_project != -1
+                and max_premium_collaborators_per_private_project
+                < self.direct_collaborators.count()
+            ):
+                status = Project.Status.FAILED
+                status_code = Project.StatusCode.TOO_MANY_COLLABORATORS
+
+            self._status_code = status_code
+            return status
+
+    @property
+    def status_code(self) -> StatusCode:
+        return self._status_code
+
+    @property
+    def storage_size_perc(self) -> float:
+        return (
+            self.storage_size_mb / self.owner.useraccount.storage_quota_total_mb * 100
+        )
+
+    @property
+    def direct_collaborators(self):
+        if self.owner.is_organization:
+            exclude_pks = [self.owner.organization.organization_owner_id]
+        else:
+            exclude_pks = [self.owner_id]
+
+        return self.collaborators.filter(
+            collaborator__user_type=User.TYPE_USER,
+        ).exclude(
+            collaborator_id__in=exclude_pks,
+        )
 
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
             qfieldcloud.core.utils2.storage.remove_project_thumbail(self)
         super().delete(*args, **kwargs)
+
+    def save(self, recompute_storage=False, *args, **kwargs):
+        if recompute_storage:
+            self.storage_size_mb = utils.get_s3_project_size(self.id)
+        super().save(*args, **kwargs)
+
+
+class ProjectCollaboratorQueryset(models.QuerySet):
+    def validated(self, skip_invalid=False):
+        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
+
+        A membership to a private project is valid when the owning user plan has a
+        `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
+
+        Args:
+            skip_invalid:   if true, invalid rows are removed"""
+
+        # Build the conditions with Q objects
+        public = Q(project__is_public=True)
+        count = Count(
+            "project__collaborators", filter=Q(collaborator__user_type=User.TYPE_USER)
+        )
+        max_premium_collaborators_per_private_project = Q(
+            project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+                -1
+            )
+        ) | Q(
+            project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+        )
+
+        # Assemble the condition
+        condition = public | max_premium_collaborators_per_private_project
+
+        # Annotate the queryset
+        qs = self.annotate(is_valid=Case(When(condition, then=True), default=False))
+
+        # Filter out invalid
+        if skip_invalid:
+            qs = qs.exclude(is_valid=False)
+
+        return qs
 
 
 class ProjectCollaborator(models.Model):
@@ -1025,6 +1170,8 @@ class ProjectCollaborator(models.Model):
             )
         ]
 
+    objects = ProjectCollaboratorQueryset.as_manager()
+
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -1033,7 +1180,7 @@ class ProjectCollaborator(models.Model):
     collaborator = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(user_type__in=[User.TYPE_USER, User.TYPE_TEAM]),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
 
@@ -1046,25 +1193,47 @@ class ProjectCollaborator(models.Model):
 
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
+            if self.collaborator.is_user:
+                members_qs = organization.members.filter(member=self.collaborator)
 
-            if organization.organization_owner == self.collaborator:
-                raise ValidationError(
-                    _(
-                        "Cannot add the owner of the owning organization of the project as a collaborator."
+                if members_qs.count() == 0:
+                    raise ValidationError(
+                        _(
+                            "Cannot add a user who is not a member of the organization as a project collaborator."
+                        )
                     )
-                )
-            elif OrganizationMember.objects.filter(
-                organization=organization,
-                member=self.collaborator,
-                role=OrganizationMember.Roles.ADMIN,
-            ).exists():
-                raise ValidationError(
-                    _(
-                        "Cannot add an admin of the owning organization of the project as a collaborator."
-                    )
-                )
+            elif self.collaborator.is_team:
+                team_qs = organization.teams.filter(pk=self.collaborator)
+                if team_qs.count() == 0:
+
+                    raise ValidationError(_("Team does not exist."))
 
         return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class ProjectRolesView(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        related_name="project_roles",
+    )
+    project = models.ForeignKey(
+        "Project",
+        on_delete=models.DO_NOTHING,
+        related_name="user_roles",
+    )
+    name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
+    origin = models.CharField(
+        max_length=100, choices=ProjectQueryset.RoleOrigins.choices
+    )
+
+    class Meta:
+        db_table = "projects_with_roles_vw"
+        managed = False
 
 
 class Delta(models.Model):
@@ -1148,6 +1317,13 @@ class Delta(models.Model):
     @property
     def method(self):
         return self.content.get("method")
+
+    @property
+    def is_supported_regarding_owner_account(self):
+        return (
+            not self.project.has_online_vector_data
+            or self.project.owner.useraccount.plan.is_external_db_supported
+        )
 
 
 class Job(models.Model):
@@ -1316,34 +1492,64 @@ class Secret(models.Model):
         ]
 
 
-auditlog.register(User, exclude_fields=["last_login", "updated_at"])
-auditlog.register(UserAccount)
-auditlog.register(Organization)
-auditlog.register(OrganizationMember)
-auditlog.register(Team)
-auditlog.register(TeamMember)
-auditlog.register(
-    Project,
-    include_fields=[
-        "id",
-        "name",
-        "description",
-        "owner",
-        "is_public",
-        "owner",
-        "created_at",
-    ],
-)
-auditlog.register(ProjectCollaborator)
-auditlog.register(
-    Delta,
-    include_fields=[
-        "id",
-        "deltafile_id",
-        "project",
-        "content",
-        "last_status",
-        "created_by",
-    ],
-)
-auditlog.register(Secret, exclude_fields=["value"])
+audited_models = [
+    (User, {"exclude_fields": ["last_login", "updated_at"]}),
+    (UserAccount, {}),
+    (Organization, {}),
+    (OrganizationMember, {}),
+    (Team, {}),
+    (TeamMember, {}),
+    (
+        Project,
+        {
+            "include_fields": [
+                "id",
+                "name",
+                "description",
+                "owner",
+                "is_public",
+                "owner",
+                "created_at",
+            ],
+        },
+    ),
+    (ProjectCollaborator, {}),
+    (
+        Delta,
+        {
+            "include_fields": [
+                "id",
+                "deltafile_id",
+                "project",
+                "content",
+                "last_status",
+                "created_by",
+            ],
+        },
+    ),
+    (Secret, {"exclude_fields": ["value"]}),
+]
+
+
+def register_model_audits(subset: List[models.Model] = []) -> None:
+    for model, kwargs in audited_models:
+        if subset and model not in subset:
+            continue
+        auditlog.register(model, **kwargs)
+
+
+def deregister_model_audits(subset: List[models.Model] = []) -> None:
+    for model, _kwargs in audited_models:
+        if subset and model not in subset:
+            continue
+
+        auditlog.unregister(model)
+
+
+@contextlib.contextmanager
+def no_audits(subset: List[models.Model] = []):
+    try:
+        deregister_model_audits(subset)
+        yield
+    finally:
+        register_model_audits(subset)

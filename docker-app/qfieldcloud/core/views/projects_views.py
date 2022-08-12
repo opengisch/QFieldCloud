@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils, utils
+from qfieldcloud.core import exceptions, permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
+from qfieldcloud.core.utils2 import storage
 from rest_framework import generics, permissions, viewsets
 
 User = get_user_model()
@@ -31,7 +33,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         project = Project.objects.get(id=projectid)
 
         if view.action == "retrieve":
-            return permissions_utils.can_read_project(user, project)
+            return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "destroy":
             return permissions_utils.can_delete_project(user, project)
         elif view.action in ["update", "partial_update"]:
@@ -101,25 +103,54 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
 
     def get_queryset(self):
-        include_public = False
-        include_public_param = self.request.query_params.get(
-            "include-public", default=None
-        )
-        if include_public_param and include_public_param.lower() == "true":
-            include_public = True
 
         projects = Project.objects.for_user(self.request.user)
-        if not include_public:
-            projects = projects.exclude(
-                user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
-            )
+
+        # In the list endpoint, by default we filter out public projects. They can be
+        # included with the `include-public` query parameter.
+        if self.action == "list":
+            include_public = False
+            include_public_param = self.request.query_params.get("include-public")
+            if include_public_param and include_public_param.lower() == "1":
+                include_public = True
+
+            if not include_public:
+                projects = projects.exclude(
+                    user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
+                )
+
         return projects
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        # Here we do an additional check if the owner has changed. If so, the reciever
+        # of the project must have enough storage quota, otherwise the transfer is
+        # not permitted.
+
+        # TODO: this should be moved to some more reusable place. Maybe in Project.clean() ?
+        # But then it would also be enforced by admin, which we don't want I guess...
+
+        old_owner = serializer.instance.owner
+        super().perform_update(serializer)
+        new_owner = serializer.instance.owner
+
+        # If owner has not changed, no additional check is made
+        if old_owner == new_owner:
+            return
+
+        # Owner has changed, we must ensure he has enough quota for that
+        # (in this transaction, the project is his already, so we just need to
+        # check his quota)
+        if new_owner.useraccount.storage_quota_left_mb < 0:
+            # If not, we rollback the transaction
+            # (don't give away numbers in message as it's potentially private)
+            raise exceptions.QuotaError(
+                "Project storage too large for recipient's quota."
+            )
 
     def destroy(self, request, projectid):
         # Delete files from storage
-        bucket = utils.get_s3_bucket()
-        prefix = utils.safe_join("projects/{}/".format(projectid))
-        bucket.objects.filter(Prefix=prefix).delete()
+        storage.delete_project_files(projectid)
 
         return super().destroy(request, projectid)
 

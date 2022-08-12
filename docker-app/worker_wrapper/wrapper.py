@@ -5,6 +5,7 @@ import sys
 import tempfile
 import traceback
 import uuid
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -16,6 +17,7 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -26,6 +28,7 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
+from qfieldcloud.core.utils2 import storage
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +155,9 @@ class JobRun:
                 self.job.save()
                 return
 
+            # make sure we have reloaded the project, since someone might have changed it already
+            self.job.project.refresh_from_db()
+
             self.job.status = Job.Status.FINISHED
             self.job.save()
 
@@ -194,13 +200,23 @@ class JobRun:
     ) -> Tuple[int, bytes]:
         QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+        QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ.get(
+            "QFIELDCLOUD_WORKER_QFIELDCLOUD_URL", None
+        )
         TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
             "TRANSFORMATION_GRIDS_VOLUME_NAME", None
         )
 
         assert QGIS_CONTAINER_NAME
         assert QFIELDCLOUD_HOST
+        assert QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
         assert TRANSFORMATION_GRIDS_VOLUME_NAME
+
+        token = AuthToken.objects.create(
+            user=self.job.created_by,
+            client_type=AuthToken.ClientType.WORKER,
+            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+        )
 
         client = docker.from_env()
 
@@ -221,16 +237,10 @@ class JobRun:
             QGIS_CONTAINER_NAME,
             command,
             environment={
-                # NOTE the envvars below will overwrite the ones provided via `extra_envvars`
-                **extra_envvars,
                 "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
-                "STORAGE_ACCESS_KEY_ID": os.environ.get("STORAGE_ACCESS_KEY_ID"),
-                "STORAGE_SECRET_ACCESS_KEY": os.environ.get(
-                    "STORAGE_SECRET_ACCESS_KEY"
-                ),
-                "STORAGE_BUCKET_NAME": os.environ.get("STORAGE_BUCKET_NAME"),
-                "STORAGE_REGION_NAME": os.environ.get("STORAGE_REGION_NAME"),
-                "STORAGE_ENDPOINT_URL": os.environ.get("STORAGE_ENDPOINT_URL"),
+                "QFIELDCLOUD_TOKEN": token.key,
+                "QFIELDCLOUD_URL": QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+                "JOB_ID": self.job_id,
                 "PROJ_DOWNLOAD_DIR": "/transformation_grids",
                 "QT_QPA_PLATFORM": "offscreen",
             },
@@ -277,7 +287,43 @@ class PackageJobRun(JobRun):
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         if self.job.status == Job.Status.FINISHED:
             self.job.project.data_last_packaged_at = self.data_last_packaged_at
-            self.job.project.save()
+            self.job.project.last_package_job = self.job
+            self.job.project.save(
+                update_fields=(
+                    "data_last_packaged_at",
+                    "last_package_job",
+                )
+            )
+
+            try:
+                project_id = str(self.job.project.id)
+                package_ids = storage.get_stored_package_ids(project_id)
+                job_ids = [
+                    str(job["id"])
+                    for job in Job.objects.filter(
+                        type=Job.Type.PACKAGE,
+                    )
+                    .exclude(
+                        status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+                    )
+                    .values("id")
+                ]
+
+                for package_id in package_ids:
+                    # keep the last package
+                    if package_id == str(self.job.project.last_package_job_id):
+                        continue
+
+                    # the job is still active, so it might be one of the new packages
+                    if package_id in job_ids:
+                        continue
+
+                    storage.delete_stored_package(project_id, package_id)
+            except Exception as err:
+                logger.error(
+                    "Failed to delete dangling packages, will be deleted via CRON later.",
+                    exc_info=err,
+                )
 
 
 class DeltaApplyJobRun(JobRun):
@@ -379,7 +425,7 @@ class DeltaApplyJobRun(JobRun):
 
         if is_data_modified:
             self.job.project.data_last_updated_at = timezone.now()
-            self.job.project.save()
+            self.job.project.save(update_fields=("data_last_updated_at",))
 
     def after_docker_exception(self) -> None:
         Delta.objects.filter(
@@ -424,9 +470,14 @@ class ProcessProjectfileJobRun(JobRun):
                 project, f, "image/png", "thumbnail"
             )
         project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
-        project.save()
+        project.save(
+            update_fields=(
+                "project_details",
+                "thumbnail_uri",
+            )
+        )
 
     def after_docker_exception(self) -> None:
         project = self.job.project
         project.project_details = None
-        project.save()
+        project.save(update_fields=("project_details",))

@@ -1,0 +1,24 @@
+{
+  "deltas": [
+    {
+      "uuid": "f15db6cf-1ed7-4a8c-9728-e13d4d96bdb5",
+      "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+      "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+      "localPk": "1001",
+      "sourcePk": "",
+      "localLayerId": "point_6ed9e32d_b677_466f_ae6b_c86d48412d22",
+      "sourceLayerId": "point_6ed9e32d_b677_466f_ae6b_c86d48412d22",
+      "method": "create",
+      "new": {
+        "attributes": {
+          "id": 1001,
+          "name": "hello-1001"
+        }
+      }
+    }
+  ],
+  "files": [],
+  "id": "c903cde7-f075-41ce-9c66-63e2b59e571a",
+  "project": "e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
+  "version": "1.0"
+}

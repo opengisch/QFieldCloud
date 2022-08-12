@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from qfieldcloud.core.models import User, UserAccount
+from qfieldcloud.subscription.models import Plan
 
 
 class Command(BaseCommand):
@@ -14,5 +15,6 @@ class Command(BaseCommand):
             print(
                 f'Creating user account for user "{user.username}" email "{user.email}"...'
             )
+            plan = Plan.objects.get(user_type=user.user_type, is_default=True)
 
-            UserAccount.objects.create(user)
+            UserAccount.objects.create(user=user, plan=plan)

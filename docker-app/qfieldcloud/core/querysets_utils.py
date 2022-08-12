@@ -1,4 +1,3 @@
-import warnings
 from functools import reduce
 from operator import and_, or_
 
@@ -16,33 +15,6 @@ from qfieldcloud.core.models import (
 )
 
 
-def get_available_projects(
-    user,
-    owner,
-    ownerships=False,
-    collaborations=False,
-    memberships=False,
-    public=False,
-):
-    """Return a queryset with all projects that are available to the `user`.
-    The param `user` is meant to be the user that did the request and the `owner`
-    is the user that has access to them.
-    - owned `owner` or organization he belongs to and collaborated with `user`
-    """
-
-    warnings.warn(
-        "`get_available_projects()` is deprecated. Use `owner.projects.for_user(user)` instead.",
-        DeprecationWarning,
-    )
-
-    if not ownerships or not collaborations or not memberships or not public:
-        raise Exception(
-            "`get_available_projects()` was reimplemented and doesn't support excluding permissions from ownerships/collaborations/memberships anymore. Use `owner.projects.for_user(user)` instead and do the required filtering yourself."
-        )
-
-    return owner.projects.for_user(user, include_public=public)
-
-
 def get_organization_teams(organization):
     return Team.objects.filter(team_organization=organization)
 
@@ -58,11 +30,6 @@ def get_organization_members(organization):
 def get_project_deltas(project):
     """Return a queryset of all available deltas of a specific project."""
     return Delta.objects.filter(project=project)
-
-
-def get_collaborators_of_project(project):
-    """Return a queryset of all available collaborators of a specific project."""
-    return ProjectCollaborator.objects.filter(project=project)
 
 
 def get_users(
@@ -111,6 +78,12 @@ def get_users(
 
     # exclude the already existing members, the organization owner and the organization itself from the returned users
     elif organization:
+        # exclude all teams that are not of the current organization
+        users = users.filter(
+            ~Q(user_type=User.TYPE_TEAM)
+            | Q(pk__in=Team.objects.filter(team_organization=organization))
+        )
+
         member_ids = OrganizationMember.objects.filter(
             organization=organization
         ).values_list("member", flat=True)

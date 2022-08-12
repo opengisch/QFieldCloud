@@ -1,6 +1,7 @@
-from typing import List, Union
+from typing import List, Literal, Union
 
 from deprecated import deprecated
+from django.utils.translation import gettext as _
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -9,12 +10,41 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     ProjectQueryset,
+    Team,
 )
 from qfieldcloud.core.models import User as QfcUser
 
 
-def _project_for_owner(user: QfcUser, project: Project):
-    return Project.objects.for_user(user).filter(pk=project.pk)
+class CheckPermError(Exception):
+    ...
+
+
+class AlreadyCollaboratorError(CheckPermError):
+    ...
+
+
+class ReachedCollaboratorLimitError(CheckPermError):
+    ...
+
+
+class UserHasProjectRoleOrigins(CheckPermError):
+    ...
+
+
+class UserOrganizationRoleError(CheckPermError):
+    ...
+
+
+class TeamOrganizationRoleError(CheckPermError):
+    ...
+
+
+class ExpectedPremiumUserError(CheckPermError):
+    ...
+
+
+def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
+    return Project.objects.for_user(user, skip_invalid).filter(pk=project.pk)
 
 
 def _organization_of_owner(user: QfcUser, organization: Organization):
@@ -22,27 +52,72 @@ def _organization_of_owner(user: QfcUser, organization: Organization):
 
 
 def user_has_project_roles(
-    user: QfcUser, project: Project, roles: List[ProjectCollaborator.Roles]
+    user: QfcUser,
+    project: Project,
+    roles: List[ProjectCollaborator.Roles],
+    skip_invalid: bool = False,
 ):
-    return _project_for_owner(user, project).filter(user_role__in=roles).exists()
+    return (
+        _project_for_owner(user, project, skip_invalid)
+        .filter(user_role__in=roles)
+        .exists()
+    )
+
+
+def check_user_has_project_role_origins(
+    user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
+) -> Literal[True]:
+    if (
+        _project_for_owner(user, project, skip_invalid=False)
+        .filter(user_role_origin__in=origins)
+        .exists()
+    ):
+        return True
+
+    raise UserHasProjectRoleOrigins(
+        'User "{}" has not role origins "{}" on project {}.'.format(
+            user.username,
+            [origin.name for origin in origins],
+            project.name,
+        )
+    )
 
 
 def user_has_project_role_origins(
     user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
-):
-    return (
-        _project_for_owner(user, project).filter(user_role_origin__in=origins).exists()
+) -> bool:
+    try:
+        return check_user_has_project_role_origins(user, project, origins)
+    except CheckPermError:
+        return False
+
+
+def check_user_has_organization_roles(
+    user: QfcUser, organization: Organization, roles: List[OrganizationMember.Roles]
+) -> Literal[True]:
+    if (
+        _organization_of_owner(user, organization)
+        .filter(membership_role__in=roles)
+        .exists()
+    ):
+        return True
+
+    raise UserOrganizationRoleError(
+        _('User "{}" does not have {} roles in organization "{}"').format(
+            user.username,
+            [role.name for role in roles],
+            organization.username,
+        )
     )
 
 
 def user_has_organization_roles(
     user: QfcUser, organization: Organization, roles: List[OrganizationMember.Roles]
-):
-    return (
-        _organization_of_owner(user, organization)
-        .filter(membership_role__in=roles)
-        .exists()
-    )
+) -> bool:
+    try:
+        return check_user_has_organization_roles(user, organization, roles)
+    except CheckPermError:
+        return False
 
 
 def user_has_organization_role_origins(
@@ -93,7 +168,7 @@ def can_create_project(
     return False
 
 
-def can_read_project(user: QfcUser, project: Project) -> bool:
+def can_access_project(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -104,6 +179,21 @@ def can_read_project(user: QfcUser, project: Project) -> bool:
             ProjectCollaborator.Roles.REPORTER,
             ProjectCollaborator.Roles.READER,
         ],
+    )
+
+
+def can_retrieve_project(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaborator.Roles.READER,
+        ],
+        True,
     )
 
 
@@ -470,19 +560,82 @@ def can_delete_members(user: QfcUser, organization: Organization) -> bool:
     )
 
 
-def can_become_collaborator(user: QfcUser, project: Project) -> bool:
-    if project.collaborators.filter(collaborator=user).count() > 0:
-        return False
+def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
+    if user == project.owner:
+        raise AlreadyCollaboratorError(
+            _("Cannot add the project owner as a collaborator.")
+        )
 
-    return not user_has_project_role_origins(
-        user,
-        project,
-        [
-            ProjectQueryset.RoleOrigins.PROJECTOWNER,
-            ProjectQueryset.RoleOrigins.COLLABORATOR,
-            ProjectQueryset.RoleOrigins.ORGANIZATIONOWNER,
-        ],
+    if project.collaborators.filter(collaborator=user).count() > 0:
+        raise AlreadyCollaboratorError(
+            _('The user "{}" is already a collaborator of project "{}".').format(
+                user.username, project.name
+            )
+        )
+
+    max_premium_collaborators_per_private_project = (
+        project.owner.useraccount.plan.max_premium_collaborators_per_private_project
     )
+    if max_premium_collaborators_per_private_project >= 0 and not project.is_public:
+        project_collaborators_count = project.direct_collaborators.count()
+        if project_collaborators_count >= max_premium_collaborators_per_private_project:
+            raise ReachedCollaboratorLimitError(
+                _(
+                    "The subscription plan of the project owner does not allow any additional collaborators. "
+                    "Please remove some collaborators first."
+                )
+            )
+
+    # Rules for organization projects
+    if project.owner.is_organization:
+        if user.is_team:
+            if (
+                Team.objects.filter(
+                    pk=user.pk,
+                    team_organization=project.owner,
+                ).count()
+                != 1
+            ):
+                raise TeamOrganizationRoleError(
+                    _(
+                        'The team "{}" is not owned by the "{}" organization that owns the project.'
+                    ).format(
+                        user.username,
+                        project.owner.username,
+                    )
+                )
+        else:
+            # And only members of these organizations can join
+            check_user_has_organization_roles(
+                user,
+                project.owner,
+                [OrganizationMember.Roles.MEMBER, OrganizationMember.Roles.ADMIN],
+            )
+    else:
+        if user.is_team:
+            raise TeamOrganizationRoleError(
+                _(
+                    "Teams can be added as collaborators only in projects owned by organizations."
+                )
+            )
+
+        # Rules for private projects
+        if not project.is_public:
+            if not user.useraccount.plan.is_premium:
+                raise ExpectedPremiumUserError(
+                    _(
+                        "Only premium users can be added as collaborators on private projects."
+                    ).format(user.username)
+                )
+
+    return True
+
+
+def can_become_collaborator(user: QfcUser, project: Project) -> bool:
+    try:
+        return check_can_become_collaborator(user, project)
+    except CheckPermError:
+        return False
 
 
 def can_read_geodb(user: QfcUser, profile: QfcUser) -> bool:
@@ -522,6 +675,12 @@ def can_delete_geodb(user: QfcUser, profile: QfcUser) -> bool:
 
 
 def can_become_member(user: QfcUser, organization: Organization) -> bool:
+    if user.user_type == QfcUser.TYPE_ORGANIZATION:
+        return False
+
+    if user.user_type == QfcUser.TYPE_TEAM:
+        return Team.objects.get(pk=user.pk).team_organization == organization
+
     return not user_has_organization_role_origins(
         user,
         organization,
