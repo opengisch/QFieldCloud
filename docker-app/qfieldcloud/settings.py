@@ -337,7 +337,6 @@ IN_TEST_SUITE = False
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
 
-WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 60))
 APPLY_DELTAS_LIMIT = 1000
 
 DEBUG_TOOLBAR_CONFIG = {
@@ -347,7 +346,12 @@ DEBUG_TOOLBAR_CONFIG = {
 QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
-CONSTANCE_CONFIG = {}
+CONSTANCE_CONFIG = {
+    "WORKER_TIMEOUT_S": (
+        60,
+        "Timeout of the workers before being terminated by the wrapper in seconds.",
+    ),
+}
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
         "django.forms.CharField",
@@ -356,4 +360,6 @@ CONSTANCE_ADDITIONAL_FIELDS = {
         },
     ]
 }
-CONSTANCE_CONFIG_FIELDSETS = {}
+CONSTANCE_CONFIG_FIELDSETS = {
+    "Worker": ("WORKER_TIMEOUT_S",),
+}
