@@ -214,7 +214,7 @@ def _strip_json_null_bytes_memory_file(file: IO) -> IO:
     BLOCKSIZE = 65536
 
     for chunk in file.chunks(BLOCKSIZE):
-        result.write(chunk.decode().replace(r"\u0000", "").encode())
+        result.write(chunk.replace(b"\0", b""))
     file.seek(0)
     result.seek(0)
 
@@ -227,7 +227,7 @@ def _strip_json_null_bytes_file(file: IO) -> IO:
 
     buf = file.read(BLOCKSIZE)
     while len(buf) > 0:
-        result.write(buf.decode().replace(r"\u0000", "").encode())
+        result.write(buf.replace(b"\0", b""))
         buf = file.read(BLOCKSIZE)
     file.seek(0)
     result.seek(0)
