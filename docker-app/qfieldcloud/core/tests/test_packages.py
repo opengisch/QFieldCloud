@@ -13,9 +13,13 @@ from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import (
     Geodb,
     Job,
+    Organization,
+    OrganizationMember,
     Project,
     ProjectCollaborator,
     Secret,
+    Team,
+    TeamMember,
     User,
 )
 from rest_framework import status
@@ -596,14 +600,55 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         for idx, role in enumerate(ProjectCollaborator.Roles):
-            reader = User.objects.create(username=f"user_with_role_{idx}")
+            u1 = User.objects.create(username=f"user_with_role_{idx}")
             ProjectCollaborator.objects.create(
-                collaborator=reader, project=self.project1, role=role
+                collaborator=u1, project=self.project1, role=role
             )
 
             self.check_package(
-                token=AuthToken.objects.get_or_create(user=reader)[0],
+                token=AuthToken.objects.get_or_create(user=u1)[0],
                 project=self.project1,
+                expected_files=[
+                    "data.gpkg",
+                    "project_qfield.qgs",
+                    "project_qfield_attachments.zip",
+                ],
+            )
+
+    def test_collaborator_via_team_can_package(self):
+        u1 = User.objects.create(username="u1")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        p1 = Project.objects.create(
+            name="p1",
+            owner=o1,
+        )
+        token_u1 = AuthToken.objects.get_or_create(user=u1)[0]
+
+        self.upload_files(
+            token=token_u1,
+            project=p1,
+            files=[
+                ("delta/nonspatial.csv", "nonspatial.csv"),
+                ("delta/testdata.gpkg", "testdata.gpkg"),
+                ("delta/points.geojson", "points.geojson"),
+                ("delta/polygons.geojson", "polygons.geojson"),
+                ("delta/project.qgs", "project.qgs"),
+            ],
+        )
+
+        for idx, role in enumerate(ProjectCollaborator.Roles):
+            team = Team.objects.create(
+                username=f"@{o1.username}/team_{idx}", team_organization=o1
+            )
+            team_user = User.objects.create(username=f"team_user_{idx}")
+
+            OrganizationMember.objects.create(member=team_user, organization=o1)
+            TeamMember.objects.create(member=team_user, team=team)
+            ProjectCollaborator.objects.create(collaborator=team, project=p1, role=role)
+
+            self.check_package(
+                token=AuthToken.objects.get_or_create(user=team_user)[0],
+                project=p1,
                 expected_files=[
                     "data.gpkg",
                     "project_qfield.qgs",
