@@ -16,7 +16,6 @@ from .authentication import create_token
 from .models import AuthToken
 from .utils import load_module
 
-LoginSerializer = load_module(settings.QFIELDCLOUD_LOGIN_SERIALIZER)
 TokenSerializer = load_module(settings.QFIELDCLOUD_TOKEN_SERIALIZER)
 UserSerializer = load_module(settings.QFIELDCLOUD_USER_SERIALIZER)
 
@@ -38,7 +37,6 @@ class LoginView(ObtainAuthToken):
     # Based on: https://github.com/Tivix/django-rest-auth/blob/master/rest_auth/views.py#L33
 
     permission_classes = (AllowAny,)
-    serializer_class = LoginSerializer
     token_model = AuthToken
 
     @sensitive_post_parameters_m
