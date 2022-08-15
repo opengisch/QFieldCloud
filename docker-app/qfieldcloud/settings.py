@@ -48,10 +48,9 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
 
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
-    # `allauth` specific authentication methods, such as login by email
-    "allauth.account.auth_backends.AuthenticationBackend",
+    # custom QFC backend that extends the `allauth` specific authentication methods
+    # such as login by email, but restricting who can login to only regular users
+    "qfieldcloud.authentication.auth_backends.AuthenticationBackend",
 ]
 
 
