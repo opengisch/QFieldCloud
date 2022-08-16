@@ -11,11 +11,15 @@ logger = logging.getLogger(__name__)
 
 def exception_handler(exc, context):
 
+    log_exception = True
+
     if isinstance(exc, qfieldcloud_exceptions.QFieldCloudException):
         pass
     elif isinstance(exc, rest_exceptions.AuthenticationFailed):
+        log_exception = False
         exc = qfieldcloud_exceptions.AuthenticationFailedError()
     elif isinstance(exc, rest_exceptions.NotAuthenticated):
+        log_exception = False
         exc = qfieldcloud_exceptions.NotAuthenticatedError()
     elif isinstance(exc, rest_exceptions.APIException):
         exc = qfieldcloud_exceptions.APIError(
@@ -24,6 +28,7 @@ def exception_handler(exc, context):
     elif isinstance(exc, exceptions.ObjectDoesNotExist):
         exc = qfieldcloud_exceptions.ObjectNotFoundError(detail=str(exc))
     elif isinstance(exc, exceptions.ValidationError):
+        log_exception = False
         exc = qfieldcloud_exceptions.ValidationError(detail=str(exc))
     else:
         # When running tests, we rethrow the exception, so we get a full trace to
@@ -47,7 +52,10 @@ def exception_handler(exc, context):
             "detail": exc.detail,
         }
 
-    logging.exception(exc)
+    if log_exception:
+        logging.exception(exc)
+    else:
+        logging.info(str(exc))
 
     return Response(
         body,
