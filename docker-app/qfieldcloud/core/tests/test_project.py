@@ -298,7 +298,7 @@ class QfcTestCase(APITestCase):
         response = self.client.get("/api/v1/projects/{}/".format(project1.id))
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()["code"], "api_error")
+        self.assertEqual(response.json()["code"], "permission_denied")
 
         # Get an unexisting project id
         response = self.client.get(
