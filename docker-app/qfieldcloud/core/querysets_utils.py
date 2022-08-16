@@ -2,6 +2,8 @@ from functools import reduce
 from operator import and_, or_
 
 from django.db.models import Q
+from django.db.models import Value as V
+from django.db.models.functions import StrIndex
 from django.db.models.manager import BaseManager
 from qfieldcloud.core.models import (
     Delta,
@@ -45,9 +47,7 @@ def get_users(
     ), "Cannot have the project and organization filters set simultaneously"
 
     if username:
-        users = User.objects.filter(
-            Q(username__icontains=username) | Q(email__icontains=username)
-        )
+        users = User.objects.filter(username__icontains=username)
     else:
         users = User.objects.all()
 
@@ -100,4 +100,6 @@ def get_users(
         else:
             users = users.exclude(reduce(or_, [c for c in conditions]))
 
-    return users.order_by("-username")
+    return users.annotate(
+        ordering=StrIndex("username", V(username)),
+    ).order_by("ordering", "username")
