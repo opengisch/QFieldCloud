@@ -49,6 +49,14 @@ class NotAuthenticatedError(QFieldCloudException):
     status_code = status.HTTP_401_UNAUTHORIZED
 
 
+class PermissionDeniedError(QFieldCloudException):
+    """Raised when the user has not the required permission for an action."""
+
+    code = "permission_denied"
+    message = "Permission denied"
+    status_code = status.HTTP_403_FORBIDDEN
+
+
 class EmptyContentError(QFieldCloudException):
     """Raised when a request doesn't contain an expected content
     (e.g. a file)"""

@@ -21,6 +21,9 @@ def exception_handler(exc, context):
     elif isinstance(exc, rest_exceptions.NotAuthenticated):
         log_exception = False
         exc = qfieldcloud_exceptions.NotAuthenticatedError()
+    elif isinstance(exc, rest_exceptions.PermissionDenied):
+        log_exception = False
+        exc = qfieldcloud_exceptions.PermissionDeniedError()
     elif isinstance(exc, rest_exceptions.APIException):
         exc = qfieldcloud_exceptions.APIError(
             status_code=exc.status_code, detail=exc.detail
