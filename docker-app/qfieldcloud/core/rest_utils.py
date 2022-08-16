@@ -29,6 +29,7 @@ def exception_handler(exc, context):
             status_code=exc.status_code, detail=exc.detail
         )
     elif isinstance(exc, exceptions.ObjectDoesNotExist):
+        log_exception = False
         exc = qfieldcloud_exceptions.ObjectNotFoundError(detail=str(exc))
     elif isinstance(exc, exceptions.ValidationError):
         log_exception = False
