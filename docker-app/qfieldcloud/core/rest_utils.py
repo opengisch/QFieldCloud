@@ -11,31 +11,41 @@ logger = logging.getLogger(__name__)
 
 def exception_handler(exc, context):
 
-    if isinstance(exc, qfieldcloud_exceptions.QFieldCloudException):
-        pass
-    elif isinstance(exc, rest_exceptions.AuthenticationFailed):
-        exc = qfieldcloud_exceptions.AuthenticationFailedError()
+    # Map exceptions to qfc exceptions
+    is_error = False
+    if isinstance(exc, rest_exceptions.AuthenticationFailed):
+        qfc_exc = qfieldcloud_exceptions.AuthenticationFailedError()
     elif isinstance(exc, rest_exceptions.NotAuthenticated):
-        exc = qfieldcloud_exceptions.NotAuthenticatedError()
-    elif isinstance(exc, rest_exceptions.APIException):
-        exc = qfieldcloud_exceptions.APIError(
-            status_code=exc.status_code, detail=exc.detail
-        )
+        qfc_exc = qfieldcloud_exceptions.NotAuthenticatedError()
+    elif isinstance(exc, rest_exceptions.PermissionDenied):
+        qfc_exc = qfieldcloud_exceptions.PermissionDeniedError()
     elif isinstance(exc, exceptions.ObjectDoesNotExist):
-        exc = qfieldcloud_exceptions.ObjectNotFoundError(detail=str(exc))
+        qfc_exc = qfieldcloud_exceptions.ObjectNotFoundError(detail=str(exc))
     elif isinstance(exc, exceptions.ValidationError):
-        exc = qfieldcloud_exceptions.ValidationError(detail=str(exc))
+        qfc_exc = qfieldcloud_exceptions.ValidationError(detail=str(exc))
+    elif isinstance(exc, qfieldcloud_exceptions.QFieldCloudException):
+        is_error = True
+        qfc_exc = exc
+    elif isinstance(exc, rest_exceptions.APIException):
+        is_error = True
+        qfc_exc = qfieldcloud_exceptions.APIError(exc.detail, exc.status_code)
     else:
-        # When running tests, we rethrow the exception, so we get a full trace to
-        # help with debugging
+        # Unexpected ! We rethrow original exception to make debugging tests easier
         if settings.IN_TEST_SUITE:
             raise exc
+        is_error = True
+        qfc_exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
+
+    if is_error:
+        # log the original exception
         logging.exception(exc)
-        exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
+    else:
+        # log as info as repeated errors could still indicate an actual issue
+        logging.info(str(exc))
 
     body = {
-        "code": exc.code,
-        "message": exc.message,
+        "code": qfc_exc.code,
+        "message": qfc_exc.message,
     }
 
     if settings.DEBUG:
@@ -44,12 +54,10 @@ def exception_handler(exc, context):
             "args": context["args"],
             "kwargs": context["kwargs"],
             "request": str(context["request"]),
-            "detail": exc.detail,
+            "detail": qfc_exc.detail,
         }
-
-    logging.exception(exc)
 
     return Response(
         body,
-        status=exc.status_code,
+        status=qfc_exc.status_code,
     )
