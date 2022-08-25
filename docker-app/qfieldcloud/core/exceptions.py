@@ -84,7 +84,7 @@ class EmptyContentError(QFieldCloudException):
 
     code = "empty_content"
     message = "Empty content"
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    status_code = status.HTTP_400_BAD_REQUEST
 
 
 class MultipleContentsError(QFieldCloudException):
