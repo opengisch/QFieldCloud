@@ -4,7 +4,6 @@ from django.conf import settings
 from django.core import exceptions
 from qfieldcloud.core import exceptions as qfieldcloud_exceptions
 from rest_framework import exceptions as rest_exceptions
-from rest_framework import status
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -32,8 +31,8 @@ def exception_handler(exc, context):
             raise exc
         qfc_exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
 
-    # Log level depends on the status code (5xx are logged as errors, 4xx are logged in info)
-    if not status.is_client_error(qfc_exc.status_code):
+    # Log level is defined by the exception
+    if qfc_exc.log_as_error:
         # log the original exception
         logging.exception(exc)
     else:
