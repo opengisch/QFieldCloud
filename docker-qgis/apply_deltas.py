@@ -37,8 +37,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
-logging.basicConfig(level=logging.DEBUG)
-
 logger = logging.getLogger(__name__)
 # /LOGGER
 
@@ -1262,6 +1260,12 @@ def inverse_delta(delta: Delta) -> Delta:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s.%(msecs)03d %(name)-11s %(levelname)-8s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
     parser = argparse.ArgumentParser(
         prog="COMMAND",
         description="",

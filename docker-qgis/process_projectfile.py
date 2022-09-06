@@ -176,3 +176,11 @@ def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:
 
     if not img.save(str(thumbnail_filename)):
         raise FailedThumbnailGenerationException(reason="Failed to save.")
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s.%(msecs)03d %(name)-11s %(levelname)-8s %(message)s",
+        datefmt="%H:%M:%S",
+    )

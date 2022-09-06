@@ -345,6 +345,11 @@ def cmd_process_projectfile(args):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s.%(msecs)03d %(name)-9s %(levelname)-8s %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
     # Set S3 logging levels
     logging.getLogger("nose").setLevel(logging.CRITICAL)
