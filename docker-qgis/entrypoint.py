@@ -29,7 +29,7 @@ from qgis.core import (
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("ENTRYPNT")
 logger.setLevel(logging.INFO)
 
 

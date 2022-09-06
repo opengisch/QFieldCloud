@@ -30,9 +30,9 @@ from tabulate import tabulate
 # Get environment variables
 JOB_ID = os.environ.get("JOB_ID")
 
-qgs_stderr_logger = logging.getLogger("QGIS_STDERR")
+qgs_stderr_logger = logging.getLogger("QGSSTDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
-qgs_msglog_logger = logging.getLogger("QGIS_MSGLOG")
+qgs_msglog_logger = logging.getLogger("QGSMSGLOG")
 qgs_msglog_logger.setLevel(logging.DEBUG)
 
 
