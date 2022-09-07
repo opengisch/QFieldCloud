@@ -1,4 +1,5 @@
 import atexit
+import hashlib
 import inspect
 import json
 import logging
@@ -189,11 +190,14 @@ def download_project(
         show_progress=False,
     )
 
+    list_local_files(project_id, working_dir)
+
     return destination
 
 
 def upload_package(project_id: str, package_dir: Path) -> None:
     client = sdk.Client()
+    list_local_files(project_id, package_dir)
     client.upload_files(
         project_id,
         sdk.FileTransferType.PACKAGE,
@@ -208,6 +212,7 @@ def upload_package(project_id: str, package_dir: Path) -> None:
 def upload_project(project_id: str, project_dir: Path) -> None:
     """Upload the files from the `project_dir` to the permanent file storage."""
     client = sdk.Client()
+    list_local_files(project_id, project_dir)
     client.upload_files(
         project_id,
         sdk.FileTransferType.PROJECT,
@@ -216,6 +221,19 @@ def upload_project(project_id: str, project_dir: Path) -> None:
         throw_on_error=True,
         show_progress=False,
     )
+
+
+def list_local_files(project_id: str, project_dir: Path):
+    client = sdk.Client()
+    files = client.list_local_files(str(project_dir), "*")
+    if files:
+        logging.info(
+            f'Local files list for project "{project_id}":\n{files_list_to_string(files)}',
+        )
+    else:
+        logging.info(
+            f'Local files list for project "{project_id}": empty!',
+        )
 
 
 class WorkflowValidationException(Exception):
@@ -622,6 +640,36 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
             ] = "No data provider available"
 
     return layers_by_id
+
+
+def get_file_size(filename: str) -> int:
+    return Path(filename).stat().st_size
+
+
+def get_file_md5sum(filename: str) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+
+    with open(filename, "rb") as f:
+        while chunk := f.read(BLOCKSIZE):
+            hasher.update(chunk)
+
+    return hasher.hexdigest()
+
+
+def files_list_to_string(files: List[Dict[str, Any]]) -> str:
+    table = [
+        [
+            d["name"],
+            get_file_size(d["absolute_filename"]),
+            get_file_md5sum(d["absolute_filename"]),
+        ]
+        for d in sorted(files, key=lambda f: f["name"])
+    ]
+    return tabulate(
+        table,
+        headers=["Name", "Size", "MD5 Checksum"],
+    )
 
 
 def layers_data_to_string(layers_by_id):
