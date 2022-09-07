@@ -3,6 +3,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -648,3 +649,64 @@ def layers_data_to_string(layers_by_id):
             "Provider Summary",
         ],
     )
+
+
+class RedactingFormatter(logging.Formatter):
+    """Filter out sensitive information such as passwords from the logs.
+
+    Note: this is done via logging.Formatter instead of logging.Filter,
+    because modified default handler formatter affects all existing loggers,
+    while this is not the case for filters.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        patterns = kwargs.pop(
+            "patterns",
+            [
+                r"(?:password=')(.*?)(?:')",
+            ],
+        )
+        replacement = kwargs.pop("replacement", "***")
+
+        super().__init__(*args, **kwargs)
+
+        self._patterns = [re.compile(p, re.IGNORECASE) for p in patterns]
+        self._replacement = replacement
+
+    def format(self, record: logging.LogRecord) -> str:
+        msg = super().format(record)
+
+        if isinstance(record.args, dict):
+            for k in record.args.keys():
+                record.args[k] = self.redact(record.args[k])
+        else:
+            record.args = tuple(self.redact(arg) for arg in record.args)
+
+        return self.redact(msg)
+
+    def redact(self, record: str) -> str:
+        record = str(record)
+
+        for pattern in self._patterns:
+            record = re.sub(pattern, self._replacement, record)
+
+        return record
+
+
+def setup_basic_logging_config():
+    """Set the default logger level to debug and set a password censoring formatter.
+
+    This will affect all child loggers with the default handler,
+    no matter if they are created before or after calling this function.
+    """
+    logging.basicConfig(
+        level=logging.DEBUG,
+    )
+
+    formatter = RedactingFormatter(
+        "%(asctime)s.%(msecs)03d %(name)-9s %(levelname)-8s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    for handler in logging.root.handlers:
+        handler.setFormatter(formatter)
