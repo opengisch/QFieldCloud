@@ -1073,8 +1073,9 @@ class Project(models.Model):
             if not self.project_filename:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
-            elif self.is_public or (
-                max_premium_collaborators_per_private_project != -1
+            elif (
+                not self.is_public
+                and max_premium_collaborators_per_private_project != -1
                 and max_premium_collaborators_per_private_project
                 < self.direct_collaborators.count()
             ):
