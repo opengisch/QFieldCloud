@@ -1,5 +1,6 @@
 import logging
 
+from django.db import IntegrityError
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -308,3 +309,13 @@ class QfcTestCase(APITestCase):
         self.assertEquals(organization["membership_role"], "admin")
         self.assertEquals(organization["membership_role_origin"], "organization_owner")
         self.assertEquals(organization["membership_is_public"], True)
+
+    def test_duplicate_user_emails(self):
+        User.objects.create_user(
+            username="u1", password="abc123", email="same@example.com"
+        )
+
+        with self.assertRaises(IntegrityError):
+            User.objects.create_user(
+                username="u2", password="abc123", email="same@example.com"
+            )

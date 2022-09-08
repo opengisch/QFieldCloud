@@ -36,4 +36,9 @@ class Migration(migrations.Migration):
             sql="\n            CREATE TRIGGER core_delta_geom_insert_trigger BEFORE INSERT ON core_delta\n            FOR EACH ROW\n            EXECUTE FUNCTION core_delta_geom_trigger_func()\n        ",
             reverse_sql="\n            DROP TRIGGER IF EXISTS core_delta_geom_insert_trigger ON core_delta\n        ",
         ),
+        migrate_sql.operations.CreateSQL(
+            name="core_user_email_partial_uniq",
+            sql="\n            CREATE UNIQUE INDEX IF NOT EXISTS core_user_email_partial_uniq ON core_user (email)\n            WHERE user_type = 1 AND email IS NOT NULL AND email != ''\n        ",
+            reverse_sql="\n            DROP TRIGGER IF EXISTS core_delta_geom_insert_trigger ON core_delta\n        ",
+        ),
     ]
