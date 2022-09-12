@@ -37,8 +37,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
-logging.basicConfig(level=logging.DEBUG)
-
 logger = logging.getLogger(__name__)
 # /LOGGER
 
@@ -1262,6 +1260,10 @@ def inverse_delta(delta: Delta) -> Delta:
 
 
 if __name__ == "__main__":
+    from qfieldcloud.qgis.utils import setup_basic_logging_config
+
+    setup_basic_logging_config()
+
     parser = argparse.ArgumentParser(
         prog="COMMAND",
         description="",

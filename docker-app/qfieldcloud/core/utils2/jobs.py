@@ -34,7 +34,7 @@ def apply_deltas(
 
     # 1.1. Filter only the deltas of interest.
     if len(delta_ids) > 0:
-        pending_deltas.filter(pk__in=delta_ids)
+        pending_deltas = pending_deltas.filter(pk__in=delta_ids)
 
     # 2. If there are no pending deltas, do not create a new job and return.
     if pending_deltas.count() == 0:

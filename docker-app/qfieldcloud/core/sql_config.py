@@ -226,4 +226,14 @@ sql_items = [
             DROP TRIGGER IF EXISTS core_delta_geom_insert_trigger ON core_delta
         """,
     ),
+    SQLItem(
+        "core_user_email_partial_uniq",
+        r"""
+            CREATE UNIQUE INDEX IF NOT EXISTS core_user_email_partial_uniq ON core_user (email)
+            WHERE user_type = 1 AND email IS NOT NULL AND email != ''
+        """,
+        r"""
+            DROP INDEX IF EXISTS core_user_email_partial_uniq
+        """,
+    ),
 ]

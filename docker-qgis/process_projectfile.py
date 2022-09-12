@@ -1,5 +1,4 @@
 import logging
-import sys
 from pathlib import Path
 from typing import Dict
 from xml.etree import ElementTree
@@ -9,9 +8,7 @@ from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
 
-logging.basicConfig(
-    stream=sys.stderr, level=logging.DEBUG, format="%(asctime)s %(levelname)s %(msg)s"
-)
+logger = logging.getLogger("PROCPRJ")
 
 
 class ProjectFileNotFoundException(BaseException):
@@ -41,7 +38,7 @@ class FailedThumbnailGenerationException(BaseException):
 
 
 def check_valid_project_file(project_filename: Path) -> None:
-    logging.info("Check QGIS project file validity...")
+    logger.info("Check QGIS project file validity…")
 
     if not project_filename.exists():
         raise ProjectFileNotFoundException(project_filename=project_filename)
@@ -61,7 +58,7 @@ def check_valid_project_file(project_filename: Path) -> None:
 
 
 def load_project_file(project_filename: Path) -> QgsProject:
-    logging.info("Open QGIS project file...")
+    logger.info("Open QGIS project file…")
 
     project = QgsProject.instance()
     if not project.read(str(project_filename)):
@@ -72,11 +69,11 @@ def load_project_file(project_filename: Path) -> QgsProject:
 
 def extract_project_details(project: QgsProject) -> Dict[str, str]:
     """Extract project details"""
-    logging.info("Extract project details...")
+    logger.info("Extract project details…")
 
     details = {}
 
-    logging.info("Reading QGIS project file...")
+    logger.info("Reading QGIS project file…")
     map_settings = QgsMapSettings()
 
     def on_project_read(doc):
@@ -110,7 +107,7 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
     details["crs"] = project.crs().authid()
     details["project_name"] = project.title()
 
-    logging.info("Extracting layer and datasource details...")
+    logger.info("Extracting layer and datasource details…")
 
     details["layers_by_id"] = get_layers_data(project)
     details["ordered_layer_ids"] = list(details["layers_by_id"].keys())
@@ -118,7 +115,7 @@ def extract_project_details(project: QgsProject) -> Dict[str, str]:
         "QFieldSync", "attachmentDirs", ["DCIM"]
     )
 
-    logging.info(
+    logger.info(
         f'QGIS project layer checks\n{layers_data_to_string(details["layers_by_id"])}',
     )
 
@@ -134,7 +131,7 @@ def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:
         project (QgsProject)
         thumbnail_filename (Path)
     """
-    logging.info("Generate project thumbnail image...")
+    logger.info("Generate project thumbnail image…")
 
     map_settings = QgsMapSettings()
     layer_tree = project.layerTreeRoot()
@@ -179,3 +176,9 @@ def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:
 
     if not img.save(str(thumbnail_filename)):
         raise FailedThumbnailGenerationException(reason="Failed to save.")
+
+
+if __name__ == "__main__":
+    from qfieldcloud.qgis.utils import setup_basic_logging_config
+
+    setup_basic_logging_config()

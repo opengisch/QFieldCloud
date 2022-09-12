@@ -351,6 +351,9 @@ def can_set_delta_status(user: QfcUser, delta: Delta) -> bool:
         Delta.Status.CONFLICT,
         Delta.Status.NOT_APPLIED,
         Delta.Status.ERROR,
+        Delta.Status.APPLIED,
+        Delta.Status.IGNORED,
+        Delta.Status.UNPERMITTED,
     ):
         return False
 
@@ -418,6 +421,19 @@ def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
         return False
 
     return True
+
+
+def can_read_jobs(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
 
 
 def can_create_secrets(user: QfcUser, project: Project) -> bool:

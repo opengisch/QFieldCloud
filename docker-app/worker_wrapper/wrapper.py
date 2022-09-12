@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 import docker
 import qfieldcloud.core.utils2.storage
 import requests
-from django.conf import settings
+from constance import config
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
@@ -45,7 +45,7 @@ class QgisException(Exception):
 
 
 class JobRun:
-    container_timeout_secs = settings.WORKER_TIMEOUT_S
+    container_timeout_secs = config.WORKER_TIMEOUT_S
     job_class = Job
     command = []
 

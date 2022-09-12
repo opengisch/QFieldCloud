@@ -1,8 +1,10 @@
 import atexit
+import hashlib
 import inspect
 import json
 import logging
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -30,9 +32,9 @@ from tabulate import tabulate
 # Get environment variables
 JOB_ID = os.environ.get("JOB_ID")
 
-qgs_stderr_logger = logging.getLogger("QGIS_STDERR")
+qgs_stderr_logger = logging.getLogger("QGSSTDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
-qgs_msglog_logger = logging.getLogger("QGIS_MSGLOG")
+qgs_msglog_logger = logging.getLogger("QGSMSGLOG")
 qgs_msglog_logger.setLevel(logging.DEBUG)
 
 
@@ -188,11 +190,14 @@ def download_project(
         show_progress=False,
     )
 
+    list_local_files(project_id, working_dir)
+
     return destination
 
 
 def upload_package(project_id: str, package_dir: Path) -> None:
     client = sdk.Client()
+    list_local_files(project_id, package_dir)
     client.upload_files(
         project_id,
         sdk.FileTransferType.PACKAGE,
@@ -207,6 +212,7 @@ def upload_package(project_id: str, package_dir: Path) -> None:
 def upload_project(project_id: str, project_dir: Path) -> None:
     """Upload the files from the `project_dir` to the permanent file storage."""
     client = sdk.Client()
+    list_local_files(project_id, project_dir)
     client.upload_files(
         project_id,
         sdk.FileTransferType.PROJECT,
@@ -215,6 +221,19 @@ def upload_project(project_id: str, project_dir: Path) -> None:
         throw_on_error=True,
         show_progress=False,
     )
+
+
+def list_local_files(project_id: str, project_dir: Path):
+    client = sdk.Client()
+    files = client.list_local_files(str(project_dir), "*")
+    if files:
+        logging.info(
+            f'Local files list for project "{project_id}":\n{files_list_to_string(files)}',
+        )
+    else:
+        logging.info(
+            f'Local files list for project "{project_id}": empty!',
+        )
 
 
 class WorkflowValidationException(Exception):
@@ -623,6 +642,36 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
     return layers_by_id
 
 
+def get_file_size(filename: str) -> int:
+    return Path(filename).stat().st_size
+
+
+def get_file_md5sum(filename: str) -> str:
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+
+    with open(filename, "rb") as f:
+        while chunk := f.read(BLOCKSIZE):
+            hasher.update(chunk)
+
+    return hasher.hexdigest()
+
+
+def files_list_to_string(files: List[Dict[str, Any]]) -> str:
+    table = [
+        [
+            d["name"],
+            get_file_size(d["absolute_filename"]),
+            get_file_md5sum(d["absolute_filename"]),
+        ]
+        for d in sorted(files, key=lambda f: f["name"])
+    ]
+    return tabulate(
+        table,
+        headers=["Name", "Size", "MD5 Checksum"],
+    )
+
+
 def layers_data_to_string(layers_by_id):
     # Print layer check results
     table = [
@@ -648,3 +697,64 @@ def layers_data_to_string(layers_by_id):
             "Provider Summary",
         ],
     )
+
+
+class RedactingFormatter(logging.Formatter):
+    """Filter out sensitive information such as passwords from the logs.
+
+    Note: this is done via logging.Formatter instead of logging.Filter,
+    because modified default handler formatter affects all existing loggers,
+    while this is not the case for filters.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        patterns = kwargs.pop(
+            "patterns",
+            [
+                r"(?:password=')(.*?)(?:')",
+            ],
+        )
+        replacement = kwargs.pop("replacement", "***")
+
+        super().__init__(*args, **kwargs)
+
+        self._patterns = [re.compile(p, re.IGNORECASE) for p in patterns]
+        self._replacement = replacement
+
+    def format(self, record: logging.LogRecord) -> str:
+        msg = super().format(record)
+
+        if isinstance(record.args, dict):
+            for k in record.args.keys():
+                record.args[k] = self.redact(record.args[k])
+        else:
+            record.args = tuple(self.redact(arg) for arg in record.args)
+
+        return self.redact(msg)
+
+    def redact(self, record: str) -> str:
+        record = str(record)
+
+        for pattern in self._patterns:
+            record = re.sub(pattern, self._replacement, record)
+
+        return record
+
+
+def setup_basic_logging_config():
+    """Set the default logger level to debug and set a password censoring formatter.
+
+    This will affect all child loggers with the default handler,
+    no matter if they are created before or after calling this function.
+    """
+    logging.basicConfig(
+        level=logging.DEBUG,
+    )
+
+    formatter = RedactingFormatter(
+        "%(asctime)s.%(msecs)03d %(name)-9s %(levelname)-8s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    for handler in logging.root.handlers:
+        handler.setFormatter(formatter)
