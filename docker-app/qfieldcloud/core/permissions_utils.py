@@ -351,6 +351,9 @@ def can_set_delta_status(user: QfcUser, delta: Delta) -> bool:
         Delta.Status.CONFLICT,
         Delta.Status.NOT_APPLIED,
         Delta.Status.ERROR,
+        Delta.Status.APPLIED,
+        Delta.Status.IGNORED,
+        Delta.Status.UNPERMITTED,
     ):
         return False
 
