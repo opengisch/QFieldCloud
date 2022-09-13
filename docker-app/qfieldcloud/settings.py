@@ -68,12 +68,10 @@ INSTALLED_APPS = [
     # 3rd-party apps
     # if django_filters defined after [rest_framework] caused '... _frozen_importlib._DeadlockError ...'
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
-    "django_tables2",
     "django_filters",
     # debug
     "debug_toolbar",
     # style
-    "bootstrap4",
     "rest_framework",
     "rest_framework.authtoken",
     "drf_yasg",
