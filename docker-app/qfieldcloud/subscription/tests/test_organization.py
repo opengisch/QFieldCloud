@@ -81,7 +81,7 @@ class QfcTestCase(APITransactionTestCase):
         org01 = Organization.objects.create(username="org01", organization_owner=u1)
         org01.useraccount.plan = Plan.objects.create(
             code="test_plan",
-            user_type=Plan.UserType.ORGANIZATION,
+            user_type=User.Type.ORGANIZATION,
             is_premium=True,
         )
         org01.useraccount.save()
@@ -232,12 +232,12 @@ class QfcTestCase(APITransactionTestCase):
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         unlimited_plan = Plan.objects.create(
             code="max_organization_members_minus1",
-            user_type=Plan.UserType.ORGANIZATION,
+            user_type=User.Type.ORGANIZATION,
             max_organization_members=-1,
         )
         limited_plan = Plan.objects.create(
             code="max_organization_members_plus1",
-            user_type=Plan.UserType.ORGANIZATION,
+            user_type=User.Type.ORGANIZATION,
             max_organization_members=1,
         )
 

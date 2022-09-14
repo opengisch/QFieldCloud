@@ -199,7 +199,7 @@ class QfcTestCase(APITestCase):
 
         # non-premium user cannot collaborate on private user project with max_premium_collaborators set to 0
         premium_plan = Plan.objects.create(
-            user_type=Plan.UserType.USER,
+            user_type=User.Type.PERSON,
             is_premium=True,
             max_premium_collaborators_per_private_project=0,
         )

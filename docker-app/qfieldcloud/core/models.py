@@ -28,7 +28,6 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.subscription.models import Plan
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -297,6 +296,8 @@ class User(AbstractUser):
         return hasattr(self, "geodb")
 
     def save(self, *args, **kwargs):
+        from qfieldcloud.subscription.models import Plan
+
         # if the user is created, we need to create a user account
         if self._state.adding and self.type != User.Type.TEAM:
             with transaction.atomic():

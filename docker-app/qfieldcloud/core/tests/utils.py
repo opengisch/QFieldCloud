@@ -2,6 +2,7 @@ import io
 import os
 from typing import IO
 
+from qfieldcloud.core.models import User
 from qfieldcloud.subscription.models import Plan
 
 
@@ -31,14 +32,14 @@ def setup_subscription_plans():
                 display_name="default user (autocreated)",
                 is_default=True,
                 is_public=False,
-                user_type=Plan.UserType.USER,
+                user_type=User.Type.PERSON,
             ),
             Plan(
                 code="default_org",
                 display_name="default organization (autocreated)",
                 is_default=True,
                 is_public=False,
-                user_type=Plan.UserType.ORGANIZATION,
+                user_type=User.Type.ORGANIZATION,
             ),
         ]
     )
