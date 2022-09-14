@@ -135,7 +135,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
         return get_avatar_url(obj)
 
     def get_username_display(self, obj):
-        if obj.user_type == obj.TYPE_TEAM:
+        if obj.user_type == obj.Type.TEAM:
             team = Team.objects.get(id=obj.id)
             return team.username.replace(f"@{team.team_organization.username}/", "")
         else:

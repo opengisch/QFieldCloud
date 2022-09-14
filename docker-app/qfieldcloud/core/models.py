@@ -58,7 +58,7 @@ class UserQueryset(models.QuerySet):
         count = Count(
             "project_roles__project__collaborators",
             filter=Q(
-                project_roles__project__collaborators__collaborator__user_type=User.TYPE_USER
+                project_roles__project__collaborators__collaborator__user_type=User.Type.PERSON
             ),
         )
 
@@ -71,9 +71,9 @@ class UserQueryset(models.QuerySet):
         )
 
         org_member_condition = Q(
-            project_roles__project__owner__user_type=User.TYPE_USER
+            project_roles__project__owner__user_type=User.Type.PERSON
         ) | (
-            Q(project_roles__project__owner__user_type=User.TYPE_ORGANIZATION)
+            Q(project_roles__project__owner__user_type=User.Type.ORGANIZATION)
             & Exists(
                 Organization.objects.of_user(OuterRef("project_roles__user")).filter(
                     id=OuterRef("project_roles__project__owner")
@@ -89,7 +89,7 @@ class UserQueryset(models.QuerySet):
         qs = (
             self.defer("project_roles__project_id", "project_roles__project_id")
             .filter(
-                user_type=User.TYPE_USER,
+                user_type=User.Type.PERSON,
                 project_roles__project=project,
             )
             .annotate(
@@ -113,7 +113,7 @@ class UserQueryset(models.QuerySet):
                 "organization_roles__organization_id",
             )
             .filter(
-                user_type=User.TYPE_USER,
+                user_type=User.Type.PERSON,
                 organization_roles__organization=organization,
             )
             .annotate(
@@ -165,13 +165,13 @@ class UserQueryset(models.QuerySet):
 
         Internally calls for_team or for_organization depending on the entity."""
 
-        if entity.user_type == User.TYPE_USER:
+        if entity.user_type == User.Type.PERSON:
             return self.filter(pk=entity.pk)
 
-        if entity.user_type == User.TYPE_TEAM:
+        if entity.user_type == User.Type.TEAM:
             return self.for_team(entity)
 
-        if entity.user_type == User.TYPE_ORGANIZATION:
+        if entity.user_type == User.Type.ORGANIZATION:
             return self.for_organization(entity)
 
         raise RuntimeError(f"Unsupported entity : {entity}")
@@ -210,15 +210,10 @@ class User(AbstractUser):
 
     objects = QFieldCloudUserManager()
 
-    TYPE_USER = 1
-    TYPE_ORGANIZATION = 2
-    TYPE_TEAM = 3
-
-    TYPE_CHOICES = (
-        (TYPE_USER, "user"),
-        (TYPE_ORGANIZATION, "organization"),
-        (TYPE_TEAM, "team"),
-    )
+    class Type(models.IntegerChoices):
+        PERSON = (1, _("Person"))
+        ORGANIZATION = (2, _("Organization"))
+        TEAM = (3, _("Team"))
 
     """Define username here, so we can avoid multiple validators from the constructor. Check the class notes."""
     username = models.CharField(
@@ -245,7 +240,7 @@ class User(AbstractUser):
     )
 
     user_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_USER, editable=False
+        choices=Type.choices, default=Type.PERSON, editable=False
     )
 
     remaining_invitations = models.PositiveIntegerField(
@@ -260,7 +255,7 @@ class User(AbstractUser):
         return self.username
 
     def get_absolute_url(self):
-        if self.user_type == User.TYPE_TEAM:
+        if self.user_type == User.Type.TEAM:
             team = Team.objects.get(pk=self.pk)
             return reverse_lazy(
                 "settings_teams_edit",
@@ -274,15 +269,15 @@ class User(AbstractUser):
 
     @property
     def is_user(self):
-        return self.user_type == User.TYPE_USER
+        return self.user_type == User.Type.PERSON
 
     @property
     def is_organization(self):
-        return self.user_type == User.TYPE_ORGANIZATION
+        return self.user_type == User.Type.ORGANIZATION
 
     @property
     def is_team(self):
-        return self.user_type == User.TYPE_TEAM
+        return self.user_type == User.Type.TEAM
 
     @property
     def full_name(self) -> str:
@@ -303,7 +298,7 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         # if the user is created, we need to create a user account
-        if self._state.adding and self.user_type != User.TYPE_TEAM:
+        if self._state.adding and self.user_type != User.Type.TEAM:
             with transaction.atomic():
                 super().save(*args, **kwargs)
                 plan = Plan.objects.get(user_type=self.user_type, is_default=True)
@@ -312,7 +307,7 @@ class User(AbstractUser):
             super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.user_type != User.TYPE_TEAM:
+        if self.user_type != User.Type.TEAM:
             qfieldcloud.core.utils2.storage.remove_user_avatar(self)
 
         with no_audits([User, UserAccount, Project]):
@@ -556,7 +551,7 @@ class Organization(User):
         User,
         on_delete=models.CASCADE,
         related_name="owner",
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(user_type=User.Type.PERSON),
     )
 
     class Meta:
@@ -602,7 +597,7 @@ class Organization(User):
         )
 
     def save(self, *args, **kwargs):
-        self.user_type = self.TYPE_ORGANIZATION
+        self.user_type = User.Type.ORGANIZATION
         return super().save(*args, **kwargs)
 
 
@@ -641,13 +636,13 @@ class OrganizationMember(models.Model):
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_ORGANIZATION),
+        limit_choices_to=models.Q(user_type=User.Type.ORGANIZATION),
         related_name="members",
     )
     member = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(user_type=User.Type.PERSON),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.MEMBER)
 
@@ -724,7 +719,7 @@ class Team(User):
         verbose_name_plural = "teams"
 
     def save(self, *args, **kwargs):
-        self.user_type = self.TYPE_TEAM
+        self.user_type = User.Type.TEAM
         return super().save(*args, **kwargs)
 
     @property
@@ -748,13 +743,13 @@ class TeamMember(models.Model):
     team = models.ForeignKey(
         Team,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_TEAM),
+        limit_choices_to=models.Q(user_type=User.Type.TEAM),
         related_name="members",
     )
     member = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(user_type=User.Type.PERSON),
     )
 
     def clean(self) -> None:
@@ -806,7 +801,7 @@ class ProjectQueryset(models.QuerySet):
         public = Q(is_public=True)
         count = Count(
             "collaborators",
-            filter=Q(collaborators__collaborator__user_type=User.TYPE_USER),
+            filter=Q(collaborators__collaborator__user_type=User.Type.PERSON),
         )
         max_premium_collaborators_per_private_project = Q(
             owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
@@ -816,8 +811,8 @@ class ProjectQueryset(models.QuerySet):
             owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
-        org_member_condition = Q(owner__user_type=User.TYPE_USER) | (
-            Q(owner__user_type=User.TYPE_ORGANIZATION)
+        org_member_condition = Q(owner__user_type=User.Type.PERSON) | (
+            Q(owner__user_type=User.Type.ORGANIZATION)
             & Exists(Organization.objects.of_user(user).filter(id=OuterRef("owner")))
         )
         org_member = Case(When(org_member_condition, then=True), default=False)
@@ -907,7 +902,7 @@ class Project(models.Model):
         on_delete=models.CASCADE,
         related_name="projects",
         limit_choices_to=models.Q(
-            user_type__in=[User.TYPE_USER, User.TYPE_ORGANIZATION]
+            user_type__in=[User.Type.PERSON, User.Type.ORGANIZATION]
         ),
         help_text=_(
             "The project owner can be either you or any of the organization you are member of."
@@ -1103,7 +1098,7 @@ class Project(models.Model):
             exclude_pks = [self.owner_id]
 
         return self.collaborators.filter(
-            collaborator__user_type=User.TYPE_USER,
+            collaborator__user_type=User.Type.PERSON,
         ).exclude(
             collaborator_id__in=exclude_pks,
         )
@@ -1132,7 +1127,7 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         # Build the conditions with Q objects
         public = Q(project__is_public=True)
         count = Count(
-            "project__collaborators", filter=Q(collaborator__user_type=User.TYPE_USER)
+            "project__collaborators", filter=Q(collaborator__user_type=User.Type.PERSON)
         )
         max_premium_collaborators_per_private_project = Q(
             project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
@@ -1181,7 +1176,7 @@ class ProjectCollaborator(models.Model):
     collaborator = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type__in=[User.TYPE_USER, User.TYPE_TEAM]),
+        limit_choices_to=models.Q(user_type__in=[User.Type.PERSON, User.Type.TEAM]),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
 

@@ -75,14 +75,14 @@ class QfcTestCase(APITestCase):
         self.team1_1 = Team.objects.create(
             username="team1_1",
             password="abc123",
-            user_type=User.TYPE_TEAM,
+            user_type=User.Type.TEAM,
             team_organization=self.organization1,
         )
 
         self.team2_1 = Team.objects.create(
             username="team2_1",
             password="abc123",
-            user_type=User.TYPE_TEAM,
+            user_type=User.Type.TEAM,
             team_organization=self.organization2,
         )
 

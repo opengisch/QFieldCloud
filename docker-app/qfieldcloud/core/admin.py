@@ -99,17 +99,17 @@ class MemberOrganizationInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class MemberTeamInline(admin.TabularInline):
@@ -119,17 +119,17 @@ class MemberTeamInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class UserAccountInline(admin.StackedInline):
@@ -139,12 +139,12 @@ class UserAccountInline(admin.StackedInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.user_type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class ProjectInline(admin.TabularInline):
@@ -174,17 +174,17 @@ class UserProjectCollaboratorInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.user_type == User.Type.PERSON
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.user_type == User.Type.PERSON
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.user_type == User.Type.PERSON
 
 
 class UserAdmin(admin.ModelAdmin):

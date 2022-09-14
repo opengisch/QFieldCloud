@@ -61,7 +61,7 @@ def create_collaborator_by_username_or_email(
     success, message = False, ""
     users = list(
         User.objects.filter(Q(username=username) | Q(email=username)).exclude(
-            user_type=User.TYPE_ORGANIZATION
+            user_type=User.Type.ORGANIZATION
         )
     )
 

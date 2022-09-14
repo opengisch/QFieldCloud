@@ -10,7 +10,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for user in User.objects.filter(
-            useraccount=None, type__in=[User.TYPE_USER, User.TYPE_ORGANIZATION]
+            useraccount=None, type__in=[User.Type.PERSON, User.Type.ORGANIZATION]
         ):
             print(
                 f'Creating user account for user "{user.username}" email "{user.email}"...'
