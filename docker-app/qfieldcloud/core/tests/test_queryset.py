@@ -5,6 +5,7 @@ from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     ProjectQueryset,
@@ -168,9 +169,9 @@ class QfcTestCase(APITestCase):
 
         # Test on Users
         if origin != ProjectQueryset.RoleOrigins.PUBLIC:
-            # The User.objects.for_project queryset is not symetric to Project.objects.for_user
+            # The Person.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
-            u = User.objects.for_project(project).get(pk=user.pk)
+            u = Person.objects.for_project(project).get(pk=user.pk)
             self.assertEqual(u.project_role, role)
             self.assertEqual(u.project_role_origin, origin)
             self.assertEqual(u.project_role_is_valid, is_valid)

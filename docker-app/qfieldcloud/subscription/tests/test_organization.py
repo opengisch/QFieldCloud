@@ -5,6 +5,7 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     ProjectQueryset,
@@ -43,7 +44,7 @@ class QfcTestCase(APITransactionTestCase):
         # Assert user does not have any role
         if role is None:
             with self.assertRaises(User.DoesNotExist):
-                User.objects.for_project(project).get(pk=user.pk)
+                Person.objects.for_project(project).get(pk=user.pk)
 
             with self.assertRaises(Project.DoesNotExist):
                 Project.objects.for_user(user).get(pk=project.pk)
@@ -52,9 +53,9 @@ class QfcTestCase(APITransactionTestCase):
 
         # Test on Users
         if origin != ProjectQueryset.RoleOrigins.PUBLIC:
-            # The User.objects.for_project queryset is not symetric to Project.objects.for_user
+            # The Person.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
-            u = User.objects.for_project(project).get(pk=user.pk)
+            u = Person.objects.for_project(project).get(pk=user.pk)
             self.assertEqual(u.project_role, role)
             self.assertEqual(u.project_role_origin, origin)
             self.assertEqual(u.project_role_is_valid, is_valid)

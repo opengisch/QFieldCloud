@@ -9,6 +9,7 @@ from notifications.signals import notify
 from ..core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     ProjectQueryset,
@@ -60,16 +61,14 @@ def _send_notif(verb, action_object, recipient, target=None):
 def _concerned_users_in_entity(entity: User):
     """Returns a list of users (of User.Type.PERSON) concerned by updates to an user (any type)"""
 
-    return User.objects.for_entity(entity).filter(type=User.Type.PERSON)
+    return Person.objects.for_entity(entity)
 
 
 def _concerned_users_in_project(project: Project):
     """Returns a list of users concerned by updates to a project"""
 
-    return (
-        User.objects.for_project(project)
-        .filter(type=User.Type.PERSON)
-        .exclude(project_role_origin=ProjectQueryset.RoleOrigins.PUBLIC)
+    return Person.objects.for_project(project).exclude(
+        project_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
     )
 
 

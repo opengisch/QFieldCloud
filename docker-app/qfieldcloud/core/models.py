@@ -6,7 +6,7 @@ import string
 import uuid
 from datetime import date, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
@@ -33,7 +33,7 @@ from timezone_field import TimeZoneField
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
 
-class UserQueryset(models.QuerySet):
+class PersonQueryset(models.QuerySet):
     """Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
 
     Users are annotated with the user's project role (`project_role`) and the origin of this role (`project_role_origin`).
@@ -45,7 +45,7 @@ class UserQueryset(models.QuerySet):
     Usage:
     ```
     # List all users that are involved in OpenKebabMap.
-    Users.object.for_project(OpenKebabMap)
+    Persons.object.for_project(OpenKebabMap)
     ```
 
     Note:
@@ -88,7 +88,6 @@ class UserQueryset(models.QuerySet):
         qs = (
             self.defer("project_roles__project_id", "project_roles__project_id")
             .filter(
-                type=User.Type.PERSON,
                 project_roles__project=project,
             )
             .annotate(
@@ -176,9 +175,9 @@ class UserQueryset(models.QuerySet):
         raise RuntimeError(f"Unsupported entity : {entity}")
 
 
-class QFieldCloudUserManager(UserManager):
+class PersonManager(UserManager):
     def get_queryset(self):
-        return UserQueryset(self.model, using=self._db)
+        return PersonQueryset(self.model, using=self._db)
 
     def for_project(self, project: "Project", skip_invalid: bool = False):
         return self.get_queryset().for_project(project, skip_invalid)
@@ -206,8 +205,6 @@ class User(AbstractUser):
     Note:
         If you add validators in the constructor, note they will be added multiple times for each class that extends User.
     """
-
-    objects = QFieldCloudUserManager()
 
     class Type(models.IntegerChoices):
         PERSON = (1, _("Person"))
@@ -241,14 +238,6 @@ class User(AbstractUser):
     type = models.PositiveSmallIntegerField(
         choices=Type.choices, default=Type.PERSON, editable=False
     )
-
-    remaining_invitations = models.PositiveIntegerField(
-        default=3,
-        help_text=_("Remaining invitations that can be sent by the user himself."),
-    )
-
-    has_newsletter_subscription = models.BooleanField(default=False)
-    has_accepted_tos = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username
@@ -295,6 +284,17 @@ class User(AbstractUser):
     def has_geodb(self) -> bool:
         return hasattr(self, "geodb")
 
+    @property
+    def polymorph(self) -> Union["Person", "Organization", "Team"]:
+        if self.type == User.Type.PERSON:
+            return self.person
+        elif self.type == User.Type.ORGANIZATION:
+            return self.organization
+        elif self.type == User.Type.TEAM:
+            return self.team
+        else:
+            raise NotImplementedError()
+
     def save(self, *args, **kwargs):
         from qfieldcloud.subscription.models import Plan
 
@@ -328,6 +328,33 @@ class User(AbstractUser):
     #             name="core_user_username_uppercase"
     #         )
     #     ]
+
+
+class Person(User):
+    """Individual users in QFieldCloud."""
+
+    objects = PersonManager()
+
+    # The number of invitations the user can send.
+    # NOTE the limit was developed during the beta phase and to prevent going over the email quota per hour.
+    remaining_invitations = models.PositiveIntegerField(
+        default=3,
+        help_text=_("Remaining invitations that can be sent by the user himself."),
+    )
+
+    # Whether the user agreed to subscribe for the newsletter
+    has_newsletter_subscription = models.BooleanField(default=False)
+
+    # Whether the user has accepted the Terms of Service
+    has_accepted_tos = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "person"
+        verbose_name_plural = "people"
+
+    def save(self, *args, **kwargs):
+        self.type = User.Type.PERSON
+        return super().save(*args, **kwargs)
 
 
 class UserAccount(models.Model):
@@ -787,7 +814,7 @@ class ProjectQueryset(models.QuerySet):
     ```
 
     Note:
-    This query is very similar to `UserQueryset.for_project`, don't forget to update it too.
+    This query is very similar to `PersonQueryset.for_project`, don't forget to update it too.
     """
 
     class RoleOrigins(models.TextChoices):

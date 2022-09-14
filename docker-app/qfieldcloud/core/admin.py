@@ -216,14 +216,11 @@ class UserAdmin(admin.ModelAdmin):
         "email",
         "first_name",
         "last_name",
-        "remaining_invitations",
         "date_joined",
         "last_login",
         "is_superuser",
         "is_staff",
         "is_active",
-        "has_newsletter_subscription",
-        "has_accepted_tos",
     )
 
     inlines = (
