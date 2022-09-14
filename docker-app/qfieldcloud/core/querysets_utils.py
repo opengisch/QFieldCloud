@@ -52,16 +52,16 @@ def get_users(
         users = User.objects.all()
 
     if exclude_organizations:
-        users = users.exclude(user_type=User.Type.ORGANIZATION)
+        users = users.exclude(type=User.Type.ORGANIZATION)
 
     if exclude_teams:
-        users = users.exclude(user_type=User.Type.TEAM)
+        users = users.exclude(type=User.Type.TEAM)
     else:
         if project:
             users = users.filter(
-                ~Q(user_type=User.Type.TEAM)
+                ~Q(type=User.Type.TEAM)
                 | (
-                    Q(user_type=User.Type.TEAM)
+                    Q(type=User.Type.TEAM)
                     & Q(pk__in=Team.objects.filter(team_organization=project.owner))
                 )
             )
@@ -80,7 +80,7 @@ def get_users(
     elif organization:
         # exclude all teams that are not of the current organization
         users = users.filter(
-            ~Q(user_type=User.Type.TEAM)
+            ~Q(type=User.Type.TEAM)
             | Q(pk__in=Team.objects.filter(team_organization=organization))
         )
 

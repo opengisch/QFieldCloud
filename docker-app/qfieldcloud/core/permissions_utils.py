@@ -691,10 +691,10 @@ def can_delete_geodb(user: QfcUser, profile: QfcUser) -> bool:
 
 
 def can_become_member(user: QfcUser, organization: Organization) -> bool:
-    if user.user_type == QfcUser.Type.ORGANIZATION:
+    if user.type == QfcUser.Type.ORGANIZATION:
         return False
 
-    if user.user_type == QfcUser.Type.TEAM:
+    if user.type == QfcUser.Type.TEAM:
         return Team.objects.get(pk=user.pk).team_organization == organization
 
     return not user_has_organization_role_origins(

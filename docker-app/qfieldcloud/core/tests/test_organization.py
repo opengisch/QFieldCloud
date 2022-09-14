@@ -41,7 +41,7 @@ class QfcTestCase(APITestCase):
         self.organization1 = Organization.objects.create(
             username="organization1",
             password="abc123",
-            user_type=2,
+            type=2,
             organization_owner=self.user1,
         )
 

@@ -56,7 +56,7 @@ class QfcTestCase(APITestCase):
         self.organization1 = Organization.objects.create(
             username="organization1",
             password="abc123",
-            user_type=2,
+            type=2,
             organization_owner=self.user1,
         )
 
@@ -118,7 +118,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user1")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertTrue("email" in response.json())
 
     def test_get_another_user(self):
@@ -128,7 +128,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user2")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertFalse("email" in response.json())
 
     def test_get_organization(self):
@@ -138,7 +138,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "organization1")
-        self.assertEqual(response.data["user_type"], 2)
+        self.assertEqual(response.data["type"], 2)
         self.assertEqual(response.data["organization_owner"], "user1")
         self.assertEqual(len(response.data["members"]), 1)
 
@@ -210,7 +210,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user1")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertTrue("email" in response.json())
 
     def test_update_the_authenticated_user(self):
@@ -227,7 +227,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user1")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertEqual(response.data["first_name"], "Charles")
         self.assertEqual(response.data["last_name"], "Darwin")
         self.assertEqual(response.data["email"], "charles@beagle.uk")
@@ -305,7 +305,7 @@ class QfcTestCase(APITestCase):
         organization = payload[0]
 
         self.assertEquals(organization["username"], self.organization1.username)
-        self.assertEquals(organization["user_type"], User.Type.ORGANIZATION)
+        self.assertEquals(organization["type"], User.Type.ORGANIZATION)
         self.assertEquals(organization["membership_role"], "admin")
         self.assertEquals(organization["membership_role_origin"], "organization_owner")
         self.assertEquals(organization["membership_is_public"], True)

@@ -15,6 +15,6 @@ class Command(BaseCommand):
             print(
                 f'Creating user account for user "{user.username}" email "{user.email}"...'
             )
-            plan = Plan.objects.get(user_type=user.user_type, is_default=True)
+            plan = Plan.objects.get(type=user.type, is_default=True)
 
             UserAccount.objects.create(user=user, plan=plan)

@@ -29,7 +29,7 @@ class QfcTestCase(APITransactionTestCase):
                 "first_name": "",
                 "full_name": "",
                 "last_name": "",
-                "user_type": "1",
+                "type": "1",
             },
         )
         self.assertTrue(datetime.fromisoformat(expires_at) == token.expires_at)

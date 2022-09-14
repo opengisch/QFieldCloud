@@ -65,7 +65,7 @@ def invite_user_by_email(email: str, inviter: User, send: bool = True) -> tuple:
                 ).format(email),
             )
 
-    qs = User.objects.filter(email=email, user_type=User.Type.PERSON)
+    qs = User.objects.filter(email=email, type=User.Type.PERSON)
 
     if len(qs) > 0:
         assert len(qs) == 1
