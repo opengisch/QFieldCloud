@@ -5,6 +5,7 @@ from qfieldcloud.core import permissions_utils as perms
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     Team,
@@ -24,11 +25,11 @@ class QfcTestCase(APITestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a second user
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # Create an organization
@@ -156,9 +157,9 @@ class QfcTestCase(APITestCase):
             self.assertEqual(perms.can_become_collaborator(u, p), error is None)
 
         # Create users
-        u1 = User.objects.create_user(username="u1")
-        u2 = User.objects.create_user(username="u2")
-        u3 = User.objects.create_user(username="u3")
+        u1 = Person.objects.create_user(username="u1")
+        u2 = Person.objects.create_user(username="u2")
+        u3 = Person.objects.create_user(username="u3")
 
         # Create organizations
         o1 = Organization.objects.create(username="o1", organization_owner=u1)

@@ -8,7 +8,7 @@ from django.core.management import call_command
 from django.http import FileResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project, User
+from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob, Project
 from qfieldcloud.subscription.models import Plan
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -23,10 +23,10 @@ class QfcTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.user1.save()
 
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.user2.save()
 
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]

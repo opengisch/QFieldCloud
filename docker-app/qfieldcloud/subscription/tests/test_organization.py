@@ -43,7 +43,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Assert user does not have any role
         if role is None:
-            with self.assertRaises(User.DoesNotExist):
+            with self.assertRaises(Person.DoesNotExist):
                 Person.objects.for_project(project).get(pk=user.pk)
 
             with self.assertRaises(Project.DoesNotExist):
@@ -70,14 +70,14 @@ class QfcTestCase(APITransactionTestCase):
         Roles = ProjectCollaborator.Roles
         RoleOrigins = ProjectQueryset.RoleOrigins
 
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
-        u3 = User.objects.create(username="u3")
-        u4 = User.objects.create(username="u4")
-        u5 = User.objects.create(username="u5")
-        u6 = User.objects.create(username="u6")
-        u7 = User.objects.create(username="u7")
-        u8 = User.objects.create(username="u8")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
+        u3 = Person.objects.create(username="u3")
+        u4 = Person.objects.create(username="u4")
+        u5 = Person.objects.create(username="u5")
+        u6 = Person.objects.create(username="u6")
+        u7 = Person.objects.create(username="u7")
+        u8 = Person.objects.create(username="u8")
 
         org01 = Organization.objects.create(username="org01", organization_owner=u1)
         org01.useraccount.plan = Plan.objects.create(
@@ -224,10 +224,10 @@ class QfcTestCase(APITransactionTestCase):
     def test_max_organization_members(self):
         """This tests quotas"""
 
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
-        u3 = User.objects.create(username="u3")
-        u4 = User.objects.create(username="u4")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
+        u3 = Person.objects.create(username="u3")
+        u4 = Person.objects.create(username="u4")
         self._login(u1)
 
         o1 = Organization.objects.create(username="o1", organization_owner=u1)

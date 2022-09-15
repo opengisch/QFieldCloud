@@ -2,7 +2,7 @@ import logging
 import unittest
 
 import psycopg2
-from qfieldcloud.core.models import Geodb, User
+from qfieldcloud.core.models import Geodb, Person
 
 from .utils import setup_subscription_plans
 
@@ -15,7 +15,7 @@ class QfcTestCase(unittest.TestCase):
 
     def test_create_db(self):
         # Create a user
-        user1 = User.objects.create_user(
+        user1 = Person.objects.create_user(
             username="user1", password="abc123", email="user1@pizza.it"
         )
 

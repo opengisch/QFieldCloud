@@ -43,6 +43,13 @@ class ExpectedPremiumUserError(CheckPermError):
     ...
 
 
+def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
+    """Checks if User model derivatives are equal.
+
+    NOTE User(pk=12) is not equal to Person(pk=12)!"""
+    return user1.pk == user2.pk
+
+
 def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
     return Project.objects.for_user(user, skip_invalid).filter(pk=project.pk)
 
@@ -146,19 +153,18 @@ def can_create_project(
     user: QfcUser, organization: Union[QfcUser, Organization] = None
 ) -> bool:
     """Return True if the `user` can create a project. Accepts additional
-    `organizaiton` to check whether the user has permissions to do so on
+    `organization` to check whether the user has permissions to do so on
     that organization. Return False otherwise."""
 
     if organization is None:
-        return True
-    if user == organization:
         return True
 
     if organization.is_organization:
         if not isinstance(organization, Organization):
             organization = organization.organization  # type: ignore
     else:
-        return False
+        # the user checks if they can create project of their own
+        return user == organization
 
     if user_has_organization_roles(
         user, organization, [OrganizationMember.Roles.ADMIN]
@@ -468,7 +474,7 @@ def can_create_organizations(user: QfcUser) -> bool:
 
 
 def can_update_user(user: QfcUser, account: QfcUser) -> bool:
-    if user == account:
+    if user_eq(user, account):
         return True
 
     if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
@@ -478,7 +484,7 @@ def can_update_user(user: QfcUser, account: QfcUser) -> bool:
 
 
 def can_delete_user(user: QfcUser, account: QfcUser) -> bool:
-    if user == account:
+    if user_eq(user, account):
         return True
 
     if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
@@ -577,7 +583,7 @@ def can_delete_members(user: QfcUser, organization: Organization) -> bool:
 
 
 def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
-    if user == project.owner:
+    if user_eq(user, project.owner):
         raise AlreadyCollaboratorError(
             _("Cannot add the project owner as a collaborator.")
         )
