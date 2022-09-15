@@ -21,6 +21,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     PackageJob,
+    Person,
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
@@ -187,7 +188,7 @@ class UserProjectCollaboratorInline(admin.TabularInline):
         return obj.type == User.Type.PERSON
 
 
-class UserAdmin(admin.ModelAdmin):
+class PersonAdmin(admin.ModelAdmin):
     list_display = (
         "username",
         "first_name",
@@ -208,7 +209,7 @@ class UserAdmin(admin.ModelAdmin):
         "useraccount__plan",
     )
 
-    search_fields = ("username__icontains", "owner__username__iexact")
+    search_fields = ("username__icontains",)
 
     fields = (
         "username",
@@ -221,6 +222,9 @@ class UserAdmin(admin.ModelAdmin):
         "is_superuser",
         "is_staff",
         "is_active",
+        "remaining_invitations",
+        "has_newsletter_subscription",
+        "has_accepted_tos",
     )
 
     inlines = (
@@ -763,7 +767,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
     def organization_owner__link(self, instance):
         return model_admin_url(
-            instance.organization_owner, instance.organization_owner.username
+            instance.organization_owner.polymorph, instance.organization_owner.username
         )
 
     def get_search_results(self, request, queryset, search_term):
@@ -820,7 +824,7 @@ class TeamAdmin(admin.ModelAdmin):
         obj.save()
 
 
-admin.site.register(User, UserAdmin)
+admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
