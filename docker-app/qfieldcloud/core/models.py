@@ -268,7 +268,7 @@ class User(AbstractUser):
             return reverse_lazy("profile_overview", kwargs={"username": self.username})
 
     @property
-    def is_user(self):
+    def is_person(self):
         return self.user_type == User.Type.PERSON
 
     @property
@@ -1189,7 +1189,7 @@ class ProjectCollaborator(models.Model):
 
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
-            if self.collaborator.is_user:
+            if self.collaborator.is_person:
                 members_qs = organization.members.filter(member=self.collaborator)
 
                 if members_qs.count() == 0:

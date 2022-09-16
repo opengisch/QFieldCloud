@@ -12,7 +12,7 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
     def _authenticate_by_username(self, **credentials):
         user = super()._authenticate_by_username(**credentials)
 
-        if user and user.is_user:
+        if user and user.is_person:
             return user
 
         return None
@@ -20,7 +20,7 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
     def _authenticate_by_email(self, **credentials):
         user = super()._authenticate_by_email(**credentials)
 
-        if user and user.is_user:
+        if user and user.is_person:
             return user
 
         return None

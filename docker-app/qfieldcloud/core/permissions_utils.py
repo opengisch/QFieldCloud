@@ -711,7 +711,7 @@ def can_send_invitations(user: QfcUser, account: QfcUser) -> bool:
     if user.pk != account.pk:
         return False
 
-    if account.is_user:
+    if account.is_person:
         return True
 
     return False
