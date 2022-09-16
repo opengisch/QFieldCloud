@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
+    "django_countries",
     "timezone_field",
     "auditlog",
     # Local
