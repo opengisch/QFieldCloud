@@ -5,6 +5,7 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     ProjectQueryset,
@@ -42,8 +43,8 @@ class QfcTestCase(APITransactionTestCase):
 
         # Assert user does not have any role
         if role is None:
-            with self.assertRaises(User.DoesNotExist):
-                User.objects.for_project(project).get(pk=user.pk)
+            with self.assertRaises(Person.DoesNotExist):
+                Person.objects.for_project(project).get(pk=user.pk)
 
             with self.assertRaises(Project.DoesNotExist):
                 Project.objects.for_user(user).get(pk=project.pk)
@@ -52,9 +53,9 @@ class QfcTestCase(APITransactionTestCase):
 
         # Test on Users
         if origin != ProjectQueryset.RoleOrigins.PUBLIC:
-            # The User.objects.for_project queryset is not symetric to Project.objects.for_user
+            # The Person.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
-            u = User.objects.for_project(project).get(pk=user.pk)
+            u = Person.objects.for_project(project).get(pk=user.pk)
             self.assertEqual(u.project_role, role)
             self.assertEqual(u.project_role_origin, origin)
             self.assertEqual(u.project_role_is_valid, is_valid)
@@ -69,19 +70,19 @@ class QfcTestCase(APITransactionTestCase):
         Roles = ProjectCollaborator.Roles
         RoleOrigins = ProjectQueryset.RoleOrigins
 
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
-        u3 = User.objects.create(username="u3")
-        u4 = User.objects.create(username="u4")
-        u5 = User.objects.create(username="u5")
-        u6 = User.objects.create(username="u6")
-        u7 = User.objects.create(username="u7")
-        u8 = User.objects.create(username="u8")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
+        u3 = Person.objects.create(username="u3")
+        u4 = Person.objects.create(username="u4")
+        u5 = Person.objects.create(username="u5")
+        u6 = Person.objects.create(username="u6")
+        u7 = Person.objects.create(username="u7")
+        u8 = Person.objects.create(username="u8")
 
         org01 = Organization.objects.create(username="org01", organization_owner=u1)
         org01.useraccount.plan = Plan.objects.create(
             code="test_plan",
-            user_type=Plan.UserType.ORGANIZATION,
+            user_type=User.Type.ORGANIZATION,
             is_premium=True,
         )
         org01.useraccount.save()
@@ -223,21 +224,21 @@ class QfcTestCase(APITransactionTestCase):
     def test_max_organization_members(self):
         """This tests quotas"""
 
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
-        u3 = User.objects.create(username="u3")
-        u4 = User.objects.create(username="u4")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
+        u3 = Person.objects.create(username="u3")
+        u4 = Person.objects.create(username="u4")
         self._login(u1)
 
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         unlimited_plan = Plan.objects.create(
             code="max_organization_members_minus1",
-            user_type=Plan.UserType.ORGANIZATION,
+            user_type=User.Type.ORGANIZATION,
             max_organization_members=-1,
         )
         limited_plan = Plan.objects.create(
             code="max_organization_members_plus1",
-            user_type=Plan.UserType.ORGANIZATION,
+            user_type=User.Type.ORGANIZATION,
             max_organization_members=1,
         )
 

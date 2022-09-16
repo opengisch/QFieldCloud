@@ -10,8 +10,8 @@ from qfieldcloud.core.models import (
     Job,
     Organization,
     OrganizationMember,
+    Person,
     Project,
-    User,
 )
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -26,22 +26,22 @@ class QfcTestCase(APITestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a user
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # Create a user
-        self.user3 = User.objects.create_user(username="user3", password="abc123")
+        self.user3 = Person.objects.create_user(username="user3", password="abc123")
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
         # Create an organization
         self.organization1 = Organization.objects.create(
             username="organization1",
             password="abc123",
-            user_type=2,
+            type=2,
             organization_owner=self.user1,
         )
 
@@ -91,7 +91,7 @@ class QfcTestCase(APITestCase):
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0].organization, self.organization1)
-        self.assertEqual(members[0].member, self.user2)
+        self.assertEqual(members[0].member.polymorph, self.user2)
         self.assertEqual(members[0].role, OrganizationMember.Roles.ADMIN)
 
     def test_update_member(self):
@@ -115,7 +115,7 @@ class QfcTestCase(APITestCase):
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0].organization, self.organization1)
-        self.assertEqual(members[0].member, self.user2)
+        self.assertEqual(members[0].member.polymorph, self.user2)
         self.assertEqual(members[0].role, OrganizationMember.Roles.MEMBER)
 
     def test_delete_member(self):

@@ -271,7 +271,7 @@ ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
 ACCOUNT_PRESERVE_USERNAME_CASING = False
 ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_ADAPTER = "invitations.models.InvitationsAdapter"
+ACCOUNT_ADAPTER = "qfieldcloud.core.adapters.AccountAdapter"
 ACCOUNT_LOGOUT_ON_GET = True
 
 # Django axes configuration
@@ -301,7 +301,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 # https://github.com/bee-keeper/django-invitations#additional-configuration
 INVITATIONS_INVITATION_EXPIRY = 365  # integer in days, 0 disables invitations
 INVITATIONS_INVITATION_ONLY = False
-INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+# INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
 INVITATIONS_GONE_ON_ACCEPT_ERROR = False
 
 TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"

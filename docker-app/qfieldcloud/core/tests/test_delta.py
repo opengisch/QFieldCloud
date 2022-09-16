@@ -12,9 +12,9 @@ from qfieldcloud.core.models import (
     Job,
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
-    User,
 )
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -29,11 +29,11 @@ class QfcTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.user1.save()
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.user2.save()
-        self.user3 = User.objects.create_user(username="user3", password="abc123")
+        self.user3 = Person.objects.create_user(username="user3", password="abc123")
         self.user3.save()
 
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]

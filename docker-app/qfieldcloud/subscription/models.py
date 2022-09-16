@@ -1,17 +1,13 @@
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.utils.translation import gettext as _
+from qfieldcloud.core.models import User
 
 
 class Plan(models.Model):
-
-    # NOTE the values for USER and ORGANIZATION should match the values of TYPE_USER and TYPE_ORGANIZATION in qfieldcloud.core.models.User
-    class UserType(models.IntegerChoices):
-        USER = (1, _("User"))
-        ORGANIZATION = (2, _("Organization"))
-
     @classmethod
     def get_or_create_default(cls) -> "Plan":
         """Returns the default plan, creating one if none exists.
@@ -23,14 +19,14 @@ class Plan(models.Model):
                     display_name="default user (autocreated)",
                     is_default=True,
                     is_public=False,
-                    user_type=Plan.UserType.USER,
+                    user_type=User.Type.PERSON,
                 )
                 cls.objects.create(
                     code="default_org",
                     display_name="default organization (autocreated)",
                     is_default=True,
                     is_public=False,
-                    user_type=Plan.UserType.ORGANIZATION,
+                    user_type=User.Type.ORGANIZATION,
                 )
         return cls.objects.order_by("-is_default").first()
 
@@ -39,7 +35,7 @@ class Plan(models.Model):
 
     # the plan would be applicable only to user of that `user_type`
     user_type = models.PositiveSmallIntegerField(
-        choices=UserType.choices, default=UserType.USER
+        choices=User.Type.choices, default=User.Type.PERSON
     )
 
     # relative ordering of the record
@@ -81,7 +77,7 @@ class Plan(models.Model):
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
     # the maximum amount of money that they are going to pay.
-    # Only makes sense when the user_type == UserType.ORGANIZATION
+    # Only makes sense when the user_type == User.Type.ORGANIZATION
     # If the organization subscription is changed from unlimited to limited organization members,
     # the existing members that are over the max_organization_members configuration remain active.
     max_organization_members = models.IntegerField(
@@ -102,6 +98,11 @@ class Plan(models.Model):
     )
 
     def save(self, *args, **kwargs):
+        if self.user_type not in (User.Type.PERSON, User.Type.ORGANIZATION):
+            raise ValidationError(
+                'Only "PERSON" and "ORGANIZATION" user types are allowed.'
+            )
+
         with transaction.atomic():
             # If default is set to true, we unset default on all other plans
             if self.is_default:

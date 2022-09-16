@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from qfieldcloud.core.invitations_utils import invite_user_by_email
+from qfieldcloud.core.models import Person
 
 
 class Command(BaseCommand):
@@ -22,16 +22,14 @@ class Command(BaseCommand):
         parser.add_argument("--exit-on-failure", action="store_true")
 
     def handle(self, *args, **options):
-        User = get_user_model()
-
         inviter_username = options.get("inviter")
         emails = options.get("emails", [])
         exit_on_failure = options.get("exit-on-failure")
         sent_emails_limit = options.get("limit", 0)
 
         try:
-            inviter = User.objects.get(username=inviter_username)
-        except User.DoesNotExist:
+            inviter = Person.objects.get(username=inviter_username)
+        except Person.DoesNotExist:
             print(f'ERROR: Failed to find user "{inviter_username}"!')
             exit(1)
 

@@ -21,6 +21,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     PackageJob,
+    Person,
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
@@ -99,17 +100,17 @@ class MemberOrganizationInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class MemberTeamInline(admin.TabularInline):
@@ -119,17 +120,17 @@ class MemberTeamInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class UserAccountInline(admin.StackedInline):
@@ -139,12 +140,12 @@ class UserAccountInline(admin.StackedInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class ProjectInline(admin.TabularInline):
@@ -174,20 +175,20 @@ class UserProjectCollaboratorInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.type == User.Type.PERSON
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.type == User.Type.PERSON
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.type == User.Type.PERSON
 
 
-class UserAdmin(admin.ModelAdmin):
+class PersonAdmin(admin.ModelAdmin):
     list_display = (
         "username",
         "first_name",
@@ -197,18 +198,18 @@ class UserAdmin(admin.ModelAdmin):
         "is_staff",
         "is_active",
         "date_joined",
-        "user_type",
+        "type",
         "useraccount",
     )
     list_filter = (
-        "user_type",
+        "type",
         "date_joined",
         "is_active",
         "is_staff",
         "useraccount__plan",
     )
 
-    search_fields = ("username__icontains", "owner__username__iexact")
+    search_fields = ("username__icontains",)
 
     fields = (
         "username",
@@ -216,12 +217,12 @@ class UserAdmin(admin.ModelAdmin):
         "email",
         "first_name",
         "last_name",
-        "remaining_invitations",
         "date_joined",
         "last_login",
         "is_superuser",
         "is_staff",
         "is_active",
+        "remaining_invitations",
         "has_newsletter_subscription",
         "has_accepted_tos",
     )
@@ -766,7 +767,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
     def organization_owner__link(self, instance):
         return model_admin_url(
-            instance.organization_owner, instance.organization_owner.username
+            instance.organization_owner.polymorph, instance.organization_owner.username
         )
 
     def get_search_results(self, request, queryset, search_term):
@@ -823,7 +824,7 @@ class TeamAdmin(admin.ModelAdmin):
         obj.save()
 
 
-admin.site.register(User, UserAdmin)
+admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)

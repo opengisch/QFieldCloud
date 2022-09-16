@@ -5,6 +5,7 @@ from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     ProjectQueryset,
@@ -26,29 +27,29 @@ class QfcTestCase(APITestCase):
         # user1 owns p1 and p2
         # user1 owns o1
         # user1 collaborates on p7
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # user2 owns p3 and p4
         # user2 admins o1
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # user2 owns p7 and p8
         # user2 is member of o1
-        self.user3 = User.objects.create_user(username="user3", password="abc123")
+        self.user3 = Person.objects.create_user(username="user3", password="abc123")
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
         # user2 owns no projects
         # user2 is member of o2
-        self.user4 = User.objects.create_user(username="user4", password="abc123")
+        self.user4 = Person.objects.create_user(username="user4", password="abc123")
         self.token4 = AuthToken.objects.get_or_create(user=self.user4)[0]
 
         # organization1 owns p4 and p5
         self.organization1 = Organization.objects.create(
             username="organization1",
             password="abc123",
-            user_type=2,
+            type=User.Type.ORGANIZATION,
             organization_owner=self.user1,
         )
 
@@ -56,7 +57,7 @@ class QfcTestCase(APITestCase):
         self.organization2 = Organization.objects.create(
             username="organization2",
             password="abc123",
-            user_type=2,
+            type=User.Type.ORGANIZATION,
             organization_owner=self.user4,
         )
 
@@ -75,14 +76,14 @@ class QfcTestCase(APITestCase):
         self.team1_1 = Team.objects.create(
             username="team1_1",
             password="abc123",
-            user_type=User.TYPE_TEAM,
+            type=User.Type.TEAM,
             team_organization=self.organization1,
         )
 
         self.team2_1 = Team.objects.create(
             username="team2_1",
             password="abc123",
-            user_type=User.TYPE_TEAM,
+            type=User.Type.TEAM,
             team_organization=self.organization2,
         )
 
@@ -158,8 +159,8 @@ class QfcTestCase(APITestCase):
 
         # Assert user does not have any role
         if role is None:
-            with self.assertRaises(User.DoesNotExist):
-                User.objects.for_project(project).get(pk=user.pk)
+            with self.assertRaises(Person.DoesNotExist):
+                Person.objects.for_project(project).get(pk=user.pk)
 
             with self.assertRaises(Project.DoesNotExist):
                 Project.objects.for_user(user).get(pk=project.pk)
@@ -168,9 +169,9 @@ class QfcTestCase(APITestCase):
 
         # Test on Users
         if origin != ProjectQueryset.RoleOrigins.PUBLIC:
-            # The User.objects.for_project queryset is not symetric to Project.objects.for_user
+            # The Person.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
-            u = User.objects.for_project(project).get(pk=user.pk)
+            u = Person.objects.for_project(project).get(pk=user.pk)
             self.assertEqual(u.project_role, role)
             self.assertEqual(u.project_role_origin, origin)
             self.assertEqual(u.project_role_is_valid, is_valid)
@@ -183,75 +184,85 @@ class QfcTestCase(APITestCase):
 
     def test_get_users(self):
         # should get all the available users
-        queryset = querysets_utils.get_users("")
-        self.assertEqual(len(queryset), 8)
-        self.assertTrue(self.user1 in queryset)
-        self.assertTrue(self.user2 in queryset)
-        self.assertTrue(self.user3 in queryset)
-        self.assertTrue(self.organization1.user_ptr in queryset)
-        self.assertTrue(self.organization2.user_ptr in queryset)
-        self.assertTrue(self.team1_1.user_ptr in queryset)
-        self.assertTrue(self.team2_1.user_ptr in queryset)
+        queryset_ids = querysets_utils.get_users("").values_list("id", flat=True)
+        self.assertEqual(len(queryset_ids), 8)
+        self.assertTrue(self.user1.id in queryset_ids)
+        self.assertTrue(self.user2.id in queryset_ids)
+        self.assertTrue(self.user3.id in queryset_ids)
+        self.assertTrue(self.organization1.user_ptr_id in queryset_ids)
+        self.assertTrue(self.organization2.user_ptr_id in queryset_ids)
+        self.assertTrue(self.team1_1.user_ptr_id in queryset_ids)
+        self.assertTrue(self.team2_1.user_ptr_id in queryset_ids)
 
         # should get all the available users
-        queryset = querysets_utils.get_users("user3")
-        self.assertEqual(len(queryset), 1)
-        self.assertTrue(self.user3 in queryset)
+        queryset_ids = querysets_utils.get_users("user3").values_list("id", flat=True)
+        self.assertEqual(len(queryset_ids), 1)
+        self.assertTrue(self.user3.id in queryset_ids)
 
         # should get only the users that are not an organization
-        queryset = querysets_utils.get_users("", exclude_organizations=True)
-        self.assertEqual(len(queryset), 6)
-        self.assertTrue(self.user1 in queryset)
-        self.assertTrue(self.user2 in queryset)
-        self.assertTrue(self.user3 in queryset)
-        self.assertTrue(self.user4 in queryset)
-        self.assertTrue(self.team1_1.user_ptr in queryset)
-        self.assertTrue(self.team2_1.user_ptr in queryset)
+        queryset_ids = querysets_utils.get_users(
+            "", exclude_organizations=True
+        ).values_list("id", flat=True)
+        self.assertEqual(len(queryset_ids), 6)
+        self.assertTrue(self.user1.id in queryset_ids)
+        self.assertTrue(self.user2.id in queryset_ids)
+        self.assertTrue(self.user3.id in queryset_ids)
+        self.assertTrue(self.user4.id in queryset_ids)
+        self.assertTrue(self.team1_1.user_ptr_id in queryset_ids)
+        self.assertTrue(self.team2_1.user_ptr_id in queryset_ids)
 
         # should get only the users that are not a team
-        queryset = querysets_utils.get_users("", exclude_teams=True)
-        self.assertEqual(len(queryset), 6)
-        self.assertTrue(self.user1 in queryset)
-        self.assertTrue(self.user2 in queryset)
-        self.assertTrue(self.user3 in queryset)
-        self.assertTrue(self.user4 in queryset)
-        self.assertTrue(self.organization1.user_ptr in queryset)
-        self.assertTrue(self.organization2.user_ptr in queryset)
+        queryset_ids = querysets_utils.get_users("", exclude_teams=True).values_list(
+            "id", flat=True
+        )
+        self.assertEqual(len(queryset_ids), 6)
+        self.assertTrue(self.user1.id in queryset_ids)
+        self.assertTrue(self.user2.id in queryset_ids)
+        self.assertTrue(self.user3.id in queryset_ids)
+        self.assertTrue(self.user4.id in queryset_ids)
+        self.assertTrue(self.organization1.user_ptr_id in queryset_ids)
+        self.assertTrue(self.organization2.user_ptr_id in queryset_ids)
 
         # should get all the users, that are not members or owners of an organization, or teams within the organization
-        queryset = querysets_utils.get_users("", organization=self.organization1)
-        self.assertEqual(len(queryset), 3)
-        self.assertTrue(self.user4 in queryset)
-        self.assertTrue(self.organization2.user_ptr in queryset)
-        self.assertTrue(self.team1_1.user_ptr in queryset)
+        queryset_ids = querysets_utils.get_users(
+            "", organization=self.organization1
+        ).values_list("id", flat=True)
+        self.assertEqual(len(queryset_ids), 3)
+        self.assertTrue(self.user4.id in queryset_ids)
+        self.assertTrue(self.organization2.user_ptr_id in queryset_ids)
+        self.assertTrue(self.team1_1.user_ptr_id in queryset_ids)
 
         # should get all the users, that are not members or owner of a project
-        queryset = querysets_utils.get_users("", project=self.project1)
-        self.assertEqual(len(queryset), 5)
-        self.assertTrue(self.user2 in queryset)
-        self.assertTrue(self.user3 in queryset)
-        self.assertTrue(self.user4 in queryset)
-        self.assertTrue(self.organization1.user_ptr in queryset)
-        self.assertTrue(self.organization2.user_ptr in queryset)
+        queryset_ids = querysets_utils.get_users("", project=self.project1).values_list(
+            "id", flat=True
+        )
+        self.assertEqual(len(queryset_ids), 5)
+        self.assertTrue(self.user2.id in queryset_ids)
+        self.assertTrue(self.user3.id in queryset_ids)
+        self.assertTrue(self.user4.id in queryset_ids)
+        self.assertTrue(self.organization1.user_ptr_id in queryset_ids)
+        self.assertTrue(self.organization2.user_ptr_id in queryset_ids)
 
         # should get all the users, that are not members or owner of a project
-        queryset = querysets_utils.get_users("", project=self.project5)
-        self.assertEqual(len(queryset), 6)
-        self.assertTrue(self.user1 in queryset)
-        self.assertTrue(self.user2 in queryset)
-        self.assertTrue(self.user3 in queryset)
-        self.assertTrue(self.user4 in queryset)
-        self.assertTrue(self.team1_1.user_ptr in queryset)
-        self.assertTrue(self.organization2.user_ptr in queryset)
+        queryset_ids = querysets_utils.get_users("", project=self.project5).values_list(
+            "id", flat=True
+        )
+        self.assertEqual(len(queryset_ids), 6)
+        self.assertTrue(self.user1.id in queryset_ids)
+        self.assertTrue(self.user2.id in queryset_ids)
+        self.assertTrue(self.user3.id in queryset_ids)
+        self.assertTrue(self.user4.id in queryset_ids)
+        self.assertTrue(self.team1_1.user_ptr_id in queryset_ids)
+        self.assertTrue(self.organization2.user_ptr_id in queryset_ids)
 
         # should get all the users, that are not members or owner of a project and are not an organization
-        queryset = querysets_utils.get_users(
+        queryset_ids = querysets_utils.get_users(
             "", project=self.project1, exclude_organizations=True
-        )
-        self.assertEqual(len(queryset), 3)
-        self.assertTrue(self.user2 in queryset)
-        self.assertTrue(self.user3 in queryset)
-        self.assertTrue(self.user4 in queryset)
+        ).values_list("id", flat=True)
+        self.assertEqual(len(queryset_ids), 3)
+        self.assertTrue(self.user2.id in queryset_ids)
+        self.assertTrue(self.user3.id in queryset_ids)
+        self.assertTrue(self.user4.id in queryset_ids)
 
     def test_projects_roles_and_role_origins(self):
         """
@@ -303,11 +314,11 @@ class QfcTestCase(APITestCase):
         role_origins = ProjectQueryset.RoleOrigins
 
         # Initial user setup
-        u = User.objects.create(username="u")
+        u = Person.objects.create(username="u")
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
 
-        u1 = User.objects.create(username="u1")
+        u1 = Person.objects.create(username="u1")
 
         # A public project is readable
         self.assertProjectRole(p, u1, roles.READER, role_origins.PUBLIC, True)

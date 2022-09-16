@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from django_currentuser.middleware import _set_current_user
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import get_random_file, setup_subscription_plans
 from qfieldcloud.core.utils import list_versions
 from qfieldcloud.core.utils2.storage import delete_file_version
@@ -27,7 +27,7 @@ class QfcTestCase(APITransactionTestCase):
     def test_storage_quota_calculation(self):
         """This tests quotas"""
 
-        u1 = User.objects.create(username="u1")
+        u1 = Person.objects.create(username="u1")
         p1 = Project.objects.create(name="p1", owner=u1)
 
         # NOTE since we do not login via the API, the django_currentuser module is unable to set
@@ -137,7 +137,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.useraccount.storage_quota_used_perc, 20)
 
     def test_api_enforces_storage_limit(self):
-        u1 = User.objects.create(username="u1")
+        u1 = Person.objects.create(username="u1")
         p1 = Project.objects.create(name="p1", owner=u1)
         plan_1mb = Plan.objects.create(code="plan_1mb", storage_mb=1)
         u1.useraccount.plan = plan_1mb
@@ -166,11 +166,11 @@ class QfcTestCase(APITransactionTestCase):
             code="extra_1mb", display_name="extra_1mb", megabytes=1
         )
 
-        u1 = User.objects.create(username="u1")
+        u1 = Person.objects.create(username="u1")
         u1.useraccount.plan = plan_1mb
         u1.useraccount.save()
 
-        u2 = User.objects.create(username="u2")
+        u2 = Person.objects.create(username="u2")
         u2.useraccount.plan = plan_2mb
         u2.useraccount.save()
 

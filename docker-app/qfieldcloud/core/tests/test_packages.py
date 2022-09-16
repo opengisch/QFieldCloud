@@ -15,12 +15,12 @@ from qfieldcloud.core.models import (
     Job,
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     Secret,
     Team,
     TeamMember,
-    User,
 )
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -35,7 +35,7 @@ class QfcTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a project
@@ -600,7 +600,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         for idx, role in enumerate(ProjectCollaborator.Roles):
-            u1 = User.objects.create(username=f"user_with_role_{idx}")
+            u1 = Person.objects.create(username=f"user_with_role_{idx}")
             ProjectCollaborator.objects.create(
                 collaborator=u1, project=self.project1, role=role
             )
@@ -616,7 +616,7 @@ class QfcTestCase(APITransactionTestCase):
             )
 
     def test_collaborator_via_team_can_package(self):
-        u1 = User.objects.create(username="u1")
+        u1 = Person.objects.create(username="u1")
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         p1 = Project.objects.create(
             name="p1",
@@ -640,7 +640,7 @@ class QfcTestCase(APITransactionTestCase):
             team = Team.objects.create(
                 username=f"@{o1.username}/team_{idx}", team_organization=o1
             )
-            team_user = User.objects.create(username=f"team_user_{idx}")
+            team_user = Person.objects.create(username=f"team_user_{idx}")
 
             OrganizationMember.objects.create(member=team_user, organization=o1)
             TeamMember.objects.create(member=team_user, team=team)
