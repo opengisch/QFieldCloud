@@ -62,7 +62,11 @@ def get_users(
                 ~Q(type=User.Type.TEAM)
                 | (
                     Q(type=User.Type.TEAM)
-                    & Q(pk__in=Team.objects.filter(team_organization=project.owner))
+                    & Q(
+                        pk__in=Team.objects.filter(
+                            team_organization_id=project.owner_id
+                        )
+                    )
                 )
             )
 
