@@ -374,6 +374,11 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
             obj["clientPks"],
         )
 
+        # Workaround for sourceLayerId = ""
+        for delta in delta_file.deltas:
+            if not delta.sourceLayerId and delta.localLayerId:
+                delta.sourceLayerId = delta.localLayerId
+
     return delta_file
 
 
