@@ -621,6 +621,8 @@ class Organization(User):
         limit_choices_to=models.Q(type=User.Type.PERSON),
     )
 
+    is_initially_trial = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = "organization"
         verbose_name_plural = "organizations"

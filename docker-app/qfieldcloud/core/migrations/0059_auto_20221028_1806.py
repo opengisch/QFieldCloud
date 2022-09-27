@@ -76,4 +76,10 @@ class Migration(migrations.Migration):
             model_name="useraccount",
             name="plan",
         ),
+        # Add is_initially_trial field to organizations
+        migrations.AddField(
+            model_name="organization",
+            name="is_initially_trial",
+            field=models.BooleanField(default=False),
+        ),
     ]
