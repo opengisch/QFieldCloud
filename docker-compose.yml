@@ -1,14 +1,13 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
+x-logging: &default-logging
   driver: "json-file"
   options:
     max-size: "10m"
     max-file: "10"
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
 services:
-
   app: &default-django
     build:
       context: ./docker-app
@@ -76,10 +75,11 @@ services:
       options:
         max-size: "1000m"
         max-file: "5"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
     labels:
       ofelia.enabled: "true"
       ofelia.job-exec.runcrons.no-overlap: "true"
-      ofelia.job-exec.runcrons.schedule: '@every 1m'
+      ofelia.job-exec.runcrons.schedule: "@every 1m"
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
   nginx:
