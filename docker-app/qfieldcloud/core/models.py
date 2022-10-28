@@ -177,6 +177,8 @@ class PersonQueryset(models.QuerySet):
 
 
 class UserManager(InheritanceManagerMixin, DjangoUserManager):
+    # NOTE you should never have `select_related("user")` if you want the polymorphism to work.
+    # tried with `select_related("user__person")`, or all child tables at once, but it's not working either
     def get_queryset(self):
         return super().get_queryset().select_subclasses()
 
