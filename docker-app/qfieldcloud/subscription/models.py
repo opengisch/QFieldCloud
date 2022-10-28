@@ -120,7 +120,7 @@ class Plan(models.Model):
         )
 
 
-class ExtraPackageType(models.Model):
+class PackageType(models.Model):
     code = models.CharField(max_length=100, unique=True)
     # TODO: decide how to localize display_name. Possible approaches:
     # - django-vinaigrette (never tried, but like the name, and seems to to exactly what we want)
@@ -130,22 +130,22 @@ class ExtraPackageType(models.Model):
     is_public = models.BooleanField(default=False)
 
 
-class ExtraPackageTypeStorage(ExtraPackageType):
+class PackageTypeStorage(PackageType):
     megabytes = models.PositiveIntegerField()
 
 
-class ExtraPackageTypeJobMinutes(ExtraPackageType):
+class PackageTypeJobMinutes(PackageType):
     minutes = models.PositiveIntegerField()
 
 
-class ExtraPackage(models.Model):
+class Package(models.Model):
     account = models.ForeignKey(
         "core.UserAccount",
         on_delete=models.CASCADE,
         related_name="extra_packages",
     )
     type = models.ForeignKey(
-        ExtraPackageType, on_delete=models.CASCADE, related_name="packages"
+        PackageType, on_delete=models.CASCADE, related_name="packages"
     )
     quantity = models.PositiveIntegerField(
         validators=[
