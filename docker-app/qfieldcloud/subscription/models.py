@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils.translation import gettext as _
 from qfieldcloud.core.models import User
@@ -121,28 +121,40 @@ class Plan(models.Model):
 
 
 class PackageType(models.Model):
+    class Type(models.TextChoices):
+        STORAGE = "storage", _("Storage")
+
     code = models.CharField(max_length=100, unique=True)
     # TODO: decide how to localize display_name. Possible approaches:
     # - django-vinaigrette (never tried, but like the name, and seems to to exactly what we want)
     # - django-modeltranslation (tried, works well, but maybe overkill as it creates new database columns for each locale)
     # - something else ? there's probably some json based stuff
     display_name = models.CharField(max_length=100)
+
+    # the type of the package
+    type = models.CharField(choices=Type.choices, max_length=100, unique=True)
+
+    # whether the package is available for the general public
     is_public = models.BooleanField(default=False)
 
+    # the minimum quantity per subscription
+    min_quantity = models.PositiveIntegerField()
 
-class PackageTypeStorage(PackageType):
-    megabytes = models.PositiveIntegerField()
+    # the maximum quantity per subscription
+    max_quantity = models.PositiveIntegerField()
 
+    # the size of the package in `unit_label` units
+    unit_amount = models.PositiveIntegerField()
 
-class PackageTypeJobMinutes(PackageType):
-    minutes = models.PositiveIntegerField()
+    # Unit of measurement (e.g. gigabyte, minute, etc)
+    unit_label = models.CharField(max_length=100, null=True, blank=True)
 
 
 class Package(models.Model):
     account = models.ForeignKey(
         "core.UserAccount",
         on_delete=models.CASCADE,
-        related_name="extra_packages",
+        related_name="packages",
     )
     type = models.ForeignKey(
         PackageType, on_delete=models.CASCADE, related_name="packages"
@@ -150,7 +162,6 @@ class Package(models.Model):
     quantity = models.PositiveIntegerField(
         validators=[
             MinValueValidator(1),
-            MaxValueValidator(25),
         ],
     )
     start_date = models.DateField()
