@@ -190,7 +190,7 @@ class QfcTestCase(APITestCase):
         collaborators = ProjectCollaborator.objects.all()
         self.assertEqual(len(collaborators), 1)
         self.assertEqual(collaborators[0].project, self.project1)
-        self.assertEqual(collaborators[0].collaborator.polymorph, self.user2)
+        self.assertEqual(collaborators[0].collaborator, self.user2)
         self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.EDITOR)
 
     def test_get_collaborator(self):
@@ -244,7 +244,7 @@ class QfcTestCase(APITestCase):
         collaborators = ProjectCollaborator.objects.all()
         self.assertEqual(len(collaborators), 1)
         self.assertEqual(collaborators[0].project, self.project1)
-        self.assertEqual(collaborators[0].collaborator.polymorph, self.user2)
+        self.assertEqual(collaborators[0].collaborator, self.user2)
         self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.ADMIN)
 
     def test_delete_collaborator(self):

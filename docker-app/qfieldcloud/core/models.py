@@ -6,13 +6,14 @@ import string
 import uuid
 from datetime import date, timedelta
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
 from deprecated import deprecated
-from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
@@ -26,7 +27,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
-from model_utils.managers import InheritanceManager
+from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
 from timezone_field import TimeZoneField
 
@@ -175,6 +176,13 @@ class PersonQueryset(models.QuerySet):
         raise RuntimeError(f"Unsupported entity : {entity}")
 
 
+class UserManager(InheritanceManagerMixin, DjangoUserManager):
+    # NOTE you should never have `select_related("user")` if you want the polymorphism to work.
+    # tried with `select_related("user__person")`, or all child tables at once, but it's not working either
+    def get_queryset(self):
+        return super().get_queryset().select_subclasses()
+
+
 class PersonManager(UserManager):
     def get_queryset(self):
         return PersonQueryset(self.model, using=self._db)
@@ -205,6 +213,8 @@ class User(AbstractUser):
     Note:
         If you add validators in the constructor, note they will be added multiple times for each class that extends User.
     """
+
+    objects = UserManager()
 
     class Type(models.IntegerChoices):
         PERSON = (1, _("Person"))
@@ -284,17 +294,6 @@ class User(AbstractUser):
     def has_geodb(self) -> bool:
         return hasattr(self, "geodb")
 
-    @property
-    def polymorph(self) -> Union["Person", "Organization", "Team"]:
-        if self.type == User.Type.PERSON:
-            return self.person
-        elif self.type == User.Type.ORGANIZATION:
-            return self.organization
-        elif self.type == User.Type.TEAM:
-            return self.team
-        else:
-            raise NotImplementedError()
-
     def save(self, *args, **kwargs):
         from qfieldcloud.subscription.models import Plan
 
@@ -315,6 +314,7 @@ class User(AbstractUser):
             super().delete(*args, **kwargs)
 
     class Meta:
+        base_manager_name = "objects"
         verbose_name = "user"
         verbose_name_plural = "users"
 

@@ -91,7 +91,7 @@ class QfcTestCase(APITestCase):
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0].organization, self.organization1)
-        self.assertEqual(members[0].member.polymorph, self.user2)
+        self.assertEqual(members[0].member, self.user2)
         self.assertEqual(members[0].role, OrganizationMember.Roles.ADMIN)
 
     def test_update_member(self):
@@ -115,7 +115,7 @@ class QfcTestCase(APITestCase):
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0].organization, self.organization1)
-        self.assertEqual(members[0].member.polymorph, self.user2)
+        self.assertEqual(members[0].member, self.user2)
         self.assertEqual(members[0].role, OrganizationMember.Roles.MEMBER)
 
     def test_delete_member(self):

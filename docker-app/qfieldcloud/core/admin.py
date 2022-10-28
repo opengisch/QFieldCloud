@@ -767,7 +767,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
     def organization_owner__link(self, instance):
         return model_admin_url(
-            instance.organization_owner.polymorph, instance.organization_owner.username
+            instance.organization_owner, instance.organization_owner.username
         )
 
     def get_search_results(self, request, queryset, search_term):
