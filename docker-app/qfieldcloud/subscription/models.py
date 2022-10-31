@@ -1,9 +1,11 @@
 from datetime import timedelta
+from functools import lru_cache
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils.translation import gettext as _
+from model_utils.managers import InheritanceManagerMixin
 from qfieldcloud.core.models import User
 
 
@@ -120,7 +122,15 @@ class Plan(models.Model):
         )
 
 
+class PackageTypeManager(InheritanceManagerMixin, models.Manager):
+    # NOTE you should never have `select_related("packagetype")` if you want the polymorphism to work.
+    def get_queryset(self):
+        return super().get_queryset().select_subclasses()
+
+
 class PackageType(models.Model):
+    objects = PackageTypeManager()
+
     class Type(models.TextChoices):
         STORAGE = "storage", _("Storage")
 
@@ -148,6 +158,11 @@ class PackageType(models.Model):
 
     # Unit of measurement (e.g. gigabyte, minute, etc)
     unit_label = models.CharField(max_length=100, null=True, blank=True)
+
+    @classmethod
+    @lru_cache
+    def get_storage_package_type(cls):
+        return PackageType.objects.get(type=PackageType.Type.Package)
 
 
 class Package(models.Model):
