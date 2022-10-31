@@ -162,7 +162,7 @@ class PackageType(models.Model):
     @classmethod
     @lru_cache
     def get_storage_package_type(cls):
-        return PackageType.objects.get(type=PackageType.Type.Package)
+        return PackageType.objects.get(type=PackageType.Type.STORAGE)
 
 
 class Package(models.Model):
