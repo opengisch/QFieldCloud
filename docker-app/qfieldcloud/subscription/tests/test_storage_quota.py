@@ -58,6 +58,8 @@ class QfcTestCase(APITransactionTestCase):
             unit_amount=2,
             code="extra_2mb",
             type=PackageType.Type.STORAGE,
+            min_quantity=0,
+            max_quantity=100,
         )
         Package.objects.create(
             account=u1.useraccount,
@@ -168,6 +170,8 @@ class QfcTestCase(APITransactionTestCase):
             unit_amount=1,
             code="extra_1mb",
             type=PackageType.Type.STORAGE,
+            min_quantity=0,
+            max_quantity=100,
         )
 
         u1 = Person.objects.create(username="u1")
