@@ -379,7 +379,7 @@ class UserAccount(models.Model):
         on_delete=models.PROTECT,
     )
 
-    # These will be moved one day to extrapackage. We don't touch for now (they are only used
+    # These will be moved one day to the package. We don't touch for now (they are only used
     # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
     is_geodb_enabled = models.BooleanField(
@@ -415,21 +415,15 @@ class UserAccount(models.Model):
 
     @property
     def storage_quota_total_mb(self) -> float:
-        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
+        """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
 
         base_quota = self.plan.storage_mb
 
         extra_quota = (
-            self.extra_packages.filter(
+            self.packages.filter(
                 Q(start_date__lte=timezone.now())
                 & (Q(end_date__isnull=True) | Q(end_date__gte=timezone.now()))
-            ).aggregate(
-                sum_mb=Sum(
-                    F("type__extrapackagetypestorage__megabytes") * F("quantity")
-                )
-            )[
-                "sum_mb"
-            ]
+            ).aggregate(sum_mb=Sum(F("type__unit_amount") * F("quantity")))["sum_mb"]
             or 0
         )
 
@@ -446,7 +440,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_quota_left_mb(self) -> float:
-        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
+        """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
 
         return self.storage_quota_total_mb - self.storage_quota_used_mb
 

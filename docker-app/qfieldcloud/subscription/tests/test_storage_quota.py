@@ -11,7 +11,7 @@ from qfieldcloud.core.utils2.storage import delete_file_version
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from ..models import ExtraPackage, ExtraPackageTypeStorage, Plan
+from ..models import Package, PackageType, Plan
 
 logging.disable(logging.CRITICAL)
 
@@ -53,11 +53,15 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.useraccount.storage_quota_total_mb, 1)
         self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
-        # Adding an extra package increases the quota
-        extra_2mb = ExtraPackageTypeStorage.objects.create(
-            code="extra_2mb", megabytes=2
+        # Adding a package increases the quota
+        extra_2mb = PackageType.objects.create(
+            unit_amount=2,
+            code="extra_2mb",
+            type=PackageType.Type.STORAGE,
+            min_quantity=0,
+            max_quantity=100,
         )
-        ExtraPackage.objects.create(
+        Package.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
             quantity=1,
@@ -70,7 +74,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Adding an obsolete package does not count
-        ExtraPackage.objects.create(
+        Package.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
             quantity=1,
@@ -83,7 +87,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Adding a future package does not count
-        ExtraPackage.objects.create(
+        Package.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
             quantity=1,
@@ -96,7 +100,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.useraccount.storage_quota_used_perc, 0)
 
         # Adding a timeless package increases the quota
-        ExtraPackage.objects.create(
+        Package.objects.create(
             account=u1.useraccount,
             type=extra_2mb,
             quantity=1,
@@ -162,8 +166,12 @@ class QfcTestCase(APITransactionTestCase):
     def test_api_enforces_storage_limit_for_reparenting(self):
         plan_1mb = Plan.objects.create(code="plan_1mb", storage_mb=1)
         plan_2mb = Plan.objects.create(code="plan_2mb", storage_mb=2)
-        extra_1mb = ExtraPackageTypeStorage.objects.create(
-            code="extra_1mb", display_name="extra_1mb", megabytes=1
+        extra_1mb = PackageType.objects.create(
+            unit_amount=1,
+            code="extra_1mb",
+            type=PackageType.Type.STORAGE,
+            min_quantity=0,
+            max_quantity=100,
         )
 
         u1 = Person.objects.create(username="u1")
@@ -195,7 +203,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(Project.objects.filter(owner=u2).exists())
 
         # User 1 buys a package, transfer now works
-        ExtraPackage.objects.create(
+        Package.objects.create(
             account=u1.useraccount,
             type=extra_1mb,
             quantity=1,
