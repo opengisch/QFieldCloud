@@ -206,7 +206,6 @@ class PersonAdmin(admin.ModelAdmin):
         "date_joined",
         "is_active",
         "is_staff",
-        "useraccount__plan",
     )
 
     search_fields = ("username__icontains",)
