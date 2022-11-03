@@ -14,7 +14,7 @@ from qfieldcloud.core.models import (
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans
+from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
@@ -352,8 +352,7 @@ class QfcTestCase(APITestCase):
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
 
-        u.useraccount.plan.max_premium_collaborators_per_private_project = 0
-        u.useraccount.plan.save()
+        set_subscription(u, max_premium_collaborators_per_private_project=0)
 
         apiurl = f"/api/v1/projects/{p.pk}/"
 

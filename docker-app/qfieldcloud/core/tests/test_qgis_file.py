@@ -9,11 +9,15 @@ from django.http import FileResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob, Project
-from qfieldcloud.subscription.models import Plan
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import get_filename, setup_subscription_plans, testdata_path
+from .utils import (
+    get_filename,
+    set_subscription,
+    setup_subscription_plans,
+    testdata_path,
+)
 
 logging.disable(logging.CRITICAL)
 
@@ -514,9 +518,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
-        acctype_3 = Plan.objects.create(storage_keep_versions=3, code="acc3")
-        self.user1.useraccount.plan = acctype_3
-        self.user1.useraccount.save()
+        set_subscription(self.user1, storage_keep_versions=3)
 
         def count_versions():
             """counts the versions in first file of project1"""
@@ -575,9 +577,8 @@ class QfcTestCase(APITransactionTestCase):
             return file.versions[n]._data.get()["Body"].read().decode()
 
         # As PRO account, 10 version should be kept out of 20
-        acctype_10 = Plan.objects.create(storage_keep_versions=10, code="acc10")
-        self.user1.useraccount.plan = acctype_10
-        self.user1.useraccount.save()
+        set_subscription(self.user1, "keep_10", storage_keep_versions=10)
+
         for i in range(20):
             test_file = io.StringIO(f"v{i}")
             self.client.post(apipath, {"file": test_file}, format="multipart")
@@ -586,9 +587,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(read_version(9), "v19")
 
         # As COMMUNITY account, 3 version should be kept
-        acctype_3 = Plan.objects.create(storage_keep_versions=3, code="acc3")
-        self.user1.useraccount.plan = acctype_3
-        self.user1.useraccount.save()
+        set_subscription(self.user1, "keep_3", storage_keep_versions=3)
 
         # But first we check that uploading to another project doesn't affect a projct
         otherproj = Project.objects.create(name="other", owner=self.user1)
