@@ -92,3 +92,4 @@ watchdog==2.1.6
 websocket-client==1.2.3
 wrapt==1.13.3
 zipp==3.6.0
+stripe==4.2.0
