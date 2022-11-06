@@ -4,7 +4,7 @@ import django.core.validators
 from django.db import migrations, models
 
 
-def make_single_storage_package(apps, schema_editor):
+def replace_with_single_storage_package_type(apps, schema_editor):
     PackageType = apps.get_model("subscription", "PackageType")
     PackageType.objects.all().delete()
     PackageType.objects.create(
@@ -18,7 +18,7 @@ def make_single_storage_package(apps, schema_editor):
     )
 
 
-def recreate_storage_packages(apps, schema_editor):
+def recreate_storage_package_types(apps, schema_editor):
     ExtraPackageTypeStorage = apps.get_model("subscription", "ExtraPackageTypeStorage")
 
     packages = ExtraPackageTypeStorage.objects.filter(
@@ -45,15 +45,15 @@ def recreate_storage_packages(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("core", "0058_auto_20220914_2049"),
         ("subscription", "0002_populate_plans"),
-        ("core", "0059_auto_20221028_1806"),
     ]
 
     operations = [
         migrations.RunSQL(
             migrations.RunSQL.noop, reverse_sql="SET CONSTRAINTS ALL IMMEDIATE"
         ),
-        migrations.RunPython(migrations.RunPython.noop, recreate_storage_packages),
+        migrations.RunPython(migrations.RunPython.noop, recreate_storage_package_types),
         migrations.RunSQL(
             migrations.RunSQL.noop, reverse_sql="SET CONSTRAINTS ALL DEFERRED"
         ),
@@ -115,7 +115,9 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             "SET CONSTRAINTS ALL IMMEDIATE", reverse_sql=migrations.RunSQL.noop
         ),
-        migrations.RunPython(make_single_storage_package, migrations.RunPython.noop),
+        migrations.RunPython(
+            replace_with_single_storage_package_type, migrations.RunPython.noop
+        ),
         migrations.RunSQL(
             "SET CONSTRAINTS ALL DEFERRED", reverse_sql=migrations.RunSQL.noop
         ),

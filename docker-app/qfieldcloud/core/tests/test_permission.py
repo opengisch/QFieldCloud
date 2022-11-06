@@ -11,11 +11,10 @@ from qfieldcloud.core.models import (
     Team,
     User,
 )
-from qfieldcloud.subscription.models import Plan
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans, testdata_path
+from .utils import set_subscription, setup_subscription_plans, testdata_path
 
 logging.disable(logging.CRITICAL)
 
@@ -199,34 +198,37 @@ class QfcTestCase(APITestCase):
         assertBecomeCollaborator(o1_t1, p2, None)
 
         # non-premium user cannot collaborate on private user project with max_premium_collaborators set to 0
-        premium_plan = Plan.objects.create(
-            user_type=User.Type.PERSON,
+        set_subscription(
+            u1,
             is_premium=True,
             max_premium_collaborators_per_private_project=0,
         )
-        u1.useraccount.plan = premium_plan
-        u1.useraccount.save()
         assertBecomeCollaborator(u2, p1, perms.ReachedCollaboratorLimitError)
 
         # non-premium user cannot collaborate on private user project with max_premium_collaborators set to 1
-        u1.useraccount.plan.max_premium_collaborators_per_private_project = 1
-        u1.useraccount.plan.save()
+        subscription = u1.useraccount.active_subscription
+        subscription.plan.max_premium_collaborators_per_private_project = 1
+        subscription.plan.save()
         assertBecomeCollaborator(u2, p1, perms.ExpectedPremiumUserError)
 
         # premium user can collaborate on private user project with max_premium_collaborators set to 1
-        default_plan = u2.useraccount.plan
-        u2.useraccount.plan = premium_plan
-        u2.useraccount.plan.save()
+        default_plan = u2.useraccount.active_subscription.plan
+        set_subscription(
+            u2,
+            is_premium=True,
+            max_premium_collaborators_per_private_project=0,
+        )
         assertBecomeCollaborator(u2, p1, None)
 
         # non-premium user can collaborate on public user project with max_premium_collaborators set to 1
-        u2.useraccount.plan = default_plan
-        u2.useraccount.plan.save()
+        subscription = u2.useraccount.active_subscription
+        subscription.plan = default_plan
+        subscription.plan.save()
         p1.is_public = True
         p1.save()
         assertBecomeCollaborator(u2, p1, None)
 
         # non-premium user can collaborate on public user project with max_premium_collaborators set to 0
-        u1.useraccount.plan.max_premium_collaborators_per_private_project = 0
-        u1.useraccount.plan.save()
+        subscription.plan.max_premium_collaborators_per_private_project = 0
+        subscription.plan.save()
         assertBecomeCollaborator(u2, p1, None)

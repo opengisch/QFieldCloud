@@ -68,12 +68,10 @@ INSTALLED_APPS = [
     # 3rd-party apps
     # if django_filters defined after [rest_framework] caused '... _frozen_importlib._DeadlockError ...'
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
-    "django_tables2",
     "django_filters",
     # debug
     "debug_toolbar",
     # style
-    "bootstrap4",
     "rest_framework",
     "rest_framework.authtoken",
     "drf_yasg",
@@ -83,6 +81,7 @@ INSTALLED_APPS = [
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
+    "django_countries",
     "timezone_field",
     "auditlog",
     # Local
@@ -332,6 +331,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 # Whether we are currently running tests
 # NOTE automatically set when running tests, don't change manually!
 IN_TEST_SUITE = False
+
+QFIELDCLOUD_SUBSCRIPTIONS_MODEL = os.environ.get(
+    "QFIELDCLOUD_SUBSCRIPTION_MODEL", "subscription.Subscription"
+)
 
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"

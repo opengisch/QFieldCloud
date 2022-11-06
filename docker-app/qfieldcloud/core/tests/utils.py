@@ -1,6 +1,6 @@
 import io
 import os
-from typing import IO
+from typing import IO, Iterable, Union
 
 from qfieldcloud.core.models import User
 from qfieldcloud.subscription.models import Plan
@@ -43,6 +43,35 @@ def setup_subscription_plans():
             ),
         ]
     )
+
+
+def set_subscription(
+    users: Union[User, Iterable[User]],
+    code: str = None,
+    **kwargs,
+):
+    if isinstance(users, User):
+        users = [users]
+
+    assert len(
+        users
+    ), "When iterable, the first argument must contain at least 1 element."
+
+    code = code or f"plan_for_{'_and_'.join([u.username for u in users])}"
+    plan = Plan.objects.create(
+        code=code,
+        user_type=users[0].type,
+        **kwargs,
+    )
+    for user in users:
+        assert (
+            user.type == plan.user_type
+        ), 'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
+        subscription = user.useraccount.active_subscription
+        subscription.plan = plan
+        subscription.save(update_fields=["plan"])
+
+    return subscription
 
 
 def get_random_file(mb: int) -> IO:

@@ -12,6 +12,8 @@ import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
 from deprecated import deprecated
+from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
@@ -34,6 +36,10 @@ from timezone_field import TimeZoneField
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
 
+def get_subscription_model():
+    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTIONS_MODEL)
+
+
 class PersonQueryset(models.QuerySet):
     """Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
 
@@ -54,36 +60,49 @@ class PersonQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project", skip_invalid: bool):
-        public = Q(project_roles__project__is_public=True)
-        count = Count(
+        now = timezone.now()
+        count_collaborators = Count(
             "project_roles__project__collaborators",
             filter=Q(
                 project_roles__project__collaborators__collaborator__type=User.Type.PERSON
             ),
         )
 
-        max_premium_collaborators_per_private_project = Q(
-            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
-                -1
+        is_public_q = Q(project_roles__project__is_public=True)
+        is_person_q = Q(project_roles__project__owner__type=User.Type.PERSON)
+        is_org_q = Q(project_roles__project__owner__type=User.Type.ORGANIZATION)
+        is_org_member_q = Q(
+            project_roles__project__owner__type=User.Type.ORGANIZATION
+        ) & Exists(
+            Organization.objects.of_user(OuterRef("project_roles__user")).filter(
+                id=OuterRef("project_roles__project__owner")
             )
-        ) | Q(
-            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
-        org_member_condition = Q(
-            project_roles__project__owner__type=User.Type.PERSON
-        ) | (
-            Q(project_roles__project__owner__type=User.Type.ORGANIZATION)
-            & Exists(
-                Organization.objects.of_user(OuterRef("project_roles__user")).filter(
-                    id=OuterRef("project_roles__project__owner")
+        active_subscription_q = Q(
+            project_roles__project__owner__useraccount__subscriptions__active_since__lte=now,
+        ) & (
+            Q(
+                project_roles__project__owner__useraccount__subscriptions__active_until__gt=now
+            )
+            | Q(
+                project_roles__project__owner__useraccount__subscriptions__active_until__isnull=True
+            )
+        )
+        max_premium_collaborators_per_private_project_q = active_subscription_q & (
+            Q(
+                project_roles__project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project=V(
+                    -1
                 )
             )
+            | Q(
+                project_roles__project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
+            )
         )
-        org_member = Case(When(org_member_condition, then=True), default=False)
 
-        project_role_is_valid_condition = public | (
-            max_premium_collaborators_per_private_project & org_member
+        project_role_is_valid_condition_q = is_public_q | (
+            max_premium_collaborators_per_private_project_q
+            & (is_person_q | (is_org_q & is_org_member_q))
         )
 
         qs = (
@@ -95,7 +114,7 @@ class PersonQueryset(models.QuerySet):
                 project_role=F("project_roles__name"),
                 project_role_origin=F("project_roles__origin"),
                 project_role_is_valid=Case(
-                    When(project_role_is_valid_condition, then=True), default=False
+                    When(project_role_is_valid_condition_q, then=True), default=False
                 ),
             )
         )
@@ -200,7 +219,6 @@ class PersonManager(UserManager):
         return self.get_queryset().for_entity(entity)
 
 
-# TODO change types to Enum
 class User(AbstractUser):
     """User model. Used as base for organizations and teams too.
 
@@ -295,14 +313,14 @@ class User(AbstractUser):
         return hasattr(self, "geodb")
 
     def save(self, *args, **kwargs):
-        from qfieldcloud.subscription.models import Plan
+        Subscription = get_subscription_model()
 
         # if the user is created, we need to create a user account
         if self._state.adding and self.type != User.Type.TEAM:
             with transaction.atomic():
                 super().save(*args, **kwargs)
-                plan = Plan.objects.get(user_type=self.type, is_default=True)
-                UserAccount.objects.create(user=self, plan=plan)
+                account = UserAccount.objects.create(user=self)
+                Subscription.get_or_create_active_subscription(account)
         else:
             super().save(*args, **kwargs)
 
@@ -374,11 +392,6 @@ class UserAccount(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
-    plan = models.ForeignKey(
-        "subscription.Plan",
-        on_delete=models.PROTECT,
-    )
-
     # These will be moved one day to the package. We don't touch for now (they are only used
     # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
@@ -404,6 +417,11 @@ class UserAccount(models.Model):
     )
 
     @property
+    def active_subscription(self):
+        Subscription = get_subscription_model()
+        return Subscription.get_or_create_active_subscription(self)
+
+    @property
     def avatar_url(self):
         if self.avatar_uri:
             return reverse_lazy(
@@ -414,23 +432,38 @@ class UserAccount(models.Model):
             return None
 
     @property
+    @deprecated(
+        "Use `UserAccount().active_subscription.active_storage_total_mb` instead."
+    )
     def storage_quota_total_mb(self) -> float:
         """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
-
-        base_quota = self.plan.storage_mb
-
-        extra_quota = (
-            self.packages.filter(
-                Q(start_date__lte=timezone.now())
-                & (Q(end_date__isnull=True) | Q(end_date__gte=timezone.now()))
-            ).aggregate(sum_mb=Sum(F("type__unit_amount") * F("quantity")))["sum_mb"]
-            or 0
+        return (
+            self.active_subscription.plan.storage_mb
+            + self.active_subscription.active_storage_package_mb
         )
 
-        return base_quota + extra_quota
+    @property
+    @deprecated("Use `UserAccount().storage_used_mb` instead.")
+    def storage_quota_used_mb(self) -> float:
+        return self.storage_used_mb
 
     @property
-    def storage_quota_used_mb(self) -> float:
+    @deprecated("Use `UserAccount().storage_free_mb` instead.")
+    def storage_quota_left_mb(self) -> float:
+        return self.storage_free_mb
+
+    @property
+    @deprecated("Use `UserAccount().storage_used_ratio` instead")
+    def storage_quota_used_perc(self) -> float:
+        return self.storage_used_ratio
+
+    @property
+    @deprecated("Use `UserAccount().storage_free_ratio` instead")
+    def storage_quota_left_perc(self) -> float:
+        return self.storage_free_ratio
+
+    @property
+    def storage_used_mb(self) -> float:
         """Returns the storage used in MB"""
         used_quota = (
             self.user.projects.aggregate(sum_mb=Sum("storage_size_mb"))["sum_mb"] or 0
@@ -439,20 +472,32 @@ class UserAccount(models.Model):
         return used_quota
 
     @property
-    def storage_quota_left_mb(self) -> float:
+    def storage_free_mb(self) -> float:
         """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
 
-        return self.storage_quota_total_mb - self.storage_quota_used_mb
+        return self.active_subscription.active_storage_total_mb - self.storage_used_mb
 
     @property
-    def storage_quota_used_perc(self) -> float:
-        """Returns the storage used in percentage (%) of the total storage"""
+    def storage_used_ratio(self) -> float:
+        """Returns the storage used in fraction of the total storage"""
         return max(
-            0, min(self.storage_quota_used_mb / self.storage_quota_total_mb * 100, 100)
+            0,
+            min(
+                self.storage_used_mb / self.active_subscription.active_storage_total_mb,
+                1,
+            ),
         )
 
-    def __str__(self):
-        return f"Account {self.plan}"
+    @property
+    def storage_free_ratio(self) -> float:
+        """Returns the storage used in fraction of the total storage"""
+        return 1 - max(
+            0,
+            min(
+                self.storage_used_mb / self.active_subscription.active_storage_total_mb,
+                1,
+            ),
+        )
 
 
 class Geodb(models.Model):
@@ -678,7 +723,7 @@ class OrganizationMember(models.Model):
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
         max_organization_members = (
-            self.organization.useraccount.plan.max_organization_members
+            self.organization.useraccount.active_subscription.plan.max_organization_members
         )
         if (
             max_organization_members > -1
@@ -820,28 +865,39 @@ class ProjectQueryset(models.QuerySet):
         PUBLIC = "public", _("Public")
 
     def for_user(self, user: "User", skip_invalid: bool = False):
-        public = Q(is_public=True)
+        now = timezone.now()
         count = Count(
             "collaborators",
             filter=Q(collaborators__collaborator__type=User.Type.PERSON),
         )
-        max_premium_collaborators_per_private_project = Q(
-            owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
-                -1
-            )
-        ) | Q(
-            owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
-        )
 
-        org_member_condition = Q(owner__type=User.Type.PERSON) | (
-            Q(owner__type=User.Type.ORGANIZATION)
-            & Exists(Organization.objects.of_user(user).filter(id=OuterRef("owner")))
+        is_public_q = Q(is_public=True)
+        is_person_q = Q(owner__type=User.Type.PERSON)
+        is_org_q = Q(owner__type=User.Type.ORGANIZATION)
+        is_org_member_q = Q(owner__type=User.Type.ORGANIZATION) & Exists(
+            Organization.objects.of_user(user).filter(id=OuterRef("owner"))
         )
-        org_member = Case(When(org_member_condition, then=True), default=False)
+        active_subscription_q = Q(
+            owner__useraccount__subscriptions__active_since__lte=now,
+        ) & (
+            Q(owner__useraccount__subscriptions__active_until__gt=now)
+            | Q(owner__useraccount__subscriptions__active_until__isnull=True)
+        )
+        max_premium_collaborators_per_private_project_q = active_subscription_q & (
+            Q(
+                owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project=V(
+                    -1
+                )
+            )
+            | Q(
+                owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project__gte=count
+            )
+        )
 
         # Assemble the condition
-        user_role_is_valid_condition = public | (
-            max_premium_collaborators_per_private_project & org_member
+        is_valid_user_role_q = is_public_q | (
+            max_premium_collaborators_per_private_project_q
+            & (is_person_q | (is_org_q & is_org_member_q))
         )
 
         qs = (
@@ -853,7 +909,7 @@ class ProjectQueryset(models.QuerySet):
                 user_role=F("user_roles__name"),
                 user_role_origin=F("user_roles__origin"),
                 user_role_is_valid=Case(
-                    When(user_role_is_valid_condition, then=True), default=False
+                    When(is_valid_user_role_q, then=True), default=False
                 ),
             )
         )
@@ -1082,7 +1138,7 @@ class Project(models.Model):
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
             max_premium_collaborators_per_private_project = (
-                self.owner.useraccount.plan.max_premium_collaborators_per_private_project
+                self.owner.useraccount.active_subscription.plan.max_premium_collaborators_per_private_project
             )
 
             if not self.project_filename:
@@ -1141,25 +1197,39 @@ class ProjectCollaboratorQueryset(models.QuerySet):
 
         Args:
             skip_invalid:   if true, invalid rows are removed"""
-
-        # Build the conditions with Q objects
-        public = Q(project__is_public=True)
+        now = timezone.now()
         count = Count(
             "project__collaborators", filter=Q(collaborator__type=User.Type.PERSON)
         )
-        max_premium_collaborators_per_private_project = Q(
-            project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
-                -1
+
+        # Build the conditions with Q objects
+        is_public_q = Q(project__is_public=True)
+        active_subscription_q = Q(
+            project__owner__useraccount__subscriptions__active_since__lte=now,
+        ) & (
+            Q(project__owner__useraccount__subscriptions__active_until__gt=now)
+            | Q(project__owner__useraccount__subscriptions__active_until__isnull=True)
+        )
+        max_premium_collaborators_per_private_project_q = active_subscription_q & (
+            Q(
+                project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project=V(
+                    -1
+                )
             )
-        ) | Q(
-            project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+            | Q(
+                project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project__gte=count
+            )
         )
 
         # Assemble the condition
-        condition = public | max_premium_collaborators_per_private_project
+        is_valid_collaborator = (
+            is_public_q | max_premium_collaborators_per_private_project_q
+        )
 
         # Annotate the queryset
-        qs = self.annotate(is_valid=Case(When(condition, then=True), default=False))
+        qs = self.annotate(
+            is_valid=Case(When(is_valid_collaborator, then=True), default=False)
+        )
 
         # Filter out invalid
         if skip_invalid:
@@ -1336,7 +1406,7 @@ class Delta(models.Model):
     def is_supported_regarding_owner_account(self):
         return (
             not self.project.has_online_vector_data
-            or self.project.owner.useraccount.plan.is_external_db_supported
+            or self.project.owner.useraccount.active_subscription.plan.is_external_db_supported
         )
 
 
