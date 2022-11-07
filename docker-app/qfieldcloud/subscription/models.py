@@ -536,10 +536,15 @@ class Subscription(models.Model):
             is_default=True,
         )
 
+        if account.user.is_organization:
+            created_by = account.user.organization_owner
+        else:
+            created_by = account.user
+
         subscription = cls.objects.create(
             plan=plan,
             account=account,
-            created_by=account.user,
+            created_by=created_by,
             status=cls.Status.ACTIVE_PAID,
             active_since=active_since,
         )
