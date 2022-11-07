@@ -33,6 +33,14 @@ def set_active_plan(apps, schema_editor):
         account.save(update_fields=["plan_id"])
 
 
+def add_organization_created_by_and_created_at(apps, schema_editor):
+    Organization = apps.get_model("core", "Organization")
+    for org in Organization.objects.all():
+        org.created_by = org.organization_owner
+        org.created_at = org.date_joined
+        org.save(update_fields=["created_by", "created_at"])
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -81,5 +89,56 @@ class Migration(migrations.Migration):
             model_name="organization",
             name="is_initially_trial",
             field=models.BooleanField(default=False),
+        ),
+        migrations.AlterField(
+            model_name="organization",
+            name="organization_owner",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="owned_organizations",
+                to="core.person",
+            ),
+        ),
+        migrations.AddField(
+            model_name="organization",
+            name="created_by",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="created_organizations",
+                to="core.person",
+                null=True,
+            ),
+        ),
+        migrations.AddField(
+            model_name="organization",
+            name="created_at",
+            field=models.DateTimeField(
+                auto_now_add=True,
+                null=True,
+            ),
+        ),
+        migrations.RunPython(
+            add_organization_created_by_and_created_at, migrations.RunPython.noop
+        ),
+        migrations.AlterField(
+            model_name="organization",
+            name="created_by",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="created_organizations",
+                to="core.person",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="organization",
+            name="created_at",
+            field=models.DateTimeField(
+                auto_now_add=True,
+            ),
+        ),
+        migrations.AddField(
+            model_name="organization",
+            name="updated_at",
+            field=models.DateTimeField(auto_now=True),
         ),
     ]

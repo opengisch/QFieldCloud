@@ -612,20 +612,31 @@ class OrganizationManager(UserManager):
 
 
 class Organization(User):
+    class Meta:
+        verbose_name = "organization"
+        verbose_name_plural = "organizations"
+
     objects = OrganizationManager()
 
     organization_owner = models.ForeignKey(
-        User,
+        Person,
         on_delete=models.CASCADE,
-        related_name="owner",
-        limit_choices_to=models.Q(type=User.Type.PERSON),
+        related_name="owned_organizations",
     )
 
     is_initially_trial = models.BooleanField(default=False)
 
-    class Meta:
-        verbose_name = "organization"
-        verbose_name_plural = "organizations"
+    created_by = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name="created_organizations",
+    )
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
 
     def billable_users(self, from_date: date, to_date: Optional[date] = None):
         """Returns the queryset of billable users in the given time interval.
@@ -667,6 +678,7 @@ class Organization(User):
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
+        self.created_by = self.created_by or self.organization_owner
         return super().save(*args, **kwargs)
 
 
