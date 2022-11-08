@@ -1,10 +1,9 @@
-import calendar
 import contextlib
 import os
 import secrets
 import string
 import uuid
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
@@ -638,26 +637,23 @@ class Organization(User):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
-    def billable_users(self, from_date: date, to_date: Optional[date] = None):
-        """Returns the queryset of billable users in the given time interval.
+    def active_users(self, period_since: datetime, period_until: datetime):
+        """Returns the queryset of active users in the given time interval.
 
-        Billable users are users triggering a job or pushing a delta on a project owned by the organization.
+        Active users are users triggering a job or pushing a delta on a project owned by the organization.
 
         Args:
-            from_date (datetime.date): inclusive beginning of the interval
-            to_date (Optional[datetime.date], optional): inclusive end of the interval (if None, will default to the last day of the month of the start date)
+            period_since (datetime): inclusive beginning of the interval
+            period_until (datetime): inclusive end of the interval
         """
-
-        if to_date is None:
-            to_date = from_date.replace(
-                day=calendar.monthrange(from_date.year, from_date.month)[1]
-            )
+        assert period_since
+        assert period_until
 
         users_with_delta = (
             Delta.objects.filter(
                 project__in=self.projects.all(),
-                updated_at__gte=from_date,
-                updated_at__lte=to_date,
+                created_at__gte=period_since,
+                created_at__lte=period_until,
             )
             .values_list("created_by_id", flat=True)
             .distinct()
@@ -665,14 +661,14 @@ class Organization(User):
         users_with_jobs = (
             Job.objects.filter(
                 project__in=self.projects.all(),
-                updated_at__gte=from_date,
-                updated_at__lte=to_date,
+                created_at__gte=period_since,
+                created_at__lte=period_until,
             )
             .values_list("created_by_id", flat=True)
             .distinct()
         )
 
-        return User.objects.filter(organizationmember__organization=self).filter(
+        return Person.objects.filter(
             Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
         )
 
