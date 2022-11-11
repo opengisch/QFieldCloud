@@ -1,4 +1,4 @@
-version: "3.7"
+version: "3.9"
 
 x-logging: &default-logging
   driver: "json-file"
@@ -156,6 +156,7 @@ services:
     depends_on:
       - redis
       - app
+    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   ofelia:
     image: mcuadros/ofelia:v0.3.4
