@@ -33,7 +33,7 @@ server {
   ssl_certificate     certs/${QFIELDCLOUD_HOST}.pem;
   ssl_certificate_key certs/${QFIELDCLOUD_HOST}-key.pem;
 
-  server_name ${QFIELDCLOUD_HOST};
+  server_name ${QFIELDCLOUD_HOST} nginx;
   client_max_body_size 10G;
   keepalive_timeout 5;
 
