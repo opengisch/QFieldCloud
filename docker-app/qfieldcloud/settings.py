@@ -332,7 +332,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 # NOTE automatically set when running tests, don't change manually!
 IN_TEST_SUITE = False
 
-QFIELDCLOUD_SUBSCRIPTIONS_MODEL = os.environ.get(
+QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
     "QFIELDCLOUD_SUBSCRIPTION_MODEL", "subscription.Subscription"
 )
 
