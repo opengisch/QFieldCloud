@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3'
 
 services:
 
@@ -21,6 +21,7 @@ services:
     command: python3 -m debugpy --listen 0.0.0.0:5681 manage.py dequeue
     ports:
       - 5681:5681
+    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   db:
     environment:
