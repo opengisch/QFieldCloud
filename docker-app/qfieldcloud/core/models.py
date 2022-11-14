@@ -37,7 +37,7 @@ from timezone_field import TimeZoneField
 
 
 def get_subscription_model():
-    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTIONS_MODEL)
+    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
 
 
 class PersonQueryset(models.QuerySet):
