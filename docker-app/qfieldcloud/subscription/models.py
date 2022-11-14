@@ -171,7 +171,9 @@ class Plan(models.Model):
         with transaction.atomic():
             # If default is set to true, we unset default on all other plans
             if self.is_default:
-                Plan.objects.filter(user_type=self.user_type).update(is_default=False)
+                Plan.objects.filter(user_type=self.user_type).exclude(
+                    pk=self.pk
+                ).update(is_default=False)
             return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -515,6 +517,18 @@ class Subscription(models.Model):
         with transaction.atomic():
             cls.objects.select_for_update().get(id=subscription.id)
             update_fields = []
+
+            if (
+                subscription.active_since is None
+                and kwargs.get("active_since") is not None
+            ):
+                cls.objects.filter(
+                    active_since__isnull=False,
+                    active_until__isnull=True,
+                ).exclude(pk=subscription.pk,).update(
+                    status=Subscription.Status.INACTIVE_CANCELLED,
+                    active_until=kwargs["active_since"],
+                )
 
             for attr_name, attr_value in kwargs.items():
                 update_fields.append(attr_name)
