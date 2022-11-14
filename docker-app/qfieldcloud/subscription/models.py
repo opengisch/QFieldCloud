@@ -368,6 +368,13 @@ class Subscription(models.Model):
     current_period_until = models.DateTimeField(null=True, blank=True)
 
     @property
+    def is_active(self) -> bool:
+        return self.status in [
+            SubscriptionStatus.ACTIVE_PAID,
+            SubscriptionStatus.ACTIVE_PAST_DUE,
+        ]
+
+    @property
     def active_storage_total_mb(self) -> int:
         return self.plan.storage_mb + self.active_storage_package_mb
 
