@@ -16,6 +16,34 @@ from qfieldcloud.core.models import User, UserAccount
 from .exceptions import NotPremiumPlanException
 
 
+class SubscriptionStatus(models.TextChoices):
+    """Status of the subscription.
+
+    Initially the status is INACTIVE_DRAFT.
+
+    INACTIVE_DRAFT -> (INACTIVE_DRAFT_EXPIRED, INACTIVE_REQUESTED_CREATE)
+    INACTIVE_REQUESTED_CREATE -> (INACTIVE_AWAITS_PAYMENT, INACTIVE_CANCELLED)
+
+    """
+
+    # the user drafted a subscription, initial status
+    INACTIVE_DRAFT = "inactive_draft", _("Inactive Draft")
+    # the user draft expired (e.g. a new subscription is attempted)
+    INACTIVE_DRAFT_EXPIRED = "inactive_draft_expired", _("Inactive Draft Expired")
+    # requested creating the subscription on Stripe
+    INACTIVE_REQUESTED_CREATE = "inactive Requested_create", _(
+        "Inactive_Requested Create"
+    )
+    # requested creating the subscription on Stripe
+    INACTIVE_AWAITS_PAYMENT = "inactive_awaits_payment", _("Inactive Awaits Payment")
+    # payment succeeded
+    ACTIVE_PAID = "active_paid", _("Active Paid")
+    # payment failed, but the subscription is still active
+    ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
+    # successfully cancelled
+    INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
+
+
 class Plan(models.Model):
     @classmethod
     def get_or_create_default(cls) -> "Plan":
@@ -86,6 +114,9 @@ class Plan(models.Model):
     # the plan is set as trial
     is_trial = models.BooleanField(default=False)
 
+    # the plan is metered or licensed. If it metered, it is automatically post-paid.
+    is_metered = models.BooleanField(default=False)
+
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
     # the maximum amount of money that they are going to pay.
@@ -116,6 +147,13 @@ class Plan(models.Model):
         help_text=_(
             "Maximum number of trial organizations that the user can create. Set -1 to allow unlimited trial organizations."
         ),
+    )
+
+    # The status when a new subscription is created
+    initial_susbscription_status = models.CharField(
+        max_length=100,
+        choices=SubscriptionStatus.choices,
+        default=SubscriptionStatus.INACTIVE_DRAFT,
     )
 
     # created at
@@ -271,34 +309,7 @@ class Subscription(models.Model):
 
     objects = SubscriptionQuerySet.as_manager()
 
-    class Status(models.TextChoices):
-        """Status of the subscription.
-
-        Initially the status is INACTIVE_DRAFT.
-
-        INACTIVE_DRAFT -> (INACTIVE_DRAFT_EXPIRED, INACTIVE_REQUESTED_CREATE)
-        INACTIVE_REQUESTED_CREATE -> (INACTIVE_AWAITS_PAYMENT, INACTIVE_CANCELLED)
-
-        """
-
-        # the user drafted a subscription, initial status
-        INACTIVE_DRAFT = "inactive_draft", _("Inactive Draft")
-        # the user draft expired (e.g. a new subscription is attempted)
-        INACTIVE_DRAFT_EXPIRED = "inactive_draft_expired", _("Inactive Draft Expired")
-        # requested creating the subscription on Stripe
-        INACTIVE_REQUESTED_CREATE = "inactive Requested_create", _(
-            "Inactive_Requested Create"
-        )
-        # requested creating the subscription on Stripe
-        INACTIVE_AWAITS_PAYMENT = "inactive_awaits_payment", _(
-            "Inactive Awaits Payment"
-        )
-        # payment succeeded
-        ACTIVE_PAID = "active_paid", _("Active Paid")
-        # payment failed, but the subscription is still active
-        ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
-        # successfully cancelled
-        INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
+    Status = SubscriptionStatus
 
     class UpdateSubscriptionKwargs(TypedDict):
         status: "Subscription.Status"
@@ -545,7 +556,8 @@ class Subscription(models.Model):
             plan=plan,
             account=account,
             created_by=created_by,
-            status=cls.Status.ACTIVE_PAID,
+            # TODO in the future the status can be configured in the `Plan.initial_susbscription_status`
+            status=plan.initial_susbscription_status,
             active_since=active_since,
         )
 
