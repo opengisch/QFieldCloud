@@ -479,24 +479,18 @@ class UserAccount(models.Model):
     @property
     def storage_used_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        return max(
-            0,
-            min(
+        if self.active_subscription.active_storage_total_mb > 0:
+            return min(
                 self.storage_used_mb / self.active_subscription.active_storage_total_mb,
                 1,
-            ),
-        )
+            )
+        else:
+            return 1
 
     @property
     def storage_free_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        return 1 - max(
-            0,
-            min(
-                self.storage_used_mb / self.active_subscription.active_storage_total_mb,
-                1,
-            ),
-        )
+        return 1 - self.storage_used_ratio
 
 
 class Geodb(models.Model):
