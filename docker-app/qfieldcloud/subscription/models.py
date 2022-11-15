@@ -421,6 +421,23 @@ class Subscription(models.Model):
         else:
             return 0
 
+    @property
+    def active_users(self):
+        if not self.account.user.is_organization:
+            return None
+
+        return self.account.user.active_users(
+            self.current_period_since,
+            self.current_period_until,
+        )
+
+    @property
+    def active_users_count(self) -> int:
+        if not self.current_period_since or not self.current_period_until:
+            return 0
+
+        return self.active_users.count()
+
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)
 
