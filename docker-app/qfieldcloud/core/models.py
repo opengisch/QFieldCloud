@@ -668,7 +668,10 @@ class Organization(User):
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
-        self.created_by = self.created_by or self.organization_owner
+        if getattr(self, "created_by", None) is not None:
+            self.created_by = self.created_by
+        else:
+            self.created_by = self.organization_owner
         return super().save(*args, **kwargs)
 
 
