@@ -11,7 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
-from qfieldcloud.core.models import User, UserAccount
+from qfieldcloud.core.models import Person, User, UserAccount
 
 from .exceptions import NotPremiumPlanException
 
@@ -568,18 +568,15 @@ class Subscription(models.Model):
     def create_default_plan_subscription(
         cls, account: UserAccount, active_since: datetime = None
     ) -> "Subscription":
-        """Activates the default (free) subscription for a given account.
+        """Creates the default subscription for a given account.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
             active_since (datetime): active since for the subscription
 
         Returns:
-            Subscription: the currently active subscription.
+            Subscription: the created subscription.
         """
-        if active_since is None:
-            active_since = timezone.now()
-
         plan = Plan.objects.get(
             user_type=account.user.type,
             is_default=True,
@@ -590,6 +587,34 @@ class Subscription(models.Model):
         else:
             created_by = account.user
 
+        if active_since is None:
+            active_since = timezone.now()
+
+        return cls.create_subscription(
+            account=account,
+            plan=plan,
+            created_by=created_by,
+            active_since=active_since,
+        )
+
+    @classmethod
+    def create_subscription(
+        cls,
+        account: UserAccount,
+        plan: Plan,
+        created_by: Person,
+        active_since: Optional[datetime] = None,
+    ) -> "Subscription":
+        """Creates a subscription for a given account to a given plan.
+
+        Args:
+            account (UserAccount): the account the subscription belongs to.
+            plan (Plan): the plan to subscribe to.
+            active_since (Optional[datetime]): active since for the subscription.
+
+        Returns:
+            Subscription: the created subscription.
+        """
         subscription = cls.objects.create(
             plan=plan,
             account=account,
