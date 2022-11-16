@@ -2,8 +2,9 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Optional, TypedDict
+from typing import Optional, Tuple, TypedDict
 
+from constance import config
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -512,7 +513,9 @@ class Subscription(models.Model):
             account (UserAccount): the account the subscription belongs to.
 
         Returns:
-            Subscription: the currently active subscription
+            Self: the currently active subscription
+
+        TODO Python 3.11 the actual return type is Self
         """
         try:
             subscription = cls.objects.active().get(account_id=account.pk)
@@ -533,7 +536,9 @@ class Subscription(models.Model):
             subscription (Subscription): subscription to be updated
 
         Returns:
-            Subscription: the same as the subscription argument
+            Self: the same as the subscription argument
+
+        TODO Python 3.11 the actual return type is Self
         """
         if not kwargs:
             return subscription
@@ -575,7 +580,9 @@ class Subscription(models.Model):
             active_since (datetime): active since for the subscription
 
         Returns:
-            Subscription: the created subscription.
+            Self: the created subscription.
+
+        TODO Python 3.11 the actual return type is Self
         """
         plan = Plan.objects.get(
             user_type=account.user.type,
@@ -590,12 +597,14 @@ class Subscription(models.Model):
         if active_since is None:
             active_since = timezone.now()
 
-        return cls.create_subscription(
+        _trial_subscription, regular_subscription = cls.create_subscription(
             account=account,
             plan=plan,
             created_by=created_by,
             active_since=active_since,
         )
+
+        return regular_subscription
 
     @classmethod
     def create_subscription(
@@ -604,24 +613,54 @@ class Subscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: Optional[datetime] = None,
-    ) -> "Subscription":
-        """Creates a subscription for a given account to a given plan.
+    ) -> Tuple["Subscription", "Subscription"]:
+        """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
-            plan (Plan): the plan to subscribe to.
+            plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
+            created_by (Person): created by.
             active_since (Optional[datetime]): active since for the subscription.
 
         Returns:
-            Subscription: the created subscription.
+            Tuple[Subscription, Subscription]: the created trial subscription if the given plan was a trial and the regular subscription.
+
+        TODO Python 3.11 the actual return type is Self
         """
-        subscription = cls.objects.create(
-            plan=plan,
+        if plan.is_trial:
+            assert isinstance(
+                active_since, datetime
+            ), "Creating a trial plan requires `active_since` to be a valid datetime object"
+
+            active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
+            trial_subscription = cls.objects.create(
+                plan=plan,
+                account=account,
+                created_by=created_by,
+                # TODO in the future the status can be configured in the `Plan.initial_susbscription_status`
+                status=plan.initial_susbscription_status,
+                active_since=active_since,
+                active_until=active_until,
+            )
+            # the regular plan should be the default plan
+            regular_plan = Plan.objects.get(
+                user_type=account.user.type,
+                is_default=True,
+            )
+
+            # the end date of the trial is the start date of the regular
+            regular_active_since = active_until
+        else:
+            trial_subscription = None
+            regular_plan = plan
+            regular_active_since = active_since
+
+        regular_subscription = cls.objects.create(
+            plan=regular_plan,
             account=account,
             created_by=created_by,
-            # TODO in the future the status can be configured in the `Plan.initial_susbscription_status`
-            status=plan.initial_susbscription_status,
-            active_since=active_since,
+            status=regular_plan.initial_susbscription_status,
+            active_since=regular_active_since,
         )
 
-        return subscription
+        return trial_subscription, regular_subscription

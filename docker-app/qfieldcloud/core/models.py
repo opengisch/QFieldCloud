@@ -316,10 +316,14 @@ class User(AbstractUser):
 
         # if the user is created, we need to create a user account
         if self._state.adding and self.type != User.Type.TEAM:
+            skip_account_creation = kwargs.pop("skip_account_creation", False)
+
             with transaction.atomic():
                 super().save(*args, **kwargs)
-                account = UserAccount.objects.create(user=self)
-                Subscription.get_or_create_active_subscription(account)
+
+                if not skip_account_creation:
+                    account, _created = UserAccount.objects.get_or_create(user=self)
+                    Subscription.get_or_create_active_subscription(account)
         else:
             super().save(*args, **kwargs)
 

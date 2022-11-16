@@ -353,6 +353,7 @@ CONSTANCE_CONFIG = {
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
     ),
+    "TRIAL_PERIOD_DAYS": (28, "Days in which the trial period expires."),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -364,4 +365,5 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 CONSTANCE_CONFIG_FIELDSETS = {
     "Worker": ("WORKER_TIMEOUT_S",),
+    "Subscription": ("TRIAL_PERIOD_DAYS",),
 }
