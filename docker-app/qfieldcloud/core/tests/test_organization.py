@@ -235,8 +235,8 @@ class QfcTestCase(APITestCase):
         # User 2 leaves the organization
         OrganizationMember.objects.filter(member=self.user3).delete()
 
-        # There is now 1 billable user
-        self.assertEqual(_active_users_count(), 1)
+        # There are strill 2 billable user
+        self.assertEqual(_active_users_count(), 2)
 
         # Report at a different time is empty
         self.assertEqual(_active_users_count(now() + timedelta(days=365)), 0)
