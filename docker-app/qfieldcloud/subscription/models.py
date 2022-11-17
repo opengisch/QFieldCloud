@@ -551,10 +551,9 @@ class Subscription(models.Model):
                 subscription.active_since is None
                 and kwargs.get("active_since") is not None
             ):
-                cls.objects.filter(
-                    active_since__isnull=False,
-                    active_until__isnull=True,
-                ).exclude(pk=subscription.pk,).update(
+                cls.objects.active().filter(account=subscription.account,).exclude(
+                    pk=subscription.pk,
+                ).update(
                     status=Subscription.Status.INACTIVE_CANCELLED,
                     active_until=kwargs["active_since"],
                 )
