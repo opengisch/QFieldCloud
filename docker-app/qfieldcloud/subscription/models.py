@@ -234,11 +234,11 @@ class PackageType(models.Model):
     @lru_cache
     def get_storage_package_type(cls):
         try:
-            return PackageType.objects.get(type=PackageType.Type.STORAGE)
-        except PackageType.DoesNotExist:
-            return PackageType.objects.create(
+            return cls.objects.get(type=cls.Type.STORAGE)
+        except cls.DoesNotExist:
+            return cls.objects.create(
                 code="storage_package",
-                type=PackageType.Type.STORAGE,
+                type=cls.Type.STORAGE,
                 unit_amount=1000,
                 unit_label="MB",
                 min_quantity=0,
