@@ -3,7 +3,7 @@ import os
 from typing import IO, Iterable, Union
 
 from qfieldcloud.core.models import User
-from qfieldcloud.subscription.models import Plan
+from qfieldcloud.subscription.models import Plan, Subscription
 
 
 def testdata_path(path):
@@ -33,6 +33,7 @@ def setup_subscription_plans():
                 is_default=True,
                 is_public=False,
                 user_type=User.Type.PERSON,
+                initial_susbscription_status=Subscription.Status.ACTIVE_PAID,
             ),
             Plan(
                 code="default_org",
@@ -40,6 +41,7 @@ def setup_subscription_plans():
                 is_default=True,
                 is_public=False,
                 user_type=User.Type.ORGANIZATION,
+                initial_susbscription_status=Subscription.Status.ACTIVE_PAID,
             ),
         ]
     )
