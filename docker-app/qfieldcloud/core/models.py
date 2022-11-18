@@ -11,8 +11,6 @@ import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
 from deprecated import deprecated
-from django.apps import apps
-from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
@@ -33,10 +31,6 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
-
-
-def get_subscription_model():
-    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
 
 
 class PersonQueryset(models.QuerySet):
@@ -312,6 +306,8 @@ class User(AbstractUser):
         return hasattr(self, "geodb")
 
     def save(self, *args, **kwargs):
+        from qfieldcloud.subscription.models import get_subscription_model
+
         Subscription = get_subscription_model()
 
         # if the user is created, we need to create a user account
@@ -421,6 +417,8 @@ class UserAccount(models.Model):
 
     @property
     def active_subscription(self):
+        from qfieldcloud.subscription.models import get_subscription_model
+
         Subscription = get_subscription_model()
         return Subscription.get_or_create_active_subscription(self)
 

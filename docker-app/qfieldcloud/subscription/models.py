@@ -5,6 +5,8 @@ from functools import lru_cache
 from typing import Optional, Tuple, TypedDict
 
 from constance import config
+from django.apps import apps
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -15,6 +17,10 @@ from model_utils.managers import InheritanceManagerMixin
 from qfieldcloud.core.models import Person, User, UserAccount
 
 from .exceptions import NotPremiumPlanException
+
+
+def get_subscription_model() -> "Subscription":
+    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
 
 
 class SubscriptionStatus(models.TextChoices):

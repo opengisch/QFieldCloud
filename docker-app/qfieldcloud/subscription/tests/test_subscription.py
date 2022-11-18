@@ -9,9 +9,11 @@ from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_pl
 from rest_framework.test import APITransactionTestCase
 
 from ..exceptions import NotPremiumPlanException
-from ..models import Package, PackageType, Plan, Subscription
+from ..models import Package, PackageType, Plan, get_subscription_model
 
 logging.disable(logging.CRITICAL)
+
+Subscription = get_subscription_model()
 
 
 class QfcTestCase(APITransactionTestCase):
