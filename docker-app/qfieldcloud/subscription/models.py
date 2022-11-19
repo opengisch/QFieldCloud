@@ -39,7 +39,7 @@ class SubscriptionStatus(models.TextChoices):
     INACTIVE_DRAFT_EXPIRED = "inactive_draft_expired", _("Inactive Draft Expired")
     # requested creating the subscription on Stripe
     INACTIVE_REQUESTED_CREATE = "inactive_requested_create", _(
-        "Inactive_Requested Create"
+        "Inactive Requested Create"
     )
     # requested creating the subscription on Stripe
     INACTIVE_AWAITS_PAYMENT = "inactive_awaits_payment", _("Inactive Awaits Payment")
@@ -157,7 +157,7 @@ class Plan(models.Model):
     )
 
     # The status when a new subscription is created
-    initial_susbscription_status = models.CharField(
+    initial_subscription_status = models.CharField(
         max_length=100,
         choices=SubscriptionStatus.choices,
         default=SubscriptionStatus.INACTIVE_DRAFT,
@@ -642,8 +642,8 @@ class Subscription(models.Model):
                 plan=plan,
                 account=account,
                 created_by=created_by,
-                # TODO in the future the status can be configured in the `Plan.initial_susbscription_status`
-                status=plan.initial_susbscription_status,
+                # TODO in the future the status can be configured in the `Plan.initial_subscription_status`
+                status=plan.initial_subscription_status,
                 active_since=active_since,
                 active_until=active_until,
             )
@@ -664,7 +664,7 @@ class Subscription(models.Model):
             plan=regular_plan,
             account=account,
             created_by=created_by,
-            status=regular_plan.initial_susbscription_status,
+            status=regular_plan.initial_subscription_status,
             active_since=regular_active_since,
         )
 

@@ -127,7 +127,7 @@ class Migration(migrations.Migration):
                         choices=[
                             ("inactive_draft", "Inactive Draft"),
                             ("inactive_draft_expired", "Inactive Draft Expired"),
-                            ("inactive Requested_create", "Inactive_Requested Create"),
+                            ("inactive_requested_create", "Inactive Requested Create"),
                             ("inactive_awaits_payment", "Inactive Awaits Payment"),
                             ("active_paid", "Active Paid"),
                             ("active_past_due", "Active Past Due"),
@@ -332,12 +332,12 @@ class Migration(migrations.Migration):
         ####################
         migrations.AddField(
             model_name="plan",
-            name="initial_susbscription_status",
+            name="initial_subscription_status",
             field=models.CharField(
                 choices=[
                     ("inactive_draft", "Inactive Draft"),
                     ("inactive_draft_expired", "Inactive Draft Expired"),
-                    ("inactive Requested_create", "Inactive_Requested Create"),
+                    ("inactive_requested_create", "Inactive Requested Create"),
                     ("inactive_awaits_payment", "Inactive Awaits Payment"),
                     ("active_paid", "Active Paid"),
                     ("active_past_due", "Active Past Due"),
