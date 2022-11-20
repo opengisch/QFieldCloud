@@ -737,3 +737,29 @@ def can_read_billing(user: QfcUser, account: QfcUser) -> bool:
         )
     else:
         return False
+
+
+def can_change_additional_storage(user, account):
+    if account.is_person:
+        return user_eq(user, account)
+    elif account.is_organization:
+        return user_has_organization_role_origins(
+            user, account, [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER]
+        )
+
+    return False
+
+
+def can_cancel_subscription_at_period_end(user: QfcUser, account: QfcUser) -> bool:
+    """Cannot cancel subscription if different from the personal account. Organizations need to be deleted."""
+    if account.is_person:
+        return user_eq(user, account)
+
+    return False
+
+
+def can_abort_subscription_cancellation(user: QfcUser, account: QfcUser) -> bool:
+    if account.is_person:
+        return user_eq(user, account)
+
+    return False

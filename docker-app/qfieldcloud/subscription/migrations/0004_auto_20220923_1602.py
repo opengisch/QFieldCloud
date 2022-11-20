@@ -311,4 +311,45 @@ class Migration(migrations.Migration):
             name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
+        ####################
+        # Add trial organizations support
+        ####################
+        migrations.AddField(
+            model_name="plan",
+            name="is_trial",
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AddField(
+            model_name="plan",
+            name="max_trial_organizations",
+            field=models.IntegerField(
+                default=1,
+                help_text="Maximum number of trial organizations that the user can create. Set -1 to allow unlimited trial organizations.",
+            ),
+        ),
+        ####################
+        # Add extra configuration on the plans
+        ####################
+        migrations.AddField(
+            model_name="plan",
+            name="initial_susbscription_status",
+            field=models.CharField(
+                choices=[
+                    ("inactive_draft", "Inactive Draft"),
+                    ("inactive_draft_expired", "Inactive Draft Expired"),
+                    ("inactive Requested_create", "Inactive_Requested Create"),
+                    ("inactive_awaits_payment", "Inactive Awaits Payment"),
+                    ("active_paid", "Active Paid"),
+                    ("active_past_due", "Active Past Due"),
+                    ("inactive_cancelled", "Inactive Cancelled"),
+                ],
+                default="inactive_draft",
+                max_length=100,
+            ),
+        ),
+        migrations.AddField(
+            model_name="plan",
+            name="is_metered",
+            field=models.BooleanField(default=False),
+        ),
     ]

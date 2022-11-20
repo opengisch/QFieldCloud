@@ -2,8 +2,11 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Optional, TypedDict
+from typing import Optional, Tuple, TypedDict
 
+from constance import config
+from django.apps import apps
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -11,9 +14,41 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
-from qfieldcloud.core.models import User, UserAccount
+from qfieldcloud.core.models import Person, User, UserAccount
 
 from .exceptions import NotPremiumPlanException
+
+
+def get_subscription_model() -> "Subscription":
+    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
+
+
+class SubscriptionStatus(models.TextChoices):
+    """Status of the subscription.
+
+    Initially the status is INACTIVE_DRAFT.
+
+    INACTIVE_DRAFT -> (INACTIVE_DRAFT_EXPIRED, INACTIVE_REQUESTED_CREATE)
+    INACTIVE_REQUESTED_CREATE -> (INACTIVE_AWAITS_PAYMENT, INACTIVE_CANCELLED)
+
+    """
+
+    # the user drafted a subscription, initial status
+    INACTIVE_DRAFT = "inactive_draft", _("Inactive Draft")
+    # the user draft expired (e.g. a new subscription is attempted)
+    INACTIVE_DRAFT_EXPIRED = "inactive_draft_expired", _("Inactive Draft Expired")
+    # requested creating the subscription on Stripe
+    INACTIVE_REQUESTED_CREATE = "inactive_requested_create", _(
+        "Inactive_Requested Create"
+    )
+    # requested creating the subscription on Stripe
+    INACTIVE_AWAITS_PAYMENT = "inactive_awaits_payment", _("Inactive Awaits Payment")
+    # payment succeeded
+    ACTIVE_PAID = "active_paid", _("Active Paid")
+    # payment failed, but the subscription is still active
+    ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
+    # successfully cancelled
+    INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
 
 
 class Plan(models.Model):
@@ -83,6 +118,12 @@ class Plan(models.Model):
     # the plan is marked as premium which assumes it has premium access
     is_premium = models.BooleanField(default=False)
 
+    # the plan is set as trial
+    is_trial = models.BooleanField(default=False)
+
+    # the plan is metered or licensed. If it metered, it is automatically post-paid.
+    is_metered = models.BooleanField(default=False)
+
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
     # the maximum amount of money that they are going to pay.
@@ -106,6 +147,22 @@ class Plan(models.Model):
         ),
     )
 
+    # The maximum number of trial organizations that the user can create.
+    # Set -1 to allow unlimited trial organizations.
+    max_trial_organizations = models.IntegerField(
+        default=1,
+        help_text=_(
+            "Maximum number of trial organizations that the user can create. Set -1 to allow unlimited trial organizations."
+        ),
+    )
+
+    # The status when a new subscription is created
+    initial_susbscription_status = models.CharField(
+        max_length=100,
+        choices=SubscriptionStatus.choices,
+        default=SubscriptionStatus.INACTIVE_DRAFT,
+    )
+
     # created at
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -121,7 +178,9 @@ class Plan(models.Model):
         with transaction.atomic():
             # If default is set to true, we unset default on all other plans
             if self.is_default:
-                Plan.objects.filter(user_type=self.user_type).update(is_default=False)
+                Plan.objects.filter(user_type=self.user_type).exclude(
+                    pk=self.pk
+                ).update(is_default=False)
             return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -182,11 +241,11 @@ class PackageType(models.Model):
     @lru_cache
     def get_storage_package_type(cls):
         try:
-            return PackageType.objects.get(type=PackageType.Type.STORAGE)
-        except PackageType.DoesNotExist:
-            return PackageType.objects.create(
+            return cls.objects.get(type=cls.Type.STORAGE)
+        except cls.DoesNotExist:
+            return cls.objects.create(
                 code="storage_package",
-                type=PackageType.Type.STORAGE,
+                type=cls.Type.STORAGE,
                 unit_amount=1000,
                 unit_label="MB",
                 min_quantity=0,
@@ -259,34 +318,7 @@ class Subscription(models.Model):
 
     objects = SubscriptionQuerySet.as_manager()
 
-    class Status(models.TextChoices):
-        """Status of the subscription.
-
-        Initially the status is INACTIVE_DRAFT.
-
-        INACTIVE_DRAFT -> (INACTIVE_DRAFT_EXPIRED, INACTIVE_REQUESTED_CREATE)
-        INACTIVE_REQUESTED_CREATE -> (INACTIVE_AWAITS_PAYMENT, INACTIVE_CANCELLED)
-
-        """
-
-        # the user drafted a subscription, initial status
-        INACTIVE_DRAFT = "inactive_draft", _("Inactive Draft")
-        # the user draft expired (e.g. a new subscription is attempted)
-        INACTIVE_DRAFT_EXPIRED = "inactive_draft_expired", _("Inactive Draft Expired")
-        # requested creating the subscription on Stripe
-        INACTIVE_REQUESTED_CREATE = "inactive Requested_create", _(
-            "Inactive_Requested Create"
-        )
-        # requested creating the subscription on Stripe
-        INACTIVE_AWAITS_PAYMENT = "inactive_awaits_payment", _(
-            "Inactive Awaits Payment"
-        )
-        # payment succeeded
-        ACTIVE_PAID = "active_paid", _("Active Paid")
-        # payment failed, but the subscription is still active
-        ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
-        # successfully cancelled
-        INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
+    Status = SubscriptionStatus
 
     class UpdateSubscriptionKwargs(TypedDict):
         status: "Subscription.Status"
@@ -343,6 +375,13 @@ class Subscription(models.Model):
     current_period_until = models.DateTimeField(null=True, blank=True)
 
     @property
+    def is_active(self) -> bool:
+        return self.status in [
+            SubscriptionStatus.ACTIVE_PAID,
+            SubscriptionStatus.ACTIVE_PAST_DUE,
+        ]
+
+    @property
     def active_storage_total_mb(self) -> int:
         return self.plan.storage_mb + self.active_storage_package_mb
 
@@ -388,6 +427,23 @@ class Subscription(models.Model):
             return self.future_storage_package_mb - self.active_storage_package_mb
         else:
             return 0
+
+    @property
+    def active_users(self):
+        if not self.account.user.is_organization:
+            return None
+
+        return self.account.user.active_users(
+            self.current_period_since,
+            self.current_period_until,
+        )
+
+    @property
+    def active_users_count(self) -> int:
+        if not self.current_period_since or not self.current_period_until:
+            return 0
+
+        return self.active_users.count()
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)
@@ -463,7 +519,9 @@ class Subscription(models.Model):
             account (UserAccount): the account the subscription belongs to.
 
         Returns:
-            Subscription: the currently active subscription
+            Self: the currently active subscription
+
+        TODO Python 3.11 the actual return type is Self
         """
         try:
             subscription = cls.objects.active().get(account_id=account.pk)
@@ -484,7 +542,9 @@ class Subscription(models.Model):
             subscription (Subscription): subscription to be updated
 
         Returns:
-            Subscription: the same as the subscription argument
+            Self: the same as the subscription argument
+
+        TODO Python 3.11 the actual return type is Self
         """
         if not kwargs:
             return subscription
@@ -492,6 +552,17 @@ class Subscription(models.Model):
         with transaction.atomic():
             cls.objects.select_for_update().get(id=subscription.id)
             update_fields = []
+
+            if (
+                subscription.active_since is None
+                and kwargs.get("active_since") is not None
+            ):
+                cls.objects.active().filter(account=subscription.account,).exclude(
+                    pk=subscription.pk,
+                ).update(
+                    status=Subscription.Status.INACTIVE_CANCELLED,
+                    active_until=kwargs["active_since"],
+                )
 
             for attr_name, attr_value in kwargs.items():
                 update_fields.append(attr_name)
@@ -507,29 +578,94 @@ class Subscription(models.Model):
     def create_default_plan_subscription(
         cls, account: UserAccount, active_since: datetime = None
     ) -> "Subscription":
-        """Activates the default (free) subscription for a given account.
+        """Creates the default subscription for a given account.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
             active_since (datetime): active since for the subscription
 
         Returns:
-            Subscription: the currently active subscription.
-        """
-        if active_since is None:
-            active_since = timezone.now()
+            Self: the created subscription.
 
+        TODO Python 3.11 the actual return type is Self
+        """
         plan = Plan.objects.get(
             user_type=account.user.type,
             is_default=True,
         )
 
-        subscription = cls.objects.create(
-            plan=plan,
+        if account.user.is_organization:
+            created_by = account.user.organization_owner
+        else:
+            created_by = account.user
+
+        if active_since is None:
+            active_since = timezone.now()
+
+        _trial_subscription, regular_subscription = cls.create_subscription(
             account=account,
-            created_by=account.user,
-            status=cls.Status.ACTIVE_PAID,
+            plan=plan,
+            created_by=created_by,
             active_since=active_since,
         )
 
-        return subscription
+        return regular_subscription
+
+    @classmethod
+    def create_subscription(
+        cls,
+        account: UserAccount,
+        plan: Plan,
+        created_by: Person,
+        active_since: Optional[datetime] = None,
+    ) -> Tuple["Subscription", "Subscription"]:
+        """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
+
+        Args:
+            account (UserAccount): the account the subscription belongs to.
+            plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
+            created_by (Person): created by.
+            active_since (Optional[datetime]): active since for the subscription.
+
+        Returns:
+            Tuple[Subscription, Subscription]: the created trial subscription if the given plan was a trial and the regular subscription.
+
+        TODO Python 3.11 the actual return type is Self
+        """
+        if plan.is_trial:
+            assert isinstance(
+                active_since, datetime
+            ), "Creating a trial plan requires `active_since` to be a valid datetime object"
+
+            active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
+            trial_subscription = cls.objects.create(
+                plan=plan,
+                account=account,
+                created_by=created_by,
+                # TODO in the future the status can be configured in the `Plan.initial_susbscription_status`
+                status=plan.initial_susbscription_status,
+                active_since=active_since,
+                active_until=active_until,
+            )
+            # the regular plan should be the default plan
+            regular_plan = Plan.objects.get(
+                user_type=account.user.type,
+                is_default=True,
+            )
+
+            # the end date of the trial is the start date of the regular
+            regular_active_since = active_until
+        else:
+            trial_subscription = None
+            regular_plan = plan
+            regular_active_since = active_since
+
+        regular_subscription = cls.objects.create(
+            plan=regular_plan,
+            account=account,
+            created_by=created_by,
+            status=regular_plan.initial_susbscription_status,
+            active_since=regular_active_since,
+        )
+
+        return trial_subscription, regular_subscription

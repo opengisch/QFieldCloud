@@ -1,10 +1,9 @@
-import calendar
 import contextlib
 import os
 import secrets
 import string
 import uuid
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
@@ -12,8 +11,6 @@ import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
 from auditlog.registry import auditlog
 from deprecated import deprecated
-from django.apps import apps
-from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
@@ -34,10 +31,6 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
-
-
-def get_subscription_model():
-    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
 
 
 class PersonQueryset(models.QuerySet):
@@ -313,14 +306,20 @@ class User(AbstractUser):
         return hasattr(self, "geodb")
 
     def save(self, *args, **kwargs):
+        from qfieldcloud.subscription.models import get_subscription_model
+
         Subscription = get_subscription_model()
 
         # if the user is created, we need to create a user account
         if self._state.adding and self.type != User.Type.TEAM:
+            skip_account_creation = kwargs.pop("skip_account_creation", False)
+
             with transaction.atomic():
                 super().save(*args, **kwargs)
-                account = UserAccount.objects.create(user=self)
-                Subscription.get_or_create_active_subscription(account)
+
+                if not skip_account_creation:
+                    account, _created = UserAccount.objects.get_or_create(user=self)
+                    Subscription.get_or_create_active_subscription(account)
         else:
             super().save(*args, **kwargs)
 
@@ -418,6 +417,8 @@ class UserAccount(models.Model):
 
     @property
     def active_subscription(self):
+        from qfieldcloud.subscription.models import get_subscription_model
+
         Subscription = get_subscription_model()
         return Subscription.get_or_create_active_subscription(self)
 
@@ -480,24 +481,18 @@ class UserAccount(models.Model):
     @property
     def storage_used_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        return max(
-            0,
-            min(
+        if self.active_subscription.active_storage_total_mb > 0:
+            return min(
                 self.storage_used_mb / self.active_subscription.active_storage_total_mb,
                 1,
-            ),
-        )
+            )
+        else:
+            return 1
 
     @property
     def storage_free_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        return 1 - max(
-            0,
-            min(
-                self.storage_used_mb / self.active_subscription.active_storage_total_mb,
-                1,
-            ),
-        )
+        return 1 - self.storage_used_ratio
 
 
 class Geodb(models.Model):
@@ -612,39 +607,49 @@ class OrganizationManager(UserManager):
 
 
 class Organization(User):
-    objects = OrganizationManager()
-
-    organization_owner = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="owner",
-        limit_choices_to=models.Q(type=User.Type.PERSON),
-    )
-
     class Meta:
         verbose_name = "organization"
         verbose_name_plural = "organizations"
 
-    def billable_users(self, from_date: date, to_date: Optional[date] = None):
-        """Returns the queryset of billable users in the given time interval.
+    objects = OrganizationManager()
 
-        Billable users are users triggering a job or pushing a delta on a project owned by the organization.
+    organization_owner = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name="owned_organizations",
+    )
+
+    is_initially_trial = models.BooleanField(default=False)
+
+    created_by = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name="created_organizations",
+    )
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def active_users(self, period_since: datetime, period_until: datetime):
+        """Returns the queryset of active users in the given time interval.
+
+        Active users are users triggering a job or pushing a delta on a project owned by the organization.
 
         Args:
-            from_date (datetime.date): inclusive beginning of the interval
-            to_date (Optional[datetime.date], optional): inclusive end of the interval (if None, will default to the last day of the month of the start date)
+            period_since (datetime): inclusive beginning of the interval
+            period_until (datetime): inclusive end of the interval
         """
-
-        if to_date is None:
-            to_date = from_date.replace(
-                day=calendar.monthrange(from_date.year, from_date.month)[1]
-            )
+        assert period_since
+        assert period_until
 
         users_with_delta = (
             Delta.objects.filter(
                 project__in=self.projects.all(),
-                updated_at__gte=from_date,
-                updated_at__lte=to_date,
+                created_at__gte=period_since,
+                created_at__lte=period_until,
             )
             .values_list("created_by_id", flat=True)
             .distinct()
@@ -652,19 +657,23 @@ class Organization(User):
         users_with_jobs = (
             Job.objects.filter(
                 project__in=self.projects.all(),
-                updated_at__gte=from_date,
-                updated_at__lte=to_date,
+                created_at__gte=period_since,
+                created_at__lte=period_until,
             )
             .values_list("created_by_id", flat=True)
             .distinct()
         )
 
-        return User.objects.filter(organizationmember__organization=self).filter(
+        return Person.objects.filter(
             Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
         )
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
+        if getattr(self, "created_by", None) is not None:
+            self.created_by = self.created_by
+        else:
+            self.created_by = self.organization_owner
         return super().save(*args, **kwargs)
 
 
