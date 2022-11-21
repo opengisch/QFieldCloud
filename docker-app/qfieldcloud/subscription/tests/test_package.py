@@ -116,7 +116,7 @@ class QfcTestCase(APITransactionTestCase):
             max_quantity=100,
         )
 
-        self.assertEqual(PackageType.get_storage_package_type(), package_type)
+        self.assertEqual(PackageType.get_storage_package_type().pk, package_type.pk)
 
     def test_storage_on_default_plan(self):
         subscription = self.a1.active_subscription
@@ -452,7 +452,7 @@ class QfcTestCase(APITransactionTestCase):
             max_quantity=100,
         )
 
-        self.assertEqual(package_type, PackageType.get_storage_package_type())
+        self.assertEqual(package_type.pk, PackageType.get_storage_package_type().pk)
 
         _old_package, new_package = self.a1.active_subscription.set_package_quantity(
             package_type,
