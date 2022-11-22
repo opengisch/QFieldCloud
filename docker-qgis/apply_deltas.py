@@ -380,6 +380,10 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
         for delta in delta_file.deltas:
             if delta["sourceLayerId"] == "" and delta["localLayerId"] != "":
                 delta["sourceLayerId"] = delta["localLayerId"]
+                logger.warning(
+                    "Patching project %s delta's empty sourceLayerId from localLayerId",
+                    delta_file.project_id,
+                )
 
     return delta_file
 
