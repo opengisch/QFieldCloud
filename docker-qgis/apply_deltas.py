@@ -375,7 +375,7 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
         )
 
         # NOTE Sometimes QField does not fill the `sourceLayerId` field
-        # In recent QGIS versions, offline editing replaces the data source of the layers, so the layer ids do not change        
+        # In recent QGIS versions, offline editing replaces the data source of the layers, so the layer ids do not change
         # See https://github.com/opengisch/qfieldcloud/issues/415#issuecomment-1322922349
         for delta in delta_file.deltas:
             if not delta.sourceLayerId and delta.localLayerId:
