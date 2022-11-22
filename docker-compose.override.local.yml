@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3'
 
 services:
 
@@ -17,6 +17,7 @@ services:
     command: python3 manage.py runserver 0.0.0.0:8000
 
   worker_wrapper:
+    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
     build:
       args:
         - DEBUG_BUILD=1

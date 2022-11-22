@@ -18,7 +18,7 @@ RUN apt update \
 
 # install dependencies
 COPY ./requirements.txt .
-RUN pip install -r requirements.txt
+RUN find . -name "requirements*.txt" -type f -exec pip3 install -r '{}' ';'
 
 # install debug dependencies
 ARG DEBUG_BUILD

@@ -1,14 +1,13 @@
-version: "3.7"
+version: "3.9"
 
-x-logging:
-  &default-logging
+x-logging: &default-logging
   driver: "json-file"
   options:
     max-size: "10m"
     max-file: "10"
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
 services:
-
   app: &default-django
     build:
       context: ./docker-app
@@ -66,6 +65,7 @@ services:
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       QFIELDCLOUD_WORKER_QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
+      QFIELDCLOUD_SUBSCRIPTION_MODEL: ${QFIELDCLOUD_SUBSCRIPTION_MODEL}
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
@@ -76,10 +76,11 @@ services:
       options:
         max-size: "1000m"
         max-file: "5"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
     labels:
       ofelia.enabled: "true"
       ofelia.job-exec.runcrons.no-overlap: "true"
-      ofelia.job-exec.runcrons.schedule: '@every 1m'
+      ofelia.job-exec.runcrons.schedule: "@every 1m"
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
   nginx:
@@ -155,6 +156,7 @@ services:
     depends_on:
       - redis
       - app
+    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   ofelia:
     image: mcuadros/ofelia:v0.3.4

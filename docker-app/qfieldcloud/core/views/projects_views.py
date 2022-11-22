@@ -17,10 +17,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         if view.action == "list":
             # The queryset is already filtered by what the user can see
             return True
-        user = request.user.polymorph
+        user = request.user
         owner = permissions_utils.get_param_from_request(request, "owner")
         if owner:
-            owner_obj = User.objects.get(username=owner).polymorph
+            owner_obj = User.objects.get(username=owner)
         else:
             # If the owner is not in the request, means that the owner
             # should be the user that made the request
@@ -141,7 +141,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # Owner has changed, we must ensure he has enough quota for that
         # (in this transaction, the project is his already, so we just need to
         # check his quota)
-        if new_owner.useraccount.storage_quota_left_mb < 0:
+        if new_owner.useraccount.storage_free_mb < 0:
             # If not, we rollback the transaction
             # (don't give away numbers in message as it's potentially private)
             raise exceptions.QuotaError(

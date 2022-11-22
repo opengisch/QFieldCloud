@@ -15,7 +15,7 @@ from qfieldcloud.core.models import (
 )
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans
+from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
@@ -141,8 +141,15 @@ class QfcTestCase(APITestCase):
         )
 
         # update user default plan to disable collaborations
-        self.user1.useraccount.plan.max_premium_collaborators_per_private_project = 0
-        self.user1.useraccount.plan.save()
+        set_subscription(
+            [
+                self.user1,
+                self.user2,
+                self.user3,
+                self.user4,
+            ],
+            max_premium_collaborators_per_private_project=0,
+        )
 
     def assertProjectRole(
         self,
@@ -317,6 +324,11 @@ class QfcTestCase(APITestCase):
         u = Person.objects.create(username="u")
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
+
+        set_subscription(
+            u,
+            max_premium_collaborators_per_private_project=0,
+        )
 
         u1 = Person.objects.create(username="u1")
 

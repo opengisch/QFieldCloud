@@ -68,12 +68,10 @@ INSTALLED_APPS = [
     # 3rd-party apps
     # if django_filters defined after [rest_framework] caused '... _frozen_importlib._DeadlockError ...'
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
-    "django_tables2",
     "django_filters",
     # debug
     "debug_toolbar",
     # style
-    "bootstrap4",
     "rest_framework",
     "rest_framework.authtoken",
     "drf_yasg",
@@ -83,6 +81,7 @@ INSTALLED_APPS = [
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
+    "django_countries",
     "timezone_field",
     "auditlog",
     # Local
@@ -191,7 +190,7 @@ LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "Europe/Zurich"
 
-USE_I18N = True
+USE_I18N = False
 
 USE_L10N = True
 
@@ -333,6 +332,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 # NOTE automatically set when running tests, don't change manually!
 IN_TEST_SUITE = False
 
+QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
+    "QFIELDCLOUD_SUBSCRIPTION_MODEL", "subscription.Subscription"
+)
+
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
 
@@ -347,9 +350,10 @@ QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_CONFIG = {
     "WORKER_TIMEOUT_S": (
-        60,
+        600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
     ),
+    "TRIAL_PERIOD_DAYS": (28, "Days in which the trial period expires."),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -361,4 +365,5 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 CONSTANCE_CONFIG_FIELDSETS = {
     "Worker": ("WORKER_TIMEOUT_S",),
+    "Subscription": ("TRIAL_PERIOD_DAYS",),
 }
