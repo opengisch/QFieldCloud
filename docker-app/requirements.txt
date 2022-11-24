@@ -8,12 +8,8 @@ botocore-stubs==1.23.26
 certifi==2021.10.8
 cffi==1.15.0
 charset-normalizer==2.0.9
-click==8.0.3
-click-plugins==1.1.1
-cligj==0.7.2
 coreapi==2.3.3
 coreschema==0.0.4
-coverage==5.3
 cryptography==36.0.1
 defusedxml==0.7.1
 Deprecated==1.2.13
@@ -42,13 +38,8 @@ django-storages==1.11.1
 django-tables2==2.4.1
 django-timezone-field==4.2.1
 djangorestframework==3.12.4
-docker==4.2.2
 drf-yasg==1.20.0
-Fiona==1.8.20
-ghp-import==2.0.2
-gunicorn==20.1.0
 idna==3.3
-importlib-metadata==4.10.0
 inflection==0.5.1
 itypes==1.2.0
 Jinja2==3.0.3
@@ -56,10 +47,7 @@ jmespath==0.10.0
 JSON-log-formatter==0.5.0
 jsonfield==3.1.0
 jsonschema==3.2.0
-Markdown==3.3.6
 MarkupSafe==2.0.1
-mergedeep==1.3.4
-munch==2.5.0
 mypy-boto3-s3==1.20.17
 oauthlib==3.2.1
 packaging==21.3
@@ -72,8 +60,6 @@ pyrsistent==0.18.0
 python-dateutil==2.8.2
 python3-openid==3.2.0
 pytz==2021.3
-PyYAML==5.4
-pyyaml-env-tag==0.1
 redis==3.5.3
 requests==2.26.0
 requests-oauthlib==1.3.0
@@ -88,8 +74,6 @@ swapper==1.3.0
 typing-extensions==4.0.1
 uritemplate==4.1.1
 urllib3==1.26.7
-watchdog==2.1.6
 websocket-client==1.2.3
 wrapt==1.13.3
-zipp==3.6.0
 stripe==4.2.0

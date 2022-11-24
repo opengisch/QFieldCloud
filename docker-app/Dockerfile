@@ -3,7 +3,7 @@
 ###########
 
 # pull official base image
-FROM python:3.8.0-buster as builder
+FROM python:3.8.0-buster as base
 
 # set work directory
 WORKDIR /usr/src/app
@@ -18,7 +18,7 @@ RUN apt update \
 
 # install dependencies
 COPY ./requirements.txt .
-RUN find . -name "requirements*.txt" -type f -exec pip3 install -r '{}' ';'
+RUN pip3 install -r requirements.txt
 
 # install debug dependencies
 ARG DEBUG_BUILD
@@ -37,9 +37,6 @@ RUN chown -R app:app .
 # RUN groupmod -g 1000 app
 # RUN usermod -u 1000 app
 
-# change to the app user
-USER app
-
 EXPOSE 8000
 
 # create an empty JSON fixture for the sole purpose of Django's testserver
@@ -48,3 +45,23 @@ RUN echo '{}' > fixture.json
 # run entrypoint.prod.sh
 COPY ./entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
+
+
+# a separate stage for webserver runtime environment
+FROM base as webserver_runtime
+RUN pip3 install -r requirements_runtime.txt
+USER app
+
+
+# a separate stage for webserver test environment
+FROM base as webserver_test
+COPY ./requirements_test.txt .
+RUN pip3 install -r requirements_test.txt
+USER app
+
+
+# a separate stage for worker wrapper runtime environment
+FROM base as worker_wrapper_runtime
+COPY ./requirements_worker_wrapper.txt .
+RUN pip3 install -r requirements_worker_wrapper.txt
+USER app
