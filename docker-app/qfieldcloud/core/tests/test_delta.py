@@ -183,6 +183,28 @@ class QfcTestCase(APITransactionTestCase):
             features = list(layer)
             self.assertEqual(666, features[0]["properties"]["int"])
 
+    def test_push_apply_delta_file_empty_source_layer_id(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta_empty_source_layer_id.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+        )
+
+        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
+        with fiona.open(gpkg, layer="points") as layer:
+            features = list(layer)
+            self.assertEqual(666, features[0]["properties"]["int"])
+
     def test_push_apply_delta_file_with_null_char(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
