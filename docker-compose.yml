@@ -11,6 +11,7 @@ services:
   app: &default-django
     build:
       context: ./docker-app
+      target: webserver_runtime
     restart: unless-stopped
     command: >
       gunicorn
@@ -142,6 +143,9 @@ services:
 
   worker_wrapper:
     <<: *default-django
+    build:
+      context: ./docker-app
+      target: worker_wrapper_runtime
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
