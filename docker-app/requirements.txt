@@ -54,7 +54,7 @@ mypy-boto3-s3==1.20.17
 oauthlib==3.2.1
 packaging==21.3
 phonenumbers==8.12.55
-psycopg2-binary==2.8.6
+psycopg2==2.8.6
 pycparser==2.21
 PyJWT==2.4.0
 pyparsing==3.0.6

@@ -2,8 +2,28 @@
 # BUILDER #
 ###########
 
+# pull a builder image, the same as the base
+FROM python:3.10.8-slim-buster as build
+
+# Disable annoying pip version check, we don't care if pip is slightly older
+ARG PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Do not craete and use redundant cache dir in the current user home
+ARG PIP_NO_CACHE_DIR=1
+
+# install psycopg2 requirements
+RUN apt update && apt install -y libpq-dev python3-dev gcc
+
+# install dependencies
+COPY ./requirements.txt .
+RUN pip3 install -r requirements.txt
+
+# save 60 MB of data... Safe to delete according to botocore contributor https://github.com/boto/botocore/issues/1629#issuecomment-451309885
+RUN ls -Q /usr/local/lib/python3.10/site-packages/botocore/data | grep -xv "endpoints.json" | xargs rm -rf
+
+
 # pull official base image
-FROM python:3.8.0-buster as base
+FROM python:3.10.8-slim-buster as base
 
 # set work directory
 WORKDIR /usr/src/app
@@ -14,11 +34,14 @@ ENV PYTHONUNBUFFERED 1
 
 # install dependencies
 RUN apt update \
-    && apt install -y netcat python3-gdal
+    && apt install -y \
+# required by PostGIS driver for Django
+        python3-gdal \
+# required by Fiona
+        gdal-bin
 
-# install dependencies
-COPY ./requirements.txt .
-RUN pip3 install -r requirements.txt
+# copy the dependencies
+COPY --from=build /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/
 
 # install debug dependencies
 ARG DEBUG_BUILD
@@ -49,6 +72,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 # a separate stage for webserver runtime environment
 FROM base as webserver_runtime
+COPY ./requirements_runtime.txt .
 RUN pip3 install -r requirements_runtime.txt
 USER app
 
