@@ -193,7 +193,7 @@ class QfcTestCase(APITransactionTestCase):
             token=self.token1.key,
             final_values=[
                 [
-                    "c8c421cd-e39c-40a0-97d8-a319c245ba14",
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
                     "STATUS_APPLIED",
                     self.user1.username,
                 ]
