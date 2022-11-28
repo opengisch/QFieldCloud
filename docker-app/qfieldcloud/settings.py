@@ -344,7 +344,7 @@ DEBUG_TOOLBAR_CONFIG = {
 
 QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
 
-CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
+CONSTANCE_BACKEND = "qfieldcloud.core.constance_backends.DatabaseBackend"
 CONSTANCE_CONFIG = {
     "WORKER_TIMEOUT_S": (
         60,
