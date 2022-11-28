@@ -1,15 +1,15 @@
-###########
-# BUILDER #
-###########
+##########################
+# BUILDER                #
+##########################
 
 # pull a builder image, the same as the base
 FROM python:3.10.8-slim-buster as build
 
 # Disable annoying pip version check, we don't care if pip is slightly older
-ARG PIP_DISABLE_PIP_VERSION_CHECK=1
+ARG PIP_DISABLE_PIP_VERSION_CHECK 1
 
-# Do not craete and use redundant cache dir in the current user home
-ARG PIP_NO_CACHE_DIR=1
+# Do not create and use redundant cache dir in the current user home
+ARG PIP_NO_CACHE_DIR 1
 
 # install psycopg2 requirements
 RUN apt update && apt install -y libpq-dev python3-dev gcc
@@ -21,6 +21,9 @@ RUN pip3 install -r requirements.txt
 # save 60 MB of data... Safe to delete according to botocore contributor https://github.com/boto/botocore/issues/1629#issuecomment-451309885
 RUN ls -Q /usr/local/lib/python3.10/site-packages/botocore/data | grep -xv "endpoints.json" | xargs rm -rf
 
+##########################
+# BASE                   #
+##########################
 
 # pull official base image
 FROM python:3.10.8-slim-buster as base
@@ -31,21 +34,22 @@ WORKDIR /usr/src/app
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+# check `build` stage for more info
+# NOTE while using ARG would be more appropriate, the following vars would have to be redifined for each build stage.
+ENV PIP_DISABLE_PIP_VERSION_CHECK 1
+ENV PIP_NO_CACHE_DIR 1
 
 # install dependencies
-RUN apt update \
-    && apt install -y \
-# required by PostGIS driver for Django
-        python3-gdal \
-# required by Fiona
-        gdal-bin
+RUN apt update && apt-get install -y \
+# GeoDjango as recommended at https://docs.djangoproject.com/en/4.1/ref/contrib/gis/install/geolibs/#installing-geospatial-libraries
+    binutils libproj-dev gdal-bin
 
 # copy the dependencies
 COPY --from=build /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/
 
 # install debug dependencies
 ARG DEBUG_BUILD
-RUN if [ "$DEBUG_BUILD" = "1" ]; then pip install debugpy; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install debugpy; fi
 
 # copy project
 COPY . .
@@ -69,6 +73,9 @@ RUN echo '{}' > fixture.json
 COPY ./entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
+##########################
+# WEBSERVER RUNTIME      #
+##########################
 
 # a separate stage for webserver runtime environment
 FROM base as webserver_runtime
@@ -76,6 +83,9 @@ COPY ./requirements_runtime.txt .
 RUN pip3 install -r requirements_runtime.txt
 USER app
 
+##########################
+# WEBSERVER TEST         #
+##########################
 
 # a separate stage for webserver test environment
 FROM base as webserver_test
@@ -83,6 +93,9 @@ COPY ./requirements_test.txt .
 RUN pip3 install -r requirements_test.txt
 USER app
 
+##########################
+# WORKER WRAPPER RUNTIME #
+##########################
 
 # a separate stage for worker wrapper runtime environment
 FROM base as worker_wrapper_runtime
