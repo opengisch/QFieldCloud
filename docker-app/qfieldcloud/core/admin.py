@@ -12,6 +12,8 @@ from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
+from invitations.admin import InvitationAdmin as InvitationAdminBase
+from invitations.utils import get_invitation_model
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -31,6 +33,12 @@ from qfieldcloud.core.models import (
     UserAccount,
 )
 from qfieldcloud.core.utils2 import jobs
+
+Invitation = get_invitation_model()
+
+
+# Unregister admins from other Django apps
+admin.site.unregister(Invitation)
 
 
 class PrettyJSONWidget(widgets.Textarea):
@@ -823,6 +831,18 @@ class TeamAdmin(admin.ModelAdmin):
         obj.save()
 
 
+class InvitationAdmin(InvitationAdminBase):
+    list_display = ("email", "inviter", "created", "sent", "accepted")
+    list_select_related = ("inviter",)
+    list_filter = (
+        "accepted",
+        "created",
+        "sent",
+    )
+    search_fields = ("email__icontains", "inviter__username__iexact")
+
+
+admin.site.register(Invitation, InvitationAdmin)
 admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Team, TeamAdmin)
