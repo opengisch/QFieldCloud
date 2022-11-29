@@ -46,6 +46,8 @@ def admin_urlname_by_obj(value, arg):
             return "admin:core_team_%s" % (arg)
         else:
             raise NotImplementedError("Unknown user type!")
+    elif isinstance(value, Job):
+        return "admin:core_job_%s" % (arg)
     else:
         return admin_urlname(value._meta, arg)
 
