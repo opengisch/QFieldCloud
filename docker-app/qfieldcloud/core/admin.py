@@ -198,8 +198,7 @@ class PersonAdmin(admin.ModelAdmin):
         "is_staff",
         "is_active",
         "date_joined",
-        "type",
-        "useraccount",
+        "last_login",
     )
     list_filter = (
         "type",
@@ -754,13 +753,14 @@ class OrganizationAdmin(admin.ModelAdmin):
         "email",
         "organization_owner__link",
         "date_joined",
-        "useraccount",
     )
 
     search_fields = (
         "username__icontains",
         "organization_owner__username__icontains",
     )
+
+    list_select_related = ("organization_owner",)
 
     list_filter = ("date_joined",)
 
