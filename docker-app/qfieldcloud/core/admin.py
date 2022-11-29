@@ -32,6 +32,7 @@ from qfieldcloud.core.models import (
     UserAccount,
 )
 from qfieldcloud.core.utils2 import jobs
+from rest_framework.authtoken.models import TokenProxy
 
 Invitation = get_invitation_model()
 
@@ -54,6 +55,11 @@ def admin_urlname_by_obj(value, arg):
 
 # Unregister admins from other Django apps
 admin.site.unregister(Invitation)
+admin.site.unregister(TokenProxy)
+admin.site.unregister(Group)
+admin.site.unregister(SocialAccount)
+admin.site.unregister(SocialApp)
+admin.site.unregister(SocialToken)
 
 
 class PrettyJSONWidget(widgets.Textarea):
@@ -788,8 +794,3 @@ admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
-
-admin.site.unregister(Group)
-admin.site.unregister(SocialAccount)
-admin.site.unregister(SocialApp)
-admin.site.unregister(SocialToken)
