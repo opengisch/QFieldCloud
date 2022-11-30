@@ -67,9 +67,9 @@ class PersonQueryset(models.QuerySet):
         is_org_member_q = Q(
             project_roles__project__owner__type=User.Type.ORGANIZATION
         ) & Exists(
-            Organization.objects.of_user(OuterRef("project_roles__user")).filter(
-                id=OuterRef("project_roles__project__owner")
-            )
+            Organization.objects.of_user(OuterRef("project_roles__user"))
+            .select_related(None)
+            .filter(id=OuterRef("project_roles__project__owner"))
         )
 
         active_subscription_q = Q(
@@ -603,7 +603,7 @@ class OrganizationManager(UserManager):
         return OrganizationQueryset(self.model, using=self._db)
 
     def of_user(self, user):
-        return self.get_queryset().of_user(user)
+        return self.get_queryset().select_related("useraccount").of_user(user)
 
 
 class Organization(User):
@@ -884,7 +884,9 @@ class ProjectQueryset(models.QuerySet):
         is_person_q = Q(owner__type=User.Type.PERSON)
         is_org_q = Q(owner__type=User.Type.ORGANIZATION)
         is_org_member_q = Q(owner__type=User.Type.ORGANIZATION) & Exists(
-            Organization.objects.of_user(user).filter(id=OuterRef("owner"))
+            Organization.objects.of_user(user)
+            .select_related(None)
+            .filter(id=OuterRef("owner"))
         )
         active_subscription_q = Q(
             owner__useraccount__subscriptions__active_since__lte=now,
