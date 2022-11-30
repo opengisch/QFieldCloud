@@ -916,6 +916,7 @@ class ProjectQueryset(models.QuerySet):
             .filter(
                 user_roles__user=user,
             )
+            .select_related("owner")
             .annotate(
                 user_role=F("user_roles__name"),
                 user_role_origin=F("user_roles__origin"),

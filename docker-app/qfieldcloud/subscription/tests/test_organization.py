@@ -41,10 +41,10 @@ class QfcTestCase(APITransactionTestCase):
         # Assert user does not have any role
         if role is None:
             with self.assertRaises(Person.DoesNotExist):
-                Person.objects.for_project(project).get(pk=user.pk)
+                Person.objects.for_project(project).select_related(None).get(pk=user.pk)
 
             with self.assertRaises(Project.DoesNotExist):
-                Project.objects.for_user(user).get(pk=project.pk)
+                Project.objects.for_user(user).select_related(None).get(pk=project.pk)
 
             return
 
