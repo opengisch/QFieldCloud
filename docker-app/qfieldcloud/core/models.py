@@ -103,6 +103,7 @@ class PersonQueryset(models.QuerySet):
             .filter(
                 project_roles__project=project,
             )
+            .select_related("useraccount")
             .annotate(
                 project_role=F("project_roles__name"),
                 project_role_origin=F("project_roles__origin"),
