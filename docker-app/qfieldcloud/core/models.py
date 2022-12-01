@@ -75,9 +75,9 @@ class UserQueryset(models.QuerySet):
         ) | (
             Q(project_roles__project__owner__user_type=User.TYPE_ORGANIZATION)
             & Exists(
-                Organization.objects.of_user(OuterRef("project_roles__user")).filter(
-                    id=OuterRef("project_roles__project__owner")
-                )
+                Organization.objects.of_user(OuterRef("project_roles__user"))
+                .select_related(None)
+                .filter(id=OuterRef("project_roles__project__owner"))
             )
         )
         org_member = Case(When(org_member_condition, then=True), default=False)
@@ -92,6 +92,7 @@ class UserQueryset(models.QuerySet):
                 user_type=User.TYPE_USER,
                 project_roles__project=project,
             )
+            .select_related("useraccount")
             .annotate(
                 project_role=F("project_roles__name"),
                 project_role_origin=F("project_roles__origin"),
@@ -546,7 +547,7 @@ class OrganizationManager(UserManager):
         return OrganizationQueryset(self.model, using=self._db)
 
     def of_user(self, user):
-        return self.get_queryset().of_user(user)
+        return self.get_queryset().select_related("useraccount").of_user(user)
 
 
 class Organization(User):
@@ -818,7 +819,11 @@ class ProjectQueryset(models.QuerySet):
 
         org_member_condition = Q(owner__user_type=User.TYPE_USER) | (
             Q(owner__user_type=User.TYPE_ORGANIZATION)
-            & Exists(Organization.objects.of_user(user).filter(id=OuterRef("owner")))
+            & Exists(
+                Organization.objects.of_user(user)
+                .select_related(None)
+                .filter(id=OuterRef("owner"))
+            )
         )
         org_member = Case(When(org_member_condition, then=True), default=False)
 
@@ -832,6 +837,7 @@ class ProjectQueryset(models.QuerySet):
             .filter(
                 user_roles__user=user,
             )
+            .select_related("owner")
             .annotate(
                 user_role=F("user_roles__name"),
                 user_role_origin=F("user_roles__origin"),
