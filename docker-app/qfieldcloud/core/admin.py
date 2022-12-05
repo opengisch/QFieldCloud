@@ -12,17 +12,18 @@ from django.http.response import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
+from invitations.admin import InvitationAdmin as InvitationAdminBase
+from invitations.utils import get_invitation_model
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
     Geodb,
+    Job,
     Organization,
     OrganizationMember,
-    PackageJob,
     Person,
-    ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
     Team,
@@ -31,6 +32,34 @@ from qfieldcloud.core.models import (
     UserAccount,
 )
 from qfieldcloud.core.utils2 import jobs
+from rest_framework.authtoken.models import TokenProxy
+
+Invitation = get_invitation_model()
+
+
+def admin_urlname_by_obj(value, arg):
+    if isinstance(value, User):
+        if value.is_person:
+            return "admin:core_person_%s" % (arg)
+        elif value.is_organization:
+            return "admin:core_organization_%s" % (arg)
+        elif value.is_team:
+            return "admin:core_team_%s" % (arg)
+        else:
+            raise NotImplementedError("Unknown user type!")
+    elif isinstance(value, Job):
+        return "admin:core_job_%s" % (arg)
+    else:
+        return admin_urlname(value._meta, arg)
+
+
+# Unregister admins from other Django apps
+admin.site.unregister(Invitation)
+admin.site.unregister(TokenProxy)
+admin.site.unregister(Group)
+admin.site.unregister(SocialAccount)
+admin.site.unregister(SocialApp)
+admin.site.unregister(SocialToken)
 
 
 class PrettyJSONWidget(widgets.Textarea):
@@ -63,7 +92,7 @@ def search_parser(
 
 
 def model_admin_url(obj, name: str = None) -> str:
-    url = resolve_url(admin_urlname(obj._meta, SafeText("change")), obj.pk)
+    url = resolve_url(admin_urlname_by_obj(obj, SafeText("change")), obj.pk)
     return format_html('<a href="{}">{}</a>', url, name or str(obj))
 
 
@@ -198,8 +227,7 @@ class PersonAdmin(admin.ModelAdmin):
         "is_staff",
         "is_active",
         "date_joined",
-        "type",
-        "useraccount",
+        "last_login",
     )
     list_filter = (
         "type",
@@ -369,33 +397,61 @@ class DeltaInline(admin.TabularInline):
     #     return format_pre_json(instance.feedback)
 
 
-class ApplyJobAdmin(admin.ModelAdmin):
+class JobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "project__owner",
         "project__name",
+        "type",
         "status",
+        "created_by__link",
         "created_at",
         "updated_at",
     )
-
-    list_filter = ("status", "updated_at")
+    list_filter = ("type", "status", "updated_at")
+    list_select_related = ("project", "project__owner", "created_by")
+    exclude = ("feedback", "output")
     ordering = ("-updated_at",)
     search_fields = (
         "project__name__iexact",
         "project__owner__username__iexact",
-        "deltas_to_apply__id__startswith",
         "id",
     )
     readonly_fields = (
+        "project",
+        "status",
+        "type",
         "created_at",
         "updated_at",
         "started_at",
         "finished_at",
+        "output__pre",
+        "feedback__pre",
     )
-    inlines = [
-        DeltaInline,
-    ]
+
+    def get_object(self, request, object_id, from_field=None):
+        obj = super().get_object(request, object_id, from_field)
+        if obj and obj.type == Job.Type.DELTA_APPLY:
+            obj = ApplyJob.objects.get(pk=obj.pk)
+        return obj
+
+    def get_inline_instances(self, request, obj=None):
+        inline_instances = super().get_inline_instances(request, obj)
+
+        if isinstance(obj, ApplyJob):
+            for inline_instance in inline_instances:
+                if inline_instance.parent_model == Job:
+                    inline_instance.parent_model = ApplyJob
+
+        return inline_instances
+
+    def get_inlines(self, request, obj=None):
+        inlines = [*super().get_inlines(request, obj)]
+
+        if obj and obj.type == Job.Type.DELTA_APPLY:
+            inlines.append(DeltaInline)
+
+        return inlines
 
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
@@ -407,6 +463,11 @@ class ApplyJobAdmin(admin.ModelAdmin):
 
     project__name.admin_order_field = "project__name"
 
+    def created_by__link(self, instance):
+        return model_admin_url(instance.created_by)
+
+    created_by__link.admin_order_field = "created_by"
+
     def has_add_permission(self, request, obj=None):
         return False
 
@@ -415,6 +476,12 @@ class ApplyJobAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def output__pre(self, instance):
+        return format_pre(instance.output)
+
+    def feedback__pre(self, instance):
+        return format_pre_json(instance.feedback)
 
 
 class ApplyJobDeltaInline(admin.TabularInline):
@@ -554,122 +621,6 @@ class DeltaAdmin(admin.ModelAdmin):
         return super().response_change(request, delta)
 
 
-class PackageJobAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "project__owner",
-        "project__name",
-        "status",
-        "created_at",
-        "updated_at",
-    )
-    list_filter = ("status", "updated_at")
-    list_select_related = ("project", "project__owner")
-    actions = None
-    exclude = ("feedback", "output")
-
-    readonly_fields = (
-        "project",
-        "status",
-        "created_at",
-        "updated_at",
-        "started_at",
-        "finished_at",
-        "output__pre",
-        "feedback__pre",
-    )
-
-    search_fields = (
-        "id",
-        "feedback__icontains",
-        "project__name__iexact",
-        "project__owner__username__iexact",
-    )
-
-    ordering = ("-updated_at",)
-
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    project__owner.admin_order_field = "project__owner"
-
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
-
-    project__name.admin_order_field = "project__name"
-
-    def output__pre(self, instance):
-        return format_pre(instance.output)
-
-    def feedback__pre(self, instance):
-        return format_pre_json(instance.feedback)
-
-    # This will disable add functionality
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
-class ProcessProjectfileJobAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "project__owner",
-        "project__name",
-        "status",
-        "created_at",
-        "updated_at",
-    )
-    list_filter = ("status", "updated_at")
-    list_select_related = ("project", "project__owner")
-    actions = None
-    exclude = ("feedback", "output")
-
-    readonly_fields = (
-        "project",
-        "status",
-        "created_at",
-        "updated_at",
-        "started_at",
-        "finished_at",
-        "output__pre",
-        "feedback__pre",
-    )
-
-    search_fields = (
-        "id",
-        "feedback__icontains",
-        "project__name__iexact",
-        "project__owner__username__iexact",
-    )
-
-    ordering = ("-updated_at",)
-
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    project__owner.admin_order_field = "project__owner"
-
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
-
-    project__name.admin_order_field = "project__name"
-
-    def output__pre(self, instance):
-        return format_pre(instance.output)
-
-    def feedback__pre(self, instance):
-        return format_pre_json(instance.feedback)
-
-    # This will disable add functionality
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
 class GeodbAdmin(admin.ModelAdmin):
     list_filter = ("created_at", "hostname")
     list_display = (
@@ -754,13 +705,14 @@ class OrganizationAdmin(admin.ModelAdmin):
         "email",
         "organization_owner__link",
         "date_joined",
-        "useraccount",
     )
 
     search_fields = (
         "username__icontains",
         "organization_owner__username__icontains",
     )
+
+    list_select_related = ("organization_owner",)
 
     list_filter = ("date_joined",)
 
@@ -823,17 +775,22 @@ class TeamAdmin(admin.ModelAdmin):
         obj.save()
 
 
+class InvitationAdmin(InvitationAdminBase):
+    list_display = ("email", "inviter", "created", "sent", "accepted")
+    list_select_related = ("inviter",)
+    list_filter = (
+        "accepted",
+        "created",
+        "sent",
+    )
+    search_fields = ("email__icontains", "inviter__username__iexact")
+
+
+admin.site.register(Invitation, InvitationAdmin)
 admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
-admin.site.register(ApplyJob, ApplyJobAdmin)
-admin.site.register(PackageJob, PackageJobAdmin)
-admin.site.register(ProcessProjectfileJob, ProcessProjectfileJobAdmin)
+admin.site.register(Job, JobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
-
-admin.site.unregister(Group)
-admin.site.unregister(SocialAccount)
-admin.site.unregister(SocialApp)
-admin.site.unregister(SocialToken)
