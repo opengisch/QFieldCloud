@@ -495,6 +495,27 @@ class UserAccount(models.Model):
         """Returns the storage used in fraction of the total storage"""
         return 1 - self.storage_used_ratio
 
+    @property
+    def has_premium_support(self) -> bool:
+        """A user has premium support if they have an active premium subscription plan or a at least one organization that they have admin role."""
+        subscription = self.active_subscription
+        if subscription.plan.is_premium:
+            return True
+
+        if self.user.is_organization:
+            return False
+
+        if (
+            Organization.objects.of_user(self.user)
+            .filter(
+                membership_role=OrganizationMember.Roles.ADMIN,
+            )
+            .count()
+        ):
+            return True
+
+        return False
+
 
 class Geodb(models.Model):
     def random_string():
