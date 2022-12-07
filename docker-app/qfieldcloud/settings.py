@@ -353,6 +353,14 @@ CONSTANCE_CONFIG = {
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
     ),
+    "WORKER_QGIS_MEMORY_LIMIT": (
+        "1000m",
+        "Maximum memory for each QGIS worker container.",
+    ),
+    "WORKER_QGIS_CPU_SHARES": (
+        512,
+        "Share of CPUs for each QGIS worker container. By default all containers have value 1024 set by docker.",
+    ),
     "TRIAL_PERIOD_DAYS": (28, "Days in which the trial period expires."),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -364,6 +372,10 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     ]
 }
 CONSTANCE_CONFIG_FIELDSETS = {
-    "Worker": ("WORKER_TIMEOUT_S",),
+    "Worker": (
+        "WORKER_TIMEOUT_S",
+        "WORKER_QGIS_MEMORY_LIMIT",
+        "WORKER_QGIS_CPU_SHARES",
+    ),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
 }

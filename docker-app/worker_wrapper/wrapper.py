@@ -249,6 +249,8 @@ class JobRun:
             # auto_remove=True,
             network=os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK"),
             detach=True,
+            mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
+            cpu_shares=config.WORKER_QGIS_CPU_SHARES,
         )
 
         logger.info(f"Starting worker {container.id} ...")
