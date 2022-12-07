@@ -51,25 +51,26 @@ COPY --from=build /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python
 ARG DEBUG_BUILD
 RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install debugpy; fi
 
-# copy project
-COPY . .
+# add app group
+RUN addgroup --system app && adduser --system app --ingroup app
 
 # create the appropriate directories
 RUN mkdir staticfiles
 RUN mkdir mediafiles
 
-# chown all the files to the app user
-RUN addgroup --system app && adduser --system app --ingroup app
-RUN chown -R app:app .
-# RUN groupmod -g 1000 app
-# RUN usermod -u 1000 app
-
-EXPOSE 8000
-
 # create an empty JSON fixture for the sole purpose of Django's testserver
 RUN echo '{}' > fixture.json
 
-# run entrypoint.prod.sh
+# copy project
+COPY . .
+
+# chown all the files to the app user
+RUN chown -R app:app .
+
+# Do not uncomment unless you want to share the user id between the host and the container
+# RUN groupmod -g 1000 app
+# RUN usermod -u 1000 app
+
 COPY ./entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
@@ -81,6 +82,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 FROM base as webserver_runtime
 COPY ./requirements_runtime.txt .
 RUN pip3 install -r requirements_runtime.txt
+EXPOSE 8000
 USER app
 
 ##########################
@@ -91,6 +93,7 @@ USER app
 FROM base as webserver_test
 COPY ./requirements_test.txt .
 RUN pip3 install -r requirements_test.txt
+EXPOSE 8000
 USER app
 
 ##########################
