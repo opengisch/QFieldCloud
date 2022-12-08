@@ -347,8 +347,16 @@ QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
 CONSTANCE_BACKEND = "qfieldcloud.core.constance_backends.DatabaseBackend"
 CONSTANCE_CONFIG = {
     "WORKER_TIMEOUT_S": (
-        60,
+        600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
+    ),
+    "WORKER_QGIS_MEMORY_LIMIT": (
+        "1000m",
+        "Maximum memory for each QGIS worker container.",
+    ),
+    "WORKER_QGIS_CPU_SHARES": (
+        512,
+        "Share of CPUs for each QGIS worker container. By default all containers have value 1024 set by docker.",
     ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -360,5 +368,9 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     ]
 }
 CONSTANCE_CONFIG_FIELDSETS = {
-    "Worker": ("WORKER_TIMEOUT_S",),
+    "Worker": (
+        "WORKER_TIMEOUT_S",
+        "WORKER_QGIS_MEMORY_LIMIT",
+        "WORKER_QGIS_CPU_SHARES",
+    ),
 }
