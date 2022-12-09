@@ -420,13 +420,23 @@ class Subscription(models.Model):
         )
 
     @property
-    def future_storage_package_changed_mb(self) -> int:
+    def future_storage_package_changed_quantity(self) -> int:
         if self.future_storage_package or (
             self.active_storage_package and self.active_storage_package.active_until
         ):
-            return self.future_storage_package_mb - self.active_storage_package_mb
+            return (
+                self.future_storage_package_quantity
+                - self.active_storage_package_quantity
+            )
         else:
             return 0
+
+    @property
+    def future_storage_package_changed_mb(self) -> int:
+        return (
+            self.future_storage_package_changed_quantity
+            * PackageType.get_storage_package_type().unit_amount
+        )
 
     @property
     def active_users(self):
