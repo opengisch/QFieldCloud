@@ -1,0 +1,7 @@
+version: '3.9'
+
+services:
+  nginx:
+    volumes:
+      - static_volume:/var/www/html/staticfiles/
+      - media_volume:/var/www/html/mediafiles/
