@@ -86,8 +86,6 @@ services:
     image: nginx:stable
     restart: unless-stopped
     volumes:
-      - static_volume:/var/www/html/staticfiles/
-      - media_volume:/var/www/html/mediafiles/
       - ./conf/nginx/pages/:/var/www/html/pages/
       - ./conf/nginx/templates/:/etc/nginx/templates/
       - ./conf/nginx/certs/:/etc/nginx/certs/:ro
