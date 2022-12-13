@@ -471,7 +471,13 @@ class Subscription(models.Model):
 
     def get_future_package_quantity(self, package_type: PackageType) -> int:
         package = self.get_future_package(package_type)
-        return package.quantity if package else 0
+        if package:
+            return package.quantity
+        else:
+            package = self.get_active_package(package_type)
+            if package and not package.active_until:
+                return package.quantity
+        return 0
 
     def set_package_quantity(
         self,

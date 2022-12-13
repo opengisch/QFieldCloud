@@ -154,7 +154,7 @@ class QfcTestCase(APITransactionTestCase):
             PackageType.get_storage_package_type(), 2
         )
 
-        self.assertEqual(subscription.future_storage_package_mb, 0)
+        self.assertEqual(subscription.future_storage_package_mb, 2000)
 
         _old, _new = subscription.set_package_quantity(
             PackageType.get_storage_package_type(),
@@ -218,7 +218,7 @@ class QfcTestCase(APITransactionTestCase):
             PackageType.get_storage_package_type(), 2
         )
 
-        self.assertEqual(subscription.future_storage_package_quantity, 0)
+        self.assertEqual(subscription.future_storage_package_quantity, 2)
 
         _old, _new = subscription.set_package_quantity(
             PackageType.get_storage_package_type(),
@@ -250,7 +250,7 @@ class QfcTestCase(APITransactionTestCase):
             PackageType.get_storage_package_type(), 2
         )
 
-        self.assertEqual(subscription.future_storage_package_mb, 0)
+        self.assertEqual(subscription.future_storage_package_mb, 2000)
 
         _old, _new = subscription.set_package_quantity(
             PackageType.get_storage_package_type(),
@@ -451,7 +451,7 @@ class QfcTestCase(APITransactionTestCase):
             subscription.get_future_package_quantity(
                 PackageType.get_storage_package_type()
             ),
-            0,
+            2,
         )
 
         _old, new = subscription.set_package_quantity(
