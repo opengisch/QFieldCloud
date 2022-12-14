@@ -450,6 +450,10 @@ class Subscription(models.Model):
 
     @property
     def active_users_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
         if not self.current_period_since or not self.current_period_until:
             return 0
 
