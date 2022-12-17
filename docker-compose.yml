@@ -1,17 +1,17 @@
-version: "3.7"
+version: "3.9"
 
-x-logging:
-  &default-logging
+x-logging: &default-logging
   driver: "json-file"
   options:
     max-size: "10m"
     max-file: "10"
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
 services:
-
   app: &default-django
     build:
       context: ./docker-app
+      network: host
     restart: unless-stopped
     command: >
       gunicorn
@@ -76,18 +76,17 @@ services:
       options:
         max-size: "1000m"
         max-file: "5"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
     labels:
       ofelia.enabled: "true"
       ofelia.job-exec.runcrons.no-overlap: "true"
-      ofelia.job-exec.runcrons.schedule: '@every 1m'
+      ofelia.job-exec.runcrons.schedule: "@every 1m"
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
   nginx:
     image: nginx:stable
     restart: unless-stopped
     volumes:
-      - static_volume:/var/www/html/staticfiles/
-      - media_volume:/var/www/html/mediafiles/
       - ./conf/nginx/pages/:/var/www/html/pages/
       - ./conf/nginx/templates/:/etc/nginx/templates/
       - ./conf/nginx/certs/:/etc/nginx/certs/:ro
@@ -125,6 +124,7 @@ services:
   qgis:
     build:
       context: ./docker-qgis
+      network: host
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
@@ -132,6 +132,7 @@ services:
   redis:
     build:
       context: ./docker-redis
+      network: host
       args:
         REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
@@ -141,6 +142,9 @@ services:
 
   worker_wrapper:
     <<: *default-django
+    build:
+      context: ./docker-app
+      network: host
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
@@ -155,6 +159,7 @@ services:
     depends_on:
       - redis
       - app
+    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   ofelia:
     image: mcuadros/ofelia:v0.3.4

@@ -246,6 +246,12 @@ Docker logs are managed by docker in the default way. To read the logs:
     docker-compose logs
 
 
+For great `nginx` logs, use:
+
+    QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
+    docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
+
+
 ### Geodb
 
 The geodb (database for the users projects data) is installed on
