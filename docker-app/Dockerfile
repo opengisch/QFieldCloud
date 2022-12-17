@@ -61,12 +61,6 @@ RUN mkdir mediafiles
 # create an empty JSON fixture for the sole purpose of Django's testserver
 RUN echo '{}' > fixture.json
 
-# copy project
-COPY . .
-
-# chown all the files to the app user
-RUN chown -R app:app .
-
 # Do not uncomment unless you want to share the user id between the host and the container
 # RUN groupmod -g 1000 app
 # RUN usermod -u 1000 app
@@ -83,6 +77,9 @@ FROM base as webserver_runtime
 COPY ./requirements_runtime.txt .
 RUN pip3 install -r requirements_runtime.txt
 EXPOSE 8000
+
+COPY . .
+RUN chown -R app:app .
 USER app
 
 ##########################
@@ -94,6 +91,9 @@ FROM base as webserver_test
 COPY ./requirements_test.txt .
 RUN pip3 install -r requirements_test.txt
 EXPOSE 8000
+
+COPY . .
+RUN chown -R app:app .
 USER app
 
 ##########################
@@ -104,4 +104,7 @@ USER app
 FROM base as worker_wrapper_runtime
 COPY ./requirements_worker_wrapper.txt .
 RUN pip3 install -r requirements_worker_wrapper.txt
+
+COPY . .
+RUN chown -R app:app .
 USER app
