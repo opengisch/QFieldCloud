@@ -11,6 +11,7 @@ services:
   app: &default-django
     build:
       context: ./docker-app
+      network: host
     restart: unless-stopped
     command: >
       gunicorn
@@ -123,6 +124,7 @@ services:
   qgis:
     build:
       context: ./docker-qgis
+      network: host
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
@@ -130,6 +132,7 @@ services:
   redis:
     build:
       context: ./docker-redis
+      network: host
       args:
         REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
@@ -139,6 +142,9 @@ services:
 
   worker_wrapper:
     <<: *default-django
+    build:
+      context: ./docker-app
+      network: host
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
