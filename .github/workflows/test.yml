@@ -5,7 +5,7 @@ on:
 jobs:
   test:
     name: Code check and tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -31,19 +31,26 @@ jobs:
           sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
       - name: Pull docker containers
-        run: docker-compose pull
+        run: docker compose pull
       - name: Build and run docker containers
         run: |
-          docker-compose up -d --build
+          docker compose up -d --build
       - name: Initial manage.py commands
         run: |
-          docker-compose run app python manage.py migrate
-          docker-compose run app python manage.py collectstatic
+          docker compose run app python manage.py migrate
+          docker compose run app python manage.py collectstatic
       - name: Run unit and integration tests
         run: |
-          docker-compose run app python manage.py test --keepdb -v2 qfieldcloud
+          docker compose run app python manage.py test --keepdb -v2 qfieldcloud
 
       - name: "failure logs"
         if: failure()
         run: |
-          docker-compose logs
+          docker compose logs
+
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true

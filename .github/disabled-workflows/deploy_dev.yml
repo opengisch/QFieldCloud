@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     name: Deploy on dev.qfield.cloud
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Deploy
         uses: appleboy/ssh-action@master
@@ -23,15 +23,15 @@ jobs:
           script_stop: true
           script: |
             cd /opt/qfieldcloud
-            docker-compose -f docker-compose.dev.yml stop
+            docker compose -f docker-compose.dev.yml stop
             echo "$DEV_PASSWORD" | sudo -S git pull https://"$REPO_USERNAME":"$REPO_TOKEN"@github.com/opengisch/qfieldcloud
-            docker-compose -f docker-compose.dev.yml up -d --build
-            docker-compose -f docker-compose.dev.yml exec -T web python manage.py collectstatic --no-input --clear
-            docker-compose -f docker-compose.dev.yml exec -T web python manage.py migrate --noinput
+            docker compose -f docker-compose.dev.yml up -d --build
+            docker compose -f docker-compose.dev.yml exec -T web python manage.py collectstatic --no-input --clear
+            docker compose -f docker-compose.dev.yml exec -T web python manage.py migrate --noinput
 
   status:
     name: Check dev.qfield.cloud status
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     needs: deploy
     steps:
       - name: Check
