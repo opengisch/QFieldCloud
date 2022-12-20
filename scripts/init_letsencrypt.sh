@@ -19,7 +19,7 @@ domain_args="-d ${QFIELDCLOUD_HOST}"
 # Enable staging mode if needed
 if [ $LETSENCRYPT_STAGING != "0" ]; then staging_arg="--staging"; fi
 
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $domain_args \
@@ -36,4 +36,4 @@ cp ${CONFIG_PATH}/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem ${CONFIG_PAT
 echo
 
 echo "### Reloading nginx ..."
-docker-compose exec nginx nginx -s reload
+docker compose exec nginx nginx -s reload
