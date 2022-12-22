@@ -2,16 +2,25 @@ import json
 import time
 from typing import Any, Dict
 
+from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
+from allauth.account.utils import user_pk_to_url_str
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
+from django.core.exceptions import PermissionDenied
 from django.db.models.fields.json import JSONField
 from django.forms import ModelForm, fields, widgets
-from django.http.response import HttpResponseRedirect
+from django.http.response import Http404, HttpResponseRedirect
 from django.shortcuts import resolve_url
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.utils.decorators import method_decorator
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
 from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
 from qfieldcloud.core import exceptions
@@ -259,7 +268,8 @@ class PersonAdmin(admin.ModelAdmin):
         GeodbInline,
     )
 
-    change_form_template = "admin/user_change_form.html"
+    add_form_template = "admin/change_form.html"
+    change_form_template = "admin/person_change_form.html"
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -269,6 +279,53 @@ class PersonAdmin(admin.ModelAdmin):
         else:
             obj.set_password(obj.password)
         obj.save()
+
+    def get_urls(self):
+        urls = super().get_urls()
+
+        urls = [
+            *urls,
+            path(
+                "<int:user_id>/password_reset_url",
+                self.admin_site.admin_view(self.password_reset_url),
+                name="password_reset_url",
+            ),
+        ]
+        return urls
+
+    @method_decorator(never_cache)
+    def password_reset_url(self, request, user_id, form_url=""):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+
+        user = self.get_object(request, user_id)
+        if user is None:
+            raise Http404(
+                _("%(name)s object with primary key %(key)r does " "not exist.")
+                % {
+                    "name": self.model._meta.verbose_name,
+                    "key": escape(user_id),
+                }
+            )
+
+        token_generator = EmailAwarePasswordResetTokenGenerator()
+        url = reverse(
+            "account_reset_password_from_key",
+            kwargs={
+                "uidb36": user_pk_to_url_str(user),
+                "key": token_generator.make_token(user),
+            },
+        )
+        return TemplateResponse(
+            request,
+            "admin/password_reset_url.html",
+            context={
+                "user": user,
+                "url": request.build_absolute_uri(url),
+                "title": _("Password reset"),
+                "timeout_days": settings.PASSWORD_RESET_TIMEOUT / 3600 / 24,
+            },
+        )
 
 
 class ProjectCollaboratorInline(admin.TabularInline):
