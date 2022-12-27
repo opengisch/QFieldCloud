@@ -70,7 +70,7 @@ class QfcTestCase(TransactionTestCase):
             "/admin/axes/accessattempt/add/",
             "/admin/axes/accesslog/add/",
         )
-        # TODO make tests pass for these srotable URLs
+        # TODO make tests pass for these sortable URLs
         skip_sort_urls = ("/admin/django_cron/cronjoblog/?o=4",)
 
         self.client.force_login(self.superuser)

@@ -4,6 +4,8 @@
   {{ block.super }}
 
   <div class="submit-row">
+    <a href="{% url 'admin:password_reset_url' original.id %}">Generate reset password URL</a>
+    |
     <a href="{% url 'admin:core_project_changelist' %}?q=owner:{{original.username}}">Owned projects</a>
     |
     <a href="{% url 'admin:core_project_changelist' %}?q=collaborator:{{original.username}}">Projects collaborations</a>
