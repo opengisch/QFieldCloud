@@ -124,6 +124,12 @@ class Plan(models.Model):
     # the plan is metered or licensed. If it metered, it is automatically post-paid.
     is_metered = models.BooleanField(default=False)
 
+    # the plan is cancellable. If it True, the plan cannot be cancelled.
+    is_cancellable = models.BooleanField(default=True)
+
+    # the plan is cancellable. If it True, the plan cannot be cancelled.
+    is_storage_modifiable = models.BooleanField(default=True)
+
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
     # the maximum amount of money that they are going to pay.
@@ -162,6 +168,9 @@ class Plan(models.Model):
         choices=SubscriptionStatus.choices,
         default=SubscriptionStatus.INACTIVE_DRAFT,
     )
+
+    # comma separated list of plan codes, which given plan can upgrade to.
+    upgradable_to = models.CharField(max_length=1000, null=True, blank=True)
 
     # created at
     created_at = models.DateTimeField(auto_now_add=True)
@@ -549,6 +558,14 @@ class Subscription(models.Model):
             subscription = cls.create_default_plan_subscription(account)
 
         return subscription
+
+    @classmethod
+    def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
+        return (
+            cls.objects.filter(account_id=account.pk, active_since__gt=timezone.now())
+            .order_by("active_since")
+            .first()
+        )
 
     @classmethod
     def update_subscription(
