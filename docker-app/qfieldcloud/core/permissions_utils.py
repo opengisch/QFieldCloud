@@ -13,6 +13,7 @@ from qfieldcloud.core.models import (
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
+from qfieldcloud.subscription.models import Subscription
 
 
 class CheckPermError(Exception):
@@ -758,16 +759,62 @@ def can_change_additional_storage(user, account):
     return False
 
 
-def can_cancel_subscription_at_period_end(user: QfcUser, account: QfcUser) -> bool:
-    """Cannot cancel subscription if different from the personal account. Organizations need to be deleted."""
-    if account.is_person:
-        return user_eq(user, account)
+def can_cancel_subscription_at_period_end(
+    user: QfcUser, subscription: Subscription
+) -> bool:
+    """
+    Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
+    Organization can be downgraded only by owners, need to be deleted.
+    In any case cancellation is only possible if the plan allows it.
+    """
+    if not subscription.plan.is_cancellable:
+        return False
 
-    return False
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account.user,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )
 
 
-def can_abort_subscription_cancellation(user: QfcUser, account: QfcUser) -> bool:
-    if account.is_person:
-        return user_eq(user, account)
+def can_cancel_subscription_immediately(
+    user: QfcUser, subscription: Subscription
+) -> bool:
+    """
+    Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
+    Organization can be downgraded only by owners, need to be deleted.
+    In any case cancellation is only possible if the plan allows it.
+    """
+    if not subscription.plan.is_cancellable:
+        return False
 
-    return False
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account.user,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )
+
+
+def can_abort_subscription_cancellation(
+    user: QfcUser, subscription: Subscription
+) -> bool:
+    if subscription.active_until is None:
+        return False
+
+    if not subscription.plan.is_cancellable:
+        return False
+
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account.user,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )

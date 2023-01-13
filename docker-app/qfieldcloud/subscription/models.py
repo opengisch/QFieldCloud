@@ -563,6 +563,7 @@ class Subscription(models.Model):
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
         return (
             cls.objects.filter(account_id=account.pk, active_since__gt=timezone.now())
+            .exclude(status__in=[Subscription.Status.INACTIVE_CANCELLED])
             .order_by("active_since")
             .first()
         )
