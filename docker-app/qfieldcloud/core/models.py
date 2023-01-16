@@ -424,6 +424,13 @@ class UserAccount(models.Model):
         return Subscription.get_or_create_active_subscription(self)
 
     @property
+    def upcoming_subscription(self):
+        from qfieldcloud.subscription.models import get_subscription_model
+
+        Subscription = get_subscription_model()
+        return Subscription.get_upcoming_subscription(self)
+
+    @property
     def avatar_url(self):
         if self.avatar_uri:
             return reverse_lazy(
