@@ -448,13 +448,33 @@ class Subscription(models.Model):
         )
 
     @property
+    def has_current_period(self) -> bool:
+        return (
+            self.current_period_since is not None
+            and self.current_period_until is not None
+        )
+
+    @property
     def active_users(self):
         if not self.account.user.is_organization:
             return None
 
+        if self.has_current_period:
+            return self.account.user.active_users(
+                self.current_period_since,
+                self.current_period_until,
+            )
+
+        assert (
+            self.current_period_since == self.current_period_until
+        ), "Both current_period _since and _until must be set."
+
+        now = timezone.now()
+        month_ago = now - timedelta(days=28)
+
         return self.account.user.active_users(
-            self.current_period_since,
-            self.current_period_until,
+            month_ago,
+            now,
         )
 
     @property
