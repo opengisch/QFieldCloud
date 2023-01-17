@@ -4,7 +4,7 @@ from datetime import timedelta
 import django.db.utils
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Person
+from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from rest_framework.test import APITransactionTestCase
 
@@ -723,3 +723,23 @@ class QfcTestCase(APITransactionTestCase):
 
         with self.assertRaises(django.db.utils.IntegrityError):
             Subscription.create_default_plan_subscription(u1.useraccount)
+
+    def test_project_lists_duplicates_if_multiple_subscriptions(self):
+        u1 = Person.objects.create(username="u1")
+        old_subscription = u1.useraccount.active_subscription
+        old_subscription.active_since -= timedelta(days=1)
+        old_subscription.active_until = timezone.now()
+        old_subscription.save()
+
+        Project.objects.create(name="p1", owner=u1)
+
+        count = Project.objects.for_user(u1).count()
+
+        new_subscription = u1.useraccount.active_subscription
+
+        self.assertEqual(count, 1)
+        self.assertNotEqual(old_subscription, new_subscription)
+
+        count = Project.objects.for_user(u1).count()
+
+        self.assertEqual(count, 1)

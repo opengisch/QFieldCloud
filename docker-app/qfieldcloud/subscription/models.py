@@ -323,7 +323,9 @@ class SubscriptionQuerySet(models.QuerySet):
         return qs
 
 
-class Subscription(models.Model):
+class AbstractSubscription(models.Model):
+    class Meta:
+        abstract = True
 
     objects = SubscriptionQuerySet.as_manager()
 
@@ -707,3 +709,19 @@ class Subscription(models.Model):
         )
 
         return trial_subscription, regular_subscription
+
+
+class Subscription(AbstractSubscription):
+    pass
+
+
+class CurrentSubscription(AbstractSubscription):
+    class Meta:
+        managed = False
+        db_table = "current_subscriptions_vw"
+
+    account = models.OneToOneField(
+        UserAccount,
+        on_delete=models.CASCADE,
+        related_name="current_subscription",
+    )
