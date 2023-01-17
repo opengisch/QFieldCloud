@@ -13,14 +13,14 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 
 from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(APITestCase):
+class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 
@@ -275,9 +275,6 @@ class QfcTestCase(APITestCase):
         """
         Checks user_role and user_role_origin are correctly defined
         """
-
-        def p(proj, user):
-            return Project.objects.for_user(user).get(pk=proj.pk)
 
         roles = ProjectCollaborator.Roles
         role_origins = ProjectQueryset.RoleOrigins
