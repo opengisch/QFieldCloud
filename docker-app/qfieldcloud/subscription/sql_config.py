@@ -31,4 +31,23 @@ sql_items = [
             ALTER TABLE subscription_package DROP CONSTRAINT subscription_package_prevent_overlaps
         """,
     ),
+    SQLItem(
+        "current_subscriptions_vw",
+        r"""
+            CREATE VIEW current_subscriptions_vw AS
+            SELECT
+                *
+            FROM
+                subscription_subscription
+            WHERE
+                active_since < now()
+                AND (
+                    active_until IS NULL
+                    OR active_until > now()
+                )
+        """,
+        r"""
+            DROP VIEW current_subscriptions_vw
+        """,
+    ),
 ]

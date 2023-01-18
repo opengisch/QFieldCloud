@@ -12,14 +12,14 @@ from qfieldcloud.core.models import (
     TeamMember,
 )
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 
 from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(APITestCase):
+class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 

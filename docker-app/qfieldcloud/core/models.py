@@ -23,7 +23,6 @@ from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
@@ -53,7 +52,6 @@ class PersonQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project", skip_invalid: bool):
-        now = timezone.now()
         count_collaborators = Count(
             "project_roles__project__collaborators",
             filter=Q(
@@ -72,25 +70,12 @@ class PersonQueryset(models.QuerySet):
             .filter(id=OuterRef("project_roles__project__owner"))
         )
 
-        active_subscription_q = Q(
-            project_roles__project__owner__useraccount__subscriptions__active_since__lte=now,
-        ) & (
-            Q(
-                project_roles__project__owner__useraccount__subscriptions__active_until__gt=now
+        max_premium_collaborators_per_private_project_q = Q(
+            project_roles__project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
+                -1
             )
-            | Q(
-                project_roles__project__owner__useraccount__subscriptions__active_until__isnull=True
-            )
-        )
-        max_premium_collaborators_per_private_project_q = active_subscription_q & (
-            Q(
-                project_roles__project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project=V(
-                    -1
-                )
-            )
-            | Q(
-                project_roles__project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
-            )
+        ) | Q(
+            project_roles__project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
         )
 
         project_role_is_valid_condition_q = is_public_q | (
@@ -903,7 +888,6 @@ class ProjectQueryset(models.QuerySet):
         PUBLIC = "public", _("Public")
 
     def for_user(self, user: "User", skip_invalid: bool = False):
-        now = timezone.now()
         count = Count(
             "collaborators",
             filter=Q(collaborators__collaborator__type=User.Type.PERSON),
@@ -917,21 +901,12 @@ class ProjectQueryset(models.QuerySet):
             .select_related(None)
             .filter(id=OuterRef("owner"))
         )
-        active_subscription_q = Q(
-            owner__useraccount__subscriptions__active_since__lte=now,
-        ) & (
-            Q(owner__useraccount__subscriptions__active_until__gt=now)
-            | Q(owner__useraccount__subscriptions__active_until__isnull=True)
-        )
-        max_premium_collaborators_per_private_project_q = active_subscription_q & (
-            Q(
-                owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project=V(
-                    -1
-                )
+        max_premium_collaborators_per_private_project_q = Q(
+            owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
+                -1
             )
-            | Q(
-                owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project__gte=count
-            )
+        ) | Q(
+            owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
@@ -1238,28 +1213,19 @@ class ProjectCollaboratorQueryset(models.QuerySet):
 
         Args:
             skip_invalid:   if true, invalid rows are removed"""
-        now = timezone.now()
         count = Count(
             "project__collaborators", filter=Q(collaborator__type=User.Type.PERSON)
         )
 
         # Build the conditions with Q objects
         is_public_q = Q(project__is_public=True)
-        active_subscription_q = Q(
-            project__owner__useraccount__subscriptions__active_since__lte=now,
-        ) & (
-            Q(project__owner__useraccount__subscriptions__active_until__gt=now)
-            | Q(project__owner__useraccount__subscriptions__active_until__isnull=True)
-        )
-        max_premium_collaborators_per_private_project_q = active_subscription_q & (
-            Q(
-                project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project=V(
-                    -1
-                )
+        # max_premium_collaborators_per_private_project_q = active_subscription_q & (
+        max_premium_collaborators_per_private_project_q = Q(
+            project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
+                -1
             )
-            | Q(
-                project__owner__useraccount__subscriptions__plan__max_premium_collaborators_per_private_project__gte=count
-            )
+        ) | Q(
+            project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
