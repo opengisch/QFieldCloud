@@ -748,12 +748,22 @@ def can_read_billing(user: QfcUser, account: QfcUser) -> bool:
         return False
 
 
-def can_change_additional_storage(user, account):
-    if account.is_person:
-        return user_eq(user, account)
-    elif account.is_organization:
+def can_change_additional_storage(user: QfcUser, subscription: Subscription) -> bool:
+    if not subscription.plan.is_storage_modifiable:
+        return False
+
+    # assuming that active until is the same as current_period_until
+    # TODO change this when yearly subscriptions are supported
+    if subscription.active_until:
+        return False
+
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+    elif subscription.account.user.is_organization:
         return user_has_organization_role_origins(
-            user, account, [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER]
+            user,
+            subscription.account,
+            [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
         )
 
     return False
