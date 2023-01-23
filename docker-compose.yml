@@ -46,7 +46,6 @@ services:
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK}
       SENTRY_DSN: ${SENTRY_DSN}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      REDIS_PORT: ${REDIS_PORT}
       GEODB_HOST: ${GEODB_HOST}
       GEODB_PORT: ${GEODB_PORT}
       GEODB_USER: ${GEODB_USER}
@@ -138,8 +137,8 @@ services:
       args:
         REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT}:6379"
+    expose:
+      - "6379:6379"
     logging: *default-logging
 
   worker_wrapper:
@@ -180,6 +179,11 @@ services:
       chmod a+r /transformation_grids/*
     volumes:
       - transformation_grids:/transformation_grids
+
+  memcached:
+    image: memcached:1
+    expose:
+      - "11211:11211"
 
 volumes:
   static_volume:
