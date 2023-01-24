@@ -59,6 +59,14 @@ services:
       - ${HOST_POSTGRES_PORT}:5432
     command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
 
+  redis:
+    ports:
+      - "${REDIS_PORT}:6379"
+
+  memcached:
+    ports:
+      - "${MEMCACHED_PORT}:11211"
+
   geodb:
     image: postgis/postgis:12-3.0
     restart: unless-stopped
