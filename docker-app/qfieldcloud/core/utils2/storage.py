@@ -203,7 +203,7 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = project.thumbnail_uri
-    if not key or not re.match(r"^projects/\w+/meta/\w+.(png|jpg)$", key):
+    if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg)$", key):
         raise RuntimeError("Suspicious S3 deletion")
     bucket.object_versions.filter(Prefix=key).delete()
 
@@ -246,7 +246,7 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
                 raise Exception("Trying to delete latest version")
 
             if not old_version.key or not re.match(
-                r"^projects/\w+/.+$", old_version.key
+                r"^projects/[\w-]+/.+$", old_version.key
             ):
                 raise RuntimeError("Suspicious S3 deletion")
             # TODO: any way to batch those ? will probaby get slow on production
@@ -281,7 +281,7 @@ def upload_project_file(
 def delete_project_files(project_id: str) -> None:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/"
-    if not not re.match(r"^projects/.+$", prefix):
+    if not not re.match(r"^projects/[\w-]+/.+$", prefix):
         raise RuntimeError("Suspicious S3 deletion")
     bucket.object_versions.filter(Prefix=prefix).delete()
 
@@ -358,7 +358,7 @@ def delete_file_version(
     for file_version in versions_to_delete:
 
         if (
-            not re.match(r"^projects/\w+/.+$", file_version._data.key)
+            not re.match(r"^projects/[\w-]+/.+$", file_version._data.key)
             or not file_version.version_id
         ):
             raise RuntimeError("Suspicious S3 deletion")
@@ -398,6 +398,6 @@ def get_stored_package_ids(project_id: str) -> Set[str]:
 def delete_stored_package(project_id: str, package_id: str) -> None:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/{package_id}/"
-    if not re.match(r"^projects/\w+/packages/\w+/$", prefix):
+    if not re.match(r"^projects/[\w-]+/packages/\w+/$", prefix):
         raise RuntimeError("Suspicious S3 deletion")
     bucket.object_versions.filter(Prefix=prefix).delete()
