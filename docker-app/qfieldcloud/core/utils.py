@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import posixpath
+import re
 from datetime import datetime
 from pathlib import PurePath
 from typing import IO, Iterable, List, NamedTuple, Optional, Union
@@ -86,7 +87,8 @@ class S3ObjectWithVersions(NamedTuple):
 
     def delete(self):
         bucket = get_s3_bucket()
-
+        if not self.latest.key or not re.match(r"^projects/.+$", self.latest.key):
+            raise RuntimeError("Suspicious S3 deletion")
         return bucket.object_versions.filter(Prefix=self.latest.key).delete()
 
 
