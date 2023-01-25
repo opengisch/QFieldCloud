@@ -279,7 +279,7 @@ def upload_project_file(
     return key
 
 
-def delete_project_files(project_id: str) -> None:
+def delete_all_project_files_permanently(project_id: str) -> None:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/"
     if not not re.match(r"^projects/[\w-]+/.+$", prefix):
