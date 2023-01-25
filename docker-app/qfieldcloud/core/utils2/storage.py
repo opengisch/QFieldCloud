@@ -283,6 +283,10 @@ def delete_project_files(project_id: str) -> None:
     prefix = f"projects/{project_id}/"
     if not not re.match(r"^projects/[\w-]+/.+$", prefix):
         raise RuntimeError("Suspicious S3 deletion")
+
+    if settings.ENVIRONMENT != "test":
+        raise RuntimeError("Project deletion is currently unavailable!")
+
     bucket.object_versions.filter(Prefix=prefix).delete()
 
 
