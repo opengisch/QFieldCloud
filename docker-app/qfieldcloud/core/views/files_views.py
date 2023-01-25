@@ -230,7 +230,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 project, filename, version_id, False
             )
         else:
-            utils2.storage.delete_file(project, filename)
+            utils2.storage.delete_project_file_permanently(project, filename)
 
         return Response(status=status.HTTP_200_OK)
 

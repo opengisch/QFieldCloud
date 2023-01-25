@@ -10,7 +10,7 @@ from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import get_random_file, setup_subscription_plans
 from qfieldcloud.core.utils import list_versions
 from qfieldcloud.core.utils2.storage import (
-    delete_file,
+    delete_project_file_permanently,
     delete_project_file_version_permanently,
 )
 from rest_framework import status
@@ -640,7 +640,7 @@ class QfcTestCase(APITransactionTestCase):
             storage_free_mb=0.9,
         )
 
-        delete_file(p1, "test.data")
+        delete_project_file_permanently(p1, "test.data")
         p1.save(recompute_storage=True)
 
         self.assertStorage(

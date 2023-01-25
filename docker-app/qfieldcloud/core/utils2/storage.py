@@ -290,7 +290,7 @@ def delete_project_files(project_id: str) -> None:
     bucket.object_versions.filter(Prefix=prefix).delete()
 
 
-def delete_file(project: "Project", filename: str):  # noqa: F821
+def delete_project_file_permanently(project: "Project", filename: str):  # noqa: F821
     file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
 
     if not file:
