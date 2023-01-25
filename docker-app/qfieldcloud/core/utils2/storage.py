@@ -149,7 +149,7 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = user.useraccount.avatar_uri
-    if not key or not re.match(r"^users/\w+/avatar.(png|jpg)$", key):
+    if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
         raise RuntimeError("Suspicious S3 deletion")
     bucket.object_versions.filter(Prefix=key).delete()
 
@@ -203,7 +203,7 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = project.thumbnail_uri
-    if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg)$", key):
+    if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", key):
         raise RuntimeError("Suspicious S3 deletion")
     bucket.object_versions.filter(Prefix=key).delete()
 
