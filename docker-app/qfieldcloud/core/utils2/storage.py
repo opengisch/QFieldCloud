@@ -22,26 +22,30 @@ WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 
 
 def delete_by_prefix_versioned(prefix: str):
+    logging.info(f"S3 object deletion (versioned) with {prefix=}")
+
     if not isinstance(prefix, str) or prefix == "" or prefix == "/":
-        raise RuntimeError(
-            f'Attempt to delete S3 object with illegal prefix "{prefix}"'
-        )
+        raise RuntimeError(f"Attempt to delete S3 object with illegal {prefix=}")
 
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     return bucket.objects.filter(Prefix=prefix).delete()
 
 
 def delete_by_prefix_permanently(prefix: str):
+    logging.info(f"S3 object deletion (permanent) with {prefix=}")
+
     if not isinstance(prefix, str) or prefix == "" or prefix == "/":
-        raise RuntimeError(
-            f'Attempt to delete S3 object with illegal prefix "{prefix}"'
-        )
+        raise RuntimeError(f"Attempt to delete S3 object with illegal {prefix=}")
 
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     return bucket.object_versions.filter(Prefix=prefix).delete()
 
 
 def delete_version_permanently(version_obj: qfieldcloud.core.utils.S3ObjectVersion):
+    logging.info(
+        f'S3 object version deletion (permanent) with "{version_obj.key=}" and "{version_obj.id=}"'
+    )
+
     version_obj._data.delete()
 
 
@@ -175,7 +179,7 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     prefix = user.useraccount.avatar_uri
 
     if not prefix or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", prefix):
-        raise RuntimeError("Suspicious S3 deletion of user avatar")
+        raise RuntimeError(f"Suspicious S3 deletion of user avatar {prefix=}")
 
     delete_by_prefix_permanently(prefix)
 
@@ -230,7 +234,9 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     prefix = project.thumbnail_uri
 
     if not prefix or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", prefix):
-        raise RuntimeError("Suspicious S3 deletion of project thumbnail image")
+        raise RuntimeError(
+            f"Suspicious S3 deletion of project thumbnail image {prefix=}"
+        )
 
     delete_by_prefix_permanently(prefix)
 
@@ -275,7 +281,9 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
             if not old_version.key or not re.match(
                 r"^projects/[\w-]+/.+$", old_version.key
             ):
-                raise RuntimeError("Suspicious S3 deletion")
+                raise RuntimeError(
+                    f"Suspicious S3 file version deletion {old_version.key=} {old_version.id=}"
+                )
             # TODO: any way to batch those ? will probaby get slow on production
             delete_version_permanently(old_version)
             # TODO: audit ? take implementation from files_views.py:211
@@ -309,7 +317,9 @@ def delete_all_project_files_permanently(project_id: str) -> None:
     prefix = f"projects/{project_id}/"
 
     if not not re.match(r"^projects/[\w-]+/.+$", prefix):
-        raise RuntimeError("Suspicious S3 deletion of all project files")
+        raise RuntimeError(
+            f"Suspicious S3 deletion of all project files with {prefix=}"
+        )
 
     delete_by_prefix_versioned(prefix)
 
@@ -318,7 +328,9 @@ def delete_project_file_permanently(project: "Project", filename: str):  # noqa:
     file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
 
     if not file:
-        raise Exception("No file with such name in the given project found")
+        raise Exception(
+            f"No file with such name in the given project found {filename=}"
+        )
 
     with transaction.atomic():
         if qfieldcloud.core.utils.is_qgis_project_file(filename):
@@ -355,7 +367,9 @@ def delete_project_file_version_permanently(
     file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
 
     if not file:
-        raise Exception("No file with such name in the given project found")
+        raise Exception(
+            f"No file with such name in the given project found {filename=} {version_id=}"
+        )
 
     is_deleting_all_versions = False
     if file.latest.id == version_id:
@@ -398,7 +412,9 @@ def delete_project_file_version_permanently(
                 not re.match(r"^projects/[\w-]+/.+$", file_version._data.key)
                 or not file_version.id
             ):
-                raise RuntimeError("Suspicious S3 deletion")
+                raise RuntimeError(
+                    f"Suspicious S3 file version deletion {filename=} {version_id=} {include_older=}"
+                )
 
             audit_suffix = "ALL" if is_deleting_all_versions else file_version.display
 
@@ -433,6 +449,8 @@ def delete_stored_package(project_id: str, package_id: str) -> None:
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
     if not re.match(r"^projects/[\w-]+/packages/\w+/$", prefix):
-        raise RuntimeError("Suspicious S3 deletion on stored project package.")
+        raise RuntimeError(
+            f"Suspicious S3 deletion on stored project package {project_id=} {package_id=}"
+        )
 
     delete_by_prefix_permanently(prefix)
