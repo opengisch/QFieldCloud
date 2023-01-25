@@ -41,6 +41,10 @@ def delete_by_prefix_permanently(prefix: str):
     return bucket.object_versions.filter(Prefix=prefix).delete()
 
 
+def delete_version_permanently(version_obj: qfieldcloud.core.utils.S3ObjectVersion):
+    version_obj._data.delete()
+
+
 def get_attachment_dir_prefix(project: "Project", filename: str) -> str:  # noqa: F821
     """Returns the attachment dir where the file belongs to or empty string if it does not.
 
@@ -273,7 +277,7 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
             ):
                 raise RuntimeError("Suspicious S3 deletion")
             # TODO: any way to batch those ? will probaby get slow on production
-            old_version._data.delete()
+            delete_version_permanently(old_version)
             # TODO: audit ? take implementation from files_views.py:211
 
     # Update the project size
@@ -404,7 +408,7 @@ def delete_project_file_version_permanently(
                 changes={f"{filename} {audit_suffix}": [file_version.e_tag, None]},
             )
 
-            file_version._data.delete()
+            delete_version_permanently(file_version)
 
     project.save(recompute_storage=True)
 
