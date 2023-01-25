@@ -381,12 +381,13 @@ def delete_project_file_version_permanently(
             f"No file with such name in the given project found {filename=} {version_id=}"
         )
 
-    is_deleting_all_versions = False
     if file.latest.id == version_id:
         include_older = False
 
         if len(file.versions) == 1:
-            is_deleting_all_versions = True
+            raise RuntimeError(
+                "Forbidded attempt to delete a specific file version which is the only file version available."
+            )
 
     versions_to_delete: List[qfieldcloud.core.utils.S3ObjectVersion] = []
 
@@ -410,12 +411,6 @@ def delete_project_file_version_permanently(
             versions_to_delete.append(file_version)
 
     with transaction.atomic():
-        if is_deleting_all_versions and qfieldcloud.core.utils.is_qgis_project_file(
-            filename
-        ):
-            project.project_filename = None
-            project.save(update_fields=["project_filename"])
-
         for file_version in versions_to_delete:
 
             if (
@@ -426,7 +421,7 @@ def delete_project_file_version_permanently(
                     f"Suspicious S3 file version deletion {filename=} {version_id=} {include_older=}"
                 )
 
-            audit_suffix = "ALL" if is_deleting_all_versions else file_version.display
+            audit_suffix = file_version.display
 
             audit(
                 project,
