@@ -359,7 +359,7 @@ def delete_file_version(
 
         if (
             not re.match(r"^projects/[\w-]+/.+$", file_version._data.key)
-            or not file_version.version_id
+            or not file_version.id
         ):
             raise RuntimeError("Suspicious S3 deletion")
         file_version._data.delete()
