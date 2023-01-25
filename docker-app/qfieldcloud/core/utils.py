@@ -88,7 +88,7 @@ class S3ObjectWithVersions(NamedTuple):
     def delete(self):
         bucket = get_s3_bucket()
         if not self.latest.key or not re.match(r"^projects/.+$", self.latest.key):
-            raise RuntimeError("Suspicious S3 deletion")
+            raise RuntimeError(f"Suspicious S3 deletion: {self.latest.key=}")
         return bucket.object_versions.filter(Prefix=self.latest.key).delete()
 
 

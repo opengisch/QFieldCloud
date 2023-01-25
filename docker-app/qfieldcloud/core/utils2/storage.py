@@ -150,7 +150,7 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = user.useraccount.avatar_uri
     if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
-        raise RuntimeError("Suspicious S3 deletion")
+        raise RuntimeError(f"Suspicious S3 deletion: {key=}")
     bucket.object_versions.filter(Prefix=key).delete()
 
 
@@ -204,7 +204,7 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = project.thumbnail_uri
     if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", key):
-        raise RuntimeError("Suspicious S3 deletion")
+        raise RuntimeError(f"Suspicious S3 deletion: {key=}")
     bucket.object_versions.filter(Prefix=key).delete()
 
 
@@ -248,7 +248,7 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
             if not old_version.key or not re.match(
                 r"^projects/[\w-]+/.+$", old_version.key
             ):
-                raise RuntimeError("Suspicious S3 deletion")
+                raise RuntimeError(f"Suspicious S3 deletion: {old_version.key=}")
             # TODO: any way to batch those ? will probaby get slow on production
             old_version._data.delete()
             # TODO: audit ? take implementation from files_views.py:211
@@ -282,7 +282,7 @@ def delete_project_files(project_id: str) -> None:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/"
     if not not re.match(r"^projects/[\w-]+/.+$", prefix):
-        raise RuntimeError("Suspicious S3 deletion")
+        raise RuntimeError(f"Suspicious S3 deletion: {prefix=}")
     bucket.object_versions.filter(Prefix=prefix).delete()
 
 
@@ -361,7 +361,9 @@ def delete_file_version(
             not re.match(r"^projects/[\w-]+/.+$", file_version._data.key)
             or not file_version.version_id
         ):
-            raise RuntimeError("Suspicious S3 deletion")
+            raise RuntimeError(
+                f"Suspicious S3 deletion: {file_version._data.key=} {file_version.version_id=}"
+            )
         file_version._data.delete()
 
         audit_suffix = "ALL" if is_deleting_all_versions else file_version.display
@@ -399,5 +401,5 @@ def delete_stored_package(project_id: str, package_id: str) -> None:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/{package_id}/"
     if not re.match(r"^projects/[\w-]+/packages/\w+/$", prefix):
-        raise RuntimeError("Suspicious S3 deletion")
+        raise RuntimeError(f"Suspicious S3 deletion: {prefix=}")
     bucket.object_versions.filter(Prefix=prefix).delete()
