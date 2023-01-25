@@ -309,7 +309,7 @@ def delete_file(project: "Project", filename: str):  # noqa: F821
     )
 
 
-def delete_file_version(
+def delete_project_file_version_permanently(
     project: "Project",  # noqa: F821
     filename: str,
     version_id: str,

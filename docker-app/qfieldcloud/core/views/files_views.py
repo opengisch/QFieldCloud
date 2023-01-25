@@ -226,7 +226,9 @@ class DownloadPushDeleteFileView(views.APIView):
         version_id = request.META.get("HTTP_X_FILE_VERSION")
 
         if version_id:
-            utils2.storage.delete_file_version(project, filename, version_id, False)
+            utils2.storage.delete_project_file_version_permanently(
+                project, filename, version_id, False
+            )
         else:
             utils2.storage.delete_file(project, filename)
 
