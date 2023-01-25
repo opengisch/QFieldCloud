@@ -362,7 +362,7 @@ def delete_file_version(
             or not file_version.id
         ):
             raise RuntimeError(
-                f"Suspicious S3 deletion: {file_version._data.key=} {file_version.version_id=}"
+                f"Suspicious S3 deletion: {file_version._data.key=} {file_version.id=}"
             )
         file_version._data.delete()
 
