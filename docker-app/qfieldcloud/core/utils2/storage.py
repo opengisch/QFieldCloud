@@ -10,6 +10,7 @@ import qfieldcloud.core.models
 import qfieldcloud.core.utils
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
 from qfieldcloud.core.utils2.audit import LogEntry, audit
@@ -296,17 +297,19 @@ def delete_project_file_permanently(project: "Project", filename: str):  # noqa:
     if not file:
         raise Exception("No file with such name in the given project found")
 
-    file.delete()
+    with transaction.atomic():
+        if qfieldcloud.core.utils.is_qgis_project_file(filename):
+            project.project_filename = None
+            project.save(recompute_storage=True, update_fields=["project_filename"])
 
-    if qfieldcloud.core.utils.is_qgis_project_file(filename):
-        project.project_filename = None
-        project.save(recompute_storage=True)
+        # NOTE auditing the file deletion in the transation might be costly, but guarantees the audit
+        audit(
+            project,
+            LogEntry.Action.DELETE,
+            changes={f"{filename} ALL": [file.latest.e_tag, None]},
+        )
 
-    audit(
-        project,
-        LogEntry.Action.DELETE,
-        changes={f"{filename} ALL": [file.latest.e_tag, None]},
-    )
+        file.delete()
 
 
 def delete_project_file_version_permanently(
@@ -359,28 +362,32 @@ def delete_project_file_version_permanently(
 
             versions_to_delete.append(file_version)
 
-    for file_version in versions_to_delete:
-
-        if (
-            not re.match(r"^projects/[\w-]+/.+$", file_version._data.key)
-            or not file_version.version_id
+    with transaction.atomic():
+        if is_deleting_all_versions and qfieldcloud.core.utils.is_qgis_project_file(
+            filename
         ):
-            raise RuntimeError("Suspicious S3 deletion")
-        file_version._data.delete()
+            project.project_filename = None
+            project.save(update_fields=["project_filename"])
 
-        audit_suffix = "ALL" if is_deleting_all_versions else file_version.display
+        for file_version in versions_to_delete:
 
-        audit(
-            project,
-            LogEntry.Action.DELETE,
-            changes={f"{filename} {audit_suffix}": [file_version.e_tag, None]},
-        )
+            if (
+                not re.match(r"^projects/[\w-]+/.+$", file_version._data.key)
+                or not file_version.id
+            ):
+                raise RuntimeError("Suspicious S3 deletion")
 
-    if is_deleting_all_versions and qfieldcloud.core.utils.is_qgis_project_file(
-        filename
-    ):
-        project.project_filename = None
-        project.save(recompute_storage=True)
+            audit_suffix = "ALL" if is_deleting_all_versions else file_version.display
+
+            audit(
+                project,
+                LogEntry.Action.DELETE,
+                changes={f"{filename} {audit_suffix}": [file_version.e_tag, None]},
+            )
+
+            file_version._data.delete()
+
+    project.save(recompute_storage=True)
 
     return versions_to_delete
 
