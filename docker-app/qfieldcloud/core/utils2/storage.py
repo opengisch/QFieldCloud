@@ -21,6 +21,26 @@ QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 
 
+def delete_by_prefix_versioned(prefix: str):
+    if not isinstance(prefix, str) or prefix == "" or prefix == "/":
+        raise RuntimeError(
+            f'Attempt to delete S3 object with illegal prefix "{prefix}"'
+        )
+
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    return bucket.objects.filter(Prefix=prefix).delete()
+
+
+def delete_by_prefix_permanently(prefix: str):
+    if not isinstance(prefix, str) or prefix == "" or prefix == "/":
+        raise RuntimeError(
+            f'Attempt to delete S3 object with illegal prefix "{prefix}"'
+        )
+
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    return bucket.object_versions.filter(Prefix=prefix).delete()
+
+
 def get_attachment_dir_prefix(project: "Project", filename: str) -> str:  # noqa: F821
     """Returns the attachment dir where the file belongs to or empty string if it does not.
 
@@ -148,11 +168,12 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     Args:
         user (User):
     """
-    bucket = qfieldcloud.core.utils.get_s3_bucket()
-    key = user.useraccount.avatar_uri
-    if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
-        raise RuntimeError("Suspicious S3 deletion")
-    bucket.object_versions.filter(Prefix=key).delete()
+    prefix = user.useraccount.avatar_uri
+
+    if not prefix or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", prefix):
+        raise RuntimeError("Suspicious S3 deletion of user avatar")
+
+    delete_by_prefix_permanently(prefix)
 
 
 def upload_project_thumbail(
@@ -202,11 +223,12 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     """
-    bucket = qfieldcloud.core.utils.get_s3_bucket()
-    key = project.thumbnail_uri
-    if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", key):
-        raise RuntimeError("Suspicious S3 deletion")
-    bucket.object_versions.filter(Prefix=key).delete()
+    prefix = project.thumbnail_uri
+
+    if not prefix or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", prefix):
+        raise RuntimeError("Suspicious S3 deletion of project thumbnail image")
+
+    delete_by_prefix_permanently(prefix)
 
 
 def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
@@ -280,15 +302,12 @@ def upload_project_file(
 
 
 def delete_all_project_files_permanently(project_id: str) -> None:
-    bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/"
+
     if not not re.match(r"^projects/[\w-]+/.+$", prefix):
-        raise RuntimeError("Suspicious S3 deletion")
+        raise RuntimeError("Suspicious S3 deletion of all project files")
 
-    if settings.ENVIRONMENT != "test":
-        raise RuntimeError("Project deletion is currently unavailable!")
-
-    bucket.object_versions.filter(Prefix=prefix).delete()
+    delete_by_prefix_versioned(prefix)
 
 
 def delete_project_file_permanently(project: "Project", filename: str):  # noqa: F821
@@ -309,7 +328,7 @@ def delete_project_file_permanently(project: "Project", filename: str):  # noqa:
             changes={f"{filename} ALL": [file.latest.e_tag, None]},
         )
 
-        file.delete()
+        delete_by_prefix_versioned(filename)
 
 
 def delete_project_file_version_permanently(
@@ -407,8 +426,9 @@ def get_stored_package_ids(project_id: str) -> Set[str]:
 
 
 def delete_stored_package(project_id: str, package_id: str) -> None:
-    bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/{package_id}/"
+
     if not re.match(r"^projects/[\w-]+/packages/\w+/$", prefix):
-        raise RuntimeError("Suspicious S3 deletion")
-    bucket.object_versions.filter(Prefix=prefix).delete()
+        raise RuntimeError("Suspicious S3 deletion on stored project package.")
+
+    delete_by_prefix_permanently(prefix)
