@@ -431,7 +431,7 @@ def upload_project_file(
 def delete_all_project_files_permanently(project_id: str) -> None:
     prefix = f"projects/{project_id}/"
 
-    if not not re.match(r"^projects/[\w-]+/.+$", prefix):
+    if not re.match(r"^projects/[\w-]+/.+$", prefix):
         raise RuntimeError(
             f"Suspicious S3 deletion of all project files with {prefix=}"
         )
