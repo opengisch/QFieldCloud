@@ -103,6 +103,53 @@ def _delete_by_key_versioned(key: str):
     )
 
 
+def _delete_by_key_permanently(key: str):
+    """
+    Delete an object with a given key.
+
+    Deleting with this method will permanently delete objects and all their versions and the deletion is impossible to recover.
+    In other words, it is a hard delete.
+
+    Args:
+        key (str): Object's key to search and delete. Check the given key if it matches the expected format before using this function!
+
+    Raises:
+        RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+    """
+    logging.info(f"S3 object deletion (versioned) with {key=}")
+
+    # prevent disastrous results when prefix is either empty string ("") or slash ("/").
+    if not isinstance(key, str) or key == "" or key == "/":
+        raise RuntimeError(f"Attempt to delete S3 object with illegal {key=}")
+
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+
+    # NOTE filer by prefix will return all objects with that prefix. E.g. for given key="orho.tif", it will return "ortho.tif", "ortho.tif.aux.xml" and "ortho.tif.backup"
+    temp_objects = bucket.object_versions.filter(
+        Prefix=key,
+    )
+    object_to_delete = []
+    for temp_object in temp_objects:
+        # filter out objects that do not have the same key as the requested deletion key.
+        if temp_object.key != key:
+            continue
+
+        object_to_delete.append(
+            {
+                "Key": key,
+                "VersionId": temp_object.id,
+            }
+        )
+
+    assert len(object_to_delete) > 0
+
+    return bucket.delete_objects(
+        Delete={
+            "Objects": object_to_delete,
+        },
+    )
+
+
 def delete_version_permanently(version_obj: qfieldcloud.core.utils.S3ObjectVersion):
     logging.info(
         f'S3 object version deletion (permanent) with "{version_obj.key=}" and "{version_obj.id=}"'
@@ -247,7 +294,7 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
         raise RuntimeError(f"Suspicious S3 deletion of user avatar {key=}")
 
-    _delete_by_key_versioned(key)
+    _delete_by_key_permanently(key)
 
 
 def upload_project_thumbail(
@@ -306,7 +353,7 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", key):
         raise RuntimeError(f"Suspicious S3 deletion of project thumbnail image {key=}")
 
-    _delete_by_key_versioned(key)
+    _delete_by_key_permanently(key)
 
 
 def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
@@ -412,7 +459,10 @@ def delete_project_file_permanently(project: "Project", filename: str):  # noqa:
             changes={f"{filename} ALL": [file.latest.e_tag, None]},
         )
 
-        _delete_by_key_versioned(filename)
+        if not re.match(r"^projects/[\w-]+/.+$", file.latest.key):
+            raise RuntimeError(f"Suspicious S3 file deletion {file.latest.key=}")
+
+        _delete_by_key_permanently(file.latest.key)
 
 
 def delete_project_file_version_permanently(
