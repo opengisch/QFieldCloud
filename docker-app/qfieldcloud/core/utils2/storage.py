@@ -21,7 +21,21 @@ QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 
 
-def delete_by_prefix_versioned(prefix: str):
+def _delete_by_prefix_versioned(prefix: str):
+    """
+    Delete all objects and their versions starting with a given prefix.
+
+    Similar concept to delete a directory.
+    Do not use when deleting objects with precise key, as it will delete all objects that start with the same name.
+    Deleting with this method will leave a deleted version and the deletion is not permanent.
+    In other words, it is a soft delete.
+
+    Args:
+        prefix (str): Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
+
+    Raises:
+        RuntimeError: When the given prefix is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+    """
     logging.info(f"S3 object deletion (versioned) with {prefix=}")
 
     # Illegal prefix is either empty string ("") or slash ("/"), it will delete random 1000 objects.
@@ -32,7 +46,21 @@ def delete_by_prefix_versioned(prefix: str):
     return bucket.objects.filter(Prefix=prefix).delete()
 
 
-def delete_by_prefix_permanently(prefix: str):
+def _delete_by_prefix_permanently(prefix: str):
+    """
+    Delete all objects and their versions starting with a given prefix.
+
+    Similar concept to delete a directory.
+    Do not use when deleting objects with precise key, as it will delete all objects that start with the same name.
+    Deleting with this method will permanently delete objects and all their versions and the deletion is impossible to recover.
+    In other words, it is a hard delete.
+
+    Args:
+        prefix (str): Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
+
+    Raises:
+        RuntimeError: When the given prefix is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+    """
     logging.info(f"S3 object deletion (permanent) with {prefix=}")
 
     # Illegal prefix is either empty string ("") or slash ("/"), it will delete random 1000 object versions.
@@ -331,7 +359,7 @@ def delete_all_project_files_permanently(project_id: str) -> None:
             f"Suspicious S3 deletion of all project files with {prefix=}"
         )
 
-    delete_by_prefix_versioned(prefix)
+    _delete_by_prefix_versioned(prefix)
 
 
 def delete_project_file_permanently(project: "Project", filename: str):  # noqa: F821
@@ -458,4 +486,4 @@ def delete_stored_package(project_id: str, package_id: str) -> None:
             f"Suspicious S3 deletion on stored project package {project_id=} {package_id=}"
         )
 
-    delete_by_prefix_permanently(prefix)
+    _delete_by_prefix_permanently(prefix)
