@@ -238,16 +238,16 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     Args:
         user (User):
     """
-    prefix = user.useraccount.avatar_uri
+    key = user.useraccount.avatar_uri
 
     # it well could be the user has no avatar yet
-    if not prefix:
+    if not key:
         return
 
-    if not prefix or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", prefix):
-        raise RuntimeError(f"Suspicious S3 deletion of user avatar {prefix=}")
+    if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
+        raise RuntimeError(f"Suspicious S3 deletion of user avatar {key=}")
 
-    _delete_by_key_versioned(prefix)
+    _delete_by_key_versioned(key)
 
 
 def upload_project_thumbail(
@@ -297,18 +297,16 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     """
-    prefix = project.thumbnail_uri
+    key = project.thumbnail_uri
 
     # it well could be the project has no thumbnail yet
-    if not prefix:
+    if not key:
         return
 
-    if not prefix or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", prefix):
-        raise RuntimeError(
-            f"Suspicious S3 deletion of project thumbnail image {prefix=}"
-        )
+    if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", key):
+        raise RuntimeError(f"Suspicious S3 deletion of project thumbnail image {key=}")
 
-    _delete_by_key_versioned(prefix)
+    _delete_by_key_versioned(key)
 
 
 def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
