@@ -350,7 +350,9 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
     if not key:
         return
 
-    if not key or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", key):
+    if not key or not re.match(
+        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/\w+.(png|jpg|svg)$", key
+    ):
         raise RuntimeError(f"Suspicious S3 deletion of project thumbnail image {key=}")
 
     _delete_by_key_permanently(key)
@@ -394,7 +396,7 @@ def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
                 raise Exception("Trying to delete latest version")
 
             if not old_version.key or not re.match(
-                r"^projects/[\w-]+/.+$", old_version.key
+                r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/.+$", old_version.key
             ):
                 raise RuntimeError(
                     f"Suspicious S3 file version deletion {old_version.key=} {old_version.id=}"
@@ -431,7 +433,7 @@ def upload_project_file(
 def delete_all_project_files_permanently(project_id: str) -> None:
     prefix = f"projects/{project_id}/"
 
-    if not re.match(r"^projects/[\w-]+/$", prefix):
+    if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/$", prefix):
         raise RuntimeError(
             f"Suspicious S3 deletion of all project files with {prefix=}"
         )
@@ -459,7 +461,9 @@ def delete_project_file_permanently(project: "Project", filename: str):  # noqa:
             changes={f"{filename} ALL": [file.latest.e_tag, None]},
         )
 
-        if not re.match(r"^projects/[\w-]+/.+$", file.latest.key):
+        if not re.match(
+            r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/.+$", file.latest.key
+        ):
             raise RuntimeError(f"Suspicious S3 file deletion {file.latest.key=}")
 
         _delete_by_key_permanently(file.latest.key)
@@ -522,7 +526,10 @@ def delete_project_file_version_permanently(
         for file_version in versions_to_delete:
 
             if (
-                not re.match(r"^projects/[\w-]+/.+$", file_version._data.key)
+                not re.match(
+                    r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/.+$",
+                    file_version._data.key,
+                )
                 or not file_version.id
             ):
                 raise RuntimeError(
@@ -561,7 +568,7 @@ def get_stored_package_ids(project_id: str) -> Set[str]:
 def delete_stored_package(project_id: str, package_id: str) -> None:
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
-    if not re.match(r"^projects/[\w-]+/packages/\w+/$", prefix):
+    if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/packages/\w+/$", prefix):
         raise RuntimeError(
             f"Suspicious S3 deletion on stored project package {project_id=} {package_id=}"
         )
