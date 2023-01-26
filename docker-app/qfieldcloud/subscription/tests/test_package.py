@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from unittest import skip
 
 import django.db.utils
 from django.utils import timezone
@@ -657,6 +658,9 @@ class QfcTestCase(APITransactionTestCase):
             storage_free_mb=1,
         )
 
+    @skip(
+        "Temporary disable the checks for storage limit, as we temporarily disabled purging old versions."
+    )
     def test_api_enforces_storage_limit(self):
         p1 = Project.objects.create(name="p1", owner=self.u1)
 
@@ -676,6 +680,9 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, 402)
 
+    @skip(
+        "Temporary disable the checks for storage limit, as we temporarily disabled purging old versions."
+    )
     def test_api_enforces_storage_limit_when_owner_changes(self):
         plan_10mb = Plan.objects.create(
             code="plan_10mb", storage_mb=10, is_premium=True
