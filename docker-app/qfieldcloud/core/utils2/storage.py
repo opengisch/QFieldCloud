@@ -71,6 +71,38 @@ def _delete_by_prefix_permanently(prefix: str):
     return bucket.object_versions.filter(Prefix=prefix).delete()
 
 
+def _delete_by_key_versioned(key: str):
+    """
+    Delete an object with a given key.
+
+    Deleting with this method will leave a deleted version and the deletion is not permanent.
+    In other words, it is a soft delete.
+
+    Args:
+        key (str): Object's key to search and delete. Check the given key if it matches the expected format before using this function!
+
+    Raises:
+        RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+    """
+    logging.info(f"S3 object deletion (versioned) with {key=}")
+
+    # prevent disastrous results when prefix is either empty string ("") or slash ("/").
+    if not isinstance(key, str) or key == "" or key == "/":
+        raise RuntimeError(f"Attempt to delete S3 object with illegal {key=}")
+
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+
+    return bucket.delete_objects(
+        Delete={
+            "Objects": [
+                {
+                    "Key": key,
+                }
+            ],
+        },
+    )
+
+
 def delete_version_permanently(version_obj: qfieldcloud.core.utils.S3ObjectVersion):
     logging.info(
         f'S3 object version deletion (permanent) with "{version_obj.key=}" and "{version_obj.id=}"'
@@ -215,7 +247,7 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     if not prefix or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", prefix):
         raise RuntimeError(f"Suspicious S3 deletion of user avatar {prefix=}")
 
-    delete_by_prefix_permanently(prefix)
+    _delete_by_key_versioned(prefix)
 
 
 def upload_project_thumbail(
@@ -276,7 +308,7 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
             f"Suspicious S3 deletion of project thumbnail image {prefix=}"
         )
 
-    delete_by_prefix_permanently(prefix)
+    _delete_by_key_versioned(prefix)
 
 
 def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
@@ -382,7 +414,7 @@ def delete_project_file_permanently(project: "Project", filename: str):  # noqa:
             changes={f"{filename} ALL": [file.latest.e_tag, None]},
         )
 
-        delete_by_prefix_versioned(filename)
+        _delete_by_key_versioned(filename)
 
 
 def delete_project_file_version_permanently(
