@@ -28,7 +28,7 @@ def _delete_by_prefix_versioned(prefix: str):
     Similar concept to delete a directory.
     Do not use when deleting objects with precise key, as it will delete all objects that start with the same name.
     Deleting with this method will leave a deleted version and the deletion is not permanent.
-    In other words, it is a soft delete.
+    In other words, it is a soft delete. Read more here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
 
     Args:
         prefix (str): Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
@@ -53,7 +53,7 @@ def _delete_by_prefix_permanently(prefix: str):
     Similar concept to delete a directory.
     Do not use when deleting objects with precise key, as it will delete all objects that start with the same name.
     Deleting with this method will permanently delete objects and all their versions and the deletion is impossible to recover.
-    In other words, it is a hard delete.
+    In other words, it is a hard delete. Read more here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
 
     Args:
         prefix (str): Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
