@@ -150,7 +150,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, projectid):
         # Delete files from storage
-        storage.delete_project_files(projectid)
+        storage.delete_all_project_files_permanently(projectid)
 
         return super().destroy(request, projectid)
 

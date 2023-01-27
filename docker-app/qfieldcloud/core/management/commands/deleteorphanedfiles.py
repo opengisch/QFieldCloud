@@ -73,4 +73,4 @@ class Command(BaseCommand):
             self.stdout.write(f'Deleting project files for "{project_id}"...')
 
             if not dry_run:
-                storage.delete_project_files(project_id)
+                storage.delete_all_project_files_permanently(project_id)
