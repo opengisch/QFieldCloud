@@ -127,7 +127,7 @@ class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
 
         user = User.objects.get(username=username)
 
-        if user.user_type == User.TYPE_ORGANIZATION:
+        if user.type == User.Type.ORGANIZATION:
             organization = Organization.objects.of_user(request.user).get(
                 username=username
             )

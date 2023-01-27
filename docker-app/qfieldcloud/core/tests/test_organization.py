@@ -10,8 +10,8 @@ from qfieldcloud.core.models import (
     Job,
     Organization,
     OrganizationMember,
+    Person,
     Project,
-    User,
 )
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -26,22 +26,22 @@ class QfcTestCase(APITestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a user
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # Create a user
-        self.user3 = User.objects.create_user(username="user3", password="abc123")
+        self.user3 = Person.objects.create_user(username="user3", password="abc123")
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
         # Create an organization
         self.organization1 = Organization.objects.create(
             username="organization1",
             password="abc123",
-            user_type=2,
+            type=2,
             organization_owner=self.user1,
         )
 
@@ -170,7 +170,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
 
-    def test_billable_users_count(self):
+    def test_active_users_count(self):
         """Tests billable users calculations"""
 
         # Set user1 and user2 as member of organization1
@@ -188,7 +188,7 @@ class QfcTestCase(APITestCase):
         # Create a project owned by the organization
         project1 = Project.objects.create(name="p1", owner=self.organization1)
 
-        def _billable_users_count(base_date=None):
+        def _active_users_count(base_date=None):
             """Helper to get count of billable users"""
             if base_date is None:
                 base_date = now()
@@ -201,10 +201,10 @@ class QfcTestCase(APITestCase):
             end_date = base_date.replace(
                 day=calendar.monthrange(base_date.year, base_date.month)[1]
             )
-            return self.organization1.billable_users(start_date, end_date).count()
+            return self.organization1.active_users(start_date, end_date).count()
 
         # Initially, there is no billable user
-        self.assertEqual(_billable_users_count(), 0)
+        self.assertEqual(_active_users_count(), 0)
 
         # User 1 creates a job
         Job.objects.create(
@@ -212,7 +212,7 @@ class QfcTestCase(APITestCase):
             created_by=self.user2,
         )
         # There is now 1 billable user
-        self.assertEqual(_billable_users_count(), 1)
+        self.assertEqual(_active_users_count(), 1)
 
         # User 1 creates a delta
         Delta.objects.create(
@@ -222,7 +222,7 @@ class QfcTestCase(APITestCase):
             created_by=self.user2,
         )
         # There is still 1 billable user
-        self.assertEqual(_billable_users_count(), 1)
+        self.assertEqual(_active_users_count(), 1)
 
         # User 2 creates a job
         Job.objects.create(
@@ -230,13 +230,13 @@ class QfcTestCase(APITestCase):
             created_by=self.user3,
         )
         # There is 2 billable user
-        self.assertEqual(_billable_users_count(), 2)
+        self.assertEqual(_active_users_count(), 2)
 
         # User 2 leaves the organization
         OrganizationMember.objects.filter(member=self.user3).delete()
 
-        # There is now 1 billable user
-        self.assertEqual(_billable_users_count(), 1)
+        # There are strill 2 billable user
+        self.assertEqual(_active_users_count(), 2)
 
         # Report at a different time is empty
-        self.assertEqual(_billable_users_count(now() + timedelta(days=365)), 0)
+        self.assertEqual(_active_users_count(now() + timedelta(days=365)), 0)

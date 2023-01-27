@@ -117,7 +117,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             "username",
-            "user_type",
+            "type",
             "full_name",
             "email",
             "avatar_url",
@@ -135,7 +135,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
         return get_avatar_url(obj)
 
     def get_username_display(self, obj):
-        if obj.user_type == obj.TYPE_TEAM:
+        if obj.type == obj.Type.TEAM:
             team = Team.objects.get(id=obj.id)
             return team.username.replace(f"@{team.team_organization.username}/", "")
         else:
@@ -145,7 +145,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             "username",
-            "user_type",
+            "type",
             "full_name",
             "avatar_url",
             "username_display",
@@ -178,7 +178,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         model = Organization
         fields = (
             "username",
-            "user_type",
+            "type",
             "email",
             "avatar_url",
             "members",
@@ -210,7 +210,7 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
 class TokenSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username")
     expires_at = serializers.DateTimeField()
-    user_type = serializers.CharField(source="user.user_type")
+    type = serializers.CharField(source="user.type")
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
     full_name = serializers.CharField(source="user.full_name")
@@ -230,7 +230,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "token",
             "expires_at",
             "username",
-            "user_type",
+            "type",
             "email",
             "avatar_url",
             "first_name",

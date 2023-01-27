@@ -68,12 +68,10 @@ INSTALLED_APPS = [
     # 3rd-party apps
     # if django_filters defined after [rest_framework] caused '... _frozen_importlib._DeadlockError ...'
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
-    "django_tables2",
     "django_filters",
     # debug
     "debug_toolbar",
     # style
-    "bootstrap4",
     "rest_framework",
     "rest_framework.authtoken",
     "drf_yasg",
@@ -83,6 +81,7 @@ INSTALLED_APPS = [
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
+    "django_countries",
     "timezone_field",
     "auditlog",
     # Local
@@ -271,7 +270,7 @@ ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
 ACCOUNT_PRESERVE_USERNAME_CASING = False
 ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_ADAPTER = "invitations.models.InvitationsAdapter"
+ACCOUNT_ADAPTER = "qfieldcloud.core.adapters.AccountAdapter"
 ACCOUNT_LOGOUT_ON_GET = True
 
 # Django axes configuration
@@ -301,7 +300,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 # https://github.com/bee-keeper/django-invitations#additional-configuration
 INVITATIONS_INVITATION_EXPIRY = 365  # integer in days, 0 disables invitations
 INVITATIONS_INVITATION_ONLY = False
-INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+# INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
 INVITATIONS_GONE_ON_ACCEPT_ERROR = False
 
 TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"
@@ -333,6 +332,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 # NOTE automatically set when running tests, don't change manually!
 IN_TEST_SUITE = False
 
+QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
+    "QFIELDCLOUD_SUBSCRIPTION_MODEL", "subscription.Subscription"
+)
+
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
 
@@ -358,6 +361,7 @@ CONSTANCE_CONFIG = {
         512,
         "Share of CPUs for each QGIS worker container. By default all containers have value 1024 set by docker.",
     ),
+    "TRIAL_PERIOD_DAYS": (28, "Days in which the trial period expires."),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -373,4 +377,5 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "WORKER_QGIS_MEMORY_LIMIT",
         "WORKER_QGIS_CPU_SHARES",
     ),
+    "Subscription": ("TRIAL_PERIOD_DAYS",),
 }

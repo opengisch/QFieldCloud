@@ -10,7 +10,7 @@ from invitations.adapters import get_invitations_adapter
 from invitations.signals import invite_url_sent
 from invitations.utils import get_invitation_model
 from qfieldcloud.core import permissions_utils
-from qfieldcloud.core.models import User
+from qfieldcloud.core.models import Person
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def is_valid_email(email: str) -> bool:
         return False
 
 
-def invite_user_by_email(email: str, inviter: User, send: bool = True) -> tuple:
+def invite_user_by_email(email: str, inviter: Person, send: bool = True) -> tuple:
     """
     Sends an invite for a given email address
 
@@ -65,7 +65,7 @@ def invite_user_by_email(email: str, inviter: User, send: bool = True) -> tuple:
                 ).format(email),
             )
 
-    qs = User.objects.filter(email=email, user_type=User.TYPE_USER)
+    qs = Person.objects.filter(email=email)
 
     if len(qs) > 0:
         assert len(qs) == 1

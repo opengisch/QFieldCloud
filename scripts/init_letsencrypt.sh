@@ -2,19 +2,14 @@
 
 set -e
 
-if ! [ -x "$(command -v docker-compose)" ]; then
-  echo 'Error: docker-compose is not installed.' >&2
-  exit 1
-fi
-
 eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
-CONFIG_PATH="./conf/nginx"
+CONFIG_PATH="${CONFIG_PATH:-'./conf'}"
 
-if [ ! -e "$CONFIG_PATH/options-ssl-nginx.conf" ] || [ ! -e "$CONFIG_PATH/ssl-dhparams.pem" ]; then
+if [ ! -e "$CONFIG_PATH/nginx/options-ssl-nginx.conf" ] || [ ! -e "$CONFIG_PATH/nginx/ssl-dhparams.pem" ]; then
   echo "### Downloading recommended TLS parameters ..."
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "$CONFIG_PATH/options-ssl-nginx.conf"
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "$CONFIG_PATH/ssl-dhparams.pem"
+  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "$CONFIG_PATH/nginx/options-ssl-nginx.conf"
+  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "$CONFIG_PATH/nginx/ssl-dhparams.pem"
   echo
 fi
 
@@ -24,7 +19,7 @@ domain_args="-d ${QFIELDCLOUD_HOST}"
 # Enable staging mode if needed
 if [ $LETSENCRYPT_STAGING != "0" ]; then staging_arg="--staging"; fi
 
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $domain_args \
@@ -32,12 +27,13 @@ docker-compose run --rm --entrypoint "\
     --rsa-key-size $LETSENCRYPT_RSA_KEY_SIZE \
     --agree-tos \
     --force-renewal" certbot
+
 echo
 
 echo "### Copy the certificate and key to their final destination ..."
-cp conf/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem conf/nginx/certs/${QFIELDCLOUD_HOST}.pem
-cp conf/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem conf/nginx/certs/${QFIELDCLOUD_HOST}-key.pem
+cp ${CONFIG_PATH}/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem ${CONFIG_PATH}/nginx/certs/${QFIELDCLOUD_HOST}.pem
+cp ${CONFIG_PATH}/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem ${CONFIG_PATH}/nginx/certs/${QFIELDCLOUD_HOST}-key.pem
 echo
 
 echo "### Reloading nginx ..."
-docker-compose exec nginx nginx -s reload
+docker compose exec nginx nginx -s reload

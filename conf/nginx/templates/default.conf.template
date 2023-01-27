@@ -58,7 +58,7 @@ server {
 
   access_log /var/log/nginx/access.log json-logger;
 
-  server_name ${QFIELDCLOUD_HOST};
+  server_name ${QFIELDCLOUD_HOST} nginx;
   client_max_body_size 10G;
   keepalive_timeout 5;
 

@@ -2,7 +2,7 @@ import logging
 
 from django.utils.timezone import datetime, now
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Organization, Team, User
+from qfieldcloud.core.models import Organization, Person, Team
 from qfieldcloud.core.tests.utils import setup_subscription_plans
 from rest_framework.test import APITransactionTestCase
 
@@ -14,7 +14,7 @@ class QfcTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
 
     def assertTokenMatch(self, token, payload):
         expires_at = payload.pop("expires_at")
@@ -29,7 +29,7 @@ class QfcTestCase(APITransactionTestCase):
                 "first_name": "",
                 "full_name": "",
                 "last_name": "",
-                "user_type": "1",
+                "type": "1",
             },
         )
         self.assertTrue(datetime.fromisoformat(expires_at) == token.expires_at)
@@ -208,7 +208,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertLess(first_used_at, second_used_at)
 
     def test_login_users_only(self):
-        u1 = User.objects.create_user(username="u1", password="abc123")
+        u1 = Person.objects.create_user(username="u1", password="abc123")
         o1 = Organization.objects.create_user(
             username="o1", password="abc123", organization_owner=u1
         )

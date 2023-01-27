@@ -26,7 +26,7 @@ sql_items = [
                     "core_project" P1
                     INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
                 WHERE
-                    U1."user_type" = 1
+                    U1."type" = 1
             ),
             organization_owner AS (
                 SELECT
@@ -230,7 +230,7 @@ sql_items = [
         "core_user_email_partial_uniq",
         r"""
             CREATE UNIQUE INDEX IF NOT EXISTS core_user_email_partial_uniq ON core_user (email)
-            WHERE user_type = 1 AND email IS NOT NULL AND email != ''
+            WHERE type = 1 AND email IS NOT NULL AND email != ''
         """,
         r"""
             DROP INDEX IF EXISTS core_user_email_partial_uniq

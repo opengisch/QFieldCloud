@@ -11,6 +11,7 @@ services:
   app: &default-django
     build:
       context: ./docker-app
+      target: webserver_runtime
       network: host
     restart: unless-stopped
     command: >
@@ -62,10 +63,11 @@ services:
       # Settings below are specific to worker_wrapper
       # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
       TMP_DIRECTORY: ${TMP_DIRECTORY}
-      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
+      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}-qgis
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       QFIELDCLOUD_WORKER_QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
+      QFIELDCLOUD_SUBSCRIPTION_MODEL: ${QFIELDCLOUD_SUBSCRIPTION_MODEL}
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
@@ -145,6 +147,7 @@ services:
     build:
       context: ./docker-app
       network: host
+      target: worker_wrapper_runtime
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:

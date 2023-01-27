@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 from qfieldcloud.core import invitations_utils as invitation
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core.models import Project, ProjectCollaborator, User
+from qfieldcloud.core.models import Person, Project, ProjectCollaborator, User
 
 
 def create_collaborator(project: Project, user: User) -> Tuple[bool, str]:
@@ -46,24 +46,20 @@ def create_collaborator(project: Project, user: User) -> Tuple[bool, str]:
 
 
 def create_collaborator_by_username_or_email(
-    project: Project, username: str, created_by: User
+    project: Project, username: str, created_by: Person
 ):
     """Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible
 
     Args:
         project (Project): the project to add collaborator to
         user (str): the username or email to be added as collaborator or invited to join QFieldCloud
-        created_by (User): the user that initiated the collaborator creation
+        created_by (Person): the user that initiated the collaborator creation
 
     Returns:
         Tuple[bool, str]: success, message - whether the collaborator creation was success and explanation message of the outcome
     """
     success, message = False, ""
-    users = list(
-        User.objects.filter(Q(username=username) | Q(email=username)).exclude(
-            user_type=User.TYPE_ORGANIZATION
-        )
-    )
+    users = list(Person.objects.filter(Q(username=username) | Q(email=username)))
 
     if len(users) == 0:
         # No user found, if string is an email address, we try to send a link

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.test.testcases import TransactionTestCase
 from django.urls.resolvers import URLPattern, URLResolver
 
-from ..models import Delta, Organization, ProcessProjectfileJob, Project, Team, User
+from ..models import Delta, Organization, Person, ProcessProjectfileJob, Project, Team
 from .utils import setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
@@ -30,7 +30,7 @@ def list_urls(url_items, prefixes=None):
 class QfcTestCase(TransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
-        self.superuser = User.objects.create_superuser(
+        self.superuser = Person.objects.create_superuser(
             username="superuser", password="secret", email="super@example.com"
         )
 
@@ -70,7 +70,7 @@ class QfcTestCase(TransactionTestCase):
             "/admin/axes/accessattempt/add/",
             "/admin/axes/accesslog/add/",
         )
-        # TODO make tests pass for these srotable URLs
+        # TODO make tests pass for these sortable URLs
         skip_sort_urls = ("/admin/django_cron/cronjoblog/?o=4",)
 
         self.client.force_login(self.superuser)
