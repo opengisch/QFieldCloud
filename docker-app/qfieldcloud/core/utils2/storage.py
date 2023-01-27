@@ -24,6 +24,7 @@ WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 def delete_by_prefix_versioned(prefix: str):
     logging.info(f"S3 object deletion (versioned) with {prefix=}")
 
+    # Illegal prefix is either empty string ("") or slash ("/"), it will delete random 1000 objects.
     if not isinstance(prefix, str) or prefix == "" or prefix == "/":
         raise RuntimeError(f"Attempt to delete S3 object with illegal {prefix=}")
 
@@ -34,6 +35,7 @@ def delete_by_prefix_versioned(prefix: str):
 def delete_by_prefix_permanently(prefix: str):
     logging.info(f"S3 object deletion (permanent) with {prefix=}")
 
+    # Illegal prefix is either empty string ("") or slash ("/"), it will delete random 1000 object versions.
     if not isinstance(prefix, str) or prefix == "" or prefix == "/":
         raise RuntimeError(f"Attempt to delete S3 object with illegal {prefix=}")
 
