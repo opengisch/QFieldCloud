@@ -180,6 +180,10 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     """
     prefix = user.useraccount.avatar_uri
 
+    # it well could be the user has no avatar yet
+    if not prefix:
+        return
+
     if not prefix or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", prefix):
         raise RuntimeError(f"Suspicious S3 deletion of user avatar {prefix=}")
 
@@ -234,6 +238,10 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
 
     """
     prefix = project.thumbnail_uri
+
+    # it well could be the project has no thumbnail yet
+    if not prefix:
+        return
 
     if not prefix or not re.match(r"^projects/[\w-]+/meta/\w+.(png|jpg|svg)$", prefix):
         raise RuntimeError(
