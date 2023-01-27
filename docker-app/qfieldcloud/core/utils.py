@@ -84,11 +84,6 @@ class S3ObjectWithVersions(NamedTuple):
         # latest is also in versions
         return sum(v.size for v in self.versions)
 
-    def delete(self):
-        bucket = get_s3_bucket()
-
-        return bucket.object_versions.filter(Prefix=self.latest.key).delete()
-
 
 def redis_is_running() -> bool:
     try:

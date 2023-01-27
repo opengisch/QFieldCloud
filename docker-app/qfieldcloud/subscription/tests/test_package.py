@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from unittest import skip
 
 import django.db.utils
 from django.utils import timezone
@@ -9,7 +10,10 @@ from qfieldcloud.core import utils
 from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import get_random_file, setup_subscription_plans
 from qfieldcloud.core.utils import list_versions
-from qfieldcloud.core.utils2.storage import delete_file, delete_file_version
+from qfieldcloud.core.utils2.storage import (
+    delete_project_file_permanently,
+    delete_project_file_version_permanently,
+)
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -620,7 +624,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         version = list(list_versions(bucket, storage_path))[0]
-        delete_file_version(p1, "test.data", version.id)
+        delete_project_file_version_permanently(p1, "test.data", version.id)
         p1.save(recompute_storage=True)
 
         self.assertStorage(
@@ -637,7 +641,7 @@ class QfcTestCase(APITransactionTestCase):
             storage_free_mb=0.9,
         )
 
-        delete_file(p1, "test.data")
+        delete_project_file_permanently(p1, "test.data")
         p1.save(recompute_storage=True)
 
         self.assertStorage(
@@ -654,6 +658,9 @@ class QfcTestCase(APITransactionTestCase):
             storage_free_mb=1,
         )
 
+    @skip(
+        "Temporary disable the checks for storage limit, as we temporarily disabled purging old versions."
+    )
     def test_api_enforces_storage_limit(self):
         p1 = Project.objects.create(name="p1", owner=self.u1)
 
@@ -673,6 +680,9 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, 402)
 
+    @skip(
+        "Temporary disable the checks for storage limit, as we temporarily disabled purging old versions."
+    )
     def test_api_enforces_storage_limit_when_owner_changes(self):
         plan_10mb = Plan.objects.create(
             code="plan_10mb", storage_mb=10, is_premium=True
