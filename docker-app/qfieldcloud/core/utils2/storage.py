@@ -352,7 +352,9 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
         return
 
     if not key or not re.match(
-        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/\w+.(png|jpg|svg)$", key
+        # e.g. "projects/9bf34e75-0a5d-47c3-a2f0-ebb7126eeccc/meta/thumbnail.png"
+        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/thumbnail\.(png|jpg|svg)$",
+        key,
     ):
         raise RuntimeError(f"Suspicious S3 deletion of project thumbnail image {key=}")
 
