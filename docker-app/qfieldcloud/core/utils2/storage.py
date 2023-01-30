@@ -568,7 +568,11 @@ def get_stored_package_ids(project_id: str) -> Set[str]:
 def delete_stored_package(project_id: str, package_id: str) -> None:
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
-    if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/packages/\w+/$", prefix):
+    if not re.match(
+        # e.g. "projects/878039c4-b945-4356-a44e-a908fd3f2263/packages/633cd4f7-db14-4e6e-9b2b-c0ce98f9d338/"
+        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/packages/[\w]{8}(-[\w]{4}){3}-[\w]{12}/$",
+        prefix,
+    ):
         raise RuntimeError(
             f"Suspicious S3 deletion on stored project package {project_id=} {package_id=}"
         )
