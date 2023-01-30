@@ -291,7 +291,8 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     if not key:
         return
 
-    if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
+    # e.g. "users/suricactus/avatar.svg"
+    if not key or not re.match(r"^users/\w+/avatar\.(png|jpg|svg)$", key):
         raise RuntimeError(f"Suspicious S3 deletion of user avatar {key=}")
 
     _delete_by_key_permanently(key)
