@@ -311,7 +311,7 @@ class User(AbstractUser):
 
     def delete(self, *args, **kwargs):
         if self.type != User.Type.TEAM:
-            qfieldcloud.core.utils2.storage.remove_user_avatar(self)
+            qfieldcloud.core.utils2.storage.delete_user_avatar(self)
 
         with no_audits([User, UserAccount, Project]):
             super().delete(*args, **kwargs)

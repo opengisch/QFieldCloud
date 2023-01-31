@@ -277,8 +277,8 @@ def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F
     return key
 
 
-def remove_user_avatar(user: "User") -> None:  # noqa: F821
-    """Removes the user's avatar file.
+def delete_user_avatar(user: "User") -> None:  # noqa: F821
+    """Deletes the user's avatar file.
 
     NOTE this function does NOT modify the `UserAccount.avatar_uri` field
 
