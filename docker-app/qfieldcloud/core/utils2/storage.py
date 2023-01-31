@@ -338,8 +338,8 @@ def upload_project_thumbail(
     return key
 
 
-def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
-    """Uploads a picture as a project thumbnail.
+def delete_project_thumbnail(project: "Project") -> None:  # noqa: F821
+    """Delete a picture as a project thumbnail.
 
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 

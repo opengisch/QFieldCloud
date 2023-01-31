@@ -1195,7 +1195,7 @@ class Project(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
-            qfieldcloud.core.utils2.storage.remove_project_thumbail(self)
+            qfieldcloud.core.utils2.storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
     def save(self, recompute_storage=False, *args, **kwargs):
