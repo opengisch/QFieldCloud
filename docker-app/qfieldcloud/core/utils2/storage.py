@@ -291,7 +291,8 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     if not key:
         return
 
-    if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
+    # e.g. "users/suricactus/avatar.svg"
+    if not key or not re.match(r"^users/\w+/avatar\.(png|jpg|svg)$", key):
         raise RuntimeError(f"Suspicious S3 deletion of user avatar {key=}")
 
     _delete_by_key_permanently(key)
@@ -351,7 +352,9 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
         return
 
     if not key or not re.match(
-        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/\w+.(png|jpg|svg)$", key
+        # e.g. "projects/9bf34e75-0a5d-47c3-a2f0-ebb7126eeccc/meta/thumbnail.png"
+        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/thumbnail\.(png|jpg|svg)$",
+        key,
     ):
         raise RuntimeError(f"Suspicious S3 deletion of project thumbnail image {key=}")
 
@@ -568,7 +571,11 @@ def get_stored_package_ids(project_id: str) -> Set[str]:
 def delete_stored_package(project_id: str, package_id: str) -> None:
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
-    if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/packages/\w+/$", prefix):
+    if not re.match(
+        # e.g. "projects/878039c4-b945-4356-a44e-a908fd3f2263/packages/633cd4f7-db14-4e6e-9b2b-c0ce98f9d338/"
+        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/packages/[\w]{8}(-[\w]{4}){3}-[\w]{12}/$",
+        prefix,
+    ):
         raise RuntimeError(
             f"Suspicious S3 deletion on stored project package {project_id=} {package_id=}"
         )
