@@ -84,11 +84,13 @@ def _delete_by_key_versioned(key: str):
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
     """
-    logging.info(f"S3 object deletion (versioned) with {key=}")
+    logging.info(f"Delete (versioned) S3 object with {key=}")
 
     # prevent disastrous results when prefix is either empty string ("") or slash ("/").
     if not isinstance(key, str) or key == "" or key == "/":
-        raise RuntimeError(f"Attempt to delete S3 object with illegal {key=}")
+        raise RuntimeError(
+            f"Attempt to delete (versioned) S3 object with illegal {key=}"
+        )
 
     bucket = qfieldcloud.core.utils.get_s3_bucket()
 
@@ -116,11 +118,13 @@ def _delete_by_key_permanently(key: str):
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
     """
-    logging.info(f"S3 object deletion (versioned) with {key=}")
+    logging.info(f"Delete (permanently) S3 object with {key=}")
 
     # prevent disastrous results when prefix is either empty string ("") or slash ("/").
     if not isinstance(key, str) or key == "" or key == "/":
-        raise RuntimeError(f"Attempt to delete S3 object with illegal {key=}")
+        raise RuntimeError(
+            f"Attempt to delete (permanently) S3 object with illegal {key=}"
+        )
 
     bucket = qfieldcloud.core.utils.get_s3_bucket()
 
