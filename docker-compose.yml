@@ -31,6 +31,8 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG}
       ENVIRONMENT: ${ENVIRONMENT}
+      # actually I never made it work with sentry_sdk.init(environment=ENVIRONMENT)
+      SENTRY_ENVIRONMENT: ${ENVIRONMENT}
       SQL_DATABASE: ${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
       SQL_USER: ${POSTGRES_USER}
