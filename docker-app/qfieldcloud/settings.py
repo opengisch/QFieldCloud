@@ -54,6 +54,13 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
+        "LOCATION": "memcached:11211",
+    }
+}
+
 # Application definition
 INSTALLED_APPS = [
     # django contrib
@@ -98,6 +105,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "log_request_id.middleware.RequestIDMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -306,9 +314,12 @@ INVITATIONS_GONE_ON_ACCEPT_ERROR = False
 TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
+LOG_REQUEST_ID_HEADER = "HTTP_X_REQUEST_ID"
+GENERATE_REQUEST_ID_IF_NOT_IN_HEADER = False
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {"request_id": {"()": "log_request_id.filters.RequestIDFilter"}},
     "formatters": {
         "json": {
             "()": "qfieldcloud.core.logging.formatters.CustomisedJSONFormatter",
@@ -317,6 +328,7 @@ LOGGING = {
     "handlers": {
         "console.json": {
             "class": "logging.StreamHandler",
+            "filters": ["request_id"],
             "formatter": "json",
         },
     },
@@ -348,6 +360,8 @@ DEBUG_TOOLBAR_CONFIG = {
 QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
 
 CONSTANCE_BACKEND = "qfieldcloud.core.constance_backends.DatabaseBackend"
+CONSTANCE_DATABASE_CACHE_BACKEND = "default"
+CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = 60 * 60 * 24
 CONSTANCE_CONFIG = {
     "WORKER_TIMEOUT_S": (
         600,

@@ -3,7 +3,7 @@ version: "3.9"
 x-logging: &default-logging
   driver: "json-file"
   options:
-    max-size: "10m"
+    max-size: "100m"
     max-file: "10"
     tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
@@ -31,6 +31,8 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG}
       ENVIRONMENT: ${ENVIRONMENT}
+      # actually I never made it work with sentry_sdk.init(environment=ENVIRONMENT)
+      SENTRY_ENVIRONMENT: ${ENVIRONMENT}
       SQL_DATABASE: ${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
       SQL_USER: ${POSTGRES_USER}
@@ -46,7 +48,6 @@ services:
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK}
       SENTRY_DSN: ${SENTRY_DSN}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      REDIS_PORT: ${REDIS_PORT}
       GEODB_HOST: ${GEODB_HOST}
       GEODB_PORT: ${GEODB_PORT}
       GEODB_USER: ${GEODB_USER}
@@ -77,7 +78,7 @@ services:
       driver: "json-file"
       options:
         max-size: "1000m"
-        max-file: "5"
+        max-file: "10"
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
     labels:
       ofelia.enabled: "true"
@@ -105,7 +106,12 @@ services:
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
       LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
       LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
-    logging: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1000m"
+        max-file: "10"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
   mkcert:
     image: vishnunair/docker-mkcert
@@ -138,8 +144,8 @@ services:
       args:
         REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT}:6379"
+    expose:
+      - "6379:6379"
     logging: *default-logging
 
   worker_wrapper:
@@ -180,6 +186,11 @@ services:
       chmod a+r /transformation_grids/*
     volumes:
       - transformation_grids:/transformation_grids
+
+  memcached:
+    image: memcached:1
+    expose:
+      - "11211:11211"
 
 volumes:
   static_volume:

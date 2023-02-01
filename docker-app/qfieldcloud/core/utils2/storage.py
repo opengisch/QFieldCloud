@@ -84,11 +84,13 @@ def _delete_by_key_versioned(key: str):
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
     """
-    logging.info(f"S3 object deletion (versioned) with {key=}")
+    logging.info(f"Delete (versioned) S3 object with {key=}")
 
     # prevent disastrous results when prefix is either empty string ("") or slash ("/").
     if not isinstance(key, str) or key == "" or key == "/":
-        raise RuntimeError(f"Attempt to delete S3 object with illegal {key=}")
+        raise RuntimeError(
+            f"Attempt to delete (versioned) S3 object with illegal {key=}"
+        )
 
     bucket = qfieldcloud.core.utils.get_s3_bucket()
 
@@ -116,11 +118,13 @@ def _delete_by_key_permanently(key: str):
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
     """
-    logging.info(f"S3 object deletion (versioned) with {key=}")
+    logging.info(f"Delete (permanently) S3 object with {key=}")
 
     # prevent disastrous results when prefix is either empty string ("") or slash ("/").
     if not isinstance(key, str) or key == "" or key == "/":
-        raise RuntimeError(f"Attempt to delete S3 object with illegal {key=}")
+        raise RuntimeError(
+            f"Attempt to delete (permanently) S3 object with illegal {key=}"
+        )
 
     bucket = qfieldcloud.core.utils.get_s3_bucket()
 
@@ -141,7 +145,21 @@ def _delete_by_key_permanently(key: str):
             }
         )
 
-    assert len(object_to_delete) > 0
+    if len(object_to_delete) == 0:
+        logging.warning(
+            f"Attempt to delete (permanently) S3 objects did not match any existing objects for {key=}",
+            extra={
+                "all_objects": [
+                    (o.key, o.version_id, o.e_tag, o.last_modified, o.is_latest)
+                    for o in temp_objects
+                ]
+            },
+        )
+        return None
+
+    logging.info(
+        f"Delete (permanently) S3 object with {key=} will delete delete {len(object_to_delete)} version(s)"
+    )
 
     return bucket.delete_objects(
         Delete={
@@ -277,8 +295,8 @@ def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F
     return key
 
 
-def remove_user_avatar(user: "User") -> None:  # noqa: F821
-    """Removes the user's avatar file.
+def delete_user_avatar(user: "User") -> None:  # noqa: F821
+    """Deletes the user's avatar file.
 
     NOTE this function does NOT modify the `UserAccount.avatar_uri` field
 
@@ -291,7 +309,8 @@ def remove_user_avatar(user: "User") -> None:  # noqa: F821
     if not key:
         return
 
-    if not key or not re.match(r"^users/\w+/avatar.(png|jpg|svg)$", key):
+    # e.g. "users/suricactus/avatar.svg"
+    if not key or not re.match(r"^users/\w+/avatar\.(png|jpg|svg)$", key):
         raise RuntimeError(f"Suspicious S3 deletion of user avatar {key=}")
 
     _delete_by_key_permanently(key)
@@ -338,8 +357,8 @@ def upload_project_thumbail(
     return key
 
 
-def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
-    """Uploads a picture as a project thumbnail.
+def delete_project_thumbnail(project: "Project") -> None:  # noqa: F821
+    """Delete a picture as a project thumbnail.
 
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
@@ -351,7 +370,9 @@ def remove_project_thumbail(project: "Project") -> None:  # noqa: F821
         return
 
     if not key or not re.match(
-        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/\w+.(png|jpg|svg)$", key
+        # e.g. "projects/9bf34e75-0a5d-47c3-a2f0-ebb7126eeccc/meta/thumbnail.png"
+        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/thumbnail\.(png|jpg|svg)$",
+        key,
     ):
         raise RuntimeError(f"Suspicious S3 deletion of project thumbnail image {key=}")
 
@@ -568,7 +589,11 @@ def get_stored_package_ids(project_id: str) -> Set[str]:
 def delete_stored_package(project_id: str, package_id: str) -> None:
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
-    if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/packages/\w+/$", prefix):
+    if not re.match(
+        # e.g. "projects/878039c4-b945-4356-a44e-a908fd3f2263/packages/633cd4f7-db14-4e6e-9b2b-c0ce98f9d338/"
+        r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/packages/[\w]{8}(-[\w]{4}){3}-[\w]{12}/$",
+        prefix,
+    ):
         raise RuntimeError(
             f"Suspicious S3 deletion on stored project package {project_id=} {package_id=}"
         )
