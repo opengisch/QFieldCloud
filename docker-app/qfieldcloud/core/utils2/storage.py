@@ -141,7 +141,21 @@ def _delete_by_key_permanently(key: str):
             }
         )
 
-    assert len(object_to_delete) > 0
+    if len(object_to_delete) == 0:
+        logging.warning(
+            f"Attempt to delete (permanently) S3 objects did not match any existing objects for {key=}",
+            extra={
+                "all_objects": [
+                    (o.key, o.version_id, o.e_tag, o.last_modified, o.is_latest)
+                    for o in temp_objects
+                ]
+            },
+        )
+        return None
+
+    logging.info(
+        f"Delete (permanently) S3 object with {key=} will delete delete {len(object_to_delete)} version(s)"
+    )
 
     return bucket.delete_objects(
         Delete={
