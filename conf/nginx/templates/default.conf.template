@@ -21,6 +21,7 @@ log_format json-logger escape=json
   '"upstream_connect_time":"$upstream_connect_time",'
   '"upstream_header_time":"$upstream_header_time",'
   '"upstream_response_time":"$upstream_response_time",'
+  '"request_id":"$request_id",'
   '"source":"nginx"'
 '}';
 

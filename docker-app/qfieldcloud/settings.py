@@ -353,6 +353,9 @@ QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializ
 
 APPLY_DELTAS_LIMIT = 1000
 
+# the value of the "source" key in each logger entry
+LOGGER_SOURCE = os.environ.get("LOGGER_SOURCE", None)
+
 DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
 }
