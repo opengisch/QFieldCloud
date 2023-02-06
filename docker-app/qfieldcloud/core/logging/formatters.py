@@ -51,11 +51,11 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         """
         try:
             return self.json_lib.dumps(
-                record, default=json_default, sort_keys=True, cls=JsonEncoder
+                record, default=json_default, cls=JsonEncoder, separators=(",", ":")
             )
         # ujson doesn't support default argument and raises TypeError.
         except TypeError:
-            return self.json_lib.dumps(record, cls=JsonEncoder)
+            return self.json_lib.dumps(record, cls=JsonEncoder, separators=(",", ":"))
 
 
 def json_default(obj):
