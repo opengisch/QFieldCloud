@@ -24,7 +24,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         :return: Dictionary which will be passed to JSON lib.
 
         """
-        if "ts" in extra:
+        if "ts" not in extra:
             extra["ts"] = datetime.utcnow()
 
         # Include builtins
