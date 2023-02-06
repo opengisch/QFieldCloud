@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import json_log_formatter
+from django.conf import settings
 from django.core.handlers.wsgi import WSGIRequest
 from django.core.serializers.json import DjangoJSONEncoder
 
@@ -34,6 +35,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         extra["filename"] = record.filename
         extra["lineno"] = record.lineno
         extra["thread"] = record.thread
+        extra["source"] = settings.LOGGER_SOURCE
 
         if record.exc_info:
             extra["exc_info"] = self.formatException(record.exc_info)
