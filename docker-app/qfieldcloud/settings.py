@@ -261,6 +261,18 @@ SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 if SENTRY_DSN:
     SENTRY_SAMPLE_RATE = os.environ.get("SENTRY_SAMPLE_RATE", 1)
 
+    def before_send(event, hint):
+        if "exc_info" in hint:
+            from rest_framework.exceptions import ValidationError
+
+            exc_class, _exc_object, _exc_tb = hint["exc_info"]
+
+            # Skip sending errors
+            if issubclass(exc_class, ValidationError):
+                return None
+
+        return event
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration()],
@@ -272,6 +284,9 @@ if SENTRY_DSN:
         # If you wish to associate users to errors (assuming you are using
         # django.contrib.auth) you may enable sending PII data.
         send_default_pii=True,
+        #
+        # Filter some of the exception which we do not want to see on Sentry. Read more on https://docs.sentry.io/platforms/python/configuration/filtering/ .
+        before_send=before_send,
         #
         # Sentry environment should have been configured like this, but I didn't make it work.
         # Therefore the Sentry environment is defined as `SENTRY_ENVIRONMENT` in `docker-compose.yml`.
