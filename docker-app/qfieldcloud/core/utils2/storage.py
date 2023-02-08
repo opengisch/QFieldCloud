@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from pathlib import PurePath
-from typing import IO, List, Set
+from typing import IO, List, Optional, Set
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
@@ -13,6 +13,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
+from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 
 logger = logging.getLogger(__name__)
@@ -132,7 +133,7 @@ def _delete_by_key_permanently(key: str):
     temp_objects = bucket.object_versions.filter(
         Prefix=key,
     )
-    object_to_delete = []
+    object_to_delete: List[ObjectIdentifierTypeDef] = []
     for temp_object in temp_objects:
         # filter out objects that do not have the same key as the requested deletion key.
         if temp_object.key != key:
@@ -176,7 +177,9 @@ def delete_version_permanently(version_obj: qfieldcloud.core.utils.S3ObjectVersi
     version_obj._data.delete()
 
 
-def get_attachment_dir_prefix(project: "Project", filename: str) -> str:  # noqa: F821
+def get_attachment_dir_prefix(
+    project: qfieldcloud.core.models.Project, filename: str
+) -> str:  # noqa: F821
     """Returns the attachment dir where the file belongs to or empty string if it does not.
 
     Args:
@@ -198,7 +201,7 @@ def file_response(
     key: str,
     presigned: bool = False,
     expires: int = 60,
-    version: str = None,
+    version: Optional[str] = None,
     as_attachment: bool = False,
 ) -> HttpResponseBase:
     url = ""
@@ -259,7 +262,9 @@ def file_response(
     )
 
 
-def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F821
+def upload_user_avatar(
+    user: qfieldcloud.core.models.User, file: IO, mimetype: str
+) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
     NOTE this function does NOT modify the `UserAccount.avatar_uri` field
@@ -295,7 +300,7 @@ def upload_user_avatar(user: "User", file: IO, mimetype: str) -> str:  # noqa: F
     return key
 
 
-def delete_user_avatar(user: "User") -> None:  # noqa: F821
+def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F821
     """Deletes the user's avatar file.
 
     NOTE this function does NOT modify the `UserAccount.avatar_uri` field
@@ -317,7 +322,10 @@ def delete_user_avatar(user: "User") -> None:  # noqa: F821
 
 
 def upload_project_thumbail(
-    project: "Project", file: IO, mimetype: str, filename: str  # noqa: F821
+    project: qfieldcloud.core.models.Project,
+    file: IO,
+    mimetype: str,
+    filename: str,  # noqa: F821
 ) -> str:
     """Uploads a picture as a project thumbnail.
 
@@ -357,7 +365,9 @@ def upload_project_thumbail(
     return key
 
 
-def delete_project_thumbnail(project: "Project") -> None:  # noqa: F821
+def delete_project_thumbnail(
+    project: qfieldcloud.core.models.Project,
+) -> None:  # noqa: F821
     """Delete a picture as a project thumbnail.
 
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
@@ -379,7 +389,9 @@ def delete_project_thumbnail(project: "Project") -> None:  # noqa: F821
     _delete_by_key_permanently(key)
 
 
-def purge_old_file_versions(project: "Project") -> None:  # noqa: F821
+def purge_old_file_versions(
+    project: qfieldcloud.core.models.Project,
+) -> None:  # noqa: F821
     """
     Deletes old versions of all files in the given project. Will keep __3__
     versions for COMMUNITY user accounts, and __10__ versions for PRO user
@@ -440,7 +452,7 @@ def upload_file(file: IO, key: str):
 
 
 def upload_project_file(
-    project: "Project", file: IO, filename: str  # noqa: F821
+    project: qfieldcloud.core.models.Project, file: IO, filename: str  # noqa: F821
 ) -> str:
     key = f"projects/{project.id}/files/{filename}"
     bucket = qfieldcloud.core.utils.get_s3_bucket()
@@ -462,7 +474,9 @@ def delete_all_project_files_permanently(project_id: str) -> None:
     _delete_by_prefix_versioned(prefix)
 
 
-def delete_project_file_permanently(project: "Project", filename: str):  # noqa: F821
+def delete_project_file_permanently(
+    project: qfieldcloud.core.models.Project, filename: str
+):  # noqa: F821
     file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
 
     if not file:
@@ -491,7 +505,7 @@ def delete_project_file_permanently(project: "Project", filename: str):  # noqa:
 
 
 def delete_project_file_version_permanently(
-    project: "Project",  # noqa: F821
+    project: qfieldcloud.core.models.Project,  # noqa: F821
     filename: str,
     version_id: str,
     include_older: bool = False,
