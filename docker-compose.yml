@@ -31,8 +31,10 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG}
       ENVIRONMENT: ${ENVIRONMENT}
-      # actually I never made it work with sentry_sdk.init(environment=ENVIRONMENT)
+      SENTRY_DSN: ${SENTRY_DSN}
+      # Sentry environment should not be configured like this, but I never made it work with `sentry_sdk.init(environment=ENVIRONMENT)`.
       SENTRY_ENVIRONMENT: ${ENVIRONMENT}
+      SENTRY_SAMPLE_RATE: ${SENTRY_SAMPLE_RATE}
       SQL_DATABASE: ${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
       SQL_USER: ${POSTGRES_USER}
@@ -46,7 +48,6 @@ services:
       STORAGE_REGION_NAME: ${STORAGE_REGION_NAME}
       STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL}
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK}
-      SENTRY_DSN: ${SENTRY_DSN}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       GEODB_HOST: ${GEODB_HOST}
       GEODB_PORT: ${GEODB_PORT}

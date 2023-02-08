@@ -16,6 +16,9 @@ from datetime import timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
+# QFieldCloud specific configuration
+QFIELDCLOUD_HOST = os.environ["QFIELDCLOUD_HOST"]
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -253,17 +256,49 @@ SWAGGER_SETTINGS = {
 
 LOGIN_URL = "account_login"
 
+# Sentry configuration
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+if SENTRY_DSN:
+    SENTRY_SAMPLE_RATE = os.environ.get("SENTRY_SAMPLE_RATE", 1)
 
-sentry_sdk.init(
-    dsn=os.environ.get("SENTRY_DSN", ""),
-    integrations=[DjangoIntegration()],
-    # Define how many random events are sent for performance monitoring
-    sample_rate=0.05,
-    server_name=os.environ.get("QFIELDCLOUD_HOST"),
-    # If you wish to associate users to errors (assuming you are using
-    # django.contrib.auth) you may enable sending PII data.
-    send_default_pii=True,
-)
+    def before_send(event, hint):
+        from qfieldcloud.core.exceptions import ProjectAlreadyExistsError
+        from rest_framework.exceptions import ValidationError
+
+        ignored_exceptions = (
+            ValidationError,
+            ProjectAlreadyExistsError,
+        )
+
+        if "exc_info" in hint:
+
+            exc_class, _exc_object, _exc_tb = hint["exc_info"]
+
+            # Skip sending errors
+            if issubclass(exc_class, ignored_exceptions):
+                return None
+
+        return event
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        server_name=QFIELDCLOUD_HOST,
+        #
+        # Sentry sample rate between 0 and 1. Read more on https://docs.sentry.io/platforms/python/configuration/sampling/ .
+        sample_rate=SENTRY_SAMPLE_RATE,
+        #
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True,
+        #
+        # Filter some of the exception which we do not want to see on Sentry. Read more on https://docs.sentry.io/platforms/python/configuration/filtering/ .
+        before_send=before_send,
+        #
+        # Sentry environment should have been configured like this, but I didn't make it work.
+        # Therefore the Sentry environment is defined as `SENTRY_ENVIRONMENT` in `docker-compose.yml`.
+        # environment=ENVIRONMENT,
+    )
 
 
 # Django allauth configurations
