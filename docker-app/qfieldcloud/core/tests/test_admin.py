@@ -68,6 +68,7 @@ class QfcTestCase(TransactionTestCase):
             "/admin/core/delta/add/",
             "/admin/core/job/add/",
             "/admin/axes/accessattempt/add/",
+            "/admin/axes/accessfailurelog/add/",
             "/admin/axes/accesslog/add/",
         )
         # TODO make tests pass for these sortable URLs
