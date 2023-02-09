@@ -8,7 +8,6 @@ from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
-from auditlog.context import disable_auditlog
 from deprecated import deprecated
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
@@ -312,8 +311,7 @@ class User(AbstractUser):
         if self.type != User.Type.TEAM:
             qfieldcloud.core.utils2.storage.delete_user_avatar(self)
 
-        with disable_auditlog():
-            super().delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
 
     class Meta:
         base_manager_name = "objects"
