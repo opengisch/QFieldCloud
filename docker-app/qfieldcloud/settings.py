@@ -431,3 +431,80 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
 }
+
+
+# `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
+AUDITLOG_INCLUDE_TRACKING_MODELS = [
+    # NOTE `Delta` and `Job` models are not being automatically audited, because their data changes very often and timestamps are available in their models.
+    {
+        "model": "account.emailaddress",
+    },
+    # NOTE Constance model cannot be audited. If enabled, an `IndexError list index out of range` is raised.
+    # {
+    #     "model": "constance.config",
+    # },
+    {
+        "model": "core.geodb",
+    },
+    {
+        "model": "core.organization",
+    },
+    # TODO check if we can use `Organization.members` m2m when next version is released as described in "Many-to-many fields" here https://django-auditlog.readthedocs.io/en/latest/usage.html#automatically-logging-changes
+    {
+        "model": "core.organizationmember",
+    },
+    {
+        "model": "core.person",
+        "exclude_fields": ["last_login", "updated_at"],
+    },
+    {
+        "model": "core.project",
+        # these fields are updated by scripts and will produce a lot of audit noise
+        "exclude_fields": [
+            "updated_at",
+            "data_last_updated_at",
+            "data_last_packaged_at",
+            "last_package_job",
+            "storage_size_mb",
+        ],
+    },
+    # TODO check if we can use `Project.collaborators` m2m when next version is released as described in "Many-to-many fields" here https://django-auditlog.readthedocs.io/en/latest/usage.html#automatically-logging-changes
+    {
+        "model": "core.projectcollaborator",
+    },
+    {
+        "model": "core.secret",
+        "mask_fields": [
+            "value",
+        ],
+    },
+    # TODO check if we can use `Team.members` m2m when next version is released as described in "Many-to-many fields" here https://django-auditlog.readthedocs.io/en/latest/usage.html#automatically-logging-changes
+    {
+        "model": "core.team",
+    },
+    {
+        "model": "core.teammember",
+    },
+    {
+        "model": "core.user",
+        "exclude_fields": ["last_login", "updated_at"],
+    },
+    {
+        "model": "core.useraccount",
+    },
+    {
+        "model": "invitations.invitation",
+    },
+    {
+        "model": "subscription.package",
+    },
+    {
+        "model": "subscription.packagetype",
+    },
+    {
+        "model": "subscription.plan",
+    },
+    {
+        "model": "subscription.subscription",
+    },
+]

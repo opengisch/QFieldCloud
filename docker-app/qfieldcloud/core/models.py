@@ -1,4 +1,3 @@
-import contextlib
 import os
 import secrets
 import string
@@ -9,7 +8,6 @@ from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
-from auditlog.registry import auditlog
 from deprecated import deprecated
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
@@ -313,8 +311,7 @@ class User(AbstractUser):
         if self.type != User.Type.TEAM:
             qfieldcloud.core.utils2.storage.delete_user_avatar(self)
 
-        with no_audits([User, UserAccount, Project]):
-            super().delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
 
     class Meta:
         base_manager_name = "objects"
@@ -1581,66 +1578,3 @@ class Secret(models.Model):
                 fields=["project", "name"], name="secret_project_name_uniq"
             )
         ]
-
-
-audited_models = [
-    (User, {"exclude_fields": ["last_login", "updated_at"]}),
-    (UserAccount, {}),
-    (Organization, {}),
-    (OrganizationMember, {}),
-    (Team, {}),
-    (TeamMember, {}),
-    (
-        Project,
-        {
-            "include_fields": [
-                "id",
-                "name",
-                "description",
-                "owner",
-                "is_public",
-                "owner",
-                "created_at",
-            ],
-        },
-    ),
-    (ProjectCollaborator, {}),
-    (
-        Delta,
-        {
-            "include_fields": [
-                "id",
-                "deltafile_id",
-                "project",
-                "content",
-                "last_status",
-                "created_by",
-            ],
-        },
-    ),
-    (Secret, {"exclude_fields": ["value"]}),
-]
-
-
-def register_model_audits(subset: List[models.Model] = []) -> None:
-    for model, kwargs in audited_models:
-        if subset and model not in subset:
-            continue
-        auditlog.register(model, **kwargs)
-
-
-def deregister_model_audits(subset: List[models.Model] = []) -> None:
-    for model, _kwargs in audited_models:
-        if subset and model not in subset:
-            continue
-
-        auditlog.unregister(model)
-
-
-@contextlib.contextmanager
-def no_audits(subset: List[models.Model] = []):
-    try:
-        deregister_model_audits(subset)
-        yield
-    finally:
-        register_model_audits(subset)
