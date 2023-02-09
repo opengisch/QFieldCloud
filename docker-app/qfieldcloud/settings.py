@@ -259,7 +259,7 @@ LOGIN_URL = "account_login"
 # Sentry configuration
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 if SENTRY_DSN:
-    SENTRY_SAMPLE_RATE = os.environ.get("SENTRY_SAMPLE_RATE", 1)
+    SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
 
     def before_send(event, hint):
         from qfieldcloud.core.exceptions import ProjectAlreadyExistsError
