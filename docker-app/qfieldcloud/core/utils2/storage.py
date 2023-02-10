@@ -613,3 +613,25 @@ def delete_stored_package(project_id: str, package_id: str) -> None:
         )
 
     _delete_by_prefix_permanently(prefix)
+
+
+def get_project_file_storage_in_bytes(project_id: str) -> int:
+    """Calculates the project files storage in bytes, including their versions.
+
+    WARNING This function can be quite slow on projects with thousands of files.
+    """
+    bucket = qfieldcloud.core.utils.get_s3_bucket()
+    total_bytes = 0
+    prefix = f"projects/{project_id}/files/"
+
+    logger.info(f"Project file storage size requrested for {project_id=}")
+
+    if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/files/$", prefix):
+        raise RuntimeError(
+            f"Suspicious S3 calculation of all project files with {prefix=}"
+        )
+
+    for version in bucket.object_versions.filter(Prefix=prefix):
+        total_bytes += version.size or 0
+
+    return total_bytes

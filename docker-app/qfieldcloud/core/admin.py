@@ -371,7 +371,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "is_public",
         "owner",
         "project_filename",
-        "storage_size_mb",
+        "file_storage_bytes",
         "created_at",
         "updated_at",
         "data_last_updated_at",
@@ -381,7 +381,7 @@ class ProjectAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "id",
-        "storage_size_mb",
+        "file_storage_bytes",
         "created_at",
         "updated_at",
         "data_last_updated_at",
