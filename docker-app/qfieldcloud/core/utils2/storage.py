@@ -477,6 +477,8 @@ def delete_all_project_files_permanently(project_id: str) -> None:
 def delete_project_file_permanently(
     project: qfieldcloud.core.models.Project, filename: str
 ):  # noqa: F821
+    logger.info(f"Requested delete (permanent) of project file {filename=}")
+
     file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
 
     if not file:
@@ -484,24 +486,36 @@ def delete_project_file_permanently(
             f"No file with such name in the given project found {filename=}"
         )
 
-    with transaction.atomic():
-        if qfieldcloud.core.utils.is_qgis_project_file(filename):
-            project.project_filename = None
-            project.save(recompute_storage=True, update_fields=["project_filename"])
+    if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/.+$", file.latest.key):
+        raise RuntimeError(f"Suspicious S3 file deletion {file.latest.key=}")
 
-        # NOTE auditing the file deletion in the transation might be costly, but guarantees the audit
+    # NOTE the file operations depend on HTTP calls to the S3 storage and they might fail,
+    # we need to choose source of truth between DB and S3.
+    # For now the source of truth is what is on the S3 storage,
+    # because we do most of our file operations directly by calling the S3 API.
+    # 1. S3 storage modification. If it fails, it will cancel the transaction
+    # and do not update anything in the database.
+    # We assume S3 storage is transactional, while it might not be true.
+    # 2. DB modification. If it fails, the states betewen DB and S3 mismatch,
+    # but can be easyly synced from the S3 to DB with a manual script.
+    with transaction.atomic():
+        _delete_by_key_permanently(file.latest.key)
+
+        update_fields = ["file_storage_bytes"]
+
+        if qfieldcloud.core.utils.is_qgis_project_file(filename):
+            update_fields.append("project_filename")
+            project.project_filename = None
+
+        project.file_storage_bytes -= sum([v.size for v in file.versions])
+        project.save(update_fields=update_fields)
+
+        # NOTE force audits to be required when deleting files
         audit(
             project,
             LogEntry.Action.DELETE,
             changes={f"{filename} ALL": [file.latest.e_tag, None]},
         )
-
-        if not re.match(
-            r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/.+$", file.latest.key
-        ):
-            raise RuntimeError(f"Suspicious S3 file deletion {file.latest.key=}")
-
-        _delete_by_key_permanently(file.latest.key)
 
 
 def delete_project_file_version_permanently(
