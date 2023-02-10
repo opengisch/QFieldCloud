@@ -127,6 +127,7 @@ class DownloadPushDeleteFileView(views.APIView):
             as_attachment=True,
         )
 
+    # TODO refactor this function by moving the actual upload and Project model updates to library function outside the view
     def post(self, request, projectid, filename, format=None):
         project = Project.objects.get(id=projectid)
 
@@ -146,7 +147,7 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file = request.FILES.get("file")
 
-        file_size_mb = request_file.size / 1024 / 1024
+        file_size_mb = request_file.size / 1000 / 1000
         quota_left_mb = project.owner.useraccount.storage_free_mb
 
         if file_size_mb > quota_left_mb:
@@ -173,7 +174,7 @@ class DownloadPushDeleteFileView(views.APIView):
             # project and update it now, it guarantees there will be no other file upload editing
             # the same project row.
             project = Project.objects.select_for_update().get(id=projectid)
-            update_fields = ["data_last_updated_at"]
+            update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
                 is_qgis_project_file or project.project_filename is not None
@@ -198,6 +199,8 @@ class DownloadPushDeleteFileView(views.APIView):
                     )
 
             project.data_last_updated_at = timezone.now()
+            # NOTE just incrementing the fils_storage_bytes when uploading might make the database out of sync if a files is uploaded/deleted bypassing this function
+            project.file_storage_bytes += request_file.size
             project.save(update_fields=update_fields)
 
         if old_object:

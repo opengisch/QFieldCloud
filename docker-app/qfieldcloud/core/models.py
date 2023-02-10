@@ -1,3 +1,4 @@
+import logging
 import os
 import secrets
 import string
@@ -28,6 +29,8 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
+
+logger = logging.getLogger(__name__)
 
 
 class PersonQueryset(models.QuerySet):
@@ -457,7 +460,15 @@ class UserAccount(models.Model):
     def storage_used_mb(self) -> float:
         """Returns the storage used in MB"""
         used_quota = (
-            self.user.projects.aggregate(sum_mb=Sum("storage_size_mb"))["sum_mb"] or 0
+            (
+                self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
+                    "sum_bytes"
+                ]
+                # if there are no projects, the value will be `None`
+                or 0
+            )
+            / 1000
+            / 1000
         )
 
         return used_quota
@@ -1002,7 +1013,7 @@ class Project(models.Model):
 
     # These cache stats of the S3 storage. These can be out of sync, and should be
     # refreshed whenever retrieving/uploading files by passing `project.save(recompute_storage=True)`
-    storage_size_mb = models.FloatField(default=0)
+    file_storage_bytes = models.PositiveBigIntegerField(default=0)
 
     # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
@@ -1175,9 +1186,8 @@ class Project(models.Model):
 
     @property
     def storage_size_perc(self) -> float:
-        return (
-            self.storage_size_mb / self.owner.useraccount.storage_quota_total_mb * 100
-        )
+        file_storage_mb = self.file_storage_bytes / 1000 / 1000
+        return file_storage_mb / self.owner.useraccount.storage_quota_total_mb * 100
 
     @property
     def direct_collaborators(self):
@@ -1196,8 +1206,14 @@ class Project(models.Model):
         super().delete(*args, **kwargs)
 
     def save(self, recompute_storage=False, *args, **kwargs):
+        logger.info(f"Saving project {self}...")
+
         if recompute_storage:
-            self.storage_size_mb = utils.get_s3_project_size(self.id)
+            self.file_storage_bytes = (
+                qfieldcloud.core.utils2.storage.get_project_file_storage_in_bytes(
+                    self.id
+                )
+            )
         super().save(*args, **kwargs)
 
 

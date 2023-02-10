@@ -465,7 +465,7 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
             "data_last_updated_at",
             "data_last_packaged_at",
             "last_package_job",
-            "storage_size_mb",
+            "file_storage_bytes",
         ],
     },
     # TODO check if we can use `Project.collaborators` m2m when next version is released as described in "Many-to-many fields" here https://django-auditlog.readthedocs.io/en/latest/usage.html#automatically-logging-changes
