@@ -464,7 +464,7 @@ class QfcTestCase(APITransactionTestCase):
 
         big_file = tempfile.NamedTemporaryFile()
         with open(big_file.name, "wb") as bf:
-            bf.truncate(1024 * 1024 * 1)
+            bf.truncate(1000 * 1000 * 1)
 
         # Push the file
         response = self.client.post(
@@ -494,7 +494,7 @@ class QfcTestCase(APITransactionTestCase):
 
         big_file = tempfile.NamedTemporaryFile()
         with open(big_file.name, "wb") as bf:
-            bf.truncate(1024 * 1024 * 10)
+            bf.truncate(1000 * 1000 * 10)
 
         # Push the file
         response = self.client.post(

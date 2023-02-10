@@ -147,7 +147,7 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file = request.FILES.get("file")
 
-        file_size_mb = request_file.size / 1024 / 1024
+        file_size_mb = request_file.size / 1000 / 1000
         quota_left_mb = project.owner.useraccount.storage_free_mb
 
         if file_size_mb > quota_left_mb:
