@@ -147,12 +147,12 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file = request.FILES.get("file")
 
-        file_size_mb = request_file.size / 1000 / 1000
-        quota_left_mb = project.owner.useraccount.storage_free_mb
+        file_size_bytes = request_file.size
+        quota_left_bytes = project.owner.useraccount.storage_free_bytes
 
-        if file_size_mb > quota_left_mb:
+        if file_size_bytes > quota_left_bytes:
             raise exceptions.QuotaError(
-                f"Requiring {file_size_mb}MB of storage but only {quota_left_mb}MB available."
+                f"Requiring {file_size_bytes} bytes of storage but only {quota_left_bytes} bytes available."
             )
 
         old_object = get_project_file_with_versions(project.id, filename)

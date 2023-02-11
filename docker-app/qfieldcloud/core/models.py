@@ -426,65 +426,49 @@ class UserAccount(models.Model):
             return None
 
     @property
-    @deprecated(
-        "Use `UserAccount().active_subscription.active_storage_total_mb` instead."
-    )
-    def storage_quota_total_mb(self) -> float:
-        """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
-        return (
-            self.active_subscription.plan.storage_mb
-            + self.active_subscription.active_storage_package_mb
-        )
-
-    @property
-    @deprecated("Use `UserAccount().storage_used_mb` instead.")
-    def storage_quota_used_mb(self) -> float:
-        return self.storage_used_mb
-
-    @property
-    @deprecated("Use `UserAccount().storage_free_mb` instead.")
-    def storage_quota_left_mb(self) -> float:
-        return self.storage_free_mb
-
-    @property
-    @deprecated("Use `UserAccount().storage_used_ratio` instead")
-    def storage_quota_used_perc(self) -> float:
-        return self.storage_used_ratio
-
-    @property
-    @deprecated("Use `UserAccount().storage_free_ratio` instead")
-    def storage_quota_left_perc(self) -> float:
-        return self.storage_free_ratio
-
-    @property
+    @deprecated("Use `UserAccount().storage_used_bytes` instead")
+    # TODO delete this method after refactoring tests so it's no longer used there
     def storage_used_mb(self) -> float:
         """Returns the storage used in MB"""
+        return self.storage_used_bytes / 1000 / 1000
+
+    @property
+    def storage_used_bytes(self) -> float:
+        """Returns the storage used in bytes"""
         used_quota = (
-            (
-                self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
-                    "sum_bytes"
-                ]
-                # if there are no projects, the value will be `None`
-                or 0
-            )
-            / 1000
-            / 1000
+            self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
+                "sum_bytes"
+            ]
+            # if there are no projects, the value will be `None`
+            or 0
         )
 
         return used_quota
 
     @property
+    @deprecated("Use `UserAccount().storage_free_bytes` instead")
+    # TODO delete this method after refactoring tests so it's no longer used there
     def storage_free_mb(self) -> float:
         """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
 
-        return self.active_subscription.active_storage_total_mb - self.storage_used_mb
+        return self.storage_free_bytes / 1000 / 1000
+
+    @property
+    def storage_free_bytes(self) -> float:
+        """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)"""
+
+        return (
+            self.active_subscription.active_storage_total_bytes
+            - self.storage_used_bytes
+        )
 
     @property
     def storage_used_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        if self.active_subscription.active_storage_total_mb > 0:
+        if self.active_subscription.active_storage_total_bytes > 0:
             return min(
-                self.storage_used_mb / self.active_subscription.active_storage_total_mb,
+                self.storage_used_bytes
+                / self.active_subscription.active_storage_total_bytes,
                 1,
             )
         else:
@@ -1186,8 +1170,14 @@ class Project(models.Model):
 
     @property
     def storage_size_perc(self) -> float:
-        file_storage_mb = self.file_storage_bytes / 1000 / 1000
-        return file_storage_mb / self.owner.useraccount.storage_quota_total_mb * 100
+        if self.owner.useraccount.active_subscription.active_storage_total_bytes > 0:
+            return (
+                self.file_storage_bytes
+                / self.owner.useraccount.active_subscription.active_storage_total_bytes
+                * 100
+            )
+        else:
+            return 100
 
     @property
     def direct_collaborators(self):
