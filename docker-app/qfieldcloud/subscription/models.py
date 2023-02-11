@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import Optional, Tuple, TypedDict
 
 from constance import config
+from deprecated import deprecated
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -177,6 +178,10 @@ class Plan(models.Model):
 
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def storage_bytes(self) -> int:
+        return self.storage_mb * 1000 * 1000
 
     def save(self, *args, **kwargs):
         if self.user_type not in (User.Type.PERSON, User.Type.ORGANIZATION):
@@ -393,8 +398,13 @@ class AbstractSubscription(models.Model):
         ]
 
     @property
+    @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
     def active_storage_total_mb(self) -> int:
         return self.plan.storage_mb + self.active_storage_package_mb
+
+    @property
+    def active_storage_total_bytes(self) -> int:
+        return self.plan.storage_bytes + self.active_storage_package_bytes
 
     @property
     def active_storage_package(self) -> Package:
@@ -405,10 +415,22 @@ class AbstractSubscription(models.Model):
         return self.get_active_package_quantity(PackageType.get_storage_package_type())
 
     @property
+    @deprecated("Use `AbstractSubscription.active_storage_package_bytes` instead")
     def active_storage_package_mb(self) -> int:
         return (
             self.get_active_package_quantity(PackageType.get_storage_package_type())
             * PackageType.get_storage_package_type().unit_amount
+        )
+
+    @property
+    def active_storage_package_bytes(self) -> int:
+        return (
+            (
+                self.get_active_package_quantity(PackageType.get_storage_package_type())
+                * PackageType.get_storage_package_type().unit_amount
+            )
+            * 1000
+            * 1000
         )
 
     @property
