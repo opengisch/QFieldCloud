@@ -315,7 +315,7 @@ def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F82
         return
 
     # e.g. "users/suricactus/avatar.svg"
-    if not key or not re.match(r"^users/\w+/avatar\.(png|jpg|svg)$", key):
+    if not key or not re.match(r"^users/[\w-]+/avatar\.(png|jpg|svg)$", key):
         raise RuntimeError(f"Suspicious S3 deletion of user avatar {key=}")
 
     _delete_by_key_permanently(key)
