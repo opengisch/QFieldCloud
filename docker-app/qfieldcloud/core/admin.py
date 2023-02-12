@@ -11,7 +11,9 @@ from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.db.models.fields.json import JSONField
+from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
+from django.http import HttpRequest
 from django.http.response import Http404, HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
@@ -332,6 +334,8 @@ class ProjectCollaboratorInline(admin.TabularInline):
     model = ProjectCollaborator
     extra = 0
 
+    autocomplete_fields = ("collaborator",)
+
 
 class ProjectFilesWidget(widgets.Input):
     template_name = "admin/project_files_widget.html"
@@ -394,6 +398,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "name__icontains",
         "owner__username__iexact",
     )
+    autocomplete_fields = ("owner",)
 
     ordering = ("-updated_at",)
 
@@ -726,6 +731,8 @@ class OrganizationMemberInline(admin.TabularInline):
     fk_name = "organization"
     extra = 0
 
+    autocomplete_fields = ("member",)
+
 
 class TeamInline(admin.TabularInline):
     model = Team
@@ -773,6 +780,8 @@ class OrganizationAdmin(admin.ModelAdmin):
 
     list_filter = ("date_joined",)
 
+    autocomplete_fields = ("organization_owner",)
+
     def organization_owner__link(self, instance):
         return model_admin_url(
             instance.organization_owner, instance.organization_owner.username
@@ -808,6 +817,8 @@ class TeamMemberInline(admin.TabularInline):
     fk_name = "team"
     extra = 0
 
+    autocomplete_fields = ("member",)
+
 
 class TeamAdmin(admin.ModelAdmin):
     inlines = (TeamMemberInline,)
@@ -826,6 +837,8 @@ class TeamAdmin(admin.ModelAdmin):
 
     list_filter = ("date_joined",)
 
+    autocomplete_fields = ("team_organization",)
+
     def save_model(self, request, obj, form, change):
         if not obj.username.startswith("@"):
             obj.username = f"@{obj.team_organization.username}/{obj.username}"
@@ -843,6 +856,36 @@ class InvitationAdmin(InvitationAdminBase):
     search_fields = ("email__icontains", "inviter__username__iexact")
 
 
+class UserAccountAdmin(admin.ModelAdmin):
+    """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
+
+    ordering = (Lower("user__username"),)
+    search_fields = ("user__username__icontains",)
+    list_select_related = ("user",)
+
+    def has_module_permission(self, request: HttpRequest) -> bool:
+        # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
+        return False
+
+
+class UserAdmin(admin.ModelAdmin):
+    """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
+
+    ordering = (Lower("username"),)
+    search_fields = ("username__icontains",)
+
+    def get_queryset(self, request: HttpRequest):
+        return (
+            super()
+            .get_queryset(request)
+            .filter(type__in=(User.Type.PERSON, User.Type.ORGANIZATION))
+        )
+
+    def has_module_permission(self, request: HttpRequest) -> bool:
+        # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
+        return False
+
+
 admin.site.register(Invitation, InvitationAdmin)
 admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
@@ -851,3 +894,7 @@ admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
+
+# The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
+admin.site.register(User, UserAdmin)
+admin.site.register(UserAccount, UserAccountAdmin)
