@@ -500,6 +500,9 @@ class UserAccount(models.Model):
 
         return False
 
+    def __str__(self) -> str:
+        return f"{self.user.username_with_full_name} ({self.__class__.__name__})"
+
 
 class Geodb(models.Model):
     def random_string():
