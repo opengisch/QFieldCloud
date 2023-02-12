@@ -1217,11 +1217,13 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         Args:
             skip_invalid:   if true, invalid rows are removed"""
         count = Count(
-            "project__collaborators", filter=Q(collaborator__type=User.Type.PERSON)
+            "project__collaborators",
+            filter=Q(collaborator__type=User.Type.PERSON),
         )
 
         # Build the conditions with Q objects
         is_public_q = Q(project__is_public=True)
+        is_team_collaborator = Q(collaborator__type=User.Type.TEAM)
         # max_premium_collaborators_per_private_project_q = active_subscription_q & (
         max_premium_collaborators_per_private_project_q = Q(
             project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
@@ -1233,7 +1235,9 @@ class ProjectCollaboratorQueryset(models.QuerySet):
 
         # Assemble the condition
         is_valid_collaborator = (
-            is_public_q | max_premium_collaborators_per_private_project_q
+            is_public_q
+            | max_premium_collaborators_per_private_project_q
+            | is_team_collaborator
         )
 
         # Annotate the queryset
