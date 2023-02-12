@@ -7,7 +7,10 @@ from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
-from qfieldcloud.core.utils2.storage import get_attachment_dir_prefix
+from qfieldcloud.core.utils2.storage import (
+    get_attachment_dir_prefix,
+    purge_old_file_versions,
+)
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -217,7 +220,7 @@ class DownloadPushDeleteFileView(views.APIView):
             )
 
         # Delete the old file versions
-        # purge_old_file_versions(project)
+        purge_old_file_versions(project)
 
         return Response(status=status.HTTP_201_CREATED)
 
