@@ -3,7 +3,6 @@ import logging
 import tempfile
 import time
 from pathlib import PurePath
-from unittest import skip
 
 from django.core.management import call_command
 from django.http import FileResponse
@@ -585,9 +584,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(read_version(0), "v17")
         self.assertEqual(read_version(2), "v19")
 
-    @skip(
-        "Temporary disable the purge old versions, as we temporarily disabled purging old versions."
-    )
     def test_purge_old_versions(self):
         """This tests automated purging of old versions when uploading files"""
 
