@@ -247,7 +247,7 @@ class PersonAdmin(admin.ModelAdmin):
         "is_staff",
     )
 
-    search_fields = ("username__icontains",)
+    search_fields = ("username__icontains", "email__iexact")
 
     fields = (
         "username",
@@ -774,6 +774,8 @@ class OrganizationAdmin(admin.ModelAdmin):
     search_fields = (
         "username__icontains",
         "organization_owner__username__icontains",
+        "email__iexact",
+        "organization_owner__email__iexact",
     )
 
     list_select_related = ("organization_owner",)
