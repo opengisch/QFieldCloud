@@ -1213,7 +1213,7 @@ class Project(models.Model):
 
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):
-        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
+        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships if `skip_invalid` is set to True.
 
         A membership to a private project is valid when the owning user plan has a
         `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
@@ -1222,7 +1222,11 @@ class ProjectCollaboratorQueryset(models.QuerySet):
             skip_invalid:   if true, invalid rows are removed"""
         count = Count(
             "project__collaborators",
-            filter=Q(collaborator__type=User.Type.PERSON),
+            filter=Q(
+                collaborator__type=User.Type.PERSON,
+                # incognito users should never be counted
+                is_incognito=False,
+            ),
         )
 
         # Build the conditions with Q objects
