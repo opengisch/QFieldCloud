@@ -922,6 +922,7 @@ class ProjectQueryset(models.QuerySet):
                 user_role_is_valid=Case(
                     When(is_valid_user_role_q, then=True), default=False
                 ),
+                user_role_is_incognito=F("user_roles__is_incognito"),
             )
         )
 
@@ -1254,6 +1255,9 @@ class ProjectCollaboratorQueryset(models.QuerySet):
 
         return qs
 
+    def skip_incognito(self):
+        return self.filter(is_incognito=False)
+
 
 class ProjectCollaborator(models.Model):
     class Roles(models.TextChoices):
@@ -1284,6 +1288,38 @@ class ProjectCollaborator(models.Model):
         limit_choices_to=models.Q(type__in=[User.Type.PERSON, User.Type.TEAM]),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
+
+    # whether the collaborator is incognito, e.g. shown in the UI and billed
+    is_incognito = models.BooleanField(
+        default=False,
+        help_text=_(
+            "If a collaborator is marked as incognito, they will work as normal, but will not be listed in the UI or accounted in the subscription as active users. Used to add OPENGIS.ch support members to projects."
+        ),
+    )
+
+    # created by
+    created_by = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # created by
+    updated_by = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.project.name + ": " + self.collaborator.username
@@ -1331,6 +1367,7 @@ class ProjectRolesView(models.Model):
     origin = models.CharField(
         max_length=100, choices=ProjectQueryset.RoleOrigins.choices
     )
+    is_incognito = models.BooleanField()
 
     class Meta:
         db_table = "projects_with_roles_vw"
