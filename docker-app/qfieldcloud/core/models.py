@@ -674,8 +674,8 @@ class Organization(User):
         )
 
         return Person.objects.filter(
-            Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
-        )
+            is_staff=False,
+        ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION

@@ -37,6 +37,12 @@ class QfcTestCase(APITestCase):
         self.user3 = Person.objects.create_user(username="user3", password="abc123")
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
+        # Create a staff user
+        self.user4 = Person.objects.create_user(
+            username="user4", password="abc123", is_staff=True
+        )
+        self.token4 = AuthToken.objects.get_or_create(user=self.user4)[0]
+
         # Create an organization
         self.organization1 = Organization.objects.create(
             username="organization1",
@@ -184,6 +190,11 @@ class QfcTestCase(APITestCase):
             member=self.user3,
             role=OrganizationMember.Roles.MEMBER,
         )
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user4,
+            role=OrganizationMember.Roles.MEMBER,
+        )
 
         # Create a project owned by the organization
         project1 = Project.objects.create(name="p1", owner=self.organization1)
@@ -229,14 +240,22 @@ class QfcTestCase(APITestCase):
             project=project1,
             created_by=self.user3,
         )
-        # There is 2 billable user
+        # There are 2 billable users
         self.assertEqual(_active_users_count(), 2)
 
         # User 2 leaves the organization
         OrganizationMember.objects.filter(member=self.user3).delete()
 
-        # There are strill 2 billable user
+        # There are still 2 billable users
         self.assertEqual(_active_users_count(), 2)
 
         # Report at a different time is empty
         self.assertEqual(_active_users_count(now() + timedelta(days=365)), 0)
+
+        # User 3 creates a job
+        Job.objects.create(
+            project=project1,
+            created_by=self.user3,
+        )
+        # There are still 2 billable users, because self.user3 is staff
+        self.assertEqual(_active_users_count(), 2)
