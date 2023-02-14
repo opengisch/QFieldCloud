@@ -332,7 +332,15 @@ class PersonAdmin(admin.ModelAdmin):
 
 class ProjectCollaboratorInline(admin.TabularInline):
     model = ProjectCollaborator
+
     extra = 0
+
+    readonly_fields = (
+        "created_by",
+        "updated_by",
+        "created_at",
+        "updated_at",
+    )
 
     autocomplete_fields = ("collaborator",)
 
@@ -437,6 +445,17 @@ class ProjectAdmin(admin.ModelAdmin):
             return ""
 
         return format_pre_json(instance.project_details)
+
+    def save_formset(self, request, form, formset, change):
+        for form_obj in formset:
+            if isinstance(form_obj.instance, ProjectCollaborator):
+                # add created_by only if it's a newly created collaborator
+                if form_obj.instance.id is None:
+                    form_obj.instance.created_by = request.user
+
+                form_obj.instance.updated_by = request.user
+
+        super().save_formset(request, form, formset, change)
 
 
 class DeltaInline(admin.TabularInline):
