@@ -1190,8 +1190,14 @@ class Project(models.Model):
         else:
             exclude_pks = [self.owner_id]
 
-        return self.collaborators.filter(collaborator__type=User.Type.PERSON,).exclude(
-            collaborator_id__in=exclude_pks,
+        return (
+            self.collaborators.skip_incognito()
+            .filter(
+                collaborator__type=User.Type.PERSON,
+            )
+            .exclude(
+                collaborator_id__in=exclude_pks,
+            )
         )
 
     def delete(self, *args, **kwargs):
