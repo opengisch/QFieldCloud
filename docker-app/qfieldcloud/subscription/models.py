@@ -15,7 +15,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
-from qfieldcloud.core.models import Person, User, UserAccount
+from qfieldcloud.core.models import Organization, Person, User, UserAccount
 
 from .exceptions import NotPremiumPlanException
 
@@ -677,7 +677,8 @@ class AbstractSubscription(models.Model):
         )
 
         if account.user.is_organization:
-            created_by = account.user.organization_owner
+            # NOTE sometimes `account.user` is not an organization instance for unknown reasons
+            created_by = Organization.objects.get(pk=account.pk).organization_owner
         else:
             created_by = account.user
 
