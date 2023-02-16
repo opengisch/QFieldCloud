@@ -186,7 +186,7 @@ class Plan(models.Model):
     @storage_bytes.setter
     def storage_bytes(self, value: int):
         if value < 0:
-            raise ValueError(f"A plan's storage capacity (bytes) but be greater than 0 (bytes).")
+            raise ValueError(f"A plan's storage capacity (bytes) must be greater than 0 (bytes).")
         self.storage_mb = value
 
     def save(self, *args, **kwargs):
