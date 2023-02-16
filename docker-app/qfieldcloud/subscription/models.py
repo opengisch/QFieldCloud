@@ -183,6 +183,12 @@ class Plan(models.Model):
     def storage_bytes(self) -> int:
         return self.storage_mb * 1000 * 1000
 
+    @storage_bytes.setter
+    def storage_bytes(self, value: int):
+        if value < 0:
+            raise ValueError(f"A plan's storage capacity (bytes) but be greater than 0 (bytes).")
+        self.storage_mb = value
+
     def save(self, *args, **kwargs):
         if self.user_type not in (User.Type.PERSON, User.Type.ORGANIZATION):
             raise ValidationError(
