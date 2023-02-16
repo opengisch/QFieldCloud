@@ -508,5 +508,7 @@ class ProcessProjectfileJobRun(JobRun):
 
     def after_docker_exception(self) -> None:
         project = self.job.project
-        project.project_details = None
-        project.save(update_fields=("project_details",))
+
+        if project.project_details is not None:
+            project.project_details = None
+            project.save(update_fields=("project_details",))
