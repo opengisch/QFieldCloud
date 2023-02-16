@@ -507,7 +507,11 @@ def delete_project_file_permanently(
             update_fields.append("project_filename")
             project.project_filename = None
 
-        project.file_storage_bytes -= sum([v.size for v in file.versions])
+        file_storage_bytes = project.file_storage_bytes - sum(
+            [v.size for v in file.versions]
+        )
+        project.file_storage_bytes = max(file_storage_bytes, 0)
+
         project.save(update_fields=update_fields)
 
         # NOTE force audits to be required when deleting files
