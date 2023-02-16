@@ -623,17 +623,21 @@ class Organization(User):
     objects = OrganizationManager()
 
     organization_owner = models.ForeignKey(
-        Person,
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
         on_delete=models.CASCADE,
         related_name="owned_organizations",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
     )
 
     is_initially_trial = models.BooleanField(default=False)
 
     created_by = models.ForeignKey(
-        Person,
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
         on_delete=models.CASCADE,
         related_name="created_organizations",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
     )
 
     # created at
@@ -1309,9 +1313,11 @@ class ProjectCollaborator(models.Model):
 
     # created by
     created_by = models.ForeignKey(
-        Person,
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
         on_delete=models.SET_NULL,
         related_name="+",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
         null=True,
         blank=True,
     )
@@ -1321,9 +1327,11 @@ class ProjectCollaborator(models.Model):
 
     # created by
     updated_by = models.ForeignKey(
-        Person,
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
         on_delete=models.SET_NULL,
         related_name="+",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
         null=True,
         blank=True,
     )
