@@ -4,8 +4,8 @@
             "uuid": "736bf2c2-646a-41a2-8c55-28c26aecd68d",
             "localPk": "1",
             "sourcePk": "1",
-            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
-            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "geometry": "POINT (666 0)"
@@ -18,8 +18,8 @@
             "uuid": "8adac0df-e1d3-473e-b150-f8c4a91b4781",
             "localPk": "2",
             "sourcePk": "2",
-            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
-            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "attributes": {
@@ -40,8 +40,8 @@
             "uuid": "c6c88e78-172c-4f77-b2fd-2ff41f5aa854",
             "localPk": "3",
             "sourcePk": "3",
-            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
-            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "geometry": "POINT (666 0)",

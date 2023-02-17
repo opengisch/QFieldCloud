@@ -179,7 +179,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points") as layer:
+        with fiona.open(gpkg, layer="points_xy") as layer:
             features = list(layer)
             self.assertEqual(666, features[0]["properties"]["int"])
 
@@ -201,7 +201,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points") as layer:
+        with fiona.open(gpkg, layer="points_xy") as layer:
             features = list(layer)
             self.assertEqual(666, features[0]["properties"]["int"])
 
@@ -223,7 +223,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points") as layer:
+        with fiona.open(gpkg, layer="points_xy") as layer:
             features = list(layer)
             self.assertEqual("", features[0]["properties"]["str"])
 
@@ -313,7 +313,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points") as layer:
+        with fiona.open(gpkg, layer="points_xy") as layer:
             features = list(layer)
             self.assertEqual(666, features[0]["properties"]["int"])
 
@@ -623,7 +623,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points") as layer:
+        with fiona.open(gpkg, "r", layer="points_xy") as layer:
             features = list(layer)
 
             self.assertEqual(len(features), 4)
@@ -647,7 +647,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points") as layer:
+        with fiona.open(gpkg, "r", layer="points_xy") as layer:
             features = list(layer)
 
             self.assertEqual(len(features), 5)
@@ -672,7 +672,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points") as layer:
+        with fiona.open(gpkg, "r", layer="points_xy") as layer:
             features = list(layer)
 
             self.assertEqual(len(features), 5)
@@ -697,7 +697,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points") as layer:
+        with fiona.open(gpkg, "r", layer="points_xy") as layer:
             features = list(layer)
 
             self.assertEqual(len(features), 5)
@@ -722,7 +722,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points") as layer:
+        with fiona.open(gpkg, "r", layer="points_xy") as layer:
             features = list(layer)
 
             self.assertEqual(len(features), 4)
@@ -746,7 +746,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points") as layer:
+        with fiona.open(gpkg, "r", layer="points_xy") as layer:
             features = list(layer)
 
             self.assertEqual(len(features), 3)

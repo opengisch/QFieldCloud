@@ -4,8 +4,8 @@
             "uuid": "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
             "localPk": "1",
             "sourcePk": "1",
-            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
-            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "patch",
             "new": {
                 "attributes": {

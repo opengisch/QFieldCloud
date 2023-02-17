@@ -23,7 +23,7 @@
     <layer-tree-layer expanded="1" legend_exp="" providerKey="ogr" patch_size="-1,-1" checked="Qt::Checked" source="./testdata.gpkg|layername=polygons" id="polygons_f18b6046_8e46_4206_a698_641c58e5ac73" name="polygons" legend_split_behavior="0">
       <customproperties/>
     </layer-tree-layer>
-    <layer-tree-layer expanded="1" legend_exp="" providerKey="ogr" patch_size="-1,-1" checked="Qt::Checked" source="./testdata.gpkg|layername=points" id="points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1" name="points" legend_split_behavior="0">
+    <layer-tree-layer expanded="1" legend_exp="" providerKey="ogr" patch_size="-1,-1" checked="Qt::Checked" source="./testdata.gpkg|layername=points" id="points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1" name="points" legend_split_behavior="0">
       <customproperties/>
     </layer-tree-layer>
     <layer-tree-layer expanded="1" legend_exp="" providerKey="ogr" patch_size="0,0" checked="Qt::Checked" source="./polygons.geojson" id="polygons_5096fc7b_b106_4740_90b4_9de822382d71" name="polygons" legend_split_behavior="0">
@@ -35,13 +35,13 @@
     <custom-order enabled="0">
       <item>points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c</item>
       <item>polygons_5096fc7b_b106_4740_90b4_9de822382d71</item>
-      <item>points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1</item>
+      <item>points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1</item>
       <item>polygons_f18b6046_8e46_4206_a698_641c58e5ac73</item>
     </custom-order>
   </layer-tree-group>
   <snapping-settings maxScale="0" enabled="0" minScale="0" mode="2" type="1" unit="1" scaleDependencyMode="0" tolerance="12" intersection-snapping="0" self-snapping="0">
     <individual-layer-settings>
-      <layer-setting maxScale="0" enabled="0" minScale="0" type="1" units="1" tolerance="12" id="points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1"/>
+      <layer-setting maxScale="0" enabled="0" minScale="0" type="1" units="1" tolerance="12" id="points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1"/>
       <layer-setting maxScale="0" enabled="0" minScale="0" type="1" units="1" tolerance="12" id="polygons_f18b6046_8e46_4206_a698_641c58e5ac73"/>
       <layer-setting maxScale="0" enabled="0" minScale="0" type="1" units="1" tolerance="12" id="points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c"/>
       <layer-setting maxScale="0" enabled="0" minScale="0" type="1" units="1" tolerance="12" id="polygons_5096fc7b_b106_4740_90b4_9de822382d71"/>
@@ -82,7 +82,7 @@
     </legendlayer>
     <legendlayer drawingOrder="-1" showFeatureCount="0" open="true" checked="Qt::Checked" name="points">
       <filegroup hidden="false" open="true">
-        <legendlayerfile visible="1" layerid="points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1" isInOverview="0"/>
+        <legendlayerfile visible="1" layerid="points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1" isInOverview="0"/>
       </filegroup>
     </legendlayer>
     <legendlayer drawingOrder="-1" showFeatureCount="0" open="true" checked="Qt::Checked" name="polygons">
@@ -181,7 +181,7 @@
         <xmax>9</xmax>
         <ymax>0</ymax>
       </extent>
-      <id>points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1</id>
+      <id>points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1</id>
       <datasource>./testdata.gpkg|layername=points</datasource>
       <keywordList>
         <value></value>
@@ -946,7 +946,7 @@
   <layerorder>
     <layer id="points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c"/>
     <layer id="polygons_5096fc7b_b106_4740_90b4_9de822382d71"/>
-    <layer id="points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1"/>
+    <layer id="points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1"/>
     <layer id="polygons_f18b6046_8e46_4206_a698_641c58e5ac73"/>
   </layerorder>
   <properties>
