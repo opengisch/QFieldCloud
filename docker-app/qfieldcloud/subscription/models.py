@@ -319,6 +319,11 @@ class Package(models.Model):
 
 class SubscriptionQuerySet(models.QuerySet):
     def active(self):
+        """Returns the subscriptions which are relevant to the current moment.
+
+        WARNING the name `active` is super misleading, should be `current`. Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
+        TODO rename to `current`
+        """
         now = timezone.now()
         qs = self.filter(
             Q(active_since__lte=now)
