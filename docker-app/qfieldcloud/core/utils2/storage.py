@@ -554,9 +554,10 @@ def delete_project_file_version_permanently(
                 "Forbidded attempt to delete a specific file version which is the only file version available."
             )
 
+    versions_latest_first = list(reversed(file.versions))
     versions_to_delete: List[qfieldcloud.core.utils.S3ObjectVersion] = []
 
-    for file_version in file.versions:
+    for file_version in versions_latest_first:
         if file_version.id == version_id:
             versions_to_delete.append(file_version)
 
