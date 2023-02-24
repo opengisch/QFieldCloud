@@ -239,6 +239,7 @@ class PersonAdmin(admin.ModelAdmin):
         "is_active",
         "date_joined",
         "last_login",
+        "stripe_id__stripe_link",
     )
     list_filter = (
         "type",
@@ -788,6 +789,7 @@ class OrganizationAdmin(admin.ModelAdmin):
         "email",
         "organization_owner__link",
         "date_joined",
+        "stripe_id__stripe_link",
     )
 
     search_fields = (
