@@ -777,6 +777,9 @@ def can_cancel_subscription_at_period_end(
     Organization can be downgraded only by owners, need to be deleted.
     In any case cancellation is only possible if the plan allows it.
     """
+    if subscription.active_until is not None:
+        return False
+
     if not subscription.plan.is_cancellable:
         return False
 
