@@ -4,9 +4,10 @@ import time
 from collections import namedtuple
 from typing import Any, Dict, Generator
 
+from allauth.account import admin as allauth_account_admin
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
-from allauth.account.utils import user_pk_to_url_str
 from allauth.account.models import EmailAddress
+from allauth.account.utils import user_pk_to_url_str
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.conf import settings
 from django.contrib import admin, messages
@@ -97,7 +98,7 @@ admin.site.unregister(SocialToken)
 admin.site.unregister(EmailAddress)
 
 
-class EmailAddressAdmin(admin.ModelAdmin):
+class EmailAddressAdmin(allauth_account_admin.EmailAddressAdmin):
     def get_urls(self):
         urls = super().get_urls()
         return [
