@@ -2,10 +2,11 @@ import csv
 import json
 import time
 from collections import namedtuple
-from typing import Any, Dict, Generator, List
+from typing import Any, Dict, Generator
 
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.utils import user_pk_to_url_str
+from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.conf import settings
 from django.contrib import admin, messages
@@ -51,7 +52,22 @@ Invitation = get_invitation_model()
 
 
 UserEmailDetails = namedtuple(
-    "UserEmailDetails", ["username", "first_name", "last_name", "email"]
+    "UserEmailDetails",
+    [
+        "id",
+        "username",
+        "first_name",
+        "last_name",
+        "type",
+        "email",
+        "date_joined",
+        "owner_id",
+        "owner_username",
+        "owner_email",
+        "owner_first_name",
+        "owner_last_name",
+        "owner_date_joined",
+    ],
 )
 
 
@@ -78,6 +94,104 @@ admin.site.unregister(Group)
 admin.site.unregister(SocialAccount)
 admin.site.unregister(SocialApp)
 admin.site.unregister(SocialToken)
+admin.site.unregister(EmailAddress)
+
+
+class EmailAddressAdmin(admin.ModelAdmin):
+    def get_urls(self):
+        urls = super().get_urls()
+        return [
+            *urls,
+            path(
+                "admin/export_emails_to_csv",
+                self.admin_site.admin_view(self.export_emails_to_csv),
+                name="export_emails_to_csv",
+            ),
+        ]
+
+    def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
+        raw_queryset = User.objects.raw(
+            """
+            WITH u AS (
+                SELECT
+                    DISTINCT ON (COALESCE(ae.email, u.email)) COALESCE(ae.email, u.email) AS "email",
+                    u.id,
+                    u.username,
+                    u.first_name,
+                    u.last_name,
+                    u.type,
+                    u.date_joined
+                FROM
+                    core_user u
+                    LEFT JOIN account_emailaddress ae ON ae.user_id = u.id AND ae.primary
+                WHERE
+                    COALESCE(ae.email, u.email) IS NOT NULL
+                    AND COALESCE(ae.email, u.email) != ''
+                ORDER BY
+                    COALESCE(ae.email, u.email),
+                    u.type
+            )
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.date_joined,
+                u.type,
+                oo.id AS "owner_id",
+                oo.username AS "owner_username",
+                oo.email AS "owner_email",
+                oo.first_name AS "owner_first_name",
+                oo.last_name AS "owner_last_name",
+                oo.date_joined AS "owner_date_joined"
+            FROM
+                u
+                LEFT JOIN account_emailaddress ae ON ae.user_id = u.id
+                LEFT JOIN core_organization o ON o.user_ptr_id = u.id
+                LEFT JOIN u oo ON oo.id = o.organization_owner_id
+            ORDER BY u.id
+            """
+        )
+        return (
+            UserEmailDetails(
+                row.id,
+                row.username,
+                row.first_name,
+                row.last_name,
+                row.type,
+                row.email,
+                row.date_joined,
+                row.owner_id,
+                row.owner_username,
+                row.owner_email,
+                row.owner_first_name,
+                row.owner_last_name,
+                row.owner_date_joined,
+            )
+            for row in raw_queryset
+        )
+
+    @admin.action(description="Export all users' email contact details to .csv")
+    def export_emails_to_csv(self, request) -> StreamingHttpResponse:
+        """ "Export all users' email contact details to .csv"""
+
+        class PseudoBuffer:
+            # Good idea from https://docs.djangoproject.com/en/4.1/howto/outputting-csv/
+            def write(self, value):
+                return value
+
+        email_rows = self.gen_users_email_addresses()
+        pseudo_buffer = PseudoBuffer()
+        writer = csv.writer(pseudo_buffer)
+
+        return StreamingHttpResponse(
+            (writer.writerow(row) for row in email_rows),
+            content_type="text/csv",
+            headers={
+                "Content-Disposition": 'attachment; filename="exported_users_emails.csv"'
+            },
+        )
 
 
 class PrettyJSONWidget(widgets.Textarea):
@@ -299,11 +413,6 @@ class PersonAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.password_reset_url),
                 name="password_reset_url",
             ),
-            path(
-                "admin/export_emails_to_csv",
-                self.admin_site.admin_view(self.export_emails_to_csv),
-                name="export_emails_to_csv",
-            ),
         ]
         return urls
 
@@ -338,79 +447,6 @@ class PersonAdmin(admin.ModelAdmin):
                 "url": request.build_absolute_uri(url),
                 "title": _("Password reset"),
                 "timeout_days": settings.PASSWORD_RESET_TIMEOUT / 3600 / 24,
-            },
-        )
-
-    def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
-        raw_queryset = User.objects.raw(
-            """
-            WITH u AS (
-            SELECT
-                DISTINCT ON (COALESCE(ae.email, u.email)) COALESCE(ae.email, u.email) AS "email",
-                u.id,
-                u.username,
-                u.first_name,
-                u.last_name,
-                u.type,
-                u.date_joined
-            FROM
-                core_user u
-                LEFT JOIN account_emailaddress ae ON ae.user_id = u.id AND ae.primary
-            WHERE
-                COALESCE(ae.email, u.email) IS NOT NULL
-                AND COALESCE(ae.email, u.email) != ''
-            ORDER BY
-                COALESCE(ae.email, u.email),
-                u.type
-            )
-            SELECT
-                u.id,
-                u.username,
-                u.email,
-                u.first_name,
-                u.last_name,
-                u.date_joined,
-                u.type,
-                oo.id AS "owner_id",
-                oo.username AS "owner_username",
-                oo.email AS "owner_email",
-                oo.first_name AS "owner_first_name",
-                oo.last_name AS "owner_last_name",
-                oo.date_joined AS "owner_date_joined"
-            FROM
-                u
-                LEFT JOIN account_emailaddress ae ON ae.user_id = u.id
-                LEFT JOIN core_organization o ON o.user_ptr_id = u.id
-                LEFT JOIN u oo ON oo.id = o.organization_owner_id
-            ORDER BY u.id
-            """
-        )
-        return (
-            UserEmailDetails(u.username, u.first_name, u.last_name, u.email)
-            for u in raw_queryset
-        )
-
-    def list_users_email_addresses(self) -> List[UserEmailDetails]:
-        return list(self.gen_users_email_addresses())
-
-    @admin.action(description="Export all users' email contact details to .csv")
-    def export_emails_to_csv(self, request) -> StreamingHttpResponse:
-        """ "Export all users' email contact details to .csv"""
-
-        class PseudoBuffer:
-            # Good idea from https://docs.djangoproject.com/en/4.1/howto/outputting-csv/
-            def write(self, value):
-                return value
-
-        rows = self.gen_users_email_addresses()
-        pseudo_buffer = PseudoBuffer()
-        writer = csv.writer(pseudo_buffer)
-
-        return StreamingHttpResponse(
-            (writer.writerow(row) for row in rows),
-            content_type="text/csv",
-            headers={
-                "Content-Disposition": 'attachment; filename="exported_users_emails.csv"'
             },
         )
 
@@ -1004,3 +1040,4 @@ admin.site.register(Geodb, GeodbAdmin)
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 admin.site.register(User, UserAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
+admin.site.register(EmailAddress, EmailAddressAdmin)
