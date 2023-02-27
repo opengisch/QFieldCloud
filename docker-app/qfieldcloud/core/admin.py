@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from typing import Any, Dict, Generator
 
-from allauth.account import admin as allauth_account_admin
+from allauth.account.admin import EmailAddressAdmin
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
@@ -52,26 +52,6 @@ from rest_framework.authtoken.models import TokenProxy
 Invitation = get_invitation_model()
 
 
-UserEmailDetails = namedtuple(
-    "UserEmailDetails",
-    [
-        "id",
-        "username",
-        "first_name",
-        "last_name",
-        "type",
-        "email",
-        "date_joined",
-        "owner_id",
-        "owner_username",
-        "owner_email",
-        "owner_first_name",
-        "owner_last_name",
-        "owner_date_joined",
-    ],
-)
-
-
 def admin_urlname_by_obj(value, arg):
     if isinstance(value, User):
         if value.is_person:
@@ -96,6 +76,25 @@ admin.site.unregister(SocialAccount)
 admin.site.unregister(SocialApp)
 admin.site.unregister(SocialToken)
 admin.site.unregister(EmailAddress)
+
+UserEmailDetails = namedtuple(
+    "UserEmailDetails",
+    [
+        "id",
+        "username",
+        "first_name",
+        "last_name",
+        "type",
+        "email",
+        "date_joined",
+        "owner_id",
+        "owner_username",
+        "owner_email",
+        "owner_first_name",
+        "owner_last_name",
+        "owner_date_joined",
+    ],
+)
 
 
 class EmailAddressAdmin(EmailAddressAdmin):
@@ -184,10 +183,15 @@ class EmailAddressAdmin(EmailAddressAdmin):
 
         email_rows = self.gen_users_email_addresses()
         pseudo_buffer = PseudoBuffer()
-        writer = csv.writer(pseudo_buffer)
+
+        def writing_with_header():
+            writer = csv.DictWriter(pseudo_buffer, fieldnames=UserEmailDetails._fields)
+            header = {k: k for k in UserEmailDetails._fields}
+            rows = [header] + [row._asdict() for row in email_rows]
+            return (writer.writerow(row) for row in rows)
 
         return StreamingHttpResponse(
-            (writer.writerow(row) for row in email_rows),
+            writing_with_header(),
             content_type="text/csv",
             headers={
                 "Content-Disposition": 'attachment; filename="exported_users_emails.csv"'
