@@ -71,7 +71,9 @@ class QfcTestCase(TransactionTestCase):
             "/admin/axes/accessfailurelog/add/",
             "/admin/axes/accesslog/add/",
             "/admin/auditlog/logentry/add/",
+            "/admin/account/emailaddress/admin/export_emails_to_csv",
         )
+
         # TODO make tests pass for these sortable URLs
         skip_sort_urls = ("/admin/django_cron/cronjoblog/?o=4",)
 
@@ -102,6 +104,7 @@ class QfcTestCase(TransactionTestCase):
 
             # check all different sort columns
             soup = BeautifulSoup(resp.content, "html.parser")
+
             for anchor in soup.select("th.sortable a"):
                 sort_url = f"{url}{anchor.get('href')}"
 
