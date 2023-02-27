@@ -237,8 +237,9 @@ def get_geometry_from_delta(
             if geometry.isNull():
                 raise DeltaException(f"Null geometry from {wkt=}")
 
+            # E.g. Shapefile might report a `Polygon` geometry, even though it is a `MultiPolygon`
             if geometry.type() != layer.geometryType():
-                raise DeltaException(
+                logger.info(
                     f"The provided geometry type {geometry.type()} differs from the layer geometry type {layer.geometryType()} for {wkt=}"
                 )
 
