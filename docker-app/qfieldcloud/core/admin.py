@@ -2,6 +2,8 @@ import csv
 import json
 import time
 from collections import namedtuple
+from datetime import datetime
+from itertools import chain
 from typing import Any, Dict, Generator
 
 from allauth.account.admin import EmailAddressAdmin
@@ -181,21 +183,26 @@ class EmailAddressAdmin(EmailAddressAdmin):
             def write(self, value):
                 return value
 
+        def human_readable_timestamp() -> str:
+            d, h = str(datetime.utcnow()).split(" ")
+            d = d.replace("-", "")
+            h = h[:-7].replace(":", "")
+            return "_".join([d, h])
+
         email_rows = self.gen_users_email_addresses()
         pseudo_buffer = PseudoBuffer()
-
-        def writing_with_header():
-            writer = csv.DictWriter(pseudo_buffer, fieldnames=UserEmailDetails._fields)
-            header = {k: k for k in UserEmailDetails._fields}
-            rows = [header] + [row._asdict() for row in email_rows]
-            return (writer.writerow(row) for row in rows)
+        writer = csv.DictWriter(pseudo_buffer, fieldnames=UserEmailDetails._fields)
+        header = {k: k for k in UserEmailDetails._fields}
+        write_with_header = chain(
+            [writer.writerow(header)],
+            (writer.writerow(row._asdict()) for row in email_rows),
+        )
+        filename = f"qfc_user_email_{human_readable_timestamp()}"
 
         return StreamingHttpResponse(
-            writing_with_header(),
+            write_with_header,
             content_type="text/csv",
-            headers={
-                "Content-Disposition": 'attachment; filename="exported_users_emails.csv"'
-            },
+            headers={"Content-Disposition": f"attachment; filename={filename}.csv"},
         )
 
 
