@@ -105,7 +105,7 @@ class EmailAddressAdmin(EmailAddressAdmin):
         return [
             *urls,
             path(
-                "admin/export_emails_to_csv",
+                "admin/export_emails_to_csv/",
                 self.admin_site.admin_view(self.export_emails_to_csv),
                 name="export_emails_to_csv",
             ),
