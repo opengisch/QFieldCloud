@@ -98,7 +98,7 @@ admin.site.unregister(SocialToken)
 admin.site.unregister(EmailAddress)
 
 
-class EmailAddressAdmin(allauth_account_admin.EmailAddressAdmin):
+class EmailAddressAdmin(EmailAddressAdmin):
     def get_urls(self):
         urls = super().get_urls()
         return [
