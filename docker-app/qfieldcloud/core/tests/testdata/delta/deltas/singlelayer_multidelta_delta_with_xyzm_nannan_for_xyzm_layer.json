@@ -1,0 +1,42 @@
+{
+  "deltas": [
+    {
+      "uuid": "736bf2c2-646a-41a2-8c55-28c26aecd68d",
+      "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+      "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+      "localPk": "1",
+      "sourcePk": "1",
+      "localLayerId": "points_xyzm_1cb6363a_5a99_4090_aeaf_d88deec2a3d8",
+      "sourceLayerId": "points_xyzm_1cb6363a_5a99_4090_aeaf_d88deec2a3d8",
+      "method": "patch",
+      "new": {
+        "geometry": "POINTZM (666 0 nan nan)"
+      },
+      "old": {
+        "geometry": "POINTZM (1 0 0 0)"
+      }
+    },
+    {
+      "uuid": "8adac0df-e1d3-473e-b150-f8c4a91b4781",
+      "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+      "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+      "localPk": "2",
+      "sourcePk": "",
+      "localLayerId": "points_xyzm_1cb6363a_5a99_4090_aeaf_d88deec2a3d8",
+      "sourceLayerId": "points_xyzm_1cb6363a_5a99_4090_aeaf_d88deec2a3d8",
+      "method": "create",
+      "new": {
+        "geometry": "POINTZM (777 0 nan nan)",
+        "attributes": {
+          "dbl": 0.666,
+          "int": 666,
+          "str": "str666"
+        }
+      }
+    }
+  ],
+  "files": [],
+  "id": "b7c17bc6-e5af-4fa7-b905-4b395729d782",
+  "project": "e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
+  "version": "1.0"
+}
