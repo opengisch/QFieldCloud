@@ -1,8 +1,14 @@
+import csv
 import json
 import time
-from typing import Any, Dict
+from collections import namedtuple
+from datetime import datetime
+from itertools import chain
+from typing import Any, Dict, Generator
 
+from allauth.account.admin import EmailAddressAdmin
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
+from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django.conf import settings
@@ -14,7 +20,7 @@ from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest
-from django.http.response import Http404, HttpResponseRedirect
+from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -71,6 +77,133 @@ admin.site.unregister(Group)
 admin.site.unregister(SocialAccount)
 admin.site.unregister(SocialApp)
 admin.site.unregister(SocialToken)
+admin.site.unregister(EmailAddress)
+
+UserEmailDetails = namedtuple(
+    "UserEmailDetails",
+    [
+        "id",
+        "username",
+        "first_name",
+        "last_name",
+        "type",
+        "email",
+        "date_joined",
+        "owner_id",
+        "owner_username",
+        "owner_email",
+        "owner_first_name",
+        "owner_last_name",
+        "owner_date_joined",
+    ],
+)
+
+
+class EmailAddressAdmin(EmailAddressAdmin):
+    def get_urls(self):
+        urls = super().get_urls()
+        return [
+            *urls,
+            path(
+                "admin/export_emails_to_csv/",
+                self.admin_site.admin_view(self.export_emails_to_csv),
+                name="export_emails_to_csv",
+            ),
+        ]
+
+    def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
+        raw_queryset = User.objects.raw(
+            """
+            WITH u AS (
+                SELECT
+                    DISTINCT ON (COALESCE(ae.email, u.email)) COALESCE(ae.email, u.email) AS "email",
+                    u.id,
+                    u.username,
+                    u.first_name,
+                    u.last_name,
+                    u.type,
+                    u.date_joined
+                FROM
+                    core_user u
+                    LEFT JOIN account_emailaddress ae ON ae.user_id = u.id AND ae.primary
+                WHERE
+                    COALESCE(ae.email, u.email) IS NOT NULL
+                    AND COALESCE(ae.email, u.email) != ''
+                ORDER BY
+                    COALESCE(ae.email, u.email),
+                    u.type
+            )
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.date_joined,
+                u.type,
+                oo.id AS "owner_id",
+                oo.username AS "owner_username",
+                oo.email AS "owner_email",
+                oo.first_name AS "owner_first_name",
+                oo.last_name AS "owner_last_name",
+                oo.date_joined AS "owner_date_joined"
+            FROM
+                u
+                LEFT JOIN account_emailaddress ae ON ae.user_id = u.id
+                LEFT JOIN core_organization o ON o.user_ptr_id = u.id
+                LEFT JOIN u oo ON oo.id = o.organization_owner_id
+            ORDER BY u.id
+            """
+        )
+        return (
+            UserEmailDetails(
+                row.id,
+                row.username,
+                row.first_name,
+                row.last_name,
+                row.type,
+                row.email,
+                row.date_joined,
+                row.owner_id,
+                row.owner_username,
+                row.owner_email,
+                row.owner_first_name,
+                row.owner_last_name,
+                row.owner_date_joined,
+            )
+            for row in raw_queryset
+        )
+
+    @admin.action(description="Export all users' email contact details to .csv")
+    def export_emails_to_csv(self, request) -> StreamingHttpResponse:
+        """ "Export all users' email contact details to .csv"""
+
+        class PseudoBuffer:
+            # Good idea from https://docs.djangoproject.com/en/4.1/howto/outputting-csv/
+            def write(self, value):
+                return value
+
+        def human_readable_timestamp() -> str:
+            d, h = str(datetime.utcnow()).split(" ")
+            d = d.replace("-", "")
+            h = h[:-7].replace(":", "")
+            return "_".join([d, h])
+
+        email_rows = self.gen_users_email_addresses()
+        pseudo_buffer = PseudoBuffer()
+        writer = csv.DictWriter(pseudo_buffer, fieldnames=UserEmailDetails._fields)
+        header = {k: k for k in UserEmailDetails._fields}
+        write_with_header = chain(
+            [writer.writerow(header)],
+            (writer.writerow(row._asdict()) for row in email_rows),
+        )
+        filename = f"qfc_user_email_{human_readable_timestamp()}"
+
+        return StreamingHttpResponse(
+            write_with_header,
+            content_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}.csv"},
+        )
 
 
 class PrettyJSONWidget(widgets.Textarea):
@@ -919,3 +1052,4 @@ admin.site.register(Geodb, GeodbAdmin)
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 admin.site.register(User, UserAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
+admin.site.register(EmailAddress, EmailAddressAdmin)
