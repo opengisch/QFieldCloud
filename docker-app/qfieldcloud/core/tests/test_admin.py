@@ -72,6 +72,7 @@ class QfcTestCase(TransactionTestCase):
             "/admin/axes/accesslog/add/",
             "/admin/auditlog/logentry/add/",
             "/admin/account/emailaddress/admin/export_emails_to_csv/",
+            "/admin/billing/invoice/add/",
         )
 
         # TODO make tests pass for these sortable URLs
