@@ -311,14 +311,10 @@ class UserAccountInline(admin.StackedInline):
     extra = 1
 
     def has_add_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
+        return obj is None
 
     def has_delete_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
+        return False
 
 
 class ProjectInline(admin.TabularInline):
