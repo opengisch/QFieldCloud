@@ -73,8 +73,6 @@ services:
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
-    depends_on:
-      - redis
     logging:
       driver: "json-file"
       options:
@@ -166,9 +164,6 @@ services:
       - ${LOG_DIRECTORY}:/log
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
-    depends_on:
-      - redis
-      - app
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   ofelia:
