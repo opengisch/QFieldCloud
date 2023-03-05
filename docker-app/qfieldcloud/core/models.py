@@ -1409,7 +1409,7 @@ class Delta(models.Model):
         UNPERMITTED = "unpermitted", _("Unpermitted")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    deltafile_id = models.UUIDField()
+    deltafile_id = models.UUIDField(db_index=True)
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -1420,6 +1420,7 @@ class Delta(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
         max_length=32,
+        db_index=True,
     )
     last_feedback = JSONField(null=True)
     last_modified_pk = models.TextField(null=True)
@@ -1429,8 +1430,8 @@ class Delta(models.Model):
         on_delete=models.CASCADE,
         null=True,
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
     created_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
