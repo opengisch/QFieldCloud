@@ -8,3 +8,4 @@ __pycache__/
 docker-compose.override.yml
 client/projects
 conf/nginx/certs/*
+Pipfile*
