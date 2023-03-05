@@ -1,40 +1,57 @@
 name: Test
+
 on:
   - push
   - pull_request
+
 jobs:
-  test:
-    name: Code check and tests
+  check_format:
+    if: '! github.event.pull_request.draft'
+    name: Check code formatting
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
+
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      - name: Install pipenv
-        run: pip install pipenv
       - name: Check code formatting
         uses: pre-commit/action@v2.0.3
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
       - name: Prepare docker-compose override file
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
+
       - name: Check env vars coniguration
         run: |
           scripts/check_envvars.sh
+
       - name: Export the env variables file
         run: |
           cp .env.example .env
           sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
       - name: Pull docker containers
         run: docker compose pull
+
       - name: Build and run docker containers
         run: |
           docker compose up -d --build
+
       - name: Initial manage.py commands
         run: |
           docker compose run app python manage.py migrate
