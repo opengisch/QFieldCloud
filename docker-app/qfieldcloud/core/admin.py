@@ -916,6 +916,7 @@ class OrganizationAdmin(admin.ModelAdmin):
         "username",
         "email",
         "organization_owner",
+        "date_joined",
     )
     list_display = (
         "username",
@@ -930,6 +931,8 @@ class OrganizationAdmin(admin.ModelAdmin):
         "email__iexact",
         "organization_owner__email__iexact",
     )
+
+    readonly_fields = ("date_joined",)
 
     list_select_related = ("organization_owner",)
 
