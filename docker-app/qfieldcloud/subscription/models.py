@@ -328,7 +328,7 @@ class SubscriptionQuerySet(models.QuerySet):
         qs = self.filter(
             Q(active_since__lte=now)
             & (Q(active_until__isnull=True) | Q(active_until__gte=now))
-        )
+        ).select_related("plan")
 
         return qs
 
@@ -757,6 +757,9 @@ class AbstractSubscription(models.Model):
         )
 
         return trial_subscription, regular_subscription
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{self.active_storage_total_mb}MB"
 
 
 class Subscription(AbstractSubscription):

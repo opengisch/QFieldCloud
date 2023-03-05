@@ -6,8 +6,8 @@
             "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
             "localPk": "1000",
             "sourcePk": "0",
-            "localLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
-            "sourceLayerId": "points_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
             "method": "delete",
             "old": {
                 "attributes": {

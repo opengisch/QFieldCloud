@@ -111,9 +111,12 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(user.useraccount.storage_free_mb, storage_free_mb)
 
     def test_get_storage_package_type(self):
+        PackageType.objects.all().delete()
+        PackageType.get_storage_package_type.cache_clear()
+
         package_type = PackageType.objects.create(
             unit_amount=1,
-            code="storage_package",
+            code="test_storage_package",
             type=PackageType.Type.STORAGE,
             min_quantity=0,
             max_quantity=100,

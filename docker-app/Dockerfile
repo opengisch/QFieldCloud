@@ -42,7 +42,9 @@ ENV PIP_NO_CACHE_DIR 1
 # install dependencies
 RUN apt update && apt-get install -y \
 # GeoDjango as recommended at https://docs.djangoproject.com/en/4.1/ref/contrib/gis/install/geolibs/#installing-geospatial-libraries
-    binutils libproj-dev gdal-bin
+    binutils libproj-dev gdal-bin \
+# for development purposes only (optional dependency for `django-extensions`)
+    graphviz
 
 # copy the dependencies
 COPY --from=build /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/
