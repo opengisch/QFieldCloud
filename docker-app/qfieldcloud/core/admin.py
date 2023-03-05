@@ -940,6 +940,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
     autocomplete_fields = ("organization_owner",)
 
+    @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
         return model_admin_url(
             instance.organization_owner, instance.organization_owner.username
