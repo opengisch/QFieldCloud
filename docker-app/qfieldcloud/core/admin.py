@@ -398,6 +398,11 @@ class PersonAdmin(admin.ModelAdmin):
         "has_accepted_tos",
     )
 
+    readonly_fields = (
+        "date_joined",
+        "last_login",
+    )
+
     inlines = (
         UserAccountInline,
         GeodbInline,
