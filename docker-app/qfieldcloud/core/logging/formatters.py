@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import json_log_formatter
+from django.conf import settings
 from django.core.handlers.wsgi import WSGIRequest
 from django.core.serializers.json import DjangoJSONEncoder
 
@@ -23,7 +24,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         :return: Dictionary which will be passed to JSON lib.
 
         """
-        if "ts" in extra:
+        if "ts" not in extra:
             extra["ts"] = datetime.utcnow()
 
         # Include builtins
@@ -34,6 +35,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         extra["filename"] = record.filename
         extra["lineno"] = record.lineno
         extra["thread"] = record.thread
+        extra["source"] = settings.LOGGER_SOURCE
 
         if record.exc_info:
             extra["exc_info"] = self.formatException(record.exc_info)
@@ -49,11 +51,11 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         """
         try:
             return self.json_lib.dumps(
-                record, default=json_default, sort_keys=True, cls=JsonEncoder
+                record, default=json_default, cls=JsonEncoder, separators=(",", ":")
             )
         # ujson doesn't support default argument and raises TypeError.
         except TypeError:
-            return self.json_lib.dumps(record, cls=JsonEncoder)
+            return self.json_lib.dumps(record, cls=JsonEncoder, separators=(",", ":"))
 
 
 def json_default(obj):

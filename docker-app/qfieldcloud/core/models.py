@@ -1,4 +1,4 @@
-import contextlib
+import logging
 import os
 import secrets
 import string
@@ -9,7 +9,6 @@ from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
-from auditlog.registry import auditlog
 from deprecated import deprecated
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
@@ -30,6 +29,8 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
+
+logger = logging.getLogger(__name__)
 
 
 class PersonQueryset(models.QuerySet):
@@ -313,8 +314,7 @@ class User(AbstractUser):
         if self.type != User.Type.TEAM:
             qfieldcloud.core.utils2.storage.delete_user_avatar(self)
 
-        with no_audits([User, UserAccount, Project]):
-            super().delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
 
     class Meta:
         base_manager_name = "objects"
@@ -426,57 +426,49 @@ class UserAccount(models.Model):
             return None
 
     @property
-    @deprecated(
-        "Use `UserAccount().active_subscription.active_storage_total_mb` instead."
-    )
-    def storage_quota_total_mb(self) -> float:
-        """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
-        return (
-            self.active_subscription.plan.storage_mb
-            + self.active_subscription.active_storage_package_mb
-        )
-
-    @property
-    @deprecated("Use `UserAccount().storage_used_mb` instead.")
-    def storage_quota_used_mb(self) -> float:
-        return self.storage_used_mb
-
-    @property
-    @deprecated("Use `UserAccount().storage_free_mb` instead.")
-    def storage_quota_left_mb(self) -> float:
-        return self.storage_free_mb
-
-    @property
-    @deprecated("Use `UserAccount().storage_used_ratio` instead")
-    def storage_quota_used_perc(self) -> float:
-        return self.storage_used_ratio
-
-    @property
-    @deprecated("Use `UserAccount().storage_free_ratio` instead")
-    def storage_quota_left_perc(self) -> float:
-        return self.storage_free_ratio
-
-    @property
+    @deprecated("Use `UserAccount().storage_used_bytes` instead")
+    # TODO delete this method after refactoring tests so it's no longer used there
     def storage_used_mb(self) -> float:
         """Returns the storage used in MB"""
+        return self.storage_used_bytes / 1000 / 1000
+
+    @property
+    def storage_used_bytes(self) -> float:
+        """Returns the storage used in bytes"""
         used_quota = (
-            self.user.projects.aggregate(sum_mb=Sum("storage_size_mb"))["sum_mb"] or 0
+            self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
+                "sum_bytes"
+            ]
+            # if there are no projects, the value will be `None`
+            or 0
         )
 
         return used_quota
 
     @property
+    @deprecated("Use `UserAccount().storage_free_bytes` instead")
+    # TODO delete this method after refactoring tests so it's no longer used there
     def storage_free_mb(self) -> float:
         """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
 
-        return self.active_subscription.active_storage_total_mb - self.storage_used_mb
+        return self.storage_free_bytes / 1000 / 1000
+
+    @property
+    def storage_free_bytes(self) -> float:
+        """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)"""
+
+        return (
+            self.active_subscription.active_storage_total_bytes
+            - self.storage_used_bytes
+        )
 
     @property
     def storage_used_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        if self.active_subscription.active_storage_total_mb > 0:
+        if self.active_subscription.active_storage_total_bytes > 0:
             return min(
-                self.storage_used_mb / self.active_subscription.active_storage_total_mb,
+                self.storage_used_bytes
+                / self.active_subscription.active_storage_total_bytes,
                 1,
             )
         else:
@@ -507,6 +499,9 @@ class UserAccount(models.Model):
             return True
 
         return False
+
+    def __str__(self) -> str:
+        return f"{self.user.username_with_full_name} ({self.__class__.__name__})"
 
 
 class Geodb(models.Model):
@@ -679,8 +674,8 @@ class Organization(User):
         )
 
         return Person.objects.filter(
-            Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
-        )
+            is_staff=False,
+        ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
@@ -927,6 +922,7 @@ class ProjectQueryset(models.QuerySet):
                 user_role_is_valid=Case(
                     When(is_valid_user_role_q, then=True), default=False
                 ),
+                user_role_is_incognito=F("user_roles__is_incognito"),
             )
         )
 
@@ -1005,7 +1001,7 @@ class Project(models.Model):
 
     # These cache stats of the S3 storage. These can be out of sync, and should be
     # refreshed whenever retrieving/uploading files by passing `project.save(recompute_storage=True)`
-    storage_size_mb = models.FloatField(default=0)
+    file_storage_bytes = models.PositiveBigIntegerField(default=0)
 
     # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
@@ -1178,9 +1174,14 @@ class Project(models.Model):
 
     @property
     def storage_size_perc(self) -> float:
-        return (
-            self.storage_size_mb / self.owner.useraccount.storage_quota_total_mb * 100
-        )
+        if self.owner.useraccount.active_subscription.active_storage_total_bytes > 0:
+            return (
+                self.file_storage_bytes
+                / self.owner.useraccount.active_subscription.active_storage_total_bytes
+                * 100
+            )
+        else:
+            return 100
 
     @property
     def direct_collaborators(self):
@@ -1189,8 +1190,14 @@ class Project(models.Model):
         else:
             exclude_pks = [self.owner_id]
 
-        return self.collaborators.filter(collaborator__type=User.Type.PERSON,).exclude(
-            collaborator_id__in=exclude_pks,
+        return (
+            self.collaborators.skip_incognito()
+            .filter(
+                collaborator__type=User.Type.PERSON,
+            )
+            .exclude(
+                collaborator_id__in=exclude_pks,
+            )
         )
 
     def delete(self, *args, **kwargs):
@@ -1199,14 +1206,20 @@ class Project(models.Model):
         super().delete(*args, **kwargs)
 
     def save(self, recompute_storage=False, *args, **kwargs):
+        logger.info(f"Saving project {self}...")
+
         if recompute_storage:
-            self.storage_size_mb = utils.get_s3_project_size(self.id)
+            self.file_storage_bytes = (
+                qfieldcloud.core.utils2.storage.get_project_file_storage_in_bytes(
+                    self.id
+                )
+            )
         super().save(*args, **kwargs)
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):
-        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
+        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships if `skip_invalid` is set to True.
 
         A membership to a private project is valid when the owning user plan has a
         `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
@@ -1214,11 +1227,17 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         Args:
             skip_invalid:   if true, invalid rows are removed"""
         count = Count(
-            "project__collaborators", filter=Q(collaborator__type=User.Type.PERSON)
+            "project__collaborators",
+            filter=Q(
+                collaborator__type=User.Type.PERSON,
+                # incognito users should never be counted
+                is_incognito=False,
+            ),
         )
 
         # Build the conditions with Q objects
         is_public_q = Q(project__is_public=True)
+        is_team_collaborator = Q(collaborator__type=User.Type.TEAM)
         # max_premium_collaborators_per_private_project_q = active_subscription_q & (
         max_premium_collaborators_per_private_project_q = Q(
             project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
@@ -1230,7 +1249,9 @@ class ProjectCollaboratorQueryset(models.QuerySet):
 
         # Assemble the condition
         is_valid_collaborator = (
-            is_public_q | max_premium_collaborators_per_private_project_q
+            is_public_q
+            | max_premium_collaborators_per_private_project_q
+            | is_team_collaborator
         )
 
         # Annotate the queryset
@@ -1243,6 +1264,9 @@ class ProjectCollaboratorQueryset(models.QuerySet):
             qs = qs.exclude(is_valid=False)
 
         return qs
+
+    def skip_incognito(self):
+        return self.filter(is_incognito=False)
 
 
 class ProjectCollaborator(models.Model):
@@ -1274,6 +1298,38 @@ class ProjectCollaborator(models.Model):
         limit_choices_to=models.Q(type__in=[User.Type.PERSON, User.Type.TEAM]),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
+
+    # whether the collaborator is incognito, e.g. shown in the UI and billed
+    is_incognito = models.BooleanField(
+        default=False,
+        help_text=_(
+            "If a collaborator is marked as incognito, they will work as normal, but will not be listed in the UI or accounted in the subscription as active users. Used to add OPENGIS.ch support members to projects."
+        ),
+    )
+
+    # created by
+    created_by = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # created by
+    updated_by = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.project.name + ": " + self.collaborator.username
@@ -1321,6 +1377,7 @@ class ProjectRolesView(models.Model):
     origin = models.CharField(
         max_length=100, choices=ProjectQueryset.RoleOrigins.choices
     )
+    is_incognito = models.BooleanField()
 
     class Meta:
         db_table = "projects_with_roles_vw"
@@ -1581,66 +1638,3 @@ class Secret(models.Model):
                 fields=["project", "name"], name="secret_project_name_uniq"
             )
         ]
-
-
-audited_models = [
-    (User, {"exclude_fields": ["last_login", "updated_at"]}),
-    (UserAccount, {}),
-    (Organization, {}),
-    (OrganizationMember, {}),
-    (Team, {}),
-    (TeamMember, {}),
-    (
-        Project,
-        {
-            "include_fields": [
-                "id",
-                "name",
-                "description",
-                "owner",
-                "is_public",
-                "owner",
-                "created_at",
-            ],
-        },
-    ),
-    (ProjectCollaborator, {}),
-    (
-        Delta,
-        {
-            "include_fields": [
-                "id",
-                "deltafile_id",
-                "project",
-                "content",
-                "last_status",
-                "created_by",
-            ],
-        },
-    ),
-    (Secret, {"exclude_fields": ["value"]}),
-]
-
-
-def register_model_audits(subset: List[models.Model] = []) -> None:
-    for model, kwargs in audited_models:
-        if subset and model not in subset:
-            continue
-        auditlog.register(model, **kwargs)
-
-
-def deregister_model_audits(subset: List[models.Model] = []) -> None:
-    for model, _kwargs in audited_models:
-        if subset and model not in subset:
-            continue
-
-        auditlog.unregister(model)
-
-
-@contextlib.contextmanager
-def no_audits(subset: List[models.Model] = []):
-    try:
-        deregister_model_audits(subset)
-        yield
-    finally:
-        register_model_audits(subset)

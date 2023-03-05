@@ -16,6 +16,9 @@ from datetime import timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
+# QFieldCloud specific configuration
+QFIELDCLOUD_HOST = os.environ["QFIELDCLOUD_HOST"]
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -127,7 +130,7 @@ CRON_CLASSES = [
     # "qfieldcloud.core.cron.DeleteExpiredInvitationsJob",
     "qfieldcloud.core.cron.ResendFailedInvitationsJob",
     "qfieldcloud.core.cron.SetTerminatedWorkersToFinalStatusJob",
-    # "qfieldcloud.core.cron.DeleteObsoleteProjectPackagesJob",
+    "qfieldcloud.core.cron.DeleteObsoleteProjectPackagesJob",
 ]
 
 ROOT_URLCONF = "qfieldcloud.urls"
@@ -253,17 +256,49 @@ SWAGGER_SETTINGS = {
 
 LOGIN_URL = "account_login"
 
+# Sentry configuration
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+if SENTRY_DSN:
+    SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
 
-sentry_sdk.init(
-    dsn=os.environ.get("SENTRY_DSN", ""),
-    integrations=[DjangoIntegration()],
-    # Define how many random events are sent for performance monitoring
-    sample_rate=0.05,
-    server_name=os.environ.get("QFIELDCLOUD_HOST"),
-    # If you wish to associate users to errors (assuming you are using
-    # django.contrib.auth) you may enable sending PII data.
-    send_default_pii=True,
-)
+    def before_send(event, hint):
+        from qfieldcloud.core.exceptions import ProjectAlreadyExistsError
+        from rest_framework.exceptions import ValidationError
+
+        ignored_exceptions = (
+            ValidationError,
+            ProjectAlreadyExistsError,
+        )
+
+        if "exc_info" in hint:
+
+            exc_class, _exc_object, _exc_tb = hint["exc_info"]
+
+            # Skip sending errors
+            if issubclass(exc_class, ignored_exceptions):
+                return None
+
+        return event
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        server_name=QFIELDCLOUD_HOST,
+        #
+        # Sentry sample rate between 0 and 1. Read more on https://docs.sentry.io/platforms/python/configuration/sampling/ .
+        sample_rate=SENTRY_SAMPLE_RATE,
+        #
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True,
+        #
+        # Filter some of the exception which we do not want to see on Sentry. Read more on https://docs.sentry.io/platforms/python/configuration/filtering/ .
+        before_send=before_send,
+        #
+        # Sentry environment should have been configured like this, but I didn't make it work.
+        # Therefore the Sentry environment is defined as `SENTRY_ENVIRONMENT` in `docker-compose.yml`.
+        # environment=ENVIRONMENT,
+    )
 
 
 # Django allauth configurations
@@ -353,6 +388,9 @@ QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializ
 
 APPLY_DELTAS_LIMIT = 1000
 
+# the value of the "source" key in each logger entry
+LOGGER_SOURCE = os.environ.get("LOGGER_SOURCE", None)
+
 DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
 }
@@ -393,3 +431,80 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
 }
+
+
+# `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
+AUDITLOG_INCLUDE_TRACKING_MODELS = [
+    # NOTE `Delta` and `Job` models are not being automatically audited, because their data changes very often and timestamps are available in their models.
+    {
+        "model": "account.emailaddress",
+    },
+    # NOTE Constance model cannot be audited. If enabled, an `IndexError list index out of range` is raised.
+    # {
+    #     "model": "constance.config",
+    # },
+    {
+        "model": "core.geodb",
+    },
+    {
+        "model": "core.organization",
+    },
+    # TODO check if we can use `Organization.members` m2m when next version is released as described in "Many-to-many fields" here https://django-auditlog.readthedocs.io/en/latest/usage.html#automatically-logging-changes
+    {
+        "model": "core.organizationmember",
+    },
+    {
+        "model": "core.person",
+        "exclude_fields": ["last_login", "updated_at"],
+    },
+    {
+        "model": "core.project",
+        # these fields are updated by scripts and will produce a lot of audit noise
+        "exclude_fields": [
+            "updated_at",
+            "data_last_updated_at",
+            "data_last_packaged_at",
+            "last_package_job",
+            "file_storage_bytes",
+        ],
+    },
+    # TODO check if we can use `Project.collaborators` m2m when next version is released as described in "Many-to-many fields" here https://django-auditlog.readthedocs.io/en/latest/usage.html#automatically-logging-changes
+    {
+        "model": "core.projectcollaborator",
+    },
+    {
+        "model": "core.secret",
+        "mask_fields": [
+            "value",
+        ],
+    },
+    # TODO check if we can use `Team.members` m2m when next version is released as described in "Many-to-many fields" here https://django-auditlog.readthedocs.io/en/latest/usage.html#automatically-logging-changes
+    {
+        "model": "core.team",
+    },
+    {
+        "model": "core.teammember",
+    },
+    {
+        "model": "core.user",
+        "exclude_fields": ["last_login", "updated_at"],
+    },
+    {
+        "model": "core.useraccount",
+    },
+    {
+        "model": "invitations.invitation",
+    },
+    {
+        "model": "subscription.package",
+    },
+    {
+        "model": "subscription.packagetype",
+    },
+    {
+        "model": "subscription.plan",
+    },
+    {
+        "model": "subscription.subscription",
+    },
+]

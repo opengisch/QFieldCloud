@@ -7,7 +7,10 @@ from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
-from qfieldcloud.core.utils2.storage import get_attachment_dir_prefix
+from qfieldcloud.core.utils2.storage import (
+    get_attachment_dir_prefix,
+    purge_old_file_versions,
+)
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -127,6 +130,7 @@ class DownloadPushDeleteFileView(views.APIView):
             as_attachment=True,
         )
 
+    # TODO refactor this function by moving the actual upload and Project model updates to library function outside the view
     def post(self, request, projectid, filename, format=None):
         project = Project.objects.get(id=projectid)
 
@@ -146,12 +150,12 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file = request.FILES.get("file")
 
-        file_size_mb = request_file.size / 1024 / 1024
-        quota_left_mb = project.owner.useraccount.storage_free_mb
+        file_size_bytes = request_file.size
+        quota_left_bytes = project.owner.useraccount.storage_free_bytes
 
-        if file_size_mb > quota_left_mb:
+        if file_size_bytes > quota_left_bytes:
             raise exceptions.QuotaError(
-                f"Requiring {file_size_mb}MB of storage but only {quota_left_mb}MB available."
+                f"Requiring {file_size_bytes} bytes of storage but only {quota_left_bytes} bytes available."
             )
 
         old_object = get_project_file_with_versions(project.id, filename)
@@ -173,7 +177,7 @@ class DownloadPushDeleteFileView(views.APIView):
             # project and update it now, it guarantees there will be no other file upload editing
             # the same project row.
             project = Project.objects.select_for_update().get(id=projectid)
-            update_fields = ["data_last_updated_at"]
+            update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
                 is_qgis_project_file or project.project_filename is not None
@@ -198,6 +202,8 @@ class DownloadPushDeleteFileView(views.APIView):
                     )
 
             project.data_last_updated_at = timezone.now()
+            # NOTE just incrementing the fils_storage_bytes when uploading might make the database out of sync if a files is uploaded/deleted bypassing this function
+            project.file_storage_bytes += request_file.size
             project.save(update_fields=update_fields)
 
         if old_object:
@@ -214,7 +220,7 @@ class DownloadPushDeleteFileView(views.APIView):
             )
 
         # Delete the old file versions
-        # purge_old_file_versions(project)
+        purge_old_file_versions(project)
 
         return Response(status=status.HTTP_201_CREATED)
 

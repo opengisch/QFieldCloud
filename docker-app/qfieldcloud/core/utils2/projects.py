@@ -4,15 +4,18 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 from qfieldcloud.core import invitations_utils as invitation
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core.models import Person, Project, ProjectCollaborator, User
+from qfieldcloud.core.models import Person, Project, ProjectCollaborator, Team, User
 
 
-def create_collaborator(project: Project, user: User) -> Tuple[bool, str]:
+def create_collaborator(
+    project: Project, user: User, created_by: Person
+) -> Tuple[bool, str]:
     """Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible
 
     Args:
         project (Project): the project to add collaborator to
         user (User): the user to be added as collaborator
+        created_by (Person): the user that initiated the collaborator creation
 
     Returns:
         Tuple[bool, str]: success, message - whether the collaborator creation was success and explanation message of the outcome
@@ -27,6 +30,8 @@ def create_collaborator(project: Project, user: User) -> Tuple[bool, str]:
         ProjectCollaborator.objects.create(
             project=project,
             collaborator=user,
+            created_by=created_by,
+            updated_by=created_by,
         )
         success = True
         message = _('User "{}" has been invited to the project.').format(user.username)
@@ -59,7 +64,9 @@ def create_collaborator_by_username_or_email(
         Tuple[bool, str]: success, message - whether the collaborator creation was success and explanation message of the outcome
     """
     success, message = False, ""
-    users = list(Person.objects.filter(Q(username=username) | Q(email=username)))
+    users = list(
+        Person.objects.filter(Q(username=username) | Q(email=username))
+    ) + list(Team.objects.filter(username=username, team_organization=project.owner))
 
     if len(users) == 0:
         # No user found, if string is an email address, we try to send a link
@@ -79,6 +86,6 @@ def create_collaborator_by_username_or_email(
             ).format(username),
         )
     else:
-        success, message = create_collaborator(project, users[0])
+        success, message = create_collaborator(project, users[0], created_by)
 
     return success, message

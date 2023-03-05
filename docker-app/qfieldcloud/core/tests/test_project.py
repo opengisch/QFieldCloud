@@ -404,6 +404,27 @@ class QfcTestCase(APITransactionTestCase):
                 project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
             )
 
+    def test_direct_collaborators(self):
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        c1 = ProjectCollaborator.objects.create(
+            project=p1,
+            collaborator=u2,
+            role=ProjectCollaborator.Roles.MANAGER,
+            is_incognito=False,
+        )
+
+        self.assertEqual(len(p1.direct_collaborators), 1)
+
+        c1.is_incognito = True
+        c1.save()
+
+        self.assertEqual(len(p1.direct_collaborators), 0)
+
     def test_add_project_collaborator_and_being_org_member(self):
         u1 = Person.objects.create(username="u1")
         u2 = Person.objects.create(username="u2")

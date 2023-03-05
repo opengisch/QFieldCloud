@@ -68,7 +68,9 @@ class QfcTestCase(TransactionTestCase):
             "/admin/core/delta/add/",
             "/admin/core/job/add/",
             "/admin/axes/accessattempt/add/",
+            "/admin/axes/accessfailurelog/add/",
             "/admin/axes/accesslog/add/",
+            "/admin/auditlog/logentry/add/",
         )
         # TODO make tests pass for these sortable URLs
         skip_sort_urls = ("/admin/django_cron/cronjoblog/?o=4",)
