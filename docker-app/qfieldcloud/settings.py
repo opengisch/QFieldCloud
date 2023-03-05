@@ -105,6 +105,7 @@ INSTALLED_APPS = [
     "migrate_sql",
     "constance",
     "constance.backends.database",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [
