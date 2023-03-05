@@ -311,14 +311,10 @@ class UserAccountInline(admin.StackedInline):
     extra = 1
 
     def has_add_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
+        return obj is None
 
     def has_delete_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
+        return False
 
 
 class ProjectInline(admin.TabularInline):
@@ -396,6 +392,11 @@ class PersonAdmin(admin.ModelAdmin):
         "remaining_invitations",
         "has_newsletter_subscription",
         "has_accepted_tos",
+    )
+
+    readonly_fields = (
+        "date_joined",
+        "last_login",
     )
 
     inlines = (
@@ -915,6 +916,7 @@ class OrganizationAdmin(admin.ModelAdmin):
         "username",
         "email",
         "organization_owner",
+        "date_joined",
     )
     list_display = (
         "username",
@@ -930,12 +932,15 @@ class OrganizationAdmin(admin.ModelAdmin):
         "organization_owner__email__iexact",
     )
 
+    readonly_fields = ("date_joined",)
+
     list_select_related = ("organization_owner",)
 
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("organization_owner",)
 
+    @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
         return model_admin_url(
             instance.organization_owner, instance.organization_owner.username

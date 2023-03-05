@@ -758,6 +758,9 @@ class AbstractSubscription(models.Model):
 
         return trial_subscription, regular_subscription
 
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{self.active_storage_total_mb}MB"
+
 
 class Subscription(AbstractSubscription):
     pass
