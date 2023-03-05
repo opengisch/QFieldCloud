@@ -59,24 +59,6 @@ class QfcTestCase(TransactionTestCase):
         )
 
     def test_admin_opens(self):
-        skip_urls = (
-            "/admin/login/",
-            "/admin/logout/",
-            "/admin/password_change/",
-            "/admin/password_change/done/",
-            "/admin/autocomplete/",
-            "/admin/core/delta/add/",
-            "/admin/core/job/add/",
-            "/admin/axes/accessattempt/add/",
-            "/admin/axes/accessfailurelog/add/",
-            "/admin/axes/accesslog/add/",
-            "/admin/auditlog/logentry/add/",
-            "/admin/account/emailaddress/admin/export_emails_to_csv/",
-        )
-
-        # TODO make tests pass for these sortable URLs
-        skip_sort_urls = ("/admin/django_cron/cronjoblog/?o=4",)
-
         self.client.force_login(self.superuser)
 
         urlconf = __import__(settings.ROOT_URLCONF, {}, {}, [""])
@@ -91,7 +73,7 @@ class QfcTestCase(TransactionTestCase):
             if "<" in url:
                 continue
 
-            if url in skip_urls:
+            if url in settings.QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS:
                 continue
 
             # get page without any sorting
@@ -108,7 +90,8 @@ class QfcTestCase(TransactionTestCase):
             for anchor in soup.select("th.sortable a"):
                 sort_url = f"{url}{anchor.get('href')}"
 
-                if sort_url in skip_sort_urls:
+                # TODO make tests pass for these sortable URLs
+                if sort_url in settings.QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS:
                     continue
 
                 resp = self.client.get(sort_url)

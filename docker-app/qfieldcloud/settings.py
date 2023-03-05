@@ -386,6 +386,25 @@ QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
 
+# Admin URLS which will be skipped from checking if they return HTTP 200
+QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
+    "/admin/login/",
+    "/admin/logout/",
+    "/admin/password_change/",
+    "/admin/password_change/done/",
+    "/admin/autocomplete/",
+    "/admin/core/delta/add/",
+    "/admin/core/job/add/",
+    "/admin/axes/accessattempt/add/",
+    "/admin/axes/accessfailurelog/add/",
+    "/admin/axes/accesslog/add/",
+    "/admin/auditlog/logentry/add/",
+    "/admin/account/emailaddress/admin/export_emails_to_csv/",
+)
+
+# Admin sort URLs which will be skipped from checking if they return HTTP 200
+QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
+
 APPLY_DELTAS_LIMIT = 1000
 
 # the value of the "source" key in each logger entry
