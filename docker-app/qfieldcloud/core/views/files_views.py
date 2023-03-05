@@ -1,3 +1,4 @@
+import logging
 from pathlib import PurePath
 
 import qfieldcloud.core.utils2 as utils2
@@ -14,6 +15,8 @@ from qfieldcloud.core.utils2.storage import (
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 class ListFilesViewPermissions(permissions.BasePermission):
@@ -135,6 +138,13 @@ class DownloadPushDeleteFileView(views.APIView):
         project = Project.objects.get(id=projectid)
 
         if "file" not in request.data:
+            logger.info(
+                'The key "file" was not found in `request.data`.',
+                extra={
+                    "request_data": list(request.data.keys()),
+                    "request_files": list(request.FILES.keys()),
+                },
+            )
             raise exceptions.EmptyContentError()
 
         is_qgis_project_file = utils.is_qgis_project_file(filename)
