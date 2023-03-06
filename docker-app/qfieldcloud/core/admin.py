@@ -16,6 +16,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
@@ -727,6 +728,24 @@ class ApplyJobDeltaInline(admin.TabularInline):
         return False
 
 
+class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
+    title = _("finalized delta job")
+    parameter_name = "finalized"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("finalized", _("finalized")),
+            ("not finalized", _("not finalized")),
+        )
+
+    def queryset(self, request, queryset):
+        q = Q(last_status="pending") | Q(last_status="started")
+        if self.value() == "not finalized":
+            return queryset.filter(q)
+        else:
+            return queryset.filter(~q)
+
+
 class DeltaAdmin(admin.ModelAdmin):
     list_display = (
         "id",
@@ -738,7 +757,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("last_status", "updated_at")
+    list_filter = ("last_status", "updated_at", IsFinalizedDeltaJobFilter)
 
     actions = (
         "set_status_pending",
