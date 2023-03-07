@@ -624,11 +624,7 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, queryset):
-        q = (
-            Q(last_status="pending")
-            | Q(last_status="started")
-            | Q(last_status="queued")
-        )
+        q = Q(status="pending") | Q(status="started") | Q(status="queued")
         if self.value() == "not finalized":
             return queryset.filter(q)
         else:
