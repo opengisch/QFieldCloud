@@ -32,6 +32,7 @@ from django.views.decorators.cache import never_cache
 from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
 from qfieldcloud.core import exceptions
+from qfieldcloud.core.filters import filesizeformat10
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -368,6 +369,7 @@ class PersonAdmin(admin.ModelAdmin):
         "is_active",
         "date_joined",
         "last_login",
+        "storage_usage__field",
     )
     list_filter = (
         "type",
@@ -397,6 +399,7 @@ class PersonAdmin(admin.ModelAdmin):
     readonly_fields = (
         "date_joined",
         "last_login",
+        "storage_usage__field",
     )
 
     inlines = (
@@ -406,6 +409,13 @@ class PersonAdmin(admin.ModelAdmin):
 
     add_form_template = "admin/change_form.html"
     change_form_template = "admin/person_change_form.html"
+
+    @admin.display(description=_("Storage"))
+    def storage_usage__field(self, instance) -> str:
+        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
+        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
+        used_storage_perc = instance.useraccount.storage_used_ratio * 100
+        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -923,6 +933,7 @@ class OrganizationAdmin(admin.ModelAdmin):
         "email",
         "organization_owner__link",
         "date_joined",
+        "storage_usage__field",
     )
 
     search_fields = (
@@ -932,7 +943,10 @@ class OrganizationAdmin(admin.ModelAdmin):
         "organization_owner__email__iexact",
     )
 
-    readonly_fields = ("date_joined",)
+    readonly_fields = (
+        "date_joined",
+        "storage_usage__field",
+    )
 
     list_select_related = ("organization_owner",)
 
@@ -945,6 +959,13 @@ class OrganizationAdmin(admin.ModelAdmin):
         return model_admin_url(
             instance.organization_owner, instance.organization_owner.username
         )
+
+    @admin.display(description=_("Storage"))
+    def storage_usage__field(self, instance) -> str:
+        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
+        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
+        used_storage_perc = instance.useraccount.storage_used_ratio * 100
+        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
 
     def get_search_results(self, request, queryset, search_term):
         filters = search_parser(
