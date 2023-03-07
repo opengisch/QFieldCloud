@@ -613,6 +613,28 @@ class DeltaInline(admin.TabularInline):
     #     return format_pre_json(instance.feedback)
 
 
+class IsFinalizedJobFilter(admin.SimpleListFilter):
+    title = _("finalized job")
+    parameter_name = "finalized"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("finalized", _("finalized")),
+            ("not finalized", _("not finalized")),
+        )
+
+    def queryset(self, request, queryset):
+        q = (
+            Q(last_status="pending")
+            | Q(last_status="started")
+            | Q(last_status="queued")
+        )
+        if self.value() == "not finalized":
+            return queryset.filter(q)
+        else:
+            return queryset.filter(~q)
+
+
 class JobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
@@ -624,7 +646,7 @@ class JobAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("type", "status", "updated_at")
+    list_filter = ("type", "status", "updated_at", IsFinalizedJobFilter)
     list_select_related = ("project", "project__owner", "created_by")
     exclude = ("feedback", "output")
     ordering = ("-updated_at",)
