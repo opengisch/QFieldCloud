@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+from enum import Enum
 from pathlib import PurePath
 from typing import IO, List, Optional, Set
 
@@ -262,8 +263,14 @@ def file_response(
     )
 
 
+class Mimes(str, Enum):
+    svg = "image/svg+xml"
+    png = "image/png"
+    jpg = "image/jpeg"
+
+
 def upload_user_avatar(
-    user: qfieldcloud.core.models.User, file: IO, mimetype: str
+    user: qfieldcloud.core.models.User, file: IO, mimetype: Mimes
 ) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
@@ -272,29 +279,19 @@ def upload_user_avatar(
     Args:
         user (User):
         file (IO): file used as avatar
-        mimetype (str): file mimetype
+        mimetype (Mimes): file mimetype
 
     Returns:
         str: URI to the avatar
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
-
-    if mimetype == "image/svg+xml":
-        extension = "svg"
-    elif mimetype == "image/png":
-        extension = "png"
-    elif mimetype == "image/jpeg":
-        extension = "jpg"
-    else:
-        raise Exception(f"Unknown mimetype: {mimetype}")
-
-    key = f"users/{user.username}/avatar.{extension}"
+    key = f"users/{user.username}/avatar.{mimetype.name}"
     bucket.upload_fileobj(
         file,
         key,
         {
             "ACL": "public-read",
-            "ContentType": mimetype,
+            "ContentType": mimetype.value,
         },
     )
     return key
