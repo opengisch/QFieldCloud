@@ -32,7 +32,6 @@ from django.views.decorators.cache import never_cache
 from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
 from qfieldcloud.core import exceptions
-from qfieldcloud.core.filters import filesizeformat10
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
@@ -49,6 +48,7 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import jobs
 from rest_framework.authtoken.models import TokenProxy
 
