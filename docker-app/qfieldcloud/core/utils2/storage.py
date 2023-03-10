@@ -263,14 +263,21 @@ def file_response(
     )
 
 
-class Mimes(str, Enum):
+class ImageMimeTypes(str, Enum):
     svg = "image/svg+xml"
     png = "image/png"
     jpg = "image/jpeg"
 
+    @classmethod
+    def or_none(cls, string: str) -> "ImageMimeTypes" | None:
+        try:
+            return cls(string)
+        except ValueError:
+            return None
+
 
 def upload_user_avatar(
-    user: qfieldcloud.core.models.User, file: IO, mimetype: Mimes
+    user: qfieldcloud.core.models.User, file: IO, mimetype: ImageMimeTypes
 ) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
@@ -279,7 +286,7 @@ def upload_user_avatar(
     Args:
         user (User):
         file (IO): file used as avatar
-        mimetype (Mimes): file mimetype
+        mimetype (ImageMimeTypes): file mimetype
 
     Returns:
         str: URI to the avatar
