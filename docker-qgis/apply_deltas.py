@@ -218,18 +218,20 @@ def get_geometry_from_delta(
     geometry = None
 
     if "geometry" in delta_feature:
-        wkt = delta_feature["geometry"].strip()
-
-        if not isinstance(wkt, str):
-            raise DeltaException("The provided geometry is not null or a WKT string.")
-
-        if len(wkt) == 0:
-            raise DeltaException("Empty WKT string!")
-
         if delta_feature["geometry"] is None:
             # create an invalid geometry to indicate that the geometry has been deleted
             geometry = QgsGeometry()
         else:
+            wkt = delta_feature["geometry"].strip()
+
+            if not isinstance(wkt, str):
+                raise DeltaException(
+                    "The provided geometry is not null or a WKT string."
+                )
+
+            if len(wkt) == 0:
+                raise DeltaException("Empty WKT string!")
+
             wkt = wkt_nan_to_zero(wkt)
             geometry = QgsGeometry.fromWkt(wkt)
 
