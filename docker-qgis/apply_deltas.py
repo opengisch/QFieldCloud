@@ -226,7 +226,7 @@ def get_geometry_from_delta(
 
             if not isinstance(wkt, str):
                 raise DeltaException(
-                    "The provided geometry is not null or a WKT string."
+                    f"The provided geometry is of type {type(wkt)} which is neither null nor a WKT string."
                 )
 
             if len(wkt) == 0:
