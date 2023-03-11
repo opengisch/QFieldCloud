@@ -23,6 +23,23 @@
         }
       },
       {
+        "uuid": "6c127828-b072-4939-a955-2018175748ac",
+        "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+        "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+        "localPk": "2",
+        "sourcePk": "",
+        "localLayerId": "nonspatial_5b9be5d0_6faa_4c14_825d_7889615c842c",
+        "sourceLayerId": "nonspatial_5b9be5d0_6faa_4c14_825d_7889615c842c",
+        "method": "create",
+        "new": {
+          "geometry": null,
+          "attributes": {
+            "fid": 2,
+            "col1": "newfeature"
+          }
+        }
+      },
+      {
         "uuid": "f326c3c1-138f-4261-9151-4946237ce714",
         "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
         "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
