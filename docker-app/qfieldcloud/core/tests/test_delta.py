@@ -719,6 +719,11 @@ class QfcTestCase(APITransactionTestCase):
                     self.user1.username,
                 ],
                 [
+                    "6c127828-b072-4939-a955-2018175748ac",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
                     "f326c3c1-138f-4261-9151-4946237ce714",
                     "STATUS_APPLIED",
                     self.user1.username,
@@ -727,7 +732,8 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         self.assertEqual(
-            self.get_file_contents(project, "nonspatial.csv"), b'fid,col1\n"1",qux\n'
+            self.get_file_contents(project, "nonspatial.csv"),
+            b'fid,col1\n"1",qux\n"2",newfeature\n',
         )
 
     def test_delta_pushed_after_job_triggered(self):
