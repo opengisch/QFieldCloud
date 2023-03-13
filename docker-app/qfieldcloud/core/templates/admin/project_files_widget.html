@@ -169,6 +169,17 @@
                     .then((files) => refreshTableContents({ files }))
                     .catch((error) => refreshTableContents({ error }));
             };
+            const toFixed1 = (n, f) => (n/f).toFixed(1);
+            const humanReadableSizes = n => {
+                switch(true) {
+                    case n < 10 ** 6:
+                        return toFixed1(n, 10 ** 3) + " KBs";
+                    case n < 10 ** 9:
+                        return toFixed1(n, 10 ** 6) + " MBs";
+                    default:
+                        return toFixed1(n, 10 ** 9) + " GBs";
+                }
+            };
             const refreshTableContents = ({ error, isLoading = false, files = [] }) => {
                 $tbody.innerHTML = '';
                 $count.innerHTML = '';
@@ -196,7 +207,7 @@
 
                         $trow.querySelector('td:nth-child(1)').innerHTML = file.name;
                         $trow.querySelector('td:nth-child(2)').innerHTML = file.last_modified;
-                        $trow.querySelector('td:nth-child(3)').innerHTML = file.size;
+                        $trow.querySelector('td:nth-child(3)').innerHTML = humanReadableSizes(file.size);
 
                         for (const version of file.versions) {
                             const $option = document.createElement('option');
