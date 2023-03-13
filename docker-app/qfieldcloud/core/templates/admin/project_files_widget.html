@@ -169,15 +169,15 @@
                     .then((files) => refreshTableContents({ files }))
                     .catch((error) => refreshTableContents({ error }));
             };
-            const toFixed1 = (n, f) => (n/f).toFixed(1);
-            const humanReadableSizes = n => {
+            const divByFixed3 = (x, y) => (x/y).toFixed(3);
+            const filesize10 = n => {
                 switch(true) {
                     case n < 10 ** 6:
-                        return toFixed1(n, 10 ** 3) + " KB";
+                        return [n.toString(), divByFixed3(n, 10 ** 3) + " KB"];
                     case n < 10 ** 9:
-                        return toFixed1(n, 10 ** 6) + " MB";
+                        return [n.toString(), divByFixed3(n, 10 ** 6) + " MB"];
                     default:
-                        return toFixed1(n, 10 ** 9) + " GB";
+                        return [n.toString(), divByFixed3(n, 10 ** 9) + " GB"];
                 }
             };
             const refreshTableContents = ({ error, isLoading = false, files = [] }) => {
@@ -207,7 +207,8 @@
 
                         $trow.querySelector('td:nth-child(1)').innerHTML = file.name;
                         $trow.querySelector('td:nth-child(2)').innerHTML = file.last_modified;
-                        $trow.querySelector('td:nth-child(3)').innerHTML = humanReadableSizes(file.size);
+                        const [sizeBytes, size10] = filesize10(file.size)
+                        $trow.querySelector('td:nth-child(3)').innerHTML = `<span title=${sizeBytes} bytes">${size10} KB</span>`;
 
                         for (const version of file.versions) {
                             const $option = document.createElement('option');
