@@ -173,11 +173,11 @@
             const humanReadableSizes = n => {
                 switch(true) {
                     case n < 10 ** 6:
-                        return toFixed1(n, 10 ** 3) + " KBs";
+                        return toFixed1(n, 10 ** 3) + " KB";
                     case n < 10 ** 9:
-                        return toFixed1(n, 10 ** 6) + " MBs";
+                        return toFixed1(n, 10 ** 6) + " MB";
                     default:
-                        return toFixed1(n, 10 ** 9) + " GBs";
+                        return toFixed1(n, 10 ** 9) + " GB";
                 }
             };
             const refreshTableContents = ({ error, isLoading = false, files = [] }) => {
