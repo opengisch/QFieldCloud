@@ -220,9 +220,11 @@
                         });
 
                         $downloadBtn.addEventListener('click', () => {
-                            window.open(buildApiUrl(`files/${projectId}/${file.name}/`, {
+                            const path_to_file = `files/${projectId}/${file.name}/`
+                            const buildApiUrlWithPath = () => buildApiUrl(path_to_file, {
                                 version: $versionsSelect.value,
-                            }));
+                            });
+                            window.open($versionsSelect.value ? buildApiUrlWithPath() : path_to_file);
                         });
 
                         $deleteBtn.addEventListener('click', () => {
