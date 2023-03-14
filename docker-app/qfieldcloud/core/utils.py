@@ -82,12 +82,7 @@ class S3ObjectWithVersions(NamedTuple):
     def total_size(self) -> int:
         """Total size of all versions"""
         # latest is also in versions
-        return sum(v.size for v in self.versions)
-
-    def delete(self):
-        bucket = get_s3_bucket()
-
-        return bucket.object_versions.filter(Prefix=self.latest.key).delete()
+        return sum(v.size for v in self.versions if v.size is not None)
 
 
 def redis_is_running() -> bool:
@@ -126,11 +121,9 @@ def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
 def get_s3_client() -> mypy_boto3_s3.Client:
     """Get a new S3 client instance using Django settings"""
 
-    s3_client = boto3.client(
+    s3_session = get_s3_session()
+    s3_client = s3_session.client(
         "s3",
-        region_name=settings.STORAGE_REGION_NAME,
-        aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
         endpoint_url=settings.STORAGE_ENDPOINT_URL,
     )
     return s3_client
@@ -203,32 +196,8 @@ def _get_md5sum_file(file: IO) -> str:
 
 def strip_json_null_bytes(file: IO) -> IO:
     """Return JSON string stream without NULL chars."""
-    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
-        return _strip_json_null_bytes_memory_file(file)
-    else:
-        return _strip_json_null_bytes_file(file)
-
-
-def _strip_json_null_bytes_memory_file(file: IO) -> IO:
     result = io.BytesIO()
-    BLOCKSIZE = 65536
-
-    for chunk in file.chunks(BLOCKSIZE):
-        result.write(chunk.decode().replace(r"\u0000", "").encode())
-    file.seek(0)
-    result.seek(0)
-
-    return result
-
-
-def _strip_json_null_bytes_file(file: IO) -> IO:
-    result = io.BytesIO()
-    BLOCKSIZE = 65536
-
-    buf = file.read(BLOCKSIZE)
-    while len(buf) > 0:
-        result.write(buf.decode().replace(r"\u0000", "").encode())
-        buf = file.read(BLOCKSIZE)
+    result.write(file.read().decode().replace(r"\u0000", "").encode())
     file.seek(0)
     result.seek(0)
 
@@ -333,25 +302,6 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
     jsonschema.Draft7Validator.check_schema(schema_dict)
 
     return jsonschema.Draft7Validator(schema_dict)
-
-
-def get_s3_project_size(project_id: str) -> int:
-    """Return the size in MB of the project on the storage, including the
-    exported files and their versions"""
-
-    bucket = get_s3_bucket()
-
-    total_size = 0
-
-    files_prefix = f"projects/{project_id}/files/"
-    for version in bucket.object_versions.filter(Prefix=files_prefix):
-        total_size += version.size or 0
-
-    packages_prefix = f"projects/{project_id}/packages/"
-    for version in bucket.object_versions.filter(Prefix=packages_prefix):
-        total_size += version.size or 0
-
-    return round(total_size / (1000 * 1000), 3)
 
 
 def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:

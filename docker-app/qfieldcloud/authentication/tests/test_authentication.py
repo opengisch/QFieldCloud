@@ -2,7 +2,7 @@ import logging
 
 from django.utils.timezone import datetime, now
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import User
+from qfieldcloud.core.models import Organization, Person, Team
 from qfieldcloud.core.tests.utils import setup_subscription_plans
 from rest_framework.test import APITransactionTestCase
 
@@ -14,7 +14,7 @@ class QfcTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
 
     def assertTokenMatch(self, token, payload):
         expires_at = payload.pop("expires_at")
@@ -29,7 +29,7 @@ class QfcTestCase(APITransactionTestCase):
                 "first_name": "",
                 "full_name": "",
                 "last_name": "",
-                "user_type": "1",
+                "type": "1",
             },
         )
         self.assertTrue(datetime.fromisoformat(expires_at) == token.expires_at)
@@ -42,7 +42,7 @@ class QfcTestCase(APITransactionTestCase):
             )
         )
 
-    def login(self, username, password, user_agent=""):
+    def login(self, username, password, user_agent="", success=True):
         response = self.client.post(
             "/api/v1/auth/login/",
             {
@@ -52,7 +52,8 @@ class QfcTestCase(APITransactionTestCase):
             HTTP_USER_AGENT=user_agent,
         )
 
-        self.assertEqual(response.status_code, 200)
+        if success:
+            self.assertEqual(response.status_code, 200)
 
         return response
 
@@ -205,3 +206,43 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEquals(len(tokens), 1)
         self.assertLess(first_used_at, second_used_at)
+
+    def test_login_users_only(self):
+        u1 = Person.objects.create_user(username="u1", password="abc123")
+        o1 = Organization.objects.create_user(
+            username="o1", password="abc123", organization_owner=u1
+        )
+        t1 = Team.objects.create_user(
+            username="@o1/t1", password="abc123", team_organization=o1
+        )
+
+        # regular users can login
+        response = self.login("u1", "abc123", success=True)
+
+        tokens = u1.auth_tokens.order_by("-created_at").all()
+
+        self.assertEquals(len(tokens), 1)
+        self.assertEquals(o1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEquals(t1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertTokenMatch(tokens[0], response.json())
+        self.assertIsNone(tokens[0].last_used_at)
+
+        # organizations cannot login
+        response = self.login("o1", "abc123", success=False)
+
+        self.assertEquals(u1.auth_tokens.order_by("-created_at").count(), 1)
+        self.assertEquals(o1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEquals(t1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEquals(
+            response.json(), {"code": "api_error", "message": "API Error"}
+        )
+
+        # teams cannot login
+        response = self.login("t1", "abc123", success=False)
+
+        self.assertEquals(u1.auth_tokens.order_by("-created_at").count(), 1)
+        self.assertEquals(o1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEquals(t1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEquals(
+            response.json(), {"code": "api_error", "message": "API Error"}
+        )

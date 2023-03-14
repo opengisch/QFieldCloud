@@ -5,16 +5,16 @@ from qfieldcloud.core import permissions_utils as perms
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     Team,
     User,
 )
-from qfieldcloud.subscription.models import Plan
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans, testdata_path
+from .utils import set_subscription, setup_subscription_plans, testdata_path
 
 logging.disable(logging.CRITICAL)
 
@@ -24,18 +24,18 @@ class QfcTestCase(APITestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a second user
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # Create an organization
         self.organization1 = Organization.objects.create(
             username="organization1",
             password="abc123",
-            user_type=2,
+            type=2,
             organization_owner=self.user1,
         )
 
@@ -156,9 +156,9 @@ class QfcTestCase(APITestCase):
             self.assertEqual(perms.can_become_collaborator(u, p), error is None)
 
         # Create users
-        u1 = User.objects.create_user(username="u1")
-        u2 = User.objects.create_user(username="u2")
-        u3 = User.objects.create_user(username="u3")
+        u1 = Person.objects.create_user(username="u1")
+        u2 = Person.objects.create_user(username="u2")
+        u3 = Person.objects.create_user(username="u3")
 
         # Create organizations
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
@@ -198,34 +198,37 @@ class QfcTestCase(APITestCase):
         assertBecomeCollaborator(o1_t1, p2, None)
 
         # non-premium user cannot collaborate on private user project with max_premium_collaborators set to 0
-        premium_plan = Plan.objects.create(
-            user_type=Plan.UserType.USER,
+        set_subscription(
+            u1,
             is_premium=True,
             max_premium_collaborators_per_private_project=0,
         )
-        u1.useraccount.plan = premium_plan
-        u1.useraccount.save()
         assertBecomeCollaborator(u2, p1, perms.ReachedCollaboratorLimitError)
 
         # non-premium user cannot collaborate on private user project with max_premium_collaborators set to 1
-        u1.useraccount.plan.max_premium_collaborators_per_private_project = 1
-        u1.useraccount.plan.save()
+        subscription = u1.useraccount.active_subscription
+        subscription.plan.max_premium_collaborators_per_private_project = 1
+        subscription.plan.save()
         assertBecomeCollaborator(u2, p1, perms.ExpectedPremiumUserError)
 
         # premium user can collaborate on private user project with max_premium_collaborators set to 1
-        default_plan = u2.useraccount.plan
-        u2.useraccount.plan = premium_plan
-        u2.useraccount.plan.save()
+        default_plan = u2.useraccount.active_subscription.plan
+        set_subscription(
+            u2,
+            is_premium=True,
+            max_premium_collaborators_per_private_project=0,
+        )
         assertBecomeCollaborator(u2, p1, None)
 
         # non-premium user can collaborate on public user project with max_premium_collaborators set to 1
-        u2.useraccount.plan = default_plan
-        u2.useraccount.plan.save()
+        subscription = u2.useraccount.active_subscription
+        subscription.plan = default_plan
+        subscription.plan.save()
         p1.is_public = True
         p1.save()
         assertBecomeCollaborator(u2, p1, None)
 
         # non-premium user can collaborate on public user project with max_premium_collaborators set to 0
-        u1.useraccount.plan.max_premium_collaborators_per_private_project = 0
-        u1.useraccount.plan.save()
+        subscription.plan.max_premium_collaborators_per_private_project = 0
+        subscription.plan.save()
         assertBecomeCollaborator(u2, p1, None)

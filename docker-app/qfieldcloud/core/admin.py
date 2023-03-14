@@ -1,27 +1,47 @@
+import csv
 import json
 import time
-from typing import Any, Dict
+from collections import namedtuple
+from datetime import datetime
+from itertools import chain
+from typing import Any, Dict, Generator
 
+from allauth.account.admin import EmailAddressAdmin
+from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
+from allauth.account.models import EmailAddress
+from allauth.account.utils import user_pk_to_url_str
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.db.models.fields.json import JSONField
+from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
-from django.http.response import HttpResponseRedirect
+from django.http import HttpRequest
+from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import resolve_url
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.utils.decorators import method_decorator
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeText
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
+from invitations.admin import InvitationAdmin as InvitationAdminBase
+from invitations.utils import get_invitation_model
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
     Geodb,
+    Job,
     Organization,
     OrganizationMember,
-    PackageJob,
-    ProcessProjectfileJob,
+    Person,
     Project,
     ProjectCollaborator,
     Team,
@@ -29,7 +49,163 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import jobs
+from rest_framework.authtoken.models import TokenProxy
+
+Invitation = get_invitation_model()
+
+
+def admin_urlname_by_obj(value, arg):
+    if isinstance(value, User):
+        if value.is_person:
+            return "admin:core_person_%s" % (arg)
+        elif value.is_organization:
+            return "admin:core_organization_%s" % (arg)
+        elif value.is_team:
+            return "admin:core_team_%s" % (arg)
+        else:
+            raise NotImplementedError("Unknown user type!")
+    elif isinstance(value, Job):
+        return "admin:core_job_%s" % (arg)
+    else:
+        return admin_urlname(value._meta, arg)
+
+
+# Unregister admins from other Django apps
+admin.site.unregister(Invitation)
+admin.site.unregister(TokenProxy)
+admin.site.unregister(Group)
+admin.site.unregister(SocialAccount)
+admin.site.unregister(SocialApp)
+admin.site.unregister(SocialToken)
+admin.site.unregister(EmailAddress)
+
+UserEmailDetails = namedtuple(
+    "UserEmailDetails",
+    [
+        "id",
+        "username",
+        "first_name",
+        "last_name",
+        "type",
+        "email",
+        "date_joined",
+        "owner_id",
+        "owner_username",
+        "owner_email",
+        "owner_first_name",
+        "owner_last_name",
+        "owner_date_joined",
+    ],
+)
+
+
+class EmailAddressAdmin(EmailAddressAdmin):
+    def get_urls(self):
+        urls = super().get_urls()
+        return [
+            *urls,
+            path(
+                "admin/export_emails_to_csv/",
+                self.admin_site.admin_view(self.export_emails_to_csv),
+                name="export_emails_to_csv",
+            ),
+        ]
+
+    def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
+        raw_queryset = User.objects.raw(
+            """
+            WITH u AS (
+                SELECT
+                    DISTINCT ON (COALESCE(ae.email, u.email)) COALESCE(ae.email, u.email) AS "email",
+                    u.id,
+                    u.username,
+                    u.first_name,
+                    u.last_name,
+                    u.type,
+                    u.date_joined
+                FROM
+                    core_user u
+                    LEFT JOIN account_emailaddress ae ON ae.user_id = u.id AND ae.primary
+                WHERE
+                    COALESCE(ae.email, u.email) IS NOT NULL
+                    AND COALESCE(ae.email, u.email) != ''
+                ORDER BY
+                    COALESCE(ae.email, u.email),
+                    u.type
+            )
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.date_joined,
+                u.type,
+                oo.id AS "owner_id",
+                oo.username AS "owner_username",
+                oo.email AS "owner_email",
+                oo.first_name AS "owner_first_name",
+                oo.last_name AS "owner_last_name",
+                oo.date_joined AS "owner_date_joined"
+            FROM
+                u
+                LEFT JOIN account_emailaddress ae ON ae.user_id = u.id
+                LEFT JOIN core_organization o ON o.user_ptr_id = u.id
+                LEFT JOIN u oo ON oo.id = o.organization_owner_id
+            ORDER BY u.id
+            """
+        )
+        return (
+            UserEmailDetails(
+                row.id,
+                row.username,
+                row.first_name,
+                row.last_name,
+                row.type,
+                row.email,
+                row.date_joined,
+                row.owner_id,
+                row.owner_username,
+                row.owner_email,
+                row.owner_first_name,
+                row.owner_last_name,
+                row.owner_date_joined,
+            )
+            for row in raw_queryset
+        )
+
+    @admin.action(description="Export all users' email contact details to .csv")
+    def export_emails_to_csv(self, request) -> StreamingHttpResponse:
+        """ "Export all users' email contact details to .csv"""
+
+        class PseudoBuffer:
+            # Good idea from https://docs.djangoproject.com/en/4.1/howto/outputting-csv/
+            def write(self, value):
+                return value
+
+        def human_readable_timestamp() -> str:
+            d, h = str(datetime.utcnow()).split(" ")
+            d = d.replace("-", "")
+            h = h[:-7].replace(":", "")
+            return "_".join([d, h])
+
+        email_rows = self.gen_users_email_addresses()
+        pseudo_buffer = PseudoBuffer()
+        writer = csv.DictWriter(pseudo_buffer, fieldnames=UserEmailDetails._fields)
+        header = {k: k for k in UserEmailDetails._fields}
+        write_with_header = chain(
+            [writer.writerow(header)],
+            (writer.writerow(row._asdict()) for row in email_rows),
+        )
+        filename = f"qfc_user_email_{human_readable_timestamp()}"
+
+        return StreamingHttpResponse(
+            write_with_header,
+            content_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}.csv"},
+        )
 
 
 class PrettyJSONWidget(widgets.Textarea):
@@ -62,7 +238,7 @@ def search_parser(
 
 
 def model_admin_url(obj, name: str = None) -> str:
-    url = resolve_url(admin_urlname(obj._meta, SafeText("change")), obj.pk)
+    url = resolve_url(admin_urlname_by_obj(obj, SafeText("change")), obj.pk)
     return format_html('<a href="{}">{}</a>', url, name or str(obj))
 
 
@@ -99,17 +275,17 @@ class MemberOrganizationInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class MemberTeamInline(admin.TabularInline):
@@ -119,17 +295,17 @@ class MemberTeamInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
 class UserAccountInline(admin.StackedInline):
@@ -137,14 +313,10 @@ class UserAccountInline(admin.StackedInline):
     extra = 1
 
     def has_add_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return obj is None
 
     def has_delete_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.user_type in (User.TYPE_USER, User.TYPE_ORGANIZATION)
+        return False
 
 
 class ProjectInline(admin.TabularInline):
@@ -174,20 +346,20 @@ class UserProjectCollaboratorInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.type == User.Type.PERSON
 
     def has_delete_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.type == User.Type.PERSON
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
-        return obj.user_type == User.TYPE_USER
+        return obj.type == User.Type.PERSON
 
 
-class UserAdmin(admin.ModelAdmin):
+class PersonAdmin(admin.ModelAdmin):
     list_display = (
         "username",
         "first_name",
@@ -197,18 +369,17 @@ class UserAdmin(admin.ModelAdmin):
         "is_staff",
         "is_active",
         "date_joined",
-        "user_type",
-        "useraccount",
+        "last_login",
+        "storage_usage__field",
     )
     list_filter = (
-        "user_type",
+        "type",
         "date_joined",
         "is_active",
         "is_staff",
-        "useraccount__plan",
     )
 
-    search_fields = ("username__icontains", "owner__username__iexact")
+    search_fields = ("username__icontains", "email__iexact")
 
     fields = (
         "username",
@@ -216,14 +387,20 @@ class UserAdmin(admin.ModelAdmin):
         "email",
         "first_name",
         "last_name",
-        "remaining_invitations",
         "date_joined",
         "last_login",
         "is_superuser",
         "is_staff",
         "is_active",
+        "remaining_invitations",
         "has_newsletter_subscription",
         "has_accepted_tos",
+    )
+
+    readonly_fields = (
+        "date_joined",
+        "last_login",
+        "storage_usage__field",
     )
 
     inlines = (
@@ -231,7 +408,15 @@ class UserAdmin(admin.ModelAdmin):
         GeodbInline,
     )
 
-    change_form_template = "admin/user_change_form.html"
+    add_form_template = "admin/change_form.html"
+    change_form_template = "admin/person_change_form.html"
+
+    @admin.display(description=_("Storage"))
+    def storage_usage__field(self, instance) -> str:
+        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
+        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
+        used_storage_perc = instance.useraccount.storage_used_ratio * 100
+        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -242,10 +427,67 @@ class UserAdmin(admin.ModelAdmin):
             obj.set_password(obj.password)
         obj.save()
 
+    def get_urls(self):
+        urls = super().get_urls()
+
+        urls = [
+            *urls,
+            path(
+                "<int:user_id>/password_reset_url",
+                self.admin_site.admin_view(self.password_reset_url),
+                name="password_reset_url",
+            ),
+        ]
+        return urls
+
+    @method_decorator(never_cache)
+    def password_reset_url(self, request, user_id, form_url=""):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+
+        user = self.get_object(request, user_id)
+        if user is None:
+            raise Http404(
+                _("%(name)s object with primary key %(key)r does " "not exist.")
+                % {
+                    "name": self.model._meta.verbose_name,
+                    "key": escape(user_id),
+                }
+            )
+
+        token_generator = EmailAwarePasswordResetTokenGenerator()
+        url = reverse(
+            "account_reset_password_from_key",
+            kwargs={
+                "uidb36": user_pk_to_url_str(user),
+                "key": token_generator.make_token(user),
+            },
+        )
+        return TemplateResponse(
+            request,
+            "admin/password_reset_url.html",
+            context={
+                "user": user,
+                "url": request.build_absolute_uri(url),
+                "title": _("Password reset"),
+                "timeout_days": settings.PASSWORD_RESET_TIMEOUT / 3600 / 24,
+            },
+        )
+
 
 class ProjectCollaboratorInline(admin.TabularInline):
     model = ProjectCollaborator
+
     extra = 0
+
+    readonly_fields = (
+        "created_by",
+        "updated_by",
+        "created_at",
+        "updated_at",
+    )
+
+    autocomplete_fields = ("collaborator",)
 
 
 class ProjectFilesWidget(widgets.Input):
@@ -286,7 +528,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "is_public",
         "owner",
         "project_filename",
-        "storage_size_mb",
+        "file_storage_bytes",
         "created_at",
         "updated_at",
         "data_last_updated_at",
@@ -296,7 +538,7 @@ class ProjectAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "id",
-        "storage_size_mb",
+        "file_storage_bytes",
         "created_at",
         "updated_at",
         "data_last_updated_at",
@@ -309,6 +551,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "name__icontains",
         "owner__username__iexact",
     )
+    autocomplete_fields = ("owner",)
 
     ordering = ("-updated_at",)
 
@@ -348,6 +591,17 @@ class ProjectAdmin(admin.ModelAdmin):
 
         return format_pre_json(instance.project_details)
 
+    def save_formset(self, request, form, formset, change):
+        for form_obj in formset:
+            if isinstance(form_obj.instance, ProjectCollaborator):
+                # add created_by only if it's a newly created collaborator
+                if form_obj.instance.id is None:
+                    form_obj.instance.created_by = request.user
+
+                form_obj.instance.updated_by = request.user
+
+        super().save_formset(request, form, formset, change)
+
 
 class DeltaInline(admin.TabularInline):
     model = ApplyJob.deltas_to_apply.through
@@ -369,33 +623,79 @@ class DeltaInline(admin.TabularInline):
     #     return format_pre_json(instance.feedback)
 
 
-class ApplyJobAdmin(admin.ModelAdmin):
+class IsFinalizedJobFilter(admin.SimpleListFilter):
+    title = _("finalized job")
+    parameter_name = "finalized"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("finalized", _("finalized")),
+            ("not finalized", _("not finalized")),
+        )
+
+    def queryset(self, request, queryset):
+        q = Q(status="pending") | Q(status="started") | Q(status="queued")
+        if self.value() == "not finalized":
+            return queryset.filter(q)
+        else:
+            return queryset.filter(~q)
+
+
+class JobAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "project__owner",
         "project__name",
+        "type",
         "status",
+        "created_by__link",
         "created_at",
         "updated_at",
     )
-
-    list_filter = ("status", "updated_at")
+    list_filter = ("type", "status", "updated_at", IsFinalizedJobFilter)
+    list_select_related = ("project", "project__owner", "created_by")
+    exclude = ("feedback", "output")
     ordering = ("-updated_at",)
     search_fields = (
         "project__name__iexact",
         "project__owner__username__iexact",
-        "deltas_to_apply__id__startswith",
         "id",
     )
     readonly_fields = (
+        "project",
+        "status",
+        "type",
         "created_at",
         "updated_at",
         "started_at",
         "finished_at",
+        "output__pre",
+        "feedback__pre",
     )
-    inlines = [
-        DeltaInline,
-    ]
+
+    def get_object(self, request, object_id, from_field=None):
+        obj = super().get_object(request, object_id, from_field)
+        if obj and obj.type == Job.Type.DELTA_APPLY:
+            obj = ApplyJob.objects.get(pk=obj.pk)
+        return obj
+
+    def get_inline_instances(self, request, obj=None):
+        inline_instances = super().get_inline_instances(request, obj)
+
+        if isinstance(obj, ApplyJob):
+            for inline_instance in inline_instances:
+                if inline_instance.parent_model == Job:
+                    inline_instance.parent_model = ApplyJob
+
+        return inline_instances
+
+    def get_inlines(self, request, obj=None):
+        inlines = [*super().get_inlines(request, obj)]
+
+        if obj and obj.type == Job.Type.DELTA_APPLY:
+            inlines.append(DeltaInline)
+
+        return inlines
 
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
@@ -407,6 +707,11 @@ class ApplyJobAdmin(admin.ModelAdmin):
 
     project__name.admin_order_field = "project__name"
 
+    def created_by__link(self, instance):
+        return model_admin_url(instance.created_by)
+
+    created_by__link.admin_order_field = "created_by"
+
     def has_add_permission(self, request, obj=None):
         return False
 
@@ -415,6 +720,12 @@ class ApplyJobAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def output__pre(self, instance):
+        return format_pre(instance.output)
+
+    def feedback__pre(self, instance):
+        return format_pre_json(instance.feedback)
 
 
 class ApplyJobDeltaInline(admin.TabularInline):
@@ -445,6 +756,24 @@ class ApplyJobDeltaInline(admin.TabularInline):
         return False
 
 
+class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
+    title = _("finalized delta job")
+    parameter_name = "finalized"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("finalized", _("finalized")),
+            ("not finalized", _("not finalized")),
+        )
+
+    def queryset(self, request, queryset):
+        q = Q(last_status="pending") | Q(last_status="started")
+        if self.value() == "not finalized":
+            return queryset.filter(q)
+        else:
+            return queryset.filter(~q)
+
+
 class DeltaAdmin(admin.ModelAdmin):
     list_display = (
         "id",
@@ -456,7 +785,7 @@ class DeltaAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("last_status", "updated_at")
+    list_filter = ("last_status", "updated_at", IsFinalizedDeltaJobFilter)
 
     actions = (
         "set_status_pending",
@@ -554,122 +883,6 @@ class DeltaAdmin(admin.ModelAdmin):
         return super().response_change(request, delta)
 
 
-class PackageJobAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "project__owner",
-        "project__name",
-        "status",
-        "created_at",
-        "updated_at",
-    )
-    list_filter = ("status", "updated_at")
-    list_select_related = ("project", "project__owner")
-    actions = None
-    exclude = ("feedback", "output")
-
-    readonly_fields = (
-        "project",
-        "status",
-        "created_at",
-        "updated_at",
-        "started_at",
-        "finished_at",
-        "output__pre",
-        "feedback__pre",
-    )
-
-    search_fields = (
-        "id",
-        "feedback__icontains",
-        "project__name__iexact",
-        "project__owner__username__iexact",
-    )
-
-    ordering = ("-updated_at",)
-
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    project__owner.admin_order_field = "project__owner"
-
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
-
-    project__name.admin_order_field = "project__name"
-
-    def output__pre(self, instance):
-        return format_pre(instance.output)
-
-    def feedback__pre(self, instance):
-        return format_pre_json(instance.feedback)
-
-    # This will disable add functionality
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
-class ProcessProjectfileJobAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "project__owner",
-        "project__name",
-        "status",
-        "created_at",
-        "updated_at",
-    )
-    list_filter = ("status", "updated_at")
-    list_select_related = ("project", "project__owner")
-    actions = None
-    exclude = ("feedback", "output")
-
-    readonly_fields = (
-        "project",
-        "status",
-        "created_at",
-        "updated_at",
-        "started_at",
-        "finished_at",
-        "output__pre",
-        "feedback__pre",
-    )
-
-    search_fields = (
-        "id",
-        "feedback__icontains",
-        "project__name__iexact",
-        "project__owner__username__iexact",
-    )
-
-    ordering = ("-updated_at",)
-
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    project__owner.admin_order_field = "project__owner"
-
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
-
-    project__name.admin_order_field = "project__name"
-
-    def output__pre(self, instance):
-        return format_pre(instance.output)
-
-    def feedback__pre(self, instance):
-        return format_pre_json(instance.feedback)
-
-    # This will disable add functionality
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
 class GeodbAdmin(admin.ModelAdmin):
     list_filter = ("created_at", "hostname")
     list_display = (
@@ -718,6 +931,8 @@ class OrganizationMemberInline(admin.TabularInline):
     fk_name = "organization"
     extra = 0
 
+    autocomplete_fields = ("member",)
+
 
 class TeamInline(admin.TabularInline):
     model = Team
@@ -748,26 +963,46 @@ class OrganizationAdmin(admin.ModelAdmin):
         "username",
         "email",
         "organization_owner",
+        "date_joined",
     )
     list_display = (
         "username",
         "email",
         "organization_owner__link",
         "date_joined",
-        "useraccount",
+        "storage_usage__field",
     )
 
     search_fields = (
         "username__icontains",
         "organization_owner__username__icontains",
+        "email__iexact",
+        "organization_owner__email__iexact",
     )
+
+    readonly_fields = (
+        "date_joined",
+        "storage_usage__field",
+    )
+
+    list_select_related = ("organization_owner",)
 
     list_filter = ("date_joined",)
 
+    autocomplete_fields = ("organization_owner",)
+
+    @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
         return model_admin_url(
             instance.organization_owner, instance.organization_owner.username
         )
+
+    @admin.display(description=_("Storage"))
+    def storage_usage__field(self, instance) -> str:
+        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
+        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
+        used_storage_perc = instance.useraccount.storage_used_ratio * 100
+        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
 
     def get_search_results(self, request, queryset, search_term):
         filters = search_parser(
@@ -799,6 +1034,8 @@ class TeamMemberInline(admin.TabularInline):
     fk_name = "team"
     extra = 0
 
+    autocomplete_fields = ("member",)
+
 
 class TeamAdmin(admin.ModelAdmin):
     inlines = (TeamMemberInline,)
@@ -817,23 +1054,65 @@ class TeamAdmin(admin.ModelAdmin):
 
     list_filter = ("date_joined",)
 
+    autocomplete_fields = ("team_organization",)
+
     def save_model(self, request, obj, form, change):
         if not obj.username.startswith("@"):
             obj.username = f"@{obj.team_organization.username}/{obj.username}"
         obj.save()
 
 
-admin.site.register(User, UserAdmin)
+class InvitationAdmin(InvitationAdminBase):
+    list_display = ("email", "inviter", "created", "sent", "accepted")
+    list_select_related = ("inviter",)
+    list_filter = (
+        "accepted",
+        "created",
+        "sent",
+    )
+    search_fields = ("email__icontains", "inviter__username__iexact")
+
+
+class UserAccountAdmin(admin.ModelAdmin):
+    """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
+
+    ordering = (Lower("user__username"),)
+    search_fields = ("user__username__icontains",)
+    list_select_related = ("user",)
+
+    def has_module_permission(self, request: HttpRequest) -> bool:
+        # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
+        return False
+
+
+class UserAdmin(admin.ModelAdmin):
+    """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
+
+    ordering = (Lower("username"),)
+    search_fields = ("username__icontains",)
+
+    def get_queryset(self, request: HttpRequest):
+        return (
+            super()
+            .get_queryset(request)
+            .filter(type__in=(User.Type.PERSON, User.Type.ORGANIZATION))
+        )
+
+    def has_module_permission(self, request: HttpRequest) -> bool:
+        # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
+        return False
+
+
+admin.site.register(Invitation, InvitationAdmin)
+admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
-admin.site.register(ApplyJob, ApplyJobAdmin)
-admin.site.register(PackageJob, PackageJobAdmin)
-admin.site.register(ProcessProjectfileJob, ProcessProjectfileJobAdmin)
+admin.site.register(Job, JobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
 
-admin.site.unregister(Group)
-admin.site.unregister(SocialAccount)
-admin.site.unregister(SocialApp)
-admin.site.unregister(SocialToken)
+# The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
+admin.site.register(User, UserAdmin)
+admin.site.register(UserAccount, UserAccountAdmin)
+admin.site.register(EmailAddress, EmailAddressAdmin)

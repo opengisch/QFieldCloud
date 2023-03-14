@@ -29,9 +29,16 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.utils import get_qgis_project_file
 from qfieldcloud.core.utils2 import storage
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 logger = logging.getLogger(__name__)
 
+RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
@@ -249,6 +256,8 @@ class JobRun:
             # auto_remove=True,
             network=os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK"),
             detach=True,
+            mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
+            cpu_shares=config.WORKER_QGIS_CPU_SHARES,
         )
 
         logger.info(f"Starting worker {container.id} ...")
@@ -256,14 +265,34 @@ class JobRun:
         response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
 
         try:
-            # will throw an ConnectionError, but the container is still alive
+            # will throw an `requests.exceptions.ConnectionError`, but the container is still alive
             response = container.wait(timeout=self.container_timeout_secs)
         except Exception as err:
             logger.exception("Timeout error.", exc_info=err)
 
-        logs = container.logs()
-        container.stop()
-        container.remove()
+        logs = b""
+        # Retry reading the logs, as it may fail
+        # NOTE when reading the logs of a finished container, it might timeout with an ``.
+        # This leads to exception and prevents the container to be removed few lines below.
+        # Therefore try reading the logs, as they are important, and if it fails, just use a
+        # generic "failed to read logs" message.
+        # Similar issue here: https://github.com/docker/docker-py/issues/2266
+
+        retriable = retry(
+            wait=wait_random_exponential(max=10),
+            stop=stop_after_attempt(RETRY_COUNT),
+            retry=retry_if_exception_type(requests.exceptions.ConnectionError),
+            reraise=True,
+        )
+
+        try:
+            logs = retriable(lambda: container.logs())()
+        except requests.exceptions.ConnectionError:
+            logs = b"[QFC/Worker/1001] Failed to read logs."
+
+        retriable(lambda: container.stop())()
+        retriable(lambda: container.remove())()
+
         logger.info(
             f"Finished execution with code {response['StatusCode']}, logs:\n{logs}"
         )
@@ -479,5 +508,7 @@ class ProcessProjectfileJobRun(JobRun):
 
     def after_docker_exception(self) -> None:
         project = self.job.project
-        project.project_details = None
-        project.save(update_fields=("project_details",))
+
+        if project.project_details is not None:
+            project.project_details = None
+            project.save(update_fields=("project_details",))

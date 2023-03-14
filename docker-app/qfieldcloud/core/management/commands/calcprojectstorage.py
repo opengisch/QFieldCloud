@@ -22,7 +22,7 @@ class Command(BaseCommand):
             extra_filters["id"] = project_id
 
         if not project_id and not force_recalculate:
-            extra_filters["storage_size_mb"] = 0
+            extra_filters["file_storage_bytes"] = 0
 
         projects_qs = Project.objects.filter(
             project_filename__isnull=False,
@@ -36,5 +36,5 @@ class Command(BaseCommand):
             )
             project.save(recompute_storage=True)
             print(
-                f'Project files storage size for "{project.id}" is {project.storage_size_mb}MB'
+                f'Project files storage size for "{project.id}" is {project.file_storage_bytes} bytes.'
             )

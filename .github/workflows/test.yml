@@ -1,48 +1,81 @@
 name: Test
+
 on:
   - push
   - pull_request
+
 jobs:
-  test:
-    name: Code check and tests
-    runs-on: ubuntu-20.04
+  check_format:
+    if: '! github.event.pull_request.draft'
+    name: Check code formatting
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
+
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      - name: Install pipenv
-        run: pip install pipenv
       - name: Check code formatting
         uses: pre-commit/action@v2.0.3
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
       - name: Prepare docker-compose override file
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
+
       - name: Check env vars coniguration
         run: |
           scripts/check_envvars.sh
+
       - name: Export the env variables file
         run: |
           cp .env.example .env
           sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
       - name: Pull docker containers
-        run: docker-compose pull
+        run: docker compose pull
+
       - name: Build and run docker containers
         run: |
-          docker-compose up -d --build
-      - name: Migrate
+          docker compose up -d --build
+
+      - name: Initial manage.py commands
         run: |
-          docker-compose run app python manage.py migrate
+          docker compose run app python manage.py migrate
+          docker compose run app python manage.py collectstatic
       - name: Run unit and integration tests
         run: |
-          docker-compose run app python manage.py test --keepdb -v2 qfieldcloud
+          docker compose run app python manage.py test --keepdb -v2 qfieldcloud
 
       - name: "failure logs"
         if: failure()
         run: |
-          docker-compose logs
+          docker compose logs
+
+      - name: Post Google Chat message on failure
+        if: ${{ failure() }}
+        uses: julb/action-post-googlechat-message@v1
+        with:
+          message: |
+            Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
+          gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true

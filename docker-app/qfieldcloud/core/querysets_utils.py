@@ -2,6 +2,8 @@ from functools import reduce
 from operator import and_, or_
 
 from django.db.models import Q
+from django.db.models import Value as V
+from django.db.models.functions import StrIndex
 from django.db.models.manager import BaseManager
 from qfieldcloud.core.models import (
     Delta,
@@ -45,24 +47,26 @@ def get_users(
     ), "Cannot have the project and organization filters set simultaneously"
 
     if username:
-        users = User.objects.filter(
-            Q(username__icontains=username) | Q(email__icontains=username)
-        )
+        users = User.objects.filter(username__icontains=username)
     else:
         users = User.objects.all()
 
     if exclude_organizations:
-        users = users.exclude(user_type=User.TYPE_ORGANIZATION)
+        users = users.exclude(type=User.Type.ORGANIZATION)
 
     if exclude_teams:
-        users = users.exclude(user_type=User.TYPE_TEAM)
+        users = users.exclude(type=User.Type.TEAM)
     else:
         if project:
             users = users.filter(
-                ~Q(user_type=User.TYPE_TEAM)
+                ~Q(type=User.Type.TEAM)
                 | (
-                    Q(user_type=User.TYPE_TEAM)
-                    & Q(pk__in=Team.objects.filter(team_organization=project.owner))
+                    Q(type=User.Type.TEAM)
+                    & Q(
+                        pk__in=Team.objects.filter(
+                            team_organization_id=project.owner_id
+                        )
+                    )
                 )
             )
 
@@ -80,7 +84,7 @@ def get_users(
     elif organization:
         # exclude all teams that are not of the current organization
         users = users.filter(
-            ~Q(user_type=User.TYPE_TEAM)
+            ~Q(type=User.Type.TEAM)
             | Q(pk__in=Team.objects.filter(team_organization=organization))
         )
 
@@ -100,4 +104,6 @@ def get_users(
         else:
             users = users.exclude(reduce(or_, [c for c in conditions]))
 
-    return users.order_by("-username")
+    return users.annotate(
+        ordering=StrIndex("username", V(username)),
+    ).order_by("ordering", "username")

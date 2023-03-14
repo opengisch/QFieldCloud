@@ -21,12 +21,13 @@ sql_items = [
                     P1."id" AS "project_id",
                     P1."owner_id" AS "user_id",
                     'admin' AS "name",
+                    FALSE AS "is_incognito",
                     'project_owner' AS "origin"
                 FROM
                     "core_project" P1
                     INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
                 WHERE
-                    U1."user_type" = 1
+                    U1."type" = 1
             ),
             organization_owner AS (
                 SELECT
@@ -34,6 +35,7 @@ sql_items = [
                     P1."id" AS "project_id",
                     O1."organization_owner_id" AS "user_id",
                     'admin' AS "name",
+                    FALSE AS "is_incognito",
                     'organization_owner' AS "origin"
                 FROM
                     "core_organization" O1
@@ -45,6 +47,7 @@ sql_items = [
                     P1."id" AS "project_id",
                     OM1."member_id" AS "user_id",
                     'admin' AS "name",
+                    FALSE AS "is_incognito",
                     'organization_admin' AS "origin"
                 FROM
                     "core_organizationmember" OM1
@@ -60,6 +63,7 @@ sql_items = [
                     C1."project_id",
                     C1."collaborator_id" AS "user_id",
                     C1."role" AS "name",
+                    C1."is_incognito" AS "is_incognito",
                     'collaborator' AS "origin"
                 FROM
                     "core_projectcollaborator" C1
@@ -72,6 +76,7 @@ sql_items = [
                     C1."project_id",
                     TM1."member_id" AS "user_id",
                     C1."role" AS "name",
+                    C1."is_incognito" AS "is_incognito",
                     'team_member' AS "origin"
                 FROM
                     "core_projectcollaborator" C1
@@ -86,6 +91,7 @@ sql_items = [
                     P1."id" AS "project_id",
                     U1."id" AS "user_id",
                     'reader' AS "name",
+                    FALSE AS "is_incognito",
                     'public' AS "origin"
                 FROM
                     "core_project" P1
@@ -224,6 +230,16 @@ sql_items = [
         """,
         r"""
             DROP TRIGGER IF EXISTS core_delta_geom_insert_trigger ON core_delta
+        """,
+    ),
+    SQLItem(
+        "core_user_email_partial_uniq",
+        r"""
+            CREATE UNIQUE INDEX IF NOT EXISTS core_user_email_partial_uniq ON core_user (email)
+            WHERE type = 1 AND email IS NOT NULL AND email != ''
+        """,
+        r"""
+            DROP INDEX IF EXISTS core_user_email_partial_uniq
         """,
     ),
 ]

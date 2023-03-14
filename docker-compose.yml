@@ -1,17 +1,18 @@
-version: "3.7"
+version: "3.9"
 
-x-logging:
-  &default-logging
+x-logging: &default-logging
   driver: "json-file"
   options:
-    max-size: "10m"
+    max-size: "100m"
     max-file: "10"
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
 services:
-
   app: &default-django
     build:
       context: ./docker-app
+      target: webserver_runtime
+      network: host
     restart: unless-stopped
     command: >
       gunicorn
@@ -30,6 +31,10 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG}
       ENVIRONMENT: ${ENVIRONMENT}
+      SENTRY_DSN: ${SENTRY_DSN}
+      # Sentry environment should not be configured like this, but I never made it work with `sentry_sdk.init(environment=ENVIRONMENT)`.
+      SENTRY_ENVIRONMENT: ${ENVIRONMENT}
+      SENTRY_SAMPLE_RATE: ${SENTRY_SAMPLE_RATE}
       SQL_DATABASE: ${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
       SQL_USER: ${POSTGRES_USER}
@@ -46,7 +51,6 @@ services:
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_RELEASE: ${SENTRY_RELEASE}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      REDIS_PORT: ${REDIS_PORT}
       GEODB_HOST: ${GEODB_HOST}
       GEODB_PORT: ${GEODB_PORT}
       GEODB_USER: ${GEODB_USER}
@@ -63,32 +67,33 @@ services:
       # Settings below are specific to worker_wrapper
       # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
       TMP_DIRECTORY: ${TMP_DIRECTORY}
-      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}_qgis
+      QGIS_CONTAINER_NAME: ${COMPOSE_PROJECT_NAME}-qgis
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       QFIELDCLOUD_WORKER_QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
+      QFIELDCLOUD_SUBSCRIPTION_MODEL: ${QFIELDCLOUD_SUBSCRIPTION_MODEL}
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
-    depends_on:
-      - redis
     logging:
       driver: "json-file"
       options:
         max-size: "1000m"
-        max-file: "5"
+        max-file: "10"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
     labels:
       ofelia.enabled: "true"
       ofelia.job-exec.runcrons.no-overlap: "true"
-      ofelia.job-exec.runcrons.schedule: '@every 1m'
+      ofelia.job-exec.runcrons.schedule: "@every 1m"
       ofelia.job-exec.runcrons.command: python manage.py runcrons
+    depends_on:
+      - db
+      - redis
 
   nginx:
     image: nginx:stable
     restart: unless-stopped
     volumes:
-      - static_volume:/var/www/html/staticfiles/
-      - media_volume:/var/www/html/mediafiles/
       - ./conf/nginx/pages/:/var/www/html/pages/
       - ./conf/nginx/templates/:/etc/nginx/templates/
       - ./conf/nginx/certs/:/etc/nginx/certs/:ro
@@ -105,7 +110,12 @@ services:
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
       LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
       LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
-    logging: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1000m"
+        max-file: "10"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
   mkcert:
     image: vishnunair/docker-mkcert
@@ -126,6 +136,7 @@ services:
   qgis:
     build:
       context: ./docker-qgis
+      network: host
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
@@ -133,15 +144,20 @@ services:
   redis:
     build:
       context: ./docker-redis
+      network: host
       args:
         REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT}:6379"
+    expose:
+      - "6379:6379"
     logging: *default-logging
 
   worker_wrapper:
     <<: *default-django
+    build:
+      context: ./docker-app
+      network: host
+      target: worker_wrapper_runtime
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
@@ -153,9 +169,7 @@ services:
       - ${LOG_DIRECTORY}:/log
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
-    depends_on:
-      - redis
-      - app
+    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   ofelia:
     image: mcuadros/ofelia:v0.3.4
@@ -173,6 +187,11 @@ services:
       chmod a+r /transformation_grids/*
     volumes:
       - transformation_grids:/transformation_grids
+
+  memcached:
+    image: memcached:1
+    expose:
+      - "11211:11211"
 
 volumes:
   static_volume:

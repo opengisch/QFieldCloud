@@ -13,6 +13,7 @@ from qfieldcloud.core.models import (
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
+from qfieldcloud.subscription.models import Subscription
 
 
 class CheckPermError(Exception):
@@ -43,12 +44,27 @@ class ExpectedPremiumUserError(CheckPermError):
     ...
 
 
+def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
+    """Checks if User model derivatives are equal.
+
+    NOTE User(pk=12) is not equal to Person(pk=12)!"""
+    return user1.pk == user2.pk
+
+
 def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
-    return Project.objects.for_user(user, skip_invalid).filter(pk=project.pk)
+    return (
+        Project.objects.for_user(user, skip_invalid)
+        .select_related(None)
+        .filter(pk=project.pk)
+    )
 
 
 def _organization_of_owner(user: QfcUser, organization: Organization):
-    return Organization.objects.of_user(user).filter(pk=organization.pk)
+    return (
+        Organization.objects.of_user(user)
+        .select_related(None)
+        .filter(pk=organization.pk)
+    )
 
 
 def user_has_project_roles(
@@ -146,19 +162,18 @@ def can_create_project(
     user: QfcUser, organization: Union[QfcUser, Organization] = None
 ) -> bool:
     """Return True if the `user` can create a project. Accepts additional
-    `organizaiton` to check whether the user has permissions to do so on
+    `organization` to check whether the user has permissions to do so on
     that organization. Return False otherwise."""
 
     if organization is None:
-        return True
-    if user == organization:
         return True
 
     if organization.is_organization:
         if not isinstance(organization, Organization):
             organization = organization.organization  # type: ignore
     else:
-        return False
+        # the user checks if they can create project of their own
+        return user == organization
 
     if user_has_organization_roles(
         user, organization, [OrganizationMember.Roles.ADMIN]
@@ -351,6 +366,9 @@ def can_set_delta_status(user: QfcUser, delta: Delta) -> bool:
         Delta.Status.CONFLICT,
         Delta.Status.NOT_APPLIED,
         Delta.Status.ERROR,
+        Delta.Status.APPLIED,
+        Delta.Status.IGNORED,
+        Delta.Status.UNPERMITTED,
     ):
         return False
 
@@ -420,6 +438,19 @@ def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
     return True
 
 
+def can_read_jobs(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ],
+    )
+
+
 def can_create_secrets(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
@@ -452,7 +483,7 @@ def can_create_organizations(user: QfcUser) -> bool:
 
 
 def can_update_user(user: QfcUser, account: QfcUser) -> bool:
-    if user == account:
+    if user_eq(user, account):
         return True
 
     if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
@@ -462,7 +493,7 @@ def can_update_user(user: QfcUser, account: QfcUser) -> bool:
 
 
 def can_delete_user(user: QfcUser, account: QfcUser) -> bool:
-    if user == account:
+    if user_eq(user, account):
         return True
 
     if user_has_organization_roles(user, account, [OrganizationMember.Roles.ADMIN]):
@@ -561,7 +592,7 @@ def can_delete_members(user: QfcUser, organization: Organization) -> bool:
 
 
 def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
-    if user == project.owner:
+    if user_eq(user, project.owner):
         raise AlreadyCollaboratorError(
             _("Cannot add the project owner as a collaborator.")
         )
@@ -574,7 +605,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
         )
 
     max_premium_collaborators_per_private_project = (
-        project.owner.useraccount.plan.max_premium_collaborators_per_private_project
+        project.owner.useraccount.active_subscription.plan.max_premium_collaborators_per_private_project
     )
     if max_premium_collaborators_per_private_project >= 0 and not project.is_public:
         project_collaborators_count = project.direct_collaborators.count()
@@ -621,7 +652,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
 
         # Rules for private projects
         if not project.is_public:
-            if not user.useraccount.plan.is_premium:
+            if not user.useraccount.active_subscription.plan.is_premium:
                 raise ExpectedPremiumUserError(
                     _(
                         "Only premium users can be added as collaborators on private projects."
@@ -675,10 +706,10 @@ def can_delete_geodb(user: QfcUser, profile: QfcUser) -> bool:
 
 
 def can_become_member(user: QfcUser, organization: Organization) -> bool:
-    if user.user_type == QfcUser.TYPE_ORGANIZATION:
+    if user.type == QfcUser.Type.ORGANIZATION:
         return False
 
-    if user.user_type == QfcUser.TYPE_TEAM:
+    if user.type == QfcUser.Type.TEAM:
         return Team.objects.get(pk=user.pk).team_organization == organization
 
     return not user_has_organization_role_origins(
@@ -695,7 +726,108 @@ def can_send_invitations(user: QfcUser, account: QfcUser) -> bool:
     if user.pk != account.pk:
         return False
 
-    if account.is_user:
+    if account.is_person:
         return True
 
     return False
+
+
+def can_read_billing(user: QfcUser, account: QfcUser) -> bool:
+    if user_eq(user, account):
+        return True
+
+    if account.is_organization:
+        return user_has_organization_role_origins(
+            user,
+            account,
+            [
+                OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+            ],
+        )
+    else:
+        return False
+
+
+def can_change_additional_storage(user: QfcUser, subscription: Subscription) -> bool:
+    if not subscription.plan.is_storage_modifiable:
+        return False
+
+    # assuming that active until is the same as current_period_until
+    # TODO change this when yearly subscriptions are supported
+    if subscription.active_until:
+        return False
+
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+    elif subscription.account.user.is_organization:
+        return user_has_organization_role_origins(
+            user,
+            subscription.account,
+            [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+        )
+
+    return False
+
+
+def can_cancel_subscription_at_period_end(
+    user: QfcUser, subscription: Subscription
+) -> bool:
+    """
+    Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
+    Organization can be downgraded only by owners, need to be deleted.
+    In any case cancellation is only possible if the plan allows it.
+    """
+    if subscription.active_until is not None:
+        return False
+
+    if not subscription.plan.is_cancellable:
+        return False
+
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account.user,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )
+
+
+def can_cancel_subscription_immediately(
+    user: QfcUser, subscription: Subscription
+) -> bool:
+    """
+    Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
+    Organization can be downgraded only by owners, need to be deleted.
+    In any case cancellation is only possible if the plan allows it.
+    """
+    if not subscription.plan.is_cancellable:
+        return False
+
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account.user,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )
+
+
+def can_abort_subscription_cancellation(
+    user: QfcUser, subscription: Subscription
+) -> bool:
+    if subscription.active_until is None:
+        return False
+
+    if not subscription.plan.is_cancellable:
+        return False
+
+    if subscription.account.user.is_person:
+        return user_eq(user, subscription.account.user)
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account.user,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )

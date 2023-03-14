@@ -1,10 +1,12 @@
 import logging
 
+from django.db import IntegrityError
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     User,
     UserAccount,
@@ -22,7 +24,7 @@ class QfcTestCase(APITestCase):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(
+        self.user1 = Person.objects.create_user(
             username="user1", password="abc123", email="user1@example.com"
         )
         self.token1 = AuthToken.objects.get_or_create(
@@ -32,7 +34,7 @@ class QfcTestCase(APITestCase):
         )[0]
 
         # Create a second user
-        self.user2 = User.objects.create_user(
+        self.user2 = Person.objects.create_user(
             username="user2", password="abc123", email="user2@example.com"
         )
         self.token2 = AuthToken.objects.get_or_create(
@@ -42,7 +44,7 @@ class QfcTestCase(APITestCase):
         )[0]
 
         # Create a second user
-        self.user3 = User.objects.create_user(
+        self.user3 = Person.objects.create_user(
             username="user3", password="abc123", email="user3@example.com"
         )
         self.token3 = AuthToken.objects.get_or_create(
@@ -55,7 +57,7 @@ class QfcTestCase(APITestCase):
         self.organization1 = Organization.objects.create(
             username="organization1",
             password="abc123",
-            user_type=2,
+            type=2,
             organization_owner=self.user1,
         )
 
@@ -117,7 +119,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user1")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertTrue("email" in response.json())
 
     def test_get_another_user(self):
@@ -127,7 +129,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user2")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertFalse("email" in response.json())
 
     def test_get_organization(self):
@@ -137,7 +139,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "organization1")
-        self.assertEqual(response.data["user_type"], 2)
+        self.assertEqual(response.data["type"], 2)
         self.assertEqual(response.data["organization_owner"], "user1")
         self.assertEqual(len(response.data["members"]), 1)
 
@@ -209,7 +211,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user1")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertTrue("email" in response.json())
 
     def test_update_the_authenticated_user(self):
@@ -226,7 +228,7 @@ class QfcTestCase(APITestCase):
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(response.data["username"], "user1")
-        self.assertEqual(response.data["user_type"], 1)
+        self.assertEqual(response.data["type"], 1)
         self.assertEqual(response.data["first_name"], "Charles")
         self.assertEqual(response.data["last_name"], "Darwin")
         self.assertEqual(response.data["email"], "charles@beagle.uk")
@@ -304,7 +306,17 @@ class QfcTestCase(APITestCase):
         organization = payload[0]
 
         self.assertEquals(organization["username"], self.organization1.username)
-        self.assertEquals(organization["user_type"], User.TYPE_ORGANIZATION)
+        self.assertEquals(organization["type"], User.Type.ORGANIZATION)
         self.assertEquals(organization["membership_role"], "admin")
         self.assertEquals(organization["membership_role_origin"], "organization_owner")
         self.assertEquals(organization["membership_is_public"], True)
+
+    def test_duplicate_user_emails(self):
+        Person.objects.create_user(
+            username="u1", password="abc123", email="same@example.com"
+        )
+
+        with self.assertRaises(IntegrityError):
+            Person.objects.create_user(
+                username="u2", password="abc123", email="same@example.com"
+            )

@@ -6,7 +6,7 @@ from time import sleep
 import psycopg2
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Delta, Geodb, Job, Project, User
+from qfieldcloud.core.models import Delta, Geodb, Job, Person, Project
 from qfieldcloud.core.tests.utils import setup_subscription_plans
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -64,7 +64,7 @@ class QfcTestCase(APITransactionTestCase):
     def test_is_external_db_supported(self):
         """This tests is_external_db_supported property of accounts types"""
 
-        u1 = User.objects.create(username="u1")
+        u1 = Person.objects.create(username="u1")
         self._login(u1)
 
         # Create a project with a writable remote DB

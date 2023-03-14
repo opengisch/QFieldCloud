@@ -11,9 +11,9 @@ from notifications.signals import notify
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     Team,
-    User,
     UserAccount,
 )
 from qfieldcloud.core.tests.utils import setup_subscription_plans
@@ -57,10 +57,10 @@ class QfcTestCase(TestCase):
         # (one day, maybe we could create them as AnonymousUser, see https://github.com/django-notifications/django-notifications/issues/13)
         _set_current_user(None)
 
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
-        self.user3 = User.objects.create_user(username="user3", password="abc123")
-        self.otheruser = User.objects.create_user(
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
+        self.user3 = Person.objects.create_user(username="user3", password="abc123")
+        self.otheruser = Person.objects.create_user(
             username="otheruser", password="abc123"
         )
 

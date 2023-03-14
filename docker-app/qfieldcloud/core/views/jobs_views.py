@@ -15,7 +15,7 @@ class JobPermissions(permissions.BasePermission):
         except ObjectDoesNotExist:
             return False
 
-        return permissions_utils.can_read_files(request.user, project)
+        return permissions_utils.can_read_jobs(request.user, project)
 
 
 class JobViewSet(viewsets.ReadOnlyModelViewSet):

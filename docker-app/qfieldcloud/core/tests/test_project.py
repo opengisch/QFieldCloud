@@ -5,34 +5,34 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     Team,
     TeamMember,
-    User,
 )
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 
-from .utils import setup_subscription_plans
+from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(APITestCase):
+class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 
         # Create a user
-        self.user1 = User.objects.create_user(username="user1", password="abc123")
+        self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
 
         # Create a user
-        self.user2 = User.objects.create_user(username="user2", password="abc123")
+        self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
         # Create a user
-        self.user3 = User.objects.create_user(username="user3", password="abc123")
+        self.user3 = Person.objects.create_user(username="user3", password="abc123")
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
     def test_create_project(self):
@@ -348,12 +348,11 @@ class QfcTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project with a collaborator
-        u = User.objects.create(username="u")
+        u = Person.objects.create(username="u")
         o = Organization.objects.create(username="o", organization_owner=u)
         p = Project.objects.create(name="p", owner=u, is_public=True)
 
-        u.useraccount.plan.max_premium_collaborators_per_private_project = 0
-        u.useraccount.plan.save()
+        set_subscription(u, max_premium_collaborators_per_private_project=0)
 
         apiurl = f"/api/v1/projects/{p.pk}/"
 
@@ -394,8 +393,8 @@ class QfcTestCase(APITestCase):
         assert_role("manager", "collaborator")
 
     def test_add_project_collaborator_without_being_org_member(self):
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
 
@@ -405,9 +404,30 @@ class QfcTestCase(APITestCase):
                 project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
             )
 
+    def test_direct_collaborators(self):
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
+        o1 = Organization.objects.create(username="o1", organization_owner=u1)
+        p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
+
+        OrganizationMember.objects.create(organization=o1, member=u2)
+        c1 = ProjectCollaborator.objects.create(
+            project=p1,
+            collaborator=u2,
+            role=ProjectCollaborator.Roles.MANAGER,
+            is_incognito=False,
+        )
+
+        self.assertEqual(len(p1.direct_collaborators), 1)
+
+        c1.is_incognito = True
+        c1.save()
+
+        self.assertEqual(len(p1.direct_collaborators), 0)
+
     def test_add_project_collaborator_and_being_org_member(self):
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         p1 = Project.objects.create(name="p1", owner=o1, is_public=False)
 
@@ -418,8 +438,8 @@ class QfcTestCase(APITestCase):
         )
 
     def test_add_team_member_without_being_org_member(self):
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         t1 = Team.objects.create(username="t1", team_organization=o1)
 
@@ -428,8 +448,8 @@ class QfcTestCase(APITestCase):
             TeamMember.objects.create(team=t1, member=u2)
 
     def test_add_team_member_and_being_org_member(self):
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         t1 = Team.objects.create(username="t1", team_organization=o1)
 
@@ -438,8 +458,8 @@ class QfcTestCase(APITestCase):
         TeamMember.objects.create(team=t1, member=u2)
 
     def test_delete_org_member_should_delete_team_membership(self):
-        u1 = User.objects.create(username="u1")
-        u2 = User.objects.create(username="u2")
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         t1 = Team.objects.create(username="t1", team_organization=o1)
 

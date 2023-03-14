@@ -1,18 +1,17 @@
-import calendar
-import contextlib
+import logging
 import os
 import secrets
 import string
 import uuid
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
 import django_cryptography.fields
 import qfieldcloud.core.utils2.storage
-from auditlog.registry import auditlog
 from deprecated import deprecated
-from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
@@ -23,18 +22,18 @@ from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
-from model_utils.managers import InheritanceManager
+from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.subscription.models import Plan
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
+logger = logging.getLogger(__name__)
 
-class UserQueryset(models.QuerySet):
+
+class PersonQueryset(models.QuerySet):
     """Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
 
     Users are annotated with the user's project role (`project_role`) and the origin of this role (`project_role_origin`).
@@ -46,7 +45,7 @@ class UserQueryset(models.QuerySet):
     Usage:
     ```
     # List all users that are involved in OpenKebabMap.
-    Users.object.for_project(OpenKebabMap)
+    Persons.object.for_project(OpenKebabMap)
     ```
 
     Note:
@@ -54,49 +53,48 @@ class UserQueryset(models.QuerySet):
     """
 
     def for_project(self, project: "Project", skip_invalid: bool):
-        public = Q(project_roles__project__is_public=True)
-        count = Count(
+        count_collaborators = Count(
             "project_roles__project__collaborators",
             filter=Q(
-                project_roles__project__collaborators__collaborator__user_type=User.TYPE_USER
+                project_roles__project__collaborators__collaborator__type=User.Type.PERSON
             ),
         )
 
-        max_premium_collaborators_per_private_project = Q(
-            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+        is_public_q = Q(project_roles__project__is_public=True)
+        is_person_q = Q(project_roles__project__owner__type=User.Type.PERSON)
+        is_org_q = Q(project_roles__project__owner__type=User.Type.ORGANIZATION)
+        is_org_member_q = Q(
+            project_roles__project__owner__type=User.Type.ORGANIZATION
+        ) & Exists(
+            Organization.objects.of_user(OuterRef("project_roles__user"))
+            .select_related(None)
+            .filter(id=OuterRef("project_roles__project__owner"))
+        )
+
+        max_premium_collaborators_per_private_project_q = Q(
+            project_roles__project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project_roles__project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+            project_roles__project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
         )
 
-        org_member_condition = Q(
-            project_roles__project__owner__user_type=User.TYPE_USER
-        ) | (
-            Q(project_roles__project__owner__user_type=User.TYPE_ORGANIZATION)
-            & Exists(
-                Organization.objects.of_user(OuterRef("project_roles__user")).filter(
-                    id=OuterRef("project_roles__project__owner")
-                )
-            )
-        )
-        org_member = Case(When(org_member_condition, then=True), default=False)
-
-        project_role_is_valid_condition = public | (
-            max_premium_collaborators_per_private_project & org_member
+        project_role_is_valid_condition_q = is_public_q | (
+            max_premium_collaborators_per_private_project_q
+            & (is_person_q | (is_org_q & is_org_member_q))
         )
 
         qs = (
             self.defer("project_roles__project_id", "project_roles__project_id")
             .filter(
-                user_type=User.TYPE_USER,
                 project_roles__project=project,
             )
+            .select_related("useraccount")
             .annotate(
                 project_role=F("project_roles__name"),
                 project_role_origin=F("project_roles__origin"),
                 project_role_is_valid=Case(
-                    When(project_role_is_valid_condition, then=True), default=False
+                    When(project_role_is_valid_condition_q, then=True), default=False
                 ),
             )
         )
@@ -113,7 +111,7 @@ class UserQueryset(models.QuerySet):
                 "organization_roles__organization_id",
             )
             .filter(
-                user_type=User.TYPE_USER,
+                type=User.Type.PERSON,
                 organization_roles__organization=organization,
             )
             .annotate(
@@ -165,21 +163,28 @@ class UserQueryset(models.QuerySet):
 
         Internally calls for_team or for_organization depending on the entity."""
 
-        if entity.user_type == User.TYPE_USER:
+        if entity.type == User.Type.PERSON:
             return self.filter(pk=entity.pk)
 
-        if entity.user_type == User.TYPE_TEAM:
+        if entity.type == User.Type.TEAM:
             return self.for_team(entity)
 
-        if entity.user_type == User.TYPE_ORGANIZATION:
+        if entity.type == User.Type.ORGANIZATION:
             return self.for_organization(entity)
 
         raise RuntimeError(f"Unsupported entity : {entity}")
 
 
-class QFieldCloudUserManager(UserManager):
+class UserManager(InheritanceManagerMixin, DjangoUserManager):
+    # NOTE you should never have `select_related("user")` if you want the polymorphism to work.
+    # tried with `select_related("user__person")`, or all child tables at once, but it's not working either
     def get_queryset(self):
-        return UserQueryset(self.model, using=self._db)
+        return super().get_queryset().select_subclasses()
+
+
+class PersonManager(UserManager):
+    def get_queryset(self):
+        return PersonQueryset(self.model, using=self._db)
 
     def for_project(self, project: "Project", skip_invalid: bool = False):
         return self.get_queryset().for_project(project, skip_invalid)
@@ -194,7 +199,6 @@ class QFieldCloudUserManager(UserManager):
         return self.get_queryset().for_entity(entity)
 
 
-# TODO change types to Enum
 class User(AbstractUser):
     """User model. Used as base for organizations and teams too.
 
@@ -208,17 +212,12 @@ class User(AbstractUser):
         If you add validators in the constructor, note they will be added multiple times for each class that extends User.
     """
 
-    objects = QFieldCloudUserManager()
+    objects = UserManager()
 
-    TYPE_USER = 1
-    TYPE_ORGANIZATION = 2
-    TYPE_TEAM = 3
-
-    TYPE_CHOICES = (
-        (TYPE_USER, "user"),
-        (TYPE_ORGANIZATION, "organization"),
-        (TYPE_TEAM, "team"),
-    )
+    class Type(models.IntegerChoices):
+        PERSON = (1, _("Person"))
+        ORGANIZATION = (2, _("Organization"))
+        TEAM = (3, _("Team"))
 
     """Define username here, so we can avoid multiple validators from the constructor. Check the class notes."""
     username = models.CharField(
@@ -244,23 +243,15 @@ class User(AbstractUser):
         },
     )
 
-    user_type = models.PositiveSmallIntegerField(
-        choices=TYPE_CHOICES, default=TYPE_USER, editable=False
+    type = models.PositiveSmallIntegerField(
+        choices=Type.choices, default=Type.PERSON, editable=False
     )
-
-    remaining_invitations = models.PositiveIntegerField(
-        default=3,
-        help_text=_("Remaining invitations that can be sent by the user himself."),
-    )
-
-    has_newsletter_subscription = models.BooleanField(default=False)
-    has_accepted_tos = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username
 
     def get_absolute_url(self):
-        if self.user_type == User.TYPE_TEAM:
+        if self.type == User.Type.TEAM:
             team = Team.objects.get(pk=self.pk)
             return reverse_lazy(
                 "settings_teams_edit",
@@ -273,16 +264,16 @@ class User(AbstractUser):
             return reverse_lazy("profile_overview", kwargs={"username": self.username})
 
     @property
-    def is_user(self):
-        return self.user_type == User.TYPE_USER
+    def is_person(self):
+        return self.type == User.Type.PERSON
 
     @property
     def is_organization(self):
-        return self.user_type == User.TYPE_ORGANIZATION
+        return self.type == User.Type.ORGANIZATION
 
     @property
     def is_team(self):
-        return self.user_type == User.TYPE_TEAM
+        return self.type == User.Type.TEAM
 
     @property
     def full_name(self) -> str:
@@ -302,23 +293,31 @@ class User(AbstractUser):
         return hasattr(self, "geodb")
 
     def save(self, *args, **kwargs):
+        from qfieldcloud.subscription.models import get_subscription_model
+
+        Subscription = get_subscription_model()
+
         # if the user is created, we need to create a user account
-        if self._state.adding and self.user_type != User.TYPE_TEAM:
+        if self._state.adding and self.type != User.Type.TEAM:
+            skip_account_creation = kwargs.pop("skip_account_creation", False)
+
             with transaction.atomic():
                 super().save(*args, **kwargs)
-                plan = Plan.objects.get(user_type=self.user_type, is_default=True)
-                UserAccount.objects.create(user=self, plan=plan)
+
+                if not skip_account_creation:
+                    account, _created = UserAccount.objects.get_or_create(user=self)
+                    Subscription.get_or_create_active_subscription(account)
         else:
             super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.user_type != User.TYPE_TEAM:
-            qfieldcloud.core.utils2.storage.remove_user_avatar(self)
+        if self.type != User.Type.TEAM:
+            qfieldcloud.core.utils2.storage.delete_user_avatar(self)
 
-        with no_audits([User, UserAccount, Project]):
-            super().delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
 
     class Meta:
+        base_manager_name = "objects"
         verbose_name = "user"
         verbose_name_plural = "users"
 
@@ -332,6 +331,33 @@ class User(AbstractUser):
     #             name="core_user_username_uppercase"
     #         )
     #     ]
+
+
+class Person(User):
+    """Individual users in QFieldCloud."""
+
+    objects = PersonManager()
+
+    # The number of invitations the user can send.
+    # NOTE the limit was developed during the beta phase and to prevent going over the email quota per hour.
+    remaining_invitations = models.PositiveIntegerField(
+        default=3,
+        help_text=_("Remaining invitations that can be sent by the user himself."),
+    )
+
+    # Whether the user agreed to subscribe for the newsletter
+    has_newsletter_subscription = models.BooleanField(default=False)
+
+    # Whether the user has accepted the Terms of Service
+    has_accepted_tos = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "person"
+        verbose_name_plural = "people"
+
+    def save(self, *args, **kwargs):
+        self.type = User.Type.PERSON
+        return super().save(*args, **kwargs)
 
 
 class UserAccount(models.Model):
@@ -351,12 +377,7 @@ class UserAccount(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
-    plan = models.ForeignKey(
-        "subscription.Plan",
-        on_delete=models.PROTECT,
-    )
-
-    # These will be moved one day to extrapackage. We don't touch for now (they are only used
+    # These will be moved one day to the package. We don't touch for now (they are only used
     # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
     is_geodb_enabled = models.BooleanField(
@@ -381,6 +402,20 @@ class UserAccount(models.Model):
     )
 
     @property
+    def active_subscription(self):
+        from qfieldcloud.subscription.models import get_subscription_model
+
+        Subscription = get_subscription_model()
+        return Subscription.get_or_create_active_subscription(self)
+
+    @property
+    def upcoming_subscription(self):
+        from qfieldcloud.subscription.models import get_subscription_model
+
+        Subscription = get_subscription_model()
+        return Subscription.get_upcoming_subscription(self)
+
+    @property
     def avatar_url(self):
         if self.avatar_uri:
             return reverse_lazy(
@@ -391,51 +426,82 @@ class UserAccount(models.Model):
             return None
 
     @property
-    def storage_quota_total_mb(self) -> float:
-        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
-
-        base_quota = self.plan.storage_mb
-
-        extra_quota = (
-            self.extra_packages.filter(
-                Q(start_date__lte=timezone.now())
-                & (Q(end_date__isnull=True) | Q(end_date__gte=timezone.now()))
-            ).aggregate(
-                sum_mb=Sum(
-                    F("type__extrapackagetypestorage__megabytes") * F("quantity")
-                )
-            )[
-                "sum_mb"
-            ]
-            or 0
-        )
-
-        return base_quota + extra_quota
+    @deprecated("Use `UserAccount().storage_used_bytes` instead")
+    # TODO delete this method after refactoring tests so it's no longer used there
+    def storage_used_mb(self) -> float:
+        """Returns the storage used in MB"""
+        return self.storage_used_bytes / 1000 / 1000
 
     @property
-    def storage_quota_used_mb(self) -> float:
-        """Returns the storage used in MB"""
+    def storage_used_bytes(self) -> float:
+        """Returns the storage used in bytes"""
         used_quota = (
-            self.user.projects.aggregate(sum_mb=Sum("storage_size_mb"))["sum_mb"] or 0
+            self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
+                "sum_bytes"
+            ]
+            # if there are no projects, the value will be `None`
+            or 0
         )
 
         return used_quota
 
     @property
-    def storage_quota_left_mb(self) -> float:
-        """Returns the storage quota left in MB (quota from account and extrapackages minus storage of all owned projects)"""
+    @deprecated("Use `UserAccount().storage_free_bytes` instead")
+    # TODO delete this method after refactoring tests so it's no longer used there
+    def storage_free_mb(self) -> float:
+        """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
 
-        return self.storage_quota_total_mb - self.storage_quota_used_mb
+        return self.storage_free_bytes / 1000 / 1000
 
     @property
-    def storage_quota_used_perc(self) -> float:
-        """Returns the storage used in percentage (%) of the total storage"""
-        return max(
-            0, min(self.storage_quota_used_mb / self.storage_quota_total_mb * 100, 100)
+    def storage_free_bytes(self) -> float:
+        """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)"""
+
+        return (
+            self.active_subscription.active_storage_total_bytes
+            - self.storage_used_bytes
         )
 
-    def __str__(self):
-        return f"Account {self.plan}"
+    @property
+    def storage_used_ratio(self) -> float:
+        """Returns the storage used in fraction of the total storage"""
+        if self.active_subscription.active_storage_total_bytes > 0:
+            return min(
+                self.storage_used_bytes
+                / self.active_subscription.active_storage_total_bytes,
+                1,
+            )
+        else:
+            return 1
+
+    @property
+    def storage_free_ratio(self) -> float:
+        """Returns the storage used in fraction of the total storage"""
+        return 1 - self.storage_used_ratio
+
+    @property
+    def has_premium_support(self) -> bool:
+        """A user has premium support if they have an active premium subscription plan or a at least one organization that they have admin role."""
+        subscription = self.active_subscription
+        if subscription.plan.is_premium:
+            return True
+
+        if self.user.is_organization:
+            return False
+
+        if (
+            Organization.objects.of_user(self.user)
+            .filter(
+                membership_role=OrganizationMember.Roles.ADMIN,
+            )
+            .count()
+        ):
+            return True
+
+        return False
+
+    def __str__(self) -> str:
+        return f"{self.user.username_with_full_name} ({self.__class__.__name__})"
 
 
 class Geodb(models.Model):
@@ -546,43 +612,57 @@ class OrganizationManager(UserManager):
         return OrganizationQueryset(self.model, using=self._db)
 
     def of_user(self, user):
-        return self.get_queryset().of_user(user)
+        return self.get_queryset().select_related("useraccount").of_user(user)
 
 
 class Organization(User):
-    objects = OrganizationManager()
-
-    organization_owner = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="owner",
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
-    )
-
     class Meta:
         verbose_name = "organization"
         verbose_name_plural = "organizations"
 
-    def billable_users(self, from_date: date, to_date: Optional[date] = None):
-        """Returns the queryset of billable users in the given time interval.
+    objects = OrganizationManager()
 
-        Billable users are users triggering a job or pushing a delta on a project owned by the organization.
+    organization_owner = models.ForeignKey(
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
+        on_delete=models.CASCADE,
+        related_name="owned_organizations",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
+    is_initially_trial = models.BooleanField(default=False)
+
+    created_by = models.ForeignKey(
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_organizations",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def active_users(self, period_since: datetime, period_until: datetime):
+        """Returns the queryset of active users in the given time interval.
+
+        Active users are users triggering a job or pushing a delta on a project owned by the organization.
 
         Args:
-            from_date (datetime.date): inclusive beginning of the interval
-            to_date (Optional[datetime.date], optional): inclusive end of the interval (if None, will default to the last day of the month of the start date)
+            period_since (datetime): inclusive beginning of the interval
+            period_until (datetime): inclusive end of the interval
         """
-
-        if to_date is None:
-            to_date = from_date.replace(
-                day=calendar.monthrange(from_date.year, from_date.month)[1]
-            )
+        assert period_since
+        assert period_until
 
         users_with_delta = (
             Delta.objects.filter(
                 project__in=self.projects.all(),
-                updated_at__gte=from_date,
-                updated_at__lte=to_date,
+                created_at__gte=period_since,
+                created_at__lte=period_until,
             )
             .values_list("created_by_id", flat=True)
             .distinct()
@@ -590,19 +670,23 @@ class Organization(User):
         users_with_jobs = (
             Job.objects.filter(
                 project__in=self.projects.all(),
-                updated_at__gte=from_date,
-                updated_at__lte=to_date,
+                created_at__gte=period_since,
+                created_at__lte=period_until,
             )
             .values_list("created_by_id", flat=True)
             .distinct()
         )
 
-        return User.objects.filter(organizationmember__organization=self).filter(
-            Q(id__in=users_with_delta) | Q(id__in=users_with_jobs)
-        )
+        return Person.objects.filter(
+            is_staff=False,
+        ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
 
     def save(self, *args, **kwargs):
-        self.user_type = self.TYPE_ORGANIZATION
+        self.type = User.Type.ORGANIZATION
+        if getattr(self, "created_by", None) is not None:
+            self.created_by = self.created_by
+        else:
+            self.created_by = self.organization_owner
         return super().save(*args, **kwargs)
 
 
@@ -641,13 +725,13 @@ class OrganizationMember(models.Model):
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_ORGANIZATION),
+        limit_choices_to=models.Q(type=User.Type.ORGANIZATION),
         related_name="members",
     )
     member = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(type=User.Type.PERSON),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.MEMBER)
 
@@ -661,7 +745,7 @@ class OrganizationMember(models.Model):
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
         max_organization_members = (
-            self.organization.useraccount.plan.max_organization_members
+            self.organization.useraccount.active_subscription.plan.max_organization_members
         )
         if (
             max_organization_members > -1
@@ -724,7 +808,7 @@ class Team(User):
         verbose_name_plural = "teams"
 
     def save(self, *args, **kwargs):
-        self.user_type = self.TYPE_TEAM
+        self.type = User.Type.TEAM
         return super().save(*args, **kwargs)
 
     @property
@@ -748,13 +832,13 @@ class TeamMember(models.Model):
     team = models.ForeignKey(
         Team,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_TEAM),
+        limit_choices_to=models.Q(type=User.Type.TEAM),
         related_name="members",
     )
     member = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type=User.TYPE_USER),
+        limit_choices_to=models.Q(type=User.Type.PERSON),
     )
 
     def clean(self) -> None:
@@ -791,7 +875,7 @@ class ProjectQueryset(models.QuerySet):
     ```
 
     Note:
-    This query is very similar to `UserQueryset.for_project`, don't forget to update it too.
+    This query is very similar to `PersonQueryset.for_project`, don't forget to update it too.
     """
 
     class RoleOrigins(models.TextChoices):
@@ -803,28 +887,31 @@ class ProjectQueryset(models.QuerySet):
         PUBLIC = "public", _("Public")
 
     def for_user(self, user: "User", skip_invalid: bool = False):
-        public = Q(is_public=True)
         count = Count(
             "collaborators",
-            filter=Q(collaborators__collaborator__user_type=User.TYPE_USER),
+            filter=Q(collaborators__collaborator__type=User.Type.PERSON),
         )
-        max_premium_collaborators_per_private_project = Q(
-            owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+
+        is_public_q = Q(is_public=True)
+        is_person_q = Q(owner__type=User.Type.PERSON)
+        is_org_q = Q(owner__type=User.Type.ORGANIZATION)
+        is_org_member_q = Q(owner__type=User.Type.ORGANIZATION) & Exists(
+            Organization.objects.of_user(user)
+            .select_related(None)
+            .filter(id=OuterRef("owner"))
+        )
+        max_premium_collaborators_per_private_project_q = Q(
+            owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+            owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count
         )
-
-        org_member_condition = Q(owner__user_type=User.TYPE_USER) | (
-            Q(owner__user_type=User.TYPE_ORGANIZATION)
-            & Exists(Organization.objects.of_user(user).filter(id=OuterRef("owner")))
-        )
-        org_member = Case(When(org_member_condition, then=True), default=False)
 
         # Assemble the condition
-        user_role_is_valid_condition = public | (
-            max_premium_collaborators_per_private_project & org_member
+        is_valid_user_role_q = is_public_q | (
+            max_premium_collaborators_per_private_project_q
+            & (is_person_q | (is_org_q & is_org_member_q))
         )
 
         qs = (
@@ -832,12 +919,14 @@ class ProjectQueryset(models.QuerySet):
             .filter(
                 user_roles__user=user,
             )
+            .select_related("owner")
             .annotate(
                 user_role=F("user_roles__name"),
                 user_role_origin=F("user_roles__origin"),
                 user_role_is_valid=Case(
-                    When(user_role_is_valid_condition, then=True), default=False
+                    When(is_valid_user_role_q, then=True), default=False
                 ),
+                user_role_is_incognito=F("user_roles__is_incognito"),
             )
         )
 
@@ -906,9 +995,7 @@ class Project(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name="projects",
-        limit_choices_to=models.Q(
-            user_type__in=[User.TYPE_USER, User.TYPE_ORGANIZATION]
-        ),
+        limit_choices_to=models.Q(type__in=[User.Type.PERSON, User.Type.ORGANIZATION]),
         help_text=_(
             "The project owner can be either you or any of the organization you are member of."
         ),
@@ -918,7 +1005,7 @@ class Project(models.Model):
 
     # These cache stats of the S3 storage. These can be out of sync, and should be
     # refreshed whenever retrieving/uploading files by passing `project.save(recompute_storage=True)`
-    storage_size_mb = models.FloatField(default=0)
+    file_storage_bytes = models.PositiveBigIntegerField(default=0)
 
     # NOTE we can track only the file based layers, WFS, WMS, PostGIS etc are impossible to track
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
@@ -1067,14 +1154,15 @@ class Project(models.Model):
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
             max_premium_collaborators_per_private_project = (
-                self.owner.useraccount.plan.max_premium_collaborators_per_private_project
+                self.owner.useraccount.active_subscription.plan.max_premium_collaborators_per_private_project
             )
 
             if not self.project_filename:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
-            elif self.is_public or (
-                max_premium_collaborators_per_private_project != -1
+            elif (
+                not self.is_public
+                and max_premium_collaborators_per_private_project != -1
                 and max_premium_collaborators_per_private_project
                 < self.direct_collaborators.count()
             ):
@@ -1090,9 +1178,14 @@ class Project(models.Model):
 
     @property
     def storage_size_perc(self) -> float:
-        return (
-            self.storage_size_mb / self.owner.useraccount.storage_quota_total_mb * 100
-        )
+        if self.owner.useraccount.active_subscription.active_storage_total_bytes > 0:
+            return (
+                self.file_storage_bytes
+                / self.owner.useraccount.active_subscription.active_storage_total_bytes
+                * 100
+            )
+        else:
+            return 100
 
     @property
     def direct_collaborators(self):
@@ -1101,57 +1194,83 @@ class Project(models.Model):
         else:
             exclude_pks = [self.owner_id]
 
-        return self.collaborators.filter(
-            collaborator__user_type=User.TYPE_USER,
-        ).exclude(
-            collaborator_id__in=exclude_pks,
+        return (
+            self.collaborators.skip_incognito()
+            .filter(
+                collaborator__type=User.Type.PERSON,
+            )
+            .exclude(
+                collaborator_id__in=exclude_pks,
+            )
         )
 
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
-            qfieldcloud.core.utils2.storage.remove_project_thumbail(self)
+            qfieldcloud.core.utils2.storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
     def save(self, recompute_storage=False, *args, **kwargs):
+        logger.info(f"Saving project {self}...")
+
         if recompute_storage:
-            self.storage_size_mb = utils.get_s3_project_size(self.id)
+            self.file_storage_bytes = (
+                qfieldcloud.core.utils2.storage.get_project_file_storage_in_bytes(
+                    self.id
+                )
+            )
         super().save(*args, **kwargs)
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):
-        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships.
+        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships if `skip_invalid` is set to True.
 
         A membership to a private project is valid when the owning user plan has a
         `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
 
         Args:
             skip_invalid:   if true, invalid rows are removed"""
+        count = Count(
+            "project__collaborators",
+            filter=Q(
+                collaborator__type=User.Type.PERSON,
+                # incognito users should never be counted
+                is_incognito=False,
+            ),
+        )
 
         # Build the conditions with Q objects
-        public = Q(project__is_public=True)
-        count = Count(
-            "project__collaborators", filter=Q(collaborator__user_type=User.TYPE_USER)
-        )
-        max_premium_collaborators_per_private_project = Q(
-            project__owner__useraccount__plan__max_premium_collaborators_per_private_project=V(
+        is_public_q = Q(project__is_public=True)
+        is_team_collaborator = Q(collaborator__type=User.Type.TEAM)
+        # max_premium_collaborators_per_private_project_q = active_subscription_q & (
+        max_premium_collaborators_per_private_project_q = Q(
+            project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project__owner__useraccount__plan__max_premium_collaborators_per_private_project__gte=count
+            project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
-        condition = public | max_premium_collaborators_per_private_project
+        is_valid_collaborator = (
+            is_public_q
+            | max_premium_collaborators_per_private_project_q
+            | is_team_collaborator
+        )
 
         # Annotate the queryset
-        qs = self.annotate(is_valid=Case(When(condition, then=True), default=False))
+        qs = self.annotate(
+            is_valid=Case(When(is_valid_collaborator, then=True), default=False)
+        )
 
         # Filter out invalid
         if skip_invalid:
             qs = qs.exclude(is_valid=False)
 
         return qs
+
+    def skip_incognito(self):
+        return self.filter(is_incognito=False)
 
 
 class ProjectCollaborator(models.Model):
@@ -1180,9 +1299,45 @@ class ProjectCollaborator(models.Model):
     collaborator = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        limit_choices_to=models.Q(user_type__in=[User.TYPE_USER, User.TYPE_TEAM]),
+        limit_choices_to=models.Q(type__in=[User.Type.PERSON, User.Type.TEAM]),
     )
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
+
+    # whether the collaborator is incognito, e.g. shown in the UI and billed
+    is_incognito = models.BooleanField(
+        default=False,
+        help_text=_(
+            "If a collaborator is marked as incognito, they will work as normal, but will not be listed in the UI or accounted in the subscription as active users. Used to add OPENGIS.ch support members to projects."
+        ),
+    )
+
+    # created by
+    created_by = models.ForeignKey(
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
+    )
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # created by
+    updated_by = models.ForeignKey(
+        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        User,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
+    )
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.project.name + ": " + self.collaborator.username
@@ -1193,7 +1348,7 @@ class ProjectCollaborator(models.Model):
 
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
-            if self.collaborator.is_user:
+            if self.collaborator.is_person:
                 members_qs = organization.members.filter(member=self.collaborator)
 
                 if members_qs.count() == 0:
@@ -1230,6 +1385,7 @@ class ProjectRolesView(models.Model):
     origin = models.CharField(
         max_length=100, choices=ProjectQueryset.RoleOrigins.choices
     )
+    is_incognito = models.BooleanField()
 
     class Meta:
         db_table = "projects_with_roles_vw"
@@ -1253,7 +1409,7 @@ class Delta(models.Model):
         UNPERMITTED = "unpermitted", _("Unpermitted")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    deltafile_id = models.UUIDField()
+    deltafile_id = models.UUIDField(db_index=True)
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -1264,6 +1420,7 @@ class Delta(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
         max_length=32,
+        db_index=True,
     )
     last_feedback = JSONField(null=True)
     last_modified_pk = models.TextField(null=True)
@@ -1273,8 +1430,8 @@ class Delta(models.Model):
         on_delete=models.CASCADE,
         null=True,
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
     created_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -1322,7 +1479,7 @@ class Delta(models.Model):
     def is_supported_regarding_owner_account(self):
         return (
             not self.project.has_online_vector_data
-            or self.project.owner.useraccount.plan.is_external_db_supported
+            or self.project.owner.useraccount.active_subscription.plan.is_external_db_supported
         )
 
 
@@ -1490,66 +1647,3 @@ class Secret(models.Model):
                 fields=["project", "name"], name="secret_project_name_uniq"
             )
         ]
-
-
-audited_models = [
-    (User, {"exclude_fields": ["last_login", "updated_at"]}),
-    (UserAccount, {}),
-    (Organization, {}),
-    (OrganizationMember, {}),
-    (Team, {}),
-    (TeamMember, {}),
-    (
-        Project,
-        {
-            "include_fields": [
-                "id",
-                "name",
-                "description",
-                "owner",
-                "is_public",
-                "owner",
-                "created_at",
-            ],
-        },
-    ),
-    (ProjectCollaborator, {}),
-    (
-        Delta,
-        {
-            "include_fields": [
-                "id",
-                "deltafile_id",
-                "project",
-                "content",
-                "last_status",
-                "created_by",
-            ],
-        },
-    ),
-    (Secret, {"exclude_fields": ["value"]}),
-]
-
-
-def register_model_audits(subset: List[models.Model] = []) -> None:
-    for model, kwargs in audited_models:
-        if subset and model not in subset:
-            continue
-        auditlog.register(model, **kwargs)
-
-
-def deregister_model_audits(subset: List[models.Model] = []) -> None:
-    for model, _kwargs in audited_models:
-        if subset and model not in subset:
-            continue
-
-        auditlog.unregister(model)
-
-
-@contextlib.contextmanager
-def no_audits(subset: List[models.Model] = []):
-    try:
-        deregister_model_audits(subset)
-        yield
-    finally:
-        register_model_audits(subset)

@@ -19,7 +19,7 @@ class SendNotificationsJob(CronJobBase):
     def do(self):
         try:
 
-            users = User.objects.filter(user_type=User.TYPE_USER).filter(
+            users = User.objects.filter(type=User.Type.PERSON).filter(
                 Exists(
                     Notification.objects.filter(
                         unread=True,

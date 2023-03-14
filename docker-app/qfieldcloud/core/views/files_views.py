@@ -1,3 +1,4 @@
+import logging
 from pathlib import PurePath
 
 import qfieldcloud.core.utils2 as utils2
@@ -14,6 +15,8 @@ from qfieldcloud.core.utils2.storage import (
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 class ListFilesViewPermissions(permissions.BasePermission):
@@ -130,10 +133,24 @@ class DownloadPushDeleteFileView(views.APIView):
             as_attachment=True,
         )
 
+    # TODO refactor this function by moving the actual upload and Project model updates to library function outside the view
     def post(self, request, projectid, filename, format=None):
         project = Project.objects.get(id=projectid)
 
         if "file" not in request.data:
+            logger.info(
+                'The key "file" was not found in `request.data`.',
+                extra={
+                    "data_for_key_text_content": str(request.data.get("text", ""))[
+                        :1000
+                    ],
+                    "data_for_key_text_len": len(request.data.get("text", "")),
+                    "request_content_length": request.META.get("CONTENT_LENGTH"),
+                    "request_content_type": request.META.get("CONTENT_TYPE"),
+                    "request_data": list(request.data.keys()),
+                    "request_files": list(request.FILES.keys()),
+                },
+            )
             raise exceptions.EmptyContentError()
 
         is_qgis_project_file = utils.is_qgis_project_file(filename)
@@ -149,12 +166,12 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file = request.FILES.get("file")
 
-        file_size_mb = request_file.size / 1024 / 1024
-        quota_left_mb = project.owner.useraccount.storage_quota_left_mb
+        file_size_bytes = request_file.size
+        quota_left_bytes = project.owner.useraccount.storage_free_bytes
 
-        if file_size_mb > quota_left_mb:
+        if file_size_bytes > quota_left_bytes:
             raise exceptions.QuotaError(
-                f"Requiring {file_size_mb}MB of storage but only {quota_left_mb}MB available."
+                f"Requiring {file_size_bytes} bytes of storage but only {quota_left_bytes} bytes available."
             )
 
         old_object = get_project_file_with_versions(project.id, filename)
@@ -176,7 +193,7 @@ class DownloadPushDeleteFileView(views.APIView):
             # project and update it now, it guarantees there will be no other file upload editing
             # the same project row.
             project = Project.objects.select_for_update().get(id=projectid)
-            update_fields = ["data_last_updated_at"]
+            update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
                 is_qgis_project_file or project.project_filename is not None
@@ -201,6 +218,8 @@ class DownloadPushDeleteFileView(views.APIView):
                     )
 
             project.data_last_updated_at = timezone.now()
+            # NOTE just incrementing the fils_storage_bytes when uploading might make the database out of sync if a files is uploaded/deleted bypassing this function
+            project.file_storage_bytes += request_file.size
             project.save(update_fields=update_fields)
 
         if old_object:
@@ -226,9 +245,11 @@ class DownloadPushDeleteFileView(views.APIView):
         version_id = request.META.get("HTTP_X_FILE_VERSION")
 
         if version_id:
-            utils2.storage.delete_file_version(project, filename, version_id, False)
+            utils2.storage.delete_project_file_version_permanently(
+                project, filename, version_id, False
+            )
         else:
-            utils2.storage.delete_file(project, filename)
+            utils2.storage.delete_project_file_permanently(project, filename)
 
         return Response(status=status.HTTP_200_OK)
 

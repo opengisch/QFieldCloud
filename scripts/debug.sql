@@ -21,10 +21,10 @@ CREATE OR REPLACE TEMPORARY VIEW debug_users_vw AS
         U.is_active,
         U.last_login,
         U.date_joined,
-        U.user_type,
-        U.has_accepted_tos,
-        U.has_newsletter_subscription,
-        UAT.code AS project_owner_plan,
+        U.type,
+        -- U.has_accepted_tos,
+        -- U.has_newsletter_subscription,
+        -- UAT.code AS project_owner_plan,
 
         COALESCE(P.projects_count, 0) AS projects_count,
         COALESCE(O.organizations_count, 0) AS organizations_count,
@@ -33,7 +33,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_users_vw AS
     FROM
         core_user U
         JOIN core_useraccount UA ON UA.user_id = U.id
-        JOIN subscription_plan UAT ON UAT.id = UA.plan_id
+        -- JOIN subscription_plan UAT ON UAT.id = UA.plan_id
         LEFT JOIN (
             SELECT
                 user_id,
@@ -96,10 +96,10 @@ CREATE OR REPLACE TEMPORARY VIEW debug_users_slim_vw AS
         is_active,
         last_login,
         date_joined,
-        user_type,
-        has_accepted_tos,
-        has_newsletter_subscription,
-        project_owner_plan
+        type
+        -- has_accepted_tos,
+        -- has_newsletter_subscription,
+        -- project_owner_plan
     FROM
         debug_users_vw
 ;
@@ -111,8 +111,8 @@ CREATE OR REPLACE TEMPORARY VIEW debug_projects_vw AS
         P.name AS project_name,
         LOWER(U.username) AS project_owner_username,
         U.id AS project_owner_id,
-        UAT.code AS project_owner_plan,
-        P.storage_size_mb,
+        -- UAT.code AS project_owner_plan,
+        P.file_storage_bytes,
         P.overwrite_conflicts,
         P.is_public,
         P.project_filename,
@@ -133,7 +133,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_projects_vw AS
         core_project P
         JOIN core_user U ON U.id = P.owner_id
         JOIN core_useraccount UA ON UA.user_id = U.id
-        JOIN subscription_plan UAT ON UAT.id = UA.plan_id
+        -- JOIN subscription_plan UAT ON UAT.id = UA.plan_id
         LEFT JOIN (
             SELECT
                 project_id,
@@ -165,8 +165,8 @@ CREATE OR REPLACE TEMPORARY VIEW debug_projects_slim_vw AS
         project_name,
         project_owner_username,
         project_owner_id,
-        project_owner_plan,
-        storage_size_mb,
+        -- project_owner_plan,
+        file_storage_bytes,
         overwrite_conflicts,
         is_public,
         project_filename,
@@ -188,7 +188,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_deltas_vw AS
         P.name AS project_name,
         LOWER(U.username) AS project_owner_username,
         U.id AS project_owner_id,
-        UAT.code AS project_owner_plan,
+        -- UAT.code AS project_owner_plan,
         D.id AS delta_id,
         deltafile_id AS deltafile_id,
         D.last_status,
@@ -210,7 +210,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_deltas_vw AS
         JOIN core_project P ON P.id = D.project_id
         JOIN core_user U ON U.id = P.owner_id
         JOIN core_useraccount UA ON UA.user_id = U.id
-        JOIN subscription_plan UAT ON UAT.id = UA.plan_id
+        -- JOIN subscription_plan UAT ON UAT.id = UA.plan_id
         JOIN core_user U1 ON U1.id = D.created_by_id
         LEFT JOIN core_user U2 ON U2.id = D.last_apply_attempt_by_id
         LEFT JOIN (
@@ -247,7 +247,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_deltas_slim_vw AS
         project_name,
         project_owner_username,
         project_owner_id,
-        project_owner_plan,
+        -- project_owner_plan,
         delta_id,
         deltafile_id,
         last_status,
@@ -268,7 +268,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_jobs_vw AS
         P.name AS project_name,
         LOWER(U.username) AS project_owner_username,
         U.id AS project_owner_id,
-        UAT.code AS project_owner_plan,
+        -- UAT.code AS project_owner_plan,
         J.id AS job_id,
         J.type,
         J.status,
@@ -290,7 +290,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_jobs_vw AS
         JOIN core_project P ON P.id = J.project_id
         JOIN core_user U ON U.id = P.owner_id
         JOIN core_useraccount UA ON UA.user_id = U.id
-        JOIN subscription_plan UAT ON UAT.id = UA.plan_id
+        -- JOIN subscription_plan UAT ON UAT.id = UA.plan_id
         JOIN core_user U1 ON U1.id = J.created_by_id
         LEFT JOIN core_applyjob AJ ON AJ.job_ptr_id = J.id
         LEFT JOIN (
@@ -311,7 +311,7 @@ CREATE OR REPLACE TEMPORARY VIEW debug_jobs_slim_vw AS
         project_name,
         project_owner_username,
         project_owner_id,
-        project_owner_plan,
+        -- project_owner_plan,
         job_id,
         type,
         status,

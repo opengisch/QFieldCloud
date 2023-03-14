@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
@@ -36,8 +37,6 @@ from qgis.core import (
     QgsVectorLayerUtils,
 )
 from qgis.PyQt.QtCore import QCoreApplication
-
-logging.basicConfig(level=logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 # /LOGGER
@@ -179,6 +178,74 @@ def project_decorator(f):
         return f(project, opts, *args, **kw)  # type: ignore
 
     return wrapper
+
+
+def wkt_nan_to_zero(wkt: WKT) -> WKT:
+    """Support of `nan` values is non-standard in WKT.
+
+    Since it is poorly supported on QGIS and other FOSS tools, it's safer to convert the `nan` values to 0s for now. See https://github.com/qgis/QGIS/pull/47034/ .
+
+    Args:
+        wkt (WKT): wkt that might contain `nan` values
+
+    Returns:
+        WKT: WKT with `nan` values replaced with `0`s
+    """
+    old_wkt = wkt
+    new_wkt = re.sub(r"\bnan\b", "0", wkt, flags=re.IGNORECASE)
+
+    if old_wkt != new_wkt:
+        logger.info(f"Replaced nan values with 0s for {wkt=}")
+
+    return new_wkt
+
+
+def get_geometry_from_delta(
+    delta_feature: DeltaFeature, layer: QgsVectorLayer
+) -> Optional[QgsGeometry]:
+    """Converts the `geometry` WKT from the `DeltaFeature` to a `QgsGeometry` instance.
+
+    Args:
+        delta_feature (DeltaFeature): delta feature
+        layer (QgsVectorLayer): layer the feature is part of
+
+    Raises:
+        DeltaException
+
+    Returns:
+        Optional[QgsGeometry]: the parsed `QgsGeometry`. Might be invalid geometry. Returns `None` if no geometry has been modified.
+    """
+    geometry = None
+
+    if "geometry" in delta_feature:
+        if delta_feature["geometry"] is None:
+            # create an invalid geometry to indicate that the geometry has been deleted
+            geometry = QgsGeometry()
+        else:
+            wkt = delta_feature["geometry"].strip()
+
+            if not isinstance(wkt, str):
+                raise DeltaException(
+                    f"The provided geometry is of type {type(wkt)} which is neither null nor a WKT string."
+                )
+
+            if len(wkt) == 0:
+                raise DeltaException("Empty WKT string!")
+
+            wkt = wkt_nan_to_zero(wkt)
+            geometry = QgsGeometry.fromWkt(wkt)
+
+            # TODO consider also checking for `isEmpty()` and `isGeosValid()`. Not enabling it for now.
+            if geometry.isNull():
+                raise DeltaException(f"Null geometry from {wkt=}")
+
+            # E.g. Shapefile might report a `Polygon` geometry, even though it is a `MultiPolygon`
+            if geometry.type() != layer.geometryType():
+                logger.info(
+                    f"The provided geometry type {geometry.type()} differs from the layer geometry type {layer.geometryType()} for {wkt=}"
+                )
+
+    return geometry
 
 
 def delta_apply(
@@ -375,6 +442,17 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
             obj["files"],
             obj["clientPks"],
         )
+
+        # NOTE Sometimes QField does not fill the `sourceLayerId` field
+        # In recent QGIS versions, offline editing replaces the data source of the layers, so the layer ids do not change
+        # See https://github.com/opengisch/qfieldcloud/issues/415#issuecomment-1322922349
+        for delta in delta_file.deltas:
+            if delta["sourceLayerId"] == "" and delta["localLayerId"] != "":
+                delta["sourceLayerId"] = delta["localLayerId"]
+                logger.warning(
+                    "Patching project %s delta's empty sourceLayerId from localLayerId",
+                    delta_file.project_id,
+                )
 
     return delta_file
 
@@ -977,13 +1055,14 @@ def create_feature(
     """
     fields = layer.fields()
     new_feat_delta = delta["new"]
-    geometry = QgsGeometry()
+    geometry = get_geometry_from_delta(new_feat_delta, layer)
 
-    if "geometry" in new_feat_delta:
-        if isinstance(new_feat_delta["geometry"], str):
-            geometry = QgsGeometry.fromWkt(new_feat_delta["geometry"])
-        elif new_feat_delta["geometry"] is not None:
-            logger.warning("The provided geometry is not null or a WKT string.")
+    # NOTE Make sure the geometry is a `QgsGeometry` instance, even though invalid, as `QgsVectorLayerUtils.createFeature()` requires it. Might be `None` if the layer is not spatial.
+    if geometry is None:
+        if layer.isSpatial():
+            logger.warning("A spatial layer delta should always contain a geometry.")
+
+        geometry = QgsGeometry()
 
     new_feat_attrs = new_feat_delta.get("attributes", {})
     feat_attrs = {}
@@ -1056,31 +1135,20 @@ def patch_feature(
 
     if "geometry" in new_feature_delta:
         if layer.isSpatial():
-            if isinstance(new_feature_delta["geometry"], str):
-                geometry = QgsGeometry.fromWkt(new_feature_delta["geometry"])
-
-                if geometry.isNull() or geometry.type() != layer.geometryType():
-                    raise DeltaException(
-                        "The provided geometry type differs from the layer geometry type"
-                    )
-            elif new_feature_delta["geometry"] is None:
-                geometry = QgsGeometry()
-            else:
-                logger.warning(
-                    "The provided geometry is not null or a WKT string, ignoring geometry."
-                )
-
             if new_feature_delta["geometry"] == old_feature_delta.get("geometry"):
                 logger.warning(
                     "The geometries of the new and the old features are the same, even though by spec they should not be provided in such case. Ignoring geometry."
                 )
+            else:
+                geometry = get_geometry_from_delta(new_feature_delta, layer)
 
-            if geometry is not None:
-                if not layer.changeGeometry(old_feature.id(), geometry, True):
-                    raise DeltaException(
-                        "Unable to change geometry",
-                        provider_errors=layer.dataProvider().errors(),
-                    )
+                # NOTE if the geometry is `None`, it means the geometry has not been modified.
+                if geometry is not None:
+                    if not layer.changeGeometry(old_feature.id(), geometry, True):
+                        raise DeltaException(
+                            "Unable to change geometry",
+                            provider_errors=layer.dataProvider().errors(),
+                        )
         else:
             logger.warning("Layer is not spatial, ignoring geometry")
 
@@ -1262,6 +1330,10 @@ def inverse_delta(delta: Delta) -> Delta:
 
 
 if __name__ == "__main__":
+    from qfieldcloud.qgis.utils import setup_basic_logging_config
+
+    setup_basic_logging_config()
+
     parser = argparse.ArgumentParser(
         prog="COMMAND",
         description="",

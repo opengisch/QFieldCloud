@@ -141,7 +141,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # Owner has changed, we must ensure he has enough quota for that
         # (in this transaction, the project is his already, so we just need to
         # check his quota)
-        if new_owner.useraccount.storage_quota_left_mb < 0:
+        if new_owner.useraccount.storage_free_bytes < 0:
             # If not, we rollback the transaction
             # (don't give away numbers in message as it's potentially private)
             raise exceptions.QuotaError(
@@ -150,7 +150,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, projectid):
         # Delete files from storage
-        storage.delete_project_files(projectid)
+        storage.delete_all_project_files_permanently(projectid)
 
         return super().destroy(request, projectid)
 

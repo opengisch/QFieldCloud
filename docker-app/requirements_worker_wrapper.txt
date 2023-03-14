@@ -1,0 +1,2 @@
+docker==4.2.2
+tenacity==8.1.0

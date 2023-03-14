@@ -1,17 +1,58 @@
-from datetime import timedelta
+import logging
+import uuid
+from datetime import datetime, timedelta
+from functools import lru_cache
+from typing import Optional, Tuple, TypedDict
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from constance import config
+from deprecated import deprecated
+from django.apps import apps
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.db.models import Q
+from django.utils import timezone
 from django.utils.translation import gettext as _
+from model_utils.managers import InheritanceManagerMixin
+from qfieldcloud.core.models import Organization, Person, User, UserAccount
+
+from .exceptions import NotPremiumPlanException
+
+
+def get_subscription_model() -> "Subscription":
+    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
+
+
+class SubscriptionStatus(models.TextChoices):
+    """Status of the subscription.
+
+    Initially the status is INACTIVE_DRAFT.
+
+    INACTIVE_DRAFT -> (INACTIVE_DRAFT_EXPIRED, INACTIVE_REQUESTED_CREATE)
+    INACTIVE_REQUESTED_CREATE -> (INACTIVE_AWAITS_PAYMENT, INACTIVE_CANCELLED)
+
+    """
+
+    # the user drafted a subscription, initial status
+    INACTIVE_DRAFT = "inactive_draft", _("Inactive Draft")
+    # the user draft expired (e.g. a new subscription is attempted)
+    INACTIVE_DRAFT_EXPIRED = "inactive_draft_expired", _("Inactive Draft Expired")
+    # requested creating the subscription on Stripe
+    INACTIVE_REQUESTED_CREATE = "inactive_requested_create", _(
+        "Inactive Requested Create"
+    )
+    # requested creating the subscription on Stripe
+    INACTIVE_AWAITS_PAYMENT = "inactive_awaits_payment", _("Inactive Awaits Payment")
+    # payment succeeded
+    ACTIVE_PAID = "active_paid", _("Active Paid")
+    # payment failed, but the subscription is still active
+    ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
+    # successfully cancelled
+    INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
 
 
 class Plan(models.Model):
-
-    # NOTE the values for USER and ORGANIZATION should match the values of TYPE_USER and TYPE_ORGANIZATION in qfieldcloud.core.models.User
-    class UserType(models.IntegerChoices):
-        USER = (1, _("User"))
-        ORGANIZATION = (2, _("Organization"))
-
     @classmethod
     def get_or_create_default(cls) -> "Plan":
         """Returns the default plan, creating one if none exists.
@@ -23,14 +64,14 @@ class Plan(models.Model):
                     display_name="default user (autocreated)",
                     is_default=True,
                     is_public=False,
-                    user_type=Plan.UserType.USER,
+                    user_type=User.Type.PERSON,
                 )
                 cls.objects.create(
                     code="default_org",
                     display_name="default organization (autocreated)",
                     is_default=True,
                     is_public=False,
-                    user_type=Plan.UserType.ORGANIZATION,
+                    user_type=User.Type.ORGANIZATION,
                 )
         return cls.objects.order_by("-is_default").first()
 
@@ -39,7 +80,7 @@ class Plan(models.Model):
 
     # the plan would be applicable only to user of that `user_type`
     user_type = models.PositiveSmallIntegerField(
-        choices=UserType.choices, default=UserType.USER
+        choices=User.Type.choices, default=User.Type.PERSON
     )
 
     # relative ordering of the record
@@ -78,10 +119,22 @@ class Plan(models.Model):
     # the plan is marked as premium which assumes it has premium access
     is_premium = models.BooleanField(default=False)
 
+    # the plan is set as trial
+    is_trial = models.BooleanField(default=False)
+
+    # the plan is metered or licensed. If it metered, it is automatically post-paid.
+    is_metered = models.BooleanField(default=False)
+
+    # the plan is cancellable. If it True, the plan cannot be cancelled.
+    is_cancellable = models.BooleanField(default=True)
+
+    # the plan is cancellable. If it True, the plan cannot be cancelled.
+    is_storage_modifiable = models.BooleanField(default=True)
+
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
     # the maximum amount of money that they are going to pay.
-    # Only makes sense when the user_type == UserType.ORGANIZATION
+    # Only makes sense when the user_type == User.Type.ORGANIZATION
     # If the organization subscription is changed from unlimited to limited organization members,
     # the existing members that are over the max_organization_members configuration remain active.
     max_organization_members = models.IntegerField(
@@ -101,11 +154,47 @@ class Plan(models.Model):
         ),
     )
 
+    # The maximum number of trial organizations that the user can create.
+    # Set -1 to allow unlimited trial organizations.
+    max_trial_organizations = models.IntegerField(
+        default=1,
+        help_text=_(
+            "Maximum number of trial organizations that the user can create. Set -1 to allow unlimited trial organizations."
+        ),
+    )
+
+    # The status when a new subscription is created
+    initial_subscription_status = models.CharField(
+        max_length=100,
+        choices=SubscriptionStatus.choices,
+        default=SubscriptionStatus.INACTIVE_DRAFT,
+    )
+
+    # comma separated list of plan codes, which given plan can upgrade to.
+    upgradable_to = models.CharField(max_length=1000, null=True, blank=True)
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def storage_bytes(self) -> int:
+        return self.storage_mb * 1000 * 1000
+
     def save(self, *args, **kwargs):
+        if self.user_type not in (User.Type.PERSON, User.Type.ORGANIZATION):
+            raise ValidationError(
+                'Only "PERSON" and "ORGANIZATION" user types are allowed.'
+            )
+
         with transaction.atomic():
             # If default is set to true, we unset default on all other plans
             if self.is_default:
-                Plan.objects.filter(user_type=self.user_type).update(is_default=False)
+                Plan.objects.filter(user_type=self.user_type).exclude(
+                    pk=self.pk
+                ).update(is_default=False)
             return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -119,38 +208,571 @@ class Plan(models.Model):
         )
 
 
-class ExtraPackageType(models.Model):
+class PackageTypeManager(InheritanceManagerMixin, models.Manager):
+    # NOTE you should never have `select_related("packagetype")` if you want the polymorphism to work.
+    def get_queryset(self):
+        return super().get_queryset().select_subclasses()
+
+
+class PackageType(models.Model):
+    objects = PackageTypeManager()
+
+    class Type(models.TextChoices):
+        STORAGE = "storage", _("Storage")
+
     code = models.CharField(max_length=100, unique=True)
     # TODO: decide how to localize display_name. Possible approaches:
     # - django-vinaigrette (never tried, but like the name, and seems to to exactly what we want)
     # - django-modeltranslation (tried, works well, but maybe overkill as it creates new database columns for each locale)
     # - something else ? there's probably some json based stuff
     display_name = models.CharField(max_length=100)
+
+    # the type of the package
+    type = models.CharField(choices=Type.choices, max_length=100, unique=True)
+
+    # whether the package is available for the general public
     is_public = models.BooleanField(default=False)
 
+    # the minimum quantity per subscription
+    min_quantity = models.PositiveIntegerField()
 
-class ExtraPackageTypeStorage(ExtraPackageType):
-    megabytes = models.PositiveIntegerField()
+    # the maximum quantity per subscription
+    max_quantity = models.PositiveIntegerField()
+
+    # the size of the package in `unit_label` units
+    unit_amount = models.PositiveIntegerField()
+
+    # Unit of measurement (e.g. gigabyte, minute, etc)
+    unit_label = models.CharField(max_length=100, null=True, blank=True)
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    @lru_cache
+    def get_storage_package_type(cls):
+        try:
+            return cls.objects.get(type=cls.Type.STORAGE)
+        except cls.DoesNotExist:
+            return cls.objects.create(
+                code="storage_package",
+                type=cls.Type.STORAGE,
+                unit_amount=1000,
+                unit_label="MB",
+                min_quantity=0,
+                max_quantity=100,
+            )
 
 
-class ExtraPackageTypeJobMinutes(ExtraPackageType):
-    minutes = models.PositiveIntegerField()
+class PackageQuerySet(models.QuerySet):
+    def active(self):
+        now = timezone.now()
+        qs = self.filter(
+            active_since__lte=now, subscription__plan__is_premium=True
+        ).filter(Q(active_until__isnull=True) | Q(active_until__gte=now))
+
+        return qs
+
+    def future(self):
+        now = timezone.now()
+        qs = self.filter(
+            active_since__gte=now, subscription__plan__is_premium=True
+        ).order_by("active_since")
+
+        return qs
 
 
-class ExtraPackage(models.Model):
-    account = models.ForeignKey(
-        "core.UserAccount",
+class Package(models.Model):
+
+    objects = PackageQuerySet.as_manager()
+
+    subscription = models.ForeignKey(
+        "subscription.Subscription",
         on_delete=models.CASCADE,
-        related_name="extra_packages",
+        related_name="packages",
     )
     type = models.ForeignKey(
-        ExtraPackageType, on_delete=models.CASCADE, related_name="packages"
+        PackageType, on_delete=models.CASCADE, related_name="packages"
     )
     quantity = models.PositiveIntegerField(
         validators=[
             MinValueValidator(1),
-            MaxValueValidator(25),
         ],
     )
-    start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)
+    active_since = models.DateTimeField()
+    active_until = models.DateTimeField(null=True, blank=True)
+
+    # created at
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # updated at
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+# TODO add check constraint makes sure there are no two active additional packages at the same time,
+# because we assume that once you change your quantity, the old Package instance has an end_date
+# and a new one with the new quantity is created right away.
+
+
+class SubscriptionQuerySet(models.QuerySet):
+    def active(self):
+        """Returns the subscriptions which are relevant to the current moment.
+
+        WARNING the name `active` is super misleading, should be `current`. Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
+        TODO rename to `current`
+        """
+        now = timezone.now()
+        qs = self.filter(
+            Q(active_since__lte=now)
+            & (Q(active_until__isnull=True) | Q(active_until__gte=now))
+        ).select_related("plan")
+
+        return qs
+
+
+class AbstractSubscription(models.Model):
+    class Meta:
+        abstract = True
+
+    objects = SubscriptionQuerySet.as_manager()
+
+    Status = SubscriptionStatus
+
+    class UpdateSubscriptionKwargs(TypedDict):
+        status: "Subscription.Status"
+        active_since: datetime
+        active_until: Optional[datetime]
+        requested_cancel_at: Optional[datetime]
+
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
+
+    plan = models.ForeignKey(
+        Plan,
+        on_delete=models.DO_NOTHING,
+        related_name="+",
+    )
+
+    account = models.ForeignKey(
+        UserAccount,
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+    )
+
+    status = models.CharField(
+        max_length=100, choices=Status.choices, default=Status.INACTIVE_DRAFT
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="+",
+    )
+
+    created_at = models.DateTimeField(_("Created at"), auto_now_add=True)
+
+    updated_at = models.DateTimeField(_("Updated at"), auto_now=True)
+
+    requested_cancel_at = models.DateTimeField(
+        _("Requested cancel at"), null=True, blank=True
+    )
+
+    # the time since the subscription is active. Note the value is null until the subscription is valid.
+    active_since = models.DateTimeField(_("Active since"), null=True, blank=True)
+
+    active_until = models.DateTimeField(_("Active until"), null=True, blank=True)
+
+    # the timestamp used for time calculations when the billing period starts and ends
+    billing_cycle_anchor_at = models.DateTimeField(null=True, blank=True)
+
+    # the timestamp when the current billing period started
+    # NOTE this field remains currently unused.
+    current_period_since = models.DateTimeField(null=True, blank=True)
+
+    # the timestamp when the current billing period ends
+    # NOTE ignored for subscription validity checks, but used to calculate the activation date when additional packages change
+    current_period_until = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_active(self) -> bool:
+        return self.status in [
+            SubscriptionStatus.ACTIVE_PAID,
+            SubscriptionStatus.ACTIVE_PAST_DUE,
+        ]
+
+    @property
+    @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
+    def active_storage_total_mb(self) -> int:
+        return self.plan.storage_mb + self.active_storage_package_mb
+
+    @property
+    def active_storage_total_bytes(self) -> int:
+        return self.plan.storage_bytes + self.active_storage_package_bytes
+
+    @property
+    def active_storage_package(self) -> Package:
+        return self.get_active_package(PackageType.get_storage_package_type())
+
+    @property
+    def active_storage_package_quantity(self) -> int:
+        return self.get_active_package_quantity(PackageType.get_storage_package_type())
+
+    @property
+    @deprecated("Use `AbstractSubscription.active_storage_package_bytes` instead")
+    def active_storage_package_mb(self) -> int:
+        return (
+            self.get_active_package_quantity(PackageType.get_storage_package_type())
+            * PackageType.get_storage_package_type().unit_amount
+        )
+
+    @property
+    def active_storage_package_bytes(self) -> int:
+        return (
+            (
+                self.get_active_package_quantity(PackageType.get_storage_package_type())
+                * PackageType.get_storage_package_type().unit_amount
+            )
+            * 1000
+            * 1000
+        )
+
+    @property
+    def future_storage_total_mb(self) -> int:
+        return self.plan.storage_mb + self.future_storage_package_mb
+
+    @property
+    def future_storage_package(self) -> Package:
+        return self.get_future_package(PackageType.get_storage_package_type())
+
+    @property
+    def future_storage_package_quantity(self) -> int:
+        return self.get_future_package_quantity(PackageType.get_storage_package_type())
+
+    @property
+    def future_storage_package_mb(self) -> int:
+        return (
+            self.get_future_package_quantity(PackageType.get_storage_package_type())
+            * PackageType.get_storage_package_type().unit_amount
+        )
+
+    @property
+    def future_storage_package_changed_quantity(self) -> int:
+        if self.future_storage_package or (
+            self.active_storage_package and self.active_storage_package.active_until
+        ):
+            return (
+                self.future_storage_package_quantity
+                - self.active_storage_package_quantity
+            )
+        else:
+            return 0
+
+    @property
+    def future_storage_package_changed_mb(self) -> int:
+        return (
+            self.future_storage_package_changed_quantity
+            * PackageType.get_storage_package_type().unit_amount
+        )
+
+    @property
+    def has_current_period(self) -> bool:
+        return (
+            self.current_period_since is not None
+            and self.current_period_until is not None
+        )
+
+    @property
+    def active_users(self):
+        if not self.account.user.is_organization:
+            return None
+
+        if self.has_current_period:
+            return self.account.user.active_users(
+                self.current_period_since,
+                self.current_period_until,
+            )
+
+        assert (
+            self.current_period_since == self.current_period_until
+        ), "Both current_period _since and _until must be set."
+
+        now = timezone.now()
+        month_ago = now - timedelta(days=28)
+
+        return self.account.user.active_users(
+            month_ago,
+            now,
+        )
+
+    @property
+    def active_users_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        if not self.current_period_since or not self.current_period_until:
+            return 0
+
+        return self.active_users.count()
+
+    def get_active_package(self, package_type: PackageType) -> Package:
+        storage_package_qs = self.packages.active().filter(type=package_type)
+
+        return storage_package_qs.first()
+
+    def get_active_package_quantity(self, package_type: PackageType) -> int:
+        package = self.get_active_package(package_type)
+        return package.quantity if package else 0
+
+    def get_future_package(self, package_type: PackageType) -> Package:
+        storage_package_qs = self.packages.future().filter(type=package_type)
+
+        return storage_package_qs.first()
+
+    def get_future_package_quantity(self, package_type: PackageType) -> int:
+        package = self.get_future_package(package_type)
+        if package:
+            return package.quantity
+        else:
+            package = self.get_active_package(package_type)
+            if package and not package.active_until:
+                return package.quantity
+        return 0
+
+    def set_package_quantity(
+        self,
+        package_type: PackageType,
+        quantity: int,
+        active_since: datetime = None,
+    ):
+        if not self.plan.is_premium:
+            raise NotPremiumPlanException(
+                "Only premium accounts can have additional packages!"
+            )
+
+        with transaction.atomic():
+            if active_since is None:
+                active_since = timezone.now()
+            new_package = None
+
+            # delete future packages for that subscription, as we would create a new one if needed
+            # NOTE first delete the future package and then create the new one,
+            # otherwise the active period overlap constraint will complain
+            Package.objects.future().filter(
+                subscription=self,
+                type=package_type,
+            ).delete()
+
+            try:
+                old_package = (
+                    Package.objects.active()
+                    .select_for_update()
+                    .get(
+                        subscription=self,
+                        type=package_type,
+                    )
+                )
+                old_package.active_until = active_since
+                old_package.save(update_fields=["active_until"])
+            except Package.DoesNotExist:
+                old_package = None
+
+            if quantity > 0:
+                new_package = Package.objects.create(
+                    subscription=self,
+                    quantity=quantity,
+                    type=package_type,
+                    active_since=active_since,
+                )
+
+        return old_package, new_package
+
+    @classmethod
+    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
+        """Returns the currently active subscription, if not exists returns a newly created subscription with the default plan.
+
+        Args:
+            account (UserAccount): the account the subscription belongs to.
+
+        Returns:
+            Self: the currently active subscription
+
+        TODO Python 3.11 the actual return type is Self
+        """
+        try:
+            subscription = cls.objects.active().get(account_id=account.pk)
+        except cls.DoesNotExist:
+            subscription = cls.create_default_plan_subscription(account)
+
+        return subscription
+
+    @classmethod
+    def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
+        return (
+            cls.objects.filter(account_id=account.pk, active_since__gt=timezone.now())
+            .exclude(status__in=[Subscription.Status.INACTIVE_CANCELLED])
+            .order_by("active_since")
+            .first()
+        )
+
+    @classmethod
+    def update_subscription(
+        cls,
+        subscription: "Subscription",
+        **kwargs: UpdateSubscriptionKwargs,
+    ) -> "Subscription":
+        """Updates the subscription properties.
+
+        Args:
+            subscription (Subscription): subscription to be updated
+
+        Returns:
+            Self: the same as the subscription argument
+
+        TODO Python 3.11 the actual return type is Self
+        """
+        if not kwargs:
+            return subscription
+
+        with transaction.atomic():
+            cls.objects.select_for_update().get(id=subscription.id)
+            update_fields = []
+
+            if (
+                subscription.active_since is None
+                and kwargs.get("active_since") is not None
+            ):
+                cls.objects.active().filter(account=subscription.account,).exclude(
+                    pk=subscription.pk,
+                ).update(
+                    status=Subscription.Status.INACTIVE_CANCELLED,
+                    active_until=kwargs["active_since"],
+                )
+
+            for attr_name, attr_value in kwargs.items():
+                update_fields.append(attr_name)
+                setattr(subscription, attr_name, attr_value)
+
+            logging.info(f"Updated subscription's fields: {', '.join(update_fields)}")
+
+            subscription.save(update_fields=update_fields)
+
+        return subscription
+
+    @classmethod
+    def create_default_plan_subscription(
+        cls, account: UserAccount, active_since: datetime = None
+    ) -> "Subscription":
+        """Creates the default subscription for a given account.
+
+        Args:
+            account (UserAccount): the account the subscription belongs to.
+            active_since (datetime): active since for the subscription
+
+        Returns:
+            Self: the created subscription.
+
+        TODO Python 3.11 the actual return type is Self
+        """
+        plan = Plan.objects.get(
+            user_type=account.user.type,
+            is_default=True,
+        )
+
+        if account.user.is_organization:
+            # NOTE sometimes `account.user` is not an organization instance for unknown reasons
+            created_by = Organization.objects.get(pk=account.pk).organization_owner
+        else:
+            created_by = account.user
+
+        if active_since is None:
+            active_since = timezone.now()
+
+        _trial_subscription, regular_subscription = cls.create_subscription(
+            account=account,
+            plan=plan,
+            created_by=created_by,
+            active_since=active_since,
+        )
+
+        return regular_subscription
+
+    @classmethod
+    def create_subscription(
+        cls,
+        account: UserAccount,
+        plan: Plan,
+        created_by: Person,
+        active_since: Optional[datetime] = None,
+    ) -> Tuple["Subscription", "Subscription"]:
+        """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
+
+        Args:
+            account (UserAccount): the account the subscription belongs to.
+            plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
+            created_by (Person): created by.
+            active_since (Optional[datetime]): active since for the subscription.
+
+        Returns:
+            Tuple[Subscription, Subscription]: the created trial subscription if the given plan was a trial and the regular subscription.
+
+        TODO Python 3.11 the actual return type is Self
+        """
+        if plan.is_trial:
+            assert isinstance(
+                active_since, datetime
+            ), "Creating a trial plan requires `active_since` to be a valid datetime object"
+
+            active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
+            trial_subscription = cls.objects.create(
+                plan=plan,
+                account=account,
+                created_by=created_by,
+                # TODO in the future the status can be configured in the `Plan.initial_subscription_status`
+                status=plan.initial_subscription_status,
+                active_since=active_since,
+                active_until=active_until,
+            )
+            # the regular plan should be the default plan
+            regular_plan = Plan.objects.get(
+                user_type=account.user.type,
+                is_default=True,
+            )
+
+            # the end date of the trial is the start date of the regular
+            regular_active_since = active_until
+        else:
+            trial_subscription = None
+            regular_plan = plan
+            regular_active_since = active_since
+
+        regular_subscription = cls.objects.create(
+            plan=regular_plan,
+            account=account,
+            created_by=created_by,
+            status=regular_plan.initial_subscription_status,
+            active_since=regular_active_since,
+        )
+
+        return trial_subscription, regular_subscription
+
+    def __str__(self):
+        return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{self.active_storage_total_mb}MB"
+
+
+class Subscription(AbstractSubscription):
+    pass
+
+
+class CurrentSubscription(AbstractSubscription):
+    class Meta:
+        managed = False
+        db_table = "current_subscriptions_vw"
+
+    account = models.OneToOneField(
+        UserAccount,
+        on_delete=models.CASCADE,
+        related_name="current_subscription",
+    )

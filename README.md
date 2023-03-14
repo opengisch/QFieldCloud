@@ -37,27 +37,27 @@ desire with a good editor:
 
 To build development images and run the containers:
 
-    docker-compose up -d --build
+    docker compose up -d --build
 
 It will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE`
-variable and start a django built-in server at `http://localhost:8111`.
+variable and start a django built-in server at `http://localhost:8011`.
 
 Run the django database migrations.
 
-    docker-compose exec app python manage.py migrate
+    docker compose exec app python manage.py migrate
 
 And collect the static files (CSS, JS etc):
 
-    docker-compose run app python manage.py collectstatic --noinput
+    docker compose run app python manage.py collectstatic --noinput
 
 You can check if everything seems to work correctly using the
 `status` command:
 
-    docker-compose exec app python manage.py status
+    docker compose exec app python manage.py status
 
 Now you can get started by adding the first user that would also be a super user:
 
-    docker-compose run app python manage.py createsuperuser --username super_user --email super@user.com
+    docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
 
 ### Tests
 
@@ -65,13 +65,13 @@ To run all the unit and functional tests (on a throwaway test
 database and a throwaway test storage directory):
 
     export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
-    docker-compose up -d
-    docker-compose run app python manage.py migrate
-    docker-compose run app python manage.py test --keepdb
+    docker compose up -d
+    docker compose run app python manage.py migrate
+    docker compose run app python manage.py test --keepdb
 
 To run only a test module (e.g. `test_permission.py`)
 
-    docker-compose run app python manage.py test qfieldcloud.core.tests.test_permission
+    docker compose run app python manage.py test qfieldcloud.core.tests.test_permission
 
 ### Debugging
 
@@ -88,10 +88,9 @@ debugpy.wait_for_client()  # optional
 ```
 
 Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`.
-```shell
-docker-compose run app -p 5680:5680 python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
-docker-compose run worker_wrapper -p 5681:5681 python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
-```
+
+    docker compose run app -p 5680:5680 python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
+    docker compose run worker_wrapper -p 5681:5681 python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
 
 Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
 ```
@@ -203,11 +202,11 @@ Create the directory for qfieldcloud logs and supervisor socket file
 
 Run and build the docker containers
 
-    docker-compose up -d --build
+    docker compose up -d --build
 
 Run the django database migrations
 
-    docker-compose exec app python manage.py migrate
+    docker compose exec app python manage.py migrate
 
 
 ## Create a certificate using Let's Encrypt
@@ -225,25 +224,32 @@ Based on this example
 
 ### Ports
 
-| service       | port | configuration        | local              | development        | production         |
-|---------------|------|----------------------|--------------------|--------------------|--------------------|
-| nginx http    | 80   | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| nginx https   | 443  | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| django http   | 8011 | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
-| postgres      | 5433 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| redis         | 6379 | REDIS_PORT           | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| geodb         | 5432 | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :x:                |
-| minio API     | 8009 | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
-| minio browser | 8010 | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
-| smtp web      | 8012 | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
-| smtp          | 25   | SMTP4DEV_SMTP_PORT   | :white_check_mark: | :x:                | :x:                |
-| imap          | 143  | SMTP4DEV_IMAP_PORT   | :white_check_mark: | :x:                | :x:                |
+| service       | port  | configuration        | local              | development        | production         |
+|---------------|-------|----------------------|--------------------|--------------------|--------------------|
+| nginx http    | 80    | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| nginx https   | 443   | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| django http   | 8011  | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
+| postgres      | 5433  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| redis         | 6379  | REDIS_PORT           | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| memcached     | 11211 | MEMCACHED_PORT       | :white_check_mark: | :x:                | :x:                |
+| geodb         | 5432  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :x:                |
+| minio API     | 8009  | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
+| minio browser | 8010  | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
+| smtp web      | 8012  | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
+| smtp          | 25    | SMTP4DEV_SMTP_PORT   | :white_check_mark: | :x:                | :x:                |
+| imap          | 143   | SMTP4DEV_IMAP_PORT   | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
 
 Docker logs are managed by docker in the default way. To read the logs:
 
-    docker-compose logs
+    docker compose logs
+
+
+For great `nginx` logs, use:
+
+    QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
+    docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
 
 
 ### Geodb

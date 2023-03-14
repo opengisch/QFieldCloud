@@ -1,10 +1,12 @@
-FROM qgis/qgis:final-3_26_1
+FROM qgis/qgis:final-3_28_3
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pip \
     xvfb \
     iputils-ping \
+    glibc-tools \
     && apt-get clean
 
 WORKDIR /usr/src/app
@@ -17,6 +19,7 @@ ENV LIBC_FATAL_STDERR_=1
 # other env
 ENV LANG=C.UTF-8
 ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
+ENV XDG_RUNTIME_DIR=/root
 
 COPY ./requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt

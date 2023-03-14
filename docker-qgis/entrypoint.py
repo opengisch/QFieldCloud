@@ -29,7 +29,7 @@ from qgis.core import (
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("ENTRYPNT")
 logger.setLevel(logging.INFO)
 
 
@@ -345,6 +345,9 @@ def cmd_process_projectfile(args):
 
 
 if __name__ == "__main__":
+    from qfieldcloud.qgis.utils import setup_basic_logging_config
+
+    setup_basic_logging_config()
 
     # Set S3 logging levels
     logging.getLogger("nose").setLevel(logging.CRITICAL)
