@@ -19,6 +19,8 @@ from qfieldcloud.core.models import Organization, Person, User, UserAccount
 
 from .exceptions import NotPremiumPlanException
 
+logger = logging.getLogger(__name__)
+
 
 def get_subscription_model() -> "Subscription":
     return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
@@ -655,7 +657,7 @@ class AbstractSubscription(models.Model):
                 update_fields.append(attr_name)
                 setattr(subscription, attr_name, attr_value)
 
-            logging.info(f"Updated subscription's fields: {', '.join(update_fields)}")
+            logger.info(f"Updated subscription's fields: {', '.join(update_fields)}")
 
             subscription.save(update_fields=update_fields)
 
@@ -726,6 +728,9 @@ class AbstractSubscription(models.Model):
             ), "Creating a trial plan requires `active_since` to be a valid datetime object"
 
             active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
+            logger.info(
+                f"Creating trial subscription from {active_since=} to {active_until=}"
+            )
             trial_subscription = cls.objects.create(
                 plan=plan,
                 account=account,
@@ -748,6 +753,7 @@ class AbstractSubscription(models.Model):
             regular_plan = plan
             regular_active_since = active_since
 
+        logger.info(f"Creating regular subscription from {regular_active_since}")
         regular_subscription = cls.objects.create(
             plan=regular_plan,
             account=account,
