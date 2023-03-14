@@ -727,7 +727,7 @@ class AbstractSubscription(models.Model):
 
             active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
             logging.info(
-                f"Creating trial subscription from {active_since} to {active_until}"
+                f"Creating trial subscription from {active_since=} to {active_until=}"
             )
             trial_subscription = cls.objects.create(
                 plan=plan,
