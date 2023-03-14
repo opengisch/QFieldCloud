@@ -209,11 +209,13 @@ Run the django database migrations
     docker compose exec app python manage.py migrate
 
 
-## Create a certificate using Let's Encrypt
+## Create or renew a certificate using Let's Encrypt
 
 If you are running the server on a server with a public domain, you can install Let's Encrypt certificate by running the following command:
 
     ./scripts/init_letsencrypt.sh
+
+The same command can also be used to update an expired certificate.
 
 Note you may want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
 
