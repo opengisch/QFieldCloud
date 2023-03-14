@@ -85,7 +85,6 @@ services:
       ofelia.job-exec.runcrons.schedule: "@every 1m"
       ofelia.job-exec.runcrons.command: python manage.py runcrons
     depends_on:
-      - db
       - redis
 
   nginx:

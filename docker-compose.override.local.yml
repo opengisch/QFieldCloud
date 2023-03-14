@@ -15,6 +15,9 @@ services:
     environment:
       DEBUG: 1
     command: python3 manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - db
+      - redis
 
   worker_wrapper:
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
