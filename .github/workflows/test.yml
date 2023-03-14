@@ -1,8 +1,11 @@
 name: Test
 
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - master
+      - release
+  pull_request:
 
 jobs:
   check_format:
