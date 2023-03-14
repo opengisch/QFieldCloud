@@ -206,7 +206,7 @@
 
                         $trow.querySelector('td:nth-child(1)').innerHTML = file.name;
                         $trow.querySelector('td:nth-child(2)').innerHTML = file.last_modified;
-                        $trow.querySelector('td:nth-child(3)').innerHTML = `<span title=${file.size} bytes">${filesize10(file.size)} KB</span>`;
+                        $trow.querySelector('td:nth-child(3)').innerHTML = `<span title="${file.size} bytes">${filesize10(file.size)} KB</span>`;
 
                         for (const version of file.versions) {
                             const $option = document.createElement('option');
