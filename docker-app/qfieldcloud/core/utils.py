@@ -121,11 +121,9 @@ def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
 def get_s3_client() -> mypy_boto3_s3.Client:
     """Get a new S3 client instance using Django settings"""
 
-    s3_client = boto3.client(
+    s3_session = get_s3_session()
+    s3_client = s3_session.client(
         "s3",
-        region_name=settings.STORAGE_REGION_NAME,
-        aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
         endpoint_url=settings.STORAGE_ENDPOINT_URL,
     )
     return s3_client

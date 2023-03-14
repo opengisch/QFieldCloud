@@ -73,8 +73,6 @@ services:
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
       TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
-    depends_on:
-      - redis
     logging:
       driver: "json-file"
       options:
@@ -86,6 +84,9 @@ services:
       ofelia.job-exec.runcrons.no-overlap: "true"
       ofelia.job-exec.runcrons.schedule: "@every 1m"
       ofelia.job-exec.runcrons.command: python manage.py runcrons
+    depends_on:
+      - db
+      - redis
 
   nginx:
     image: nginx:stable
@@ -166,9 +167,6 @@ services:
       - ${LOG_DIRECTORY}:/log
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
-    depends_on:
-      - redis
-      - app
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   ofelia:

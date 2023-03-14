@@ -141,6 +141,12 @@ class DownloadPushDeleteFileView(views.APIView):
             logger.info(
                 'The key "file" was not found in `request.data`.',
                 extra={
+                    "data_for_key_text_content": str(request.data.get("text", ""))[
+                        :1000
+                    ],
+                    "data_for_key_text_len": len(request.data.get("text", "")),
+                    "request_content_length": request.META.get("CONTENT_LENGTH"),
+                    "request_content_type": request.META.get("CONTENT_TYPE"),
                     "request_data": list(request.data.keys()),
                     "request_files": list(request.FILES.keys()),
                 },

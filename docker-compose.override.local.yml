@@ -25,10 +25,6 @@ services:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
       - ./docker-app/worker_wrapper:/usr/src/app/worker_wrapper
-    depends_on:
-      - db
-      - redis
-      - app
 
   smtp4dev:
     image: rnwood/smtp4dev:v3

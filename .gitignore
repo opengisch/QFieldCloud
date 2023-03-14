@@ -1,5 +1,6 @@
 __pycache__/
 *.log
+*.orig
 .htmlcov/
 .coverage
 /conf/supervisord.conf
@@ -8,4 +9,5 @@ __pycache__/
 docker-compose.override.yml
 client/projects
 conf/nginx/certs/*
+conf/certbot/*
 Pipfile*
