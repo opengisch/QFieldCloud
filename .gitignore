@@ -1,5 +1,6 @@
 __pycache__/
 *.log
+*.orig
 .htmlcov/
 .coverage
 /conf/supervisord.conf
