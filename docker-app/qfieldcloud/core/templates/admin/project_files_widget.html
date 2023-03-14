@@ -169,6 +169,16 @@
                     .then((files) => refreshTableContents({ files }))
                     .catch((error) => refreshTableContents({ error }));
             };
+            const filesize10 = n => {
+                switch(true) {
+                    case n < 10 ** 6:
+                        return (n / 10 ** 3).toFixed(3) + " KB";
+                    case n < 10 ** 9:
+                        return (n / 10 ** 6).toFixed(3) + " MB";
+                    default:
+                        return (n / 10 ** 9).toFixed(3) + " GB";
+                }
+            };
             const refreshTableContents = ({ error, isLoading = false, files = [] }) => {
                 $tbody.innerHTML = '';
                 $count.innerHTML = '';
@@ -196,7 +206,7 @@
 
                         $trow.querySelector('td:nth-child(1)').innerHTML = file.name;
                         $trow.querySelector('td:nth-child(2)').innerHTML = file.last_modified;
-                        $trow.querySelector('td:nth-child(3)').innerHTML = file.size;
+                        $trow.querySelector('td:nth-child(3)').innerHTML = `<span title="${file.size} bytes">${filesize10(file.size)} KB</span>`;
 
                         for (const version of file.versions) {
                             const $option = document.createElement('option');
