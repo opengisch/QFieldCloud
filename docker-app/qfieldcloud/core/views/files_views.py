@@ -240,8 +240,9 @@ class DownloadPushDeleteFileView(views.APIView):
 
         return Response(status=status.HTTP_201_CREATED)
 
+    @transaction.atomic()
     def delete(self, request, projectid, filename):
-        project = Project.objects.get(id=projectid)
+        project = Project.objects.select_for_update().get(id=projectid)
         version_id = request.META.get("HTTP_X_FILE_VERSION")
 
         if version_id:
