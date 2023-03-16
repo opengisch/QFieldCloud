@@ -162,6 +162,14 @@ class DeltaException(Exception):
         self.descr = descr
 
 
+class FeatureNotFoundError(Exception):
+    ...
+
+
+class DoublicateFeatureError(Exception):
+    ...
+
+
 # /EXCEPTION DEFINITIONS
 
 
@@ -1028,16 +1036,14 @@ def get_feature(
         QgsExpression.quotedValue(source_pk),
     )
 
-    feature = QgsFeature()
-    has_feature = False
-    for f in layer.getFeatures(expr):
-        if has_feature:
-            raise Exception("More than one feature match the feature select query")
-
-        feature = f
-        has_feature = True
-
-    return feature
+    features = list(layer.getFeatures(expr))
+    if not features:
+        raise FeatureNotFoundError(f"Could not find feature source_pk={source_pk}")
+    if len(features) < 1:
+        raise DoublicateFeatureError(
+            f"More than one feature match the feature select query source_pk={source_pk}"
+        )
+    return features[0]
 
 
 def create_feature(
@@ -1112,13 +1118,10 @@ def patch_feature(
     """
     new_feature_delta = delta["new"]
     old_feature_delta = delta["old"]
-    old_feature = get_feature(layer, delta, client_pks)
-
-    if not old_feature.isValid():
-        raise DeltaException(
-            f"Old feature (id={old_feature.id()} is invalid",
-            method=delta["method"],
-        )
+    try:
+        old_feature = get_feature(layer, delta, client_pks)
+    except (FeatureNotFoundError, DoublicateFeatureError) as exc:
+        raise DeltaException("Could not get feature", method=delta["method"]) from exc
 
     conflicts = compare_feature(old_feature, old_feature_delta, True)
 
@@ -1201,13 +1204,10 @@ def delete_feature(
         DeltaException: whenever the feature cannot be deleted
     """
     old_feature_delta = delta["old"]
-    old_feature = get_feature(layer, delta, client_pks)
-
-    if not old_feature.isValid():
-        raise DeltaException(
-            f"Old feature (id={old_feature.id()} is invalid",
-            method=delta["method"],
-        )
+    try:
+        old_feature = get_feature(layer, delta, client_pks)
+    except (FeatureNotFoundError, DoublicateFeatureError) as exc:
+        raise DeltaException("Could not get feature", method=delta["method"]) from exc
 
     conflicts = compare_feature(old_feature, old_feature_delta)
 
