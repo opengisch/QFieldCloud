@@ -15,7 +15,6 @@ from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.models import LogEntry
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.admin.models import LogEntry
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
@@ -52,6 +51,7 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import jobs
 from rest_framework.authtoken.models import TokenProxy
@@ -60,6 +60,14 @@ admin.site.unregister(LogEntry)
 
 
 Invitation = get_invitation_model()
+
+
+class ModelAdminEstimateCountMixin:
+    # Avoid repetitive counting large list views.
+    # Instead use pg metadata estimate.
+    paginator = LargeTablePaginator
+    # Display '(Show all)' instead of '(<count>)' in search bar
+    show_full_result_count = False
 
 
 def admin_urlname_by_obj(value, arg):
@@ -651,7 +659,7 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
             return queryset.filter(~q)
 
 
-class JobAdmin(admin.ModelAdmin):
+class JobAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "project__owner",
@@ -784,7 +792,7 @@ class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
             return queryset.filter(~q)
 
 
-class DeltaAdmin(admin.ModelAdmin):
+class DeltaAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "deltafile_id",
@@ -961,7 +969,7 @@ class TeamInline(admin.TabularInline):
         return False
 
 
-class OrganizationAdmin(admin.ModelAdmin):
+class OrganizationAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
     inlines = (
         UserAccountInline,
         GeodbInline,
@@ -1113,7 +1121,7 @@ class UserAdmin(admin.ModelAdmin):
         return False
 
 
-class LogEntryAdmin(BaseLogEntryAdmin):
+class LogEntryAdmin(ModelAdminEstimateCountMixin, BaseLogEntryAdmin):
     list_filter = ["action"]
     search_fields = [
         *BaseLogEntryAdmin.search_fields,
