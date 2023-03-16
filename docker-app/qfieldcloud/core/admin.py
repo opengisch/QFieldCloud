@@ -985,7 +985,7 @@ class OrganizationAdmin(admin.ModelAdmin):
         "storage_usage__field",
     )
 
-    list_select_related = ("organization_owner",)
+    list_select_related = ("organization_owner", "useraccount__current_subscription__plan")
 
     list_filter = ("date_joined",)
 
@@ -997,12 +997,9 @@ class OrganizationAdmin(admin.ModelAdmin):
             instance.organization_owner, instance.organization_owner.username
         )
 
-    @admin.display(description=_("Storage"))
+    @admin.display(description=_("Total Storage"))
     def storage_usage__field(self, instance) -> str:
-        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
-        used_storage_perc = instance.useraccount.storage_used_ratio * 100
-        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
+        return f"{instance.useraccount.current_subscription.plan.storage_mb} Mb"
 
     def get_search_results(self, request, queryset, search_term):
         filters = search_parser(
