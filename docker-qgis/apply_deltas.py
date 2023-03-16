@@ -1308,7 +1308,7 @@ def get_backup_path(path: Path) -> Path:
     Returns:
         Path -- suffixed path
     """
-    return Path(str(path) + BACKUP_SUFFIX)
+    return path.with_suffix(BACKUP_SUFFIX)
 
 
 def is_layer_file_based(layer: QgsMapLayer) -> bool:
