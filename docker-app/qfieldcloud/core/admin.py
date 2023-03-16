@@ -634,6 +634,9 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, queryset):
+        # Return All
+        if self.value() is None:
+            return queryset
         q = Q(status="pending") | Q(status="started") | Q(status="queued")
         if self.value() == "not finalized":
             return queryset.filter(q)
@@ -672,6 +675,7 @@ class JobAdmin(admin.ModelAdmin):
         "output__pre",
         "feedback__pre",
     )
+
 
     def get_object(self, request, object_id, from_field=None):
         obj = super().get_object(request, object_id, from_field)
