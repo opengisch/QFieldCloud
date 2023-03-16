@@ -166,7 +166,7 @@ class DeltaException(Exception):
 
 
 BACKUP_SUFFIX = ".qfieldcloudbackup"
-delta_log = []
+DELTA_LOG = []
 
 
 def project_decorator(f):
@@ -254,7 +254,7 @@ def delta_apply(
     inverse: bool,
     overwrite_conflicts: bool,
 ):
-    del delta_log[:]
+    DELTA_LOG.clear()
 
     project = QgsProject.instance()
     logging.info(f'Loading project file "{project_filename}"...')
@@ -275,8 +275,8 @@ def delta_apply(
     if not all_applied:
         logger.info("Some deltas have not been applied")
 
-    delta_log_copy = [*delta_log]
-    del delta_log[:]
+    delta_log_copy = [*DELTA_LOG]
+    DELTA_LOG.clear()
 
     return delta_log_copy
 
@@ -288,7 +288,7 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions) -> bool:
     has_uncaught_errors = False
 
     try:
-        del delta_log[:]
+        del DELTA_LOG[:]
         deltas = load_delta_file(opts)
 
         if opts["transaction"]:
@@ -329,12 +329,12 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions) -> bool:
         )
     print("Delta log file contents:")
     print("========================")
-    print(json.dumps(delta_log, indent=2, sort_keys=True, default=str))
+    print(json.dumps(DELTA_LOG, indent=2, sort_keys=True, default=str))
     print("========================")
 
     if opts.get("delta_log"):
         with open(opts["delta_log"], "w") as f:
-            json.dump(delta_log, f, indent=2, sort_keys=True, default=str)
+            json.dump(DELTA_LOG, f, indent=2, sort_keys=True, default=str)
 
     return has_uncaught_errors
 
@@ -592,7 +592,7 @@ def apply_deltas_without_transaction(
                     f'The returned modified feature is invalid in "{layer_id}"'
                 )
 
-            delta_log.append(
+            DELTA_LOG.append(
                 {
                     "msg": "Successfully applied delta!",
                     "status": delta_status,
@@ -628,7 +628,7 @@ def apply_deltas_without_transaction(
                 logger.error(f'Failed to rollback layer "{layer_id}": {err}')
 
             has_applied_all_deltas = False
-            delta_log.append(
+            DELTA_LOG.append(
                 {
                     "msg": str(err),
                     "status": delta_status,
@@ -646,7 +646,7 @@ def apply_deltas_without_transaction(
             )
         except Exception as err:
             delta_status = DeltaStatus.UnknownError
-            delta_log.append(
+            DELTA_LOG.append(
                 {
                     "msg": str(err),
                     "status": delta_status,
@@ -1115,7 +1115,10 @@ def patch_feature(
     old_feature = get_feature(layer, delta, client_pks)
 
     if not old_feature.isValid():
-        raise DeltaException("Unable to find feature")
+        raise DeltaException(
+            f"Old feature (id={old_feature.id()} is invalid",
+            method=delta["method"],
+        )
 
     conflicts = compare_feature(old_feature, old_feature_delta, True)
 
@@ -1201,7 +1204,10 @@ def delete_feature(
     old_feature = get_feature(layer, delta, client_pks)
 
     if not old_feature.isValid():
-        raise DeltaException("Unable to find feature")
+        raise DeltaException(
+            f"Old feature (id={old_feature.id()} is invalid",
+            method=delta["method"],
+        )
 
     conflicts = compare_feature(old_feature, old_feature_delta)
 
