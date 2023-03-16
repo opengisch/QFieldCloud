@@ -49,6 +49,7 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import jobs
 from rest_framework.authtoken.models import TokenProxy
@@ -990,6 +991,10 @@ class OrganizationAdmin(admin.ModelAdmin):
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("organization_owner",)
+
+    # Avoid count for performance of list views
+    paginator = LargeTablePaginator
+    show_full_result_count = False
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
