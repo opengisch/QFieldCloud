@@ -968,66 +968,62 @@ class OrganizationAdmin(admin.ModelAdmin):
     list_display = (
         "username",
         "email",
-        # "organization_owner__link",
+        "organization_owner__link",
         "date_joined",
-        # "storage_usage__field",
+        "storage_usage__field",
     )
 
-    # search_fields = (
-    #     "username__icontains",
-    #     "organization_owner__username__icontains",
-    #     "email__iexact",
-    #     "organization_owner__email__iexact",
-    # )
+    search_fields = (
+        "username__icontains",
+        "organization_owner__username__icontains",
+        "email__iexact",
+        "organization_owner__email__iexact",
+    )
 
-    # readonly_fields = (
-    #     "date_joined",
-    #     "storage_usage__field",
-    # )
+    readonly_fields = (
+        "date_joined",
+        "storage_usage__field",
+    )
 
-    # list_select_related = ("organization_owner","useraccount","customer", "user_ptr")
-    list_select_related = "user_ptr organization_owner created_by auth_token useraccount geodb".split(" ")
+    list_select_related = ("organization_owner", "useraccount__current_subscription__plan")
 
     list_filter = ("date_joined",)
 
-    # autocomplete_fields = ("organization_owner",)
+    autocomplete_fields = ("organization_owner",)
 
-    # @admin.display(description=_("Owner"))
-    # def organization_owner__link(self, instance):
-    #     return model_admin_url(
-    #         instance.organization_owner, instance.organization_owner.username
-    #     )
+    @admin.display(description=_("Owner"))
+    def organization_owner__link(self, instance):
+        return model_admin_url(
+            instance.organization_owner, instance.organization_owner.username
+        )
 
-    # @admin.display(description=_("Storage"))
-    # def storage_usage__field(self, instance) -> str:
-    #     used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-    #     free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
-    #     used_storage_perc = instance.useraccount.storage_used_ratio * 100
-    #     return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
+    @admin.display(description=_("Total Storage"))
+    def storage_usage__field(self, instance) -> str:
+        return f"{instance.useraccount.current_subscription.plan.storage_mb} Mb"
 
-    # def get_search_results(self, request, queryset, search_term):
-    #     filters = search_parser(
-    #         request,
-    #         queryset,
-    #         search_term,
-    #         {
-    #             "owner": {
-    #                 "filter": "organization_owner__username__iexact",
-    #             },
-    #             "member": {
-    #                 "filter": "membership_roles__user__username__iexact",
-    #             },
-    #         },
-    #     )
+    def get_search_results(self, request, queryset, search_term):
+        filters = search_parser(
+            request,
+            queryset,
+            search_term,
+            {
+                "owner": {
+                    "filter": "organization_owner__username__iexact",
+                },
+                "member": {
+                    "filter": "membership_roles__user__username__iexact",
+                },
+            },
+        )
 
-    #     if filters:
-    #         return queryset.filter(**filters), True
+        if filters:
+            return queryset.filter(**filters), True
 
-    #     queryset, use_distinct = super().get_search_results(
-    #         request, queryset, search_term
-    #     )
+        queryset, use_distinct = super().get_search_results(
+            request, queryset, search_term
+        )
 
-    #     return queryset, use_distinct
+        return queryset, use_distinct
 
 
 class TeamMemberInline(admin.TabularInline):
