@@ -6,18 +6,18 @@ from datetime import datetime
 from itertools import chain
 from typing import Any, Dict, Generator
 
-from django.contrib.admin.models import LogEntry
-
 from allauth.account.admin import EmailAddressAdmin
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
+from auditlog.models import LogEntry
 from django.conf import settings
 from django.contrib import admin, messages
+from django.contrib.admin.models import LogEntry
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
-from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.db.models.fields.json import JSONField
@@ -55,8 +55,6 @@ from qfieldcloud.core.models import (
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import jobs
 from rest_framework.authtoken.models import TokenProxy
-from auditlog.models import LogEntry
-from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 
 admin.site.unregister(LogEntry)
 
@@ -685,7 +683,6 @@ class JobAdmin(admin.ModelAdmin):
         "feedback__pre",
     )
 
-
     def get_object(self, request, object_id, from_field=None):
         obj = super().get_object(request, object_id, from_field)
         if obj and obj.type == Job.Type.DELTA_APPLY:
@@ -998,7 +995,10 @@ class OrganizationAdmin(admin.ModelAdmin):
         "storage_usage__field",
     )
 
-    list_select_related = ("organization_owner", "useraccount__current_subscription__plan")
+    list_select_related = (
+        "organization_owner",
+        "useraccount__current_subscription__plan",
+    )
 
     list_filter = ("date_joined",)
 
@@ -1112,13 +1112,14 @@ class UserAdmin(admin.ModelAdmin):
         # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
         return False
 
+
 class LogEntryAdmin(BaseLogEntryAdmin):
     list_filter = ["action"]
     search_fields = [
         *BaseLogEntryAdmin.search_fields,
         "content_type__model",
     ]
-    pass
+
 
 admin.site.register(Invitation, InvitationAdmin)
 admin.site.register(Person, PersonAdmin)
