@@ -634,11 +634,16 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, queryset):
-        q = Q(status="pending") | Q(status="started") | Q(status="queued")
-        if self.value() == "not finalized":
-            return queryset.filter(q)
-        else:
-            return queryset.filter(~q)
+        not_finalized = Q(last_status="pending") | Q(last_status="started")
+        match self.value():
+            case "ALL":
+                return queryset
+            case "not finalized":
+                return queryset.filter(not_finalized)
+            case "finalized":
+                return queryset.filter(~not_finalized)
+            case _:
+                messages.warning(request, f"Status {self.value()} is not implemented!")
 
 
 class JobAdmin(admin.ModelAdmin):
