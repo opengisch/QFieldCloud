@@ -6,6 +6,8 @@ from datetime import datetime
 from itertools import chain
 from typing import Any, Dict, Generator
 
+from django.contrib.admin.models import LogEntry
+
 from allauth.account.admin import EmailAddressAdmin
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
@@ -15,6 +17,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.db.models.fields.json import JSONField
@@ -52,6 +55,11 @@ from qfieldcloud.core.models import (
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import jobs
 from rest_framework.authtoken.models import TokenProxy
+from auditlog.models import LogEntry
+from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
+
+admin.site.unregister(LogEntry)
+
 
 Invitation = get_invitation_model()
 
@@ -637,6 +645,7 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
         # Return All
         if self.value() is None:
             return queryset
+
         q = Q(status="pending") | Q(status="started") | Q(status="queued")
         if self.value() == "not finalized":
             return queryset.filter(q)
@@ -1103,6 +1112,13 @@ class UserAdmin(admin.ModelAdmin):
         # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
         return False
 
+class LogEntryAdmin(BaseLogEntryAdmin):
+    list_filter = ["action"]
+    search_fields = [
+        *BaseLogEntryAdmin.search_fields,
+        "content_type__model",
+    ]
+    pass
 
 admin.site.register(Invitation, InvitationAdmin)
 admin.site.register(Person, PersonAdmin)
@@ -1112,6 +1128,7 @@ admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
+admin.site.register(LogEntry, LogEntryAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 admin.site.register(User, UserAdmin)
