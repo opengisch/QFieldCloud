@@ -4,4 +4,3 @@
 [submodule "docker-app/qfieldcloud/core/web/staticfiles/scss/bootstrap"]
 	path = docker-app/qfieldcloud/core/web/staticfiles/scss/bootstrap
 	url = https://github.com/twbs/bootstrap.git
-	branch = v4.6.0
