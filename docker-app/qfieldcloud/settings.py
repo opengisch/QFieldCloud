@@ -202,7 +202,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE", "Europe/Zurich")
+TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
 
 USE_I18N = False
 
