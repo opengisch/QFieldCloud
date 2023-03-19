@@ -20,7 +20,8 @@ services:
       - redis
 
   worker_wrapper:
-    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
+    deploy:
+      replicas: ${QFIELDCLOUD_WORKER_REPLICAS}
     build:
       args:
         - DEBUG_BUILD=1

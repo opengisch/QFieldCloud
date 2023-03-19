@@ -166,7 +166,8 @@ services:
       - ${LOG_DIRECTORY}:/log
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
-    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
+    deploy:
+      replicas: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   ofelia:
     image: mcuadros/ofelia:v0.3.4
