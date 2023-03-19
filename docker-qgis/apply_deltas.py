@@ -583,7 +583,13 @@ def apply_deltas_without_transaction(
 
                 modified_pk = feature.attribute(pk_attr_name)
 
-                if modified_pk and modified_pk != str(feature_pk):
+                if (
+                    modified_pk is not None
+                    # if the feature was newly created, do not expect `feature_pk` to match the `modified_pk`,
+                    # as the client cannot know the modified_pk in advance.
+                    and delta["method"] == str(DeltaMethod.CREATE)
+                    and str(modified_pk) != str(feature_pk)
+                ):
                     logger.warning(
                         f'The modified feature pk valued does not match "sourcePk" in the delta in "{layer_id}": sourcePk={feature_pk} modifiedFeaturePk={modified_pk}'
                     )
