@@ -57,6 +57,7 @@ server {
   ssl_certificate     certs/${QFIELDCLOUD_HOST}.pem;
   ssl_certificate_key certs/${QFIELDCLOUD_HOST}-key.pem;
 
+  ssl_dhparam /etc/nginx/ssl-dhparams.pem;
   include /etc/nginx/options-ssl-nginx.conf;
 
   access_log /var/log/nginx/access.log json-logger;
