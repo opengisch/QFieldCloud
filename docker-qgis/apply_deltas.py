@@ -1211,6 +1211,9 @@ def delete_feature(
                 f'Conflicts while applying delta "{delta["uuid"]}". Ignoring since `overwrite_conflicts` flag set to `True`.\nConflicts:\n{conflicts}'
             )
         else:
+            logger.warning(
+                f'Conflicts while applying delta "{delta["uuid"]}".\nConflicts:\n{conflicts}'
+            )
             raise DeltaException(
                 "There are conflicts with the already existing feature!",
                 conflicts=conflicts,
@@ -1284,7 +1287,7 @@ def compare_feature(
 
             if current_value != incoming_value:
                 conflicts.append(
-                    f'The attribute "{attr}" that has a conflict:\n-{delta_feature_attrs[attr]}\n+{feature.attribute(attr)}'
+                    f'The attribute "{attr}" that has a conflict:\n-{current_value}\n+{incoming_value}'
                 )
 
     return conflicts
