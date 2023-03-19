@@ -20,6 +20,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
 from django.utils.translation import gettext as _
+from django.views.generic import RedirectView
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from qfieldcloud.authentication import views as auth_views
@@ -44,6 +45,11 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path(
+        "",
+        RedirectView.as_view(url=settings.QFIELDCLOUD_ADMIN_URI, permanent=False),
+        name="index",
+    ),
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
         schema_view.without_ui(cache_timeout=0),
