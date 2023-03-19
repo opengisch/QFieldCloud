@@ -1,0 +1,51 @@
+{
+    "deltas": [
+      {
+        "uuid": "1270b97d-6a28-49cc-83f3-b827ec574fee",
+        "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+        "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+        "localPk": "1",
+        "sourcePk": "1",
+        "localLayerId": "special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292",
+        "sourceLayerId": "special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292",
+        "method": "patch",
+        "new": {
+          "attributes": {
+            "col_date": "2024-03-23",
+            "col_datetime": "2024-03-23T01:23:45",
+            "col_binary": "bar"
+        }
+    },
+    "old": {
+        "attributes": {
+            "col_date": "2023-02-22",
+            "col_datetime": "2023-02-22T01:23:45.678",
+            "col_binary": "foo"
+          }
+        }
+      },
+      {
+        "uuid": "6c127828-b072-4939-a955-2018175748ac",
+        "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+        "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+        "localPk": "2",
+        "sourcePk": "",
+        "localLayerId": "special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292",
+        "sourceLayerId": "special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292",
+        "method": "create",
+        "new": {
+          "geometry": null,
+          "attributes": {
+            "fid": 2,
+            "col_date": "2025-04-24",
+            "col_datetime": "2024-03-23T12:34:56",
+            "col_binary": "2025-04-24"
+          }
+        }
+      }
+    ],
+    "files": [],
+    "id": "2c98410f-e1b2-45e6-9026-97898bfee730",
+    "project": "e02d02cc-af1b-414c-a14c-e2ed5dfee52f",
+    "version": "1.0"
+}

@@ -36,7 +36,7 @@ from qgis.core import (
     QgsVectorLayerEditPassthrough,
     QgsVectorLayerUtils,
 )
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QDate, QDateTime, Qt, QTime
 
 logger = logging.getLogger(__name__)
 # /LOGGER
@@ -1268,7 +1268,21 @@ def compare_feature(
                 # conflicts.append(f'The attribute "{attr}" in the delta is not available in the original feature')
                 continue
 
-            if feature.attribute(attr) != delta_feature_attrs[attr]:
+            current_value = feature.attribute(attr)
+            incoming_value = delta_feature_attrs[attr]
+
+            # modify the incoming value to the desired type if needed
+            if incoming_value is not None:
+                if isinstance(current_value, QDateTime):
+                    incoming_value = QDateTime.fromString(
+                        incoming_value, Qt.ISODateWithMs
+                    )
+                elif isinstance(current_value, QDate):
+                    incoming_value = QDate.fromString(incoming_value, Qt.ISODate)
+                elif isinstance(current_value, QTime):
+                    incoming_value = QTime.fromString(incoming_value)
+
+            if current_value != incoming_value:
                 conflicts.append(
                     f'The attribute "{attr}" that has a conflict:\n-{delta_feature_attrs[attr]}\n+{feature.attribute(attr)}'
                 )
