@@ -736,6 +736,31 @@ class QfcTestCase(APITransactionTestCase):
             b'fid,col1\n"1",qux\n"2",newfeature\n',
         )
 
+    def test_special_data_types(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+        project.overwrite_conflicts = False
+        project.save()
+
+        # Push a deltafile
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="special_data_types.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "1270b97d-6a28-49cc-83f3-b827ec574fee",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "6c127828-b072-4939-a955-2018175748ac",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+
     def test_delta_pushed_after_job_triggered(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)

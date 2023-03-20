@@ -1,4 +1,4 @@
-<qgis projectname="" saveDateTime="2023-02-17T01:23:50" saveUser="suricactus" saveUserFull="Ivan Ivanov" version="3.28.3-Firenze">
+<qgis projectname="" saveDateTime="2023-03-20T00:00:48" saveUser="suricactus" saveUserFull="Ivan Ivanov" version="3.30.0-'s-Hertogenbosch">
   <homePath path=""></homePath>
   <title></title>
   <transaction mode="Disabled"></transaction>
@@ -16,6 +16,7 @@
       <geographicflag>true</geographicflag>
     </spatialrefsys>
   </projectCrs>
+  <elevation-shading-renderer combined-method="0" edl-distance="0.5" edl-distance-unit="0" edl-is-active="1" edl-strength="1000" hillshading-is-active="0" hillshading-is-multidirectional="0" hillshading-z-factor="1" is-active="0" light-altitude="45" light-azimuth="315"></elevation-shading-renderer>
   <layer-tree-group>
     <customproperties>
       <Option></Option>
@@ -55,6 +56,11 @@
           <Option></Option>
         </customproperties>
       </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" expanded="1" id="special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292" legend_exp="" legend_split_behavior="0" name="special_data_types" patch_size="-1,-1" providerKey="ogr" source="./testdata.gpkg|layername=special_data_types">
+        <customproperties>
+          <Option></Option>
+        </customproperties>
+      </layer-tree-layer>
     </layer-tree-group>
     <layer-tree-layer checked="Qt::Checked" expanded="1" id="polygons_5096fc7b_b106_4740_90b4_9de822382d71" legend_exp="" legend_split_behavior="0" name="polygons" patch_size="0,0" providerKey="ogr" source="./polygons.geojson">
       <customproperties>
@@ -73,16 +79,17 @@
       <item>points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1</item>
       <item>points_xyz_ff574332_1ff5_47e6_8d6a_15f68e0c7cd1</item>
       <item>points_xyzm_1cb6363a_5a99_4090_aeaf_d88deec2a3d8</item>
+      <item>special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292</item>
     </custom-order>
   </layer-tree-group>
   <snapping-settings enabled="0" intersection-snapping="0" maxScale="0" minScale="0" mode="2" scaleDependencyMode="0" self-snapping="0" tolerance="12" type="1" unit="1">
     <individual-layer-settings>
-      <layer-setting enabled="0" id="points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1" maxScale="0" minScale="0" tolerance="12" type="0" units="1"></layer-setting>
       <layer-setting enabled="0" id="polygons_f18b6046_8e46_4206_a698_641c58e5ac73" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
-      <layer-setting enabled="0" id="points_xyz_ff574332_1ff5_47e6_8d6a_15f68e0c7cd1" maxScale="0" minScale="0" tolerance="12" type="0" units="1"></layer-setting>
       <layer-setting enabled="0" id="polygons_5096fc7b_b106_4740_90b4_9de822382d71" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
       <layer-setting enabled="0" id="points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
+      <layer-setting enabled="0" id="points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1" maxScale="0" minScale="0" tolerance="12" type="0" units="1"></layer-setting>
       <layer-setting enabled="0" id="points_xyzm_1cb6363a_5a99_4090_aeaf_d88deec2a3d8" maxScale="0" minScale="0" tolerance="12" type="0" units="1"></layer-setting>
+      <layer-setting enabled="0" id="points_xyz_ff574332_1ff5_47e6_8d6a_15f68e0c7cd1" maxScale="0" minScale="0" tolerance="12" type="0" units="1"></layer-setting>
     </individual-layer-settings>
   </snapping-settings>
   <relations></relations>
@@ -245,6 +252,11 @@
           <legendlayerfile isInOverview="0" layerid="polygons_f18b6046_8e46_4206_a698_641c58e5ac73" visible="1"></legendlayerfile>
         </filegroup>
       </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="special_data_types" open="true" showFeatureCount="0">
+        <filegroup hidden="false" open="true">
+          <legendlayerfile isInOverview="0" layerid="special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292" visible="1"></legendlayerfile>
+        </filegroup>
+      </legendlayer>
     </legendgroup>
     <legendlayer checked="Qt::Checked" drawingOrder="-1" name="polygons" open="true" showFeatureCount="0">
       <filegroup hidden="false" open="true">
@@ -258,7 +270,7 @@
     </legendlayer>
   </legend>
   <mapViewDocks></mapViewDocks>
-  <main-annotation-layer autoRefreshEnabled="0" autoRefreshTime="0" legendPlaceholderImage="" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" type="annotation">
+  <main-annotation-layer autoRefreshEnabled="0" autoRefreshTime="0" hasScaleBasedVisibilityFlag="0" legendPlaceholderImage="" maxScale="0" minScale="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" styleCategories="AllStyleCategories" type="annotation">
     <id>Annotations_d0093c34_3d4e_4de9_baf0_24b1c6c763c1</id>
     <datasource></datasource>
     <keywordList>
@@ -286,6 +298,7 @@
       <title></title>
       <abstract></abstract>
       <links></links>
+      <dates></dates>
       <fees></fees>
       <encoding></encoding>
       <crs>
@@ -304,6 +317,15 @@
       <extent></extent>
     </resourceMetadata>
     <items></items>
+    <flags>
+      <Identifiable>1</Identifiable>
+      <Removable>1</Removable>
+      <Searchable>1</Searchable>
+      <Private>0</Private>
+    </flags>
+    <customproperties>
+      <Option></Option>
+    </customproperties>
     <layerOpacity>1</layerOpacity>
     <blendMode>0</blendMode>
     <paintEffect></paintEffect>
@@ -337,6 +359,7 @@
         <title></title>
         <abstract></abstract>
         <links></links>
+        <dates></dates>
         <fees></fees>
         <encoding></encoding>
         <crs>
@@ -393,7 +416,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleLine" enabled="1" locked="0" pass="0">
+            <layer class="SimpleLine" enabled="1" id="{38fb7dbb-a85f-48bd-88fa-198552a88717}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="align_dash_pattern" type="QString" value="0"></Option>
                 <Option name="capstyle" type="QString" value="square"></Option>
@@ -442,7 +465,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{02d07cf0-0b42-4a94-9fc6-5056a9cac6dc}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="232,113,141,255"></Option>
@@ -475,7 +498,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{4279c1f0-b5d6-4d9e-bcda-560c46aefbc1}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -541,6 +564,10 @@
         <alias field="fid" index="0" name=""></alias>
         <alias field="col1" index="1" name=""></alias>
       </aliases>
+      <splitPolicies>
+        <policy field="fid" policy="Duplicate"></policy>
+        <policy field="col1" policy="Duplicate"></policy>
+      </splitPolicies>
       <defaults>
         <default applyOnUpdate="0" expression="" field="fid"></default>
         <default applyOnUpdate="0" expression="" field="col1"></default>
@@ -624,6 +651,7 @@
         <title></title>
         <abstract></abstract>
         <links></links>
+        <dates></dates>
         <fees></fees>
         <encoding></encoding>
         <crs>
@@ -680,7 +708,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleLine" enabled="1" locked="0" pass="0">
+            <layer class="SimpleLine" enabled="1" id="{f64bcc91-6b55-4f7f-a1f4-b53e0e3ef4db}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="align_dash_pattern" type="QString" value="0"></Option>
                 <Option name="capstyle" type="QString" value="square"></Option>
@@ -729,7 +757,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{0fa56277-ad6b-4303-847e-dc1e7635cfd4}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="183,72,75,255"></Option>
@@ -762,7 +790,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{e75aabcd-f578-4278-bb5d-781e5f8858b1}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -805,7 +833,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{673dc6c1-e797-440d-960e-6e2ff861c98d}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -890,6 +918,12 @@
         <alias field="str" index="2" name=""></alias>
         <alias field="fid" index="3" name=""></alias>
       </aliases>
+      <splitPolicies>
+        <policy field="int" policy="Duplicate"></policy>
+        <policy field="dbl" policy="Duplicate"></policy>
+        <policy field="str" policy="Duplicate"></policy>
+        <policy field="fid" policy="Duplicate"></policy>
+      </splitPolicies>
       <defaults>
         <default applyOnUpdate="0" expression="" field="int"></default>
         <default applyOnUpdate="0" expression="" field="dbl"></default>
@@ -975,6 +1009,7 @@
         <title></title>
         <abstract></abstract>
         <links></links>
+        <dates></dates>
         <fees></fees>
         <encoding></encoding>
         <crs>
@@ -1031,7 +1066,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleLine" enabled="1" locked="0" pass="0">
+            <layer class="SimpleLine" enabled="1" id="{3e01470b-5a64-487e-a827-83076a065c8a}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="align_dash_pattern" type="QString" value="0"></Option>
                 <Option name="capstyle" type="QString" value="square"></Option>
@@ -1080,7 +1115,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{9f7046eb-e028-4f7b-a68e-61a3efd36ceb}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="141,90,153,255"></Option>
@@ -1113,7 +1148,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{36d7c328-0954-4ed1-9e29-52890e69fa89}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -1156,7 +1191,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{5c6eb5ce-7b92-4033-984c-690af7e36c67}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -1245,6 +1280,12 @@
         <alias field="dbl" index="2" name=""></alias>
         <alias field="str" index="3" name=""></alias>
       </aliases>
+      <splitPolicies>
+        <policy field="fid" policy="Duplicate"></policy>
+        <policy field="int" policy="Duplicate"></policy>
+        <policy field="dbl" policy="Duplicate"></policy>
+        <policy field="str" policy="Duplicate"></policy>
+      </splitPolicies>
       <defaults>
         <default applyOnUpdate="0" expression="" field="fid"></default>
         <default applyOnUpdate="0" expression="" field="int"></default>
@@ -1336,6 +1377,7 @@
         <title></title>
         <abstract></abstract>
         <links></links>
+        <dates></dates>
         <fees></fees>
         <encoding></encoding>
         <crs>
@@ -1392,7 +1434,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleLine" enabled="1" locked="0" pass="0">
+            <layer class="SimpleLine" enabled="1" id="{ad50ac7d-ab25-46af-9c79-28f742b9bae1}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="align_dash_pattern" type="QString" value="0"></Option>
                 <Option name="capstyle" type="QString" value="square"></Option>
@@ -1441,7 +1483,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{7dc231d5-159b-465b-b3fa-873f08166611}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="255,158,23,255"></Option>
@@ -1474,7 +1516,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{5c2ab01f-3bc4-459e-9e50-2085189734c1}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -1517,7 +1559,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{01620629-35e5-4fc2-b607-f85459963d45}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -1602,6 +1644,12 @@
         <alias field="dbl" index="2" name=""></alias>
         <alias field="str" index="3" name=""></alias>
       </aliases>
+      <splitPolicies>
+        <policy field="fid" policy="Duplicate"></policy>
+        <policy field="int" policy="Duplicate"></policy>
+        <policy field="dbl" policy="Duplicate"></policy>
+        <policy field="str" policy="Duplicate"></policy>
+      </splitPolicies>
       <defaults>
         <default applyOnUpdate="0" expression="" field="fid"></default>
         <default applyOnUpdate="0" expression="" field="int"></default>
@@ -1687,6 +1735,7 @@
         <title></title>
         <abstract></abstract>
         <links></links>
+        <dates></dates>
         <fees></fees>
         <encoding></encoding>
         <crs>
@@ -1743,7 +1792,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleLine" enabled="1" locked="0" pass="0">
+            <layer class="SimpleLine" enabled="1" id="{9bfc9598-335b-42c2-a50b-7555249eb393}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="align_dash_pattern" type="QString" value="0"></Option>
                 <Option name="capstyle" type="QString" value="square"></Option>
@@ -1792,7 +1841,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{13c35a5a-312e-490a-905e-a002ca198a6c}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="231,113,72,255"></Option>
@@ -1825,7 +1874,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{17217799-89ad-41ea-a076-df54a401525f}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -1868,7 +1917,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{8f31252c-fc82-4f45-ba53-505d66e2a880}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -1953,6 +2002,12 @@
         <alias field="dbl" index="2" name=""></alias>
         <alias field="str" index="3" name=""></alias>
       </aliases>
+      <splitPolicies>
+        <policy field="fid" policy="Duplicate"></policy>
+        <policy field="int" policy="Duplicate"></policy>
+        <policy field="dbl" policy="Duplicate"></policy>
+        <policy field="str" policy="Duplicate"></policy>
+      </splitPolicies>
       <defaults>
         <default applyOnUpdate="0" expression="" field="fid"></default>
         <default applyOnUpdate="0" expression="" field="int"></default>
@@ -2038,6 +2093,7 @@
         <title></title>
         <abstract></abstract>
         <links></links>
+        <dates></dates>
         <fees></fees>
         <encoding></encoding>
         <crs>
@@ -2094,7 +2150,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleLine" enabled="1" locked="0" pass="0">
+            <layer class="SimpleLine" enabled="1" id="{27468cb9-b150-448a-81c1-1559d3985bb4}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="align_dash_pattern" type="QString" value="0"></Option>
                 <Option name="capstyle" type="QString" value="square"></Option>
@@ -2143,7 +2199,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{f7fc6098-a427-43a7-a07d-54e51a476188}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="231,113,72,255"></Option>
@@ -2176,7 +2232,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{404cc8ac-2800-4f15-8140-86a58b3ef81a}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -2219,7 +2275,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{bd1a526f-fd07-4e69-a2a3-07e5e9c7497f}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="133,182,111,255"></Option>
@@ -2296,6 +2352,12 @@
         <alias field="str" index="2" name=""></alias>
         <alias field="fid" index="3" name=""></alias>
       </aliases>
+      <splitPolicies>
+        <policy field="int" policy="Duplicate"></policy>
+        <policy field="dbl" policy="Duplicate"></policy>
+        <policy field="str" policy="Duplicate"></policy>
+        <policy field="fid" policy="Duplicate"></policy>
+      </splitPolicies>
       <defaults>
         <default applyOnUpdate="0" expression="" field="int"></default>
         <default applyOnUpdate="0" expression="" field="dbl"></default>
@@ -2381,6 +2443,7 @@
         <title></title>
         <abstract></abstract>
         <links></links>
+        <dates></dates>
         <fees></fees>
         <encoding></encoding>
         <crs>
@@ -2437,7 +2500,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleLine" enabled="1" locked="0" pass="0">
+            <layer class="SimpleLine" enabled="1" id="{59e1c7ee-5376-4681-9f8e-c8b148914d57}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="align_dash_pattern" type="QString" value="0"></Option>
                 <Option name="capstyle" type="QString" value="square"></Option>
@@ -2486,7 +2549,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{c8f23136-40af-42a3-85e3-37d7ace290ee}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="152,125,183,255"></Option>
@@ -2519,7 +2582,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleMarker" enabled="1" locked="0" pass="0">
+            <layer class="SimpleMarker" enabled="1" id="{3f9defd9-b38f-40c1-8691-5927c1289a83}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="angle" type="QString" value="0"></Option>
                 <Option name="cap_style" type="QString" value="square"></Option>
@@ -2562,7 +2625,7 @@
                 <Option name="type" type="QString" value="collection"></Option>
               </Option>
             </data_defined_properties>
-            <layer class="SimpleFill" enabled="1" locked="0" pass="0">
+            <layer class="SimpleFill" enabled="1" id="{c558b6cd-39a0-4a53-9a26-39c72432709d}" locked="0" pass="0">
               <Option type="Map">
                 <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
                 <Option name="color" type="QString" value="225,89,137,255"></Option>
@@ -2639,6 +2702,12 @@
         <alias field="dbl" index="2" name=""></alias>
         <alias field="str" index="3" name=""></alias>
       </aliases>
+      <splitPolicies>
+        <policy field="fid" policy="Duplicate"></policy>
+        <policy field="int" policy="Duplicate"></policy>
+        <policy field="dbl" policy="Duplicate"></policy>
+        <policy field="str" policy="Duplicate"></policy>
+      </splitPolicies>
       <defaults>
         <default applyOnUpdate="0" expression="" field="fid"></default>
         <default applyOnUpdate="0" expression="" field="int"></default>
@@ -2684,6 +2753,314 @@
       <previewExpression></previewExpression>
       <mapTip></mapTip>
     </maplayer>
+    <maplayer autoRefreshEnabled="0" autoRefreshTime="0" geometry="No geometry" hasScaleBasedVisibilityFlag="0" legendPlaceholderImage="" maxScale="0" minScale="1e+08" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" styleCategories="AllStyleCategories" type="vector" wkbType="NoGeometry">
+      <id>special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292</id>
+      <datasource>./testdata.gpkg|layername=special_data_types</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>special_data_types</layername>
+      <srs>
+        <spatialrefsys nativeFormat="Wkt">
+          <wkt></wkt>
+          <proj4></proj4>
+          <srsid>0</srsid>
+          <srid>0</srid>
+          <authid></authid>
+          <description></description>
+          <projectionacronym></projectionacronym>
+          <ellipsoidacronym></ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <links></links>
+        <dates></dates>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys nativeFormat="Wkt">
+            <wkt></wkt>
+            <proj4></proj4>
+            <srsid>0</srsid>
+            <srid>0</srid>
+            <authid></authid>
+            <description></description>
+            <projectionacronym></projectionacronym>
+            <ellipsoidacronym></ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent></extent>
+      </resourceMetadata>
+      <provider encoding="UTF-8">ogr</provider>
+      <vectorjoins></vectorjoins>
+      <layerDependencies></layerDependencies>
+      <dataDependencies></dataDependencies>
+      <expressionfields></expressionfields>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"></map-layer-style>
+      </map-layer-style-manager>
+      <auxiliaryLayer></auxiliaryLayer>
+      <metadataUrls></metadataUrls>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+        <Private>0</Private>
+      </flags>
+      <temporal accumulate="0" durationField="" durationUnit="min" enabled="0" endExpression="" endField="" fixedDuration="0" limitMode="0" mode="0" startExpression="" startField="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <elevation binding="Centroid" clamping="Terrain" extrusion="0" extrusionEnabled="0" respectLayerSymbol="1" showMarkerSymbolInSurfacePlots="0" symbology="Line" type="IndividualFeatures" zoffset="0" zscale="1">
+        <data-defined-properties>
+          <Option type="Map">
+            <Option name="name" type="QString" value=""></Option>
+            <Option name="properties"></Option>
+            <Option name="type" type="QString" value="collection"></Option>
+          </Option>
+        </data-defined-properties>
+        <profileLineSymbol>
+          <symbol alpha="1" clip_to_extent="1" force_rhr="0" frame_rate="10" is_animated="0" name="" type="line">
+            <data_defined_properties>
+              <Option type="Map">
+                <Option name="name" type="QString" value=""></Option>
+                <Option name="properties"></Option>
+                <Option name="type" type="QString" value="collection"></Option>
+              </Option>
+            </data_defined_properties>
+            <layer class="SimpleLine" enabled="1" id="{92bc32f4-535a-496e-9c82-839f3a7f9e7f}" locked="0" pass="0">
+              <Option type="Map">
+                <Option name="align_dash_pattern" type="QString" value="0"></Option>
+                <Option name="capstyle" type="QString" value="square"></Option>
+                <Option name="customdash" type="QString" value="5;2"></Option>
+                <Option name="customdash_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="customdash_unit" type="QString" value="MM"></Option>
+                <Option name="dash_pattern_offset" type="QString" value="0"></Option>
+                <Option name="dash_pattern_offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="dash_pattern_offset_unit" type="QString" value="MM"></Option>
+                <Option name="draw_inside_polygon" type="QString" value="0"></Option>
+                <Option name="joinstyle" type="QString" value="bevel"></Option>
+                <Option name="line_color" type="QString" value="225,89,137,255"></Option>
+                <Option name="line_style" type="QString" value="solid"></Option>
+                <Option name="line_width" type="QString" value="0.6"></Option>
+                <Option name="line_width_unit" type="QString" value="MM"></Option>
+                <Option name="offset" type="QString" value="0"></Option>
+                <Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="offset_unit" type="QString" value="MM"></Option>
+                <Option name="ring_filter" type="QString" value="0"></Option>
+                <Option name="trim_distance_end" type="QString" value="0"></Option>
+                <Option name="trim_distance_end_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="trim_distance_end_unit" type="QString" value="MM"></Option>
+                <Option name="trim_distance_start" type="QString" value="0"></Option>
+                <Option name="trim_distance_start_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="trim_distance_start_unit" type="QString" value="MM"></Option>
+                <Option name="tweak_dash_pattern_on_corners" type="QString" value="0"></Option>
+                <Option name="use_custom_dash" type="QString" value="0"></Option>
+                <Option name="width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+              </Option>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option name="name" type="QString" value=""></Option>
+                  <Option name="properties"></Option>
+                  <Option name="type" type="QString" value="collection"></Option>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </profileLineSymbol>
+        <profileFillSymbol>
+          <symbol alpha="1" clip_to_extent="1" force_rhr="0" frame_rate="10" is_animated="0" name="" type="fill">
+            <data_defined_properties>
+              <Option type="Map">
+                <Option name="name" type="QString" value=""></Option>
+                <Option name="properties"></Option>
+                <Option name="type" type="QString" value="collection"></Option>
+              </Option>
+            </data_defined_properties>
+            <layer class="SimpleFill" enabled="1" id="{41953dc9-d205-4a03-8901-c2e973147a12}" locked="0" pass="0">
+              <Option type="Map">
+                <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="color" type="QString" value="225,89,137,255"></Option>
+                <Option name="joinstyle" type="QString" value="bevel"></Option>
+                <Option name="offset" type="QString" value="0,0"></Option>
+                <Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="offset_unit" type="QString" value="MM"></Option>
+                <Option name="outline_color" type="QString" value="161,64,98,255"></Option>
+                <Option name="outline_style" type="QString" value="solid"></Option>
+                <Option name="outline_width" type="QString" value="0.2"></Option>
+                <Option name="outline_width_unit" type="QString" value="MM"></Option>
+                <Option name="style" type="QString" value="solid"></Option>
+              </Option>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option name="name" type="QString" value=""></Option>
+                  <Option name="properties"></Option>
+                  <Option name="type" type="QString" value="collection"></Option>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </profileFillSymbol>
+        <profileMarkerSymbol>
+          <symbol alpha="1" clip_to_extent="1" force_rhr="0" frame_rate="10" is_animated="0" name="" type="marker">
+            <data_defined_properties>
+              <Option type="Map">
+                <Option name="name" type="QString" value=""></Option>
+                <Option name="properties"></Option>
+                <Option name="type" type="QString" value="collection"></Option>
+              </Option>
+            </data_defined_properties>
+            <layer class="SimpleMarker" enabled="1" id="{e9197702-b7ca-4650-84a6-de343fb10033}" locked="0" pass="0">
+              <Option type="Map">
+                <Option name="angle" type="QString" value="0"></Option>
+                <Option name="cap_style" type="QString" value="square"></Option>
+                <Option name="color" type="QString" value="225,89,137,255"></Option>
+                <Option name="horizontal_anchor_point" type="QString" value="1"></Option>
+                <Option name="joinstyle" type="QString" value="bevel"></Option>
+                <Option name="name" type="QString" value="diamond"></Option>
+                <Option name="offset" type="QString" value="0,0"></Option>
+                <Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="offset_unit" type="QString" value="MM"></Option>
+                <Option name="outline_color" type="QString" value="161,64,98,255"></Option>
+                <Option name="outline_style" type="QString" value="solid"></Option>
+                <Option name="outline_width" type="QString" value="0.2"></Option>
+                <Option name="outline_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="outline_width_unit" type="QString" value="MM"></Option>
+                <Option name="scale_method" type="QString" value="diameter"></Option>
+                <Option name="size" type="QString" value="3"></Option>
+                <Option name="size_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"></Option>
+                <Option name="size_unit" type="QString" value="MM"></Option>
+                <Option name="vertical_anchor_point" type="QString" value="1"></Option>
+              </Option>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option name="name" type="QString" value=""></Option>
+                  <Option name="properties"></Option>
+                  <Option name="type" type="QString" value="collection"></Option>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </profileMarkerSymbol>
+      </elevation>
+      <customproperties>
+        <Option type="Map">
+          <Option name="dualview/previewExpressions" type="List">
+            <Option type="QString" value="&quot;fid&quot;"></Option>
+          </Option>
+        </Option>
+      </customproperties>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""></Option>
+        </activeChecks>
+        <checkConfiguration></checkConfiguration>
+      </geometryOptions>
+      <legend showLabelLegend="0" type="default-vector"></legend>
+      <referencedLayers></referencedLayers>
+      <fieldConfiguration>
+        <field configurationFlags="None" name="fid">
+          <editWidget type="">
+            <config>
+              <Option></Option>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="col_date">
+          <editWidget type="">
+            <config>
+              <Option></Option>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="col_datetime">
+          <editWidget type="">
+            <config>
+              <Option></Option>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="col_binary">
+          <editWidget type="">
+            <config>
+              <Option></Option>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias field="fid" index="0" name=""></alias>
+        <alias field="col_date" index="1" name=""></alias>
+        <alias field="col_datetime" index="2" name=""></alias>
+        <alias field="col_binary" index="3" name=""></alias>
+      </aliases>
+      <splitPolicies>
+        <policy field="fid" policy="Duplicate"></policy>
+        <policy field="col_date" policy="Duplicate"></policy>
+        <policy field="col_datetime" policy="Duplicate"></policy>
+        <policy field="col_binary" policy="Duplicate"></policy>
+      </splitPolicies>
+      <defaults>
+        <default applyOnUpdate="0" expression="" field="fid"></default>
+        <default applyOnUpdate="0" expression="" field="col_date"></default>
+        <default applyOnUpdate="0" expression="" field="col_datetime"></default>
+        <default applyOnUpdate="0" expression="" field="col_binary"></default>
+      </defaults>
+      <constraints>
+        <constraint constraints="3" exp_strength="0" field="fid" notnull_strength="1" unique_strength="1"></constraint>
+        <constraint constraints="0" exp_strength="0" field="col_date" notnull_strength="0" unique_strength="0"></constraint>
+        <constraint constraints="0" exp_strength="0" field="col_datetime" notnull_strength="0" unique_strength="0"></constraint>
+        <constraint constraints="0" exp_strength="0" field="col_binary" notnull_strength="0" unique_strength="0"></constraint>
+      </constraints>
+      <constraintExpressions>
+        <constraint desc="" exp="" field="fid"></constraint>
+        <constraint desc="" exp="" field="col_date"></constraint>
+        <constraint desc="" exp="" field="col_datetime"></constraint>
+        <constraint desc="" exp="" field="col_binary"></constraint>
+      </constraintExpressions>
+      <expressionfields></expressionfields>
+      <attributeactions>
+        <defaultAction key="Canvas" value="{00000000-0000-0000-0000-000000000000}"></defaultAction>
+      </attributeactions>
+      <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
+        <columns>
+          <column hidden="0" name="fid" type="field" width="-1"></column>
+          <column hidden="0" name="col_date" type="field" width="-1"></column>
+          <column hidden="0" name="col_datetime" type="field" width="-1"></column>
+          <column hidden="0" name="col_binary" type="field" width="-1"></column>
+          <column hidden="1" type="actions" width="-1"></column>
+        </columns>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles></rowstyles>
+        <fieldstyles></fieldstyles>
+      </conditionalstyles>
+      <storedexpressions></storedexpressions>
+      <editform tolerant="1"></editform>
+      <editforminit></editforminit>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable></editable>
+      <labelOnTop></labelOnTop>
+      <reuseLastValue></reuseLastValue>
+      <dataDefinedFieldProperties></dataDefinedFieldProperties>
+      <widgets></widgets>
+      <previewExpression>"fid"</previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
   </projectlayers>
   <layerorder>
     <layer id="points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c"></layer>
@@ -2692,6 +3069,7 @@
     <layer id="points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1"></layer>
     <layer id="points_xyz_ff574332_1ff5_47e6_8d6a_15f68e0c7cd1"></layer>
     <layer id="points_xyzm_1cb6363a_5a99_4090_aeaf_d88deec2a3d8"></layer>
+    <layer id="special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292"></layer>
   </layerorder>
   <properties>
     <Digitizing>
@@ -2719,6 +3097,7 @@
     <PAL>
       <CandidatesLinePerCM type="double">5</CandidatesLinePerCM>
       <CandidatesPolygonPerCM type="double">2.5</CandidatesPolygonPerCM>
+      <DrawLabelMetrics type="bool">false</DrawLabelMetrics>
       <DrawRectOnly type="bool">false</DrawRectOnly>
       <DrawUnplaced type="bool">false</DrawUnplaced>
       <PlacementEngineVersion type="int">1</PlacementEngineVersion>
@@ -2757,6 +3136,9 @@
     <title></title>
     <abstract></abstract>
     <links></links>
+    <dates>
+      <date type="Created" value="2020-05-21T11:17:36"></date>
+    </dates>
     <author>Ivan Ivanov</author>
     <creation>2020-05-21T11:17:36</creation>
   </projectMetadata>
@@ -2766,7 +3148,7 @@
   <Bookmarks></Bookmarks>
   <ProjectViewSettings UseProjectScales="0" rotation="0">
     <Scales></Scales>
-    <DefaultViewExtent xmax="12.50113784135240635" xmin="-2.1988621586475956" ymax="7.38402892489368501" ymin="-2.30516026429550624">
+    <DefaultViewExtent xmax="12.50113784135240635" xmin="-2.1988621586475956" ymax="6.38500395055225489" ymin="-1.30613528995407568">
       <spatialrefsys nativeFormat="Wkt">
         <wkt>GEOGCRS["WGS 84",ENSEMBLE["World Geodetic System 1984 ensemble",MEMBER["World Geodetic System 1984 (Transit)"],MEMBER["World Geodetic System 1984 (G730)"],MEMBER["World Geodetic System 1984 (G873)"],MEMBER["World Geodetic System 1984 (G1150)"],MEMBER["World Geodetic System 1984 (G1674)"],MEMBER["World Geodetic System 1984 (G1762)"],MEMBER["World Geodetic System 1984 (G2139)"],ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]],ENSEMBLEACCURACY[2.0]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["Horizontal component of 3D system."],AREA["World."],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
         <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
@@ -2780,7 +3162,7 @@
       </spatialrefsys>
     </DefaultViewExtent>
   </ProjectViewSettings>
-  <ProjectStyleSettings DefaultSymbolOpacity="1" RandomizeDefaultSymbolColor="1" projectStyleId="attachment:///mBNosY_styles.db">
+  <ProjectStyleSettings DefaultSymbolOpacity="1" RandomizeDefaultSymbolColor="1" projectStyleId="attachment:///brFfje_styles.db">
     <databases></databases>
   </ProjectStyleSettings>
   <ProjectTimeSettings cumulativeTemporalRange="0" frameRate="1" timeStep="1" timeStepUnit="h"></ProjectTimeSettings>
@@ -2831,4 +3213,7 @@
       </spatialrefsys>
     </CoordinateCustomCrs>
   </ProjectDisplaySettings>
+  <ProjectGpsSettings autoAddTrackVertices="0" autoCommitFeatures="0" destinationFollowsActiveLayer="1" destinationLayer="special_data_types_c89719e4_25b5_4df7_b28d_ea5d086bd292" destinationLayerName="special_data_types" destinationLayerProvider="ogr" destinationLayerSource="/home/suricactus/work/opengis/qfieldcloud-private/public/docker-app/qfieldcloud/core/tests/testdata/delta/testdata.gpkg|layername=special_data_types">
+    <timeStampFields></timeStampFields>
+  </ProjectGpsSettings>
 </qgis>
