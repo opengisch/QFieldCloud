@@ -639,7 +639,11 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
         if value is None:
             return queryset
 
-        not_finalized = Q(status="pending") | Q(status="started") | Q(status="queued")
+        not_finalized = (
+            Q(status=Job.Status.PENDING)
+            | Q(status=Job.Status.STARTED)
+            | Q(status=Job.Status.QUEUED)
+        )
         if value == "not finalized":
             return queryset.filter(not_finalized)
         elif value == "finalized":
@@ -781,7 +785,9 @@ class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
         if value is None:
             return queryset
 
-        not_finalized = Q(last_status="pending") | Q(last_status="started")
+        not_finalized = Q(last_status=Delta.Status.PENDING) | Q(
+            last_status=Delta.Status.STARTED
+        )
 
         if value == "not finalized":
             return queryset.filter(not_finalized)
