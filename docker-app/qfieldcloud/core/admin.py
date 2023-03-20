@@ -374,7 +374,7 @@ class UserProjectCollaboratorInline(admin.TabularInline):
         return obj.type == User.Type.PERSON
 
 
-class PersonAdmin(admin.ModelAdmin):
+class PersonAdmin(QFieldCloudModelAdmin):
     list_display = (
         "username",
         "first_name",
@@ -520,7 +520,7 @@ class ProjectForm(ModelForm):
         fields = "__all__"  # required for Django 3.x
 
 
-class ProjectAdmin(admin.ModelAdmin):
+class ProjectAdmin(QFieldCloudModelAdmin):
     form = ProjectForm
     list_display = (
         "id",
@@ -898,7 +898,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         return super().response_change(request, delta)
 
 
-class GeodbAdmin(admin.ModelAdmin):
+class GeodbAdmin(QFieldCloudModelAdmin):
     list_filter = ("created_at", "hostname")
     list_display = (
         "user",
@@ -1052,7 +1052,7 @@ class TeamMemberInline(admin.TabularInline):
     autocomplete_fields = ("member",)
 
 
-class TeamAdmin(admin.ModelAdmin):
+class TeamAdmin(QFieldCloudModelAdmin):
     inlines = (TeamMemberInline,)
 
     list_display = (
@@ -1088,7 +1088,7 @@ class InvitationAdmin(InvitationAdminBase):
     search_fields = ("email__icontains", "inviter__username__iexact")
 
 
-class UserAccountAdmin(admin.ModelAdmin):
+class UserAccountAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
     ordering = (Lower("user__username"),)
@@ -1100,7 +1100,7 @@ class UserAccountAdmin(admin.ModelAdmin):
         return False
 
 
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
     ordering = (Lower("username"),)
