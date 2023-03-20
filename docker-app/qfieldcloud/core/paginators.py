@@ -1,5 +1,6 @@
 import inspect
 
+from django.conf import settings
 from django.core.paginator import Paginator
 from django.db import connection
 from django.utils.functional import cached_property
@@ -13,13 +14,11 @@ class LargeTablePaginator(Paginator):
     inspired by: https://djangosnippets.org/snippets/2855/
     """
 
-    EXACT_COUNT_LIMIT = 10000
-
     @cached_property
     def count(self):
         """
         Returns the total number of objects, across all pages.
-        Changed to use an estimate if the estimate is greater than EXACT_COUNT_LIMIT
+        Changed to use an estimate if the estimate is greater than QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT
         """
         c = getattr(self.object_list, "count", None)
         if callable(c) and not inspect.isbuiltin(c) and method_has_no_args(c):
@@ -31,7 +30,7 @@ class LargeTablePaginator(Paginator):
                     [self.object_list.query.model._meta.db_table],
                 )
                 estimate = cursor.fetchone()[0]
-            if estimate < self.EXACT_COUNT_LIMIT:
+            if estimate < settings.QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT:
                 return c()
             else:
                 return estimate
