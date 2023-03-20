@@ -12,7 +12,8 @@ from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
-from auditlog.models import LogEntry
+from auditlog.filters import ResourceTypeFilter
+from auditlog.models import ContentType, LogEntry
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
@@ -660,6 +661,13 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
             return queryset.filter(~q)
 
 
+class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
+    def lookups(self, request, model_admin):
+        qs = ContentType.objects.all().order_by("model")
+        types = qs.values_list("id", "model")
+        return types
+
+
 class JobAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
@@ -1123,11 +1131,7 @@ class UserAdmin(QFieldCloudModelAdmin):
 
 
 class LogEntryAdmin(ModelAdminEstimateCountMixin, BaseLogEntryAdmin):
-    list_filter = ["action"]
-    search_fields = [
-        *BaseLogEntryAdmin.search_fields,
-        "content_type__model",
-    ]
+    list_filter = ("action", QFieldCloudResourceTypeFilter)
 
 
 admin.site.register(Invitation, InvitationAdmin)
