@@ -62,13 +62,17 @@ admin.site.unregister(LogEntry)
 Invitation = get_invitation_model()
 
 
-class QFieldCloudModelAdmin(admin.ModelAdmin):
+class ModelAdminEstimateCountMixin:
     # Avoid repetitive counting large list views.
     # Instead use pg metadata estimate.
     paginator = LargeTablePaginator
 
     # Display '(Show all)' instead of '(<count>)' in search bar
     show_full_result_count = False
+
+
+class QFieldCloudModelAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
+    pass
 
 
 def admin_urlname_by_obj(value, arg):
@@ -1118,7 +1122,7 @@ class UserAdmin(QFieldCloudModelAdmin):
         return False
 
 
-class LogEntryAdmin(QFieldCloudModelAdmin, BaseLogEntryAdmin):
+class LogEntryAdmin(ModelAdminEstimateCountMixin, BaseLogEntryAdmin):
     list_filter = ["action"]
     search_fields = [
         *BaseLogEntryAdmin.search_fields,
