@@ -62,10 +62,11 @@ admin.site.unregister(LogEntry)
 Invitation = get_invitation_model()
 
 
-class ModelAdminEstimateCountMixin:
+class QFieldCloudModelAdmin(admin.ModelAdmin):
     # Avoid repetitive counting large list views.
     # Instead use pg metadata estimate.
     paginator = LargeTablePaginator
+
     # Display '(Show all)' instead of '(<count>)' in search bar
     show_full_result_count = False
 
@@ -655,7 +656,7 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
             return queryset.filter(~q)
 
 
-class JobAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
+class JobAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "project__owner",
@@ -788,7 +789,7 @@ class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
             return queryset.filter(~q)
 
 
-class DeltaAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
+class DeltaAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "deltafile_id",
@@ -965,7 +966,7 @@ class TeamInline(admin.TabularInline):
         return False
 
 
-class OrganizationAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
+class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
         GeodbInline,
@@ -1117,7 +1118,7 @@ class UserAdmin(admin.ModelAdmin):
         return False
 
 
-class LogEntryAdmin(ModelAdminEstimateCountMixin, BaseLogEntryAdmin):
+class LogEntryAdmin(QFieldCloudModelAdmin, BaseLogEntryAdmin):
     list_filter = ["action"]
     search_fields = [
         *BaseLogEntryAdmin.search_fields,
