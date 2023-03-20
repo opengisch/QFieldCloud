@@ -11,12 +11,15 @@ from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
 from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
+from auditlog.filters import ResourceTypeFilter
+from auditlog.models import ContentType, LogEntry
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
@@ -49,11 +52,28 @@ from qfieldcloud.core.models import (
     User,
     UserAccount,
 )
+from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import jobs
 from rest_framework.authtoken.models import TokenProxy
 
+admin.site.unregister(LogEntry)
+
+
 Invitation = get_invitation_model()
+
+
+class ModelAdminEstimateCountMixin:
+    # Avoid repetitive counting large list views.
+    # Instead use pg metadata estimate.
+    paginator = LargeTablePaginator
+
+    # Display '(Show all)' instead of '(<count>)' in search bar
+    show_full_result_count = False
+
+
+class QFieldCloudModelAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
+    pass
 
 
 def admin_urlname_by_obj(value, arg):
@@ -359,7 +379,7 @@ class UserProjectCollaboratorInline(admin.TabularInline):
         return obj.type == User.Type.PERSON
 
 
-class PersonAdmin(admin.ModelAdmin):
+class PersonAdmin(QFieldCloudModelAdmin):
     list_display = (
         "username",
         "first_name",
@@ -505,7 +525,7 @@ class ProjectForm(ModelForm):
         fields = "__all__"  # required for Django 3.x
 
 
-class ProjectAdmin(admin.ModelAdmin):
+class ProjectAdmin(QFieldCloudModelAdmin):
     form = ProjectForm
     list_display = (
         "id",
@@ -633,15 +653,28 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
             ("not finalized", _("not finalized")),
         )
 
-    def queryset(self, request, queryset):
-        q = Q(status="pending") | Q(status="started") | Q(status="queued")
-        if self.value() == "not finalized":
-            return queryset.filter(q)
+    def queryset(self, request, queryset) -> QuerySet:
+        value = self.value()
+
+        if value is None:
+            return queryset
+
+        not_finalized = (
+            Q(status=Job.Status.PENDING)
+            | Q(status=Job.Status.STARTED)
+            | Q(status=Job.Status.QUEUED)
+        )
+        if value == "not finalized":
+            return queryset.filter(not_finalized)
+        elif value == "finalized":
+            return queryset.filter(~not_finalized)
         else:
-            return queryset.filter(~q)
+            raise NotImplementedError(
+                f"Unknown filter: {value} (was expecting 'finalized' or 'not finalized')"
+            )
 
 
-class JobAdmin(admin.ModelAdmin):
+class JobAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "project__owner",
@@ -766,15 +799,27 @@ class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
             ("not finalized", _("not finalized")),
         )
 
-    def queryset(self, request, queryset):
-        q = Q(last_status="pending") | Q(last_status="started")
-        if self.value() == "not finalized":
-            return queryset.filter(q)
+    def queryset(self, request, queryset) -> QuerySet:
+        value = self.value()
+
+        if value is None:
+            return queryset
+
+        not_finalized = Q(last_status=Delta.Status.PENDING) | Q(
+            last_status=Delta.Status.STARTED
+        )
+
+        if value == "not finalized":
+            return queryset.filter(not_finalized)
+        elif value == "finalized":
+            return queryset.filter(~not_finalized)
         else:
-            return queryset.filter(~q)
+            raise NotImplementedError(
+                f"Unknown filter: {value} (was expecting 'finalized' or 'not finalized')"
+            )
 
 
-class DeltaAdmin(admin.ModelAdmin):
+class DeltaAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "deltafile_id",
@@ -883,7 +928,7 @@ class DeltaAdmin(admin.ModelAdmin):
         return super().response_change(request, delta)
 
 
-class GeodbAdmin(admin.ModelAdmin):
+class GeodbAdmin(QFieldCloudModelAdmin):
     list_filter = ("created_at", "hostname")
     list_display = (
         "user",
@@ -951,7 +996,7 @@ class TeamInline(admin.TabularInline):
         return False
 
 
-class OrganizationAdmin(admin.ModelAdmin):
+class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
         GeodbInline,
@@ -1037,7 +1082,7 @@ class TeamMemberInline(admin.TabularInline):
     autocomplete_fields = ("member",)
 
 
-class TeamAdmin(admin.ModelAdmin):
+class TeamAdmin(QFieldCloudModelAdmin):
     inlines = (TeamMemberInline,)
 
     list_display = (
@@ -1073,7 +1118,7 @@ class InvitationAdmin(InvitationAdminBase):
     search_fields = ("email__icontains", "inviter__username__iexact")
 
 
-class UserAccountAdmin(admin.ModelAdmin):
+class UserAccountAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
     ordering = (Lower("user__username"),)
@@ -1085,7 +1130,7 @@ class UserAccountAdmin(admin.ModelAdmin):
         return False
 
 
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
     ordering = (Lower("username"),)
@@ -1103,6 +1148,17 @@ class UserAdmin(admin.ModelAdmin):
         return False
 
 
+class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
+    def lookups(self, request, model_admin):
+        qs = ContentType.objects.all().order_by("model")
+        types = qs.values_list("id", "model")
+        return types
+
+
+class LogEntryAdmin(ModelAdminEstimateCountMixin, BaseLogEntryAdmin):
+    list_filter = ("action", QFieldCloudResourceTypeFilter)
+
+
 admin.site.register(Invitation, InvitationAdmin)
 admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
@@ -1111,6 +1167,7 @@ admin.site.register(Project, ProjectAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
+admin.site.register(LogEntry, LogEntryAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 admin.site.register(User, UserAdmin)

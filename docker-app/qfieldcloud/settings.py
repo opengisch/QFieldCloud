@@ -411,6 +411,9 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
 )
 
+# Use pg meta table estimate for pagination and display above n entries
+QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
+
 # Admin sort URLs which will be skipped from checking if they return HTTP 200
 QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
