@@ -661,13 +661,6 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
             return queryset.filter(~q)
 
 
-class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
-    def lookups(self, request, model_admin):
-        qs = ContentType.objects.all().order_by("model")
-        types = qs.values_list("id", "model")
-        return types
-
-
 class JobAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
@@ -1128,6 +1121,13 @@ class UserAdmin(QFieldCloudModelAdmin):
     def has_module_permission(self, request: HttpRequest) -> bool:
         # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
         return False
+
+
+class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
+    def lookups(self, request, model_admin):
+        qs = ContentType.objects.all().order_by("model")
+        types = qs.values_list("id", "model")
+        return types
 
 
 class LogEntryAdmin(ModelAdminEstimateCountMixin, BaseLogEntryAdmin):
