@@ -25,15 +25,12 @@ class LargeTablePaginator(Paginator):
         if callable(c) and not inspect.isbuiltin(c) and method_has_no_args(c):
             estimate = 0
             if not self.object_list.query.where:
-                try:
-                    cursor = connection.cursor()
-                    cursor.execute(
-                        "SELECT reltuples FROM pg_class WHERE relname = %s",
-                        [self.object_list.query.model._meta.db_table],
-                    )
-                    estimate = int(cursor.fetchone()[0])
-                except:  # noqa: E722
-                    pass
+                cursor = connection.cursor()
+                cursor.execute(
+                    "SELECT reltuples::int FROM pg_class WHERE relname = %s",
+                    [self.object_list.query.model._meta.db_table],
+                )
+                estimate = cursor.fetchone()[0]
             if estimate < self.EXACT_COUNT_LIMIT:
                 return c()
             else:
