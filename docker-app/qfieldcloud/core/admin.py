@@ -16,7 +16,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
@@ -633,12 +633,25 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
             ("not finalized", _("not finalized")),
         )
 
-    def queryset(self, request, queryset):
-        q = Q(status="pending") | Q(status="started") | Q(status="queued")
-        if self.value() == "not finalized":
-            return queryset.filter(q)
+    def queryset(self, request, queryset) -> QuerySet:
+        value = self.value()
+
+        if value is None:
+            return queryset
+
+        not_finalized = (
+            Q(status=Job.Status.PENDING)
+            | Q(status=Job.Status.STARTED)
+            | Q(status=Job.Status.QUEUED)
+        )
+        if value == "not finalized":
+            return queryset.filter(not_finalized)
+        elif value == "finalized":
+            return queryset.filter(~not_finalized)
         else:
-            return queryset.filter(~q)
+            raise NotImplementedError(
+                f"Unknown filter: {value} (was expecting 'finalized' or 'not finalized')"
+            )
 
 
 class JobAdmin(admin.ModelAdmin):
@@ -766,12 +779,24 @@ class IsFinalizedDeltaJobFilter(admin.SimpleListFilter):
             ("not finalized", _("not finalized")),
         )
 
-    def queryset(self, request, queryset):
-        q = Q(last_status="pending") | Q(last_status="started")
-        if self.value() == "not finalized":
-            return queryset.filter(q)
+    def queryset(self, request, queryset) -> QuerySet:
+        value = self.value()
+
+        if value is None:
+            return queryset
+
+        not_finalized = Q(last_status=Delta.Status.PENDING) | Q(
+            last_status=Delta.Status.STARTED
+        )
+
+        if value == "not finalized":
+            return queryset.filter(not_finalized)
+        elif value == "finalized":
+            return queryset.filter(~not_finalized)
         else:
-            return queryset.filter(~q)
+            raise NotImplementedError(
+                f"Unknown filter: {value} (was expecting 'finalized' or 'not finalized')"
+            )
 
 
 class DeltaAdmin(admin.ModelAdmin):
