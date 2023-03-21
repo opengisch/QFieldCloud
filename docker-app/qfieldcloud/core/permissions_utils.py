@@ -276,7 +276,6 @@ def can_delete_files(user: QfcUser, project: Project) -> bool:
         [
             ProjectCollaborator.Roles.ADMIN,
             ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
         ],
     )
 
