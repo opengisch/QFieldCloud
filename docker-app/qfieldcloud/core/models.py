@@ -26,7 +26,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.exceptions import ReachedMaxOrgaMembers
+from qfieldcloud.core.exceptions import ReachedMaxOrganizationMembersError
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -752,7 +752,7 @@ class OrganizationMember(models.Model):
             max_organization_members > -1
             and self.organization.members.count() >= max_organization_members
         ):
-            raise ReachedMaxOrgaMembers
+            raise ReachedMaxOrganizationMembersError
 
         return super().clean()
 
