@@ -1016,6 +1016,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__link",
         "date_joined",
         "storage_usage__field",
+        "active_users",
     )
 
     search_fields = (
@@ -1025,16 +1026,20 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__email__iexact",
     )
 
-    readonly_fields = (
-        "date_joined",
-        "storage_usage__field",
-    )
+    readonly_fields = ("date_joined", "storage_usage__field", "active_users")
 
     list_select_related = ("organization_owner",)
 
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("organization_owner",)
+
+    @admin.display(description=_("Active users (last billing period)"))
+    def active_users(self, instance) -> int:
+        try:
+            return instance.current_subscription.active_users_count
+        except Exception:
+            return None
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
