@@ -169,5 +169,5 @@ class ProjectAlreadyExistsError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class ReachedMaxOrgaMembers(Exception):
+class ReachedMaxOrganizationMembersError(ValidationError):
     message = "Cannot add new organization members, account limit has been reached."
