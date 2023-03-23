@@ -2,7 +2,7 @@ import csv
 import json
 import time
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime
 from itertools import chain
 from typing import Any, Dict, Generator
 
@@ -1034,11 +1034,12 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
     autocomplete_fields = ("organization_owner",)
 
-    @admin.display(description=_("Active users (last 90 days)"))
+    @admin.display(description=_("Active users (last billing period)"))
     def active_users(self, instance) -> int:
-        now = datetime.now()
-        three_months_ago = now - timedelta(days=90)
-        return len(list(instance.active_users(now, three_months_ago)))
+        try:
+            return instance.current_subscription.active_users_count
+        except Exception:
+            return None
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
