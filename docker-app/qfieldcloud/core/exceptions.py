@@ -167,3 +167,7 @@ class ProjectAlreadyExistsError(QFieldCloudException):
     code = "project_already_exists"
     message = "This user already owns a project with the same name."
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class ReachedMaxOrgaMembers(Exception):
+    message = "Cannot add new organization members, account limit has been reached."
