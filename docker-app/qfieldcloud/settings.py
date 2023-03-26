@@ -200,16 +200,23 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
 
 TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
 
-USE_I18N = False
+USE_I18N = True
 
 USE_L10N = True
 
 USE_TZ = True
 
+
+LANGUAGES = [
+    ("de", "German"),
+    ("en", "English"),
+    ("fr", "French"),
+    ("it", "Italian"),
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
