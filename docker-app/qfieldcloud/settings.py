@@ -204,7 +204,7 @@ LANGUAGE_CODE = "en"
 
 TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
 
-USE_I18N = True
+USE_I18N = False
 
 USE_L10N = True
 
