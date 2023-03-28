@@ -1015,7 +1015,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner",
         "date_joined",
     )
-    list_per_page = 10
     list_display = (
         "username",
         "email",
