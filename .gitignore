@@ -11,3 +11,4 @@ client/projects
 conf/nginx/certs/*
 conf/certbot/*
 Pipfile*
+**/site-packages
