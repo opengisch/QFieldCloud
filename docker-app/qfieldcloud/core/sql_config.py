@@ -235,7 +235,7 @@ sql_items = [
     SQLItem(
         "core_user_email_partial_uniq",
         r"""
-            CREATE UNIQUE INDEX IF NOT EXISTS core_user_email_partial_uniq ON core_user (email)
+            CREATE UNIQUE INDEX IF NOT EXISTS core_user_email_partial_uniq ON core_user (UPPER(email))
             WHERE type = 1 AND email IS NOT NULL AND email != ''
         """,
         r"""
