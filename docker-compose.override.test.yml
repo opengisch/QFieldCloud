@@ -12,18 +12,12 @@ services:
       # we must use the same db for test and runserver
       SQL_DATABASE: test_${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
-    ports:
-      - 5680:5680
-    command: python3 -m debugpy --listen 0.0.0.0:5680 manage.py runserver 0.0.0.0:8000
 
   worker_wrapper:
     environment:
       # we must use the same db for test and runserver
       SQL_DATABASE: test_${POSTGRES_DB}
       SQL_DATABASE_TEST: test_${POSTGRES_DB}
-    command: python3 -m debugpy --listen 0.0.0.0:5681 manage.py dequeue
-    ports:
-      - 5681:5681
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   db:
