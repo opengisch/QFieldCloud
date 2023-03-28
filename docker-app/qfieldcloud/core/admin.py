@@ -71,6 +71,9 @@ class ModelAdminEstimateCountMixin:
     # Display '(Show all)' instead of '(<count>)' in search bar
     show_full_result_count = False
 
+    # Overwrite the default Django configuration of 100
+    list_per_page = settings.QFIELDCLOUD_ADMIN_LIST_PER_PAGE
+
 
 class QFieldCloudModelAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
     pass
@@ -1010,6 +1013,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner",
         "date_joined",
     )
+    list_per_page = 10
     list_display = (
         "username",
         "email",
