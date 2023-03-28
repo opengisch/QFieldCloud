@@ -390,7 +390,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         "is_active",
         "date_joined",
         "last_login",
-        "storage_usage__field",
+        # "storage_usage__field",
     )
     list_filter = (
         "type",
@@ -402,6 +402,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
     search_fields = ("username__icontains", "email__iexact")
 
     fields = (
+        "storage_usage__field",
         "username",
         "password",
         "email",
@@ -1005,6 +1006,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         TeamInline,
     )
     fields = (
+        "storage_usage__field",
         "username",
         "email",
         "organization_owner",
@@ -1015,7 +1017,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner__link",
         "date_joined",
-        "storage_usage__field",
+        # "storage_usage__field",
         "active_users",
     )
 
