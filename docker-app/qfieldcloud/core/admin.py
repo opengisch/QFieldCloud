@@ -402,6 +402,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
     search_fields = ("username__icontains", "email__iexact")
 
     fields = (
+        "storage_usage__field",
         "username",
         "password",
         "email",
@@ -1005,6 +1006,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         TeamInline,
     )
     fields = (
+        "storage_usage__field",
         "username",
         "email",
         "organization_owner",
