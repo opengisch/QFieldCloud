@@ -415,6 +415,9 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
 )
 
+# Sets the default admin list view per page, the Django default is 100
+QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
+
 # Use pg meta table estimate for pagination and display above n entries
 QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 
