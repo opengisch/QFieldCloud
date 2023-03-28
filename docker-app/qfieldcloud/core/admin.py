@@ -390,7 +390,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         "is_active",
         "date_joined",
         "last_login",
-        "storage_usage__field",
+        # "storage_usage__field",
     )
     list_filter = (
         "type",
@@ -1015,7 +1015,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner__link",
         "date_joined",
-        "storage_usage__field",
+        # "storage_usage__field",
         "active_users",
     )
 
