@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 import docker
-import qfieldcloud.core.utils2.storage
 import requests
 from constance import config
 from django.db import transaction
@@ -495,7 +494,7 @@ class ProcessProjectfileJobRun(JobRun):
 
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         with open(thumbnail_filename, "rb") as f:
-            thumbnail_uri = qfieldcloud.core.utils2.storage.upload_project_thumbail(
+            thumbnail_uri = storage.upload_project_thumbail(
                 project, f, "image/png", "thumbnail"
             )
         project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri

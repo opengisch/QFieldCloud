@@ -36,7 +36,7 @@ from qgis.core import (
     QgsVectorLayerEditPassthrough,
     QgsVectorLayerUtils,
 )
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QDate, QDateTime, Qt, QTime
 
 logger = logging.getLogger(__name__)
 # /LOGGER
@@ -583,7 +583,13 @@ def apply_deltas_without_transaction(
 
                 modified_pk = feature.attribute(pk_attr_name)
 
-                if modified_pk and modified_pk != str(feature_pk):
+                if (
+                    modified_pk is not None
+                    # if the feature was newly created, do not expect `feature_pk` to match the `modified_pk`,
+                    # as the client cannot know the modified_pk in advance.
+                    and delta["method"] == str(DeltaMethod.CREATE)
+                    and str(modified_pk) != str(feature_pk)
+                ):
                     logger.warning(
                         f'The modified feature pk valued does not match "sourcePk" in the delta in "{layer_id}": sourcePk={feature_pk} modifiedFeaturePk={modified_pk}'
                     )
@@ -1211,6 +1217,9 @@ def delete_feature(
                 f'Conflicts while applying delta "{delta["uuid"]}". Ignoring since `overwrite_conflicts` flag set to `True`.\nConflicts:\n{conflicts}'
             )
         else:
+            logger.warning(
+                f'Conflicts while applying delta "{delta["uuid"]}".\nConflicts:\n{conflicts}'
+            )
             raise DeltaException(
                 "There are conflicts with the already existing feature!",
                 conflicts=conflicts,
@@ -1268,9 +1277,23 @@ def compare_feature(
                 # conflicts.append(f'The attribute "{attr}" in the delta is not available in the original feature')
                 continue
 
-            if feature.attribute(attr) != delta_feature_attrs[attr]:
+            current_value = feature.attribute(attr)
+            incoming_value = delta_feature_attrs[attr]
+
+            # modify the incoming value to the desired type if needed
+            if incoming_value is not None:
+                if isinstance(current_value, QDateTime):
+                    incoming_value = QDateTime.fromString(
+                        incoming_value, Qt.ISODateWithMs
+                    )
+                elif isinstance(current_value, QDate):
+                    incoming_value = QDate.fromString(incoming_value, Qt.ISODate)
+                elif isinstance(current_value, QTime):
+                    incoming_value = QTime.fromString(incoming_value)
+
+            if current_value != incoming_value:
                 conflicts.append(
-                    f'The attribute "{attr}" that has a conflict:\n-{delta_feature_attrs[attr]}\n+{feature.attribute(attr)}'
+                    f'The attribute "{attr}" that has a conflict:\n-{current_value}\n+{incoming_value}'
                 )
 
     return conflicts

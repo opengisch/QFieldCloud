@@ -8,7 +8,6 @@ from enum import Enum
 from typing import List, Optional
 
 import django_cryptography.fields
-import qfieldcloud.core.utils2.storage
 from deprecated import deprecated
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
@@ -26,6 +25,8 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.core.exceptions import ReachedMaxOrganizationMembersError
+from qfieldcloud.core.utils2 import storage
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -312,7 +313,7 @@ class User(AbstractUser):
 
     def delete(self, *args, **kwargs):
         if self.type != User.Type.TEAM:
-            qfieldcloud.core.utils2.storage.delete_user_avatar(self)
+            storage.delete_user_avatar(self)
 
         super().delete(*args, **kwargs)
 
@@ -751,11 +752,7 @@ class OrganizationMember(models.Model):
             max_organization_members > -1
             and self.organization.members.count() >= max_organization_members
         ):
-            raise ValidationError(
-                _(
-                    "Cannot add new organization members, account limit has been reached."
-                )
-            )
+            raise ReachedMaxOrganizationMembersError
 
         return super().clean()
 
@@ -1206,18 +1203,14 @@ class Project(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
-            qfieldcloud.core.utils2.storage.delete_project_thumbnail(self)
+            storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
     def save(self, recompute_storage=False, *args, **kwargs):
         logger.info(f"Saving project {self}...")
 
         if recompute_storage:
-            self.file_storage_bytes = (
-                qfieldcloud.core.utils2.storage.get_project_file_storage_in_bytes(
-                    self.id
-                )
-            )
+            self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
         super().save(*args, **kwargs)
 
 

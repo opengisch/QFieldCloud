@@ -200,9 +200,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
 
-TIME_ZONE = "Europe/Zurich"
+TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
 
 USE_I18N = False
 
@@ -210,6 +210,13 @@ USE_L10N = True
 
 USE_TZ = True
 
+
+LANGUAGES = [
+    ("de", "German"),
+    ("en", "English"),
+    ("fr", "French"),
+    ("it", "Italian"),
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
@@ -234,7 +241,9 @@ AUTH_USER_MODEL = "core.User"
 
 # QFieldCloud variables
 AUTH_TOKEN_LENGTH = 100
-AUTH_TOKEN_EXPIRATION_HOURS = 24 * 30
+AUTH_TOKEN_EXPIRATION_HOURS = int(
+    os.environ.get("QFIELDCLOUD_AUTH_TOKEN_EXPIRATION_HOURS") or 24 * 30
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
@@ -405,6 +414,9 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/auditlog/logentry/add/",
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
 )
+
+# Use pg meta table estimate for pagination and display above n entries
+QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 
 # Admin sort URLs which will be skipped from checking if they return HTTP 200
 QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)

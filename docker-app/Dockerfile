@@ -43,6 +43,8 @@ ENV PIP_NO_CACHE_DIR 1
 RUN apt update && apt-get install -y \
 # GeoDjango as recommended at https://docs.djangoproject.com/en/4.1/ref/contrib/gis/install/geolibs/#installing-geospatial-libraries
     binutils libproj-dev gdal-bin \
+# needed for Django's `manage.py makemessages`
+    gettext \
 # for development purposes only (optional dependency for `django-extensions`)
     graphviz
 
