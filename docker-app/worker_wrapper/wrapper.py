@@ -24,6 +24,7 @@ from qfieldcloud.core.models import (
     Job,
     PackageJob,
     ProcessProjectfileJob,
+    Project,
     Secret,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
@@ -162,10 +163,13 @@ class JobRun:
                 return
 
             # make sure we have reloaded the project, since someone might have changed it already
-            self.job.project.refresh_from_db()
-
-            self.job.status = Job.Status.FINISHED
-            self.job.save()
+            try:
+                self.job.project.refresh_from_db()
+                self.job.status = Job.Status.FINISHED
+                self.job.save()
+            except Project.DoesNotExist:
+                # if the project was deleted in the meantime, also delete this job
+                self.job.delete()
 
             self.after_docker_run()
 
