@@ -166,7 +166,7 @@ class JobRun:
             try:
                 self.job.project.refresh_from_db()
             except Project.DoesNotExist:
-                # if the project was deleted on db in the meantime the was also deleted (cascade)
+                # the project and job were deleted on the db in the meantime
                 self.after_docker_run()
                 return
 
