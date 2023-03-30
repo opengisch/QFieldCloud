@@ -165,12 +165,13 @@ class JobRun:
             # make sure we have reloaded the project, since someone might have changed it already
             try:
                 self.job.project.refresh_from_db()
-                self.job.status = Job.Status.FINISHED
-                self.job.save()
             except Project.DoesNotExist:
-                # if the project was deleted in the meantime, also delete this job
-                self.job.delete()
+                # if the project was deleted on db in the meantime the was also deleted (cascade)
+                self.after_docker_run()
+                return
 
+            self.job.status = Job.Status.FINISHED
+            self.job.save()
             self.after_docker_run()
 
         except Exception as err:
