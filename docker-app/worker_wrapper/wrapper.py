@@ -166,7 +166,7 @@ class JobRun:
             try:
                 self.job.project.refresh_from_db()
             except Project.DoesNotExist:
-                # the project and job were deleted on the db in the meantime
+                logger.info(f"Running Job and Project were deleted on db after job instantiation")
                 self.after_docker_run()
                 return
 
