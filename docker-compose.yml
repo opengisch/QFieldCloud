@@ -32,6 +32,7 @@ services:
       DEBUG: ${DEBUG}
       ENVIRONMENT: ${ENVIRONMENT}
       SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_RELEASE: ${SENTRY_RELEASE}
       # Sentry environment should not be configured like this, but I never made it work with `sentry_sdk.init(environment=ENVIRONMENT)`.
       SENTRY_ENVIRONMENT: ${ENVIRONMENT}
       SENTRY_SAMPLE_RATE: ${SENTRY_SAMPLE_RATE}
