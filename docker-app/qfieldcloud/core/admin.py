@@ -551,6 +551,8 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "description",
         "is_public",
         "owner",
+        "status",
+        "status_code",
         "project_filename",
         "file_storage_bytes",
         "created_at",
@@ -562,6 +564,8 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     readonly_fields = (
         "id",
+        "status",
+        "status_code",
         "file_storage_bytes",
         "created_at",
         "updated_at",
