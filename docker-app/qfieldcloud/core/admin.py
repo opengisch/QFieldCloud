@@ -71,6 +71,9 @@ class ModelAdminEstimateCountMixin:
     # Display '(Show all)' instead of '(<count>)' in search bar
     show_full_result_count = False
 
+    # Overwrite the default Django configuration of 100
+    list_per_page = settings.QFIELDCLOUD_ADMIN_LIST_PER_PAGE
+
 
 class QFieldCloudModelAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
     pass
@@ -390,7 +393,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         "is_active",
         "date_joined",
         "last_login",
-        "storage_usage__field",
+        # "storage_usage__field",
     )
     list_filter = (
         "type",
@@ -402,6 +405,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
     search_fields = ("username__icontains", "email__iexact")
 
     fields = (
+        "storage_usage__field",
         "username",
         "password",
         "email",
@@ -547,6 +551,8 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "description",
         "is_public",
         "owner",
+        "status",
+        "status_code",
         "project_filename",
         "file_storage_bytes",
         "created_at",
@@ -558,6 +564,8 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     readonly_fields = (
         "id",
+        "status",
+        "status_code",
         "file_storage_bytes",
         "created_at",
         "updated_at",
@@ -1005,6 +1013,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         TeamInline,
     )
     fields = (
+        "storage_usage__field",
         "username",
         "email",
         "organization_owner",
@@ -1015,7 +1024,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner__link",
         "date_joined",
-        "storage_usage__field",
+        # "storage_usage__field",
         "active_users",
     )
 

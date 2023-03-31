@@ -584,6 +584,7 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
             "filename": layer_source.filename,
+            "provider_name": None,
             "provider_error_summary": None,
             "provider_error_message": None,
         }
@@ -610,6 +611,8 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
             layers_by_id[layer_id][
                 "provider_error_message"
             ] = data_provider_error.message()
+
+            layers_by_id[layer_id]["provider_name"] = data_provider.name()
 
             if not layers_by_id[layer_id]["provider_error_summary"]:
                 service = data_provider.uri().service()

@@ -9,12 +9,13 @@ services:
     ports:
       # allow direct access without nginx
       - ${DJANGO_DEV_PORT}:8000
+      - ${DEBUG_DEBUGPY_APP_PORT:-5678}:5678
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
     environment:
       DEBUG: 1
-    command: python3 manage.py runserver 0.0.0.0:8000
+    command: python3 -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000
     depends_on:
       - db
       - redis
@@ -24,10 +25,13 @@ services:
     build:
       args:
         - DEBUG_BUILD=1
+    ports:
+      - ${DEBUG_DEBUGPY_WORKER_WRAPPER_PORT:-5679}:5679
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
       - ./docker-app/worker_wrapper:/usr/src/app/worker_wrapper
+    command: python3 -m debugpy --listen 0.0.0.0:5679 manage.py dequeue
 
   smtp4dev:
     image: rnwood/smtp4dev:v3

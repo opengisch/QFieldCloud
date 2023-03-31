@@ -77,9 +77,66 @@ To run only a test module (e.g. `test_permission.py`)
 
 > This section gives examples for VSCode, please adapt to your IDE)
 
-If using the provided docker-compose overrides for developement, `debugpy` is installed.
+If you are using the provided `docker-compose.override.local.yml`, then `debugpy` is automatically installed and configured for use.
 
-You can debug interactively by adding this snipped anywhere in the code.
+Add the following to your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
+
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "QFC debug app",
+            "type": "python",
+            "request": "attach",
+            "justMyCode": false,
+            "connect": {"host": "localhost", "port": 5678},
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                    "remoteRoot": "/usr/src/app/qfieldcloud"
+                },
+                {
+                    "localRoot": "${workspaceFolder}/docker-app/site-packages",
+                    "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
+                },
+            ],
+        },
+        {
+            "name": "QFC debug worker_wrapper",
+            "type": "python",
+            "request": "attach",
+            "justMyCode": false,
+            "connect": {"host": "localhost", "port": 5679},
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
+                    "remoteRoot": "/usr/src/app/qfieldcloud"
+                },
+                {
+                    "localRoot": "${workspaceFolder}/docker-app/site-packages",
+                    "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
+                },
+            ],
+        }
+    ]
+}
+```
+
+To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code.
+The easiest way to achieve that is do actual copy of them:
+
+```
+docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
+```
+
+The configuration for the vendor modules is the second object in the example `pathMappings` above, as well as setting `justMyCode` to `false`.
+
+Do not forget to copy the site packages every time any of the `requirements.txt` files are changed!
+
+If you are not using `docker-compose.override.local.yml`, there are other options.
+
+You can debug interactively by adding this snippet anywhere in the code.
 ```python
 import debugpy
 debugpy.listen(("0.0.0.0", 5680))
@@ -91,37 +148,6 @@ Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:
 
     docker compose run app -p 5680:5680 python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
     docker compose run worker_wrapper -p 5681:5681 python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
-
-Then, configure your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
-```
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "QFC debug app",
-            "type": "python",
-            "request": "attach",
-            "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5680},
-            "pathMappings": [{
-                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
-                "remoteRoot": "/usr/src/app/qfieldcloud"
-            }]
-        },
-        {
-            "name": "QFC debug worker_wrapper",
-            "type": "python",
-            "request": "attach",
-            "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5681},
-            "pathMappings": [{
-                "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
-                "remoteRoot": "/usr/src/app/qfieldcloud"
-            }]
-        }
-    ]
-}
-```
 
 Note if you run tests using the `docker-compose.test.yml` configuration, the `app` and `worker-wrapper` containers expose ports `5680` and `5681` respectively.
 
