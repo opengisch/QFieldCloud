@@ -1151,11 +1151,7 @@ class UserAdmin(QFieldCloudModelAdmin):
     search_fields = ("username__icontains",)
 
     def get_queryset(self, request: HttpRequest):
-        return (
-            super()
-            .get_queryset(request)
-            .filter(type__in=(User.Type.PERSON, User.Type.ORGANIZATION))
-        )
+        return super().get_queryset(request)
 
     def has_module_permission(self, request: HttpRequest) -> bool:
         # hide this module from Django admin, it is accessible via "Person" and "Organization" as inline edit
