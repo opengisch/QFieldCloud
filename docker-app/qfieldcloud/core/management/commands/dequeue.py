@@ -101,13 +101,6 @@ class Command(BaseCommand):
             if options["single_shot"]:
                 break
 
-    def run(self, job_id, *args, **options):
-        try:
-            job = Job.objects.get(id=job_id)
-            self._run(job)
-        except Exception:
-            pass
-
     def _run(self, job: Job):
         job_run_classes = {
             Job.Type.PACKAGE: PackageJobRun,
