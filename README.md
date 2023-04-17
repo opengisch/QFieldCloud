@@ -71,7 +71,7 @@ database and a throwaway test storage directory):
 
 To run only a test module (e.g. `test_permission.py`)
 
-    docker compose run app python manage.py test qfieldcloud.core.tests.test_permission
+    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
 
 ### Debugging
 
