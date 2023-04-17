@@ -65,10 +65,11 @@ To run all the unit and functional tests (on a throwaway test
 database and a throwaway test storage directory):
 
     export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
-    docker compose up -d
+    docker compose up -d --build
     docker compose run app python manage.py migrate
     docker compose run app python manage.py test --keepdb
 
+(Re-)build the app service to install necessary test utilities (requirements_test.txt)
 To run only a test module (e.g. `test_permission.py`)
 
     docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
