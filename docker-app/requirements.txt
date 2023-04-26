@@ -62,7 +62,7 @@ psycopg2==2.8.6
 pycparser==2.21
 pydot==1.4.2
 PyJWT==2.4.0
-pyparsing==3.0.6
+pyparsing==3.0.9
 pyrsistent==0.18.0
 python-dateutil==2.8.2
 python3-openid==3.2.0
