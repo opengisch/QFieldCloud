@@ -77,14 +77,14 @@ class Command(BaseCommand):
                     .order_by("created_at")
                 )
 
-                for job in jobs_qs:
-                    queued_job = job
+                # each `worker_wrapper` or `dequeue.py` script can handle only one job and we handle the oldest
+                queued_job = jobs_qs.first()
 
-                    logging.info(f"Dequeued job {job.id}, run!")
-
-                    job.status = Job.Status.QUEUED
-                    job.save()
-                    break
+                # there might be no jobs in the queue
+                if queued_job:
+                    logging.info(f"Dequeued job {queued_job.id}, run!")
+                    queued_job.status = Job.Status.QUEUED
+                    queued_job.save()
 
             if queued_job:
                 self._run(queued_job)
