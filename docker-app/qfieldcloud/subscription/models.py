@@ -323,7 +323,7 @@ class SubscriptionQuerySet(models.QuerySet):
     def current(self):
         """
         Returns the subscriptions which are relevant to the current moment.
-        Note: Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
+        NOTE Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
         """
         now = timezone.now()
         qs = self.filter(
