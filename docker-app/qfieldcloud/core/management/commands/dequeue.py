@@ -75,7 +75,9 @@ class Command(BaseCommand):
                 jobs_qs = (
                     Job.objects.select_for_update(skip_locked=True)
                     .filter(status=Job.Status.PENDING)
+                    # TODO: use busy_project_ids_qs as subquery here instead of the result set busy_project_ids to prevent concurrency issues
                     .exclude(project_id__in=busy_project_ids)
+                    .order_by("created_at")
                 )
 
                 for job in jobs_qs:
