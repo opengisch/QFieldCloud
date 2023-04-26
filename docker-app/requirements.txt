@@ -47,7 +47,7 @@ drf-yasg==1.20.0
 idna==3.3
 inflection==0.5.1
 itypes==1.2.0
-Jinja2==3.0.3
+Jinja2==3.1.2
 jmespath==0.10.0
 JSON-log-formatter==0.5.0
 jsonfield==3.1.0
