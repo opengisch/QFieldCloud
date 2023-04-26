@@ -2,7 +2,10 @@
 
 set -e
 
-eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+# read and export the variables from the .env file for the duration of this script
+set -o allexport
+source .env
+set +o allexport
 
 CONFIG_PATH="${CONFIG_PATH:-'./conf'}"
 
