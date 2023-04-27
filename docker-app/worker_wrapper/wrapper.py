@@ -123,6 +123,8 @@ class JobRun:
 
             if exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
+                feedback["error_type"] = "TIMEOUT"
+                feedback["error_class"] = ""
                 feedback["error_origin"] = "container"
                 feedback["error_stack"] = ""
             else:
