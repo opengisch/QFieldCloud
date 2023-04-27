@@ -66,28 +66,25 @@ class Command(BaseCommand):
                         )
                     )
                     .filter(active_jobs_count__gt=0)
-                    .values("active_jobs_count", "project_id")
+                    .values("project_id")
                 )
-
-                busy_project_ids = [j["project_id"] for j in busy_projects_ids_qs]
 
                 # select all the pending jobs, that their project has no other active job
                 jobs_qs = (
                     Job.objects.select_for_update(skip_locked=True)
                     .filter(status=Job.Status.PENDING)
-                    # TODO: use busy_project_ids_qs as subquery here instead of the result set busy_project_ids to prevent concurrency issues
-                    .exclude(project_id__in=busy_project_ids)
+                    .exclude(project_id__in=busy_projects_ids_qs)
                     .order_by("created_at")
                 )
 
-                for job in jobs_qs:
-                    queued_job = job
+                # each `worker_wrapper` or `dequeue.py` script can handle only one job and we handle the oldest
+                queued_job = jobs_qs.first()
 
-                    logging.info(f"Dequeued job {job.id}, run!")
-
-                    job.status = Job.Status.QUEUED
-                    job.save()
-                    break
+                # there might be no jobs in the queue
+                if queued_job:
+                    logging.info(f"Dequeued job {queued_job.id}, run!")
+                    queued_job.status = Job.Status.QUEUED
+                    queued_job.save()
 
             if queued_job:
                 self._run(queued_job)
