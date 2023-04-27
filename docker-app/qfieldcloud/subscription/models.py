@@ -181,6 +181,16 @@ class Plan(models.Model):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
+
     @property
     def storage_bytes(self) -> int:
         return self.storage_mb * 1000 * 1000
@@ -253,6 +263,16 @@ class PackageType(models.Model):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
+
     @classmethod
     @lru_cache
     def get_storage_package_type(cls):
@@ -312,6 +332,16 @@ class Package(models.Model):
 
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
+
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
 
 
 # TODO add check constraint makes sure there are no two active additional packages at the same time,
@@ -399,6 +429,16 @@ class AbstractSubscription(models.Model):
     # the timestamp when the current billing period ends
     # NOTE ignored for subscription validity checks, but used to calculate the activation date when additional packages change
     current_period_until = models.DateTimeField(null=True, blank=True)
+
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
 
     @property
     def is_active(self) -> bool:
