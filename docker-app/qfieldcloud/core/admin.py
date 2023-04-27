@@ -714,6 +714,9 @@ class JobAdmin(QFieldCloudModelAdmin):
         "feedback__pre",
     )
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).defer("output", "feedback")
+
     def get_object(self, request, object_id, from_field=None):
         obj = super().get_object(request, object_id, from_field)
         if obj and obj.type == Job.Type.DELTA_APPLY:
