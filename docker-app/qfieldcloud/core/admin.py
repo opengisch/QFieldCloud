@@ -17,6 +17,7 @@ from auditlog.models import ContentType, LogEntry
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
+from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
@@ -59,8 +60,28 @@ from rest_framework.authtoken.models import TokenProxy
 
 admin.site.unregister(LogEntry)
 
-
 Invitation = get_invitation_model()
+
+
+class NoPkOrderChangeList(ChangeList):
+    """
+    DjangoAdmin ChangeList adds an ordering -pk to ensure
+    'deterministic ordering to all db backends'. This has a negative
+    impact on performance and optimization.
+    Therefore remove the extra ordering -pk if custom
+    order fields are provided.
+    """
+
+    def get_ordering(self, request, queryset):
+        order_fields = super().get_ordering(request, queryset)
+        if len(order_fields) > 1 and "-pk" in order_fields:
+            order_fields.remove("-pk")
+        return order_fields
+
+
+class ModelAdminNoPkOrderChangeListMixin:
+    def get_changelist(self, request):
+        return NoPkOrderChangeList
 
 
 class ModelAdminEstimateCountMixin:
@@ -75,7 +96,9 @@ class ModelAdminEstimateCountMixin:
     list_per_page = settings.QFIELDCLOUD_ADMIN_LIST_PER_PAGE
 
 
-class QFieldCloudModelAdmin(ModelAdminEstimateCountMixin, admin.ModelAdmin):
+class QFieldCloudModelAdmin(
+    ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, admin.ModelAdmin
+):
     pass
 
 
@@ -1165,7 +1188,9 @@ class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
         return types
 
 
-class LogEntryAdmin(ModelAdminEstimateCountMixin, BaseLogEntryAdmin):
+class LogEntryAdmin(
+    ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, BaseLogEntryAdmin
+):
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
 
