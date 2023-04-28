@@ -712,6 +712,7 @@ class JobAdmin(QFieldCloudModelAdmin):
         "project__name",
         "type",
         "status",
+        "error_type",
         "created_by__link",
         "created_at",
         "updated_at",
@@ -728,6 +729,7 @@ class JobAdmin(QFieldCloudModelAdmin):
     readonly_fields = (
         "project",
         "status",
+        "error_type",
         "type",
         "created_at",
         "updated_at",
@@ -763,6 +765,12 @@ class JobAdmin(QFieldCloudModelAdmin):
             inlines.append(DeltaInline)
 
         return inlines
+
+    def error_type(self, instance):
+        if instance.feedback and "error_type" in instance.feedback:
+            return f"{instance.feedback['error_type']}".strip()
+
+        return None
 
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)

@@ -512,7 +512,29 @@ def run_workflow(
 
     except Exception as err:
         feedback["error"] = str(err)
+
+        if isinstance(err, sdk.QfcRequestException):
+            status_code = err.response.status_code
+
+            if status_code == 401:
+                feedback["error_type"] = "API_TOKEN_EXPIRED"
+            elif status_code == 402:
+                feedback["error_type"] = "API_PAYMENT_REQUIRED"
+            elif status_code == 403:
+                feedback["error_type"] = "API_FORBIDDEN"
+            elif status_code == 404:
+                feedback["error_type"] = "API_NOT_FOUND"
+            elif status_code == 500:
+                feedback["error_type"] = "API_INTERNAL_SERVER_ERROR"
+            else:
+                feedback["error_type"] = "API_OTHER"
+        elif isinstance(err, FileNotFoundError):
+            feedback["error_type"] = "FILE_NOT_FOUND"
+        else:
+            feedback["error_type"] = "UNKNOWN"
+
         (_type, _value, tb) = sys.exc_info()
+        feedback["error_class"] = type(err).__name__
         feedback["error_stack"] = traceback.format_tb(tb)
     finally:
         feedback["steps"] = []
