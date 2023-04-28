@@ -152,8 +152,9 @@ class LatestPackageDownloadFilesView(views.APIView):
         ):
             key = f"projects/{project_id}/files/{filename}"
 
+        # NOTE the `expires` kwarg is sending the `Expires` header to the client, keep it a low value (in seconds).
         return storage.file_response(
-            request, key, presigned=True, expires=600, as_attachment=True
+            request, key, presigned=True, expires=10, as_attachment=True
         )
 
 
