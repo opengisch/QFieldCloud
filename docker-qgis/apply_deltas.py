@@ -235,7 +235,7 @@ def get_geometry_from_delta(
             wkt = wkt_nan_to_zero(wkt)
             geometry = QgsGeometry.fromWkt(wkt)
 
-            # TODO consider also checking for `isEmpty()` and `isGeosValid()`. Not enabling it for now.
+            # TODO consider also checking for `isEmpty()`. Not enabling it for now.
             if geometry.isNull():
                 raise DeltaException(f"Null geometry from {wkt=}")
 
