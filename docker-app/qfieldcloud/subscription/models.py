@@ -828,5 +828,5 @@ class CurrentSubscription(AbstractSubscription):
     account = models.OneToOneField(
         UserAccount,
         on_delete=models.CASCADE,
-        related_name="current_subscription",
+        related_name="current_subscription_vw",
     )
