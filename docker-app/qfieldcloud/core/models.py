@@ -410,6 +410,13 @@ class UserAccount(models.Model):
         return Subscription.get_or_create_current_subscription(self)
 
     @property
+    @deprecated("Use `current_subscription` instead")
+    def active_subscription(self):
+        return self.current_subscription()
+
+
+
+    @property
     def upcoming_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
