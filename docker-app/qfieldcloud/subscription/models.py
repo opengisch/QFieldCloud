@@ -652,6 +652,12 @@ class AbstractSubscription(models.Model):
             subscription = cls.create_default_plan_subscription(account)
 
         return subscription
+    
+    @property
+    @deprecated("Use `get_or_create_current_subscription` instead")
+    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
+        return cls.get_or_create_current_subscription(account)
+
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
