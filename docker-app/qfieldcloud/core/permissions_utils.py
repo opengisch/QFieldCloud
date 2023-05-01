@@ -605,7 +605,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
         )
 
     max_premium_collaborators_per_private_project = (
-        project.owner.useraccount.active_subscription.plan.max_premium_collaborators_per_private_project
+        project.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
     )
     if max_premium_collaborators_per_private_project >= 0 and not project.is_public:
         project_collaborators_count = project.direct_collaborators.count()
@@ -652,7 +652,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
 
         # Rules for private projects
         if not project.is_public:
-            if not user.useraccount.active_subscription.plan.is_premium:
+            if not user.useraccount.current_subscription.plan.is_premium:
                 raise ExpectedPremiumUserError(
                     _(
                         "Only premium users can be added as collaborators on private projects."

@@ -69,7 +69,7 @@ def set_subscription(
         assert (
             user.type == plan.user_type
         ), 'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
-        subscription = user.useraccount.active_subscription
+        subscription = user.useraccount.current_subscription
         subscription.plan = plan
         subscription.save(update_fields=["plan"])
 

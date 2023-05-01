@@ -307,7 +307,7 @@ class User(AbstractUser):
 
                 if not skip_account_creation:
                     account, _created = UserAccount.objects.get_or_create(user=self)
-                    Subscription.get_or_create_active_subscription(account)
+                    Subscription.get_or_create_current_subscription(account)
         else:
             super().save(*args, **kwargs)
 
@@ -403,11 +403,11 @@ class UserAccount(models.Model):
     )
 
     @property
-    def active_subscription(self):
+    def current_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
         Subscription = get_subscription_model()
-        return Subscription.get_or_create_active_subscription(self)
+        return Subscription.get_or_create_current_subscription(self)
 
     @property
     def upcoming_subscription(self):
@@ -459,17 +459,17 @@ class UserAccount(models.Model):
         """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)"""
 
         return (
-            self.active_subscription.active_storage_total_bytes
+            self.current_subscription.active_storage_total_bytes
             - self.storage_used_bytes
         )
 
     @property
     def storage_used_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        if self.active_subscription.active_storage_total_bytes > 0:
+        if self.current_subscription.active_storage_total_bytes > 0:
             return min(
                 self.storage_used_bytes
-                / self.active_subscription.active_storage_total_bytes,
+                / self.current_subscription.active_storage_total_bytes,
                 1,
             )
         else:
@@ -483,7 +483,7 @@ class UserAccount(models.Model):
     @property
     def has_premium_support(self) -> bool:
         """A user has premium support if they have an active premium subscription plan or a at least one organization that they have admin role."""
-        subscription = self.active_subscription
+        subscription = self.current_subscription
         if subscription.plan.is_premium:
             return True
 
@@ -746,7 +746,7 @@ class OrganizationMember(models.Model):
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
         max_organization_members = (
-            self.organization.useraccount.active_subscription.plan.max_organization_members
+            self.organization.useraccount.current_subscription.plan.max_organization_members
         )
         if (
             max_organization_members > -1
@@ -1151,7 +1151,7 @@ class Project(models.Model):
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
             max_premium_collaborators_per_private_project = (
-                self.owner.useraccount.active_subscription.plan.max_premium_collaborators_per_private_project
+                self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
             )
 
             if not self.project_filename:
@@ -1175,10 +1175,10 @@ class Project(models.Model):
 
     @property
     def storage_size_perc(self) -> float:
-        if self.owner.useraccount.active_subscription.active_storage_total_bytes > 0:
+        if self.owner.useraccount.current_subscription.active_storage_total_bytes > 0:
             return (
                 self.file_storage_bytes
-                / self.owner.useraccount.active_subscription.active_storage_total_bytes
+                / self.owner.useraccount.current_subscription.active_storage_total_bytes
                 * 100
             )
         else:
@@ -1235,7 +1235,7 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         # Build the conditions with Q objects
         is_public_q = Q(project__is_public=True)
         is_team_collaborator = Q(collaborator__type=User.Type.TEAM)
-        # max_premium_collaborators_per_private_project_q = active_subscription_q & (
+        # max_premium_collaborators_per_private_project_q = current_subscription_q & (
         max_premium_collaborators_per_private_project_q = Q(
             project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
                 -1
@@ -1472,7 +1472,7 @@ class Delta(models.Model):
     def is_supported_regarding_owner_account(self):
         return (
             not self.project.has_online_vector_data
-            or self.project.owner.useraccount.active_subscription.plan.is_external_db_supported
+            or self.project.owner.useraccount.current_subscription.plan.is_external_db_supported
         )
 
 

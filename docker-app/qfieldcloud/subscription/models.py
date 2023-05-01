@@ -635,7 +635,7 @@ class AbstractSubscription(models.Model):
         return old_package, new_package
 
     @classmethod
-    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
+    def get_or_create_current_subscription(cls, account: UserAccount) -> "Subscription":
         """Returns the currently active subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
