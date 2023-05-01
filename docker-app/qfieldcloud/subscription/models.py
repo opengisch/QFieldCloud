@@ -636,13 +636,13 @@ class AbstractSubscription(models.Model):
 
     @classmethod
     def get_or_create_current_subscription(cls, account: UserAccount) -> "Subscription":
-        """Returns the currently active subscription, if not exists returns a newly created subscription with the default plan.
+        """Returns the current subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
 
         Returns:
-            Self: the currently active subscription
+            Self: the current subscription
 
         TODO Python 3.11 the actual return type is Self
         """
