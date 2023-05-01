@@ -414,8 +414,6 @@ class UserAccount(models.Model):
     def active_subscription(self):
         return self.current_subscription()
 
-
-
     @property
     def upcoming_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
