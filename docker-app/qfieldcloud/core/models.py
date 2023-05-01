@@ -1501,13 +1501,13 @@ class Job(models.Model):
     )
     type = models.CharField(max_length=32, choices=Type.choices)
     status = models.CharField(
-        max_length=32, choices=Status.choices, default=Status.PENDING
+        max_length=32, choices=Status.choices, default=Status.PENDING, db_index=True
     )
     output = models.TextField(null=True)
     feedback = JSONField(null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
     started_at = models.DateTimeField(blank=True, null=True, editable=False)
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
 

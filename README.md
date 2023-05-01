@@ -65,13 +65,14 @@ To run all the unit and functional tests (on a throwaway test
 database and a throwaway test storage directory):
 
     export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
-    docker compose up -d
+    # (Re-)build the app service to install necessary test utilities (requirements_test.txt)
+    docker compose up -d --build
     docker compose run app python manage.py migrate
     docker compose run app python manage.py test --keepdb
 
 To run only a test module (e.g. `test_permission.py`)
 
-    docker compose run app python manage.py test qfieldcloud.core.tests.test_permission
+    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
 
 ### Debugging
 
@@ -278,6 +279,7 @@ For great `nginx` logs, use:
 
     QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
     docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
+
 
 ### Geodb
 

@@ -181,6 +181,16 @@ class Plan(models.Model):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
+
     @property
     def storage_bytes(self) -> int:
         return self.storage_mb * 1000 * 1000
@@ -253,6 +263,16 @@ class PackageType(models.Model):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
+
     @classmethod
     @lru_cache
     def get_storage_package_type(cls):
@@ -313,6 +333,16 @@ class Package(models.Model):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
+
 
 # TODO add check constraint makes sure there are no two active additional packages at the same time,
 # because we assume that once you change your quantity, the old Package instance has an end_date
@@ -320,11 +350,10 @@ class Package(models.Model):
 
 
 class SubscriptionQuerySet(models.QuerySet):
-    def active(self):
-        """Returns the subscriptions which are relevant to the current moment.
-
-        WARNING the name `active` is super misleading, should be `current`. Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
-        TODO rename to `current`
+    def current(self):
+        """
+        Returns the subscriptions which are relevant to the current moment.
+        NOTE Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
         """
         now = timezone.now()
         qs = self.filter(
@@ -333,6 +362,10 @@ class SubscriptionQuerySet(models.QuerySet):
         ).select_related("plan")
 
         return qs
+
+    @deprecated("Use `current` instead. Remove this once parent repo uses current")
+    def active(self):
+        return self.current()
 
 
 class AbstractSubscription(models.Model):
@@ -396,6 +429,16 @@ class AbstractSubscription(models.Model):
     # the timestamp when the current billing period ends
     # NOTE ignored for subscription validity checks, but used to calculate the activation date when additional packages change
     current_period_until = models.DateTimeField(null=True, blank=True)
+
+    # admin only notes, not visible to end users
+    notes = models.TextField(
+        _("Admin notes"),
+        blank=True,
+        null=True,
+        help_text=_(
+            "These notes are for internal purposes only and will never be shown to the end users."
+        ),
+    )
 
     @property
     def is_active(self) -> bool:
@@ -604,7 +647,7 @@ class AbstractSubscription(models.Model):
         TODO Python 3.11 the actual return type is Self
         """
         try:
-            subscription = cls.objects.active().get(account_id=account.pk)
+            subscription = cls.objects.current().get(account_id=account.pk)
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
@@ -646,7 +689,7 @@ class AbstractSubscription(models.Model):
                 subscription.active_since is None
                 and kwargs.get("active_since") is not None
             ):
-                cls.objects.active().filter(account=subscription.account,).exclude(
+                cls.objects.current().filter(account=subscription.account,).exclude(
                     pk=subscription.pk,
                 ).update(
                     status=Subscription.Status.INACTIVE_CANCELLED,
