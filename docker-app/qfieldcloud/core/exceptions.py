@@ -175,12 +175,3 @@ class ReachedMaxOrganizationMembersError(QFieldCloudException):
     code = "organization_has_max_number_of_members"
     message = "Cannot add new organization members, account limit has been reached."
     status_code = status.HTTP_403_FORBIDDEN
-
-
-class SubscriptionInactiveError(QFieldCloudException):
-    # TODO use PermissionDeniedError instead?
-    """Raised when a subscription is inactive"""
-
-    code = "subscription_inactive"
-    message = "Cannot start any work (i.e job) for user with inactive subscription."
-    status_code = status.HTTP_403_FORBIDDEN
