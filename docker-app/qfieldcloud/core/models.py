@@ -1560,7 +1560,7 @@ class Job(models.Model):
         current_subscription = useraccount.active_subscription
 
         if not current_subscription.is_active:
-            raise ValidationError(_("Cannot create job for inactive user."))
+            raise ValidationError(_("Cannot create job for user with inactive subscription."))
 
         if useraccount.storage_free_bytes < 0:
             raise QuotaError
