@@ -26,7 +26,7 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.exceptions import (
-    PermissionDeniedError,
+    PermissionDeniedInactiveError,
     QuotaError,
     ReachedMaxOrganizationMembersError,
 )
@@ -1225,7 +1225,7 @@ class Project(models.Model):
         current_subscription = useraccount.current_subscription
 
         if not current_subscription.is_active:
-            raise PermissionDeniedError(
+            raise PermissionDeniedInactiveError(
                 _("Cannot create job for user with inactive subscription.")
             )
 
@@ -1588,7 +1588,7 @@ class Job(models.Model):
         current_subscription = useraccount.current_subscription
 
         if not current_subscription.is_active:
-            raise PermissionDeniedError(
+            raise PermissionDeniedInactiveError(
                 _("Cannot create job for user with inactive subscription.")
             )
 
@@ -1599,7 +1599,7 @@ class Job(models.Model):
             self.project.has_online_vector_data
             and not current_subscription.plan.is_external_db_supported
         ):
-            raise PermissionDeniedError(
+            raise PermissionDeniedInactiveError(
                 _(
                     "Cannot create job on project with online vector data and unsupported subscription plan."
                 )

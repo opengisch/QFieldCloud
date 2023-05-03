@@ -3,7 +3,7 @@ from unittest import mock
 
 from django.forms.models import ValidationError
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.exceptions import QuotaError, PermissionDeniedError
+from qfieldcloud.core.exceptions import QuotaError, PermissionDeniedInactiveError
 from qfieldcloud.core.models import Job, Person, Project
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase
@@ -42,7 +42,7 @@ class QfcTestCase(APITestCase):
         self.assertFalse(subscription.is_active)
 
         # Cannot create job if user's subscription is inactive
-        with self.assertRaises(PermissionDeniedError):
+        with self.assertRaises(PermissionDeniedInactiveError):
             Job.objects.create(
                 type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
             )
@@ -80,7 +80,7 @@ class QfcTestCase(APITestCase):
             )
 
             # Cannot create job with a project that has online vector data
-            with self.assertRaises(PermissionDeniedError):
+            with self.assertRaises(PermissionDeniedInactiveError):
                 Job.objects.create(
                     type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
                 )
