@@ -3,6 +3,7 @@ from unittest import mock
 
 from django.forms.models import ValidationError
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.exceptions import QuotaError
 from qfieldcloud.core.models import Job, Person, Project
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase
@@ -58,7 +59,7 @@ class QfcTestCase(APITestCase):
         )
 
         # Cannot create job if the user's plan is over quota
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(QuotaError):
             Job.objects.create(
                 type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
             )

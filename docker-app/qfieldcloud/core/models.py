@@ -25,7 +25,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.exceptions import ReachedMaxOrganizationMembersError
+from qfieldcloud.core.exceptions import QuotaError, ReachedMaxOrganizationMembersError
 from qfieldcloud.core.utils2 import storage
 from timezone_field import TimeZoneField
 
@@ -1558,22 +1558,21 @@ class Job(models.Model):
         """
         useraccount = self.created_by.useraccount
         current_subscription = useraccount.active_subscription
-        exception_msg_prefix = "Cannot create job"
 
         if not current_subscription.is_active:
-            raise ValidationError(f"{exception_msg_prefix} for inactive user.")
+            raise ValidationError(_("Cannot create job for inactive user."))
 
         if useraccount.storage_free_bytes < 0:
-            raise ValidationError(
-                f"{exception_msg_prefix} because user's storage is over quota."
-            )
+            raise QuotaError
 
         if (
             self.project.has_online_vector_data
             and not current_subscription.plan.is_external_db_supported
         ):
             raise ValidationError(
-                f"{exception_msg_prefix} on project with online vector data and unsupported subscription plan."
+                _(
+                    "Cannot create job on project with online vector data and unsupported subscription plan."
+                )
             )
 
         return super().clean()
