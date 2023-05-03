@@ -34,7 +34,7 @@ class QfcTestCase(APITestCase):
         self.assertEqual(job.status, Job.Status.PENDING)
 
     def test_create_job_by_inactive_user(self):
-        subscription = self.user1.useraccount.active_subscription
+        subscription = self.user1.useraccount.current_subscription
         subscription.status = Subscription.Status.INACTIVE_DRAFT
         subscription.save()
 
@@ -48,7 +48,7 @@ class QfcTestCase(APITestCase):
             )
 
     def test_create_job_if_user_is_over_quota(self):
-        plan = self.user1.useraccount.active_subscription.plan
+        plan = self.user1.useraccount.current_subscription.plan
 
         # Create a project that uses all the storage
         more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
@@ -76,7 +76,7 @@ class QfcTestCase(APITestCase):
 
             # Make sure the user's plan does not allow online vector data
             self.assertFalse(
-                self.user1.useraccount.active_subscription.plan.is_external_db_supported
+                self.user1.useraccount.current_subscription.plan.is_external_db_supported
             )
 
             # Cannot create job with a project that has online vector data

@@ -1557,7 +1557,7 @@ class Job(models.Model):
         or the project has online vector layers (postgis) and his account does not support it
         """
         useraccount = self.created_by.useraccount
-        current_subscription = useraccount.active_subscription
+        current_subscription = useraccount.current_subscription
 
         if not current_subscription.is_active:
             raise ValidationError(
