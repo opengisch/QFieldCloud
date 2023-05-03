@@ -1080,7 +1080,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Active users (last billing period)"))
     def active_users(self, instance) -> int:
         try:
-            return instance.current_subscription.active_users_count
+            return instance.current_subscription_vw.active_users_count
         except Exception:
             return None
 

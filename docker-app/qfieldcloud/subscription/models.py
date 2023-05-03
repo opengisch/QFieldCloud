@@ -635,14 +635,14 @@ class AbstractSubscription(models.Model):
         return old_package, new_package
 
     @classmethod
-    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
-        """Returns the currently active subscription, if not exists returns a newly created subscription with the default plan.
+    def get_or_create_current_subscription(cls, account: UserAccount) -> "Subscription":
+        """Returns the current subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
 
         Returns:
-            Self: the currently active subscription
+            Self: the current subscription
 
         TODO Python 3.11 the actual return type is Self
         """
@@ -652,6 +652,11 @@ class AbstractSubscription(models.Model):
             subscription = cls.create_default_plan_subscription(account)
 
         return subscription
+
+    @property
+    @deprecated("Use `get_or_create_current_subscription` instead")
+    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
+        return cls.get_or_create_current_subscription(account)
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
@@ -823,5 +828,5 @@ class CurrentSubscription(AbstractSubscription):
     account = models.OneToOneField(
         UserAccount,
         on_delete=models.CASCADE,
-        related_name="current_subscription",
+        related_name="current_subscription_vw",
     )
