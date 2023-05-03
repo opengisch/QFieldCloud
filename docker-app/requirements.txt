@@ -52,7 +52,7 @@ jmespath==0.10.0
 JSON-log-formatter==0.5.2
 jsonfield==3.1.0
 jsonschema==3.2.0
-MarkupSafe==2.0.1
+MarkupSafe==2.1.2
 python-memcached==1.59
 mypy-boto3-s3==1.20.17
 oauthlib==3.2.2
