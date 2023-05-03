@@ -1551,6 +1551,37 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
+    def clean(self) -> None:
+        """
+        Prevent creating new jobs if the user is inactive, over quota
+        or the project has online vector layers (postgis) and his account does not support it
+        """
+        useraccount = self.created_by.useraccount
+        current_subscription = useraccount.active_subscription
+        exception_msg_prefix = "Cannot create job"
+
+        if not current_subscription.is_active:
+            raise ValidationError(f"{exception_msg_prefix} for inactive user.")
+
+        if useraccount.storage_free_bytes < 0:
+            raise ValidationError(
+                f"{exception_msg_prefix} because user's storage is over quota."
+            )
+
+        if (
+            self.project.has_online_vector_data
+            and not current_subscription.plan.is_external_db_supported
+        ):
+            raise ValidationError(
+                f"{exception_msg_prefix} on project with online vector data and unsupported subscription plan."
+            )
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
 
 class PackageJob(Job):
     def save(self, *args, **kwargs):
