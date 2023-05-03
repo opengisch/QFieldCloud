@@ -57,7 +57,7 @@ python-memcached==1.59
 mypy-boto3-s3==1.20.17
 oauthlib==3.2.1
 packaging==21.3
-phonenumbers==8.12.55
+phonenumbers==8.13.11
 psycopg2==2.8.6
 pycparser==2.21
 pydot==1.4.2
