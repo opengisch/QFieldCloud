@@ -178,6 +178,7 @@ class ReachedMaxOrganizationMembersError(QFieldCloudException):
 
 
 class SubscriptionInactiveError(QFieldCloudException):
+    # TODO use PermissionDeniedError instead?
     """Raised when a subscription is inactive"""
 
     code = "subscription_inactive"
