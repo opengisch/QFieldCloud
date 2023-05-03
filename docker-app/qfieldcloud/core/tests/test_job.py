@@ -42,7 +42,7 @@ class QfcTestCase(APITestCase):
         self.assertFalse(subscription.is_active)
 
         # Cannot create job if user's subscription is inactive
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(PermissionError):
             Job.objects.create(
                 type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
             )
@@ -80,7 +80,7 @@ class QfcTestCase(APITestCase):
             )
 
             # Cannot create job with a project that has online vector data
-            with self.assertRaises(ValidationError):
+            with self.assertRaises(PermissionError):
                 Job.objects.create(
                     type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
                 )
