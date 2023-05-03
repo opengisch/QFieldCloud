@@ -1215,12 +1215,36 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
+
+    # FIXME merge (mixin?) with Job
+    def clean(self) -> None:
+        """
+        Prevent creating new projects if the user is inactive or over quota
+        """
+        useraccount = self.owner.useraccount
+        current_subscription = useraccount.current_subscription
+
+        if not current_subscription.is_active:
+            raise PermissionDeniedError(
+                _("Cannot create job for user with inactive subscription.")
+            )
+
+        if useraccount.storage_free_bytes < 0:
+            raise QuotaError
+        
+        # FIXME also check/permit online vector data
+
+        return super().clean()
+
+
     def save(self, recompute_storage=False, *args, **kwargs):
+        self.clean()
         logger.info(f"Saving project {self}...")
 
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
         super().save(*args, **kwargs)
+
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
