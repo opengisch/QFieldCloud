@@ -3,7 +3,7 @@ from unittest import mock
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import (
-    AccountInactiveError,
+    InactiveSubscriptionError,
     PlanInsufficientError,
     QuotaError,
 )
@@ -72,13 +72,13 @@ class QfcTestCase(APITestCase):
         self.assertFalse(subscription.is_active)
 
         # Cannot create package job if user's subscription is inactive
-        with self.assertRaises(AccountInactiveError):
+        with self.assertRaises(InactiveSubscriptionError):
             PackageJob.objects.create(
                 project=self.project1, created_by=self.user1, type=Job.Type.PACKAGE
             )
 
         # Cannot create processprojectfile job if user's subscription is inactive
-        with self.assertRaises(AccountInactiveError):
+        with self.assertRaises(InactiveSubscriptionError):
             ProcessProjectfileJob.objects.create(
                 type=Job.Type.PROCESS_PROJECTFILE,
                 project=self.project1,

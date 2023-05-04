@@ -26,7 +26,7 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.exceptions import (
-    AccountInactiveError,
+    InactiveSubscriptionError,
     PlanInsufficientError,
     QuotaError,
     ReachedMaxOrganizationMembersError,
@@ -1224,7 +1224,7 @@ class Project(models.Model):
         current_subscription = useraccount.current_subscription
 
         if not current_subscription.is_active:
-            raise AccountInactiveError(
+            raise InactiveSubscriptionError(
                 _("Cannot create job for user with inactive subscription.")
             )
 
@@ -1583,7 +1583,7 @@ class Job(models.Model):
         current_subscription = useraccount.current_subscription
 
         if not current_subscription.is_active:
-            raise AccountInactiveError(
+            raise InactiveSubscriptionError(
                 _("Cannot create job for user with inactive subscription.")
             )
 

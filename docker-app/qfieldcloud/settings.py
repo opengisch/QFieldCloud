@@ -275,7 +275,7 @@ if SENTRY_DSN:
 
     def before_send(event, hint):
         from qfieldcloud.core.exceptions import (
-            AccountInactiveError,
+            InactiveSubscriptionError,
             PlanInsufficientError,
             ProjectAlreadyExistsError,
             QuotaError,
@@ -287,7 +287,7 @@ if SENTRY_DSN:
             ProjectAlreadyExistsError,
             QuotaError,
             PlanInsufficientError,
-            AccountInactiveError,
+            InactiveSubscriptionError,
         )
 
         if "exc_info" in hint:
