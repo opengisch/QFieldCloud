@@ -2,7 +2,7 @@ import logging
 
 from django.core.exceptions import ValidationError
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.exceptions import PermissionDeniedInactiveError, QuotaError
+from qfieldcloud.core.exceptions import AccountInactiveError, QuotaError
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
@@ -494,7 +494,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertFalse(subscription.is_active)
 
         # Cannot create project if user's subscription is inactive
-        with self.assertRaises(PermissionDeniedInactiveError):
+        with self.assertRaises(AccountInactiveError):
             Project.objects.create(
                 type=Project.Type.PACKAGE, project=self.project1, created_by=self.user1
             )
