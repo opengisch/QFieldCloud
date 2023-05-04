@@ -1576,7 +1576,7 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
-    def clean(self) -> None:
+    def raise_insufficient_subscription(self) -> None:
         """
         Prevent creating new jobs if the user is inactive, over quota
         or the project has online vector layers (postgis) and his account does not support it
@@ -1602,12 +1602,6 @@ class Job(models.Model):
                 )
             )
 
-        return super().clean()
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        return super().save(*args, **kwargs)
-
 
 class PackageJob(Job):
     def save(self, *args, **kwargs):
@@ -1618,6 +1612,16 @@ class PackageJob(Job):
         verbose_name = "Job: package"
         verbose_name_plural = "Jobs: package"
 
+    def clean(self):
+        self.raise_insufficient_subscription()
+        return super().clean()
+
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+
 
 class ProcessProjectfileJob(Job):
     def save(self, *args, **kwargs):
@@ -1627,6 +1631,17 @@ class ProcessProjectfileJob(Job):
     class Meta:
         verbose_name = "Job: process QGIS project file"
         verbose_name_plural = "Jobs: process QGIS project file"
+
+
+    def clean(self):
+        self.raise_insufficient_subscription()
+        return super().clean()
+
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
 
 
 class ApplyJob(Job):
