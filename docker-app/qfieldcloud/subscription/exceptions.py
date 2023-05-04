@@ -38,6 +38,16 @@ class InactiveSubscriptionError(QFieldCloudException):
     status_code = status.HTTP_403_FORBIDDEN
 
 
+class PlanInsufficientError(QFieldCloudException):
+    """
+    Raised when a permission (action) is denied because the useraccount plan is insufficient.
+    """
+
+    code = "permission_denied_plan_insufficient"
+    message = "Permission denied because the useraccount's plan is insufficient"
+    status_code = status.HTTP_403_FORBIDDEN
+
+
 class QuotaError(QFieldCloudException):
     """Raised when a quota limitation is hit"""
 
