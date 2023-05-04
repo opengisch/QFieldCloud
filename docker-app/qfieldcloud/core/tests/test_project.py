@@ -1,6 +1,8 @@
 import logging
 
 from django.core.exceptions import ValidationError
+from qfieldcloud.subscription.models import Subscription
+from qfieldcloud.core.exceptions import QuotaError, PermissionDeniedInactiveError
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
@@ -482,3 +484,34 @@ class QfcTestCase(APITransactionTestCase):
         om1.delete()
 
         self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 0)
+
+    def test_create_project_by_inactive_user(self):
+        subscription = self.user1.useraccount.current_subscription
+        subscription.status = Subscription.Status.INACTIVE_DRAFT
+        subscription.save()
+
+        # Make sure the user is inactive
+        self.assertFalse(subscription.is_active)
+
+        # Cannot create project if user's subscription is inactive
+        with self.assertRaises(PermissionDeniedInactiveError):
+            Project.objects.create(
+                type=Project.Type.PACKAGE, project=self.project1, created_by=self.user1
+            )
+
+    def test_create_job_if_user_is_over_quota(self):
+        plan = self.user1.useraccount.current_subscription.plan
+
+        # Create a project that uses all the storage
+        more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
+        Project.objects.create(
+            name="p1",
+            owner=self.user1,
+            file_storage_bytes=more_bytes_than_plan,
+        )
+
+        # Cannot create job if the user's plan is over quota
+        with self.assertRaises(QuotaError):
+            Project.objects.create(
+                type=Project.Type.PACKAGE, project=self.project1, created_by=self.user1
+            )
