@@ -1216,7 +1216,6 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
-    # FIXME merge (mixin?) with Job
     def clean(self) -> None:
         """
         Prevent creating new projects if the user is inactive or over quota
@@ -1231,8 +1230,6 @@ class Project(models.Model):
 
         if useraccount.storage_free_bytes < 0:
             raise QuotaError
-
-        # FIXME also check/permit online vector data
 
         return super().clean()
 
