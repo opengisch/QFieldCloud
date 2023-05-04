@@ -27,6 +27,7 @@ from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.exceptions import (
     AccountInactiveError,
+    PlanInsufficientError,
     QuotaError,
     ReachedMaxOrganizationMembersError,
 )
@@ -1596,7 +1597,7 @@ class Job(models.Model):
             self.project.has_online_vector_data
             and not current_subscription.plan.is_external_db_supported
         ):
-            raise AccountInactiveError(
+            raise PlanInsufficientError(
                 _(
                     "Cannot create job on project with online vector data and unsupported subscription plan."
                 )

@@ -179,9 +179,19 @@ class ReachedMaxOrganizationMembersError(QFieldCloudException):
 
 class AccountInactiveError(QFieldCloudException):
     """
-    Raised when an action is denied because the useraccount is inactive.
+    Raised when a permission (action) is denied because the useraccount is inactive.
     """
 
     code = "permission_denied_inactive"
     message = "Permission denied because the useraccount is inactive"
+    status_code = status.HTTP_403_FORBIDDEN
+
+
+class PlanInsufficientError(QFieldCloudException):
+    """
+    Raised when a permission (action) is denied because the useraccount plan is insufficient.
+    """
+
+    code = "permission_denied_plan_insufficient"
+    message = "Permission denied because the useraccount's plan is insufficient"
     status_code = status.HTTP_403_FORBIDDEN
