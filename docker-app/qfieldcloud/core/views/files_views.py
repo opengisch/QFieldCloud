@@ -12,6 +12,7 @@ from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
     purge_old_file_versions,
 )
+from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -170,7 +171,7 @@ class DownloadPushDeleteFileView(views.APIView):
         quota_left_bytes = project.owner.useraccount.storage_free_bytes
 
         if file_size_bytes > quota_left_bytes:
-            raise exceptions.QuotaError(
+            raise QuotaError(
                 f"Requiring {file_size_bytes} bytes of storage but only {quota_left_bytes} bytes available."
             )
 

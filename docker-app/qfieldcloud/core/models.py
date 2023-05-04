@@ -25,13 +25,13 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.exceptions import (
+from qfieldcloud.core.utils2 import storage
+from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
     PlanInsufficientError,
     QuotaError,
     ReachedMaxOrganizationMembersError,
 )
-from qfieldcloud.core.utils2 import storage
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
