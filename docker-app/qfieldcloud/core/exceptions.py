@@ -185,4 +185,4 @@ class PermissionDeniedInactiveError(QFieldCloudException):
 
     code = "permission_denied_inactive"
     message = "Permission denied because the useraccount is inactive"
-    status_code = status.HTTP_403_FORBIDDEN
+    status_code = status.HTTP_402_PAYMENT_REQUIRED
