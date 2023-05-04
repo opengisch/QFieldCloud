@@ -496,10 +496,11 @@ class QfcTestCase(APITransactionTestCase):
         # Cannot create project if user's subscription is inactive
         with self.assertRaises(AccountInactiveError):
             Project.objects.create(
-                type=Project.Type.PACKAGE, project=self.project1, created_by=self.user1
+                name="p1",
+                owner=self.user1,
             )
 
-    def test_create_job_if_user_is_over_quota(self):
+    def test_create_project_if_user_is_over_quota(self):
         plan = self.user1.useraccount.current_subscription.plan
 
         # Create a project that uses all the storage
@@ -510,8 +511,9 @@ class QfcTestCase(APITransactionTestCase):
             file_storage_bytes=more_bytes_than_plan,
         )
 
-        # Cannot create job if the user's plan is over quota
+        # Cannot create another project if the user's plan is over quota
         with self.assertRaises(QuotaError):
             Project.objects.create(
-                type=Project.Type.PACKAGE, project=self.project1, created_by=self.user1
+                name="p1",
+                owner=self.user1,
             )

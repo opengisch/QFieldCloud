@@ -7,7 +7,14 @@ from qfieldcloud.core.exceptions import (
     PlanInsufficientError,
     QuotaError,
 )
-from qfieldcloud.core.models import Job, Person, Project
+from qfieldcloud.core.models import (
+    ApplyJob,
+    Job,
+    PackageJob,
+    Person,
+    ProcessProjectfileJob,
+    Project,
+)
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase
 
@@ -30,11 +37,31 @@ class QfcTestCase(APITestCase):
         )
 
     def test_create_job_succesfully(self):
-        job = Job.objects.create(
+        # Test can create all types of jobs successfully
+        job = PackageJob.objects.create(
             type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
         )
-
         self.assertEqual(job.status, Job.Status.PENDING)
+
+        package_job = PackageJob.objects.create(
+            type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+        )
+        self.assertEqual(package_job.status, Job.Status.PENDING)
+
+        processprojectfile_job = ProcessProjectfileJob.objects.create(
+            type=Job.Type.PROCESS_PROJECTFILE,
+            project=self.project1,
+            created_by=self.user1,
+        )
+        self.assertEqual(processprojectfile_job.status, Job.Status.PENDING)
+
+        deltaapply_job = ApplyJob.objects.create(
+            type=Job.Type.DELTA_APPLY,
+            project=self.project1,
+            created_by=self.user1,
+            overwrite_conflicts=True,
+        )
+        self.assertEqual(deltaapply_job.status, Job.Status.PENDING)
 
     def test_create_job_by_inactive_user(self):
         subscription = self.user1.useraccount.current_subscription
@@ -46,23 +73,26 @@ class QfcTestCase(APITestCase):
 
         # Cannot create package job if user's subscription is inactive
         with self.assertRaises(AccountInactiveError):
-            Job.objects.create(
-                type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+            PackageJob.objects.create(
+                project=self.project1, created_by=self.user1, type=Job.Type.PACKAGE
             )
 
         # Cannot create processprojectfile job if user's subscription is inactive
         with self.assertRaises(AccountInactiveError):
-            Job.objects.create(
+            ProcessProjectfileJob.objects.create(
                 type=Job.Type.PROCESS_PROJECTFILE,
                 project=self.project1,
                 created_by=self.user1,
             )
 
         # Cannot still create delta apply job if user's subscription is inactive
-        job = Job.objects.create(
-            type=Job.Type.DELTA_APPLY, project=self.project1, created_by=self.user1
+        job = ApplyJob.objects.create(
+            type=Job.Type.DELTA_APPLY,
+            project=self.project1,
+            created_by=self.user1,
+            overwrite_conflicts=True,
         )
-        self.asrtEqual(job.status, Job.Status.PENDING)
+        self.assertEqual(job.status, Job.Status.PENDING)
 
     def test_create_job_if_user_is_over_quota(self):
         plan = self.user1.useraccount.current_subscription.plan
@@ -77,23 +107,26 @@ class QfcTestCase(APITestCase):
 
         # Cannot create package job if the user's plan is over quota
         with self.assertRaises(QuotaError):
-            Job.objects.create(
+            PackageJob.objects.create(
                 type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
             )
 
         # Cannot create processprojectfile job if the user's plan is over quota
         with self.assertRaises(QuotaError):
-            Job.objects.create(
+            ProcessProjectfileJob.objects.create(
                 type=Job.Type.PROCESS_PROJECTFILE,
                 project=self.project1,
                 created_by=self.user1,
             )
 
         # Cant still create delta apply job if the user's plan is over quota
-        job = Job.objects.create(
-            type=Job.Type.DELTA_APPLY, project=self.project1, created_by=self.user1
+        job = ApplyJob.objects.create(
+            type=Job.Type.DELTA_APPLY,
+            project=self.project1,
+            created_by=self.user1,
+            overwrite_conflicts=True,
         )
-        self.asrtEqual(job.status, Job.Status.PENDING)
+        self.assertEqual(job.status, Job.Status.PENDING)
 
     def test_create_job_on_project_with_online_vector_data_for_unsupported_user_plan(
         self,
@@ -111,26 +144,29 @@ class QfcTestCase(APITestCase):
             )
 
             with self.assertRaises(PlanInsufficientError):
-                Job.objects.create(
+                PackageJob.objects.create(
                     type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
                 )
 
             # Cannot create package job with a project that has online vector data
             with self.assertRaises(PlanInsufficientError):
-                Job.objects.create(
+                PackageJob.objects.create(
                     type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
                 )
 
             # Cant still create processprojectfile with a project that has online vector data
-            processprojectfile_job = Job.objects.create(
-                type=Job.Type.DELTA_APPLY, project=self.project1, created_by=self.user1
+            processprojectfile_job = ProcessProjectfileJob.objects.create(
+                type=Job.Type.PROCESS_PROJECTFILE,
+                project=self.project1,
+                created_by=self.user1,
             )
-            self.asrtEqual(
-                processprojectfile_job.processprojectfile_job, Job.Status.PENDING
-            )
+            self.assertEqual(processprojectfile_job.status, Job.Status.PENDING)
 
             # Cant still create delta apply with a project that has online vector data
-            delta_apply = Job.objects.create(
-                type=Job.Type.DELTA_APPLY, project=self.project1, created_by=self.user1
+            delta_apply = ApplyJob.objects.create(
+                type=Job.Type.DELTA_APPLY,
+                project=self.project1,
+                created_by=self.user1,
+                overwrite_conflicts=True,
             )
-            self.asrtEqual(delta_apply.status, Job.Status.PENDING)
+            self.assertEqual(delta_apply.status, Job.Status.PENDING)
