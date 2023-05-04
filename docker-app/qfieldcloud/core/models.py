@@ -25,7 +25,12 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.exceptions import ReachedMaxOrganizationMembersError
+from qfieldcloud.core.exceptions import (
+    InactiveSubscriptionError,
+    PlanInsufficientError,
+    QuotaError,
+    ReachedMaxOrganizationMembersError,
+)
 from qfieldcloud.core.utils2 import storage
 from timezone_field import TimeZoneField
 
@@ -1211,7 +1216,25 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
+    def clean(self) -> None:
+        """
+        Prevent creating new projects if the user is inactive or over quota
+        """
+        useraccount = self.owner.useraccount
+        current_subscription = useraccount.current_subscription
+
+        if not current_subscription.is_active:
+            raise InactiveSubscriptionError(
+                _("Cannot create job for user with inactive subscription.")
+            )
+
+        if useraccount.storage_free_bytes < 0:
+            raise QuotaError
+
+        return super().clean()
+
     def save(self, recompute_storage=False, *args, **kwargs):
+        self.clean()
         logger.info(f"Saving project {self}...")
 
         if recompute_storage:
@@ -1551,9 +1574,41 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
+    def raise_insufficient_subscription(self, check_online_layers=True) -> None:
+        """
+        Prevent creating new jobs if the user is inactive, over quota
+        or (optionally) the project has online vector layers (postgis) and his account does not support it
+        """
+        useraccount = self.created_by.useraccount
+        current_subscription = useraccount.current_subscription
+
+        if not current_subscription.is_active:
+            raise InactiveSubscriptionError(
+                _("Cannot create job for user with inactive subscription.")
+            )
+
+        if useraccount.storage_free_bytes < 0:
+            raise QuotaError
+
+        if (
+            check_online_layers
+            and self.project.has_online_vector_data
+            and not current_subscription.plan.is_external_db_supported
+        ):
+            raise PlanInsufficientError(
+                _(
+                    "Cannot create job on project with online vector data and unsupported subscription plan."
+                )
+            )
+
 
 class PackageJob(Job):
+    def clean(self):
+        self.raise_insufficient_subscription()
+        return super().clean()
+
     def save(self, *args, **kwargs):
+        self.clean()
         self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
 
@@ -1563,7 +1618,13 @@ class PackageJob(Job):
 
 
 class ProcessProjectfileJob(Job):
+    def clean(self):
+        # exclude online layers from check to allow users to adapt project after downgrading plan
+        self.raise_insufficient_subscription(check_online_layers=False)
+        return super().clean()
+
     def save(self, *args, **kwargs):
+        self.clean()
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)
 
