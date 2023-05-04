@@ -1604,7 +1604,12 @@ class Job(models.Model):
 
 
 class PackageJob(Job):
+    def clean(self):
+        self.raise_insufficient_subscription()
+        return super().clean()
+
     def save(self, *args, **kwargs):
+        self.clean()
         self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
 
@@ -1612,36 +1617,20 @@ class PackageJob(Job):
         verbose_name = "Job: package"
         verbose_name_plural = "Jobs: package"
 
+
+class ProcessProjectfileJob(Job):
     def clean(self):
         self.raise_insufficient_subscription()
         return super().clean()
 
-
     def save(self, *args, **kwargs):
         self.clean()
-        return super().save(*args, **kwargs)
-
-
-
-class ProcessProjectfileJob(Job):
-    def save(self, *args, **kwargs):
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Job: process QGIS project file"
         verbose_name_plural = "Jobs: process QGIS project file"
-
-
-    def clean(self):
-        self.raise_insufficient_subscription()
-        return super().clean()
-
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        return super().save(*args, **kwargs)
-
 
 
 class ApplyJob(Job):
