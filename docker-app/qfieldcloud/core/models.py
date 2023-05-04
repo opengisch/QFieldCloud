@@ -1215,7 +1215,6 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
-
     # FIXME merge (mixin?) with Job
     def clean(self) -> None:
         """
@@ -1231,11 +1230,10 @@ class Project(models.Model):
 
         if useraccount.storage_free_bytes < 0:
             raise QuotaError
-        
+
         # FIXME also check/permit online vector data
 
         return super().clean()
-
 
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
@@ -1244,7 +1242,6 @@ class Project(models.Model):
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
         super().save(*args, **kwargs)
-
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):

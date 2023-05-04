@@ -176,6 +176,7 @@ class ReachedMaxOrganizationMembersError(QFieldCloudException):
     message = "Cannot add new organization members, account limit has been reached."
     status_code = status.HTTP_403_FORBIDDEN
 
+
 class PermissionDeniedInactiveError(QFieldCloudException):
     """
     Raised when the user has not the required permission for an action,
@@ -185,4 +186,3 @@ class PermissionDeniedInactiveError(QFieldCloudException):
     code = "permission_denied_inactive"
     message = "Permission denied because the useraccount is inactive"
     status_code = status.HTTP_403_FORBIDDEN
-

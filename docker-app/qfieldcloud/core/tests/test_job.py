@@ -1,9 +1,8 @@
 import logging
 from unittest import mock
 
-from django.forms.models import ValidationError
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.exceptions import QuotaError, PermissionDeniedInactiveError
+from qfieldcloud.core.exceptions import PermissionDeniedInactiveError, QuotaError
 from qfieldcloud.core.models import Job, Person, Project
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase
