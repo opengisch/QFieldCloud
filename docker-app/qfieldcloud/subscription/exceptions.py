@@ -10,7 +10,7 @@ class NotPremiumPlanException(SubscriptionException):
     ...
 
 
-class ReachedMaxOrganizationMembersError(QFieldCloudException):
+class ReachedMaxOrganizationMembersError(SubscriptionException):
     """Raised when an organization has exhausted its quota of members"""
 
     code = "organization_has_max_number_of_members"
@@ -18,7 +18,7 @@ class ReachedMaxOrganizationMembersError(QFieldCloudException):
     status_code = status.HTTP_403_FORBIDDEN
 
 
-class AccountInactiveError(QFieldCloudException):
+class AccountInactiveError(SubscriptionException):
     """
     Raised when a permission (action) is denied because the useraccount is inactive.
     """
@@ -28,7 +28,7 @@ class AccountInactiveError(QFieldCloudException):
     status_code = status.HTTP_403_FORBIDDEN
 
 
-class InactiveSubscriptionError(QFieldCloudException):
+class InactiveSubscriptionError(SubscriptionException):
     """
     Raised when a permission (action) is denied because the useraccount subscription is inactive.
     """
@@ -38,7 +38,7 @@ class InactiveSubscriptionError(QFieldCloudException):
     status_code = status.HTTP_403_FORBIDDEN
 
 
-class PlanInsufficientError(QFieldCloudException):
+class PlanInsufficientError(SubscriptionException):
     """
     Raised when a permission (action) is denied because the useraccount plan is insufficient.
     """
@@ -48,7 +48,7 @@ class PlanInsufficientError(QFieldCloudException):
     status_code = status.HTTP_403_FORBIDDEN
 
 
-class QuotaError(QFieldCloudException):
+class QuotaError(SubscriptionException):
     """Raised when a quota limitation is hit"""
 
     code = "over_quota"
