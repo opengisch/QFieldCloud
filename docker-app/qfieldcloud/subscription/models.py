@@ -600,6 +600,8 @@ class AbstractSubscription(models.Model):
         with transaction.atomic():
             if active_since is None:
                 active_since = timezone.now()
+
+            active_since = active_since.replace(microsecond=0)
             new_package = None
 
             # delete future packages for that subscription, as we would create a new one if needed
@@ -770,6 +772,10 @@ class AbstractSubscription(models.Model):
 
         TODO Python 3.11 the actual return type is Self
         """
+        if active_since:
+            # remove milliseconds as there will be slight shift with the remote system data
+            active_since = active_since.replace(microsecond=0)
+
         if plan.is_trial:
             assert isinstance(
                 active_since, datetime
