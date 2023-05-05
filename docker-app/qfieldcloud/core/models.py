@@ -1119,9 +1119,11 @@ class Project(models.Model):
         has_online_vector_layers = False
 
         for layer_data in layers_by_id.values():
-            if layer_data.get("type_name") == "VectorLayer" and not layer_data.get(
-                "filename", ""
-            ):
+            # NOTE QGIS 3.30.x returns "Vector", while previous versions return "VectorLayer"
+            if layer_data.get("type_name") in (
+                "VectorLayer",
+                "Vector",
+            ) and not layer_data.get("filename", ""):
                 has_online_vector_layers = True
                 break
 
