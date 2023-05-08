@@ -2,7 +2,6 @@ import logging
 
 from django.core.exceptions import ValidationError
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.exceptions import InactiveSubscriptionError, QuotaError
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
@@ -12,6 +11,7 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
+from qfieldcloud.subscription.exceptions import InactiveSubscriptionError, QuotaError
 from qfieldcloud.subscription.models import Subscription
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase

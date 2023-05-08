@@ -2,11 +2,6 @@ import logging
 from unittest import mock
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.exceptions import (
-    InactiveSubscriptionError,
-    PlanInsufficientError,
-    QuotaError,
-)
 from qfieldcloud.core.models import (
     ApplyJob,
     Job,
@@ -14,6 +9,11 @@ from qfieldcloud.core.models import (
     Person,
     ProcessProjectfileJob,
     Project,
+)
+from qfieldcloud.subscription.exceptions import (
+    InactiveSubscriptionError,
+    PlanInsufficientError,
+    QuotaError,
 )
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase

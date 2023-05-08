@@ -3,10 +3,11 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import exceptions, permissions_utils
+from qfieldcloud.core import permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
+from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import generics, permissions, viewsets
 
 User = get_user_model()
@@ -144,9 +145,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if new_owner.useraccount.storage_free_bytes < 0:
             # If not, we rollback the transaction
             # (don't give away numbers in message as it's potentially private)
-            raise exceptions.QuotaError(
-                "Project storage too large for recipient's quota."
-            )
+            raise QuotaError("Project storage too large for recipient's quota.")
 
     def destroy(self, request, projectid):
         # Delete files from storage
