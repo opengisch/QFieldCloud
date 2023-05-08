@@ -6,12 +6,12 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Count, Q
-from qfieldcloud.core.models import Job
+from qfieldcloud.core.models import Job, Project
 from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
     PackageJobRun,
     ProcessProjectfileJobRun,
+    cancel,
 )
 
 SECONDS = 5
@@ -49,42 +49,26 @@ class Command(BaseCommand):
             queued_job = None
 
             with transaction.atomic():
-
-                busy_projects_ids_qs = (
-                    Job.objects.filter(
-                        status=Job.Status.PENDING,
-                    )
-                    .annotate(
-                        active_jobs_count=Count(
-                            "project__jobs",
-                            filter=Q(
-                                project__jobs__status__in=[
-                                    Job.Status.QUEUED,
-                                    Job.Status.STARTED,
-                                ]
-                            ),
-                        )
-                    )
-                    .filter(active_jobs_count__gt=0)
-                    .values("project_id")
-                )
-
-                # select all the pending jobs, that their project has no other active job
+                # select all the pending jobs, that their project is not busy,
+                # i.e. has no other active job
+                self._cleanup_deleted_projects()
                 jobs_qs = (
                     Job.objects.select_for_update(skip_locked=True)
                     .filter(status=Job.Status.PENDING)
-                    .exclude(project_id__in=busy_projects_ids_qs)
+                    .exclude(project__static_status=Project.Status.BUSY)
                     .order_by("created_at")
                 )
 
                 # each `worker_wrapper` or `dequeue.py` script can handle only one job and we handle the oldest
                 queued_job = jobs_qs.first()
 
-                # there might be no jobs in the queue
                 if queued_job:
-                    logging.info(f"Dequeued job {queued_job.id}, run!")
+                    logging.info(f"Dequeued job {queued_job.id}")
+
                     queued_job.status = Job.Status.QUEUED
+                    # NOTE: Updates the project status on pre_save
                     queued_job.save()
+                    break
 
             if queued_job:
                 self._run(queued_job)
@@ -114,3 +98,12 @@ class Command(BaseCommand):
 
         job_run = job_run_class(job.id)
         job_run.run()
+
+    def _cleanup_deleted_projects(self):
+        deleted_projects = Project.objects.filter(static_status=Project.Status.DELETED)
+        for project in deleted_projects:
+            for job in project.jobs.all():
+                if job.status in [Job.Status.QUEUED, Job.Status.STARTED]:
+                    logging.info(f"Cancel job {job.id}!")
+                    cancel(job.container_id)
+            project.delete()

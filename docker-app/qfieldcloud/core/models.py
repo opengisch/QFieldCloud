@@ -15,7 +15,7 @@ from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Q
+from django.db.models import Case, Exists, F, OuterRef, ProtectedError, Q
 from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
@@ -955,6 +955,7 @@ class Project(models.Model):
         OK = "ok", _("Ok")
         BUSY = "busy", _("Busy")
         FAILED = "failed", _("Failed")
+        DELETED = "deleted", _("Deleted")
 
     class StatusCode(models.TextChoices):
         OK = "ok", _("Ok")
@@ -976,6 +977,9 @@ class Project(models.Model):
         ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    static_status = models.CharField(
+        max_length=32, choices=Status.choices, default=Status.OK
+    )
     name = models.CharField(
         max_length=255,
         validators=[
@@ -1211,10 +1215,28 @@ class Project(models.Model):
             )
         )
 
+    @property
+    def can_be_deleted(self) -> bool:
+        return self.static_status != Project.Status.BUSY
+
     def delete(self, *args, **kwargs):
-        if self.thumbnail_uri:
-            storage.delete_project_thumbnail(self)
-        super().delete(*args, **kwargs)
+        if self.can_be_deleted:
+            if self.thumbnail_uri:
+                storage.delete_project_thumbnail(self)
+            super().delete(*args, **kwargs)
+            return
+        try:
+            raise ProtectedError(
+                "Cannot delete busy project. Stop the workers first", self
+            )
+        except ProtectedError:
+            """
+            The next job.delete() call will succeed. It should be called by
+            worker_wrapper after stopping the job worker container.
+            """
+            logger.info("Project not deleted. Waiting to stop related job containers")
+            self.static_status = Project.Status.DELETED
+            self.save()
 
     def clean(self) -> None:
         """
@@ -1538,6 +1560,7 @@ class Job(models.Model):
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
     started_at = models.DateTimeField(blank=True, null=True, editable=False)
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
+    container_id = models.CharField(max_length=64, default="", blank=True)
 
     @property
     def short_id(self) -> str:

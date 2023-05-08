@@ -13,6 +13,7 @@ import docker
 import requests
 from constance import config
 from django.db import transaction
+from django.db.models.signals import pre_save
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
@@ -168,6 +169,7 @@ class JobRun:
 
             self.job.status = Job.Status.FINISHED
             self.job.save()
+            pre_save.send(sender=Job, instance=self.job)
 
             self.after_docker_run()
 
@@ -198,6 +200,8 @@ class JobRun:
                     )
 
                 self.job.save()
+                pre_save.send(sender=Job, instance=self.job)
+
             except Exception as err:
                 logger.error(
                     "Failed to handle exception and update the job status", exc_info=err
@@ -262,6 +266,8 @@ class JobRun:
         )
 
         logger.info(f"Starting worker {container.id} ...")
+        self.job.container_id = container.id
+        self.job.save()
 
         response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
 
@@ -513,3 +519,10 @@ class ProcessProjectfileJobRun(JobRun):
         if project.project_details is not None:
             project.project_details = None
             project.save(update_fields=("project_details",))
+
+
+def cancel(container_id):
+    client = docker.from_env()
+    logger.info(f"Stopping worker {container_id}")
+    container: Container = client.containers.get(container_id)  # type:ignore
+    container.stop()
