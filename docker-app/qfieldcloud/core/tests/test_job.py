@@ -63,8 +63,8 @@ class QfcTestCase(APITestCase):
         )
         self.assertEqual(deltaapply_job.status, Job.Status.PENDING)
 
-    def test_create_job_by_inactive_user(self):
-        subscription = self.user1.useraccount.current_subscription
+    def test_create_job_by_inactive_project_owner(self):
+        subscription = self.project1.owner.useraccount.current_subscription
         subscription.status = Subscription.Status.INACTIVE_DRAFT
         subscription.save()
 
@@ -94,7 +94,7 @@ class QfcTestCase(APITestCase):
         )
         self.assertEqual(job.status, Job.Status.PENDING)
 
-    def test_create_job_if_user_is_over_quota(self):
+    def test_create_job_if_project_owner_is_over_quota(self):
         plan = self.user1.useraccount.current_subscription.plan
 
         # Create a project that uses all the storage
@@ -128,7 +128,7 @@ class QfcTestCase(APITestCase):
         )
         self.assertEqual(job.status, Job.Status.PENDING)
 
-    def test_create_job_on_project_with_online_vector_data_for_unsupported_user_plan(
+    def test_create_job_on_project_with_online_vector_data_for_unsufficient_owner(
         self,
     ):
         # The actual property is tested in qfieldcloud.core.tests.test_packages.QfcTestCase.test_has_no_online_vector_data
@@ -140,7 +140,7 @@ class QfcTestCase(APITestCase):
 
             # Make sure the user's plan does not allow online vector data
             self.assertFalse(
-                self.user1.useraccount.current_subscription.plan.is_external_db_supported
+                self.project1.owner.useraccount.current_subscription.plan.is_external_db_supported
             )
 
             with self.assertRaises(PlanInsufficientError):

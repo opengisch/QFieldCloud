@@ -1576,12 +1576,12 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
-    def raise_insufficient_subscription(self, check_online_layers=True) -> None:
+    def check_can_create_job(self, check_online_layers=True) -> None:
         """
         Prevent creating new jobs if the user is inactive, over quota
         or (optionally) the project has online vector layers (postgis) and his account does not support it
         """
-        useraccount = self.created_by.useraccount
+        useraccount = self.project.owner.useraccount
         current_subscription = useraccount.current_subscription
 
         if not current_subscription.is_active:
@@ -1606,7 +1606,10 @@ class Job(models.Model):
 
 class PackageJob(Job):
     def clean(self):
-        self.raise_insufficient_subscription()
+        # FIXME add to check is newly created - to prevent preventing updating extsting !
+        # if self.instance.pk is None
+        #     validation_A()
+        self.check_can_create_job()
         return super().clean()
 
     def save(self, *args, **kwargs):
@@ -1622,7 +1625,7 @@ class PackageJob(Job):
 class ProcessProjectfileJob(Job):
     def clean(self):
         # exclude online layers from check to allow users to adapt project after downgrading plan
-        self.raise_insufficient_subscription(check_online_layers=False)
+        self.check_can_create_job(check_online_layers=False)
         return super().clean()
 
     def save(self, *args, **kwargs):
