@@ -45,10 +45,7 @@ class QfcTestCase(APITransactionTestCase):
             name="project1", is_public=False, owner=self.user1
         )
 
-        try:
-            delete_db_and_role("test", self.user1.username)
-        except Exception:
-            pass
+        delete_db_and_role("test", self.user1.username)
 
         self.geodb = Geodb.objects.create(
             user=self.user1,
@@ -102,6 +99,7 @@ class QfcTestCase(APITransactionTestCase):
                 == 0
             ):
                 has_no_pending_jobs = True
+                break
 
             time.sleep(1)
 
