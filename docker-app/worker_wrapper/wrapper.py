@@ -106,11 +106,11 @@ class JobRun:
         feedback = {}
 
         try:
+            self.before_docker_run()
+
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
             self.job.save()
-
-            self.before_docker_run()
 
             command = self.get_command()
             volumes = []
