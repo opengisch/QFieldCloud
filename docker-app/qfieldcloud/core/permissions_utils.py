@@ -846,11 +846,7 @@ def check_supported_regarding_owner_account(
     subscription = account.current_subscription
 
     if not subscription.is_active:
-        raise InactiveSubscriptionError(
-            # FIXME {self.__class__.__name__}
-            _("Cannot create job for user with inactive subscription.")
-        )
-
+        raise InactiveSubscriptionError
     if not account.storage_free_bytes > 0:
         raise QuotaError
 
@@ -861,9 +857,7 @@ def check_supported_regarding_owner_account(
             or subscription.plan.is_external_db_supported
         ):
             raise PlanInsufficientError(
-                _(
-                    "Cannot create job on project with online vector data and unsupported subscription plan."
-                )
+                _("Project has online vector data with unsufficient plan .")
             )
     return True
 
