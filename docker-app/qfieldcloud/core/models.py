@@ -1218,12 +1218,14 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
-    def clean(self) -> None:
-        """
-        Prevent creating new projects if the user is inactive or over quota
-        """
+    def check_can_be_created(self):
+        # Check if the object exists
+        if self.pk:
+            return
+
         useraccount = self.owner.useraccount
         current_subscription = useraccount.current_subscription
+
 
         if not current_subscription.is_active:
             raise InactiveSubscriptionError(
@@ -1232,7 +1234,14 @@ class Project(models.Model):
 
         if useraccount.storage_free_bytes < 0:
             raise QuotaError
+            # FIXME del self <add?
 
+
+    def clean(self) -> None:
+        """
+        Prevent creating new projects if the user is inactive or over quota
+        """
+        self.check_can_be_created()
         return super().clean()
 
     def save(self, recompute_storage=False, *args, **kwargs):
@@ -1576,13 +1585,17 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
-    @staticmethod
-    def check_can_create_job(project: Project, check_online_layers=True) -> None:
+    def check_can_be_created(self, check_online_layers=True):
         """
-        Prevent creating new jobs if the user is inactive, over quota
+        Cannot be created if project owner is inactive, over quota
         or (optionally) the project has online vector layers (postgis) and his account does not support it
         """
-        account = project.owner.useraccount
+        # Check if the object exists
+        if self.pk:
+            return
+
+        account = self.project.owner.useraccount
+        # FIXME del self ?
 
         if not account.current_subscription.is_active:
             raise InactiveSubscriptionError(
@@ -1594,7 +1607,7 @@ class Job(models.Model):
 
         if (
             check_online_layers
-            and project.has_online_vector_data
+            and self.project.has_online_vector_data
             and not account.current_subscription.plan.is_external_db_supported
         ):
             raise PlanInsufficientError(
@@ -1605,12 +1618,12 @@ class Job(models.Model):
 
 
 class PackageJob(Job):
-    def __init__(self, *args, **kwargs) -> None:
-        project = kwargs.get("project")
-        self.check_can_create_job(project)
-        super().__init__(*args, **kwargs)
+    def clean(self):
+        self.check_can_be_created()
+        return super().clean()
 
     def save(self, *args, **kwargs):
+        self.clean()
         self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
 
@@ -1620,12 +1633,13 @@ class PackageJob(Job):
 
 
 class ProcessProjectfileJob(Job):
-    def __init__(self, *args, **kwargs) -> None:
-        project = kwargs.get("project")
-        self.check_can_create_job(project, check_online_layers=False)
-        super().__init__(*args, **kwargs)
+    def clean(self):
+        # exclude online layers from check to allow users to adapt project after downgrading plan
+        self.check_can_be_created(check_online_layers=False)
+        return super().clean()
 
     def save(self, *args, **kwargs):
+        self.clean()
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)
 

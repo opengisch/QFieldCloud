@@ -514,6 +514,6 @@ class QfcTestCase(APITransactionTestCase):
         # Cannot create another project if the user's plan is over quota
         with self.assertRaises(QuotaError):
             Project.objects.create(
-                name="p1",
+                name="p2",
                 owner=self.user1,
             )
