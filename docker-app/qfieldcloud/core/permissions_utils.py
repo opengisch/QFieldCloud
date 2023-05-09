@@ -13,6 +13,13 @@ from qfieldcloud.core.models import (
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
+from qfieldcloud.core.models import UserAccount
+from qfieldcloud.subscription.exceptions import (
+    InactiveSubscriptionError,
+    PlanInsufficientError,
+    QuotaError,
+    SubscriptionException,
+)
 from qfieldcloud.subscription.models import Subscription
 
 
@@ -831,3 +838,39 @@ def can_abort_subscription_cancellation(
         subscription.account.user,
         [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
     )
+
+
+def check_supported_regarding_owner_account(
+    account: UserAccount, ignore_online_layers=False
+) -> Literal[True]:
+    subscription = account.current_subscription
+
+    if not subscription.is_active:
+        raise InactiveSubscriptionError(
+            # FIXME {self.__class__.__name__}
+            _("Cannot create job for user with inactive subscription.")
+        )
+
+    if not account.storage_free_bytes > 0:
+        raise QuotaError
+
+    if not ignore_online_layers:
+        # check if the project has online vector data for unsupported plan
+        if not (
+            not account.project.has_online_vector_data
+            or subscription.plan.is_external_db_supported
+        ):
+            raise PlanInsufficientError(
+                _(
+                    "Cannot create job on project with online vector data and unsupported subscription plan."
+                )
+            )
+    return True
+
+
+def is_supported_regarding_owner_account(account: UserAccount) -> bool:
+    try:
+        check_supported_regarding_owner_account(account)
+        return True
+    except (SubscriptionException):
+        return False

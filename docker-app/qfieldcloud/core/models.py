@@ -28,7 +28,6 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
-    PlanInsufficientError,
     QuotaError,
     ReachedMaxOrganizationMembersError,
 )
@@ -1227,12 +1226,12 @@ class Project(models.Model):
 
         if not account.current_subscription.is_active:
             raise InactiveSubscriptionError(
+                # FIXME {self.__class__.__name__}
                 _("Cannot create job for user with inactive subscription.")
             )
 
         if account.storage_free_bytes < 0:
             raise QuotaError
-            # FIXME del self <add?
 
     def clean(self) -> None:
         """
@@ -1421,65 +1420,7 @@ class ProjectRolesView(models.Model):
         managed = False
 
 
-class AbstractValidatedProjectOwner(models.Model):
-    """ "
-    Assumes a foreign key field 'project' for a Project
-    """
-
-    class Meta:
-        abstract = True
-
-    @property
-    def account(self):
-        return self.project.owner.useraccount
-
-    @property
-    def is_supported_regarding_online_vector_data(self) -> bool:
-        return (
-            not self.project.has_online_vector_data
-            or self.account.current_subscription.plan.is_external_db_supported
-        )
-
-    @property
-    def is_active(self) -> bool:
-        return self.account.current_subscription.is_active
-
-    @property
-    def has_free_storage(self) -> bool:
-        return self.account.storage_free_bytes > 0
-
-    @property
-    def is_supported_regarding_owner_account(self) -> bool:
-        return (
-            self.is_supported_regarding_online_vector_data
-            and self.is_active
-            and self.has_free_storage
-        )
-
-    def check_supported_regarding_owner_account(
-        self, ignore_online_layers=False
-    ) -> None:
-        # Check if the object exists
-        if not self._state.adding:
-            return
-
-        if not self.is_active:
-            raise InactiveSubscriptionError(
-                _("Cannot create job for user with inactive subscription.")
-            )
-
-        if not self.has_free_storage:
-            raise QuotaError
-
-        if not (ignore_online_layers or self.is_supported_regarding_online_vector_data):
-            raise PlanInsufficientError(
-                _(
-                    "Cannot create job on project with online vector data and unsupported subscription plan."
-                )
-            )
-
-
-class Delta(AbstractValidatedProjectOwner):
+class Delta(models.Model):
     class Method(str, Enum):
         Create = "create"
         Delete = "delete"
@@ -1562,8 +1503,17 @@ class Delta(AbstractValidatedProjectOwner):
     def method(self):
         return self.content.get("method")
 
+    @property
+    def is_supported_regarding_owner_account(self):
 
-class Job(AbstractValidatedProjectOwner):
+        from qfieldcloud.core.permissions_utils import (
+            is_supported_regarding_owner_account,
+        )
+
+        return is_supported_regarding_owner_account(self.project.owner.useraccount)
+
+
+class Job(models.Model):
 
     objects = InheritanceManager()
 
@@ -1633,8 +1583,18 @@ class Job(AbstractValidatedProjectOwner):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
+    def check_can_be_created(self, ignore_online_layers=False):
+        # Check if the object exists
+        if self._state.adding:
+
+            from qfieldcloud.core.permissions_utils import (
+                check_supported_regarding_owner_account,
+            )
+
+            check_supported_regarding_owner_account(ignore_online_layers)
+
     def clean(self):
-        self.check_supported_regarding_owner_account()
+        self.check_can_be_created()
         return super().clean()
 
 
@@ -1651,8 +1611,8 @@ class PackageJob(Job):
 
 class ProcessProjectfileJob(Job):
     # exclude online layers from check to allow users to adapt project after downgrading plan
-    def check_supported_regarding_owner_account(self):
-        super().check_supported_regarding_owner_account(ignore_online_layers=True)
+    def check_can_be_created(self):
+        super().check_can_be_created(ignore_online_layers=True)
 
     def save(self, *args, **kwargs):
         self.clean()
