@@ -480,33 +480,9 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_push_delta_allowed_for_insufficient_subscription(self):
         """
-        Test that deltas can always be pushed, even if project owner
-        (token3) is inactive or over qouta.
+        Test that deltas can always be pushed, even if project has
+        unsoppurted online layer or owner (token3) is inactive or over qouta .
         """
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
-        project = self.upload_project_files(self.project1)
-
-        subscription = project.owner.useraccount.current_subscription
-        subscription.status = Subscription.Status.INACTIVE_DRAFT
-        subscription.save()
-
-        plan = subscription.plan
-        # Make sure the user's plan is inactive and does not allow online vector data
-        self.assertFalse(subscription.is_active)
-        self.assertFalse(plan.is_external_db_supported)
-
-        # Make project use all available storage
-        project.file_storage_bytes = (plan.storage_mb * 1000 * 1000) + 1
-        project.save()
-
-        # Check can still upload deltas
-        self.assertTrue(self.upload_deltas(project, "singlelayer_singledelta.json"))
-        delta = Delta.objects.latest("created_at")
-        self.assertEqual(delta.last_status, Delta.Status.UNPERMITTED)
-        # No apply job is created
-        self.assertEqual(delta.jobs_to_apply.count(), 0)
-
-    def test_push_delta_when_unsopported_online_vector_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
         project = self.upload_project_files(self.project1)
 
@@ -515,11 +491,23 @@ class QfcTestCase(APITransactionTestCase):
         ) as mock_has_online_vector_data:
             mock_has_online_vector_data.return_value = True
             self.assertTrue(project.has_online_vector_data)
+            subscription = project.owner.useraccount.current_subscription
+            subscription.status = Subscription.Status.INACTIVE_DRAFT
+            subscription.save()
+
+            plan = subscription.plan
+            # Make sure the user's plan is inactive and does not allow online vector data
+            self.assertFalse(subscription.is_active)
+            self.assertFalse(plan.is_external_db_supported)
+
+            # Make project use all available storage
+            project.file_storage_bytes = (plan.storage_mb * 1000 * 1000) + 1
+            project.save()
 
             # Check can still upload deltas
             self.assertTrue(self.upload_deltas(project, "singlelayer_singledelta.json"))
             delta = Delta.objects.latest("created_at")
-            self.assertEqual(delta.last_status, Delta.Status.UNPERMITTED)
+            self.assertEqual(delta.last_status, Delta.Status.PENDING)
             # No apply job is created
             self.assertEqual(delta.jobs_to_apply.count(), 0)
 
