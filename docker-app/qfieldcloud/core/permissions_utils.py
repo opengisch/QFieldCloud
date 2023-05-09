@@ -856,7 +856,9 @@ def check_supported_regarding_owner_account(
             and not subscription.plan.is_external_db_supported
         ):
             raise PlanInsufficientError(
-                _("Project has online vector data with unsufficient plan .")
+                _(
+                    "Owner's subscription plan does not support online vector layer datasource."
+                )
             )
     return True
 
