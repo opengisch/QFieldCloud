@@ -1583,13 +1583,18 @@ class Job(models.Model):
             check_supported_regarding_owner_account(self.project, ignore_online_layers)
 
     def clean(self):
-        self.check_can_be_created()
+        if self._state.adding:
+            self.check_can_be_created()
+
         return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
 
 class PackageJob(Job):
     def save(self, *args, **kwargs):
-        self.clean()
         self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
 
@@ -1604,7 +1609,6 @@ class ProcessProjectfileJob(Job):
         super().check_can_be_created(ignore_online_layers=True)
 
     def save(self, *args, **kwargs):
-        self.clean()
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)
 
@@ -1627,7 +1631,6 @@ class ApplyJob(Job):
     )
 
     def save(self, *args, **kwargs):
-        self.clean()
         self.type = self.Type.DELTA_APPLY
         return super().save(*args, **kwargs)
 
