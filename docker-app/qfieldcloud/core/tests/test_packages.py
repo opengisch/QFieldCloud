@@ -8,7 +8,6 @@ from typing import List, Tuple
 import psycopg2
 from django.http import FileResponse
 from django.utils import timezone
-from qfieldcloud.subscription.models import Plan
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import (
@@ -25,6 +24,7 @@ from qfieldcloud.core.models import (
     TeamMember,
 )
 from qfieldcloud.core.utils2.storage import get_stored_package_ids
+from qfieldcloud.subscription.models import Plan
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
