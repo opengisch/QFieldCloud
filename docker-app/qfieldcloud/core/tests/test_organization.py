@@ -230,6 +230,7 @@ class QfcTestCase(APITestCase):
             deltafile_id=uuid.uuid4(),
             project=project1,
             content="delta",
+            client_id=uuid.uuid4(),
             created_by=self.user2,
         )
         # There is still 1 billable user

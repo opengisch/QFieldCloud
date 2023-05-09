@@ -377,14 +377,14 @@ class DeltaApplyJobRun(JobRun):
                 delta_client_ids.append(delta.content["clientId"])
 
         local_to_remote_pk_deltas = Delta.objects.filter(
-            content__clientId__in=delta_client_ids,
+            client_id__in=delta_client_ids,
             last_modified_pk__isnull=False,
-        ).values("content__clientId", "content__localPk", "last_modified_pk")
+        ).values("client_id", "content__localPk", "last_modified_pk")
 
         client_pks_map = {}
 
         for delta in local_to_remote_pk_deltas:
-            key = f"{delta['content__clientId']}__{delta['content__localPk']}"
+            key = f"{delta['client_id']}__{delta['content__localPk']}"
             client_pks_map[key] = delta["last_modified_pk"]
 
         deltafile_contents = {
