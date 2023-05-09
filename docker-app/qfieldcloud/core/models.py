@@ -26,11 +26,7 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils2 import storage
-from qfieldcloud.subscription.exceptions import (
-    InactiveSubscriptionError,
-    QuotaError,
-    ReachedMaxOrganizationMembersError,
-)
+from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -1218,20 +1214,14 @@ class Project(models.Model):
         super().delete(*args, **kwargs)
 
     def check_can_be_created(self):
-        # Check if the object exists
-        if not self._state.adding:
-            return
+        # Check if the object is being created
+        if self._state.adding:
 
-        account = self.owner.useraccount
-
-        if not account.current_subscription.is_active:
-            raise InactiveSubscriptionError(
-                # FIXME {self.__class__.__name__}
-                _("Cannot create job for user with inactive subscription.")
+            from qfieldcloud.core.permissions_utils import (
+                check_supported_regarding_owner_account,
             )
 
-        if account.storage_free_bytes < 0:
-            raise QuotaError
+            check_supported_regarding_owner_account(self, ignore_online_layers=True)
 
     def clean(self) -> None:
         """
@@ -1510,7 +1500,7 @@ class Delta(models.Model):
             is_supported_regarding_owner_account,
         )
 
-        return is_supported_regarding_owner_account(self.project.owner.useraccount)
+        return is_supported_regarding_owner_account(self.project)
 
 
 class Job(models.Model):
@@ -1584,14 +1574,14 @@ class Job(models.Model):
             )
 
     def check_can_be_created(self, ignore_online_layers=False):
-        # Check if the object exists
+        # Check if the object is being created
         if self._state.adding:
 
             from qfieldcloud.core.permissions_utils import (
                 check_supported_regarding_owner_account,
             )
 
-            check_supported_regarding_owner_account(ignore_online_layers)
+            check_supported_regarding_owner_account(self.project, ignore_online_layers)
 
     def clean(self):
         self.check_can_be_created()
