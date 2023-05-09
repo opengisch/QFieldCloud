@@ -1599,8 +1599,8 @@ class PackageJob(Job):
 
 
 class ProcessProjectfileJob(Job):
-    # exclude online layers from check to allow users to adapt project after downgrading plan
     def check_can_be_created(self):
+        # exclude online layers from check to allow users to adapt project after downgrading plan
         super().check_can_be_created(ignore_online_layers=True)
 
     def save(self, *args, **kwargs):
