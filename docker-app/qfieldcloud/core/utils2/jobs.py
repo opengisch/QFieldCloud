@@ -6,7 +6,6 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from qfieldcloud.core import exceptions
-from qfieldcloud.core.permissions_utils import is_supported_regarding_owner_account
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ def apply_deltas(
     )
 
     # 1. Check if project owner is permitted to trigger a job.
-    if not is_supported_regarding_owner_account(project):
+    if not project.owner_can_create_job:
         return None
 
     # 2. Check if there are any pending deltas.

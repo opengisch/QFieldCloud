@@ -1213,6 +1213,15 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
+    @property
+    def owner_can_create_job(self):
+
+        from qfieldcloud.core.permissions_utils import (
+            is_supported_regarding_owner_account,
+        )
+
+        return is_supported_regarding_owner_account(self)
+
     def check_can_be_created(self):
         # Check if the object is being created
         if self._state.adding:
@@ -1492,15 +1501,6 @@ class Delta(models.Model):
     @property
     def method(self):
         return self.content.get("method")
-
-    @property
-    def is_supported_regarding_owner_account(self):
-
-        from qfieldcloud.core.permissions_utils import (
-            is_supported_regarding_owner_account,
-        )
-
-        return is_supported_regarding_owner_account(self.project)
 
 
 class Job(models.Model):
