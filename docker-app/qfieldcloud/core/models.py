@@ -1215,6 +1215,7 @@ class Project(models.Model):
 
     @property
     def owner_can_create_job(self):
+        # NOTE consider including in status refactoring
 
         from qfieldcloud.core.permissions_utils import (
             is_supported_regarding_owner_account,
