@@ -502,7 +502,7 @@ class QfcTestCase(APITransactionTestCase):
         # Check can still upload deltas
         self.assertTrue(self.upload_deltas(project, "singlelayer_singledelta.json"))
         delta = Delta.objects.latest("created_at")
-        self.assertEqual(delta.last_status, Delta.Status.PENDING)
+        self.assertEqual(delta.last_status, Delta.Status.UNPERMITTED)
         # No apply job is created
         self.assertEqual(delta.jobs_to_apply.count(), 0)
 
