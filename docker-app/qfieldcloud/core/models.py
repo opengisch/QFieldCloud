@@ -1421,7 +1421,65 @@ class ProjectRolesView(models.Model):
         managed = False
 
 
-class Delta(models.Model):
+class AbstractValidatedProjectOwner(models.Model):
+    """ "
+    Assumes a foreign key field 'project' for a Project
+    """
+
+    class Meta:
+        abstract = True
+
+    @property
+    def account(self):
+        return self.project.owner.useraccount
+
+    @property
+    def is_supported_regarding_online_vector_data(self) -> bool:
+        return (
+            not self.project.has_online_vector_data
+            or self.account.current_subscription.plan.is_external_db_supported
+        )
+
+    @property
+    def is_active(self) -> bool:
+        return self.account.current_subscription.is_active
+
+    @property
+    def has_free_storage(self) -> bool:
+        return self.account.storage_free_bytes > 0
+
+    @property
+    def is_supported_regarding_owner_account(self) -> bool:
+        return (
+            self.is_supported_regarding_online_vector_data
+            and self.is_active
+            and self.has_free_storage
+        )
+
+    def check_supported_regarding_owner_account(
+        self, ignore_online_layers=False
+    ) -> None:
+        # Check if the object exists
+        if not self._state.adding:
+            return
+
+        if not self.is_active:
+            raise InactiveSubscriptionError(
+                _("Cannot create job for user with inactive subscription.")
+            )
+
+        if not self.has_free_storage:
+            raise QuotaError
+
+        if not (ignore_online_layers or self.is_supported_regarding_online_vector_data):
+            raise PlanInsufficientError(
+                _(
+                    "Cannot create job on project with online vector data and unsupported subscription plan."
+                )
+            )
+
+
+class Delta(AbstractValidatedProjectOwner):
     class Method(str, Enum):
         Create = "create"
         Delete = "delete"
@@ -1504,15 +1562,8 @@ class Delta(models.Model):
     def method(self):
         return self.content.get("method")
 
-    @property
-    def is_supported_regarding_owner_account(self):
-        return (
-            not self.project.has_online_vector_data
-            or self.project.owner.useraccount.current_subscription.plan.is_external_db_supported
-        )
 
-
-class Job(models.Model):
+class Job(AbstractValidatedProjectOwner):
 
     objects = InheritanceManager()
 
@@ -1582,43 +1633,12 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
-    def check_can_be_created(self, check_online_layers=True):
-        """
-        Cannot be created if project owner is inactive, over quota
-        or (optionally) the project has online vector layers (postgis) and his account does not support it
-        """
-        # Check if the object exists
-        if not self._state.adding:
-            return
-
-        account = self.project.owner.useraccount
-        # FIXME del self ?
-
-        if not account.current_subscription.is_active:
-            raise InactiveSubscriptionError(
-                _("Cannot create job for user with inactive subscription.")
-            )
-
-        if account.storage_free_bytes < 0:
-            raise QuotaError
-
-        if (
-            check_online_layers
-            and self.project.has_online_vector_data
-            and not account.current_subscription.plan.is_external_db_supported
-        ):
-            raise PlanInsufficientError(
-                _(
-                    "Cannot create job on project with online vector data and unsupported subscription plan."
-                )
-            )
+    def clean(self):
+        self.check_supported_regarding_owner_account()
+        return super().clean()
 
 
 class PackageJob(Job):
-    def clean(self):
-        self.check_can_be_created()
-        return super().clean()
-
     def save(self, *args, **kwargs):
         self.clean()
         self.type = self.Type.PACKAGE
@@ -1630,10 +1650,9 @@ class PackageJob(Job):
 
 
 class ProcessProjectfileJob(Job):
-    def clean(self):
-        # exclude online layers from check to allow users to adapt project after downgrading plan
-        self.check_can_be_created(check_online_layers=False)
-        return super().clean()
+    # exclude online layers from check to allow users to adapt project after downgrading plan
+    def check_supported_regarding_owner_account(self):
+        super().check_supported_regarding_owner_account(ignore_online_layers=True)
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -1659,6 +1678,7 @@ class ApplyJob(Job):
     )
 
     def save(self, *args, **kwargs):
+        self.clean()
         self.type = self.Type.DELTA_APPLY
         return super().save(*args, **kwargs)
 

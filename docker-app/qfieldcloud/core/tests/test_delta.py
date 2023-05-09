@@ -503,7 +503,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(self.upload_deltas(project, "singlelayer_singledelta.json"))
         delta = Delta.objects.latest("created_at")
         self.assertEqual(delta.last_status, Delta.Status.PENDING)
-        self.assertEqual(delta.jobs_to_apply.count(), 1)
+        # No apply job is created
+        self.assertEqual(delta.jobs_to_apply.count(), 0)
 
     def test_push_delta_when_unsopported_online_vector_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
