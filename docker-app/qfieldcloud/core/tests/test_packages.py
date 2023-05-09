@@ -658,6 +658,10 @@ class QfcTestCase(APITransactionTestCase):
             )
 
     def test_outdated_packaged_files_are_deleted(self):
+        subscription = self.user1.useraccount.current_subscription
+        subscription.plan.is_external_db_supported = True
+        subscription.plan.save()
+
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
         self.conn.commit()
