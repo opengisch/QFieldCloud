@@ -35,6 +35,23 @@ class QfcTestCase(APITestCase):
         self.project1 = Project.objects.create(
             name="project1", owner=self.user1, description="desc", is_public=False
         )
+        self.job = Job.objects.create(
+            type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+        )
+        self.package_job = PackageJob.objects.create(
+            type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+        )
+        self.processprojectfile_job = ProcessProjectfileJob.objects.create(
+            type=Job.Type.PROCESS_PROJECTFILE,
+            project=self.project1,
+            created_by=self.user1,
+        )
+        self.delta_apply_job = ApplyJob.objects.create(
+            type=Job.Type.DELTA_APPLY,
+            project=self.project1,
+            created_by=self.user1,
+            overwrite_conflicts=True,
+        )
 
     def test_create_job_succesfully(self):
         # Test can create all types of jobs successfully
@@ -43,10 +60,7 @@ class QfcTestCase(APITestCase):
         )
         self.assertEqual(job.status, Job.Status.PENDING)
 
-        package_job = PackageJob.objects.create(
-            type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
-        )
-        self.assertEqual(package_job.status, Job.Status.PENDING)
+        self.assertEqual(self.package_job.status, Job.Status.PENDING)
 
         processprojectfile_job = ProcessProjectfileJob.objects.create(
             type=Job.Type.PROCESS_PROJECTFILE,
@@ -85,7 +99,7 @@ class QfcTestCase(APITestCase):
                 created_by=self.user1,
             )
 
-        # Cannot still create delta apply job if user's subscription is inactive
+        # Can still create delta apply job if user's subscription is inactive
         job = ApplyJob.objects.create(
             type=Job.Type.DELTA_APPLY,
             project=self.project1,
@@ -93,6 +107,12 @@ class QfcTestCase(APITestCase):
             overwrite_conflicts=True,
         )
         self.assertEqual(job.status, Job.Status.PENDING)
+
+        # Can still modify existing job
+        self.package_job.status = Job.Status.FAILED
+        self.package_job.save()
+
+        self.check_can_update_existing_jobs()
 
     def test_create_job_if_project_owner_is_over_quota(self):
         plan = self.user1.useraccount.current_subscription.plan
@@ -110,7 +130,6 @@ class QfcTestCase(APITestCase):
             PackageJob.objects.create(
                 type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
             )
-
         # Cannot create processprojectfile job if the user's plan is over quota
         with self.assertRaises(QuotaError):
             ProcessProjectfileJob.objects.create(
@@ -119,7 +138,7 @@ class QfcTestCase(APITestCase):
                 created_by=self.user1,
             )
 
-        # Cant still create delta apply job if the user's plan is over quota
+        # Can still create delta apply job if the user's plan is over quota
         job = ApplyJob.objects.create(
             type=Job.Type.DELTA_APPLY,
             project=self.project1,
@@ -127,6 +146,8 @@ class QfcTestCase(APITestCase):
             overwrite_conflicts=True,
         )
         self.assertEqual(job.status, Job.Status.PENDING)
+
+        self.check_can_update_existing_jobs()
 
     def test_create_job_on_project_with_online_vector_data_for_unsufficient_owner(
         self,
@@ -154,7 +175,7 @@ class QfcTestCase(APITestCase):
                     type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
                 )
 
-            # Cant still create processprojectfile with a project that has online vector data
+            # Can still create processprojectfile with a project that has online vector data
             processprojectfile_job = ProcessProjectfileJob.objects.create(
                 type=Job.Type.PROCESS_PROJECTFILE,
                 project=self.project1,
@@ -162,7 +183,7 @@ class QfcTestCase(APITestCase):
             )
             self.assertEqual(processprojectfile_job.status, Job.Status.PENDING)
 
-            # Cant still create delta apply with a project that has online vector data
+            # Can still create delta apply with a project that has online vector data
             delta_apply = ApplyJob.objects.create(
                 type=Job.Type.DELTA_APPLY,
                 project=self.project1,
@@ -170,3 +191,19 @@ class QfcTestCase(APITestCase):
                 overwrite_conflicts=True,
             )
             self.assertEqual(delta_apply.status, Job.Status.PENDING)
+
+            self.check_can_update_existing_jobs()
+
+    def check_can_update_existing_jobs(self):
+        # Can update existing jobs
+        self.job.status = Job.Status.FAILED
+        self.job.save()
+
+        self.package_job.status = Job.Status.FAILED
+        self.package_job.save()
+
+        self.processprojectfile_job.status = Job.Status.FAILED
+        self.processprojectfile_job.save()
+
+        self.delta_apply_job.status = Job.Status.FAILED
+        self.delta_apply_job.save()

@@ -1220,22 +1220,19 @@ class Project(models.Model):
 
     def check_can_be_created(self):
         # Check if the object exists
-        if self.pk:
+        if not self._state.adding:
             return
 
-        useraccount = self.owner.useraccount
-        current_subscription = useraccount.current_subscription
+        account = self.owner.useraccount
 
-
-        if not current_subscription.is_active:
+        if not account.current_subscription.is_active:
             raise InactiveSubscriptionError(
                 _("Cannot create job for user with inactive subscription.")
             )
 
-        if useraccount.storage_free_bytes < 0:
+        if account.storage_free_bytes < 0:
             raise QuotaError
             # FIXME del self <add?
-
 
     def clean(self) -> None:
         """
@@ -1591,7 +1588,7 @@ class Job(models.Model):
         or (optionally) the project has online vector layers (postgis) and his account does not support it
         """
         # Check if the object exists
-        if self.pk:
+        if not self._state.adding:
             return
 
         account = self.project.owner.useraccount

@@ -9,7 +9,6 @@ import rest_framework
 from django.http.response import FileResponse, HttpResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
-from qfieldcloud.subscription.models import Subscription
 from qfieldcloud.core.models import (
     Delta,
     Job,
@@ -19,6 +18,7 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
 )
+from qfieldcloud.subscription.models import Subscription
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 from shapely.geometry import shape
@@ -500,9 +500,7 @@ class QfcTestCase(APITransactionTestCase):
             plan = subscription.plan
             # Make sure the user's plan is inactive and does not allow online vector data
             self.assertFalse(subscription.is_active)
-            self.assertFalse(
-                plan.is_external_db_supported
-            )
+            self.assertFalse(plan.is_external_db_supported)
 
             # Make project use all available storage
             project.file_storage_bytes = (plan.storage_mb * 1000 * 1000) + 1
