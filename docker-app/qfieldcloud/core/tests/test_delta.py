@@ -477,7 +477,65 @@ class QfcTestCase(APITransactionTestCase):
         json = response.json()
         self.assertEqual(json["code"], "object_not_found")
 
+    def test_push_delta_allowed_for_unsufficient_subscription(self):
+        # Test that deltas can always be pushed, even if the subscription is not sufficient
+        # Collaborator with Role REPORTER
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+        project = self.upload_project_files(self.project1)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta.json",
+            token=self.token2.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
+                    "STATUS_APPLIED",
+                    self.user2.username,
+                ]            
+                ],
+        )
+    #     self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+    #     project = self.upload_project_files(self.project1)
+
+    #     #FIXME
+    #     # check upload works for inactive subscription, over quota, online vector data
+    #     with mock.patch.object(
+    #         Project, "has_online_vector_data", new_callable=mock.PropertyMock
+    #     ) as mock_has_online_vector_data:
+    #         mock_has_online_vector_data.return_value = True
+    #         self.assertTrue(self.project1.has_online_vector_data)
+
+    #         self.assertFalse(subscription.is_active)
+    #         # Make sure the user's plan does not allow online vector data
+    #         self.assertFalse(
+    #             self.user1.useraccount.current_subscription.plan.is_external_db_supported
+    #         )
+
+    #         with self.assertRaises(PlanInsufficientError):
+    #             PackageJob.objects.create(
+    #                 type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+    #             )
+
+    #         plan = self.user1.useraccount.current_subscription.plan
+
+    #         # Create a project that uses all the storage
+    #         more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
+    #         Project.objects.create(
+    #             name="p1",
+    #             owner=self.user1,
+    #             file_storage_bytes=more_bytes_than_plan,
+    #         )
+
+    #         subscription = self.user1.useraccount.current_subscription
+    #         subscription.status = Subscription.Status.INACTIVE_DRAFT
+    #         subscription.save()
+
+
+
+
     def test_push_delta_not_allowed(self):
+        # Check collaborator with Role REPORTER cannot push a delta of a modified feature (PATCH)
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
         project = self.upload_project_files(self.project1)
 
