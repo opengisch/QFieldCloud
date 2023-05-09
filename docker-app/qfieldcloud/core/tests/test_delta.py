@@ -478,14 +478,36 @@ class QfcTestCase(APITransactionTestCase):
         json = response.json()
         self.assertEqual(json["code"], "object_not_found")
 
-    def test_push_delta_allowed_for_any_subscription_status(self):
-        # Test that deltas can always be pushed, even if the subscription is not sufficient for collaborator (token2)
+    def test_push_delta_allowed_for_insufficient_subscription(self):
+        """
+        Test that deltas can always be pushed, even if project owner
+        (token3) is inactive or over qouta.
+        """
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
-        project = Project.objects.create(
-            name="test",
-            owner=self.user3,
-        )
-        project = self.upload_project_files(project)
+        project = self.upload_project_files(self.project1)
+
+        subscription = project.owner.useraccount.current_subscription
+        subscription.status = Subscription.Status.INACTIVE_DRAFT
+        subscription.save()
+
+        plan = subscription.plan
+        # Make sure the user's plan is inactive and does not allow online vector data
+        self.assertFalse(subscription.is_active)
+        self.assertFalse(plan.is_external_db_supported)
+
+        # Make project use all available storage
+        project.file_storage_bytes = (plan.storage_mb * 1000 * 1000) + 1
+        project.save()
+
+        # Check can still upload deltas
+        self.assertTrue(self.upload_deltas(project, "singlelayer_singledelta.json"))
+        delta = Delta.objects.latest("created_at")
+        self.assertEqual(delta.last_status, Delta.Status.PENDING)
+        self.assertEqual(delta.jobs_to_apply.count(), 1)
+
+    def test_push_delta_when_unsopported_online_vector_layer(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+        project = self.upload_project_files(self.project1)
 
         with mock.patch.object(
             Project, "has_online_vector_data", new_callable=mock.PropertyMock
@@ -493,32 +515,12 @@ class QfcTestCase(APITransactionTestCase):
             mock_has_online_vector_data.return_value = True
             self.assertTrue(project.has_online_vector_data)
 
-            subscription = project.owner.useraccount.current_subscription
-            subscription.status = Subscription.Status.INACTIVE_DRAFT
-            subscription.save()
-
-            plan = subscription.plan
-            # Make sure the user's plan is inactive and does not allow online vector data
-            self.assertFalse(subscription.is_active)
-            self.assertFalse(plan.is_external_db_supported)
-
-            # Make project use all available storage
-            project.file_storage_bytes = (plan.storage_mb * 1000 * 1000) + 1
-            project.save()
-
             # Check can still upload deltas
-            self.upload_and_check_deltas(
-                project=project,
-                delta_filename="singlelayer_singledelta.json",
-                token=self.token3.key,
-                final_values=[
-                    [
-                        "9311eb96-bff8-4d5b-ab36-c314a007cfcd",
-                        "STATUS_APPLIED",
-                        self.user3.username,
-                    ]
-                ],
-            )
+            self.assertTrue(self.upload_deltas(project, "singlelayer_singledelta.json"))
+            delta = Delta.objects.latest("created_at")
+            self.assertEqual(delta.last_status, Delta.Status.UNPERMITTED)
+            # No apply job is created
+            self.assertEqual(delta.jobs_to_apply.count(), 0)
 
     def test_push_delta_not_allowed(self):
         # Check collaborator with Role REPORTER cannot push a delta of a modified feature (PATCH)
