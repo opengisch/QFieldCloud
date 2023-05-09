@@ -1101,13 +1101,11 @@ class Project(models.Model):
     def has_online_vector_data(self) -> Optional[bool]:
         """Returns None if project details or layers details are not available"""
 
-        # it's safer to assume there is an online vector layer
         if not self.project_details:
             return None
 
         layers_by_id = self.project_details.get("layers_by_id")
 
-        # it's safer to assume there is an online vector layer
         if layers_by_id is None:
             return None
 
