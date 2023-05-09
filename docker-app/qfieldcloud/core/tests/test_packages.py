@@ -8,6 +8,7 @@ from typing import List, Tuple
 import psycopg2
 from django.http import FileResponse
 from django.utils import timezone
+from qfieldcloud.subscription.models import Plan
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import (
@@ -686,6 +687,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIn(str(old_package.id), stored_package_ids)
         self.assertEqual(len(stored_package_ids), 1)
 
+        # Enable the external db support on the user plan
+        Plan.objects.all().update(is_external_db_supported=True)
         self.check_package(
             self.token1.key,
             self.project1,
