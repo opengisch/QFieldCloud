@@ -1576,26 +1576,26 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
-    def check_can_create_job(self, check_online_layers=True) -> None:
+    @staticmethod
+    def check_can_create_job(project: Project, check_online_layers=True) -> None:
         """
         Prevent creating new jobs if the user is inactive, over quota
         or (optionally) the project has online vector layers (postgis) and his account does not support it
         """
-        useraccount = self.project.owner.useraccount
-        current_subscription = useraccount.current_subscription
+        account = project.owner.useraccount
 
-        if not current_subscription.is_active:
+        if not account.current_subscription.is_active:
             raise InactiveSubscriptionError(
                 _("Cannot create job for user with inactive subscription.")
             )
 
-        if useraccount.storage_free_bytes < 0:
+        if account.storage_free_bytes < 0:
             raise QuotaError
 
         if (
             check_online_layers
-            and self.project.has_online_vector_data
-            and not current_subscription.plan.is_external_db_supported
+            and project.has_online_vector_data
+            and not account.current_subscription.plan.is_external_db_supported
         ):
             raise PlanInsufficientError(
                 _(
@@ -1605,15 +1605,12 @@ class Job(models.Model):
 
 
 class PackageJob(Job):
-    def clean(self):
-        # FIXME add to check is newly created - to prevent preventing updating extsting !
-        # if self.instance.pk is None
-        #     validation_A()
-        self.check_can_create_job()
-        return super().clean()
+    def __init__(self, *args, **kwargs) -> None:
+        project = kwargs.get("project")
+        self.check_can_create_job(project)
+        super().__init__(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        self.clean()
         self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
 
@@ -1623,13 +1620,12 @@ class PackageJob(Job):
 
 
 class ProcessProjectfileJob(Job):
-    def clean(self):
-        # exclude online layers from check to allow users to adapt project after downgrading plan
-        self.check_can_create_job(check_online_layers=False)
-        return super().clean()
+    def __init__(self, *args, **kwargs) -> None:
+        project = kwargs.get("project")
+        self.check_can_create_job(project, check_online_layers=False)
+        super().__init__(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        self.clean()
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)
 
