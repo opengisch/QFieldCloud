@@ -840,7 +840,7 @@ def can_abort_subscription_cancellation(
 
 
 def check_supported_regarding_owner_account(
-    project: Project, ignore_online_layers=False
+    project: Project, ignore_online_layers: bool = False
 ) -> Literal[True]:
     account = project.owner.useraccount
     subscription = account.current_subscription
