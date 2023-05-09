@@ -851,10 +851,9 @@ def check_supported_regarding_owner_account(
         raise QuotaError
 
     if not ignore_online_layers:
-        # check if the project has online vector data for unsupported plan
-        if not (
-            not project.has_online_vector_data
-            or subscription.plan.is_external_db_supported
+        if (
+            project.has_online_vector_data
+            and not subscription.plan.is_external_db_supported
         ):
             raise PlanInsufficientError(
                 _("Project has online vector data with unsufficient plan .")
