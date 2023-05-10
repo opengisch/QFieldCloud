@@ -13,6 +13,12 @@ from qfieldcloud.core.models import (
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
+from qfieldcloud.subscription.exceptions import (
+    InactiveSubscriptionError,
+    PlanInsufficientError,
+    QuotaError,
+    SubscriptionException,
+)
 from qfieldcloud.subscription.models import Subscription
 
 
@@ -831,3 +837,34 @@ def can_abort_subscription_cancellation(
         subscription.account.user,
         [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
     )
+
+
+def check_supported_regarding_owner_account(
+    project: Project, ignore_online_layers: bool = False
+) -> Literal[True]:
+    account = project.owner.useraccount
+    subscription = account.current_subscription
+
+    if not subscription.is_active:
+        raise InactiveSubscriptionError
+    if not account.storage_free_bytes > 0:
+        raise QuotaError
+
+    if not ignore_online_layers:
+        if (
+            project.has_online_vector_data
+            and not subscription.plan.is_external_db_supported
+        ):
+            raise PlanInsufficientError(
+                _(
+                    "Owner's subscription plan does not support online vector layer datasource."
+                )
+            )
+    return True
+
+
+def is_supported_regarding_owner_account(project: Project) -> bool:
+    try:
+        return check_supported_regarding_owner_account(project)
+    except (SubscriptionException):
+        return False

@@ -109,15 +109,15 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                                 "User has no rights to create delta on this project. Try inviting him as a collaborator with proper permissions and try again."
                             )
                         }
-                    elif not delta_obj.is_supported_regarding_owner_account:
-                        delta_obj.last_status = Delta.Status.UNPERMITTED
-                        delta_obj.last_feedback = {
-                            "msg": _(
-                                "Some features of this project are not supported by the owner's account. Either upgrade the account or ensure you're not using features such as remote layers, then try again."
-                            )
-                        }
                     else:
                         delta_obj.last_status = Delta.Status.PENDING
+
+                        if not delta_obj.project.owner_can_create_job:
+                            delta_obj.last_feedback = {
+                                "msg": _(
+                                    "Some features of this project are not supported by the owner's account. Deltas are created but kept pending. Either upgrade the account or ensure you're not using features such as remote layers, then try again."
+                                )
+                            }
 
                     delta_obj.save(force_insert=True)
                     created_deltas.append(delta_obj)
