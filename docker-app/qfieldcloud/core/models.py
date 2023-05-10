@@ -1435,6 +1435,7 @@ class Delta(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deltafile_id = models.UUIDField(db_index=True)
+    client_id = models.UUIDField(null=False, db_index=True, editable=False)
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,

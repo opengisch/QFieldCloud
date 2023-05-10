@@ -97,6 +97,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                         deltafile_id=deltafile_id,
                         project=project_obj,
                         content=delta,
+                        client_id=delta["clientId"],
                         created_by=self.request.user,
                     )
 
