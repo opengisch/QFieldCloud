@@ -728,7 +728,7 @@ class QfcTestCase(APITransactionTestCase):
         u1 = Person.objects.create(username="u1")
         old_subscription = u1.useraccount.current_subscription
         old_subscription.active_since -= timedelta(days=1)
-        old_subscription.active_until = timezone.now()
+        old_subscription.active_until = timezone.now().replace(microsecond=0)
         old_subscription.save()
 
         Project.objects.create(name="p1", owner=u1)
