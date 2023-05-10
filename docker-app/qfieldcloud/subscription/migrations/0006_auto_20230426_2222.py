@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
         # NOTE we need to recreate the view, since we just added a new `subscription_subscription.notes` column
         migrate_sql.operations.ReverseAlterSQL(
             name="current_subscriptions_vw",
-            sql="\n            DROP VIEW current_subscriptions_vw\n        ",
+            sql="\n            DROP VIEW IF EXISTS current_subscriptions_vw\n        ",
             reverse_sql="\n            CREATE VIEW current_subscriptions_vw AS\n            SELECT\n                *\n            FROM\n                subscription_subscription\n            WHERE\n                active_since < now()\n                AND (\n                    active_until IS NULL\n                    OR active_until > now()\n                )\n        ",
         ),
         migrate_sql.operations.AlterSQL(
