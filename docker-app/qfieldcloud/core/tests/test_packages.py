@@ -89,7 +89,7 @@ class QfcTestCase(APITransactionTestCase):
             status__in=[Job.Status.FAILED, Job.Status.FINISHED]
         )
 
-        if jobs.count() == 0:
+        if not jobs.exists():
             return
 
         has_no_pending_jobs = False

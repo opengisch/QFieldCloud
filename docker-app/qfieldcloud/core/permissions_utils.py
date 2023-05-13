@@ -603,7 +603,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             _("Cannot add the project owner as a collaborator.")
         )
 
-    if project.collaborators.filter(collaborator=user).count() > 0:
+    if project.collaborators.filter(collaborator=user).exists():
         raise AlreadyCollaboratorError(
             _('The user "{}" is already a collaborator of project "{}".').format(
                 user.username, project.name
