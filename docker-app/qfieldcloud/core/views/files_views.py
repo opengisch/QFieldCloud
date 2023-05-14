@@ -43,7 +43,7 @@ class ListFilesView(views.APIView):
 
         bucket = utils.get_s3_bucket()
 
-        prefix = "projects/{}/files/".format(projectid)
+        prefix = f"projects/{projectid}/files/"
 
         files = {}
         for version in bucket.object_versions.filter(Prefix=prefix):
@@ -124,7 +124,7 @@ class DownloadPushDeleteFileView(views.APIView):
         if "version" in self.request.query_params:
             version = self.request.query_params["version"]
 
-        key = utils.safe_join("projects/{}/files/".format(projectid), filename)
+        key = utils.safe_join(f"projects/{projectid}/files/", filename)
         return utils2.storage.file_response(
             request,
             key,
@@ -264,7 +264,7 @@ class ProjectMetafilesView(views.APIView):
     ]
 
     def get(self, request, projectid, filename):
-        key = utils.safe_join("projects/{}/meta/".format(projectid), filename)
+        key = utils.safe_join(f"projects/{projectid}/meta/", filename)
         return utils2.storage.file_response(request, key, presigned=True)
 
 

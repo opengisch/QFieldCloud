@@ -67,7 +67,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -85,7 +85,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -108,7 +108,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/foo/bar/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/foo/bar/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -140,7 +140,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/aaa/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/aaa/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -150,7 +150,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file2.txt")
         # Push a second file
         response = self.client.post(
-            "/api/v1/files/{}/file2.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file2.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -158,7 +158,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 2)
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
         json = response.json()
@@ -200,7 +200,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
         json = response.json()
@@ -219,7 +219,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/aaa/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/aaa/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -237,7 +237,7 @@ class QfcTestCase(APITransactionTestCase):
         # Push another file with the same name (i.e. push another
         # version)
         response = self.client.post(
-            "/api/v1/files/{}/aaa/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/aaa/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -249,7 +249,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsNone(project.project_filename)
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
         versions = sorted(
@@ -282,7 +282,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -296,7 +296,7 @@ class QfcTestCase(APITransactionTestCase):
         # Push another file with the same name (i.e. push another
         # version)
         response = self.client.post(
-            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -314,7 +314,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
         versions = sorted(
@@ -349,7 +349,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/aaa/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/aaa/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -363,7 +363,7 @@ class QfcTestCase(APITransactionTestCase):
         file_path = testdata_path("file2.txt")
         # Push a second file
         response = self.client.post(
-            "/api/v1/files/{}/file2.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file2.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -375,14 +375,12 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsNone(project.project_filename)
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.json()), 2)
 
         # Delete a file
-        response = self.client.delete(
-            "/api/v1/files/{}/aaa/file.txt/".format(self.project1.id)
-        )
+        response = self.client.delete(f"/api/v1/files/{self.project1.id}/aaa/file.txt/")
         project = Project.objects.get(pk=self.project1.pk)
 
         self.assertTrue(status.is_success(response.status_code))
@@ -391,7 +389,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsNone(project.project_filename)
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.json()), 1)
 
@@ -453,7 +451,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Push another QGIS project file
         response = self.client.post(
-            "/api/v1/files/{}/foo/bar/file2.qgz/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/foo/bar/file2.qgz/",
             {
                 "file": open(file_path, "rb"),
             },
@@ -489,7 +487,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Push the file
         response = self.client.post(
-            "/api/v1/files/{}/bigfile.big/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/bigfile.big/",
             data={"file": open(big_file.name, "rb")},
             format="multipart",
         )
@@ -500,7 +498,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(project.file_storage_bytes, 1000000)
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.json()), 1)
@@ -521,7 +519,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Push the file
         response = self.client.post(
-            "/api/v1/files/{}/bigfile.big/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/bigfile.big/",
             data={"file": open(big_file.name, "rb")},
             format="multipart",
         )
@@ -531,7 +529,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(project.files_count, 1)
         self.assertEqual(project.file_storage_bytes, 10000000)
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.json()), 1)

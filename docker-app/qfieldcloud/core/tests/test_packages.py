@@ -292,7 +292,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         local_file = os.path.join(tempdir, "project_qfield.qgs")
-        with open(local_file, "r") as f:
+        with open(local_file) as f:
             self.assertEqual(
                 f.readline().strip(),
                 "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
@@ -381,7 +381,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         local_file = os.path.join(tempdir, "project_qfield.qgs")
-        with open(local_file, "r") as f:
+        with open(local_file) as f:
             for line in f:
                 if 'name="theMapCanvas"' in line:
                     return

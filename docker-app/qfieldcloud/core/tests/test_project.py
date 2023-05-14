@@ -114,7 +114,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        response = self.client.get("/api/v1/collaborators/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/collaborators/{self.project1.id}/")
 
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
@@ -181,7 +181,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.post(
-            "/api/v1/collaborators/{}/".format(self.project1.id),
+            f"/api/v1/collaborators/{self.project1.id}/",
             {
                 "collaborator": "user2",
                 "role": "editor",
@@ -210,9 +210,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        response = self.client.get(
-            "/api/v1/collaborators/{}/user2/".format(self.project1.id)
-        )
+        response = self.client.get(f"/api/v1/collaborators/{self.project1.id}/user2/")
 
         self.assertTrue(status.is_success(response.status_code))
         json = response.json()
@@ -235,7 +233,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.patch(
-            "/api/v1/collaborators/{}/user2/".format(self.project1.id),
+            f"/api/v1/collaborators/{self.project1.id}/user2/",
             {
                 "role": "admin",
             },
@@ -265,7 +263,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.delete(
-            "/api/v1/collaborators/{}/user2/".format(self.project1.id)
+            f"/api/v1/collaborators/{self.project1.id}/user2/"
         )
 
         self.assertTrue(status.is_success(response.status_code))
@@ -282,7 +280,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         # Delete the project
-        response = self.client.delete("/api/v1/projects/{}/".format(project1.id))
+        response = self.client.delete(f"/api/v1/projects/{project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
         # The project should not exist anymore
@@ -297,7 +295,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         # Get the project without permissions
-        response = self.client.get("/api/v1/projects/{}/".format(project1.id))
+        response = self.client.get(f"/api/v1/projects/{project1.id}/")
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["code"], "permission_denied")

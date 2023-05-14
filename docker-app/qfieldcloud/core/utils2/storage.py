@@ -5,7 +5,7 @@ import os
 import re
 from enum import Enum
 from pathlib import PurePath
-from typing import IO, List, Optional, Set
+from typing import IO
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
@@ -134,7 +134,7 @@ def _delete_by_key_permanently(key: str):
     temp_objects = bucket.object_versions.filter(
         Prefix=key,
     )
-    object_to_delete: List[ObjectIdentifierTypeDef] = []
+    object_to_delete: list[ObjectIdentifierTypeDef] = []
     for temp_object in temp_objects:
         # filter out objects that do not have the same key as the requested deletion key.
         if temp_object.key != key:
@@ -202,7 +202,7 @@ def file_response(
     key: str,
     presigned: bool = False,
     expires: int = 60,
-    version: Optional[str] = None,
+    version: str | None = None,
     as_attachment: bool = False,
 ) -> HttpResponseBase:
     url = ""
@@ -269,7 +269,7 @@ class ImageMimeTypes(str, Enum):
     jpg = "image/jpeg"
 
     @classmethod
-    def or_none(cls, string: str) -> "ImageMimeTypes" | None:
+    def or_none(cls, string: str) -> ImageMimeTypes | None:
         try:
             return cls(string)
         except ValueError:
@@ -531,7 +531,7 @@ def delete_project_file_version_permanently(
     filename: str,
     version_id: str,
     include_older: bool = False,
-) -> List[qfieldcloud.core.utils.S3ObjectVersion]:
+) -> list[qfieldcloud.core.utils.S3ObjectVersion]:
     """Deletes a specific version of given file.
 
     Args:
@@ -559,7 +559,7 @@ def delete_project_file_version_permanently(
             )
 
     versions_latest_first = list(reversed(file.versions))
-    versions_to_delete: List[qfieldcloud.core.utils.S3ObjectVersion] = []
+    versions_to_delete: list[qfieldcloud.core.utils.S3ObjectVersion] = []
 
     for file_version in versions_latest_first:
         if file_version.id == version_id:
@@ -609,7 +609,7 @@ def delete_project_file_version_permanently(
     return versions_to_delete
 
 
-def get_stored_package_ids(project_id: str) -> Set[str]:
+def get_stored_package_ids(project_id: str) -> set[str]:
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/"
     root_path = PurePath(prefix)

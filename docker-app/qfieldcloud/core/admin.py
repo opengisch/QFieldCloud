@@ -1008,7 +1008,7 @@ class GeodbAdmin(QFieldCloudModelAdmin):
             messages.add_message(
                 request,
                 messages.WARNING,
-                "The password is (shown only once): {}".format(obj.password),
+                f"The password is (shown only once): {obj.password}",
             )
         super().save_model(request, obj, form, change)
 

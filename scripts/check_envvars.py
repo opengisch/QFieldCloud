@@ -10,7 +10,7 @@ import yaml
 def get_env_varnames_from_envfile(filename: str) -> Set[str]:
     result = set()
 
-    with open(filename, "r") as f:
+    with open(filename) as f:
         for line in f.readlines():
             if line.strip().startswith("#"):
                 continue
@@ -33,7 +33,7 @@ def get_env_varnames_from_docker_compose(filename: Path) -> Set[str]:
     regex = r"\$\{(\w+)\}"
     result = set()
 
-    with open(filename, "r") as f:
+    with open(filename) as f:
         for line in f.readlines():
             if line.strip().startswith("#"):
                 continue
@@ -63,7 +63,7 @@ def get_env_varnames_from_docker_compose_files(
 def get_env_varnames_from_k8s_kustomization(filename: Path) -> Set[str]:
     result = set()
 
-    with open(filename, "r") as f:
+    with open(filename) as f:
         k8s_config = yaml.load(f, Loader=yaml.SafeLoader)
         for config in k8s_config["configMapGenerator"]:
             for envvar_and_val in config["literals"]:
@@ -73,7 +73,7 @@ def get_env_varnames_from_k8s_kustomization(filename: Path) -> Set[str]:
 
 
 def get_env_varnames_from_k8s_secrets(filename: Path) -> Set[str]:
-    with open(filename, "r") as f:
+    with open(filename) as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
         return set(config["spec"]["encryptedData"].keys())
 
