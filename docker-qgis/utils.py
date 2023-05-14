@@ -750,8 +750,8 @@ class RedactingFormatter(logging.Formatter):
         if isinstance(record.args, dict):
             for k in record.args.keys():
                 record.args[k] = self.redact(record.args[k])
-        else:
-            record.args = tuple(self.redact(arg) for arg in record.args)
+        elif isinstance(record.args, tuple):
+            record.args = tuple(self.redact(str(arg)) for arg in record.args)
 
         return self.redact(msg)
 
