@@ -38,7 +38,7 @@ def apply_deltas(
 
     # 2. If there are no pending deltas, do not create a new job and return.
     if pending_deltas.count() == 0:
-        return None
+        return []
 
     # 3. Find all the pending or queued jobs in the queue.
     # If an "apply_delta" job is in a "started" status, we don't know how far the execution reached
@@ -58,7 +58,7 @@ def apply_deltas(
     # 5. If there are no pending deltas, do not create a new job and return.
     deltas_count = pending_deltas.count()
     if deltas_count == 0:
-        return None
+        return []
 
     # 6. There are pending deltas that are not part of any pending job. So we create one.
     apply_jobs = []
