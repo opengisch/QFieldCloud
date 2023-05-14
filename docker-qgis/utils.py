@@ -558,16 +558,14 @@ def run_workflow(
 
             feedback["steps"].append(step_feedback)
 
-        if feedback_filename in [sys.stderr, sys.stdout]:
-            print("Feedback:")
-            print(
-                json.dump(
-                    feedback,
-                    feedback_filename,
-                    indent=2,
-                    sort_keys=True,
-                    default=json_default,
-                )
+        if type(feedback_filename) == IO:
+            feedback_filename.write("Feedback:")
+            json.dump(
+                feedback,
+                feedback_filename,
+                indent=2,
+                sort_keys=True,
+                default=json_default,
             )
         elif isinstance(feedback_filename, Path):
             with open(feedback_filename, "w") as f:
