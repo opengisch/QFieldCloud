@@ -171,7 +171,7 @@ delta_log = []
 
 
 def project_decorator(f):
-    def wrapper(opts: BaseOptions, *args, **kw):
+    def wrapper(opts: DeltaOptions, *args, **kw):
         project = QgsProject.instance()
         project.setAutoTransaction(opts["transaction"])
         project.read(opts.get("project_filename", opts["project"]))
