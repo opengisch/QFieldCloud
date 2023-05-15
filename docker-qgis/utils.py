@@ -1,6 +1,7 @@
 import atexit
 import hashlib
 import inspect
+import io
 import json
 import logging
 import os
@@ -558,7 +559,7 @@ def run_workflow(
 
             feedback["steps"].append(step_feedback)
 
-        if type(feedback_filename) == IO:
+        if isinstance(feedback_filename, io.IOBase):
             feedback_filename.write("Feedback:")
             json.dump(
                 feedback,
@@ -752,6 +753,8 @@ class RedactingFormatter(logging.Formatter):
                 record.args[k] = self.redact(record.args[k])
         elif isinstance(record.args, tuple):
             record.args = tuple(self.redact(str(arg)) for arg in record.args)
+        else:
+            raise NotImplementedError(f"Not implemented for {type(record.args)}")
 
         return self.redact(msg)
 
