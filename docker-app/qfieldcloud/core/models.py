@@ -5,7 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -168,10 +168,10 @@ class PersonQueryset(models.QuerySet):
             return self.filter(pk=entity.pk)
 
         if entity.type == User.Type.TEAM:
-            return self.for_team(entity)
+            return self.for_team(cast(Team, entity))
 
         if entity.type == User.Type.ORGANIZATION:
-            return self.for_organization(entity)
+            return self.for_organization(cast(Organization, entity))
 
         raise RuntimeError(f"Unsupported entity : {entity}")
 
