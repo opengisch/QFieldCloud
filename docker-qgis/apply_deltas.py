@@ -958,7 +958,7 @@ def apply_deltas_on_layer(
             # TODO I am lazy now and all these properties are set only here, but should be moved in depth
             err.layer_id = err.layer_id or layer.id()
             err.delta_idx = err.delta_idx or idx
-            err.delta_id = err.delta_id or delta.get("id")
+            err.delta_id = err.delta_id or delta.get("uuid")
             err.method = err.method or delta.get("method")
             err.feature_pk = err.feature_pk or delta.get("sourcePk")
             err.provider_errors = err.provider_errors or layer.dataProvider().errors()
@@ -988,7 +988,7 @@ def apply_deltas_on_layer(
                 + str(err).replace("\n", ""),
                 layer_id=layer.id(),
                 delta_idx=idx,
-                delta_id=delta.get("id"),
+                delta_id=delta.get("uuid"),
                 method=delta.get("method"),
                 descr=traceback.format_exc(),
                 feature_pk=delta.get("sourcePk"),
