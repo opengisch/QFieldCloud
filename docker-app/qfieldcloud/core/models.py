@@ -845,7 +845,7 @@ class TeamMember(models.Model):
 
     def clean(self) -> None:
         if (
-            self.team.team_organization.members.filter(member=self.member).count() == 0
+            not self.team.team_organization.members.filter(member=self.member).exists()
             and self.team.team_organization.organization_owner != self.member
         ):
             raise ValidationError(
@@ -1376,7 +1376,7 @@ class ProjectCollaborator(models.Model):
             if self.collaborator.is_person:
                 members_qs = organization.members.filter(member=self.collaborator)
 
-                if members_qs.count() == 0:
+                if not members_qs.exists():
                     raise ValidationError(
                         _(
                             "Cannot add a user who is not a member of the organization as a project collaborator."
@@ -1384,7 +1384,7 @@ class ProjectCollaborator(models.Model):
                     )
             elif self.collaborator.is_team:
                 team_qs = organization.teams.filter(pk=self.collaborator)
-                if team_qs.count() == 0:
+                if not team_qs.exists():
 
                     raise ValidationError(_("Team does not exist."))
 

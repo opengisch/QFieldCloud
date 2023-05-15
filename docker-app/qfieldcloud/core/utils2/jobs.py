@@ -41,7 +41,7 @@ def apply_deltas(
         pending_deltas = pending_deltas.filter(pk__in=delta_ids)
 
     # 3. If there are no pending deltas, do not create a new job and return.
-    if pending_deltas.count() == 0:
+    if not pending_deltas.exists():
         return None
 
     # 4. Find all the pending or queued jobs in the queue.
@@ -56,7 +56,7 @@ def apply_deltas(
     )
 
     # 5. Check whether there are jobs found in the queue and exclude all deltas that are part of any pending job.
-    if apply_jobs.count() > 0:
+    if apply_jobs.exists():
         pending_deltas = pending_deltas.exclude(jobs_to_apply__in=apply_jobs)
 
     # 6. If there are no pending deltas, do not create a new job and return.

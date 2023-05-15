@@ -213,7 +213,7 @@ class DownloadPushDeleteFileView(views.APIView):
                     ],
                 )
 
-                if running_jobs.count() == 0:
+                if not running_jobs.exists():
                     ProcessProjectfileJob.objects.create(
                         project=project, created_by=self.request.user
                     )
