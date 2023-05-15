@@ -97,9 +97,10 @@ class DeltaFeature(TypedDict):
 
 
 class Delta(TypedDict):
-    id: Uuid
-    localFk: FeaturePk
-    sourceFk: FeaturePk
+    uuid: Uuid
+    clientId: Uuid
+    localPk: FeaturePk
+    sourcePk: FeaturePk
     localLayerId: LayerId
     sourceLayerId: LayerId
     method: DeltaMethod
