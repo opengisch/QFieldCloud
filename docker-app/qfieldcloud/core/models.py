@@ -1536,6 +1536,8 @@ class Job(models.Model):
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
     started_at = models.DateTimeField(blank=True, null=True, editable=False)
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
+    docker_started_at = models.DateTimeField(blank=True, null=True, editable=False)
+    docker_finished_at = models.DateTimeField(blank=True, null=True, editable=False)
 
     @property
     def short_id(self) -> str:
