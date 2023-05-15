@@ -26,12 +26,7 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils2 import storage
-from qfieldcloud.subscription.exceptions import (
-    InactiveSubscriptionError,
-    PlanInsufficientError,
-    QuotaError,
-    ReachedMaxOrganizationMembersError,
-)
+from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -850,7 +845,7 @@ class TeamMember(models.Model):
 
     def clean(self) -> None:
         if (
-            self.team.team_organization.members.filter(member=self.member).count() == 0
+            not self.team.team_organization.members.filter(member=self.member).exists()
             and self.team.team_organization.organization_owner != self.member
         ):
             raise ValidationError(
@@ -1106,13 +1101,11 @@ class Project(models.Model):
     def has_online_vector_data(self) -> Optional[bool]:
         """Returns None if project details or layers details are not available"""
 
-        # it's safer to assume there is an online vector layer
         if not self.project_details:
             return None
 
         layers_by_id = self.project_details.get("layers_by_id")
 
-        # it's safer to assume there is an online vector layer
         if layers_by_id is None:
             return None
 
@@ -1218,20 +1211,29 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
+    @property
+    def owner_can_create_job(self):
+        # NOTE consider including in status refactoring
+
+        from qfieldcloud.core.permissions_utils import (
+            is_supported_regarding_owner_account,
+        )
+
+        return is_supported_regarding_owner_account(self)
+
+    def check_can_be_created(self):
+        from qfieldcloud.core.permissions_utils import (
+            check_supported_regarding_owner_account,
+        )
+
+        check_supported_regarding_owner_account(self, ignore_online_layers=True)
+
     def clean(self) -> None:
         """
         Prevent creating new projects if the user is inactive or over quota
         """
-        useraccount = self.owner.useraccount
-        current_subscription = useraccount.current_subscription
-
-        if not current_subscription.is_active:
-            raise InactiveSubscriptionError(
-                _("Cannot create job for user with inactive subscription.")
-            )
-
-        if useraccount.storage_free_bytes < 0:
-            raise QuotaError
+        if self._state.adding:
+            self.check_can_be_created()
 
         return super().clean()
 
@@ -1374,7 +1376,7 @@ class ProjectCollaborator(models.Model):
             if self.collaborator.is_person:
                 members_qs = organization.members.filter(member=self.collaborator)
 
-                if members_qs.count() == 0:
+                if not members_qs.exists():
                     raise ValidationError(
                         _(
                             "Cannot add a user who is not a member of the organization as a project collaborator."
@@ -1382,7 +1384,7 @@ class ProjectCollaborator(models.Model):
                     )
             elif self.collaborator.is_team:
                 team_qs = organization.teams.filter(pk=self.collaborator)
-                if team_qs.count() == 0:
+                if not team_qs.exists():
 
                     raise ValidationError(_("Team does not exist."))
 
@@ -1433,6 +1435,7 @@ class Delta(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deltafile_id = models.UUIDField(db_index=True)
+    client_id = models.UUIDField(null=False, db_index=True, editable=False)
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -1497,13 +1500,6 @@ class Delta(models.Model):
     @property
     def method(self):
         return self.content.get("method")
-
-    @property
-    def is_supported_regarding_owner_account(self):
-        return (
-            not self.project.has_online_vector_data
-            or self.project.owner.useraccount.current_subscription.plan.is_external_db_supported
-        )
 
 
 class Job(models.Model):
@@ -1576,41 +1572,27 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
-    def raise_insufficient_subscription(self, check_online_layers=True) -> None:
-        """
-        Prevent creating new jobs if the user is inactive, over quota
-        or (optionally) the project has online vector layers (postgis) and his account does not support it
-        """
-        useraccount = self.created_by.useraccount
-        current_subscription = useraccount.current_subscription
+    def check_can_be_created(self, ignore_online_layers=False):
+        # Check if the object is being created
+        from qfieldcloud.core.permissions_utils import (
+            check_supported_regarding_owner_account,
+        )
 
-        if not current_subscription.is_active:
-            raise InactiveSubscriptionError(
-                _("Cannot create job for user with inactive subscription.")
-            )
+        check_supported_regarding_owner_account(self.project, ignore_online_layers)
 
-        if useraccount.storage_free_bytes < 0:
-            raise QuotaError
-
-        if (
-            check_online_layers
-            and self.project.has_online_vector_data
-            and not current_subscription.plan.is_external_db_supported
-        ):
-            raise PlanInsufficientError(
-                _(
-                    "Cannot create job on project with online vector data and unsupported subscription plan."
-                )
-            )
-
-
-class PackageJob(Job):
     def clean(self):
-        self.raise_insufficient_subscription()
+        if self._state.adding:
+            self.check_can_be_created()
+
         return super().clean()
 
     def save(self, *args, **kwargs):
         self.clean()
+        return super().save(*args, **kwargs)
+
+
+class PackageJob(Job):
+    def save(self, *args, **kwargs):
         self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
 
@@ -1620,13 +1602,11 @@ class PackageJob(Job):
 
 
 class ProcessProjectfileJob(Job):
-    def clean(self):
+    def check_can_be_created(self):
         # exclude online layers from check to allow users to adapt project after downgrading plan
-        self.raise_insufficient_subscription(check_online_layers=False)
-        return super().clean()
+        super().check_can_be_created(ignore_online_layers=True)
 
     def save(self, *args, **kwargs):
-        self.clean()
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)
 

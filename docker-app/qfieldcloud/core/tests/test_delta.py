@@ -2,7 +2,7 @@ import io
 import json
 import logging
 import time
-from unittest import skip
+from unittest import mock, skip
 
 import fiona
 import rest_framework
@@ -18,6 +18,7 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
 )
+from qfieldcloud.subscription.models import Subscription
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 from shapely.geometry import shape
@@ -477,7 +478,41 @@ class QfcTestCase(APITransactionTestCase):
         json = response.json()
         self.assertEqual(json["code"], "object_not_found")
 
+    def test_push_delta_allowed_for_insufficient_subscription(self):
+        """
+        Test that deltas can always be pushed, even if project has
+        unsoppurted online layer or owner (token3) is inactive or over qouta .
+        """
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+        project = self.upload_project_files(self.project1)
+
+        with mock.patch.object(
+            Project, "has_online_vector_data", new_callable=mock.PropertyMock
+        ) as mock_has_online_vector_data:
+            mock_has_online_vector_data.return_value = True
+            self.assertTrue(project.has_online_vector_data)
+            subscription = project.owner.useraccount.current_subscription
+            subscription.status = Subscription.Status.INACTIVE_DRAFT
+            subscription.save()
+
+            plan = subscription.plan
+            # Make sure the user's plan is inactive and does not allow online vector data
+            self.assertFalse(subscription.is_active)
+            self.assertFalse(plan.is_external_db_supported)
+
+            # Make project use all available storage
+            project.file_storage_bytes = (plan.storage_mb * 1000 * 1000) + 1
+            project.save()
+
+            # Check can still upload deltas
+            self.assertTrue(self.upload_deltas(project, "singlelayer_singledelta.json"))
+            delta = Delta.objects.latest("created_at")
+            self.assertEqual(delta.last_status, Delta.Status.PENDING)
+            # No apply job is created
+            self.assertEqual(delta.jobs_to_apply.count(), 0)
+
     def test_push_delta_not_allowed(self):
+        # Check collaborator with Role REPORTER cannot push a delta of a modified feature (PATCH)
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
         project = self.upload_project_files(self.project1)
 

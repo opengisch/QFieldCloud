@@ -54,6 +54,7 @@ class QfcTestCase(TransactionTestCase):
         self.delta = Delta.objects.create(
             deltafile_id="f85b4d28-2444-40ce-95a8-6502bf4f00d9",
             project=self.project,
+            client_id="f85b4d28-2444-40ce-95a8-6502bf4f00d9",
             created_by=self.superuser,
             content={},
         )

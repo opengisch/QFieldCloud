@@ -24,7 +24,11 @@ def apply_deltas(
         f"Requested apply_deltas on {project} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
     )
 
-    # 1. Check if there are any pending deltas.
+    # 1. Check if project owner is permitted to trigger a job.
+    if not project.owner_can_create_job:
+        return None
+
+    # 2. Check if there are any pending deltas.
     # We need to call .select_for_update() to make sure there would not be a concurrent
     # request that will try to apply these deltas.
     pending_deltas = models.Delta.objects.select_for_update().filter(
@@ -32,15 +36,15 @@ def apply_deltas(
         last_status=models.Delta.Status.PENDING,
     )
 
-    # 1.1. Filter only the deltas of interest.
+    # 2.1. Filter only the deltas of interest.
     if len(delta_ids) > 0:
         pending_deltas = pending_deltas.filter(pk__in=delta_ids)
 
-    # 2. If there are no pending deltas, do not create a new job and return.
-    if pending_deltas.count() == 0:
+    # 3. If there are no pending deltas, do not create a new job and return.
+    if not pending_deltas.exists():
         return []
 
-    # 3. Find all the pending or queued jobs in the queue.
+    # 4. Find all the pending or queued jobs in the queue.
     # If an "apply_delta" job is in a "started" status, we don't know how far the execution reached
     # so we better assume the deltas will reach a non-"pending" status.
     apply_jobs = models.ApplyJob.objects.filter(
@@ -51,16 +55,16 @@ def apply_deltas(
         ],
     )
 
-    # 4. Check whether there are jobs found in the queue and exclude all deltas that are part of any pending job.
-    if apply_jobs.count() > 0:
+    # 5. Check whether there are jobs found in the queue and exclude all deltas that are part of any pending job.
+    if apply_jobs.exists():
         pending_deltas = pending_deltas.exclude(jobs_to_apply__in=apply_jobs)
 
-    # 5. If there are no pending deltas, do not create a new job and return.
+    # 6. If there are no pending deltas, do not create a new job and return.
     deltas_count = pending_deltas.count()
     if deltas_count == 0:
         return []
 
-    # 6. There are pending deltas that are not part of any pending job. So we create one.
+    # 7. There are pending deltas that are not part of any pending job. So we create one.
     apply_jobs = []
     for i in range(deltas_count // settings.APPLY_DELTAS_LIMIT + 1):
         offset = settings.APPLY_DELTAS_LIMIT * i
@@ -87,7 +91,7 @@ def apply_deltas(
 
         apply_jobs.append(apply_job)
 
-    # 7. return the created job
+    # 8. return the created job
     return apply_jobs
 
 

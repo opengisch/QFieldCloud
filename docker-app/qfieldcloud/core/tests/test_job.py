@@ -35,6 +35,23 @@ class QfcTestCase(APITestCase):
         self.project1 = Project.objects.create(
             name="project1", owner=self.user1, description="desc", is_public=False
         )
+        self.job = Job.objects.create(
+            type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+        )
+        self.package_job = PackageJob.objects.create(
+            type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+        )
+        self.processprojectfile_job = ProcessProjectfileJob.objects.create(
+            type=Job.Type.PROCESS_PROJECTFILE,
+            project=self.project1,
+            created_by=self.user1,
+        )
+        self.delta_apply_job = ApplyJob.objects.create(
+            type=Job.Type.DELTA_APPLY,
+            project=self.project1,
+            created_by=self.user1,
+            overwrite_conflicts=True,
+        )
 
     def test_create_job_succesfully(self):
         # Test can create all types of jobs successfully
@@ -43,10 +60,7 @@ class QfcTestCase(APITestCase):
         )
         self.assertEqual(job.status, Job.Status.PENDING)
 
-        package_job = PackageJob.objects.create(
-            type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
-        )
-        self.assertEqual(package_job.status, Job.Status.PENDING)
+        self.assertEqual(self.package_job.status, Job.Status.PENDING)
 
         processprojectfile_job = ProcessProjectfileJob.objects.create(
             type=Job.Type.PROCESS_PROJECTFILE,
@@ -63,38 +77,18 @@ class QfcTestCase(APITestCase):
         )
         self.assertEqual(deltaapply_job.status, Job.Status.PENDING)
 
-    def test_create_job_by_inactive_user(self):
-        subscription = self.user1.useraccount.current_subscription
+    def test_create_job_by_inactive_project_owner(self):
+        subscription = self.project1.owner.useraccount.current_subscription
         subscription.status = Subscription.Status.INACTIVE_DRAFT
         subscription.save()
 
         # Make sure the user is inactive
         self.assertFalse(subscription.is_active)
 
-        # Cannot create package job if user's subscription is inactive
-        with self.assertRaises(InactiveSubscriptionError):
-            PackageJob.objects.create(
-                project=self.project1, created_by=self.user1, type=Job.Type.PACKAGE
-            )
+        self.check_cannot_create_jobs(InactiveSubscriptionError)
+        self.check_can_update_existing_jobs()
 
-        # Cannot create processprojectfile job if user's subscription is inactive
-        with self.assertRaises(InactiveSubscriptionError):
-            ProcessProjectfileJob.objects.create(
-                type=Job.Type.PROCESS_PROJECTFILE,
-                project=self.project1,
-                created_by=self.user1,
-            )
-
-        # Cannot still create delta apply job if user's subscription is inactive
-        job = ApplyJob.objects.create(
-            type=Job.Type.DELTA_APPLY,
-            project=self.project1,
-            created_by=self.user1,
-            overwrite_conflicts=True,
-        )
-        self.assertEqual(job.status, Job.Status.PENDING)
-
-    def test_create_job_if_user_is_over_quota(self):
+    def test_create_job_if_project_owner_is_over_quota(self):
         plan = self.user1.useraccount.current_subscription.plan
 
         # Create a project that uses all the storage
@@ -105,30 +99,10 @@ class QfcTestCase(APITestCase):
             file_storage_bytes=more_bytes_than_plan,
         )
 
-        # Cannot create package job if the user's plan is over quota
-        with self.assertRaises(QuotaError):
-            PackageJob.objects.create(
-                type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
-            )
+        self.check_cannot_create_jobs(QuotaError)
+        self.check_can_update_existing_jobs()
 
-        # Cannot create processprojectfile job if the user's plan is over quota
-        with self.assertRaises(QuotaError):
-            ProcessProjectfileJob.objects.create(
-                type=Job.Type.PROCESS_PROJECTFILE,
-                project=self.project1,
-                created_by=self.user1,
-            )
-
-        # Cant still create delta apply job if the user's plan is over quota
-        job = ApplyJob.objects.create(
-            type=Job.Type.DELTA_APPLY,
-            project=self.project1,
-            created_by=self.user1,
-            overwrite_conflicts=True,
-        )
-        self.assertEqual(job.status, Job.Status.PENDING)
-
-    def test_create_job_on_project_with_online_vector_data_for_unsupported_user_plan(
+    def test_create_job_on_project_with_online_vector_data_for_unsufficient_owner(
         self,
     ):
         # The actual property is tested in qfieldcloud.core.tests.test_packages.QfcTestCase.test_has_no_online_vector_data
@@ -140,7 +114,7 @@ class QfcTestCase(APITestCase):
 
             # Make sure the user's plan does not allow online vector data
             self.assertFalse(
-                self.user1.useraccount.current_subscription.plan.is_external_db_supported
+                self.project1.owner.useraccount.current_subscription.plan.is_external_db_supported
             )
 
             with self.assertRaises(PlanInsufficientError):
@@ -148,13 +122,15 @@ class QfcTestCase(APITestCase):
                     type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
                 )
 
-            # Cannot create package job with a project that has online vector data
             with self.assertRaises(PlanInsufficientError):
-                PackageJob.objects.create(
-                    type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+                ApplyJob.objects.create(
+                    type=Job.Type.DELTA_APPLY,
+                    project=self.project1,
+                    created_by=self.user1,
+                    overwrite_conflicts=True,
                 )
 
-            # Cant still create processprojectfile with a project that has online vector data
+            # Can still create processprojectfile job
             processprojectfile_job = ProcessProjectfileJob.objects.create(
                 type=Job.Type.PROCESS_PROJECTFILE,
                 project=self.project1,
@@ -162,11 +138,39 @@ class QfcTestCase(APITestCase):
             )
             self.assertEqual(processprojectfile_job.status, Job.Status.PENDING)
 
-            # Cant still create delta apply with a project that has online vector data
-            delta_apply = ApplyJob.objects.create(
+            self.check_can_update_existing_jobs()
+
+    def check_cannot_create_jobs(self, error):
+        with self.assertRaises(error):
+            PackageJob.objects.create(
+                type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+            )
+
+        with self.assertRaises(error):
+            ProcessProjectfileJob.objects.create(
+                type=Job.Type.PROCESS_PROJECTFILE,
+                project=self.project1,
+                created_by=self.user1,
+            )
+
+        with self.assertRaises(error):
+            ApplyJob.objects.create(
                 type=Job.Type.DELTA_APPLY,
                 project=self.project1,
                 created_by=self.user1,
                 overwrite_conflicts=True,
             )
-            self.assertEqual(delta_apply.status, Job.Status.PENDING)
+
+    def check_can_update_existing_jobs(self):
+        # Can update existing jobs
+        self.job.status = Job.Status.FAILED
+        self.job.save()
+
+        self.package_job.status = Job.Status.FAILED
+        self.package_job.save()
+
+        self.processprojectfile_job.status = Job.Status.FAILED
+        self.processprojectfile_job.save()
+
+        self.delta_apply_job.status = Job.Status.FAILED
+        self.delta_apply_job.save()
