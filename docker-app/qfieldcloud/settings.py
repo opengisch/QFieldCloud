@@ -47,7 +47,7 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT")
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
@@ -351,8 +351,8 @@ AXES_RESET_ON_SUCCESS = True
 # Django email configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS").lower() == "true"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL").lower() == "true"
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "").lower() == "true"
 EMAIL_PORT = os.environ.get("EMAIL_PORT")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")

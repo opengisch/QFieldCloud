@@ -97,9 +97,10 @@ class DeltaFeature(TypedDict):
 
 
 class Delta(TypedDict):
-    id: Uuid
-    localFk: FeaturePk
-    sourceFk: FeaturePk
+    uuid: Uuid
+    clientId: Uuid
+    localPk: FeaturePk
+    sourcePk: FeaturePk
     localLayerId: LayerId
     sourceLayerId: LayerId
     method: DeltaMethod
@@ -170,7 +171,7 @@ delta_log = []
 
 
 def project_decorator(f):
-    def wrapper(opts: BaseOptions, *args, **kw):
+    def wrapper(opts: DeltaOptions, *args, **kw):
         project = QgsProject.instance()
         project.setAutoTransaction(opts["transaction"])
         project.read(opts.get("project_filename", opts["project"]))
@@ -333,7 +334,7 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions) -> bool:
     print("========================")
 
     if opts.get("delta_log"):
-        with open(opts["delta_log"], "w") as f:
+        with open(str(opts["delta_log"]), "w") as f:
             json.dump(delta_log, f, indent=2, sort_keys=True, default=str)
 
     return has_uncaught_errors
@@ -399,10 +400,12 @@ def delta_file_args_loader(args: DeltaOptions) -> Optional[DeltaFile]:
     Returns:
         Optional[DeltaFile] -- loaded delta file on success, otherwise none
     """
-    if "delta_contents" not in args:
+    obj = args.get("delta_contents")
+    if not obj:
         return None
 
-    obj = args["delta_contents"]
+    obj = cast(dict, obj)
+
     get_json_schema_validator().validate(obj)
     delta_file = DeltaFile(
         obj["id"],
@@ -495,7 +498,7 @@ def apply_deltas_without_transaction(
     # apply deltas on each individual layer
     for idx, delta in enumerate(delta_file.deltas):
         delta_status = DeltaStatus.Applied
-        layer_id: str = delta.get("sourceLayerId")
+        layer_id: str = delta.get("sourceLayerId", "")
         layer: QgsVectorLayer = project.mapLayer(layer_id)
         feature = QgsFeature()
 
@@ -887,8 +890,8 @@ def cleanup_backups(layer_paths: Set[str]) -> bool:
     """
     is_success = True
 
-    for layer_path in layer_paths:
-        layer_path = Path(layer_path)
+    for layer_path_str in layer_paths:
+        layer_path = Path(layer_path_str)
         layer_backup_path = get_backup_path(layer_path)
         try:
             if layer_backup_path.exists():
@@ -955,7 +958,7 @@ def apply_deltas_on_layer(
             # TODO I am lazy now and all these properties are set only here, but should be moved in depth
             err.layer_id = err.layer_id or layer.id()
             err.delta_idx = err.delta_idx or idx
-            err.delta_id = err.delta_id or delta.get("id")
+            err.delta_id = err.delta_id or delta.get("uuid")
             err.method = err.method or delta.get("method")
             err.feature_pk = err.feature_pk or delta.get("sourcePk")
             err.provider_errors = err.provider_errors or layer.dataProvider().errors()
@@ -985,7 +988,7 @@ def apply_deltas_on_layer(
                 + str(err).replace("\n", ""),
                 layer_id=layer.id(),
                 delta_idx=idx,
-                delta_id=delta.get("id"),
+                delta_id=delta.get("uuid"),
                 method=delta.get("method"),
                 descr=traceback.format_exc(),
                 feature_pk=delta.get("sourcePk"),
