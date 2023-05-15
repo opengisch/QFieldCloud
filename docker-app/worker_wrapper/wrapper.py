@@ -340,6 +340,7 @@ class PackageJobRun(JobRun):
                 for job in Job.objects.filter(
                     type=Job.Type.PACKAGE,
                 )
+                .exclude(id=self.job_id)
                 .exclude(
                     status__in=(Job.Status.FAILED, Job.Status.FINISHED),
                 )
