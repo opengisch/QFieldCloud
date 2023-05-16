@@ -1,10 +1,11 @@
 import io
 import os
-from typing import IO, Iterable, Union
 from time import sleep
+from typing import IO, Iterable, Union
 
-from qfieldcloud.core.models import User, Project, Job
+from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.subscription.models import Plan, Subscription
+
 # FIXME from unittest import fail
 
 
@@ -85,7 +86,7 @@ def get_random_file(mb: int) -> IO:
 
 def wait_for_project_ok_status(project: Project, wait_s: int = 30):
     """
-    Helper that waits for any jobs of the project to finish """
+    Helper that waits for any jobs of the project to finish"""
     jobs = Job.objects.filter(project=project).exclude(
         status__in=[Job.Status.FAILED, Job.Status.FINISHED]
     )
@@ -95,10 +96,7 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
 
     has_no_pending_jobs = False
     for _ in range(wait_s):
-        if (
-            Job.objects.filter(project=project, status=Job.Status.PENDING).count()
-            == 0
-        ):
+        if Job.objects.filter(project=project, status=Job.Status.PENDING).count() == 0:
             has_no_pending_jobs = True
             break
 

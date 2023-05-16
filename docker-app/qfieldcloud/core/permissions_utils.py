@@ -872,7 +872,6 @@ def is_supported_regarding_owner_account(project: Project) -> bool:
 
 
 def can_always_upload_files(client_type) -> bool:
-    # ... not matter what
     return client_type in (
         AuthToken.ClientType.QFIELD,
         AuthToken.ClientType.WORKER,

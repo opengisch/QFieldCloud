@@ -1,7 +1,6 @@
 import logging
 import os
 import pdb
-from time import sleep
 
 import psycopg2
 from qfieldcloud.authentication.models import AuthToken
@@ -12,7 +11,7 @@ from qfieldcloud.subscription.models import SubscriptionStatus
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import setup_subscription_plans, testdata_path
+from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
 
 logging.disable(logging.CRITICAL)
 
@@ -40,13 +39,30 @@ class QfcTestCase(APITransactionTestCase):
         self.token_qfield = AuthToken.objects.get_or_create(
             user=self.project.owner,
             client_type=AuthToken.ClientType.QFIELD,
-            # user_agent="qfield|dev", # FIXME TODO remove?
         )[0]
 
         self.token_worker = AuthToken.objects.get_or_create(
             user=self.project.owner,
             client_type=AuthToken.ClientType.WORKER,
         )[0]
+
+        self.token_qfieldsync = AuthToken.objects.get_or_create(
+            user=self.project.owner,
+            client_type=AuthToken.ClientType.QFIELDSYNC,
+        )[0]
+
+        self.assertEqual(self.project.owner.id, self.token_qfield.user.id)
+
+        account = self.user.useraccount
+        subscription = account.current_subscription
+        subscription.status = SubscriptionStatus.INACTIVE_DRAFT
+        subscription.save()
+        # Check user has inactive subscription
+        self.assertFalse(account.current_subscription.is_active)
+
+        plan = subscription.plan
+        plan.storage_mb = 0
+        plan.save()
 
         delete_db_and_role("test", self.user.username)
 
@@ -89,35 +105,98 @@ class QfcTestCase(APITransactionTestCase):
     def tearDown(self):
         self.conn.close()
 
-    def test_push_file_to_qfield_always_allowed(self):
+    def test_always_accept_file_from_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token_qfield.key)
 
-        # FIXME TODO 'worker'
         self.assertEqual(self.token_qfield.client_type, AuthToken.ClientType.QFIELD)
 
-        # Check 'project owner' and 'client' user are same to ensure all scenarios
-        self.assertEqual(self.project.owner.id, self.token_qfield.user.id)
-        account = self.user.useraccount
-        subscription = account.current_subscription
-        subscription.status = SubscriptionStatus.INACTIVE_DRAFT
-        subscription.save()
+        response = self.add_qgis_project_file()
+        self.assertTrue(status.is_success(response.status_code))
+        #pdb.set_trace()
+        wait_for_project_ok_status(self.project)
 
-        self.assertFalse(account.current_subscription.is_active)
+        # self.assertTrue(self.project.has_online_vector_data)
 
-        plan = subscription.plan
-        plan.storage_mb = 0
-        plan.save()
-        self.assertEqual(account.storage_free_bytes, 0)
+        # Check user has no storage left
+        self.assertTrue(self.user.useraccount.storage_free_bytes < 0)
 
-        self.add_qfis_project_file()
-        # Create a project that uses all the storage
-        # more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
-        # Project.objects.create(
-        #     name="p1",
-        #     owner=self.user,
-        #     file_storage_bytes=more_bytes_than_plan,
-        # )
+        response = self.add_text_file()
+        self.assertTrue(status.is_success(response.status_code))
+        wait_for_project_ok_status(self.project)
 
+        response = self.change_qgis_project_file()
+        self.assertTrue(status.is_success(response.status_code))
+        wait_for_project_ok_status(self.project)
+
+        # Cannot not sync or download data because we prevent creating a Package Job
+        self.export_file_forbidden()
+        self.cross_check_prevent_package_and_apply_job()
+
+    def test_always_accept_file_from_worker(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token_worker.key)
+
+        response = self.add_qgis_project_file()
+        self.assertTrue(status.is_success(response.status_code))
+        wait_for_project_ok_status(self.project)
+        self.assertTrue(self.project.has_online_vector_data)
+
+        # Check user has no storage left
+        self.assertTrue(self.user.useraccount.storage_free_bytes < 0)
+
+        response = self.add_text_file()
+        self.assertTrue(status.is_success(response.status_code))
+        wait_for_project_ok_status(self.project)
+
+        response = self.change_qgis_project_file()
+        self.assertTrue(status.is_success(response.status_code))
+        wait_for_project_ok_status(self.project)
+
+        # Cannot not sync or download data because we prevent creating a Package Job
+        self.export_file_forbidden()
+
+    def test_upload_file_unpermitted_from_qfieldsync(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token_qfieldsync.key)
+
+        response = self.add_qgis_project_file()
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+        response = self.add_text_file()
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+        self.assertEqual(self.project.jobs.count(), 0)
+
+        # Cannot not sync or download data because we prevent creating a Package Job
+        self.export_file_forbidden()
+
+    def add_qgis_project_file(self):
+        file = testdata_path("delta/project2.qgs")
+        return self.client.post(
+            f"/api/v1/files/{self.project.id}/project.qgs/",
+            {"file": open(file, "rb")},
+            format="multipart",
+        )
+
+    def change_qgis_project_file(self):
+        file = testdata_path("delta/project.qgs")
+        return self.client.post(
+            f"/api/v1/files/{self.project.id}/project.qgs/",
+            {"file": open(file, "rb")},
+            format="multipart",
+        )
+
+    def add_text_file(self):
+        file = testdata_path("file.txt")
+        return self.client.post(
+            f"/api/v1/files/{self.project.id}/file.txt/",
+            {"file": open(file, "rb")},
+            format="multipart",
+        )
+
+    def export_file_forbidden(self):
+        response = self.client.post(f"/api/v1/qfield-files/export/{self.project.id}/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def cross_check_prevent_package_and_apply_job(self):
         # A cross check that no delta apply or package jobs can be created on the project
         with self.assertRaises(SubscriptionException):
             PackageJob.objects.create(
@@ -127,20 +206,3 @@ class QfcTestCase(APITransactionTestCase):
             ApplyJob.objects.create(
                 type=Job.Type.DELTA_APPLY, project=self.project, created_by=self.user
             )
-
-        response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project.id)
-        )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def add_qfis_project_file(self):
-        file = testdata_path("delta/project2.qgs")
-        response = self.client.post(
-            "/api/v1/files/{}/project.qgs/".format(self.project.id),
-            {"file": open(file, "rb")},
-            format="multipart",
-        )
-        self.assertTrue(status.is_success(response.status_code))
-        sleep(5)
-        self.project.refresh_from_db()
-        self.assertTrue(self.project.has_online_vector_data)
