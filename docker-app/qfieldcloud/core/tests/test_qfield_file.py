@@ -3,13 +3,14 @@ import logging
 import os
 import tempfile
 import time
+from qfieldcloud.subscription.exceptions import SubscriptionException
 
 import psycopg2
 import requests
 from django.http.response import HttpResponse, HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Geodb, Job, PackageJob, Person, Project
+from qfieldcloud.core.models import ApplyJob, Geodb, Job, PackageJob, Person, Project
 from qfieldcloud.subscription.models import SubscriptionStatus
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -91,22 +92,40 @@ class QfcTestCase(APITransactionTestCase):
     def test_push_file_to_qfield_always_allowed(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
-        subscription = self.user1.useraccount.current_subscription
+        # FIXME TODO 'worker'
+        self.assertEqual(self.token1.client_type, AuthToken.ClientType.QFIELD)
+
+        # Check 'project owner' and 'client' user are same to ensure all scenarios
+        self.assertEqual(self.project1.owner.id, self.token1.user.id)
+        account = self.user1.useraccount
+        subscription = account.current_subscription
         subscription.status = SubscriptionStatus.INACTIVE_DRAFT
         subscription.save()
-        self.assertFalse(self.user1.useraccount.current_subscription.is_active)
+
+        self.assertFalse(account.current_subscription.is_active)
+
+        plan = subscription.plan
+        plan.storage_mb = 0
+        plan.save()
+        self.assertEqual(account.storage_free_bytes, 0)
+
+        # Create a project that uses all the storage
+        # more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
+        # Project.objects.create(
+        #     name="p1",
+        #     owner=self.user1,
+        #     file_storage_bytes=more_bytes_than_plan,
+        # )
 
         # A cross check that no delta apply or package jobs can be created on the project
-        # with self.assertRaises(SubscriptionException):
-        #     PackageJob.objects.create(
-        #         type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
-        #     )
-        # with self.assertRaises(SubscriptionException):
-        #     ApplyJob.objects.create(
-        #         type=Job.Type.DELTA_APPLY, project=self.project1, created_by=self.user1
-        #     )
-
-        self.assertEqual(self.token1.client_type, AuthToken.ClientType.QFIELD)
+        with self.assertRaises(SubscriptionException):
+            PackageJob.objects.create(
+                type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+            )
+        with self.assertRaises(SubscriptionException):
+            ApplyJob.objects.create(
+                type=Job.Type.DELTA_APPLY, project=self.project1, created_by=self.user1
+            )
 
         cur = self.conn.cursor()
 
@@ -179,8 +198,6 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.post(
             "/api/v1/qfield-files/export/{}/".format(self.project1.id)
         )
-        print("********response.status_code**************************")
-        print(response.status_code)
 
         self.assertTrue(status.is_success(response.status_code))
 
