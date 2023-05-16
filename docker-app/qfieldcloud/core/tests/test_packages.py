@@ -170,6 +170,7 @@ class QfcTestCase(APITransactionTestCase):
             payload = response.json()
 
             if payload["status"] == Job.Status.FINISHED:
+                project.refresh_from_db()
                 response = self.client.get(f"/api/v1/packages/{project.id}/latest/")
                 package_payload = response.json()
 
