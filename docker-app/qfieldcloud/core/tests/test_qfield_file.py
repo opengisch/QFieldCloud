@@ -88,9 +88,7 @@ class QfcTestCase(APITransactionTestCase):
         except Exception:
             self.assertTrue(status.is_success(response.status_code), response.content)
 
-    # FIXME def test_push_file_to_qfield_if_inactive_user(self):
-
-    def test_list_files_for_qfield(self):
+    def test_push_file_to_qfield_always_allowed(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         subscription = self.user1.useraccount.current_subscription
@@ -143,6 +141,47 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.post(
             "/api/v1/qfield-files/export/{}/".format(self.project1.id)
         )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_files_for_qfield(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            CREATE TABLE point (
+                id          integer,
+                geometry   geometry(point, 2056)
+            );
+            """
+        )
+
+        self.conn.commit()
+
+        cur.execute(
+            """
+            INSERT INTO point(id, geometry)
+            VALUES(1, ST_GeomFromText('POINT(2725505 1121435)', 2056));
+            """
+        )
+        self.conn.commit()
+
+        # Add the qgis project
+        file = testdata_path("delta/project2.qgs")
+        response = self.client.post(
+            "/api/v1/files/{}/project.qgs/".format(self.project1.id),
+            {"file": open(file, "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        response = self.client.post(
+            "/api/v1/qfield-files/export/{}/".format(self.project1.id)
+        )
+        print("********response.status_code**************************")
+        print(response.status_code)
+
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
