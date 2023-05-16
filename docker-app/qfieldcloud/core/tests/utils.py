@@ -1,7 +1,7 @@
 import io
 import os
 from time import sleep
-from typing import IO, Iterable, Union
+from typing import IO, Dict, Iterable, Union
 
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.subscription.models import Plan, Subscription
@@ -87,6 +87,7 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
     Helper that waits for any jobs (worker) of the project to finish.
     NOTE this does not mean the project is updated yet as there
     is some processing to be done and saved to the project in the app.
+    So maybe a better name would be 'wait_for_project_jobs_ok_status'.
     """
     jobs = Job.objects.filter(project=project).exclude(
         status__in=[Job.Status.FAILED, Job.Status.FINISHED]
@@ -119,18 +120,27 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
     fail(f"Waited for ok status for {wait_s} seconds")
 
 
-def wait_for_has_online_vector_data(project: Project, wait_s: int = 30):
+def assert_eventually_project_has(
+    project: Project, prop_val: Dict[str, any], wait_s: int = 30
+):
     """
-    Helper that waits for ProcessProjectfileJobRun.after_docker_run to finish
-    ans asserts there is online vector layers"""
+    Helper asserts a property in the future after some worker job has finished.
+    E.g. after ProcessProjectfileJobrun has finished the project needs to still
+    be updated with some data and thumbnail generated. Currently there it can
+    just be awaited."""
     for _ in range(wait_s):
         project.refresh_from_db()
-        if project.has_online_vector_data:
-            return True
+        for property, expected_value in prop_val.items():
+            attribute = getattr(project, property)
+
+            if callable(attribute):
+                attribute = attribute()
+            if attribute == expected_value:
+                return
 
         sleep(1)
 
-    fail(f"Waited for has_online_vector_data for {wait_s} seconds")
+    fail(f"Waited for {property}={expected_value} for {wait_s} seconds")
 
 
 def fail(msg):

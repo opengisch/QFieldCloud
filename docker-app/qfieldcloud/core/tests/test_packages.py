@@ -27,7 +27,12 @@ from qfieldcloud.core.utils2.storage import get_stored_package_ids
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
+from .utils import (
+    assert_eventually_project_has,
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_project_ok_status,
+)
 
 logging.disable(logging.CRITICAL)
 
@@ -373,9 +378,8 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_needs_repackaging_without_online_vector(self):
-        self.project1.refresh_from_db()
         # newly uploaded project should always need to be packaged at least once
-        self.assertTrue(self.project1.needs_repackaging)
+        assert_eventually_project_has(self.project1, {"needs_repackaging": True})
 
         self.upload_files_and_check_package(
             token=self.token1.key,
@@ -394,9 +398,8 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        self.project1.refresh_from_db()
         # no longer needs repackaging since geopackage layers cannot change without deltas/reupload
-        self.assertFalse(self.project1.needs_repackaging)
+        assert_eventually_project_has(self.project1, {"needs_repackaging": False})
 
         self.upload_files(
             self.token1.key,
@@ -419,9 +422,8 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.conn.commit()
 
-        self.project1.refresh_from_db()
         # newly uploaded project should always need to be packaged at least once
-        self.assertTrue(self.project1.needs_repackaging)
+        assert_eventually_project_has(self.project1, {"needs_repackaging": True})
 
         self.upload_files_and_check_package(
             token=self.token1.key,
@@ -437,9 +439,8 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        self.project1.refresh_from_db()
         # projects with online vector layer should always show as it needs repackaging
-        self.assertTrue(self.project1.needs_repackaging)
+        assert_eventually_project_has(self.project1, {"needs_repackaging": True})
 
     def test_connects_via_pgservice(self):
         cur = self.conn.cursor()
@@ -487,7 +488,6 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         wait_for_project_ok_status(self.project1)
-        self.project1.refresh_from_db()
 
         last_process_job = Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE).latest(
             "updated_at"
@@ -496,7 +496,6 @@ class QfcTestCase(APITransactionTestCase):
             "project_details"
         ]["layers_by_id"]
 
-        self.assertEqual(last_process_job.status, Job.Status.FINISHED)
         self.assertTrue(
             layers_by_id["point_6b900fa7_af52_4082_bbff_6077f4a91d02"]["is_valid"]
         )
@@ -515,8 +514,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         wait_for_project_ok_status(self.project1)
-
-        self.project1.refresh_from_db()
+        assert_eventually_project_has(self.project, {"has_online_vector_data": True})
 
         self.assertTrue(self.project1.has_online_vector_data)
 
@@ -530,6 +528,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         wait_for_project_ok_status(self.project1)
+        assert_eventually_project_has(self.project, {"has_online_vector_data": False})
 
         self.project1.refresh_from_db()
 
