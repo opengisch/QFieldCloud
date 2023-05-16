@@ -141,16 +141,16 @@ class QfcTestCase(APITestCase):
             self.check_can_update_existing_jobs()
 
     def check_cannot_create_jobs(self, error):
+        # Can still create processprojectfile job
+        ProcessProjectfileJob.objects.create(
+            type=Job.Type.PROCESS_PROJECTFILE,
+            project=self.project1,
+            created_by=self.user1,
+        )
+
         with self.assertRaises(error):
             PackageJob.objects.create(
                 type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
-            )
-
-        with self.assertRaises(error):
-            ProcessProjectfileJob.objects.create(
-                type=Job.Type.PROCESS_PROJECTFILE,
-                project=self.project1,
-                created_by=self.user1,
             )
 
         with self.assertRaises(error):

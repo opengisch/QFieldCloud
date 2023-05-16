@@ -21,8 +21,6 @@ class PackageViewPermissions(permissions.BasePermission):
             return False
         user = request.user
 
-        check_supported_regarding_owner_account(project)
-
         return permissions_utils.can_read_files(user, project)
 
 
@@ -47,6 +45,7 @@ class PackageView(views.APIView):
     def post(self, request, projectid):
 
         project_obj = Project.objects.get(id=projectid)
+        check_supported_regarding_owner_account(project_obj)
 
         if not project_obj.project_filename:
             raise exceptions.NoQGISProjectError()
