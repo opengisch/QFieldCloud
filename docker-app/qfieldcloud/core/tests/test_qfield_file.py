@@ -3,7 +3,6 @@ import logging
 import os
 import tempfile
 import time
-from qfieldcloud.subscription.exceptions import SubscriptionException
 
 import psycopg2
 import requests
@@ -11,6 +10,7 @@ from django.http.response import HttpResponse, HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import ApplyJob, Geodb, Job, PackageJob, Person, Project
+from qfieldcloud.subscription.exceptions import SubscriptionException
 from qfieldcloud.subscription.models import SubscriptionStatus
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
