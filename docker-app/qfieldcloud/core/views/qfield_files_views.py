@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, serializers, utils
 from qfieldcloud.core.models import PackageJob, Project
-from qfieldcloud.core.permissions_utils import check_supported_regarding_owner_account
+from qfieldcloud.core.permissions_utils import is_supported_regarding_owner_account
 from rest_framework import permissions, views
 from rest_framework.response import Response
 
@@ -20,7 +20,8 @@ class PackageViewPermissions(permissions.BasePermission):
         except ObjectDoesNotExist:
             return False
         user = request.user
-        return permissions_utils.can_read_files(user, project)
+
+        return permissions_utils.can_read_files(user, project) and is_supported_regarding_owner_account(project)
 
 
 @method_decorator(
@@ -42,15 +43,12 @@ class PackageView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def post(self, request, projectid):
+        request.user
 
         project_obj = Project.objects.get(id=projectid)
 
         if not project_obj.project_filename:
             raise exceptions.NoQGISProjectError()
-
-        # NOTE fail early, only for performance reasons
-        # TODO maybe can be implemented somewhere generic
-        check_supported_regarding_owner_account(project_obj)
 
         # Check if active packaging job already exists
         # TODO: !!!!!!!!!!!! cache results for some minutes
