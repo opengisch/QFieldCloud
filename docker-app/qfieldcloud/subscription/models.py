@@ -59,7 +59,7 @@ class Plan(models.Model):
     def get_or_create_default(cls) -> "Plan":
         """Returns the default plan, creating one if none exists.
         To be used as a default value for UserAccount.type"""
-        if cls.objects.count() == 0:
+        if not cls.objects.exists():
             with transaction.atomic():
                 cls.objects.create(
                     code="default_user",
@@ -597,6 +597,8 @@ class AbstractSubscription(models.Model):
         with transaction.atomic():
             if active_since is None:
                 active_since = timezone.now()
+
+            active_since = active_since.replace(microsecond=0)
             new_package = None
 
             # delete future packages for that subscription, as we would create a new one if needed
@@ -632,14 +634,14 @@ class AbstractSubscription(models.Model):
         return old_package, new_package
 
     @classmethod
-    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
-        """Returns the currently active subscription, if not exists returns a newly created subscription with the default plan.
+    def get_or_create_current_subscription(cls, account: UserAccount) -> "Subscription":
+        """Returns the current subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
 
         Returns:
-            Self: the currently active subscription
+            Self: the current subscription
 
         TODO Python 3.11 the actual return type is Self
         """
@@ -649,6 +651,11 @@ class AbstractSubscription(models.Model):
             subscription = cls.create_default_plan_subscription(account)
 
         return subscription
+
+    @property
+    @deprecated("Use `get_or_create_current_subscription` instead")
+    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
+        return cls.get_or_create_current_subscription(account)
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
@@ -762,6 +769,10 @@ class AbstractSubscription(models.Model):
 
         TODO Python 3.11 the actual return type is Self
         """
+        if active_since:
+            # remove milliseconds as there will be slight shift with the remote system data
+            active_since = active_since.replace(microsecond=0)
+
         if plan.is_trial:
             assert isinstance(
                 active_since, datetime
@@ -820,5 +831,5 @@ class CurrentSubscription(AbstractSubscription):
     account = models.OneToOneField(
         UserAccount,
         on_delete=models.CASCADE,
-        related_name="current_subscription",
+        related_name="current_subscription_vw",
     )

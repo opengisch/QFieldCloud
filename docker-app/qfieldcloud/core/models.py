@@ -25,8 +25,8 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
-from qfieldcloud.core.exceptions import ReachedMaxOrganizationMembersError
 from qfieldcloud.core.utils2 import storage
+from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from timezone_field import TimeZoneField
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
@@ -73,11 +73,11 @@ class PersonQueryset(models.QuerySet):
         )
 
         max_premium_collaborators_per_private_project_q = Q(
-            project_roles__project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
+            project_roles__project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project_roles__project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
+            project_roles__project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
         )
 
         project_role_is_valid_condition_q = is_public_q | (
@@ -307,7 +307,7 @@ class User(AbstractUser):
 
                 if not skip_account_creation:
                     account, _created = UserAccount.objects.get_or_create(user=self)
-                    Subscription.get_or_create_active_subscription(account)
+                    Subscription.get_or_create_current_subscription(account)
         else:
             super().save(*args, **kwargs)
 
@@ -403,11 +403,16 @@ class UserAccount(models.Model):
     )
 
     @property
-    def active_subscription(self):
+    def current_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
         Subscription = get_subscription_model()
-        return Subscription.get_or_create_active_subscription(self)
+        return Subscription.get_or_create_current_subscription(self)
+
+    @property
+    @deprecated("Use `current_subscription` instead")
+    def active_subscription(self):
+        return self.current_subscription()
 
     @property
     def upcoming_subscription(self):
@@ -459,17 +464,17 @@ class UserAccount(models.Model):
         """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)"""
 
         return (
-            self.active_subscription.active_storage_total_bytes
+            self.current_subscription.active_storage_total_bytes
             - self.storage_used_bytes
         )
 
     @property
     def storage_used_ratio(self) -> float:
         """Returns the storage used in fraction of the total storage"""
-        if self.active_subscription.active_storage_total_bytes > 0:
+        if self.current_subscription.active_storage_total_bytes > 0:
             return min(
                 self.storage_used_bytes
-                / self.active_subscription.active_storage_total_bytes,
+                / self.current_subscription.active_storage_total_bytes,
                 1,
             )
         else:
@@ -483,7 +488,7 @@ class UserAccount(models.Model):
     @property
     def has_premium_support(self) -> bool:
         """A user has premium support if they have an active premium subscription plan or a at least one organization that they have admin role."""
-        subscription = self.active_subscription
+        subscription = self.current_subscription
         if subscription.plan.is_premium:
             return True
 
@@ -746,7 +751,7 @@ class OrganizationMember(models.Model):
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
         max_organization_members = (
-            self.organization.useraccount.active_subscription.plan.max_organization_members
+            self.organization.useraccount.current_subscription.plan.max_organization_members
         )
         if (
             max_organization_members > -1
@@ -840,7 +845,7 @@ class TeamMember(models.Model):
 
     def clean(self) -> None:
         if (
-            self.team.team_organization.members.filter(member=self.member).count() == 0
+            not self.team.team_organization.members.filter(member=self.member).exists()
             and self.team.team_organization.organization_owner != self.member
         ):
             raise ValidationError(
@@ -898,11 +903,11 @@ class ProjectQueryset(models.QuerySet):
             .filter(id=OuterRef("owner"))
         )
         max_premium_collaborators_per_private_project_q = Q(
-            owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
+            owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count
+            owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
@@ -1096,22 +1101,22 @@ class Project(models.Model):
     def has_online_vector_data(self) -> Optional[bool]:
         """Returns None if project details or layers details are not available"""
 
-        # it's safer to assume there is an online vector layer
         if not self.project_details:
             return None
 
         layers_by_id = self.project_details.get("layers_by_id")
 
-        # it's safer to assume there is an online vector layer
         if layers_by_id is None:
             return None
 
         has_online_vector_layers = False
 
         for layer_data in layers_by_id.values():
-            if layer_data.get("type_name") == "VectorLayer" and not layer_data.get(
-                "filename", ""
-            ):
+            # NOTE QGIS 3.30.x returns "Vector", while previous versions return "VectorLayer"
+            if layer_data.get("type_name") in (
+                "VectorLayer",
+                "Vector",
+            ) and not layer_data.get("filename", ""):
                 has_online_vector_layers = True
                 break
 
@@ -1151,7 +1156,7 @@ class Project(models.Model):
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
             max_premium_collaborators_per_private_project = (
-                self.owner.useraccount.active_subscription.plan.max_premium_collaborators_per_private_project
+                self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
             )
 
             if not self.project_filename:
@@ -1175,10 +1180,10 @@ class Project(models.Model):
 
     @property
     def storage_size_perc(self) -> float:
-        if self.owner.useraccount.active_subscription.active_storage_total_bytes > 0:
+        if self.owner.useraccount.current_subscription.active_storage_total_bytes > 0:
             return (
                 self.file_storage_bytes
-                / self.owner.useraccount.active_subscription.active_storage_total_bytes
+                / self.owner.useraccount.current_subscription.active_storage_total_bytes
                 * 100
             )
         else:
@@ -1206,7 +1211,34 @@ class Project(models.Model):
             storage.delete_project_thumbnail(self)
         super().delete(*args, **kwargs)
 
+    @property
+    def owner_can_create_job(self):
+        # NOTE consider including in status refactoring
+
+        from qfieldcloud.core.permissions_utils import (
+            is_supported_regarding_owner_account,
+        )
+
+        return is_supported_regarding_owner_account(self)
+
+    def check_can_be_created(self):
+        from qfieldcloud.core.permissions_utils import (
+            check_supported_regarding_owner_account,
+        )
+
+        check_supported_regarding_owner_account(self, ignore_online_layers=True)
+
+    def clean(self) -> None:
+        """
+        Prevent creating new projects if the user is inactive or over quota
+        """
+        if self._state.adding:
+            self.check_can_be_created()
+
+        return super().clean()
+
     def save(self, recompute_storage=False, *args, **kwargs):
+        self.clean()
         logger.info(f"Saving project {self}...")
 
         if recompute_storage:
@@ -1235,13 +1267,13 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         # Build the conditions with Q objects
         is_public_q = Q(project__is_public=True)
         is_team_collaborator = Q(collaborator__type=User.Type.TEAM)
-        # max_premium_collaborators_per_private_project_q = active_subscription_q & (
+        # max_premium_collaborators_per_private_project_q = current_subscription_q & (
         max_premium_collaborators_per_private_project_q = Q(
-            project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project=V(
+            project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project__owner__useraccount__current_subscription__plan__max_premium_collaborators_per_private_project__gte=count
+            project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
@@ -1344,7 +1376,7 @@ class ProjectCollaborator(models.Model):
             if self.collaborator.is_person:
                 members_qs = organization.members.filter(member=self.collaborator)
 
-                if members_qs.count() == 0:
+                if not members_qs.exists():
                     raise ValidationError(
                         _(
                             "Cannot add a user who is not a member of the organization as a project collaborator."
@@ -1352,7 +1384,7 @@ class ProjectCollaborator(models.Model):
                     )
             elif self.collaborator.is_team:
                 team_qs = organization.teams.filter(pk=self.collaborator)
-                if team_qs.count() == 0:
+                if not team_qs.exists():
 
                     raise ValidationError(_("Team does not exist."))
 
@@ -1403,6 +1435,7 @@ class Delta(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deltafile_id = models.UUIDField(db_index=True)
+    client_id = models.UUIDField(null=False, db_index=True, editable=False)
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -1468,13 +1501,6 @@ class Delta(models.Model):
     def method(self):
         return self.content.get("method")
 
-    @property
-    def is_supported_regarding_owner_account(self):
-        return (
-            not self.project.has_online_vector_data
-            or self.project.owner.useraccount.active_subscription.plan.is_external_db_supported
-        )
-
 
 class Job(models.Model):
 
@@ -1510,6 +1536,8 @@ class Job(models.Model):
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
     started_at = models.DateTimeField(blank=True, null=True, editable=False)
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
+    docker_started_at = models.DateTimeField(blank=True, null=True, editable=False)
+    docker_finished_at = models.DateTimeField(blank=True, null=True, editable=False)
 
     @property
     def short_id(self) -> str:
@@ -1546,6 +1574,23 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
+    def check_can_be_created(self):
+        from qfieldcloud.core.permissions_utils import (
+            check_supported_regarding_owner_account,
+        )
+
+        check_supported_regarding_owner_account(self.project)
+
+    def clean(self):
+        if self._state.adding:
+            self.check_can_be_created()
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
 
 class PackageJob(Job):
     def save(self, *args, **kwargs):
@@ -1558,6 +1603,11 @@ class PackageJob(Job):
 
 
 class ProcessProjectfileJob(Job):
+    def check_can_be_created(self):
+        # Alsways create jobs because they are cheap
+        # and is always good to have updated metadata
+        pass
+
     def save(self, *args, **kwargs):
         self.type = self.Type.PROCESS_PROJECTFILE
         return super().save(*args, **kwargs)

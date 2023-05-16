@@ -11,6 +11,8 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
+from qfieldcloud.subscription.exceptions import InactiveSubscriptionError, QuotaError
+from qfieldcloud.subscription.models import Subscription
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -482,3 +484,49 @@ class QfcTestCase(APITransactionTestCase):
         om1.delete()
 
         self.assertEqual(TeamMember.objects.filter(team=t1, member=u2).count(), 0)
+
+    def test_create_project_by_inactive_user(self):
+        p1 = Project.objects.create(
+            name="p1",
+            owner=self.user1,
+        )
+
+        subscription = self.user1.useraccount.current_subscription
+        subscription.status = Subscription.Status.INACTIVE_DRAFT
+        subscription.save()
+
+        # Make sure the user is inactive
+        self.assertFalse(subscription.is_active)
+
+        # Cannot create project if user's subscription is inactive
+        with self.assertRaises(InactiveSubscriptionError):
+            Project.objects.create(
+                name="p2",
+                owner=self.user1,
+            )
+
+        # Cant still modify existing project
+        p1.name = "p1-modified"
+        p1.save()
+
+    def test_create_project_if_user_is_over_quota(self):
+        plan = self.user1.useraccount.current_subscription.plan
+
+        # Create a project that uses all the storage
+        more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
+        p1 = Project.objects.create(
+            name="p1",
+            owner=self.user1,
+            file_storage_bytes=more_bytes_than_plan,
+        )
+
+        # Cannot create another project if the user's plan is over quota
+        with self.assertRaises(QuotaError):
+            Project.objects.create(
+                name="p2",
+                owner=self.user1,
+            )
+
+        # Cant still modify existing project
+        p1.name = "p1-modified"
+        p1.save()

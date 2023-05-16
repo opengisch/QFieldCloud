@@ -406,7 +406,7 @@ def purge_old_file_versions(
 
     # Number of versions to keep is determined by the account type
     keep_count = (
-        project.owner.useraccount.active_subscription.plan.storage_keep_versions
+        project.owner.useraccount.current_subscription.plan.storage_keep_versions
     )
 
     logger.debug(f"Keeping {keep_count} versions")

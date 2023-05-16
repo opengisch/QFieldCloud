@@ -49,7 +49,7 @@ class QfcTestCase(APITransactionTestCase):
         # need to clean the `lru_cache` value since we recreate the PackageType for each test
         PackageType.get_storage_package_type.cache_clear()
 
-        subscription = self.a1.active_subscription
+        subscription = self.a1.current_subscription
         subscription.plan = self.plan_premium
         subscription.save()
 
@@ -72,39 +72,39 @@ class QfcTestCase(APITransactionTestCase):
             user = self.u1
 
         self.assertEqual(
-            user.useraccount.active_subscription.active_storage_total_mb,
+            user.useraccount.current_subscription.active_storage_total_mb,
             active_storage_total_mb,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.active_storage_package,
+            user.useraccount.current_subscription.active_storage_package,
             active_storage_package,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.active_storage_package_quantity,
+            user.useraccount.current_subscription.active_storage_package_quantity,
             active_storage_package_quantity,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.active_storage_package_mb,
+            user.useraccount.current_subscription.active_storage_package_mb,
             active_storage_package_mb,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.future_storage_total_mb,
+            user.useraccount.current_subscription.future_storage_total_mb,
             future_storage_total_mb,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.future_storage_package,
+            user.useraccount.current_subscription.future_storage_package,
             future_storage_package,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.future_storage_package_quantity,
+            user.useraccount.current_subscription.future_storage_package_quantity,
             future_storage_package_quantity,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.future_storage_package_mb,
+            user.useraccount.current_subscription.future_storage_package_mb,
             future_storage_package_mb,
         )
         self.assertEqual(
-            user.useraccount.active_subscription.future_storage_package_changed_mb,
+            user.useraccount.current_subscription.future_storage_package_changed_mb,
             future_storage_package_changed_mb,
         )
         self.assertEqual(user.useraccount.storage_used_mb, storage_used_mb)
@@ -125,7 +125,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(PackageType.get_storage_package_type().pk, package_type.pk)
 
     def test_storage_on_default_plan(self):
-        subscription = self.a1.active_subscription
+        subscription = self.a1.current_subscription
         subscription.plan = self.plan_default
         subscription.save()
 
@@ -144,12 +144,12 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_default_plan_raises_when_adding_active_storage(self):
-        subscription = self.a1.active_subscription
+        subscription = self.a1.current_subscription
         subscription.plan = self.plan_default
         subscription.save()
 
         with self.assertRaises(NotPremiumPlanException):
-            self.a1.active_subscription.set_package_quantity(
+            self.a1.current_subscription.set_package_quantity(
                 PackageType.get_storage_package_type(), 1
             )
 
@@ -168,12 +168,12 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_default_plan_ignores_active_package(self):
-        subscription = self.a1.active_subscription
+        subscription = self.a1.current_subscription
         subscription.plan = self.plan_default
         subscription.save()
 
         Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=timezone.now() - timedelta(days=3),
@@ -211,7 +211,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_premium_plan_with_active_storage(self):
         package = Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=timezone.now() - timedelta(days=3),
@@ -234,7 +234,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_premium_plan_with_active_storage_without_end_date(self):
         package = Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=timezone.now() - timedelta(days=3),
@@ -257,7 +257,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_premium_plan_with_expired_storage(self):
         Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=timezone.now() - timedelta(days=3),
@@ -280,7 +280,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_premium_plan_with_future_storage(self):
         package = Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=timezone.now() + timedelta(days=2),
@@ -304,21 +304,21 @@ class QfcTestCase(APITransactionTestCase):
     def test_premium_plan_with_active_and_future_and_expired_storage(self):
         now = timezone.now()
         active_package = Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=now - timedelta(days=3),
             active_until=now + timedelta(days=3),
         )
         Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=now - timedelta(days=5),
             active_until=now - timedelta(days=3),
         )
         future_package = Package.objects.create(
-            subscription=self.a1.active_subscription,
+            subscription=self.a1.current_subscription,
             type=PackageType.get_storage_package_type(),
             quantity=1,
             active_since=now + timedelta(days=3),
@@ -340,7 +340,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_premium_plan_can_add_active_storage(self):
-        _old_package, new_package = self.a1.active_subscription.set_package_quantity(
+        _old_package, new_package = self.a1.current_subscription.set_package_quantity(
             PackageType.get_storage_package_type(), 1
         )
 
@@ -359,7 +359,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_premium_plan_can_add_active_storage_with_quantity_of_42(self):
-        _old_package, new_package = self.a1.active_subscription.set_package_quantity(
+        _old_package, new_package = self.a1.current_subscription.set_package_quantity(
             PackageType.get_storage_package_type(), 42
         )
 
@@ -378,7 +378,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_premium_plan_can_add_future_storage(self):
-        _old_package, new_package = self.a1.active_subscription.set_package_quantity(
+        _old_package, new_package = self.a1.current_subscription.set_package_quantity(
             PackageType.get_storage_package_type(),
             1,
             timezone.now() + timedelta(days=3),
@@ -402,7 +402,7 @@ class QfcTestCase(APITransactionTestCase):
         (
             old_package,
             active_package,
-        ) = self.a1.active_subscription.set_package_quantity(
+        ) = self.a1.current_subscription.set_package_quantity(
             PackageType.get_storage_package_type(), 1
         )
 
@@ -424,7 +424,7 @@ class QfcTestCase(APITransactionTestCase):
         (
             retired_package,
             future_package,
-        ) = self.a1.active_subscription.set_package_quantity(
+        ) = self.a1.current_subscription.set_package_quantity(
             PackageType.get_storage_package_type(),
             2,
             timezone.now() + timedelta(days=3),
@@ -460,7 +460,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(package_type.pk, PackageType.get_storage_package_type().pk)
 
-        _old_package, new_package = self.a1.active_subscription.set_package_quantity(
+        _old_package, new_package = self.a1.current_subscription.set_package_quantity(
             package_type,
             1,
         )
@@ -480,7 +480,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_storage_cannot_have_packages_with_time_overlaps(self):
-        subscription = self.u1.useraccount.active_subscription
+        subscription = self.u1.useraccount.current_subscription
         package = Package.objects.create(
             subscription=subscription,
             quantity=1,
@@ -528,7 +528,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_storage_cannot_add_new_package_when_active_until_is_null(self):
-        subscription = self.u1.useraccount.active_subscription
+        subscription = self.u1.useraccount.current_subscription
         package = Package.objects.create(
             subscription=subscription,
             quantity=1,
@@ -688,12 +688,12 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         u10mb = Person.objects.create(username="u10mb")
-        u10mb_subscription = u10mb.useraccount.active_subscription
+        u10mb_subscription = u10mb.useraccount.current_subscription
         u10mb_subscription.plan = plan_10mb
         u10mb_subscription.save()
 
         u20mb = Person.objects.create(username="u20mb")
-        u20mb_subscription = u20mb.useraccount.active_subscription
+        u20mb_subscription = u20mb.useraccount.current_subscription
         u20mb_subscription.plan = plan_20mb
         u20mb_subscription.save()
 
@@ -765,7 +765,7 @@ class QfcTestCase(APITransactionTestCase):
         (
             _old_package,
             new_package,
-        ) = u10mb.useraccount.active_subscription.set_package_quantity(
+        ) = u10mb.useraccount.current_subscription.set_package_quantity(
             PackageType.get_storage_package_type(), 1
         )
 

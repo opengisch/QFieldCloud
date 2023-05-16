@@ -1,3 +1,4 @@
+from deprecated import deprecated
 from rest_framework import status
 
 
@@ -153,14 +154,6 @@ class QGISPackageError(QFieldCloudException):
         message = "QGIS is unable to open the QGIS project"
 
 
-class QuotaError(QFieldCloudException):
-    """Raised when a quota limitation is hit"""
-
-    code = "over_quota"
-    message = "Quota error"
-    status_code = status.HTTP_402_PAYMENT_REQUIRED
-
-
 class ProjectAlreadyExistsError(QFieldCloudException):
     """Raised when a quota limitation is hit"""
 
@@ -169,6 +162,7 @@ class ProjectAlreadyExistsError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
+@deprecated("moved to subscription")
 class ReachedMaxOrganizationMembersError(QFieldCloudException):
     """Raised when an organization has exhausted its quota of members"""
 

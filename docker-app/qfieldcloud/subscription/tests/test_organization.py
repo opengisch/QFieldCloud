@@ -1,7 +1,6 @@
 import logging
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.exceptions import ReachedMaxOrganizationMembersError
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
@@ -12,6 +11,7 @@ from qfieldcloud.core.models import (
     Team,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
@@ -77,7 +77,7 @@ class QfcTestCase(APITransactionTestCase):
         u8 = Person.objects.create(username="u8")
 
         org01 = Organization.objects.create(username="org01", organization_owner=u1)
-        subscription = org01.useraccount.active_subscription
+        subscription = org01.useraccount.current_subscription
         set_subscription(org01, is_premium=True)
         subscription.save()
         org01.members.create(member=u2, role=OrganizationMember.Roles.ADMIN)
