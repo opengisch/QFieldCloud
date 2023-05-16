@@ -94,7 +94,7 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
 
     has_pending_jobs = True
     for _ in range(wait_s):
-        if Job.objects.filter(project=project, status=Job.Status.PENDING).exists():
+        if not Job.objects.filter(project=project, status=Job.Status.PENDING).exists():
             has_pending_jobs = False
             break
 
