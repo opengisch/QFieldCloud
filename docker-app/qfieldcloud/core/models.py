@@ -1606,9 +1606,8 @@ class PackageJob(Job):
 
 class ProcessProjectfileJob(Job):
     def check_can_be_created(self):
-        # Exclude from checks (for now) because else User cannot adapt after
-        # Downgrading.
-        # TODO create a more sophisticated model where job creation is prevented under certain conditions
+        # Alsways create jobs because they are cheap
+        # and is always good to have updated metadata
         pass
 
     def save(self, *args, **kwargs):
