@@ -120,11 +120,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         wait_for_project_ok_status(self.project)
 
-        self.assertTrue(
-            assert_eventually_project_has(
-                self.project, {"has_online_vector_data": True}
-            )
-        )
+        assert_eventually_project_has(self.project, {"has_online_vector_data": True})
 
         # Check user has no storage left
         self.assertTrue(self.user.useraccount.storage_free_bytes < 0)

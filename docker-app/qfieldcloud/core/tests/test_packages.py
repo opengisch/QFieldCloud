@@ -488,6 +488,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
 
         last_process_job = Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE).latest(
             "updated_at"
@@ -514,7 +515,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         wait_for_project_ok_status(self.project1)
-        assert_eventually_project_has(self.project, {"has_online_vector_data": True})
+        assert_eventually_project_has(self.project1, {"has_online_vector_data": True})
 
         self.assertTrue(self.project1.has_online_vector_data)
 
@@ -528,7 +529,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         wait_for_project_ok_status(self.project1)
-        assert_eventually_project_has(self.project, {"has_online_vector_data": False})
+        assert_eventually_project_has(self.project1, {"has_online_vector_data": False})
 
         self.project1.refresh_from_db()
 
