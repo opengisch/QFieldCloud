@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, permissions_utils, serializers, utils
 from qfieldcloud.core.models import PackageJob, Project
-from qfieldcloud.core.permissions_utils import is_supported_regarding_owner_account, check_supported_regarding_owner_account
+from qfieldcloud.core.permissions_utils import check_supported_regarding_owner_account
 from rest_framework import permissions, views
 from rest_framework.response import Response
 

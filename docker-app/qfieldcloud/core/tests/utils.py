@@ -6,8 +6,6 @@ from typing import IO, Iterable, Union
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.subscription.models import Plan, Subscription
 
-# FIXME from unittest import fail
-
 
 def testdata_path(path):
     basepath = os.path.dirname(os.path.abspath(__file__))
@@ -119,4 +117,4 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
 
 
 def fail(msg):
-    raise Exception(msg)
+    raise AssertionError(msg or "Test case failed")

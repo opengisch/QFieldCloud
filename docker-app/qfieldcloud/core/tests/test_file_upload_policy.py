@@ -1,6 +1,5 @@
 import logging
 import os
-import pdb
 
 import psycopg2
 from qfieldcloud.authentication.models import AuthToken
@@ -112,10 +111,10 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.add_qgis_project_file()
         self.assertTrue(status.is_success(response.status_code))
-        #pdb.set_trace()
         wait_for_project_ok_status(self.project)
 
-        # self.assertTrue(self.project.has_online_vector_data)
+        self.project.refresh_from_db()
+        self.assertTrue(self.project.has_online_vector_data)
 
         # Check user has no storage left
         self.assertTrue(self.user.useraccount.storage_free_bytes < 0)
