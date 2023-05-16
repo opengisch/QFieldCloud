@@ -1144,9 +1144,7 @@ class Project(models.Model):
 
     @property
     def status(self) -> Status:
-        # NOTE the status is NOT stored in the db, because it might be outdated.
-        # One reason is after_docker_run() might still be running which means that
-        # e.g has_online_vector_data might be outdated for some seconds.
+        # NOTE the status is NOT stored in the db, because it might be outdated
         if (
             Job.objects.filter(
                 project=self, status__in=[Job.Status.QUEUED, Job.Status.STARTED]
