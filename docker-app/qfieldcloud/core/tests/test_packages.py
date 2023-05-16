@@ -27,7 +27,7 @@ from qfieldcloud.core.utils2.storage import get_stored_package_ids
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import setup_subscription_plans, testdata_path
+from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
 
 logging.disable(logging.CRITICAL)
 
@@ -83,40 +83,6 @@ class QfcTestCase(APITransactionTestCase):
                 format="multipart",
             )
             self.assertTrue(status.is_success(response.status_code))
-
-    def wait_for_project_ok_status(self, project: Project, wait_s: int = 30):
-        jobs = Job.objects.filter(project=project).exclude(
-            status__in=[Job.Status.FAILED, Job.Status.FINISHED]
-        )
-
-        if not jobs.exists():
-            return
-
-        has_no_pending_jobs = False
-        for _ in range(wait_s):
-            if (
-                Job.objects.filter(project=project, status=Job.Status.PENDING).count()
-                == 0
-            ):
-                has_no_pending_jobs = True
-                break
-
-            time.sleep(1)
-
-        if not has_no_pending_jobs:
-            self.fail(f"Still pending jobs after waiting for {wait_s} seconds")
-
-        for _ in range(wait_s):
-            project.refresh_from_db()
-            if project.status == Project.Status.OK:
-                return
-            if project.status == Project.Status.FAILED:
-                self.fail("Waited for ok status, but got failed")
-                return
-
-            time.sleep(1)
-
-        self.fail(f"Waited for ok status for {wait_s} seconds")
 
     def upload_files_and_check_package(
         self,
@@ -520,7 +486,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        self.wait_for_project_ok_status(self.project1)
+        wait_for_project_ok_status(self.project1)
         self.project1.refresh_from_db()
 
         last_process_job = Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE).latest(
@@ -548,7 +514,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        self.wait_for_project_ok_status(self.project1)
+        wait_for_project_ok_status(self.project1)
 
         self.project1.refresh_from_db()
 
@@ -563,7 +529,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        self.wait_for_project_ok_status(self.project1)
+        wait_for_project_ok_status(self.project1)
 
         self.project1.refresh_from_db()
 

@@ -1,9 +1,11 @@
 import io
 import os
 from typing import IO, Iterable, Union
+from time import sleep
 
-from qfieldcloud.core.models import User
+from qfieldcloud.core.models import User, Project, Job
 from qfieldcloud.subscription.models import Plan, Subscription
+# FIXME from unittest import fail
 
 
 def testdata_path(path):
@@ -79,3 +81,44 @@ def set_subscription(
 def get_random_file(mb: int) -> IO:
     """Helper that returns a file of given size in megabytes"""
     return io.BytesIO(os.urandom(1000 * int(mb * 1000)))
+
+
+def wait_for_project_ok_status(project: Project, wait_s: int = 30):
+    """
+    Helper that waits for any jobs of the project to finish """
+    jobs = Job.objects.filter(project=project).exclude(
+        status__in=[Job.Status.FAILED, Job.Status.FINISHED]
+    )
+
+    if jobs.count() == 0:
+        return
+
+    has_no_pending_jobs = False
+    for _ in range(wait_s):
+        if (
+            Job.objects.filter(project=project, status=Job.Status.PENDING).count()
+            == 0
+        ):
+            has_no_pending_jobs = True
+            break
+
+        sleep(1)
+
+    if not has_no_pending_jobs:
+        fail(f"Still pending jobs after waiting for {wait_s} seconds")
+
+    for _ in range(wait_s):
+        project.refresh_from_db()
+        if project.status == Project.Status.OK:
+            return
+        if project.status == Project.Status.FAILED:
+            fail("Waited for ok status, but got failed")
+            return
+
+        sleep(1)
+
+    fail(f"Waited for ok status for {wait_s} seconds")
+
+
+def fail(msg):
+    raise Exception(msg)
