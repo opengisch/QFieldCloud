@@ -511,6 +511,7 @@ class UserAccount(models.Model):
 
 
 class Geodb(models.Model):
+    @staticmethod
     def random_string():
         """Generate random sting starting with a lowercase letter and then
         lowercase letters and digits"""
@@ -522,6 +523,7 @@ class Geodb(models.Model):
         )
         return secure_str
 
+    @staticmethod
     def random_password():
         """Generate secure random password composed of
         letters, digits and special characters"""
@@ -532,9 +534,11 @@ class Geodb(models.Model):
         secure_str = "".join((secrets.choice(password_characters) for i in range(16)))
         return secure_str
 
+    @staticmethod
     def default_hostname():
         return os.environ.get("GEODB_HOST")
 
+    @staticmethod
     def default_port():
         return os.environ.get("GEODB_PORT")
 
