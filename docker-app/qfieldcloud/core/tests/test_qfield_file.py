@@ -10,6 +10,7 @@ from django.http.response import HttpResponse, HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Job, PackageJob, Person, Project
+from qfieldcloud.subscription.models import SubscriptionStatus
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -27,7 +28,11 @@ class QfcTestCase(APITransactionTestCase):
 
         self.user2 = Person.objects.create_user(username="user2", password="abc123")
 
-        self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
+        self.token1 = AuthToken.objects.get_or_create(
+            user=self.user1,
+            client_type=AuthToken.ClientType.QFIELD,
+            user_agent="qfield|dev",
+        )[0]
 
         # Create a project
         self.project1 = Project.objects.create(
@@ -83,8 +88,27 @@ class QfcTestCase(APITransactionTestCase):
         except Exception:
             self.assertTrue(status.is_success(response.status_code), response.content)
 
+    # FIXME def test_push_file_to_qfield_if_inactive_user(self):
+
     def test_list_files_for_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        subscription = self.user1.useraccount.current_subscription
+        subscription.status = SubscriptionStatus.INACTIVE_DRAFT
+        subscription.save()
+        self.assertFalse(self.user1.useraccount.current_subscription.is_active)
+
+        # A cross check that no delta apply or package jobs can be created on the project
+        # with self.assertRaises(SubscriptionException):
+        #     PackageJob.objects.create(
+        #         type=Job.Type.PACKAGE, project=self.project1, created_by=self.user1
+        #     )
+        # with self.assertRaises(SubscriptionException):
+        #     ApplyJob.objects.create(
+        #         type=Job.Type.DELTA_APPLY, project=self.project1, created_by=self.user1
+        #     )
+
+        self.assertEqual(self.token1.client_type, AuthToken.ClientType.QFIELD)
 
         cur = self.conn.cursor()
 
