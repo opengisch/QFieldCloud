@@ -2,6 +2,7 @@ from typing import List, Literal, Union
 
 from deprecated import deprecated
 from django.utils.translation import gettext as _
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -861,6 +862,14 @@ def check_supported_regarding_owner_account(
                 )
             )
     return True
+
+
+def can_always_upload_files(client_type) -> bool:
+    # ... not matter what
+    return client_type in (
+        AuthToken.ClientType.QFIELD,
+        AuthToken.ClientType.WORKER,
+    )
 
 
 def is_supported_regarding_owner_account(project: Project) -> bool:

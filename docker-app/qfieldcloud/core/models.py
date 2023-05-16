@@ -1574,13 +1574,12 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
-    def check_can_be_created(self, ignore_online_layers=False):
-        # Check if the object is being created
+    def check_can_be_created(self):
         from qfieldcloud.core.permissions_utils import (
             check_supported_regarding_owner_account,
         )
 
-        check_supported_regarding_owner_account(self.project, ignore_online_layers)
+        check_supported_regarding_owner_account(self.project)
 
     def clean(self):
         if self._state.adding:
@@ -1605,8 +1604,10 @@ class PackageJob(Job):
 
 class ProcessProjectfileJob(Job):
     def check_can_be_created(self):
-        # exclude online layers from check to allow users to adapt project after downgrading plan
-        super().check_can_be_created(ignore_online_layers=True)
+        # Exclude from checks (for now) because else User cannot adapt after
+        # Downgrading.
+        # TODO create a more sophisticated model where job creation is prevented under certain conditions
+        pass
 
     def save(self, *args, **kwargs):
         self.type = self.Type.PROCESS_PROJECTFILE
