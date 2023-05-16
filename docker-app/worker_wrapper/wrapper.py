@@ -323,6 +323,7 @@ class PackageJobRun(JobRun):
         self.data_last_packaged_at = timezone.now()
 
     def after_docker_run(self) -> None:
+        # only successfully finished packaging jobs should update the Project.data_last_packaged_at	
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
         self.job.project.last_package_job = self.job
         self.job.project.save(
