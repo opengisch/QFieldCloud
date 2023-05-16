@@ -167,15 +167,7 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file = request.FILES.get("file")
 
-        if not permissions_utils.can_always_upload_files(request.auth.client_type):
-            # Accept file uploads from QField or delta_apply jobs no matter what
-            file_size_bytes = request_file.size
-            quota_left_bytes = project.owner.useraccount.storage_free_bytes
-
-            if file_size_bytes > quota_left_bytes:
-                raise QuotaError(
-                    f"Requiring {file_size_bytes} bytes of storage but only {quota_left_bytes} bytes available."
-                )
+        permissions_utils.check_can_upload_file(project, request.auth.client_type, request_file.size)
 
         old_object = get_project_file_with_versions(project.id, filename)
         sha256sum = utils.get_sha256(request_file)
