@@ -2,6 +2,7 @@ from typing import List, Literal, Union
 
 from deprecated import deprecated
 from django.utils.translation import gettext as _
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -868,3 +869,21 @@ def is_supported_regarding_owner_account(project: Project) -> bool:
         return check_supported_regarding_owner_account(project)
     except (SubscriptionException):
         return False
+
+
+def can_always_upload_files(client_type) -> bool:
+    return client_type in (
+        AuthToken.ClientType.QFIELD,
+        AuthToken.ClientType.WORKER,
+    )
+
+
+def check_can_upload_file(project, client_type, file_size_bytes: int) -> Literal[True]:
+    if can_always_upload_files(client_type):
+        return True
+
+    quota_left_bytes = project.owner.useraccount.storage_free_bytes
+    if file_size_bytes > quota_left_bytes:
+        raise QuotaError(
+            f"Requiring {file_size_bytes} bytes of storage but only {quota_left_bytes} bytes available."
+        )
