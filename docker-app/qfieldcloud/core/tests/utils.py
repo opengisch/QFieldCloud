@@ -89,18 +89,18 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         status__in=[Job.Status.FAILED, Job.Status.FINISHED]
     )
 
-    if jobs.count() == 0:
+    if not jobs.exists():
         return
 
-    has_no_pending_jobs = False
+    has_pending_jobs = True
     for _ in range(wait_s):
-        if Job.objects.filter(project=project, status=Job.Status.PENDING).count() == 0:
-            has_no_pending_jobs = True
+        if Job.objects.filter(project=project, status=Job.Status.PENDING).exists():
+            has_pending_jobs = False
             break
 
         sleep(1)
 
-    if not has_no_pending_jobs:
+    if has_pending_jobs:
         fail(f"Still pending jobs after waiting for {wait_s} seconds")
 
     for _ in range(wait_s):
@@ -114,6 +114,20 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         sleep(1)
 
     fail(f"Waited for ok status for {wait_s} seconds")
+
+
+def wait_for_has_online_vector_data(project: Project, wait_s: int = 30):
+    """
+    Helper that waits for ProcessProjectfileJobRun.after_docker_run to finish
+    ans asserts there is online vector layers"""
+    for _ in range(wait_s):
+        project.refresh_from_db()
+        if project.has_online_vector_data:
+            return True
+
+        sleep(1)
+
+    fail(f"Waited for has_online_vector_data for {wait_s} seconds")
 
 
 def fail(msg):

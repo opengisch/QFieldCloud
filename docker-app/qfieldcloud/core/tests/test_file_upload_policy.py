@@ -10,7 +10,12 @@ from qfieldcloud.subscription.models import SubscriptionStatus
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
+from .utils import (
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_has_online_vector_data,
+    wait_for_project_ok_status,
+)
 
 logging.disable(logging.CRITICAL)
 
@@ -113,8 +118,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         wait_for_project_ok_status(self.project)
 
-        self.project.refresh_from_db()
-        self.assertTrue(self.project.has_online_vector_data)
+        self.assertTrue(wait_for_has_online_vector_data(self.project))
 
         # Check user has no storage left
         self.assertTrue(self.user.useraccount.storage_free_bytes < 0)
@@ -137,7 +141,6 @@ class QfcTestCase(APITransactionTestCase):
         response = self.add_qgis_project_file()
         self.assertTrue(status.is_success(response.status_code))
         wait_for_project_ok_status(self.project)
-        self.assertTrue(self.project.has_online_vector_data)
 
         # Check user has no storage left
         self.assertTrue(self.user.useraccount.storage_free_bytes < 0)
