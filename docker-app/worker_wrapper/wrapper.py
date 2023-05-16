@@ -106,11 +106,11 @@ class JobRun:
         feedback = {}
 
         try:
-            self.before_docker_run()
-
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
             self.job.save()
+
+            self.before_docker_run()
 
             command = self.get_command()
             volumes = []
@@ -147,7 +147,7 @@ class JobRun:
 
             self.job.output = output.decode("utf-8")
             self.job.feedback = feedback
-            self.job.finished_at = timezone.now()
+            self.job.save()
 
             if exit_code != 0 or feedback.get("error") is not None:
                 self.job.status = Job.Status.FAILED
@@ -166,10 +166,11 @@ class JobRun:
             # make sure we have reloaded the project, since someone might have changed it already
             self.job.project.refresh_from_db()
 
+            self.after_docker_run()
+
+            self.job.finished_at = timezone.now()
             self.job.status = Job.Status.FINISHED
             self.job.save()
-
-            self.after_docker_run()
 
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
@@ -241,6 +242,10 @@ class JobRun:
         logger.info(f"Execute: {' '.join(command)}")
         volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
 
+        # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
+        self.job.docker_started_at = timezone.now()
+        self.job.save()
+
         container: Container = client.containers.run(  # type:ignore
             QGIS_CONTAINER_NAME,
             command,
@@ -270,6 +275,10 @@ class JobRun:
             response = container.wait(timeout=self.container_timeout_secs)
         except Exception as err:
             logger.exception("Timeout error.", exc_info=err)
+
+        # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
+        self.job.docker_finished_at = timezone.now()
+        self.job.save()
 
         logs = b""
         # Retry reading the logs, as it may fail
@@ -315,45 +324,45 @@ class PackageJobRun(JobRun):
 
     def after_docker_run(self) -> None:
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
-        if self.job.status == Job.Status.FINISHED:
-            self.job.project.data_last_packaged_at = self.data_last_packaged_at
-            self.job.project.last_package_job = self.job
-            self.job.project.save(
-                update_fields=(
-                    "data_last_packaged_at",
-                    "last_package_job",
-                )
+        self.job.project.data_last_packaged_at = self.data_last_packaged_at
+        self.job.project.last_package_job = self.job
+        self.job.project.save(
+            update_fields=(
+                "data_last_packaged_at",
+                "last_package_job",
             )
+        )
 
-            try:
-                project_id = str(self.job.project.id)
-                package_ids = storage.get_stored_package_ids(project_id)
-                job_ids = [
-                    str(job["id"])
-                    for job in Job.objects.filter(
-                        type=Job.Type.PACKAGE,
-                    )
-                    .exclude(
-                        status__in=(Job.Status.FAILED, Job.Status.FINISHED),
-                    )
-                    .values("id")
-                ]
-
-                for package_id in package_ids:
-                    # keep the last package
-                    if package_id == str(self.job.project.last_package_job_id):
-                        continue
-
-                    # the job is still active, so it might be one of the new packages
-                    if package_id in job_ids:
-                        continue
-
-                    storage.delete_stored_package(project_id, package_id)
-            except Exception as err:
-                logger.error(
-                    "Failed to delete dangling packages, will be deleted via CRON later.",
-                    exc_info=err,
+        try:
+            project_id = str(self.job.project.id)
+            package_ids = storage.get_stored_package_ids(project_id)
+            job_ids = [
+                str(job["id"])
+                for job in Job.objects.filter(
+                    type=Job.Type.PACKAGE,
                 )
+                .exclude(id=self.job.id)
+                .exclude(
+                    status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+                )
+                .values("id")
+            ]
+
+            for package_id in package_ids:
+                # keep the last package
+                if package_id == str(self.job.project.last_package_job_id):
+                    continue
+
+                # the job is still active, so it might be one of the new packages
+                if package_id in job_ids:
+                    continue
+
+                storage.delete_stored_package(project_id, package_id)
+        except Exception as err:
+            logger.error(
+                "Failed to delete dangling packages, will be deleted via CRON later.",
+                exc_info=err,
+            )
 
 
 class DeltaApplyJobRun(JobRun):
