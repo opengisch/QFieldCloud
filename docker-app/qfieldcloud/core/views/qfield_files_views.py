@@ -45,7 +45,6 @@ class PackageView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def post(self, request, projectid):
-        request.user
 
         project_obj = Project.objects.get(id=projectid)
 
