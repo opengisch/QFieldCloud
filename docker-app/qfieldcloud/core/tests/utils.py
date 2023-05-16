@@ -84,7 +84,10 @@ def get_random_file(mb: int) -> IO:
 
 def wait_for_project_ok_status(project: Project, wait_s: int = 30):
     """
-    Helper that waits for any jobs of the project to finish"""
+    Helper that waits for any jobs (worker) of the project to finish.
+    NOTE this does not mean the project is updated yet as there
+    is some processing to be done and saved to the project in the app.
+    """
     jobs = Job.objects.filter(project=project).exclude(
         status__in=[Job.Status.FAILED, Job.Status.FINISHED]
     )
