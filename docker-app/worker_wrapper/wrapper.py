@@ -242,10 +242,6 @@ class JobRun:
         logger.info(f"Execute: {' '.join(command)}")
         volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
 
-        # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
-        self.job.docker_started_at = timezone.now()
-        self.job.save()
-
         container: Container = client.containers.run(  # type:ignore
             QGIS_CONTAINER_NAME,
             command,
@@ -266,6 +262,10 @@ class JobRun:
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
         )
 
+        # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
+        self.job.docker_started_at = timezone.now()
+        self.job.container_id = container.id
+        self.job.save()
         logger.info(f"Starting worker {container.id} ...")
 
         response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
