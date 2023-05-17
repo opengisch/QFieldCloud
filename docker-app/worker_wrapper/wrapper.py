@@ -61,7 +61,7 @@ class JobRun:
             self.job = self.job_class.objects.select_related().get(id=job_id)
             self.shared_tempdir = Path(tempfile.mkdtemp(dir="/tmp"))
         except Exception as err:
-            feedback = {}
+            feedback: Dict[str, Any] = {}
             (_type, _value, tb) = sys.exc_info()
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
@@ -392,9 +392,9 @@ class DeltaApplyJobRun(JobRun):
 
         client_pks_map = {}
 
-        for delta in local_to_remote_pk_deltas:
-            key = f"{delta['client_id']}__{delta['content__localPk']}"
-            client_pks_map[key] = delta["last_modified_pk"]
+        for delta_with_modified_pk in local_to_remote_pk_deltas:
+            key = f"{delta_with_modified_pk['client_id']}__{delta_with_modified_pk['content__localPk']}"
+            client_pks_map[key] = delta_with_modified_pk["last_modified_pk"]
 
         deltafile_contents = {
             "deltas": delta_contents,

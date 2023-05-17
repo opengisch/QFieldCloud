@@ -26,7 +26,7 @@ def apply_deltas(
 
     # 1. Check if project owner is permitted to trigger a job.
     if not project.owner_can_create_job:
-        return None
+        return []
 
     # 2. Check if there are any pending deltas.
     # We need to call .select_for_update() to make sure there would not be a concurrent
