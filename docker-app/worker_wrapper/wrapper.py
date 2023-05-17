@@ -304,7 +304,7 @@ class JobRun:
         retriable(lambda: container.remove())()
 
         logger.info(
-            f"Finished execution with code {response['StatusCode']}, logs:\n{logs}"
+            f"Finished execution with code {response['StatusCode']}, logs:\n{logs.decode()}"
         )
 
         if response["StatusCode"] == TIMEOUT_ERROR_EXIT_CODE:
