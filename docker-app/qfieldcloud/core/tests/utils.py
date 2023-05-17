@@ -1,7 +1,7 @@
 import io
 import os
 from time import sleep
-from typing import IO, Dict, Iterable, Union
+from typing import IO, Iterable, Union
 
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.subscription.models import Plan, Subscription
@@ -118,29 +118,6 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         sleep(1)
 
     fail(f"Waited for ok status for {wait_s} seconds")
-
-
-def assert_eventually_project_has(
-    project: Project, prop_val: Dict[str, any], wait_s: int = 30
-):
-    """
-    Helper asserts a property in the future after some worker job has finished.
-    E.g. after ProcessProjectfileJobrun has finished the project needs to still
-    be updated with some data and thumbnail generated. Currently there it can
-    just be awaited."""
-    for _ in range(wait_s):
-        project.refresh_from_db()
-        for property, expected_value in prop_val.items():
-            attribute = getattr(project, property)
-
-            if callable(attribute):
-                attribute = attribute()
-            if attribute == expected_value:
-                return
-
-        sleep(1)
-
-    fail(f"Waited for {property}={expected_value} for {wait_s} seconds")
 
 
 def fail(msg):
