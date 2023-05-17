@@ -12,6 +12,8 @@ from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
     PackageJobRun,
     ProcessProjectfileJobRun,
+    cancel_orphaned_workers,
+    prune_workers
 )
 
 SECONDS = 5
@@ -49,6 +51,7 @@ class Command(BaseCommand):
             queued_job = None
 
             with transaction.atomic():
+                self._cleanup_deleted_projects()
 
                 busy_projects_ids_qs = (
                     Job.objects.filter(
@@ -95,10 +98,14 @@ class Command(BaseCommand):
 
                 for _i in range(SECONDS):
                     if killer.alive:
+                        cancel_orphaned_workers()
                         sleep(1)
 
             if options["single_shot"]:
                 break
+
+            cancel_orphaned_workers()
+            prune_workers()
 
     def _run(self, job: Job):
         job_run_classes = {

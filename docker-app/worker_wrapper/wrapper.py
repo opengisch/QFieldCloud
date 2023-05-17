@@ -16,6 +16,7 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
+from docker.client import DockerClient
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -260,6 +261,9 @@ class JobRun:
             detach=True,
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
+            labels={
+                "worker": self.job_class.type
+            }
         )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
@@ -522,3 +526,32 @@ class ProcessProjectfileJobRun(JobRun):
         if project.project_details is not None:
             project.project_details = None
             project.save(update_fields=("project_details",))
+
+
+def cancel_orphaned_workers(self):
+    client: DockerClient = docker.from_env()
+
+    running_workers: List[Container] = client.containers.list(filters={
+        # lists only running container per default
+        "label": "worker"
+    })
+
+    worker_ids = [c.id for c in running_workers]
+
+    worker_with_job_ids = Job.objects.filter(container_id__in=worker_ids).value_list(
+        "container_id"
+    )
+
+    # Find all running worker containers who's Project and Job was deleted from the database
+    worker_without_job_ids = set(worker_ids) - set(worker_with_job_ids)
+
+    for worker_id in worker_without_job_ids:
+        client.container.get(worker_id).kill()
+
+
+def prune_workers(self):
+    client: DockerClient = docker.from_env()
+    # Delete stopped worker containers
+    client.containers.prune(filters={
+        "label": "worker"
+    })
