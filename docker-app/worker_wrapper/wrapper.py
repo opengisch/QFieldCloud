@@ -392,9 +392,9 @@ class DeltaApplyJobRun(JobRun):
 
         client_pks_map = {}
 
-        for map_delta in local_to_remote_pk_deltas:
-            key = f"{map_delta['client_id']}__{map_delta['content__localPk']}"
-            client_pks_map[key] = map_delta["last_modified_pk"]
+        for delta_with_modified_pk in local_to_remote_pk_deltas:
+            key = f"{delta_with_modified_pk['client_id']}__{delta_with_modified_pk['content__localPk']}"
+            client_pks_map[key] = delta_with_modified_pk["last_modified_pk"]
 
         deltafile_contents = {
             "deltas": delta_contents,
