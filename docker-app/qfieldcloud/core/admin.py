@@ -147,7 +147,7 @@ UserEmailDetails = namedtuple(
 )
 
 
-class EmailAddressAdmin(EmailAddressAdmin):
+class ExtendedEmailAddressAdmin(EmailAddressAdmin):
     def get_urls(self):
         urls = super().get_urls()
         return [
@@ -1079,10 +1079,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Active users (last billing period)"))
     def active_users(self, instance) -> int:
-        try:
-            return instance.current_subscription_vw.active_users_count
-        except Exception:
-            return None
+        return instance.current_subscription_vw.active_users_count
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
@@ -1215,4 +1212,4 @@ admin.site.register(LogEntry, LogEntryAdmin)
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 admin.site.register(User, UserAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
-admin.site.register(EmailAddress, EmailAddressAdmin)
+admin.site.register(EmailAddress, ExtendedEmailAddressAdmin)

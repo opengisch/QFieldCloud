@@ -377,7 +377,7 @@ class JobMixin:
         return last_active_job
 
     class Meta:
-        model = PackageJob
+        model = Job
         fields = (
             "id",
             "created_at",
@@ -415,6 +415,7 @@ class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
 
         if not internal_value["project"].project_filename:
             raise exceptions.NoQGISProjectError()
+        return None
 
     class Meta(JobMixin.Meta):
         model = PackageJob
