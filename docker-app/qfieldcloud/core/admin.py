@@ -1078,8 +1078,13 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     autocomplete_fields = ("organization_owner",)
 
     @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> int:
-        return instance.current_subscription_vw.active_users_count
+    def active_users(self, instance) -> int | None:
+        # The relation 'current_subscription_vw' is not instantiated unless the organization
+        # does have a current subscription
+        if hasattr(instance, "current_subscription_vw"):
+            return instance.current_subscription_vw.active_users_count
+        else:
+            return None
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
