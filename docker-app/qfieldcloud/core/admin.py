@@ -6,7 +6,7 @@ from datetime import datetime
 from itertools import chain
 from typing import Any, Dict, Generator
 
-from allauth.account.admin import EmailAddressAdmin
+from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
@@ -147,7 +147,7 @@ UserEmailDetails = namedtuple(
 )
 
 
-class ExtendedEmailAddressAdmin(EmailAddressAdmin):
+class EmailAddressAdmin(EmailAddressAdminBase):
     def get_urls(self):
         urls = super().get_urls()
         return [
@@ -1217,4 +1217,4 @@ admin.site.register(LogEntry, LogEntryAdmin)
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 admin.site.register(User, UserAdmin)
 admin.site.register(UserAccount, UserAccountAdmin)
-admin.site.register(EmailAddress, ExtendedEmailAddressAdmin)
+admin.site.register(EmailAddress, EmailAddressAdmin)
