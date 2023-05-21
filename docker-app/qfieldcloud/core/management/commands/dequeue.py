@@ -51,8 +51,6 @@ class Command(BaseCommand):
             queued_job = None
 
             with transaction.atomic():
-                self._cleanup_deleted_projects()
-
                 busy_projects_ids_qs = (
                     Job.objects.filter(
                         status=Job.Status.PENDING,

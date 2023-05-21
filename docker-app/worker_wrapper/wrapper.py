@@ -543,7 +543,7 @@ class ProcessProjectfileJobRun(JobRun):
             project.save(update_fields=("project_details",))
 
 
-def cancel_orphaned_workers(self):
+def cancel_orphaned_workers():
     client: DockerClient = docker.from_env()
 
     running_workers: List[Container] = client.containers.list(filters={
@@ -553,7 +553,7 @@ def cancel_orphaned_workers(self):
 
     worker_ids = [c.id for c in running_workers]
 
-    worker_with_job_ids = Job.objects.filter(container_id__in=worker_ids).value_list(
+    worker_with_job_ids = Job.objects.filter(container_id__in=worker_ids).values_list(
         "container_id"
     )
 
@@ -564,7 +564,7 @@ def cancel_orphaned_workers(self):
         client.container.get(worker_id).kill()
 
 
-def prune_workers(self):
+def prune_workers():
     client: DockerClient = docker.from_env()
     # Delete stopped worker containers
     client.containers.prune(filters={
