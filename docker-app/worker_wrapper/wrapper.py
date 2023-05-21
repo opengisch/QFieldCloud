@@ -107,6 +107,7 @@ class JobRun:
         feedback = {}
 
         try:
+            self._check_no_other_workers_on_project()
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
             self.job.save()
@@ -262,7 +263,8 @@ class JobRun:
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
             labels={
-                "worker": self.job_class.type
+                "worker": self.job_class.type,
+                "project_id": str(self.job.project_id),
             }
         )
 
@@ -315,6 +317,19 @@ class JobRun:
             logs += f"\nTimeout error! The job failed to finish within {self.container_timeout_secs} seconds!\n".encode()
 
         return response["StatusCode"], logs
+
+    def _check_no_other_workers_on_project(self):
+        client = docker.from_env()
+
+        workers_of_project: List[Container] = client.containers.list(filters={
+            # lists only running container per default
+            "label": f"project_id={self.job.project_id}"
+        })
+
+        if len(workers_of_project) > 0:
+            logger.warning(
+                f"Project {self.job.project_id} has running containers, NOT starting new job."
+            )
 
 
 class PackageJobRun(JobRun):
