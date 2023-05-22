@@ -262,10 +262,10 @@ class JobRun:
             detach=True,
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
-            labels={
-                "worker": self.job_type,
-                "project_id": str(self.job.project_id),
-            }
+            labels=[
+                "worker",
+                str(self.job.project_id),
+            ]
         )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
@@ -323,7 +323,7 @@ class JobRun:
 
         workers_of_project: List[Container] = client.containers.list(filters={
             # lists only running container per default
-            "label": f"project_id={self.job.project_id}"
+            "label": self.job.project_id"
         })
 
         if len(workers_of_project) > 0:
