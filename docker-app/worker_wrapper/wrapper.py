@@ -323,7 +323,7 @@ class JobRun:
 
         workers_of_project: List[Container] = client.containers.list(filters={
             # lists only running container per default
-            "label": self.job.project_id"
+            "label": ["worker", self.job.project_id]
         })
 
         if len(workers_of_project) > 0:
@@ -546,27 +546,34 @@ class ProcessProjectfileJobRun(JobRun):
 def cancel_orphaned_workers():
     client: DockerClient = docker.from_env()
 
-    running_workers: List[Container] = client.containers.list(filters={
-        # lists only running container per default
-        "label": "worker"
-    })
+    running_workers: List[Container] = client.containers.list(
+        filters={
+            "label": "worker"
+        }
+    )
 
     worker_ids = [c.id for c in running_workers]
 
     worker_with_job_ids = Job.objects.filter(container_id__in=worker_ids).values_list(
-        "container_id"
+        "container_id", flat=True
     )
 
     # Find all running worker containers who's Project and Job was deleted from the database
     worker_without_job_ids = set(worker_ids) - set(worker_with_job_ids)
 
     for worker_id in worker_without_job_ids:
-        client.container.get(worker_id).kill()
+        client.containers.get(worker_id).kill()
+        logger.info(
+            f"Cancel orphaned worker {worker_id}"
+        )
 
 
 def prune_workers():
     client: DockerClient = docker.from_env()
     # Delete stopped worker containers
-    client.containers.prune(filters={
-        "label": "worker"
-    })
+    # client.containers.prune(filters={"label": "worker"})
+    client.containers.prune()
+    # TODO not working?
+    #         filters={
+    #        "label": "worker"
+    #    }
