@@ -13,7 +13,6 @@ from worker_wrapper.wrapper import (
     PackageJobRun,
     ProcessProjectfileJobRun,
     cancel_orphaned_workers,
-    prune_workers
 )
 
 SECONDS = 5
@@ -103,8 +102,6 @@ class Command(BaseCommand):
 
             if options["single_shot"]:
                 break
-
-            prune_workers()
 
     def _run(self, job: Job):
         job_run_classes = {
