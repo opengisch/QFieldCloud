@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
+SIGKILL_EXIT_CODE = 137
 QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 
@@ -123,6 +124,10 @@ class JobRun:
                 volumes=volumes,
             )
 
+            if exit_code == SIGKILL_EXIT_CODE:
+                # No further action required, Project and Jobs are deleted
+                return
+
             if exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
                 feedback["error_type"] = "TIMEOUT"
@@ -173,11 +178,6 @@ class JobRun:
             self.job.finished_at = timezone.now()
             self.job.status = Job.Status.FINISHED
             self.job.save()
-
-        except APIError as err:
-            logger.info(
-                "Job canceled for deletet Project and Jobs"
-            )
 
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
@@ -271,7 +271,6 @@ class JobRun:
                 "worker",
                 str(self.job.project_id),
             ],
-            remove=True,
         )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
@@ -285,6 +284,14 @@ class JobRun:
         try:
             # will throw an `requests.exceptions.ConnectionError`, but the container is still alive
             response = container.wait(timeout=self.container_timeout_secs)
+
+            if response["StatusCode"] == SIGKILL_EXIT_CODE:
+                logger.info(
+                    "Job canceled for deleted Project and Jobs.",
+                )
+                # No further action required, Project and Jobs are deleted
+                return response["StatusCode"], ""
+
         except Exception as err:
             logger.exception("Timeout error.", exc_info=err)
 
@@ -553,13 +560,17 @@ def cancel_orphaned_workers():
         "container_id", flat=True
     )
 
-    # Find all running worker containers who's Project and Job was deleted from the database
+    # Find all running worker containers where its Project and Job were deleted from the database
     worker_without_job_ids = set(worker_ids) - set(worker_with_job_ids)
 
     for worker_id in worker_without_job_ids:
         container = client.containers.get(worker_id)
-        container.kill()
-        container.remove()
-        logger.info(
-            f"Cancel orphaned worker {worker_id}"
-        )
+        try:
+            container.kill()
+            container.remove()
+            logger.info(
+                f"Cancel orphaned worker {worker_id}"
+            )
+        except APIError:
+            # Container already removed
+            pass
