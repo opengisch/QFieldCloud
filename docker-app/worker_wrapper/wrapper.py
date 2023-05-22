@@ -10,14 +10,14 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 import docker
-from docker.errors import APIError
 import requests
 from constance import config
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from docker.models.containers import Container
 from docker.client import DockerClient
+from docker.errors import APIError
+from docker.models.containers import Container
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -269,7 +269,6 @@ class JobRun:
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
             labels=[
                 "worker",
-                str(self.job.project_id),
             ],
         )
 
@@ -547,9 +546,7 @@ def cancel_orphaned_workers():
     client: DockerClient = docker.from_env()
 
     running_workers: List[Container] = client.containers.list(
-        filters={
-            "label": "worker"
-        }
+        filters={"label": "worker"}
     )
     if len(running_workers) == 0:
         return
@@ -568,9 +565,7 @@ def cancel_orphaned_workers():
         try:
             container.kill()
             container.remove()
-            logger.info(
-                f"Cancel orphaned worker {worker_id}"
-            )
+            logger.info(f"Cancel orphaned worker {worker_id}")
         except APIError:
             # Container already removed
             pass
