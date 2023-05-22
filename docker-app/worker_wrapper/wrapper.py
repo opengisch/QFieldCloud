@@ -108,8 +108,6 @@ class JobRun:
         feedback = {}
 
         try:
-            if self._other_workers_on_project():
-                return
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
             self.job.save()
@@ -325,21 +323,6 @@ class JobRun:
             logs += f"\nTimeout error! The job failed to finish within {self.container_timeout_secs} seconds!\n".encode()
 
         return response["StatusCode"], logs
-
-    def _other_workers_on_project(self) -> bool:
-        client = docker.from_env()
-
-        workers_of_project: List[Container] = client.containers.list(filters={
-            # lists only running container per default
-            "label": ["worker", self.job.project_id]
-        })
-
-        if len(workers_of_project) > 0:
-            logger.warning(
-                f"Project {self.job.project_id} has running containers, NOT starting new job."
-            )
-            return True
-        return False
 
 
 class PackageJobRun(JobRun):
