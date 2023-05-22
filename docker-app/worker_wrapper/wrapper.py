@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 import docker
+from docker.errors import APIError
 import requests
 from constance import config
 from django.db import transaction
@@ -173,6 +174,11 @@ class JobRun:
             self.job.finished_at = timezone.now()
             self.job.status = Job.Status.FINISHED
             self.job.save()
+
+        except APIError as err:
+            logger.info(
+                "Job canceled for deletet Project and Jobs"
+            )
 
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
@@ -562,18 +568,10 @@ def cancel_orphaned_workers():
     worker_without_job_ids = set(worker_ids) - set(worker_with_job_ids)
 
     for worker_id in worker_without_job_ids:
-        client.containers.get(worker_id).kill()
+        container = client.containers.get(worker_id)
+        container.kill()
+        container.remove()
         logger.info(
             f"Cancel orphaned worker {worker_id}"
         )
 
-
-def prune_workers():
-    client: DockerClient = docker.from_env()
-    # Delete stopped worker containers
-    # client.containers.prune(filters={"label": "worker"})
-    client.containers.prune()
-    # TODO not working?
-    #         filters={
-    #        "label": "worker"
-    #    }
