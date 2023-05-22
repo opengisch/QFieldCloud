@@ -108,7 +108,8 @@ class JobRun:
         feedback = {}
 
         try:
-            self._check_no_other_workers_on_project()
+            if self._other_workers_on_project():
+                return
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
             self.job.save()
@@ -271,7 +272,8 @@ class JobRun:
             labels=[
                 "worker",
                 str(self.job.project_id),
-            ]
+            ],
+            remove=True,
         )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
@@ -324,7 +326,7 @@ class JobRun:
 
         return response["StatusCode"], logs
 
-    def _check_no_other_workers_on_project(self):
+    def _other_workers_on_project(self) -> bool:
         client = docker.from_env()
 
         workers_of_project: List[Container] = client.containers.list(filters={
@@ -336,6 +338,8 @@ class JobRun:
             logger.warning(
                 f"Project {self.job.project_id} has running containers, NOT starting new job."
             )
+            return True
+        return False
 
 
 class PackageJobRun(JobRun):
@@ -557,6 +561,8 @@ def cancel_orphaned_workers():
             "label": "worker"
         }
     )
+    if len(running_workers) == 0:
+        return
 
     worker_ids = [c.id for c in running_workers]
 
@@ -574,4 +580,3 @@ def cancel_orphaned_workers():
         logger.info(
             f"Cancel orphaned worker {worker_id}"
         )
-
