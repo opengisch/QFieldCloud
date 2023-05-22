@@ -73,7 +73,7 @@ class JobRun:
             if self.job:
                 self.job.status = Job.Status.FAILED
                 self.job.feedback = feedback
-                self.job.save()
+                self.job.save(update_fields=["status", "feedback"])
                 logger.exception(msg, exc_info=err)
             else:
                 logger.critical(msg, exc_info=err)
@@ -108,7 +108,7 @@ class JobRun:
         try:
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
-            self.job.save()
+            self.job.save(update_fields=["status", "started_at"])
 
             self.before_docker_run()
 
@@ -147,10 +147,11 @@ class JobRun:
 
             self.job.output = output.decode("utf-8")
             self.job.feedback = feedback
-            self.job.save()
+            self.job.save(update_fields=["output", "feedback"])
 
             if exit_code != 0 or feedback.get("error") is not None:
                 self.job.status = Job.Status.FAILED
+                self.job.save(update_fields=["status"])
 
                 try:
                     self.after_docker_exception()
@@ -160,7 +161,6 @@ class JobRun:
                         exc_info=err,
                     )
 
-                self.job.save()
                 return
 
             # make sure we have reloaded the project, since someone might have changed it already
@@ -170,7 +170,7 @@ class JobRun:
 
             self.job.finished_at = timezone.now()
             self.job.status = Job.Status.FINISHED
-            self.job.save()
+            self.job.save(update_fields=["status", "finished_at"])
 
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
@@ -198,7 +198,7 @@ class JobRun:
                         exc_info=err,
                     )
 
-                self.job.save()
+                self.job.save(update_fields=["status", "feedback", "finished_at"])
             except Exception as err:
                 logger.error(
                     "Failed to handle exception and update the job status", exc_info=err
@@ -244,7 +244,7 @@ class JobRun:
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
-        self.job.save()
+        self.job.save(update_fields=["docker_started_at"])
 
         container: Container = client.containers.run(  # type:ignore
             QGIS_CONTAINER_NAME,
@@ -278,7 +278,7 @@ class JobRun:
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_finished_at = timezone.now()
-        self.job.save()
+        self.job.save(update_fields=["docker_finished_at"])
 
         logs = b""
         # Retry reading the logs, as it may fail
