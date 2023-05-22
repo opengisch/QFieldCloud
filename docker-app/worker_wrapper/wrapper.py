@@ -263,7 +263,7 @@ class JobRun:
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
             labels={
-                "worker": self.job_class.type,
+                "worker": self.job_type,
                 "project_id": str(self.job.project_id),
             }
         )

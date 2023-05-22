@@ -48,6 +48,8 @@ class Command(BaseCommand):
             if settings.DATABASES["default"]["NAME"].startswith("test_"):
                 ContentType.objects.clear_cache()
 
+            cancel_orphaned_workers()
+
             queued_job = None
 
             with transaction.atomic():
@@ -102,7 +104,6 @@ class Command(BaseCommand):
             if options["single_shot"]:
                 break
 
-            cancel_orphaned_workers()
             prune_workers()
 
     def _run(self, job: Job):
