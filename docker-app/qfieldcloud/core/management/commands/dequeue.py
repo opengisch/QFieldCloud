@@ -49,17 +49,12 @@ class Command(BaseCommand):
 
             with transaction.atomic():
 
-                busy_projects_ids_qs = (
-                    Job.objects.filter(
-                        status__in=[
-                            Job.Status.QUEUED,
-                            Job.Status.STARTED,
-                        ]
-                    )
-                    .values("project_id")
-                )
-                # NOTE ensure updated results for the same query by calling all() ...
-                # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.all
+                busy_projects_ids_qs = Job.objects.filter(
+                    status__in=[
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ]
+                ).values("project_id")
 
                 # select all the pending jobs, that their project has no other active job
                 jobs_qs = (
