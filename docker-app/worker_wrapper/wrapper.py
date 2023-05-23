@@ -273,7 +273,7 @@ class JobRun:
             labels={
                 "app": "worker",
                 "type": self.job.type,
-                "job_id": self.job.id,
+                "job_id": str(self.job.id),
                 "project_id": str(self.job.project_id),
             },
         )
