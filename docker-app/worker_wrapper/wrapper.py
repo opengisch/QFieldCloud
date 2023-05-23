@@ -275,7 +275,7 @@ class JobRun:
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
         self.job.container_id = container.id
-        self.job.save()
+        self.job.save(update_fields=["docker_started_at", "container_id"])
         logger.info(f"Starting worker {container.id} ...")
 
         response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
