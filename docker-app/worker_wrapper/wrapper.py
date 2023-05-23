@@ -288,7 +288,7 @@ class JobRun:
                 logger.info(
                     "Job canceled for deleted Project and Jobs.",
                 )
-                # No further action required, Project and Jobs are deleted
+                # No further action required, received by wrapper's autoclean mechanism when the `Project` is deleted
                 return response["StatusCode"], ""
 
         except Exception as err:
