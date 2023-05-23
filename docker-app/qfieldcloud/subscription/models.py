@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_subscription_model() -> "Subscription":
-    return cast(Subscription, apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL))
+    model = apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
+    return cast(Subscription, model)
 
 
 class SubscriptionStatus(models.TextChoices):
@@ -75,7 +76,8 @@ class Plan(models.Model):
                     is_public=False,
                     user_type=User.Type.ORGANIZATION,
                 )
-        return cast(Plan, cls.objects.order_by("-is_default").first())
+        result = cls.objects.order_by("-is_default").first()
+        return cast(Plan, result)
 
     # unique identifier of the subscription plan
     code = models.CharField(max_length=100, unique=True)
@@ -662,13 +664,13 @@ class AbstractSubscription(models.Model):
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
-        return cast(
-            Subscription,
+        result = (
             cls.objects.filter(account_id=account.pk, active_since__gt=timezone.now())
             .exclude(status__in=[Subscription.Status.INACTIVE_CANCELLED])
             .order_by("active_since")
-            .first(),
+            .first()
         )
+        return cast(Subscription, result)
 
     @classmethod
     def update_subscription(
