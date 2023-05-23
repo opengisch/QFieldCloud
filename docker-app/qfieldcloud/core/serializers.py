@@ -254,7 +254,7 @@ class StatusChoiceField(serializers.ChoiceField):
             if self._choices[i] == data:
                 return i
         raise serializers.ValidationError(
-            "Invalid status. Acceptable values are {0}.".format(
+            "Invalid status. Acceptable values are {}.".format(
                 list(self._choices.values())
             )
         )

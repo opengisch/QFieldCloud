@@ -129,7 +129,7 @@ class JobRun:
                 feedback["error_stack"] = ""
             else:
                 try:
-                    with open(self.shared_tempdir.joinpath("feedback.json"), "r") as f:
+                    with open(self.shared_tempdir.joinpath("feedback.json")) as f:
                         feedback = json.load(f)
 
                         if feedback.get("error"):

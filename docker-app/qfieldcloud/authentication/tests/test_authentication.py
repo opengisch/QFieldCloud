@@ -61,7 +61,7 @@ class QfcTestCase(APITransactionTestCase):
         response = self.login("user1", "abc123")
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
-        self.assertEquals(len(tokens), 1)
+        self.assertEqual(len(tokens), 1)
         self.assertTokenMatch(tokens[0], response.json())
         self.assertGreater(tokens[0].expires_at, now())
 
@@ -74,7 +74,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        self.assertEquals(len(tokens), 1)
+        self.assertEqual(len(tokens), 1)
         self.assertLess(tokens[0].expires_at, now())
 
     def test_multiple_logins(self):
@@ -82,14 +82,14 @@ class QfcTestCase(APITransactionTestCase):
         response = self.login("user1", "abc123", "Mozilla/5.0 QGIS/32203")
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
-        self.assertEquals(len(tokens), 1)
+        self.assertEqual(len(tokens), 1)
         self.assertTokenMatch(tokens[0], response.json())
 
         # second single active token login
         response = self.login("user1", "abc123", "Mozilla/5.0 QGIS/32203")
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
-        self.assertEquals(len(tokens), 2)
+        self.assertEqual(len(tokens), 2)
         self.assertTokenMatch(tokens[0], response.json())
         self.assertNotEqual(tokens[0], tokens[1])
         self.assertGreater(tokens[0].expires_at, now())
@@ -99,14 +99,14 @@ class QfcTestCase(APITransactionTestCase):
         response = self.login("user1", "abc123", "sdk|py|dev python-requests|2.26.0")
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
-        self.assertEquals(len(tokens), 3)
+        self.assertEqual(len(tokens), 3)
         self.assertTokenMatch(tokens[0], response.json())
 
         # second single active token login
         response = self.login("user1", "abc123", "sdk|py|dev python-requests|2.26.0")
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
-        self.assertEquals(len(tokens), 4)
+        self.assertEqual(len(tokens), 4)
         self.assertTokenMatch(tokens[0], response.json())
         self.assertNotEqual(tokens[0], tokens[1])
         self.assertGreater(tokens[0].expires_at, now())
@@ -179,7 +179,7 @@ class QfcTestCase(APITransactionTestCase):
 
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
-        self.assertEquals(len(tokens), 1)
+        self.assertEqual(len(tokens), 1)
         self.assertTokenMatch(tokens[0], response.json())
         self.assertIsNone(tokens[0].last_used_at)
 
@@ -194,7 +194,7 @@ class QfcTestCase(APITransactionTestCase):
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
         first_used_at = tokens[0].last_used_at
 
-        self.assertEquals(len(tokens), 1)
+        self.assertEqual(len(tokens), 1)
 
         # second token usage
         response = self.client.get(f"/api/v1/users/{self.user1.username}/")
@@ -204,7 +204,7 @@ class QfcTestCase(APITransactionTestCase):
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
         second_used_at = tokens[0].last_used_at
 
-        self.assertEquals(len(tokens), 1)
+        self.assertEqual(len(tokens), 1)
         self.assertLess(first_used_at, second_used_at)
 
     def test_login_users_only(self):
@@ -221,28 +221,24 @@ class QfcTestCase(APITransactionTestCase):
 
         tokens = u1.auth_tokens.order_by("-created_at").all()
 
-        self.assertEquals(len(tokens), 1)
-        self.assertEquals(o1.auth_tokens.order_by("-created_at").count(), 0)
-        self.assertEquals(t1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(o1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEqual(t1.auth_tokens.order_by("-created_at").count(), 0)
         self.assertTokenMatch(tokens[0], response.json())
         self.assertIsNone(tokens[0].last_used_at)
 
         # organizations cannot login
         response = self.login("o1", "abc123", success=False)
 
-        self.assertEquals(u1.auth_tokens.order_by("-created_at").count(), 1)
-        self.assertEquals(o1.auth_tokens.order_by("-created_at").count(), 0)
-        self.assertEquals(t1.auth_tokens.order_by("-created_at").count(), 0)
-        self.assertEquals(
-            response.json(), {"code": "api_error", "message": "API Error"}
-        )
+        self.assertEqual(u1.auth_tokens.order_by("-created_at").count(), 1)
+        self.assertEqual(o1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEqual(t1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEqual(response.json(), {"code": "api_error", "message": "API Error"})
 
         # teams cannot login
         response = self.login("t1", "abc123", success=False)
 
-        self.assertEquals(u1.auth_tokens.order_by("-created_at").count(), 1)
-        self.assertEquals(o1.auth_tokens.order_by("-created_at").count(), 0)
-        self.assertEquals(t1.auth_tokens.order_by("-created_at").count(), 0)
-        self.assertEquals(
-            response.json(), {"code": "api_error", "message": "API Error"}
-        )
+        self.assertEqual(u1.auth_tokens.order_by("-created_at").count(), 1)
+        self.assertEqual(o1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEqual(t1.auth_tokens.order_by("-created_at").count(), 0)
+        self.assertEqual(response.json(), {"code": "api_error", "message": "API Error"})

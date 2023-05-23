@@ -519,7 +519,7 @@ class Geodb(models.Model):
         first_letter = secrets.choice(string.ascii_lowercase)
         letters_and_digits = string.ascii_lowercase + string.digits
         secure_str = first_letter + "".join(
-            (secrets.choice(letters_and_digits) for i in range(15))
+            secrets.choice(letters_and_digits) for i in range(15)
         )
         return secure_str
 
@@ -531,7 +531,7 @@ class Geodb(models.Model):
         password_characters = (
             string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
         )
-        secure_str = "".join((secrets.choice(password_characters) for i in range(16)))
+        secure_str = "".join(secrets.choice(password_characters) for i in range(16))
         return secure_str
 
     @staticmethod
