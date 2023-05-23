@@ -125,7 +125,7 @@ class JobRun:
             )
 
             if exit_code == SIGKILL_EXIT_CODE:
-                # No further action required, Project and Jobs are deleted
+                # No further action required, received by wrapper's autoclean mechanism when the `Project` is deleted
                 return
 
             if exit_code == TIMEOUT_ERROR_EXIT_CODE:
