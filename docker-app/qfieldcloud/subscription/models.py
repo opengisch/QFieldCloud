@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Optional, Tuple, TypedDict
+from typing import Optional, Tuple, TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_subscription_model() -> "Subscription":
-    return apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
+    model = apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
+    return cast(Subscription, model)
 
 
 class SubscriptionStatus(models.TextChoices):
@@ -75,7 +76,8 @@ class Plan(models.Model):
                     is_public=False,
                     user_type=User.Type.ORGANIZATION,
                 )
-        return cls.objects.order_by("-is_default").first()
+        result = cls.objects.order_by("-is_default").first()
+        return cast(Plan, result)
 
     # unique identifier of the subscription plan
     code = models.CharField(max_length=100, unique=True)
@@ -662,12 +664,13 @@ class AbstractSubscription(models.Model):
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
-        return (
+        result = (
             cls.objects.filter(account_id=account.pk, active_since__gt=timezone.now())
             .exclude(status__in=[Subscription.Status.INACTIVE_CANCELLED])
             .order_by("active_since")
             .first()
         )
+        return cast(Subscription, result)
 
     @classmethod
     def update_subscription(

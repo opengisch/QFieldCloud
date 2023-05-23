@@ -5,7 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -168,10 +168,10 @@ class PersonQueryset(models.QuerySet):
             return self.filter(pk=entity.pk)
 
         if entity.type == User.Type.TEAM:
-            return self.for_team(entity)
+            return self.for_team(cast(Team, entity))
 
         if entity.type == User.Type.ORGANIZATION:
-            return self.for_organization(entity)
+            return self.for_organization(cast(Organization, entity))
 
         raise RuntimeError(f"Unsupported entity : {entity}")
 
@@ -511,6 +511,7 @@ class UserAccount(models.Model):
 
 
 class Geodb(models.Model):
+    @staticmethod
     def random_string():
         """Generate random sting starting with a lowercase letter and then
         lowercase letters and digits"""
@@ -518,10 +519,11 @@ class Geodb(models.Model):
         first_letter = secrets.choice(string.ascii_lowercase)
         letters_and_digits = string.ascii_lowercase + string.digits
         secure_str = first_letter + "".join(
-            (secrets.choice(letters_and_digits) for i in range(15))
+            secrets.choice(letters_and_digits) for i in range(15)
         )
         return secure_str
 
+    @staticmethod
     def random_password():
         """Generate secure random password composed of
         letters, digits and special characters"""
@@ -529,12 +531,14 @@ class Geodb(models.Model):
         password_characters = (
             string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
         )
-        secure_str = "".join((secrets.choice(password_characters) for i in range(16)))
+        secure_str = "".join(secrets.choice(password_characters) for i in range(16))
         return secure_str
 
+    @staticmethod
     def default_hostname():
         return os.environ.get("GEODB_HOST")
 
+    @staticmethod
     def default_port():
         return os.environ.get("GEODB_PORT")
 
@@ -1146,11 +1150,8 @@ class Project(models.Model):
     def status(self) -> Status:
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            Job.objects.filter(
-                project=self, status__in=[Job.Status.QUEUED, Job.Status.STARTED]
-            ).count()
-            > 0
-        ):
+            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])
+        ).exists():
             return Project.Status.BUSY
         else:
             status = Project.Status.OK

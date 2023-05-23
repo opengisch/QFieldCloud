@@ -6,7 +6,7 @@ from datetime import datetime
 from itertools import chain
 from typing import Any, Dict, Generator
 
-from allauth.account.admin import EmailAddressAdmin
+from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
@@ -147,7 +147,7 @@ UserEmailDetails = namedtuple(
 )
 
 
-class EmailAddressAdmin(EmailAddressAdmin):
+class EmailAddressAdmin(EmailAddressAdminBase):
     def get_urls(self):
         urls = super().get_urls()
         return [
@@ -1008,7 +1008,7 @@ class GeodbAdmin(QFieldCloudModelAdmin):
             messages.add_message(
                 request,
                 messages.WARNING,
-                "The password is (shown only once): {}".format(obj.password),
+                f"The password is (shown only once): {obj.password}",
             )
         super().save_model(request, obj, form, change)
 
@@ -1078,10 +1078,12 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     autocomplete_fields = ("organization_owner",)
 
     @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> int:
-        try:
+    def active_users(self, instance) -> int | None:
+        # The relation 'current_subscription_vw' is not instantiated unless the organization
+        # does have a current subscription
+        if hasattr(instance, "current_subscription_vw"):
             return instance.current_subscription_vw.active_users_count
-        except Exception:
+        else:
             return None
 
     @admin.display(description=_("Owner"))

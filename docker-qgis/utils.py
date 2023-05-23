@@ -1,6 +1,7 @@
 import atexit
 import hashlib
 import inspect
+import io
 import json
 import logging
 import os
@@ -558,16 +559,14 @@ def run_workflow(
 
             feedback["steps"].append(step_feedback)
 
-        if feedback_filename in [sys.stderr, sys.stdout]:
-            print("Feedback:")
-            print(
-                json.dump(
-                    feedback,
-                    feedback_filename,
-                    indent=2,
-                    sort_keys=True,
-                    default=json_default,
-                )
+        if isinstance(feedback_filename, io.IOBase):
+            feedback_filename.write("Feedback:")
+            json.dump(
+                feedback,
+                feedback_filename,
+                indent=2,
+                sort_keys=True,
+                default=json_default,
             )
         elif isinstance(feedback_filename, Path):
             with open(feedback_filename, "w") as f:
@@ -752,8 +751,10 @@ class RedactingFormatter(logging.Formatter):
         if isinstance(record.args, dict):
             for k in record.args.keys():
                 record.args[k] = self.redact(record.args[k])
+        elif isinstance(record.args, tuple):
+            record.args = tuple(self.redact(str(arg)) for arg in record.args)
         else:
-            record.args = tuple(self.redact(arg) for arg in record.args)
+            raise NotImplementedError(f"Not implemented for {type(record.args)}")
 
         return self.redact(msg)
 

@@ -64,7 +64,7 @@ class JobRun:
             self.job = self.job_class.objects.select_related().get(id=job_id)
             self.shared_tempdir = Path(tempfile.mkdtemp(dir="/tmp"))
         except Exception as err:
-            feedback = {}
+            feedback: Dict[str, Any] = {}
             (_type, _value, tb) = sys.exc_info()
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
@@ -76,7 +76,7 @@ class JobRun:
             if self.job:
                 self.job.status = Job.Status.FAILED
                 self.job.feedback = feedback
-                self.job.save()
+                self.job.save(update_fields=["status", "feedback"])
                 logger.exception(msg, exc_info=err)
             else:
                 logger.critical(msg, exc_info=err)
@@ -111,7 +111,7 @@ class JobRun:
         try:
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
-            self.job.save()
+            self.job.save(update_fields=["status", "started_at"])
 
             self.before_docker_run()
 
@@ -136,7 +136,7 @@ class JobRun:
                 feedback["error_stack"] = ""
             else:
                 try:
-                    with open(self.shared_tempdir.joinpath("feedback.json"), "r") as f:
+                    with open(self.shared_tempdir.joinpath("feedback.json")) as f:
                         feedback = json.load(f)
 
                         if feedback.get("error"):
@@ -154,10 +154,11 @@ class JobRun:
 
             self.job.output = output.decode("utf-8")
             self.job.feedback = feedback
-            self.job.save()
+            self.job.save(update_fields=["output", "feedback"])
 
             if exit_code != 0 or feedback.get("error") is not None:
                 self.job.status = Job.Status.FAILED
+                self.job.save(update_fields=["status"])
 
                 try:
                     self.after_docker_exception()
@@ -167,7 +168,6 @@ class JobRun:
                         exc_info=err,
                     )
 
-                self.job.save()
                 return
 
             # make sure we have reloaded the project, since someone might have changed it already
@@ -177,7 +177,7 @@ class JobRun:
 
             self.job.finished_at = timezone.now()
             self.job.status = Job.Status.FINISHED
-            self.job.save()
+            self.job.save(update_fields=["status", "finished_at"])
 
         except Exception as err:
             (_type, _value, tb) = sys.exc_info()
@@ -205,7 +205,7 @@ class JobRun:
                         exc_info=err,
                     )
 
-                self.job.save()
+                self.job.save(update_fields=["status", "feedback", "finished_at"])
             except Exception as err:
                 logger.error(
                     "Failed to handle exception and update the job status", exc_info=err
@@ -251,6 +251,7 @@ class JobRun:
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
+        self.job.save(update_fields=["docker_started_at"])
 
         container: Container = client.containers.run(  # type:ignore
             QGIS_CONTAINER_NAME,
@@ -300,7 +301,7 @@ class JobRun:
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_finished_at = timezone.now()
-        self.job.save()
+        self.job.save(update_fields=["docker_finished_at"])
 
         logs = b""
         # Retry reading the logs, as it may fail
@@ -326,7 +327,7 @@ class JobRun:
         retriable(lambda: container.remove())()
 
         logger.info(
-            f"Finished execution with code {response['StatusCode']}, logs:\n{logs}"
+            f"Finished execution with code {response['StatusCode']}, logs:\n{logs.decode()}"
         )
 
         if response["StatusCode"] == TIMEOUT_ERROR_EXIT_CODE:
@@ -414,9 +415,9 @@ class DeltaApplyJobRun(JobRun):
 
         client_pks_map = {}
 
-        for delta in local_to_remote_pk_deltas:
-            key = f"{delta['client_id']}__{delta['content__localPk']}"
-            client_pks_map[key] = delta["last_modified_pk"]
+        for delta_with_modified_pk in local_to_remote_pk_deltas:
+            key = f"{delta_with_modified_pk['client_id']}__{delta_with_modified_pk['content__localPk']}"
+            client_pks_map[key] = delta_with_modified_pk["last_modified_pk"]
 
         deltafile_contents = {
             "deltas": delta_contents,

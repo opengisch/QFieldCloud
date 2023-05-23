@@ -149,7 +149,7 @@ class DeltaException(Exception):
         provider_errors: str = None,
         descr: str = None,
     ):
-        super(DeltaException, self).__init__(msg)
+        super().__init__(msg)
         self.e_type = e_type
         self.delta_file_id = delta_file_id
         self.layer_id = layer_id
@@ -739,7 +739,7 @@ def apply_deltas(
 
         if not isinstance(layers_by_id[layer_id], QgsVectorLayer):
             raise DeltaException(
-                "The layer does not exist: {}".format(layer_id), layer_id=layer_id
+                f"The layer does not exist: {layer_id}", layer_id=layer_id
             )
 
     # make a backup of the layer data source.
@@ -756,7 +756,7 @@ def apply_deltas(
 
         if not shutil.copyfile(layer_path, layer_backup_path):
             raise DeltaException(
-                "Unable to backup file for layer {}".format(layer_id),
+                f"Unable to backup file for layer {layer_id}",
                 layer_id=layer_id,
                 e_type=DeltaExceptionType.IO,
             )
@@ -798,9 +798,10 @@ def apply_deltas(
                 transaction_id = transcation_by_layer.get(layer_id)
 
                 if transaction_id and transaction_id in opened_transactions:
-                    committed_layer_ids = set(
-                        [*committed_layer_ids, *opened_transactions[transaction_id]]
-                    )
+                    committed_layer_ids = {
+                        *committed_layer_ids,
+                        *opened_transactions[transaction_id],
+                    }
                     del opened_transactions[transaction_id]
                 else:
                     committed_layer_ids.add(layer_id)
@@ -843,7 +844,7 @@ def rollback_deltas(
     for layer in layers_by_id.values():
         if layer.isEditable():
             if layer.rollBack():
-                logger.warning("Unable to rollback layer {}".format(layer.id()))
+                logger.warning(f"Unable to rollback layer {layer.id()}")
 
     # if there are already committed layers, restore the backup
     for layer_id in committed_layer_ids:
@@ -899,7 +900,7 @@ def cleanup_backups(layer_paths: Set[str]) -> bool:
         except Exception as err:
             is_success = False
             logger.warning(
-                "Unable to remove backup: {}. Reason: {}".format(layer_backup_path, err)
+                f"Unable to remove backup: {layer_backup_path}. Reason: {err}"
             )
 
     return is_success
@@ -966,13 +967,13 @@ def apply_deltas_on_layer(
             if err.e_type == DeltaExceptionType.Conflict:
                 has_conflict = True
                 logger.warning(
-                    "Conflicts while applying a single delta: {}".format(str(err)), err
+                    f"Conflicts while applying a single delta: {str(err)}", err
                 )
             else:
                 if not layer.rollBack():
                     # So unfortunate situation, that the only safe thing to do is to cancel the whole script
                     raise DeltaException(
-                        "Cannot rollback layer changes: {}".format(layer.id())
+                        f"Cannot rollback layer changes: {layer.id()}"
                     ) from err
 
                 raise err
@@ -980,7 +981,7 @@ def apply_deltas_on_layer(
             if not layer.rollBack():
                 # So unfortunate situation, that the only safe thing to do is to cancel the whole script
                 raise DeltaException(
-                    "Cannot rollback layer changes: {}".format(layer.id())
+                    f"Cannot rollback layer changes: {layer.id()}"
                 ) from err
 
             raise DeltaException(
@@ -997,7 +998,7 @@ def apply_deltas_on_layer(
     if should_commit and not layer.commitChanges():
         if not layer.rollBack():
             # So unfortunate situation, that the only safe thing to do is to cancel the whole script
-            raise DeltaException("Cannot rollback layer changes: {}".format(layer.id()))
+            raise DeltaException(f"Cannot rollback layer changes: {layer.id()}")
 
         raise DeltaException("Cannot commit changes")
 
@@ -1183,7 +1184,7 @@ def patch_feature(
             True,
         ):
             raise DeltaException(
-                'Unable to change attribute "{}"'.format(attr_name),
+                f'Unable to change attribute "{attr_name}"',
                 provider_errors=layer.dataProvider().errors(),
             )
 

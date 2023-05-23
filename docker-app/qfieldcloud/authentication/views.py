@@ -43,7 +43,7 @@ class LoginView(ObtainAuthToken):
 
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
-        return super(LoginView, self).dispatch(*args, **kwargs)
+        return super().dispatch(*args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.request = request

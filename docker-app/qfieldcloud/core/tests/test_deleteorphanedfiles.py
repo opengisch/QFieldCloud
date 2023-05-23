@@ -25,7 +25,7 @@ class QfcTestCase(TestCase):
         for i in range(1, count + 1):
             p = Project.objects.create(name=f"p{offset + i}", owner=self.u1)
             self.projects.append(p)
-            file = io.BytesIO("Hello world!".encode())
+            file = io.BytesIO(b"Hello world!")
             storage.upload_project_file(p, file, "project.qgs")
 
     def call_command(self, *args, **kwargs):
@@ -129,7 +129,7 @@ class QfcTestCase(TestCase):
         self.assertEqual(get_project_files_count(self.projects[0].id), 1)
         self.assertEqual(get_project_files_count(self.projects[1].id), 1)
 
-        file = io.BytesIO("Hello world!".encode())
+        file = io.BytesIO(b"Hello world!")
         storage.upload_file(file, "projects/strangename/project.qgs")
 
         out = self.call_command()
@@ -178,7 +178,7 @@ class QfcTestCase(TestCase):
         self.assertEqual(get_project_files_count(project_ids[3]), 1)
 
     def test_deletes_extra_files_on_second_level(self):
-        file = io.BytesIO("Hello world!".encode())
+        file = io.BytesIO(b"Hello world!")
         storage.upload_project_file(self.projects[0], file, "inner/path/data.txt")
 
         project_ids = sorted([str(p.id) for p in self.projects])

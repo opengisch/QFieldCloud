@@ -28,5 +28,5 @@ class Command(BaseCommand):
             results["storage"] = "error"
 
         self.stdout.write(
-            self.style.SUCCESS("Everything seems to work properly: {}".format(results))
+            self.style.SUCCESS(f"Everything seems to work properly: {results}")
         )
