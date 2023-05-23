@@ -1539,6 +1539,10 @@ class Job(models.Model):
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
     docker_started_at = models.DateTimeField(blank=True, null=True, editable=False)
     docker_finished_at = models.DateTimeField(blank=True, null=True, editable=False)
+    # the docker container ID of the QGIS worker that was executing the job
+    container_id = models.CharField(
+        max_length=64, default="", blank=True, db_index=True
+    )
 
     @property
     def short_id(self) -> str:

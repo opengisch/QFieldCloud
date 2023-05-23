@@ -15,6 +15,8 @@ from constance import config
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
+from docker.client import DockerClient
+from docker.errors import APIError
 from docker.models.containers import Container
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -39,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
+SIGKILL_EXIT_CODE = 137
 QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 
@@ -120,6 +123,10 @@ class JobRun:
                 command,
                 volumes=volumes,
             )
+
+            if exit_code == SIGKILL_EXIT_CODE:
+                # No further action required, received by wrapper's autoclean mechanism when the `Project` is deleted
+                return
 
             if exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
@@ -264,8 +271,16 @@ class JobRun:
             detach=True,
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
+            labels={
+                "app": "worker",
+                "type": self.job.type,
+                "job_id": str(self.job.id),
+                "project_id": str(self.job.project_id),
+            },
         )
 
+        self.job.container_id = container.id
+        self.job.save(update_fields=["docker_started_at", "container_id"])
         logger.info(f"Starting worker {container.id} ...")
 
         response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
@@ -273,6 +288,14 @@ class JobRun:
         try:
             # will throw an `requests.exceptions.ConnectionError`, but the container is still alive
             response = container.wait(timeout=self.container_timeout_secs)
+
+            if response["StatusCode"] == SIGKILL_EXIT_CODE:
+                logger.info(
+                    "Job canceled for deleted Project and Jobs.",
+                )
+                # No further action required, received by wrapper's autoclean mechanism when the `Project` is deleted
+                return response["StatusCode"], ""
+
         except Exception as err:
             logger.exception("Timeout error.", exc_info=err)
 
@@ -522,3 +545,32 @@ class ProcessProjectfileJobRun(JobRun):
         if project.project_details is not None:
             project.project_details = None
             project.save(update_fields=("project_details",))
+
+
+def cancel_orphaned_workers():
+    client: DockerClient = docker.from_env()
+
+    running_workers: List[Container] = client.containers.list(
+        filters={"label": "app=worker"}
+    )
+    if len(running_workers) == 0:
+        return
+
+    worker_ids = [c.id for c in running_workers]
+
+    worker_with_job_ids = Job.objects.filter(container_id__in=worker_ids).values_list(
+        "container_id", flat=True
+    )
+
+    # Find all running worker containers where its Project and Job were deleted from the database
+    worker_without_job_ids = set(worker_ids) - set(worker_with_job_ids)
+
+    for worker_id in worker_without_job_ids:
+        container = client.containers.get(worker_id)
+        try:
+            container.kill()
+            container.remove()
+            logger.info(f"Cancel orphaned worker {worker_id}")
+        except APIError:
+            # Container already removed
+            pass

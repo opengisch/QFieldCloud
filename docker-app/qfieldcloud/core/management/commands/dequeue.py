@@ -11,6 +11,7 @@ from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
     PackageJobRun,
     ProcessProjectfileJobRun,
+    cancel_orphaned_workers,
 )
 
 SECONDS = 5
@@ -45,10 +46,11 @@ class Command(BaseCommand):
             if settings.DATABASES["default"]["NAME"].startswith("test_"):
                 ContentType.objects.clear_cache()
 
+            cancel_orphaned_workers()
+
             queued_job = None
 
             with transaction.atomic():
-
                 busy_projects_ids_qs = Job.objects.filter(
                     status__in=[
                         Job.Status.QUEUED,
@@ -82,6 +84,7 @@ class Command(BaseCommand):
 
                 for _i in range(SECONDS):
                     if killer.alive:
+                        cancel_orphaned_workers()
                         sleep(1)
 
             if options["single_shot"]:
