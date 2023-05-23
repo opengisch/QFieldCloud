@@ -6,7 +6,6 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Count, Q
 from qfieldcloud.core.models import Job
 from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
@@ -50,24 +49,12 @@ class Command(BaseCommand):
 
             with transaction.atomic():
 
-                busy_projects_ids_qs = (
-                    Job.objects.filter(
-                        status=Job.Status.PENDING,
-                    )
-                    .annotate(
-                        active_jobs_count=Count(
-                            "project__jobs",
-                            filter=Q(
-                                project__jobs__status__in=[
-                                    Job.Status.QUEUED,
-                                    Job.Status.STARTED,
-                                ]
-                            ),
-                        )
-                    )
-                    .filter(active_jobs_count__gt=0)
-                    .values("project_id")
-                )
+                busy_projects_ids_qs = Job.objects.filter(
+                    status__in=[
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ]
+                ).values("project_id")
 
                 # select all the pending jobs, that their project has no other active job
                 jobs_qs = (
