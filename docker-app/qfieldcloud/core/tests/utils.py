@@ -89,16 +89,14 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
     is some processing to be done and saved to the project in the app.
     So maybe a better name would be 'wait_for_project_jobs_ok_status'.
     """
-    jobs = Job.objects.filter(project=project).exclude(
-        status__in=[Job.Status.FAILED, Job.Status.FINISHED]
-    )
+    jobs = project.jobs.exclude(status__in=[Job.Status.FAILED, Job.Status.FINISHED])
 
     if not jobs.exists():
         return
 
     has_pending_jobs = True
     for _ in range(wait_s):
-        if not Job.objects.filter(project=project, status=Job.Status.PENDING).exists():
+        if not project.jobs.filter(status=Job.Status.PENDING).exists():
             has_pending_jobs = False
             break
 
