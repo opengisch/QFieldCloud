@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0067_auto_20230515_1320'),
+        ("core", "0067_auto_20230515_1320"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='job',
-            name='container_id',
-            field=models.CharField(blank=True, db_index=True, default='', max_length=64),
+            model_name="job",
+            name="container_id",
+            field=models.CharField(
+                blank=True, db_index=True, default="", max_length=64
+            ),
         ),
     ]
