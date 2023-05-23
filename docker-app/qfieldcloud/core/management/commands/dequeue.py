@@ -71,7 +71,7 @@ class Command(BaseCommand):
                 if queued_job:
                     logging.info(f"Dequeued job {queued_job.id}, run!")
                     queued_job.status = Job.Status.QUEUED
-                    queued_job.save()
+                    queued_job.save(update_fields=["status"])
 
             if queued_job:
                 self._run(queued_job)
