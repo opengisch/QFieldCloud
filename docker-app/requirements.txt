@@ -41,7 +41,7 @@ django-picklefield==3.1
 django-storages==1.11.1
 django-log-request-id==2.1.0
 django-tables2==2.5.3
-django-timezone-field==4.2.1
+django-timezone-field==5.0
 djangorestframework==3.12.4
 drf-yasg==1.20.0
 idna==3.4
