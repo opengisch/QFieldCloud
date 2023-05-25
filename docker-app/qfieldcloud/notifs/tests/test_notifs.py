@@ -32,12 +32,12 @@ class QfcTestCase(TestCase):
         def noop():
             pass
 
-        runcrons.close_connection = noop
+        runcrons.close_old_connections = noop
 
     @classmethod
     def tearDownClass(cls):
         # restore above monkeypatch
-        runcrons.close_connection = cls._close_old_connections
+        runcrons.close_old_connections = cls._close_old_connections
 
     def assertNotifs(self, expected_count, filter=None):
         if filter is None:
