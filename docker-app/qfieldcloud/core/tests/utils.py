@@ -1,3 +1,4 @@
+from datetime import timedelta, timezone
 import io
 import os
 from time import sleep
@@ -70,8 +71,9 @@ def set_subscription(
         assert (
             user.type == plan.user_type
         ), 'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
-        subscription = user.useraccount.current_subscription
+        subscription: Subscription = user.useraccount.current_subscription
         subscription.plan = plan
+        subscription.active_since = timezone.now() - timedelta(days=1)
         subscription.save(update_fields=["plan"])
 
     return subscription
