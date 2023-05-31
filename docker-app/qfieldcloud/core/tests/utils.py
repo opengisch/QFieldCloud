@@ -1,9 +1,10 @@
 import io
 import os
-from datetime import timedelta, timezone
+from datetime import timedelta
 from time import sleep
 from typing import IO, Iterable, Union
 
+from django.utils import timezone
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.subscription.models import Plan, Subscription
 
@@ -62,11 +63,11 @@ def set_subscription(
     ), "When iterable, the first argument must contain at least 1 element."
 
     code = code or f"plan_for_{'_and_'.join([u.username for u in users])}"
-    plan = Plan.objects.create(
+    plan = Plan.objects.get_or_create(
         code=code,
         user_type=users[0].type,
         **kwargs,
-    )
+    )[0]
     for user in users:
         assert (
             user.type == plan.user_type
@@ -74,7 +75,7 @@ def set_subscription(
         subscription: Subscription = user.useraccount.current_subscription
         subscription.plan = plan
         subscription.active_since = timezone.now() - timedelta(days=1)
-        subscription.save(update_fields=["plan"])
+        subscription.save(update_fields=["plan", "active_since"])
 
     return subscription
 
