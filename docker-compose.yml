@@ -19,6 +19,8 @@ services:
         qfieldcloud.wsgi:application
         --bind 0.0.0.0:8000
         --timeout ${GUNICORN_TIMEOUT_S}
+        --worker-class=gevent
+        --worker-connections=1000
         --max-requests ${GUNICORN_MAX_REQUESTS}
         --workers ${GUNICORN_WORKERS}
         --threads ${GUNICORN_THREADS}
