@@ -384,11 +384,9 @@ class SubscriptionQuerySet(models.QuerySet):
         )
 
     def activeness(self):
-        """Annotates with three additional boolean fields.
+        """Annotates with additional `is_active` boolean field.
 
-        `is_period_active` - if the subscription period is active
-        `is_status_active` - if the status is active
-        `is_active` - if the period and status are active
+        `is_active` - if the period and status are active.
 
         NOTE This method is intended to be automatically called for each queryset.
         """
@@ -402,14 +400,6 @@ class SubscriptionQuerySet(models.QuerySet):
             )
         )
         return self.annotate(
-            is_period_active=Case(
-                When(is_period_active_condition, then=True),
-                default=False,
-            ),
-            is_status_active=Case(
-                When(is_status_active_condition, then=True),
-                default=False,
-            ),
             is_active=Case(
                 When(
                     is_period_active_condition & is_status_active_condition, then=True
