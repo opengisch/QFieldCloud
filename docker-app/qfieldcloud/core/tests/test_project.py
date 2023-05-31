@@ -494,7 +494,7 @@ class QfcTestCase(APITransactionTestCase):
         subscription.save()
 
         # Make sure the user is inactive
-        self.assertFalse(subscription.is_active)
+        self.assertFalse(self.user1.useraccount.current_subscription.is_active)
 
         # Cannot create project if user's subscription is inactive
         with self.assertRaises(InactiveSubscriptionError):

@@ -1,6 +1,8 @@
+from datetime import timedelta
 import logging
 from unittest import mock
 
+from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -84,7 +86,7 @@ class QfcTestCase(APITestCase):
         subscription.save()
 
         # Make sure the user is inactive
-        self.assertFalse(subscription.is_active)
+        self.assertFalse(self.project1.owner.useraccount.current_subscription.is_active)
 
         self.check_cannot_create_jobs(InactiveSubscriptionError)
         self.check_can_update_existing_jobs()
