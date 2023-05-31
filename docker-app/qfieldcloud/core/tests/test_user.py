@@ -14,7 +14,7 @@ from qfieldcloud.core.models import (
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans
+from .utils import setup_subscription_plans, set_subscription
 
 logging.disable(logging.CRITICAL)
 
@@ -53,6 +53,9 @@ class QfcTestCase(APITestCase):
             user_agent="qfield|dev",
         )[0]
 
+        # Activate Subscriptions
+        set_subscription((self.user1, self.user2, self.user3), "default_user")
+
         # Create an organization
         self.organization1 = Organization.objects.create(
             username="organization1",
@@ -64,6 +67,9 @@ class QfcTestCase(APITestCase):
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
         )
+
+        # Activate Subscriptions
+        set_subscription(self.organization1, "default_org")
 
         # Set user2 as member of organization1
         OrganizationMember.objects.create(
