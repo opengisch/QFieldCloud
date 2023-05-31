@@ -1,8 +1,6 @@
-from datetime import timedelta
 import logging
 from unittest import mock
 
-from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -20,7 +18,7 @@ from qfieldcloud.subscription.exceptions import (
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans, set_subscription
+from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
