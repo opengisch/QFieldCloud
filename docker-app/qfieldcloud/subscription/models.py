@@ -11,7 +11,9 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Case, Q
+from django.db.models import Value as V
+from django.db.models import When
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
@@ -278,6 +280,7 @@ class PackageType(models.Model):
     @classmethod
     @lru_cache
     def get_storage_package_type(cls):
+        # NOTE if the cache is still returning the old result, please restart the whole `app` container
         try:
             return cls.objects.get(type=cls.Type.STORAGE)
         except cls.DoesNotExist:
@@ -369,12 +372,69 @@ class SubscriptionQuerySet(models.QuerySet):
     def active(self):
         return self.current()
 
+    def managed_by(self, user_id: int):
+        """Returns all subscriptions that are managed by given `user_id`. It means the owner personal account and all organizations they own.
+
+        Args:
+            user_id (int): the user we are searching against
+        """
+        return self.filter(
+            Q(account_id=user_id)
+            | Q(account_id__user__organization__organization_owner_id=user_id)
+        )
+
+    def activeness(self):
+        """Annotates with three additional boolean fields.
+
+        `is_period_active` - if the subscription period is active
+        `is_status_active` - if the status is active
+        `is_active` - if the period and status are active
+
+        NOTE This method is intended to be automatically called for each queryset.
+        """
+        is_period_active_condition = Q(active_since__lte=V("now")) & (
+            Q(active_until__isnull=True) | Q(active_until__gte=V("now"))
+        )
+        is_status_active_condition = Q(
+            status__in=(
+                Subscription.Status.ACTIVE_PAID,
+                Subscription.Status.ACTIVE_PAST_DUE,
+            )
+        )
+        return self.annotate(
+            is_period_active=Case(
+                When(is_period_active_condition, then=True),
+                default=False,
+            ),
+            is_status_active=Case(
+                When(is_status_active_condition, then=True),
+                default=False,
+            ),
+            is_active=Case(
+                When(
+                    is_period_active_condition & is_status_active_condition, then=True
+                ),
+                default=False,
+            ),
+        )
+
+
+class SubscriptionManager(models.Manager):
+    def get_queryset(self):
+        return SubscriptionQuerySet(self.model, using=self._db).activeness()
+
+    def current(self):
+        return self.get_queryset().current()
+
+    def managed_by(self, user_id: int):
+        return self.get_queryset().managed_by(user_id)
+
 
 class AbstractSubscription(models.Model):
     class Meta:
         abstract = True
 
-    objects = SubscriptionQuerySet.as_manager()
+    objects = SubscriptionManager()
 
     Status = SubscriptionStatus
 
@@ -441,13 +501,6 @@ class AbstractSubscription(models.Model):
             "These notes are for internal purposes only and will never be shown to the end users."
         ),
     )
-
-    @property
-    def is_active(self) -> bool:
-        return self.status in [
-            SubscriptionStatus.ACTIVE_PAID,
-            SubscriptionStatus.ACTIVE_PAST_DUE,
-        ]
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
