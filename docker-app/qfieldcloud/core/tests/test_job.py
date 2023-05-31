@@ -18,7 +18,7 @@ from qfieldcloud.subscription.exceptions import (
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans
+from .utils import setup_subscription_plans, set_subscription
 
 logging.disable(logging.CRITICAL)
 
@@ -30,6 +30,7 @@ class QfcTestCase(APITestCase):
         # Create a user
         self.user1 = Person.objects.create_user(username="user1", password="abc123")
         self.token1 = AuthToken.objects.get_or_create(user=self.user1)[0]
+        set_subscription(self.user1, "default_user")
 
         # Create a project
         self.project1 = Project.objects.create(
