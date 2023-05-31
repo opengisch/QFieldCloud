@@ -840,7 +840,9 @@ class AbstractSubscription(models.Model):
                 active_since=active_since,
                 active_until=active_until,
             )
-            # the regular plan should be the default plan
+            # NOTE to get annotations, mostly `is_active`
+            trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
+            # the trial plan should be the default plan
             regular_plan = Plan.objects.get(
                 user_type=account.user.type,
                 is_default=True,
@@ -849,7 +851,7 @@ class AbstractSubscription(models.Model):
             # the end date of the trial is the start date of the regular
             regular_active_since = active_until
         else:
-            trial_subscription = None
+            trial_subscription_obj = None
             regular_plan = plan
             regular_active_since = active_since
 
@@ -861,8 +863,10 @@ class AbstractSubscription(models.Model):
             status=regular_plan.initial_subscription_status,
             active_since=regular_active_since,
         )
+        # NOTE to get annotations, mostly `is_active`
+        regular_subscription_obj = cls.objects.get(pk=regular_subscription.pk)
 
-        return trial_subscription, regular_subscription
+        return trial_subscription_obj, regular_subscription_obj
 
     def __str__(self):
         return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{self.active_storage_total_mb}MB"
