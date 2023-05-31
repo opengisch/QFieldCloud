@@ -16,7 +16,7 @@ from qfieldcloud.core.models import (
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans, set_subscription
+from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
