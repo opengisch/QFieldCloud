@@ -16,7 +16,7 @@ from qfieldcloud.core.models import (
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import setup_subscription_plans
+from .utils import setup_subscription_plans, set_subscription
 
 logging.disable(logging.CRITICAL)
 
@@ -50,6 +50,9 @@ class QfcTestCase(APITestCase):
             type=2,
             organization_owner=self.user1,
         )
+
+        # Activate Subscriptions
+        set_subscription(self.organization1, "default_org")
 
     def test_list_members(self):
 

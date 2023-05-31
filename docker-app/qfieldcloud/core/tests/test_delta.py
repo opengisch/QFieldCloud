@@ -497,7 +497,7 @@ class QfcTestCase(APITransactionTestCase):
 
             plan = subscription.plan
             # Make sure the user's plan is inactive and does not allow online vector data
-            self.assertFalse(subscription.is_active)
+            self.assertFalse(project.owner.useraccount.current_subscription.is_active)
             self.assertFalse(plan.is_external_db_supported)
 
             # Make project use all available storage
