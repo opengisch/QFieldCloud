@@ -182,7 +182,7 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
     def get_queryset(self):
         return super().get_queryset().select_subclasses()
 
-    def managed_by(self, user_id: int):
+    def owned_by(self, user_id: int):
         return self.filter(
             Q(pk=user_id) | Q(organization__organization_owner_id=user_id)
         )
