@@ -11,7 +11,7 @@ from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
-from qfieldcloud.core.utils2.sentry import report_to_sentry
+from qfieldcloud.core.utils2.sentry import report_serialization_diff_to_sentry
 from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
     purge_old_file_versions,
@@ -166,8 +166,7 @@ class DownloadPushDeleteFileView(views.APIView):
             logging.warning(missing_error)
 
             # QF-2540
-            # Report to sentry
-            report_to_sentry(
+            report_serialization_diff_to_sentry(
                 # using the 'X-Request-Id' added to the request by RequestIDMiddleware
                 name=f"{request.META.get('X-Request-Id')}_{projectid}",
                 pre_serialization=request.attached_keys,
