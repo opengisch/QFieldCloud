@@ -39,6 +39,10 @@ class QfcTestCase(APITestCase):
             organization_owner=self.user1,
         )
 
+        # Activate subscriptions
+        set_subscription((self.user1, self.user2), "default_user")
+        set_subscription(self.organization1, "default_org")
+
         # Create a project
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -159,10 +163,12 @@ class QfcTestCase(APITestCase):
         u1 = Person.objects.create_user(username="u1")
         u2 = Person.objects.create_user(username="u2")
         u3 = Person.objects.create_user(username="u3")
+        set_subscription((u1), "default_user")
 
         # Create organizations
         o1 = Organization.objects.create(username="o1", organization_owner=u1)
         o2 = Organization.objects.create(username="o2", organization_owner=u1)
+        set_subscription((o1, o2), "default_org")
 
         # Create a team
         o1_t1 = Team.objects.create(username="@o1/o1_t1", team_organization=o1)
