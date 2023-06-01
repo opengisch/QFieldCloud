@@ -16,7 +16,7 @@ from qfieldcloud.core.models import (
     Team,
     UserAccount,
 )
-from qfieldcloud.core.tests.utils import setup_subscription_plans
+from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 
 
 class QfcTestCase(TestCase):
@@ -152,6 +152,8 @@ class QfcTestCase(TestCase):
         org1 = Organization.objects.create(
             username="org1", organization_owner=self.user1
         )
+        # Activate Subscription
+        set_subscription(org1, "default_org")
         org1.members.create(member=self.user2)
         t1 = Team.objects.create(username="t1", team_organization=org1)
         t1.members.create(member=self.user2)
