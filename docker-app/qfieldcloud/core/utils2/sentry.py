@@ -28,4 +28,5 @@ def report_to_sentry(
                 filename=filename,
             )
         except Exception as error:
+            sentry_sdk.capture_exception(error)
             logging.error(f"Unable to send file to Sentry: failed on {error}")
