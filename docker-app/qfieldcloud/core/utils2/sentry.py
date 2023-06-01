@@ -10,12 +10,11 @@ def report_serialization_diff_to_sentry(
     name: str, pre_serialization: str, post_serialization: str, buffer: StringIO
 ):
     """
-    QF-2540 |
-    Send the report to Sentry.
+    Sends a report to sentry to debug QF-2540. The report includes request information from before and after middleware handle the request as well as a traceback.
 
     Args:
-        pre_serialization: str representing important keys on request before serialization and middleware.
-        post_serialization: str representing important keys on request after serialization and middleware.
+        pre_serialization: str representing the request `files` keys and meta information before serialization and middleware.
+        post_serialization: str representing the request `files` keys and meta information after serialization and middleware.
         buffer: StringIO buffer from which to extract traceback capturing callstack ahead of the calling function.
     """
 
