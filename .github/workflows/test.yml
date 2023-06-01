@@ -1,12 +1,19 @@
 name: Test
 
 on:
-  push:
   pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
+  # Apply formatter and fail on errors
   check_format:
-    if: '! github.event.pull_request.draft'
     name: Check code formatting
     runs-on: ubuntu-22.04
     steps:
@@ -18,12 +25,15 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-      - name: Check code formatting
-        uses: pre-commit/action@v2.0.3
+          python-version: "3.10"
 
-  test:
-    name: Run tests
+      - name: Check code formatting
+        uses: pre-commit/action@v3.0.0
+
+  # Build all images for services declaring a build
+  # Push them onto the repository's Github Container Registry
+  build_push__app:
+    name: Build app
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
@@ -31,51 +41,269 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Prepare docker-compose override file
-        run: |
-          ln -s docker-compose.override.local.yml docker-compose.override.yml
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - name: Check env vars coniguration
-        run: |
-          scripts/check_envvars.sh
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Export the env variables file
-        run: |
-          cp .env.example .env
-          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
-          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker-app
+          target: webserver_test
+          build-args: DEBUG_BUILD=1
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/app:${{ github.head_ref }}.${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: true
 
-      - name: Pull docker containers
-        run: docker compose pull
+  build_push__worker_wrapper:
+    name: Build worker_wrapper
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
-      - name: Build and run docker containers
-        run: |
-          docker compose up -d --build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - name: Initial manage.py commands
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker-app
+          target: worker_wrapper_runtime
+          build-args: DEBUG_BUILD=1
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/worker_wrapper:${{ github.head_ref }}.${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: true
+
+  build_push__redis:
+    name: Build redis
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker-redis
+          build-args: REDIS_PASSWORD=change_me_with_a_very_loooooooooooong_password
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/redis:${{ github.head_ref }}.${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: true
+
+  build_push__qgis:
+    name: Build qgis
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker-qgis
+          build-args: QGIS_TEST_VERSION=${{ github.head_ref }}.${{ github.sha }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/qgis:${{ github.head_ref }}.${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: true
+
+  # Concurrently test the 'django apps' below
+  # (in separate jobs) after pulling all images
+  # Walk through the entire matrix of django apps
+  # disregarding failures on the way.
+  test_with_matrix:
+    # Ideally the jobs defined in the matrix should be run as part of a separate workflow, using
+    # the 'workflow_run' trigger condition. But this trigger activates only when the current branch == the default branch.
+    # This means Pull Requests will never trigger it. Hence 'needs'.
+    needs:
+      - build_push__app
+      - build_push__worker_wrapper
+      - build_push__qgis
+      - build_push__redis
+    strategy:
+      fail-fast: false
+      matrix:
+        django_apps:
+          - authentication
+          - notifs
+          - subscription
+    name: Run tests
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup
+        env:
+          IMG_REG_REPO: ${{ env.REGISTRY }}/${{ github.repository }}
+          IMG_HEAD_SHA: ${{ github.head_ref }}.${{ github.sha }}
         run: |
-          docker compose run app python manage.py migrate
-          docker compose run app python manage.py collectstatic
+          ./scripts/setup.sh
+
       - name: Run unit and integration tests
         run: |
-          docker compose run app python manage.py test --keepdb -v2 qfieldcloud
+          docker compose exec app python manage.py test --keepdb -v2 qfieldcloud.${{ matrix.django_apps }}
+
+      - name: Add comment to pr
+        if: failure() && github.event_name == 'pull_request'
+        uses: opengisch/comment-pr-with-images@0.0.4
+        with:
+          images: "tests_artifacts/**/*"
 
       - name: "failure logs"
         if: failure()
         run: |
           docker compose logs
 
-      - name: Post Google Chat message on failure
-        if: ${{ failure() }}
-        uses: julb/action-post-googlechat-message@v1
+  test_core_1_2:
+    needs:
+      - build_push__app
+      - build_push__worker_wrapper
+      - build_push__qgis
+      - build_push__redis
+    name: Run core tests (1/2)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
         with:
-          message: |
-            Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
-          gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+          submodules: recursive
 
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
         with:
-          limit-access-to-actor: true
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup
+        env:
+          IMG_REG_REPO: ${{ env.REGISTRY }}/${{ github.repository }}
+          IMG_HEAD_SHA: ${{ github.head_ref }}.${{ github.sha }}
+        run: |
+          ./scripts/setup.sh
+
+      - name: Run first half of core tests
+        run: |
+          n=0;
+          for relpath in $(find ./docker-app/qfieldcloud/core/tests/test_*.py); do
+              if [[ $((n % 2)) == 0 ]]; then
+                  name=$(sed -r "s/.+\/(.+)\..+/\1/" <<<"$relpath");
+                  docker compose exec app python manage.py test --keepdb -v2 "qfieldcloud.core.tests.${name}";
+              fi
+              n=$((n + 1));
+          done
+
+      - name: Add comment to pr
+        if: failure() && github.event_name == 'pull_request'
+        uses: opengisch/comment-pr-with-images@0.0.4
+        with:
+          images: "tests_artifacts/**/*"
+
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker compose logs
+
+  test_core_2_2:
+    needs:
+      - build_push__app
+      - build_push__worker_wrapper
+      - build_push__qgis
+      - build_push__redis
+    name: Run core tests (2/2)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup
+        env:
+          IMG_REG_REPO: ${{ env.REGISTRY }}/${{ github.repository }}
+          IMG_HEAD_SHA: ${{ github.head_ref }}.${{ github.sha }}
+        run: |
+          ./scripts/setup.sh
+
+      - name: Run second half of core tests
+        run: |
+          n=0;
+          for relpath in $(find ./docker-app/qfieldcloud/core/tests/test_*.py); do
+              if [[ $((n % 2)) != 0 ]]; then
+                  name=$(sed -r "s/.+\/(.+)\..+/\1/" <<<"$relpath");
+                  docker compose exec app python manage.py test --keepdb -v2 "qfieldcloud.core.tests.${name}";
+              fi
+              n=$((n + 1));
+          done
+
+      - name: Add comment to pr
+        if: failure() && github.event_name == 'pull_request'
+        uses: opengisch/comment-pr-with-images@0.0.4
+        with:
+          images: "tests_artifacts/**/*"
+
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker compose logs

@@ -1,36 +1,31 @@
+# This includes configuration to run the integration test suite.
+# Mounts the test artifacts folder, and includes selenium browser
+
 version: '3.9'
 
 services:
 
   app:
-    build:
-      context: ./docker-app
-      target: webserver_test
+    image: ${IMG_REG_REPO}/app:${IMG_HEAD_SHA}
     environment:
-      # run flush, migrate and collectstatic in entrypoint
-      DEBUG: 1
-      # we must use the same db for test and runserver
-      SQL_DATABASE: test_${POSTGRES_DB}
-      SQL_DATABASE_TEST: test_${POSTGRES_DB}
+      TESTS_ARTIFACTS_DIR: /tests_artifacts
+    # mount the test artifacts folder to share screenshots
+    volumes:
+      - ../tests_artifacts:/tests_artifacts
+
+  # selenium browser used for integration tests
+  selenium_chrome:
+    image: selenium/standalone-chrome:107.0.5304.87-20221104
+    ports:
+      - 7900:7900
+    environment:
+      SE_VNC_NO_PASSWORD: 1
 
   worker_wrapper:
-    environment:
-      # we must use the same db for test and runserver
-      SQL_DATABASE: test_${POSTGRES_DB}
-      SQL_DATABASE_TEST: test_${POSTGRES_DB}
-    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
+    image: ${IMG_REG_REPO}/worker_wrapper:${IMG_HEAD_SHA}
 
-  db:
-    environment:
-      POSTGRES_DB: test_${POSTGRES_DB}
+  qgis:
+    image: ${IMG_REG_REPO}/qgis:${IMG_HEAD_SHA}
 
-networks:
-  default:
-    # Use a custom driver
-    name: ${QFIELDCLOUD_DEFAULT_NETWORK}
-
-volumes:
-  # We use a different volume, just so that the test_ database
-  # gets created in the entrypoint.
-  postgres_data:
-    name: qfieldcloud_postgres_data_test
+  redis:
+    image: ${IMG_REG_REPO}/redis:${IMG_HEAD_SHA}
