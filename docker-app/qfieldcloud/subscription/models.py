@@ -355,16 +355,17 @@ class Package(models.Model):
 
 
 class SubscriptionQuerySet(models.QuerySet):
+    def is_period_active_condition(self):
+        return Q(active_since__lte=V("now")) & (
+            Q(active_until__isnull=True) | Q(active_until__gte=V("now"))
+        )
+
     def current(self):
         """
         Returns the subscriptions which are relevant to the current moment.
         NOTE Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
         """
-        now = timezone.now()
-        qs = self.filter(
-            Q(active_since__lte=now)
-            & (Q(active_until__isnull=True) | Q(active_until__gte=now))
-        ).select_related("plan")
+        qs = self.filter(self.is_period_active_condition()).select_related("plan")
 
         return qs
 
@@ -390,9 +391,6 @@ class SubscriptionQuerySet(models.QuerySet):
 
         NOTE This method is intended to be automatically called for each queryset.
         """
-        is_period_active_condition = Q(active_since__lte=V("now")) & (
-            Q(active_until__isnull=True) | Q(active_until__gte=V("now"))
-        )
         is_status_active_condition = Q(
             status__in=(
                 Subscription.Status.ACTIVE_PAID,
@@ -402,7 +400,7 @@ class SubscriptionQuerySet(models.QuerySet):
         return self.annotate(
             is_active=Case(
                 When(
-                    is_period_active_condition & is_status_active_condition, then=True
+                    self.is_period_active_condition() & is_status_active_condition, then=True
                 ),
                 default=False,
             ),
