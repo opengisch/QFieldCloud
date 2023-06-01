@@ -1,5 +1,8 @@
+import copy
+import io
 import logging
 from pathlib import PurePath
+from traceback import print_stack
 
 import qfieldcloud.core.utils2 as utils2
 from django.db import transaction
@@ -8,6 +11,7 @@ from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
+from qfieldcloud.core.utils2.sentry import report_to_sentry
 from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
     purge_old_file_versions,
@@ -135,25 +139,50 @@ class DownloadPushDeleteFileView(views.APIView):
 
     # TODO refactor this function by moving the actual upload and Project model updates to library function outside the view
     def post(self, request, projectid, filename, format=None):
-        project = Project.objects.get(id=projectid)
+        """Handle POST requests."""
+
+        if len(request.FILES.getlist("file")) > 1:
+            raise exceptions.MultipleContentsError()
+
+        # QF-2540
+        # Getting traceback in case the traceback provided by Sentry is too short
+        # Add post-serialization keys for diff-ing with pre-serialization keys
+        buffer = io.StringIO()
+        print_stack(limit=50, file=buffer)
+        request_attributes = {
+            "data": str(copy.copy(self.request.data).keys()),
+            "files": str(self.request.FILES.keys()),
+            "meta": str(self.request.META),
+        }
+        missing_error = ""
 
         if "file" not in request.data:
-            logger.info(
-                'The key "file" was not found in `request.data`.',
-                extra={
-                    "data_for_key_text_content": str(request.data.get("text", ""))[
-                        :1000
-                    ],
-                    "data_for_key_text_len": len(request.data.get("text", "")),
-                    "request_content_length": request.META.get("CONTENT_LENGTH"),
-                    "request_content_type": request.META.get("CONTENT_TYPE"),
-                    "request_data": list(request.data.keys()),
-                    "request_files": list(request.FILES.keys()),
-                },
+            missing_error = 'The key "file" was not found in `request.data`. Sending report to Sentry.'
+
+        if not request.FILES.getlist("file"):
+            missing_error = 'The key "file" occurs in `request.data` but maps to an empty list. Sending report to Sentry.'
+
+        if missing_error:
+            logging.warning(missing_error)
+
+            # QF-2540
+            # Report to sentry
+            report_to_sentry(
+                # using the 'X-Request-Id' added to the request by RequestIDMiddleware
+                name=f"{request.META.get('X-Request-Id')}_{projectid}",
+                pre_serialization=request.attached_keys,
+                post_serialization=str(request_attributes),
+                buffer=buffer,
             )
             raise exceptions.EmptyContentError()
 
+        # get project from request or db
+        if hasattr(request, "project"):
+            project = request.project
+        else:
+            project = Project.objects.get(id=projectid)
         is_qgis_project_file = utils.is_qgis_project_file(filename)
+
         # check only one qgs/qgz file per project
         if (
             is_qgis_project_file

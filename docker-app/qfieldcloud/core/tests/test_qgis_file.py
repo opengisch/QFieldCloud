@@ -74,6 +74,42 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
 
+    def test_push_multiple_files(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+        self.assertEqual(
+            Project.objects.get(pk=self.project1.pk).project_filename, None
+        )
+
+        # Upload multiple files
+        file1 = io.FileIO(testdata_path("DCIM/1.jpg"), "rb")
+        file2 = io.FileIO(testdata_path("DCIM/2.jpg"), "rb")
+        file3 = io.FileIO(testdata_path("file.txt"), "rb")
+        data = {"file": [file1, file2, file3]}
+
+        should_fail_on_multiple = self.client.post(
+            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            data=data,
+            format="multipart",
+        )
+        should_fail_on_empty = self.client.post(
+            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            data={"file": []},
+            format="multipart",
+        )
+
+        # Assert that it didn't work
+        with self.subTest():
+            self.assertEqual(
+                should_fail_on_multiple.json()["code"], "multiple_contents"
+            )
+            self.assertEqual(should_fail_on_empty.json()["code"], "empty_content")
+            self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+            self.assertEqual(
+                Project.objects.get(pk=self.project1.pk).project_filename, None
+            )
+
     def test_push_download_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
