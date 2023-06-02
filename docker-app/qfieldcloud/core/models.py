@@ -510,40 +510,40 @@ class UserAccount(models.Model):
         return f"{self.user.username_with_full_name} ({self.__class__.__name__})"
 
 
+def random_string() -> str:
+    """Generate random sting starting with a lowercase letter and then
+    lowercase letters and digits"""
+
+    first_letter = secrets.choice(string.ascii_lowercase)
+    letters_and_digits = string.ascii_lowercase + string.digits
+    secure_str = first_letter + "".join(
+        secrets.choice(letters_and_digits) for i in range(15)
+    )
+    return secure_str
+
+
+def random_password() -> str:
+    """Generate secure random password composed of
+    letters, digits and special characters"""
+
+    password_characters = (
+        string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
+    )
+    secure_str = "".join(secrets.choice(password_characters) for i in range(16))
+    return secure_str
+
+
+def default_hostname() -> str:
+    return os.environ.get("GEODB_HOST")
+
+
+def default_port() -> str:
+    return os.environ.get("GEODB_PORT")
+
+
 class Geodb(models.Model):
-    @staticmethod
-    def random_string():
-        """Generate random sting starting with a lowercase letter and then
-        lowercase letters and digits"""
-
-        first_letter = secrets.choice(string.ascii_lowercase)
-        letters_and_digits = string.ascii_lowercase + string.digits
-        secure_str = first_letter + "".join(
-            secrets.choice(letters_and_digits) for i in range(15)
-        )
-        return secure_str
-
-    @staticmethod
-    def random_password():
-        """Generate secure random password composed of
-        letters, digits and special characters"""
-
-        password_characters = (
-            string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
-        )
-        secure_str = "".join(secrets.choice(password_characters) for i in range(16))
-        return secure_str
-
-    @staticmethod
-    def default_hostname():
-        return os.environ.get("GEODB_HOST")
-
-    @staticmethod
-    def default_port():
-        return os.environ.get("GEODB_PORT")
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
     hostname = models.CharField(blank=False, max_length=255, default=default_hostname)

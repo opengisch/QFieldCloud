@@ -28,28 +28,28 @@ class Migration(migrations.Migration):
                 (
                     "username",
                     models.CharField(
-                        default=qfieldcloud.core.models.Geodb.random_string,
+                        default=qfieldcloud.core.models.random_string,
                         max_length=255,
                     ),
                 ),
                 (
                     "dbname",
                     models.CharField(
-                        default=qfieldcloud.core.models.Geodb.random_string,
+                        default=qfieldcloud.core.models.random_string,
                         max_length=255,
                     ),
                 ),
                 (
                     "hostname",
                     models.CharField(
-                        default=qfieldcloud.core.models.Geodb.default_hostname,
+                        default=qfieldcloud.core.models.default_hostname,
                         max_length=255,
                     ),
                 ),
                 (
                     "port",
                     models.PositiveIntegerField(
-                        default=qfieldcloud.core.models.Geodb.default_port
+                        default=qfieldcloud.core.models.default_port
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
