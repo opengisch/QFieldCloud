@@ -20,5 +20,5 @@ mkdir -m 777 tests_artifacts
 
 echo "Setup Compose and Django (without building since we are pulling everything)"
 docker compose up -d --no-build
-docker compose exec app python manage.py makemigrations --check
+docker compose exec app python manage.py makemigrations --check --noinput
 docker compose exec app python manage.py collectstatic --noinput
