@@ -541,7 +541,6 @@ def default_port() -> str:
 
 
 class Geodb(models.Model):
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
@@ -1045,6 +1044,13 @@ class Project(models.Model):
         ),
     )
 
+    use_storage_keep_versions = models.BooleanField(
+        _("Opt-in to project-based max. files versions"),
+        default=False,
+        null=False,
+        blank=False,
+    )
+
     @property
     def thumbnail_url(self):
         if self.thumbnail_uri:
@@ -1249,21 +1255,13 @@ class Project(models.Model):
 
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
-        super().save(*args, **kwargs)
-
-    @property
-    def storage_versions(self) -> int:
-        return min(
-            self.storage_keep_versions,
-            self.owner.useraccount.current_subscription.plan.storage_keep_versions,
-        )
-
-    @storage_versions.setter
-    def keep_storage(self, value: Union[int, str]):
+        
+        # Adjust project's max keep versions in accordance to the owner's plan
         self.storage_keep_versions = min(
-            value if isinstance(value, int) else int(value),
-            self.owner.useraccount.current_subscription.plan.storage_keep_versions,
+            self.storage_keep_versions,
+            self.owner.useraccount.current_subscription.plan.storage_keep_versions
         )
+        super().save(*args, **kwargs)
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
