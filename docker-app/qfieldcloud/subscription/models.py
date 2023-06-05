@@ -378,9 +378,13 @@ class SubscriptionQuerySet(models.QuerySet):
         Args:
             user_id (int): the user we are searching against
         """
+        if not user_id:
+            # NOTE: for logged out AnonymousUser the user_id is None
+            return self.none()
+
         return self.filter(
             Q(account_id=user_id)
-            | Q(account_id__user__organization__organization_owner_id=user_id)
+            | Q(account__user__organization__organization_owner_id=user_id)
         )
 
     def activeness(self):
