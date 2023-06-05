@@ -362,7 +362,6 @@ class Person(User):
 
 
 class UserAccount(models.Model):
-
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
     NOTIFS_DAILY = timedelta(days=1)
@@ -542,7 +541,6 @@ def default_port() -> str:
 
 
 class Geodb(models.Model):
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
@@ -717,7 +715,6 @@ class OrganizationMemberQueryset(models.QuerySet):
 
 
 class OrganizationMember(models.Model):
-
     objects = OrganizationMemberQueryset.as_manager()
 
     class Roles(models.TextChoices):
@@ -802,7 +799,6 @@ class OrganizationRolesView(models.Model):
 
 
 class Team(User):
-
     team_organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
@@ -1040,6 +1036,13 @@ class Project(models.Model):
         _("Thumbnail Picture URI"), max_length=255, blank=True
     )
 
+    storage_keep_versions = models.PositiveIntegerField(
+        default=10,
+        help_text=(
+            "If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead."
+        ),
+    )
+
     @property
     def thumbnail_url(self):
         if self.thumbnail_uri:
@@ -1244,6 +1247,11 @@ class Project(models.Model):
 
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
+        
+        self.storage_keep_versions = min(
+            self.storage_keep_versions,
+            self.owner.useraccount.current_subscription.plan.storage_keep_versions
+        )
         super().save(*args, **kwargs)
 
 
@@ -1386,7 +1394,6 @@ class ProjectCollaborator(models.Model):
             elif self.collaborator.is_team:
                 team_qs = organization.teams.filter(pk=self.collaborator)
                 if not team_qs.exists():
-
                     raise ValidationError(_("Team does not exist."))
 
         return super().clean()
@@ -1504,7 +1511,6 @@ class Delta(models.Model):
 
 
 class Job(models.Model):
-
     objects = InheritanceManager()
 
     class Type(models.TextChoices):
@@ -1623,7 +1629,6 @@ class ProcessProjectfileJob(Job):
 
 
 class ApplyJob(Job):
-
     deltas_to_apply = models.ManyToManyField(
         to=Delta,
         through="ApplyJobDelta",
