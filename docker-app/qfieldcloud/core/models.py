@@ -5,7 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional, cast
+from typing import List, Optional, Union, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -362,7 +362,6 @@ class Person(User):
 
 
 class UserAccount(models.Model):
-
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
     NOTIFS_DAILY = timedelta(days=1)
@@ -717,7 +716,6 @@ class OrganizationMemberQueryset(models.QuerySet):
 
 
 class OrganizationMember(models.Model):
-
     objects = OrganizationMemberQueryset.as_manager()
 
     class Roles(models.TextChoices):
@@ -802,7 +800,6 @@ class OrganizationRolesView(models.Model):
 
 
 class Team(User):
-
     team_organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
@@ -1036,8 +1033,16 @@ class Project(models.Model):
             "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
         ),
     )
+
     thumbnail_uri = models.CharField(
         _("Thumbnail Picture URI"), max_length=255, blank=True
+    )
+
+    storage_keep_versions = models.PositiveIntegerField(
+        default=10,
+        help_text=(
+            "If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead."
+        ),
     )
 
     @property
@@ -1246,6 +1251,20 @@ class Project(models.Model):
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
         super().save(*args, **kwargs)
 
+    @property
+    def storage_versions(self) -> int:
+        return min(
+            self.storage_keep_versions,
+            self.owner.useraccount.current_subscription.plan.storage_keep_versions,
+        )
+
+    @storage_versions.setter
+    def keep_storage(self, value: Union[int, str]):
+        self.storage_keep_versions = min(
+            value if isinstance(value, int) else int(value),
+            self.owner.useraccount.current_subscription.plan.storage_keep_versions,
+        )
+
 
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):
@@ -1386,7 +1405,6 @@ class ProjectCollaborator(models.Model):
             elif self.collaborator.is_team:
                 team_qs = organization.teams.filter(pk=self.collaborator)
                 if not team_qs.exists():
-
                     raise ValidationError(_("Team does not exist."))
 
         return super().clean()
@@ -1504,7 +1522,6 @@ class Delta(models.Model):
 
 
 class Job(models.Model):
-
     objects = InheritanceManager()
 
     class Type(models.TextChoices):
@@ -1623,7 +1640,6 @@ class ProcessProjectfileJob(Job):
 
 
 class ApplyJob(Job):
-
     deltas_to_apply = models.ManyToManyField(
         to=Delta,
         through="ApplyJobDelta",
