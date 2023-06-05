@@ -132,7 +132,7 @@ class JobRun:
                 feedback["error"] = "Worker timeout error."
                 feedback["error_type"] = "TIMEOUT"
                 feedback["error_class"] = ""
-                feedback["error_origin"] = "container"
+                feedback["error_origin"] = "worker"
                 feedback["error_stack"] = ""
             else:
                 try:
@@ -140,7 +140,7 @@ class JobRun:
                         feedback = json.load(f)
 
                         if feedback.get("error"):
-                            feedback["error_origin"] = "container"
+                            feedback["error_origin"] = "worker"
                 except Exception as err:
                     if not isinstance(feedback, dict):
                         feedback = {"error_feedback": feedback}
