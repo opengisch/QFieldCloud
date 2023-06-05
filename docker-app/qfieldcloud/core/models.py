@@ -560,7 +560,7 @@ class Geodb(models.Model):
         self.password = password
 
         if not self.password:
-            self.password = Geodb.random_password()
+            self.password = random_password()
 
     def size(self):
         try:
