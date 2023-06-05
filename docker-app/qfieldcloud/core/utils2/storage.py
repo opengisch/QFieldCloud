@@ -405,10 +405,16 @@ def purge_old_file_versions(
     logger.info(f"Cleaning up old files for {project}")
 
     # Number of versions to keep is determined by the account type
-    keep_count = min(
-        project.storage_keep_versions,
-        project.owner.useraccount.current_subscription.plan.storage_keep_versions,
-    )
+    # and by whether the user has opted-in to a project-based count
+    if project.use_storage_keep_versions:
+        keep_count = min(
+            project.storage_keep_versions,
+            project.owner.useraccount.current_subscription.plan.storage_keep_versions,
+        )
+    else:
+        keep_count = (
+            project.owner.useraccount.current_subscription.plan.storage_keep_versions
+        )
 
     logger.debug(f"Keeping {keep_count} versions")
 
