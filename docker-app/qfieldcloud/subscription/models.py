@@ -355,11 +355,11 @@ class Package(models.Model):
 
 
 class SubscriptionQuerySet(models.QuerySet):
-    def is_period_active_condition(self):
+    is_period_active_condition = (
         return Q(active_since__lte=V("now")) & (
             Q(active_until__isnull=True) | Q(active_until__gte=V("now"))
         )
-
+    )
     def current(self):
         """
         Returns the subscriptions which are relevant to the current moment.
