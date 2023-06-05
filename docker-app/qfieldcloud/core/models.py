@@ -5,7 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional, Union, cast
+from typing import List, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -1255,12 +1255,14 @@ class Project(models.Model):
 
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
-        
+
         # Adjust project's max keep versions in accordance to the owner's plan
-        self.storage_keep_versions = min(
-            self.storage_keep_versions,
-            self.owner.useraccount.current_subscription.plan.storage_keep_versions
-        )
+        # if the user has opted in to this logic
+        if self.use_storage_keep_versions:
+            self.storage_keep_versions = min(
+                self.storage_keep_versions,
+                self.owner.useraccount.current_subscription.plan.storage_keep_versions,
+            )
         super().save(*args, **kwargs)
 
 

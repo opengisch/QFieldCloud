@@ -6,13 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0069_project_storage_keep_versions'),
+        ("core", "0069_project_storage_keep_versions"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='project',
-            name='use_storage_keep_versions',
-            field=models.BooleanField(default=False, verbose_name='Opt-in to project-based max. files versions'),
+            model_name="project",
+            name="use_storage_keep_versions",
+            field=models.BooleanField(
+                default=False,
+                verbose_name="Opt-in to project-based max. files versions",
+            ),
         ),
     ]

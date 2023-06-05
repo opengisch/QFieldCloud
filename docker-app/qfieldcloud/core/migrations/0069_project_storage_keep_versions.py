@@ -6,13 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0068_job_container_id'),
+        ("core", "0068_job_container_id"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='project',
-            name='storage_keep_versions',
-            field=models.PositiveIntegerField(default=10, help_text="If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead."),
+            model_name="project",
+            name="storage_keep_versions",
+            field=models.PositiveIntegerField(
+                default=10,
+                help_text="If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead.",
+            ),
         ),
     ]
