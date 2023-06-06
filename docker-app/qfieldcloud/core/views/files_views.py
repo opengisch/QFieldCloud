@@ -15,6 +15,7 @@ from qfieldcloud.core.utils2.storage import (
 from rest_framework import permissions, status, views
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from rest_framework.exceptions import server_error, bad_request
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +39,14 @@ class ListFilesView(views.APIView):
 
     def get(self, request, projectid):
 
-        project = Project.objects.get(id=projectid)
-
-        bucket = utils.get_s3_bucket()
+        try:
+            project = Project.objects.get(id=projectid)
+            bucket = utils.get_s3_bucket()
+            assert hasattr(bucket, "object_versions")
+        except exceptions.ObjectNotFoundError as exception:
+            return bad_request(request=request, reason=exception.message)
+        except Exception as unknown_reason:
+            return server_error(request=request, reason=unknown_reason)
 
         prefix = f"projects/{projectid}/files/"
 
