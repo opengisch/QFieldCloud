@@ -274,12 +274,14 @@ if SENTRY_DSN:
     SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
 
     def before_send(event, hint):
-        from qfieldcloud.core.exceptions import ProjectAlreadyExistsError
+        from qfieldcloud.core.exceptions import (
+            ProjectAlreadyExistsError,
+            ValidationError,
+        )
         from qfieldcloud.subscription.exceptions import (
             InactiveSubscriptionError,
             PlanInsufficientError,
             QuotaError,
-            ValidationError,
         )
 
         ignored_exceptions = (
