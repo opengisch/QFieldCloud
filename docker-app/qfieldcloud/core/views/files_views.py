@@ -13,9 +13,9 @@ from qfieldcloud.core.utils2.storage import (
     purge_old_file_versions,
 )
 from rest_framework import permissions, status, views
+from rest_framework.exceptions import bad_request, server_error
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
-from rest_framework.exceptions import server_error, bad_request
 
 logger = logging.getLogger(__name__)
 
