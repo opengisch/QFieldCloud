@@ -2,6 +2,7 @@ import logging
 from pathlib import PurePath
 
 import qfieldcloud.core.utils2 as utils2
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
@@ -43,8 +44,11 @@ class ListFilesView(views.APIView):
             project = Project.objects.get(id=projectid)
             bucket = utils.get_s3_bucket()
             assert hasattr(bucket, "object_versions")
-        except exceptions.ObjectNotFoundError as exception:
-            return bad_request(request=request, reason=exception.message)
+        except ObjectDoesNotExist:
+            return bad_request(
+                request=request,
+                reason=f"Unable to retrieve this project: {projectid}. Are you sure it exists?",
+            )
         except Exception as unknown_reason:
             return server_error(request=request, reason=unknown_reason)
 
