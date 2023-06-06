@@ -223,9 +223,11 @@ jobs:
           ./scripts/setup.sh
 
       - name: Run first half of core tests
+        run: |
           docker compose run app python manage.py makemigrations --no-input --check
           docker compose run app python manage.py migrate
           docker compose run app python manage.py collectstatic
+      
       - name: Run unit and integration tests
         run: |
           n=0;
