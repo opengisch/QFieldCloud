@@ -2,6 +2,7 @@ import logging
 
 from django.db import IntegrityError
 from django.utils import timezone
+from qfieldcloud.core.exceptions import ValidationError
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
@@ -88,6 +89,20 @@ class QfcTestCase(APITestCase):
         self.assertTrue(isinstance(response.data["token"], str))
         self.assertNotEqual(response.data["token"], self.token1.key)
         self.assertEqual(response.data["username"], "user1")
+
+    def test_username_field_validators(self):
+        with self.assertRaises(ValidationError):
+            User.username.field.run_validators('%')
+
+        with self.assertRaises(ValidationError):
+            User.username.field.run_validators('1user')
+
+        with self.assertRaises(ValidationError):
+            User.username.field.run_validators('us')
+
+        User.username.field.run_validators('correctusername')
+
+        # TODO add more tests
 
     def test_login_with_email(self):
         response = self.client.post(
