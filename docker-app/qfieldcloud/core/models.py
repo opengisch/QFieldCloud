@@ -5,7 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -168,10 +168,10 @@ class PersonQueryset(models.QuerySet):
             return self.filter(pk=entity.pk)
 
         if entity.type == User.Type.TEAM:
-            return self.for_team(entity)
+            return self.for_team(cast(Team, entity))
 
         if entity.type == User.Type.ORGANIZATION:
-            return self.for_organization(entity)
+            return self.for_organization(cast(Organization, entity))
 
         raise RuntimeError(f"Unsupported entity : {entity}")
 
@@ -510,36 +510,40 @@ class UserAccount(models.Model):
         return f"{self.user.username_with_full_name} ({self.__class__.__name__})"
 
 
+def random_string() -> str:
+    """Generate random sting starting with a lowercase letter and then
+    lowercase letters and digits"""
+
+    first_letter = secrets.choice(string.ascii_lowercase)
+    letters_and_digits = string.ascii_lowercase + string.digits
+    secure_str = first_letter + "".join(
+        secrets.choice(letters_and_digits) for i in range(15)
+    )
+    return secure_str
+
+
+def random_password() -> str:
+    """Generate secure random password composed of
+    letters, digits and special characters"""
+
+    password_characters = (
+        string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
+    )
+    secure_str = "".join(secrets.choice(password_characters) for i in range(16))
+    return secure_str
+
+
+def default_hostname() -> str:
+    return os.environ.get("GEODB_HOST")
+
+
+def default_port() -> str:
+    return os.environ.get("GEODB_PORT")
+
+
 class Geodb(models.Model):
-    def random_string():
-        """Generate random sting starting with a lowercase letter and then
-        lowercase letters and digits"""
-
-        first_letter = secrets.choice(string.ascii_lowercase)
-        letters_and_digits = string.ascii_lowercase + string.digits
-        secure_str = first_letter + "".join(
-            (secrets.choice(letters_and_digits) for i in range(15))
-        )
-        return secure_str
-
-    def random_password():
-        """Generate secure random password composed of
-        letters, digits and special characters"""
-
-        password_characters = (
-            string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
-        )
-        secure_str = "".join((secrets.choice(password_characters) for i in range(16)))
-        return secure_str
-
-    def default_hostname():
-        return os.environ.get("GEODB_HOST")
-
-    def default_port():
-        return os.environ.get("GEODB_PORT")
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
     hostname = models.CharField(blank=False, max_length=255, default=default_hostname)
@@ -556,7 +560,7 @@ class Geodb(models.Model):
         self.password = password
 
         if not self.password:
-            self.password = Geodb.random_password()
+            self.password = random_password()
 
     def size(self):
         try:
@@ -1146,11 +1150,8 @@ class Project(models.Model):
     def status(self) -> Status:
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            Job.objects.filter(
-                project=self, status__in=[Job.Status.QUEUED, Job.Status.STARTED]
-            ).count()
-            > 0
-        ):
+            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])
+        ).exists():
             return Project.Status.BUSY
         else:
             status = Project.Status.OK
@@ -1538,6 +1539,10 @@ class Job(models.Model):
     finished_at = models.DateTimeField(blank=True, null=True, editable=False)
     docker_started_at = models.DateTimeField(blank=True, null=True, editable=False)
     docker_finished_at = models.DateTimeField(blank=True, null=True, editable=False)
+    # the docker container ID of the QGIS worker that was executing the job
+    container_id = models.CharField(
+        max_length=64, default="", blank=True, db_index=True
+    )
 
     @property
     def short_id(self) -> str:

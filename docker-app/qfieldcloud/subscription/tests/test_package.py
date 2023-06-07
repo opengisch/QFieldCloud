@@ -430,8 +430,8 @@ class QfcTestCase(APITransactionTestCase):
             timezone.now() + timedelta(days=3),
         )
 
-        self.assertEquals(active_package, retired_package)
-        self.assertEquals(retired_package.active_until, future_package.active_since)
+        self.assertEqual(active_package, retired_package)
+        self.assertEqual(retired_package.active_until, future_package.active_since)
 
         self.assertStorage(
             active_storage_total_mb=1001,

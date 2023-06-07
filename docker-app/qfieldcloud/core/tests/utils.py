@@ -2,7 +2,7 @@ import io
 import os
 from datetime import timedelta
 from time import sleep
-from typing import IO, Dict, Iterable, Union
+from typing import IO, Iterable, Union
 
 from django.utils import timezone
 from qfieldcloud.core.models import Job, Project, User
@@ -92,16 +92,14 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
     is some processing to be done and saved to the project in the app.
     So maybe a better name would be 'wait_for_project_jobs_ok_status'.
     """
-    jobs = Job.objects.filter(project=project).exclude(
-        status__in=[Job.Status.FAILED, Job.Status.FINISHED]
-    )
+    jobs = project.jobs.exclude(status__in=[Job.Status.FAILED, Job.Status.FINISHED])
 
     if not jobs.exists():
         return
 
     has_pending_jobs = True
     for _ in range(wait_s):
-        if not Job.objects.filter(project=project, status=Job.Status.PENDING).exists():
+        if not project.jobs.filter(status=Job.Status.PENDING).exists():
             has_pending_jobs = False
             break
 
@@ -121,29 +119,6 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         sleep(1)
 
     fail(f"Waited for ok status for {wait_s} seconds")
-
-
-def assert_eventually_project_has(
-    project: Project, prop_val: Dict[str, any], wait_s: int = 30
-):
-    """
-    Helper asserts a property in the future after some worker job has finished.
-    E.g. after ProcessProjectfileJobrun has finished the project needs to still
-    be updated with some data and thumbnail generated. Currently there it can
-    just be awaited."""
-    for _ in range(wait_s):
-        project.refresh_from_db()
-        for property, expected_value in prop_val.items():
-            attribute = getattr(project, property)
-
-            if callable(attribute):
-                attribute = attribute()
-            if attribute == expected_value:
-                return
-
-        sleep(1)
-
-    fail(f"Waited for {property}={expected_value} for {wait_s} seconds")
 
 
 def fail(msg):

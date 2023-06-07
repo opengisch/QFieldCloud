@@ -109,7 +109,7 @@ class QfcTestCase(APITestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -135,7 +135,7 @@ class QfcTestCase(APITestCase):
         file_path = testdata_path("file.txt")
         # Push a file
         response = self.client.post(
-            "/api/v1/files/{}/file.txt/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/file.txt/",
             {"file": open(file_path, "rb")},
             format="multipart",
         )
@@ -146,7 +146,7 @@ class QfcTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
 
         # List files
-        response = self.client.get("/api/v1/files/{}/".format(self.project1.id))
+        response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_add_team_as_collaborators(self):

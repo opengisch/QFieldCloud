@@ -75,6 +75,15 @@ class EmptyContentError(QFieldCloudException):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
 
+class MultipleContentsError(QFieldCloudException):
+    """Raised when a request contains multiple files
+    (i.e. when it should contain at most one)"""
+
+    code = "multiple_contents"
+    message = "Multiple contents"
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+
 class ObjectNotFoundError(QFieldCloudException):
     """Raised when a requested object doesn't exist
     (e.g. wrong project id into the request)"""

@@ -255,7 +255,7 @@ def get_qgis_project_file(project_id: str) -> Optional[str]:
 
     bucket = get_s3_bucket()
 
-    prefix = "projects/{}/files/".format(project_id)
+    prefix = f"projects/{project_id}/files/"
 
     for obj in bucket.objects.filter(Prefix=prefix):
         if is_qgis_project_file(obj.key):

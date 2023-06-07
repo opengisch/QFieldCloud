@@ -5,7 +5,7 @@ from psycopg2 import sql
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
-class GeodbConnection(object):
+class GeodbConnection:
     def __init__(self):
         pass
 

@@ -1,10 +1,9 @@
 from functools import reduce
 from operator import and_, or_
 
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.db.models import Value as V
 from django.db.models.functions import StrIndex
-from django.db.models.manager import BaseManager
 from qfieldcloud.core.models import (
     Delta,
     Organization,
@@ -41,7 +40,7 @@ def get_users(
     exclude_organizations: bool = False,
     exclude_teams: bool = False,
     invert: bool = False,
-) -> BaseManager:
+) -> QuerySet:
     assert (
         project is None or organization is None
     ), "Cannot have the project and organization filters set simultaneously"

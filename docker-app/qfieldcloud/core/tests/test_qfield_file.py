@@ -110,27 +110,25 @@ class QfcTestCase(APITransactionTestCase):
         # Add the qgis project
         file = testdata_path("delta/project2.qgs")
         response = self.client.post(
-            "/api/v1/files/{}/project.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/project.qgs/",
             {"file": open(file, "rb")},
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project1.id)
-        )
+        response = self.client.post(f"/api/v1/qfield-files/export/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
         # Wait for the worker to finish
         for _ in range(20):
             time.sleep(3)
             response = self.client.get(
-                "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+                f"/api/v1/qfield-files/export/{self.project1.id}/",
             )
             payload = response.json()
             if payload["status"] == "STATUS_EXPORTED":
                 response = self.client.get(
-                    "/api/v1/qfield-files/{}/".format(self.project1.id),
+                    f"/api/v1/qfield-files/{self.project1.id}/",
                 )
                 json_resp = response.json()
                 files = sorted(json_resp["files"], key=lambda k: k["name"])
@@ -149,15 +147,13 @@ class QfcTestCase(APITransactionTestCase):
         # Add files to the project
         file = testdata_path("delta/points.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/points.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/points.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project1.id)
-        )
+        response = self.client.post(f"/api/v1/qfield-files/export/{self.project1.id}/")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "no_qgis_project")
 
@@ -167,7 +163,7 @@ class QfcTestCase(APITransactionTestCase):
         # Add files to the project
         file = testdata_path("delta/points.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/points.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/points.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -175,7 +171,7 @@ class QfcTestCase(APITransactionTestCase):
 
         file = testdata_path("delta/polygons.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/polygons.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/polygons.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -183,7 +179,7 @@ class QfcTestCase(APITransactionTestCase):
 
         file = testdata_path("delta/project.qgs")
         response = self.client.post(
-            "/api/v1/files/{}/project.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/project.qgs/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -191,7 +187,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Launch the export
         response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+            f"/api/v1/qfield-files/export/{self.project1.id}/",
         )
         self.assertTrue(status.is_success(response.status_code))
 
@@ -199,7 +195,7 @@ class QfcTestCase(APITransactionTestCase):
         for _ in range(10):
             time.sleep(3)
             response = self.client.get(
-                "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+                f"/api/v1/qfield-files/export/{self.project1.id}/",
             )
 
             self.assertHttpOk(response)
@@ -225,7 +221,7 @@ class QfcTestCase(APITransactionTestCase):
                         for chunk in r.iter_content():
                             f.write(chunk)
 
-                with open(local_file, "r") as f:
+                with open(local_file) as f:
                     self.assertEqual(
                         f.readline().strip(),
                         "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
@@ -245,7 +241,7 @@ class QfcTestCase(APITransactionTestCase):
         # Add files to the project
         file = testdata_path("delta/broken.qgs")
         response = self.client.post(
-            "/api/v1/files/{}/broken.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/broken.qgs/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -253,7 +249,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Launch the export
         response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+            f"/api/v1/qfield-files/export/{self.project1.id}/",
         )
         self.assertTrue(status.is_success(response.status_code))
 
@@ -261,7 +257,7 @@ class QfcTestCase(APITransactionTestCase):
         for _ in range(10):
             time.sleep(3)
             response = self.client.get(
-                "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+                f"/api/v1/qfield-files/export/{self.project1.id}/",
             )
 
             self.assertHttpOk(response)
@@ -279,7 +275,7 @@ class QfcTestCase(APITransactionTestCase):
         # Add files to the project
         file = testdata_path("delta/points.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/points.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/points.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -287,7 +283,7 @@ class QfcTestCase(APITransactionTestCase):
 
         file = testdata_path("delta/polygons.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/polygons.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/polygons.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -295,7 +291,7 @@ class QfcTestCase(APITransactionTestCase):
 
         file = testdata_path("delta/project.qgs")
         response = self.client.post(
-            "/api/v1/files/{}/project.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/project.qgs/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -303,7 +299,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Launch the export
         response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+            f"/api/v1/qfield-files/export/{self.project1.id}/",
         )
         self.assertTrue(status.is_success(response.status_code))
 
@@ -311,7 +307,7 @@ class QfcTestCase(APITransactionTestCase):
         for _ in range(10):
             time.sleep(3)
             response = self.client.get(
-                "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+                f"/api/v1/qfield-files/export/{self.project1.id}/",
             )
 
             payload = response.json()
@@ -334,7 +330,7 @@ class QfcTestCase(APITransactionTestCase):
                         for chunk in r.iter_content():
                             f.write(chunk)
 
-                with open(local_file, "r") as f:
+                with open(local_file) as f:
                     for line in f:
                         if 'name="theMapCanvas"' in line:
                             return
@@ -352,7 +348,7 @@ class QfcTestCase(APITransactionTestCase):
         # Add files to the project
         file = testdata_path("delta/points.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/points.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/points.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -360,7 +356,7 @@ class QfcTestCase(APITransactionTestCase):
 
         file = testdata_path("delta/project_broken_datasource.qgs")
         response = self.client.post(
-            "/api/v1/files/{}/project.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/project.qgs/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -368,7 +364,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Launch the export
         response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+            f"/api/v1/qfield-files/export/{self.project1.id}/",
         )
         self.assertTrue(status.is_success(response.status_code))
 
@@ -376,13 +372,13 @@ class QfcTestCase(APITransactionTestCase):
         for _ in range(10):
             time.sleep(3)
             response = self.client.get(
-                "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+                f"/api/v1/qfield-files/export/{self.project1.id}/",
             )
             payload = response.json()
             if payload["status"] == "STATUS_EXPORTED":
 
                 response = self.client.get(
-                    "/api/v1/qfield-files/{}/".format(self.project1.id),
+                    f"/api/v1/qfield-files/{self.project1.id}/",
                 )
 
                 self.assertHttpOk(response)
@@ -412,7 +408,7 @@ class QfcTestCase(APITransactionTestCase):
         # Add files to the project
         file = testdata_path("delta/points.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/points.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/points.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -420,7 +416,7 @@ class QfcTestCase(APITransactionTestCase):
 
         file = testdata_path("delta/polygons.geojson")
         response = self.client.post(
-            "/api/v1/files/{}/polygons.geojson/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/polygons.geojson/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -428,7 +424,7 @@ class QfcTestCase(APITransactionTestCase):
 
         file = testdata_path("delta/project.qgs")
         response = self.client.post(
-            "/api/v1/files/{}/whitespace project.qgs/".format(self.project1.id),
+            f"/api/v1/files/{self.project1.id}/whitespace project.qgs/",
             {"file": open(file, "rb")},
             format="multipart",
         )
@@ -436,7 +432,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Launch the export
         response = self.client.post(
-            "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+            f"/api/v1/qfield-files/export/{self.project1.id}/",
         )
         self.assertTrue(status.is_success(response.status_code))
 
@@ -444,7 +440,7 @@ class QfcTestCase(APITransactionTestCase):
         for _ in range(10):
             time.sleep(3)
             response = self.client.get(
-                "/api/v1/qfield-files/export/{}/".format(self.project1.id),
+                f"/api/v1/qfield-files/export/{self.project1.id}/",
             )
 
             payload = response.json()

@@ -283,7 +283,7 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.client.post(
             f"/api/v1/deltas/{project.id}/",
-            {"file": open(delta_file, "r")},
+            {"file": open(delta_file)},
             format="multipart",
         )
 
@@ -1047,7 +1047,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def get_delta_file_with_project_id(self, project, delta_filename):
         """Retrieves a delta json file with the project id replaced by the project.id"""
-        with open(delta_filename, "r") as f:
+        with open(delta_filename) as f:
             deltafile = json.load(f)
             deltafile["project"] = str(project.id)
             json_str = json.dumps(deltafile)

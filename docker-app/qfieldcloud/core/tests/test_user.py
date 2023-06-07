@@ -311,11 +311,11 @@ class QfcTestCase(APITestCase):
 
         organization = payload[0]
 
-        self.assertEquals(organization["username"], self.organization1.username)
-        self.assertEquals(organization["type"], User.Type.ORGANIZATION)
-        self.assertEquals(organization["membership_role"], "admin")
-        self.assertEquals(organization["membership_role_origin"], "organization_owner")
-        self.assertEquals(organization["membership_is_public"], True)
+        self.assertEqual(organization["username"], self.organization1.username)
+        self.assertEqual(organization["type"], User.Type.ORGANIZATION)
+        self.assertEqual(organization["membership_role"], "admin")
+        self.assertEqual(organization["membership_role_origin"], "organization_owner")
+        self.assertEqual(organization["membership_is_public"], True)
 
     def test_duplicate_user_emails(self):
         Person.objects.create_user(
