@@ -56,6 +56,16 @@ class QfcTestCase(APITransactionTestCase):
         else:
             return response.content
 
+    def test_try_to_get_nonexistent_project(self):
+        empty_string = ""
+        nonexistent_id = "007"
+        with self.subTest(
+            "Ensure that '/api/v1/files' handles missing resources correctly."
+        ):
+            one = self.client.get(f"/api/v1/files/{empty_string}")
+            two = self.client.get(f"/api/v1/files/{nonexistent_id}")
+            assert all(r.status_code == 404 for r in (one, two))
+
     def test_push_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
