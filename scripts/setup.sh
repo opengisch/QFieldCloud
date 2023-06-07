@@ -12,6 +12,12 @@ sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g
 eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
 echo "Pull, print images"
+
+# uncomment these lines if running locally
+# export IMG_REG_REPO=ghcr.io/opengisch/qfieldcloud
+# export IMG_HEAD_SHA=split-test.05d3e46131062853216f6dc24d5085f2595899db
+# docker compose config > config.txt
+
 docker compose pull
 docker images
 
