@@ -5,6 +5,7 @@ from pathlib import PurePath
 from traceback import print_stack
 
 import qfieldcloud.core.utils2 as utils2
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 from qfieldcloud.core import exceptions, permissions_utils, utils
@@ -17,6 +18,7 @@ from qfieldcloud.core.utils2.storage import (
     purge_old_file_versions,
 )
 from rest_framework import permissions, status, views
+from rest_framework.exceptions import NotFound, server_error
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
@@ -41,10 +43,21 @@ class ListFilesView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, ListFilesViewPermissions]
 
     def get(self, request, projectid):
-
-        project = Project.objects.get(id=projectid)
-
-        bucket = utils.get_s3_bucket()
+        try:
+            project = Project.objects.get(id=projectid)
+            bucket = utils.get_s3_bucket()
+            if not bucket.creation_date:
+                # Let DRF return 500 when bucket does not exist, since it needed but
+                # not what the client tried to get
+                return server_error(
+                    request=request,
+                    reason=f"Unable to fetch needed resource for {projectid}",
+                )
+        except ObjectDoesNotExist:
+            # map failure to get from db into failure to GET from API
+            raise NotFound(detail=projectid)
+        except Exception as unknown_reason:
+            return server_error(request=request, reason=str(unknown_reason))
 
         prefix = f"projects/{projectid}/files/"
 
