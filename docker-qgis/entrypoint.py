@@ -46,7 +46,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
     vl_extent_wkt = QgsRectangle()
-    vl_extent_crs = project.crs().authid()
+    vl_extent_crs = project.crs()
 
     if project_config.area_of_interest and project_config.area_of_interest_crs:
         vl_extent_wkt = project_config.area_of_interest
@@ -96,7 +96,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
         # this is an invalid polygon and cannot libqfieldsync does not like it
         vl_extent = vl_extent.buffered(1)
         vl_extent_wkt = vl_extent.asWktPolygon()
-        vl_extent_crs = project.crs().authid()
+        vl_extent_crs = project.crs()
 
     attachment_dirs, _ = project.readListEntry("QFieldSync", "attachmentDirs", ["DCIM"])
     offline_editing = QgsOfflineEditing()
