@@ -13,7 +13,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
@@ -1039,6 +1039,7 @@ class Project(models.Model):
 
     storage_keep_versions = models.PositiveIntegerField(
         default=10,
+        validators=[MaxValueValidator(100), MinValueValidator(1)],
         help_text=(
             "If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead."
         ),
