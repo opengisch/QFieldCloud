@@ -53,8 +53,6 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-redis, types-tabulate, types-jsonschema, django-stubs]
-        # We could enable `--strict` down the road. Maybe
-        #        args: [--strict, --ignore-missing-imports]
-        #
-        # Can help if mypy complains about duplicate module named ...
-        #        pass_filenames: false
+        pass_filenames: false
+        files: ^docker-qgis/
+        entry: bash -c 'mypy -p docker-qgis "$@"' --
