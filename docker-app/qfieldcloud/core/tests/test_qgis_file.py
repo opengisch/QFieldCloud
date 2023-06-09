@@ -68,7 +68,7 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(
                 self.client.get(f"/api/v1/files/{nonexistent_id}").status_code, 404
             )
-    
+
     def test_push_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 

@@ -16,6 +16,8 @@ from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from redis import Redis, exceptions
 
+from .exceptions import EmptyS3Bucket
+
 logger = logging.getLogger(__name__)
 
 
@@ -108,14 +110,22 @@ def get_s3_session() -> boto3.Session:
     return session
 
 
-def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
-    """Get a new S3 Bucket instance using Django settings"""
+def get_s3_bucket(allow_empty: bool = True) -> mypy_boto3_s3.service_resource.Bucket:
+    """
+    Get a new S3 Bucket instance using Django settings.
+    Assign 'allow_empty' False to raise when getting an empty s3 Bucket.
+    """
 
     session = get_s3_session()
 
     # Get the bucket objects
     s3 = session.resource("s3", endpoint_url=settings.STORAGE_ENDPOINT_URL)
-    return s3.Bucket(settings.STORAGE_BUCKET_NAME)
+    bucket = s3.Bucket(settings.STORAGE_BUCKET_NAME)
+
+    if not allow_empty and not bucket.creation_date:
+        raise EmptyS3Bucket()
+
+    return bucket
 
 
 def get_s3_client() -> mypy_boto3_s3.Client:

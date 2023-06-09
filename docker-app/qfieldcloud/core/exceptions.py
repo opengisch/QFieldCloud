@@ -178,3 +178,11 @@ class ReachedMaxOrganizationMembersError(QFieldCloudException):
     code = "organization_has_max_number_of_members"
     message = "Cannot add new organization members, account limit has been reached."
     status_code = status.HTTP_403_FORBIDDEN
+
+
+class EmptyS3Bucket(QFieldCloudException):
+    """Raised when an S3 Bucket is found empty and shouldn't be."""
+
+    code = "empty_bucket_found"
+    message = "Contrary to our expectations, this Bucket was found empty, when it should not have been."
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
