@@ -14,7 +14,6 @@ except ImportError:
 import argparse
 import json
 import logging
-import shutil
 import textwrap
 import traceback
 from functools import lru_cache
@@ -24,7 +23,6 @@ import jsonschema
 
 # pylint: disable=no-name-in-module
 from qgis.core import (
-    QgsDataSourceUri,
     QgsExpression,
     QgsFeature,
     QgsGeometry,
@@ -291,19 +289,12 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions) -> bool:
     try:
         del delta_log[:]
         deltas = load_delta_file(opts)
-
-        if opts["transaction"]:
-            raise NotImplementedError(
-                "Please check apply_deltas(project, deltas) and upgrade it, if needed"
-            )
-            # accepted_state = apply_deltas(project, deltas, inverse=opts['inverse'], overwrite_conflicts=opts['overwrite_conflicts'])
-        else:
-            accepted_state = apply_deltas_without_transaction(
-                project,
-                deltas,
-                inverse=opts["inverse"],
-                overwrite_conflicts=opts["overwrite_conflicts"],
-            )
+        accepted_state = apply_deltas_without_transaction(
+            project,
+            deltas,
+            inverse=opts["inverse"],
+            overwrite_conflicts=opts["overwrite_conflicts"],
+        )
 
         project.clear()
 
@@ -681,146 +672,6 @@ def apply_deltas_without_transaction(
     return has_applied_all_deltas
 
 
-def apply_deltas(
-    project: QgsProject,
-    delta_file: DeltaFile,
-    inverse: bool = False,
-    overwrite_conflicts: bool = False,
-) -> DeltaStatus:
-    """Applies the deltas from a loaded delta file on the layers in a project.
-
-    The general algorithm is as follows:
-    1) group all individual deltas by layer id.
-    2) make a backup of the layer data source. In case things go wrong, one
-    can rollback from them.
-    3) apply deltas on each individual layer:
-    startEditing -> apply changes -> commit
-    4) if all is good, delete the backup files.
-
-    Arguments:
-        project {QgsProject} -- project
-        delta_file {DeltaFile} -- delta file
-        inverse {bool} -- inverses the direction of the deltas. Makes the
-        delta `old` to `new` and `new` to `old`. Mainly used to rollback the
-        applied changes using the same delta file.
-        overwrite_conflicts {bool} -- whether the conflicts are ignored
-
-    Returns:
-        bool -- indicates whether a conflict occurred
-    """
-    has_conflict = False
-    deltas_by_layer: Dict[LayerId, List[Delta]] = {}
-    layers_by_id: Dict[LayerId, QgsVectorLayer] = {}
-    transcation_by_layer: Dict[str, str] = {}
-    opened_transactions: Dict[str, List[LayerId]] = {}
-
-    for layer_id in project.mapLayers():
-        layer = project.mapLayer(layer_id)
-        conn_type = layer.providerType()
-        conn_string = QgsDataSourceUri(layer.source()).connectionInfo(False)
-
-        if len(conn_string) == 0:
-            continue
-
-        # here we use '$$$$$' as a separator, nothing special, can be easily changed to any other string
-        transaction_id = conn_type + "$$$$$" + conn_string
-        transcation_by_layer[layer_id] = transaction_id
-        opened_transactions[transaction_id] = opened_transactions.get(
-            transaction_id, []
-        )
-        opened_transactions[transaction_id].append(layer_id)
-
-    # group all individual deltas by layer id
-    for d in delta_file.deltas:
-        layer_id = d["sourceLayerId"]
-        deltas_by_layer[layer_id] = deltas_by_layer.get(layer_id, [])
-        deltas_by_layer[layer_id].append(d)
-        layers_by_id[layer_id] = project.mapLayer(layer_id)
-
-        if not isinstance(layers_by_id[layer_id], QgsVectorLayer):
-            raise DeltaException(
-                f"The layer does not exist: {layer_id}", layer_id=layer_id
-            )
-
-    # make a backup of the layer data source.
-    for layer_id in layers_by_id.keys():
-        if not is_layer_file_based(layers_by_id[layer_id]):
-            continue
-
-        layer_path = get_layer_path(layers_by_id[layer_id])
-        layer_backup_path = get_backup_path(layer_path)
-
-        assert layer_path.exists()
-        # TODO enable this when needed
-        # assert not layer_backup_path.exists()
-
-        if not shutil.copyfile(layer_path, layer_backup_path):
-            raise DeltaException(
-                f"Unable to backup file for layer {layer_id}",
-                layer_id=layer_id,
-                e_type=DeltaExceptionType.IO,
-            )
-
-    modified_layer_ids: Set[LayerId] = set()
-
-    # apply deltas on each individual layer
-    for layer_id in deltas_by_layer.keys():
-        # keep the try/except block inside the loop, so we can have the `layer_id` context
-        try:
-            if apply_deltas_on_layer(
-                layers_by_id[layer_id],
-                deltas_by_layer[layer_id],
-                inverse,
-                overwrite_conflicts=overwrite_conflicts,
-            ):
-                has_conflict = True
-
-            modified_layer_ids.add(layer_id)
-        except DeltaException as err:
-            rollback_deltas(layers_by_id)
-            err.layer_id = err.layer_id or layer_id
-            err.delta_file_id = err.delta_file_id or delta_file.id
-            raise err
-        except Exception as err:
-            rollback_deltas(layers_by_id)
-            raise DeltaException("Failed to apply changes") from err
-
-    committed_layer_ids: Set[LayerId] = set()
-
-    for layer_id in deltas_by_layer.keys():
-        # keep the try/except block inside the loop, so we can have the `layer_id` context
-        try:
-            # the layer has already been commited. This might happend if there are multiple layers in the same transaction group.
-            if layer_id in committed_layer_ids:
-                continue
-
-            if layers_by_id[layer_id].commitChanges():
-                transaction_id = transcation_by_layer.get(layer_id)
-
-                if transaction_id and transaction_id in opened_transactions:
-                    committed_layer_ids = {
-                        *committed_layer_ids,
-                        *opened_transactions[transaction_id],
-                    }
-                    del opened_transactions[transaction_id]
-                else:
-                    committed_layer_ids.add(layer_id)
-            else:
-                raise DeltaException("Failed to commit")
-        except DeltaException:
-            # all the modified layers must be rollbacked
-            for layer_id in modified_layer_ids - committed_layer_ids:
-                if not layers_by_id[layer_id].rollBack():
-                    logger.warning("Failed to rollback")
-
-            rollback_deltas(layers_by_id, committed_layer_ids=committed_layer_ids)
-
-    if not cleanup_backups(set(layers_by_id.keys())):
-        logger.warning("Failed to cleanup backups, other than that - success")
-
-    return DeltaStatus.Conflict if has_conflict else DeltaStatus.Applied
-
-
 def rollback_deltas(
     layers_by_id: Dict[LayerId, QgsVectorLayer],
     committed_layer_ids: Set[LayerId] = set(),
@@ -904,105 +755,6 @@ def cleanup_backups(layer_paths: Set[str]) -> bool:
             )
 
     return is_success
-
-
-def apply_deltas_on_layer(
-    layer: QgsVectorLayer,
-    deltas: List[Delta],
-    inverse: bool,
-    should_commit: bool = False,
-    overwrite_conflicts: bool = False,
-) -> bool:
-    """Applies the deltas on the layer provided.
-
-    Arguments:
-        layer {QgsVectorLayer} -- target layer
-        deltas {List[Delta]} -- ordered list of deltas to be applied
-        inverse {bool} -- inverses the direction of the deltas. Makes the
-        delta `old` to `new` and `new` to `old`. Mainly used to rollback the
-        applied changes using the same delta file.
-
-    Keyword Arguments:
-        should_commit {bool} -- whether the changes should be committed
-        (default: {False})
-        overwrite_conflicts {bool} -- whether the conflicts are ignored
-
-    Raises:
-        DeltaException: whenever the changes cannot be applied
-
-    Returns:
-        bool -- indicates whether a conflict occurred
-    """
-    assert layer is not None
-    assert layer.type() == QgsMapLayerType.VectorLayer
-
-    has_conflict = False
-
-    if not layer.isEditable() and not layer.startEditing():
-        raise DeltaException("Cannot start editing")
-
-    for idx, d in enumerate(deltas):
-        assert d["sourceLayerId"] == layer.id()
-
-        delta = inverse_delta(d) if inverse else d
-
-        try:
-            if delta["method"] == str(DeltaMethod.CREATE):
-                create_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
-            elif delta["method"] == str(DeltaMethod.PATCH):
-                patch_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
-            elif delta["method"] == str(DeltaMethod.DELETE):
-                delete_feature(layer, delta, overwrite_conflicts=overwrite_conflicts)
-            else:
-                raise DeltaException("Unknown delta method")
-        except DeltaException as err:
-            # TODO I am lazy now and all these properties are set only here, but should be moved in depth
-            err.layer_id = err.layer_id or layer.id()
-            err.delta_idx = err.delta_idx or idx
-            err.delta_id = err.delta_id or delta.get("uuid")
-            err.method = err.method or delta.get("method")
-            err.feature_pk = err.feature_pk or delta.get("sourcePk")
-            err.provider_errors = err.provider_errors or layer.dataProvider().errors()
-
-            if err.e_type == DeltaExceptionType.Conflict:
-                has_conflict = True
-                logger.warning(
-                    f"Conflicts while applying a single delta: {str(err)}", err
-                )
-            else:
-                if not layer.rollBack():
-                    # So unfortunate situation, that the only safe thing to do is to cancel the whole script
-                    raise DeltaException(
-                        f"Cannot rollback layer changes: {layer.id()}"
-                    ) from err
-
-                raise err
-        except Exception as err:
-            if not layer.rollBack():
-                # So unfortunate situation, that the only safe thing to do is to cancel the whole script
-                raise DeltaException(
-                    f"Cannot rollback layer changes: {layer.id()}"
-                ) from err
-
-            raise DeltaException(
-                "An error has been encountered while applying delta:"
-                + str(err).replace("\n", ""),
-                layer_id=layer.id(),
-                delta_idx=idx,
-                delta_id=delta.get("uuid"),
-                method=delta.get("method"),
-                descr=traceback.format_exc(),
-                feature_pk=delta.get("sourcePk"),
-            ) from err
-
-    if should_commit and not layer.commitChanges():
-        if not layer.rollBack():
-            # So unfortunate situation, that the only safe thing to do is to cancel the whole script
-            raise DeltaException(f"Cannot rollback layer changes: {layer.id()}")
-
-        raise DeltaException("Cannot commit changes")
-
-    return has_conflict
 
 
 def find_layer_pk(layer: QgsVectorLayer) -> Tuple[int, str]:
@@ -1410,11 +1162,6 @@ if __name__ == "__main__":
         "--inverse",
         action="store_true",
         help="Inverses the direction of the deltas. Makes the delta `old` to `new` and `new` to `old`. Mainly used to rollback the applied changes using the same delta file..",
-    )
-    parser_delta_apply.add_argument(
-        "--transaction",
-        action="store_true",
-        help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled',
     )
     parser_delta_apply.set_defaults(func=cmd_delta_apply)
     # /deltas
