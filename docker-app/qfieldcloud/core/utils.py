@@ -16,7 +16,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from redis import Redis, exceptions
 
-from .exceptions import EmptyS3Bucket
+from .exceptions import EmptyObjectStorageBucketError
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ def get_s3_bucket(allow_empty: bool = True) -> mypy_boto3_s3.service_resource.Bu
     bucket = s3.Bucket(settings.STORAGE_BUCKET_NAME)
 
     if not allow_empty and not bucket.creation_date:
-        raise EmptyS3Bucket()
+        raise EmptyObjectStorageBucketError()
 
     return bucket
 
