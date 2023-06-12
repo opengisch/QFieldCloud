@@ -408,7 +408,7 @@ def purge_old_file_versions(
     # and by whether the user has opted-in to a project-based count
     if project.use_storage_keep_versions:
         keep_count = min(
-            project.storage_keep_versions,
+            project.keep_file_versions,
             project.owner.useraccount.current_subscription.plan.storage_keep_versions,
         )
     else:
