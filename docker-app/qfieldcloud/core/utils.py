@@ -111,20 +111,25 @@ def get_s3_session() -> boto3.Session:
     return session
 
 
-def get_s3_bucket(allow_empty: bool = True) -> mypy_boto3_s3.service_resource.Bucket:
+def get_s3_bucket(
+    bucket_name: Optional[str] = None, allow_empty: Optional[bool] = True
+) -> mypy_boto3_s3.service_resource.Bucket:
     """
     Get a new S3 Bucket instance using Django settings.
     Assign 'allow_empty' False to raise when getting an empty s3 Bucket.
     """
 
-    bucket_name = settings.STORAGE_BUCKET_NAME
+    if not bucket_name:
+        bucket_name = settings.STORAGE_BUCKET_NAME
+
     session = get_s3_session()
     s3 = session.resource("s3", endpoint_url=settings.STORAGE_ENDPOINT_URL)
 
     # Ensure the bucket exists
     try:
         s3.meta.client.head_bucket(Bucket=bucket_name)
-    except botocore.exceptions.ClientError:
+        print(f"Bucket name: {bucket_name}")
+    except (TypeError, botocore.exceptions.ClientError):
         if not allow_empty:
             raise EmptyObjectStorageBucketError()
 
