@@ -1257,17 +1257,15 @@ class Project(models.Model):
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
 
-        active_package = (
-            self.owner.useraccount.current_subscription.active_storage_package()
-        )
+        active_subscription = self.owner.useraccount.current_subscription
+        self.is_premium = active_subscription and active_subscription.plan.code in {
+            "pro",
+            "organization",
+        }
 
         # Premium users, and only them, get to increase their max. keep_files versions beyond 3
-        if active_package and active_package.type == "pro":
-            self.is_premium = True
-        else:
-            self.is_premium = False
-            if self.keep_file_versions > 3:
-                self.keep_file_versions = 3
+        if not self.is_premium and self.keep_file_versions > 3:
+            self.keep_file_versions = 3
 
         super().save(*args, **kwargs)
 
