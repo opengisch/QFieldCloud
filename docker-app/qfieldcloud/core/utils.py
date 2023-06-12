@@ -9,6 +9,7 @@ from pathlib import PurePath
 from typing import IO, Iterable, List, NamedTuple, Optional, Union
 
 import boto3
+import botocore
 import jsonschema
 import mypy_boto3_s3
 from botocore.errorfactory import ClientError
@@ -116,16 +117,19 @@ def get_s3_bucket(allow_empty: bool = True) -> mypy_boto3_s3.service_resource.Bu
     Assign 'allow_empty' False to raise when getting an empty s3 Bucket.
     """
 
+    bucket_name = settings.STORAGE_BUCKET_NAME
     session = get_s3_session()
-
-    # Get the bucket objects
     s3 = session.resource("s3", endpoint_url=settings.STORAGE_ENDPOINT_URL)
-    bucket = s3.Bucket(settings.STORAGE_BUCKET_NAME)
 
-    if not allow_empty and not bucket.creation_date:
-        raise EmptyObjectStorageBucketError()
+    # Ensure the bucket exists
+    try:
+        s3.meta.client.head_bucket(Bucket=bucket_name)
+    except botocore.exceptions.ClientError:
+        if not allow_empty:
+            raise EmptyObjectStorageBucketError()
 
-    return bucket
+    # Get or create the bucket resource
+    return s3.Bucket(settings.STORAGE_BUCKET_NAME)
 
 
 def get_s3_client() -> mypy_boto3_s3.Client:
