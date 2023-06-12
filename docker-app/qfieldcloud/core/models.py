@@ -1038,15 +1038,15 @@ class Project(models.Model):
     )
 
     keep_file_versions = models.PositiveIntegerField(
-        default=3,
-        validators=[MaxValueValidator(100), MinValueValidator(1)],
         help_text=(
             "If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead (by default 3 for non-paying customers; 10 for paying customers)"
         ),
+        default=3,
+        validators=[MaxValueValidator(100), MinValueValidator(1)],
     )
 
     is_premium = models.BooleanField(
-        _("Whether the project's owner is a premium user"),
+        help_text=_("Whether the project's owner is a premium user"),
         default=False,
         null=False,
         blank=False,

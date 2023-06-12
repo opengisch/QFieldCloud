@@ -7,26 +7,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0069_auto_20230608_1448'),
+        ("core", "0069_auto_20230608_1448"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='project',
-            name='storage_keep_versions',
+            model_name="project",
+            name="storage_keep_versions",
         ),
         migrations.RemoveField(
-            model_name='project',
-            name='use_storage_keep_versions',
+            model_name="project",
+            name="use_storage_keep_versions",
         ),
         migrations.AddField(
-            model_name='project',
-            name='is_premium',
-            field=models.BooleanField(default=False, verbose_name="Whether the project's owner is a premium user"),
+            model_name="project",
+            name="is_premium",
+            field=models.BooleanField(
+                default=False,
+                verbose_name="Whether the project's owner is a premium user",
+            ),
         ),
         migrations.AddField(
-            model_name='project',
-            name='keep_file_versions',
-            field=models.PositiveIntegerField(default=3, help_text="If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead (by default 3 for non-paying customers; 10 for paying customers)", validators=[django.core.validators.MaxValueValidator(100), django.core.validators.MinValueValidator(1)]),
+            model_name="project",
+            name="keep_file_versions",
+            field=models.PositiveIntegerField(
+                default=3,
+                help_text="If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead (by default 3 for non-paying customers; 10 for paying customers)",
+                validators=[
+                    django.core.validators.MaxValueValidator(100),
+                    django.core.validators.MinValueValidator(1),
+                ],
+            ),
         ),
     ]
