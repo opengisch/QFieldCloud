@@ -1065,7 +1065,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             model = Organization
             fields = "__all__"
 
-        projects_active_users = forms.JSONField(
+        organization_projects_active_users = forms.JSONField(
             label="Active users",
             help_text="Are considered active users who have been scheduling Jobs in the recent past.",
         )
@@ -1083,24 +1083,36 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             then = now - delta
 
             projects = Project.objects.filter(owner=instance.pk)
-            projects_active_users: Set[str] = {
+            organization_active_users: Set[str] = {
                 user.pk for user in instance.active_users(then, now)
             }
-            projects_active_users_builder: Dict[str, Dict[str, List[str]]] = {}
+            jobs_created_by_organization_users = Job.objects.filter(
+                created_by__in=organization_active_users
+            )
+            organization_projects_active_users_builder: Dict[str, Dict] = {}
 
-            # maps every project into the names and number of users
-            # having scheduled jobs against it.
+            # Maps every project of the current organization into the names and count of users
+            # having scheduled jobs against it, along with a list of jobs and count of them.
             for project in projects:
-                project_active_users = projects_active_users.intersection(
-                    {user.pk for user in project.users}
+                project_active_users = {
+                    user
+                    for user in project.users
+                    if user.pk in organization_active_users
+                }
+                project_jobs = jobs_created_by_organization_users.filter(
+                    project=project.pk
                 )
-                projects_active_users_builder[project.name] = {
+                organization_projects_active_users_builder[project.name] = {
                     "users": [user.username for user in project_active_users],
                     "user_count": len(project_active_users),
+                    "jobs": list(project_jobs),
+                    "jobs_count": project_jobs.count(),
                 }
 
-            initial["projects_active_users"] = projects_active_users_builder
-            initial["organization_active_users_count"] = len(projects_active_users)
+            initial[
+                "organization_projects_active_users"
+            ] = organization_projects_active_users_builder
+            initial["organization_active_users_count"] = len(organization_active_users)
 
             super().__init__(*args, **kwargs)
             self.initial.update(initial)
