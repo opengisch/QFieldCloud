@@ -1072,9 +1072,10 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
         organization_active_users_count = forms.IntegerField(min_value=0)
 
-        def __init__(self, instance, *args, **kwargs):
+        def __init__(self, *args, **kwargs):
             """Add initial value to 'active_users' custom, extra field."""
             initial = kwargs.get("initial", {})
+            instance = kwargs["instance"]
 
             from datetime import datetime, timedelta
 
