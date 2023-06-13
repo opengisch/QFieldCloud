@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0070_auto_20230612_1017'),
+        ("core", "0070_auto_20230612_1017"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='project',
-            name='is_premium',
-            field=models.BooleanField(default=False, help_text="Whether the project's owner is a premium user"),
+            model_name="project",
+            name="is_premium",
+            field=models.BooleanField(
+                default=False, help_text="Whether the project's owner is a premium user"
+            ),
         ),
     ]
