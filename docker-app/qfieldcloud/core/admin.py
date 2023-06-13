@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -1065,20 +1065,42 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             model = Organization
             fields = "__all__"
 
-        active_users = forms.IntegerField(
-            min_value=0,
+        projects_active_users = forms.JSONField(
             label="Active users",
             help_text="Are considered active users who have been scheduling Jobs in the recent past.",
         )
 
+        organization_active_users_count = forms.IntegerField(min_value=0)
+
         def __init__(self, instance, *args, **kwargs):
             """Add initial value to 'active_users' custom, extra field."""
             initial = kwargs.get("initial", {})
-            if hasattr(instance, "current_subscription_vw"):
-                active_users = instance.current_subscription_vw.active_users_count or 0
-            else:
-                active_users = 0
-            initial["active_users"] = active_users
+
+            from datetime import datetime, timedelta
+
+            delta = timedelta(weeks=4)
+            now = datetime.now()
+            then = now - delta
+
+            projects = Project.objects.filter(owner=instance.pk)
+            projects_active_users: Set[str] = {
+                user.pk for user in instance.active_users(then, now)
+            }
+            projects_active_users_builder: Dict[str, Dict[str, List[str]]] = {}
+
+            # maps every project into the names and number of users
+            # having scheduled jobs against it.
+            for project in projects:
+                project_active_users = projects_active_users.intersection(
+                    {user.pk for user in project.users}
+                )
+                projects_active_users_builder[project.name] = {
+                    "users": [user.username for user in project_active_users],
+                    "user_count": len(project_active_users),
+                }
+
+            initial["projects_active_users"] = projects_active_users_builder
+            initial["organization_active_users_count"] = len(projects_active_users)
 
             super().__init__(*args, **kwargs)
             self.initial.update(initial)
