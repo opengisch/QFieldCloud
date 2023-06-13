@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -14,6 +14,7 @@ from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
+from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
@@ -1039,6 +1040,51 @@ class TeamInline(admin.TabularInline):
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
+    class ActiveUsersFilter(admin.SimpleListFilter):
+        title = _("active")
+        parameter_name = "active_users"
+
+        def lookups(self, request: Any, model_admin: Any) -> List[Tuple[Any, str]]:
+            return [
+                ("only_with_active_users", _("Yes")),
+                ("only_without_active_users", _("No")),
+            ]
+
+        def queryset(self, request: HttpRequest, qs: QuerySet) -> QuerySet:
+            if self.value() == "only_active_users":
+                return qs.filter(
+                    useraccount__current_subscription_vw__isnull=False
+                ).order_by("+useraccount__current_subscription_vw")
+            elif self.value() == "only_without_active_users":
+                return qs.filter(useraccount__current_subscription_vw__isnull=True)
+            else:
+                return qs
+
+    class OrganizationForm(forms.ModelForm):
+        class Meta:
+            model = Organization
+            fields = "__all__"
+
+        active_users = forms.IntegerField(
+            min_value=0,
+            label="Active users",
+            help_text="Are considered active users who have been scheduling Jobs in the recent past.",
+        )
+
+        def __init__(self, instance, *args, **kwargs):
+            """Add initial value to 'active_users' custom, extra field."""
+            initial = kwargs.get("initial", {})
+            if hasattr(instance, "current_subscription_vw"):
+                active_users = instance.current_subscription_vw.active_users_count or 0
+            else:
+                active_users = 0
+            initial["active_users"] = active_users
+
+            super().__init__(*args, **kwargs)
+            self.initial.update(initial)
+
+    form = OrganizationForm
+
     inlines = (
         UserAccountInline,
         GeodbInline,
@@ -1073,12 +1119,12 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
     list_select_related = ("organization_owner",)
 
-    list_filter = ("date_joined",)
+    list_filter = ("date_joined", ActiveUsersFilter)
 
     autocomplete_fields = ("organization_owner",)
 
     @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> int | None:
+    def active_users(self, instance) -> Optional[int]:
         # The relation 'current_subscription_vw' is not instantiated unless the organization
         # does have a current subscription
         if hasattr(instance, "current_subscription_vw"):
