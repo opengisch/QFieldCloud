@@ -1038,6 +1038,7 @@ class TeamInline(admin.TabularInline):
     def has_change_permission(self, request, obj):
         return False
 
+
 class ActiveUsersFilter(admin.SimpleListFilter):
     title = _("active")
     parameter_name = "active_users"
@@ -1058,70 +1059,58 @@ class ActiveUsersFilter(admin.SimpleListFilter):
         else:
             return qs
 
+
 class OrganizationForm(forms.ModelForm):
     class Meta:
         model = Organization
         fields = "__all__"
-        widgets = {"active_users": widgets.TextInput()}
-    
-    active_users = fields.CharField(
-        disabled=True, required=False, widget=ProjectFilesWidget
+
+    organization_projects_active_users = forms.JSONField(
+        label="Active users",
+        help_text="Are considered active users who have been scheduling Jobs in the recent past.",
     )
 
-    # organization_projects_active_users = forms.JSONField(
-    #     label="Active users",
-    #     help_text="Are considered active users who have been scheduling Jobs in the recent past.",
-    # )
+    def __init__(self, *args, **kwargs):
+        """Add initial value to 'active_users' custom, extra field."""
+        initial = kwargs.get("initial", {})
+        instance = kwargs["instance"]
 
-    # organization_active_users_count = forms.IntegerField(min_value=0)
+        from datetime import datetime, timedelta
 
-    # organization_active_users_count = widgets.TextInput()
+        delta = timedelta(weeks=4)
+        now = datetime.now()
+        then = now - delta
 
-    # def __init__(self, *args, **kwargs):
-    #     """Add initial value to 'active_users' custom, extra field."""
-    #     initial = kwargs.get("initial", {})
-    #     instance = kwargs["instance"]
+        projects = Project.objects.filter(owner=instance.pk)
+        organization_active_users: Set[str] = {
+            user.pk for user in instance.active_users(then, now)
+        }
+        jobs_created_by_organization_users = Job.objects.filter(
+            created_by__in=organization_active_users
+        )
+        organization_projects_active_users_builder: Dict[str, Dict] = {}
 
-    #     from datetime import datetime, timedelta
+        # Maps every project of the current organization into the names and count of users
+        # having scheduled jobs against it, along with a list of jobs and jobs count.
+        for project in projects:
+            project_active_users = {
+                user for user in project.users if user.pk in organization_active_users
+            }
+            project_jobs = jobs_created_by_organization_users.filter(project=project.pk)
+            organization_projects_active_users_builder[project.name] = {
+                "users": [user.username for user in project_active_users],
+                "user_count": len(project_active_users),
+                "jobs": list(project_jobs),
+                "jobs_count": project_jobs.count(),
+            }
 
-    #     delta = timedelta(weeks=4)
-    #     now = datetime.now()
-    #     then = now - delta
+        initial[
+            "organization_projects_active_users"
+        ] = organization_projects_active_users_builder
 
-    #     projects = Project.objects.filter(owner=instance.pk)
-    #     organization_active_users: Set[str] = {
-    #         user.pk for user in instance.active_users(then, now)
-    #     }
-    #     jobs_created_by_organization_users = Job.objects.filter(
-    #         created_by__in=organization_active_users
-    #     )
-    #     organization_projects_active_users_builder: Dict[str, Dict] = {}
+        super().__init__(*args, **kwargs)
+        self.initial.update(initial)
 
-    #     # Maps every project of the current organization into the names and count of users
-    #     # having scheduled jobs against it, along with a list of jobs and count of them.
-    #     for project in projects:
-    #         project_active_users = {
-    #             user
-    #             for user in project.users
-    #             if user.pk in organization_active_users
-    #         }
-    #         project_jobs = jobs_created_by_organization_users.filter(
-    #             project=project.pk
-    #         )
-    #         organization_projects_active_users_builder[project.name] = {
-    #             "users": [user.username for user in project_active_users],
-    #             "user_count": len(project_active_users),
-    #             "jobs": list(project_jobs),
-    #             "jobs_count": project_jobs.count(),
-    #         }
-
-    #     initial[
-    #         "organization_projects_active_users"
-    #     ] = organization_projects_active_users_builder
-    #     initial["organization_active_users_count"] = len(organization_active_users)
-
-    #     super().__init__(*args, **kwargs)
-    #     self.initial.update(initial)
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
 
@@ -1140,7 +1129,8 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner",
         "date_joined",
-        "active_users"
+        "active_users",
+        "organization_projects_active_users",
     )
     list_display = (
         "username",
