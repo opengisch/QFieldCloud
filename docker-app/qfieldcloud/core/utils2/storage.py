@@ -406,7 +406,7 @@ def purge_old_file_versions(
 
     # Number of versions to keep is determined by the account type
     # and by whether the user has opted-in to a project-based count
-    if project.owner.useraccount.curren_subscription.plan.is_premium:
+    if project.owner.useraccount.current_subscription.plan.is_premium:
         keep_count = min(
             project.storage_keep_versions,
             project.owner.useraccount.current_subscription.plan.storage_keep_versions,
