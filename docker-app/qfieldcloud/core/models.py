@@ -362,6 +362,7 @@ class Person(User):
 
 
 class UserAccount(models.Model):
+
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
     NOTIFS_DAILY = timedelta(days=1)
@@ -541,6 +542,7 @@ def default_port() -> str:
 
 
 class Geodb(models.Model):
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
@@ -715,6 +717,7 @@ class OrganizationMemberQueryset(models.QuerySet):
 
 
 class OrganizationMember(models.Model):
+
     objects = OrganizationMemberQueryset.as_manager()
 
     class Roles(models.TextChoices):
@@ -799,6 +802,7 @@ class OrganizationRolesView(models.Model):
 
 
 class Team(User):
+
     team_organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
@@ -1032,24 +1036,22 @@ class Project(models.Model):
             "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
         ),
     )
-
     thumbnail_uri = models.CharField(
         _("Thumbnail Picture URI"), max_length=255, blank=True
     )
 
+    # Duplicating logic from the plan's storage_keep_versions
+    # so that users use less file versions (therefore storage)
+    # than as per their plan's default on specific projects.
+    # WARNING: If storage_keep_versions == 0, it will delete all file versions (hence the file itself) !
     storage_keep_versions = models.PositiveIntegerField(
-        help_text=(
-            "If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead (by default 3 for non-paying customers; 10 for paying customers)"
+        _("File versions to keep"),
+        help_text=_(
+            "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Available to Premium users only."
         ),
-        default=3,
-        validators=[MaxValueValidator(100), MinValueValidator(1)],
-    )
-
-    is_premium = models.BooleanField(
-        help_text=_("Whether the project's owner is a premium user"),
-        default=False,
-        null=False,
-        blank=False,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
     )
 
     @property
@@ -1257,16 +1259,15 @@ class Project(models.Model):
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
 
-        # Determining if the project's owner's account is Premium (= Pro or billed organization)
-        active_subscription = self.owner.useraccount.current_subscription
-        self.is_premium = active_subscription and active_subscription.plan.code in {
-            "pro",
-            "organization",
-        }
+        # Ensure that the Project's storage_keep_versions is at least 1, and reflects the plan's default storage_keep_versions value.
+        if not self.storage_keep_versions:
+            self.storage_keep_versions = (
+                self.owner.useraccount.current_subscription.plan.storage_keep_versions
+            )
 
-        # Premium users, and only them, get to increase their max. project.storage_keep_versions beyond 3
-        if not self.is_premium and self.storage_keep_versions > 3:
-            self.storage_keep_versions = 3
+        assert (
+            self.storage_keep_versions >= 1
+        ), "If 0, storage_keep_versions mean that all file versions are deleted!"
 
         super().save(*args, **kwargs)
 
@@ -1410,6 +1411,7 @@ class ProjectCollaborator(models.Model):
             elif self.collaborator.is_team:
                 team_qs = organization.teams.filter(pk=self.collaborator)
                 if not team_qs.exists():
+
                     raise ValidationError(_("Team does not exist."))
 
         return super().clean()
@@ -1527,6 +1529,7 @@ class Delta(models.Model):
 
 
 class Job(models.Model):
+
     objects = InheritanceManager()
 
     class Type(models.TextChoices):
@@ -1645,6 +1648,7 @@ class ProcessProjectfileJob(Job):
 
 
 class ApplyJob(Job):
+
     deltas_to_apply = models.ManyToManyField(
         to=Delta,
         through="ApplyJobDelta",
