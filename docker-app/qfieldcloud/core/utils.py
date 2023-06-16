@@ -111,8 +111,6 @@ def get_s3_session() -> boto3.Session:
 def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
     """
     Get a new S3 Bucket instance using Django settings.
-    If `bucket_name` is not provided it will be used from `settings.STORAGE_BUCKET_NAME`.
-    Assign 'allow_empty' False to raise when getting an empty s3 Bucket.
     """
 
     if not bucket_name:
