@@ -9,15 +9,12 @@ from pathlib import PurePath
 from typing import IO, Iterable, List, NamedTuple, Optional, Union
 
 import boto3
-import botocore
 import jsonschema
 import mypy_boto3_s3
 from botocore.errorfactory import ClientError
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from redis import Redis, exceptions
-
-from .exceptions import EmptyObjectStorageBucketError
 
 logger = logging.getLogger(__name__)
 
@@ -111,9 +108,7 @@ def get_s3_session() -> boto3.Session:
     return session
 
 
-def get_s3_bucket(
-    bucket_name: Optional[str] = None, allow_empty: Optional[bool] = True
-) -> mypy_boto3_s3.service_resource.Bucket:
+def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
     """
     Get a new S3 Bucket instance using Django settings.
     If `bucket_name` is not provided it will be used from `settings.STORAGE_BUCKET_NAME`.
@@ -122,21 +117,16 @@ def get_s3_bucket(
 
     if not bucket_name:
         bucket_name = settings.STORAGE_BUCKET_NAME
-    
+
     assert bucket_name, "Expected `bucket_name` to be non-empty string!"
 
     session = get_s3_session()
     s3 = session.resource("s3", endpoint_url=settings.STORAGE_ENDPOINT_URL)
 
     # Ensure the bucket exists
-    try:
-        s3.meta.client.head_bucket(Bucket=bucket_name)
-    except botocore.exceptions.ClientError:
-        if not allow_empty:
-            raise EmptyObjectStorageBucketError()
+    s3.meta.client.head_bucket(Bucket=bucket_name)
 
-
-    # Get or create the bucket resource
+    # Get the bucket resource
     return s3.Bucket(bucket_name)
 
 
