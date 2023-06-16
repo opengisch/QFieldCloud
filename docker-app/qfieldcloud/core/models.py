@@ -1037,7 +1037,7 @@ class Project(models.Model):
         _("Thumbnail Picture URI"), max_length=255, blank=True
     )
 
-    keep_file_versions = models.PositiveIntegerField(
+    storage_keep_versions = models.PositiveIntegerField(
         help_text=(
             "If enabled, QFieldCloud will use this value to limit the maximum number of versions per file in the current project with this value. If the value is larger than the maximum number of versions per file your current plan entitles you to, the current plan's value will be used instead (by default 3 for non-paying customers; 10 for paying customers)"
         ),
@@ -1257,15 +1257,16 @@ class Project(models.Model):
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
 
+        # Determining if the project's owner's account is Premium (= Pro or billed organization)
         active_subscription = self.owner.useraccount.current_subscription
         self.is_premium = active_subscription and active_subscription.plan.code in {
             "pro",
             "organization",
         }
 
-        # Premium users, and only them, get to increase their max. keep_files versions beyond 3
-        if not self.is_premium and self.keep_file_versions > 3:
-            self.keep_file_versions = 3
+        # Premium users, and only them, get to increase their max. project.storage_keep_versions beyond 3
+        if not self.is_premium and self.storage_keep_versions > 3:
+            self.storage_keep_versions = 3
 
         super().save(*args, **kwargs)
 
