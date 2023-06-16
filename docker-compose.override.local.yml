@@ -125,6 +125,13 @@ services:
       exit 0;
       "
 
+  qgis:
+    build:
+      target: dev
+#    volumes:
+# Uncomment to use a local libqfieldsync dev environment
+#      - /home/user/dev/libqfieldsync:/libqfieldsync
+
 volumes:
   postgres_data:
   geodb_data:

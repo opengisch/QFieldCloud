@@ -3,4 +3,7 @@ typing-extensions>=3.7.4.3,<3.7.5
 tabulate==v0.8.9
 sentry-sdk
 requests>=2.28.1
-qfieldcloud-sdk==0.7.0
+qfieldcloud-sdk==0.6.1
+
+# TODO: point to a commit on master after merging https://github.com/opengisch/libqfieldsync/pull/49
+libqfieldsync @ https://github.com/opengisch/libqfieldsync/archive/c3bcdbbe10542416324d6ffe6f6608a7fbc4aa69.tar.gz
