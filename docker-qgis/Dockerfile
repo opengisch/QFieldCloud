@@ -1,4 +1,4 @@
-FROM qgis/qgis:final-3_30_2
+FROM qgis/qgis:final-3_30_2 AS base
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -22,6 +22,7 @@ ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
 ENV XDG_RUNTIME_DIR=/root
 
 COPY ./requirements.txt /tmp/
+RUN pip3 install --upgrade pip
 RUN pip3 install -r /tmp/requirements.txt
 
 COPY entrypoint.py .
@@ -29,6 +30,8 @@ COPY ./apply_deltas.py ./lib/qfieldcloud/qgis/
 COPY ./process_projectfile.py ./lib/qfieldcloud/qgis/
 COPY ./utils.py ./lib/qfieldcloud/qgis/
 COPY ./schemas/deltafile_01.json ./schemas/
-COPY ./libqfieldsync ./lib/libqfieldsync
 
 ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a \"$@\"", ""]
+
+FROM base AS dev
+ENTRYPOINT ["/bin/sh", "-c", "pip install -e /libqfieldsync && /usr/bin/xvfb-run -a \"$@\"", ""]
