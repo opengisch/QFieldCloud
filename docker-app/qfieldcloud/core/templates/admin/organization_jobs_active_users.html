@@ -1,0 +1,21 @@
+<div class="organization_projects_active_users">
+    <table>
+        <thead>
+            <tr style="font-weight:bold; border-top:2px solid #DDDDDD;">
+                <th>User</th>
+                <th>Jobs count</th>
+                <th>Jobs</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for user in active_users %}
+        <tr>
+            <td> {{ user.id }} </td>
+            <td> {{ user.name }} </td>
+            <td> {{ username.jobs_count }} </td>
+            <td> {{ username.jobs }} </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

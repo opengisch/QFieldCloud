@@ -2,7 +2,7 @@ import csv
 import json
 import time
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import chain
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple
 
@@ -1059,6 +1059,10 @@ class ActiveUsersFilter(admin.SimpleListFilter):
             return qs
 
 
+class OrganizationFormActiveUsersWidget(widgets.Textarea):
+    template_name = "admin/organization_jobs_active_users.html"
+
+
 class OrganizationForm(forms.ModelForm):
     class Meta:
         model = Organization
@@ -1066,53 +1070,49 @@ class OrganizationForm(forms.ModelForm):
 
     organization_projects_active_users = forms.JSONField(
         label="Active users",
-        help_text="Are considered active users who have been scheduling Jobs in the recent past.",
+        help_text="Are considered <em>active</em> users who have been scheduling Jobs in the recent past.",
+        widget=OrganizationFormActiveUsersWidget,
     )
 
     def __init__(self, *args, **kwargs):
-        """Add initial value to 'active_users' custom, extra field."""
-        initial = kwargs.get("initial", {})
+        """Add initial value to 'organization_projects_active_users' custom, extra field."""
         instance = kwargs["instance"]
-
-        from datetime import datetime, timedelta
-
         delta = timedelta(weeks=4)
         now = datetime.now()
         then = now - delta
 
-        projects = Project.objects.filter(owner=instance.pk)
-        organization_active_users: Set[str] = {
-            user.pk for user in instance.active_users(then, now)
+        # Get all active users under organization
+        # where 'active' means 'has scheduled a job in the last 4 weeks'
+        organization_active_users: Set[Tuple[str, str]] = {
+            (user.pk, user.username) for user in instance.active_users(then, now)
         }
-        jobs_created_by_organization_users = Job.objects.filter(
-            created_by__in=organization_active_users
-        )
-        organization_projects_active_users_builder: Dict[str, Dict] = {}
+        # Get jobs under any project under organization
+        organization_jobs = Job.objects.filter(project__owner=instance.pk)
+        builder: List[Dict[str, Any]] = [{"adrien": {"jobs": [], "jobs_count": 1}}]
 
-        # Maps every project of the current organization into the names and count of users
-        # having scheduled jobs against it, along with a list of jobs and jobs count.
-        for project in projects:
-            project_active_users = {
-                user for user in project.users if user.pk in organization_active_users
-            }
-            project_jobs = jobs_created_by_organization_users.filter(project=project.pk)
-            organization_projects_active_users_builder[project.name] = {
-                "users": [user.username for user in project_active_users],
-                "user_count": len(project_active_users),
-                "jobs": list(project_jobs),
-                "jobs_count": project_jobs.count(),
-            }
+        # Build a mapping of users into projects into jobs
+        for pk, name in organization_active_users:
+            jobs = organization_jobs.filter(created_by=pk).values_list(
+                "id", "project", "created_by"
+            )
 
-        initial[
-            "organization_projects_active_users"
-        ] = organization_projects_active_users_builder
+            builder.append(
+                {
+                    "id": pk,
+                    "name": name,
+                    "jobs": jobs,
+                    "jobs_count": len(jobs),
+                }
+            )
+
+        initial = kwargs.get("initial", {})
+        initial["organization_projects_active_users"] = builder
 
         super().__init__(*args, **kwargs)
         self.initial.update(initial)
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
-
     form = OrganizationForm
 
     inlines = (
