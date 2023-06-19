@@ -47,3 +47,12 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies: [flake8-match==1.0.0]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.3.0'
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-redis, types-tabulate, types-jsonschema, django-stubs]
+        pass_filenames: false
+        files: ^docker-qgis/
+        entry: bash -c 'mypy -p docker-qgis "$@"' --

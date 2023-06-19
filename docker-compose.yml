@@ -170,6 +170,7 @@ services:
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
+    stop_grace_period: 15m
 
   ofelia:
     image: mcuadros/ofelia:v0.3.4

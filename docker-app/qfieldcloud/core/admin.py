@@ -19,7 +19,6 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
-from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
@@ -122,7 +121,6 @@ def admin_urlname_by_obj(value, arg):
 # Unregister admins from other Django apps
 admin.site.unregister(Invitation)
 admin.site.unregister(TokenProxy)
-admin.site.unregister(Group)
 admin.site.unregister(SocialAccount)
 admin.site.unregister(SocialApp)
 admin.site.unregister(SocialToken)
@@ -440,6 +438,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         "is_superuser",
         "is_staff",
         "is_active",
+        "groups",
         "remaining_invitations",
         "has_newsletter_subscription",
         "has_accepted_tos",

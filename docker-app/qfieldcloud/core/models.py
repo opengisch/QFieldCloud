@@ -13,7 +13,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
@@ -1040,6 +1040,20 @@ class Project(models.Model):
         _("Thumbnail Picture URI"), max_length=255, blank=True
     )
 
+    # Duplicating logic from the plan's storage_keep_versions
+    # so that users use less file versions (therefore storage)
+    # than as per their plan's default on specific projects.
+    # WARNING: If storage_keep_versions == 0, it will delete all file versions (hence the file itself) !
+    storage_keep_versions = models.PositiveIntegerField(
+        _("File versions to keep"),
+        help_text=_(
+            "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Available to Premium users only."
+        ),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+    )
+
     @property
     def thumbnail_url(self):
         if self.thumbnail_uri:
@@ -1244,6 +1258,17 @@ class Project(models.Model):
 
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
+
+        # Ensure that the Project's storage_keep_versions is at least 1, and reflects the plan's default storage_keep_versions value.
+        if not self.storage_keep_versions:
+            self.storage_keep_versions = (
+                self.owner.useraccount.current_subscription.plan.storage_keep_versions
+            )
+
+        assert (
+            self.storage_keep_versions >= 1
+        ), "If 0, storage_keep_versions mean that all file versions are deleted!"
+
         super().save(*args, **kwargs)
 
 
