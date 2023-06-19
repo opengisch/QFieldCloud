@@ -113,8 +113,7 @@ def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
     Get a new S3 Bucket instance using Django settings.
     """
 
-    if not bucket_name:
-        bucket_name = settings.STORAGE_BUCKET_NAME
+    bucket_name = settings.STORAGE_BUCKET_NAME
 
     assert bucket_name, "Expected `bucket_name` to be non-empty string!"
 
