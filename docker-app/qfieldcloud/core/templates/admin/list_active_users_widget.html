@@ -5,10 +5,11 @@
                 <th>User id</th>
                 <th>User name</th>
                 <th>Jobs count</th>
+                <th>Deltas count</th>
             </tr>
         </thead>
         <tbody>
-        {% for item in list_active_users %}
+        {% for item in items %}
         <tr>
             <td> {{ item.user_id }} </td>
             <td> {{ item.username }} </td>

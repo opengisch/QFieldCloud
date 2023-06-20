@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 from itertools import chain
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -20,7 +20,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, QuerySet, Value
+from django.db.models import Count, Q, QuerySet, Value
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
@@ -1062,6 +1062,17 @@ class ActiveUsersFilter(admin.SimpleListFilter):
 class OrganizationFormActiveUsersWidget(widgets.Textarea):
     template_name = "admin/list_active_users_widget.html"
 
+    def __init__(self, attrs=None, extra_widget_data=None):
+        # Construct instance with data passed-in
+        self.extra_widget_data = extra_widget_data
+        super().__init__()
+
+    def get_context(self, name, value, attrs) -> Dict[str, Any]:
+        # Add the data to the context used for rendering the widget
+        context = super().get_context(name, value, attrs)
+        context["items"] = self.extra_widget_data
+        return context
+
 
 class OrganizationForm(forms.ModelForm):
     list_active_users = fields.CharField(
@@ -1075,19 +1086,22 @@ class OrganizationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """
         Initialize model form's 'list_active_users' field with a Dictionary mapping user ids into the following values:
+        - user_id
         - username
         - number of jobs scheduled by the user
         - number of deltas scheduled by the user
         """
         super().__init__(*args, **kwargs)
         instance = kwargs.get("instance", None)
+        payload: Dict[str, Union[str, int]] = {}
 
         if instance:
             delta = timedelta(weeks=4)
             now = datetime.now()
             four_weeks_ago = now - delta
 
-            organization_projects = set(
+            # Get the organization's projects & active users
+            organization_projects_pk: Set[str] = set(
                 Project.objects.filter(owner=instance.pk).values_list("pk", flat=True)
             )
             organization_active_users_dict = dict(
@@ -1096,47 +1110,43 @@ class OrganizationForm(forms.ModelForm):
                 )
             )
 
+            # Get the jobs & deltas scheduled by the latter for the former
             jobs_created_by_organization_members: QuerySet = (
                 Job.objects.filter(
-                    project__in=organization_projects,
+                    project__in=organization_projects_pk,
                     created_by__in=organization_active_users_dict,
                 )
-                .values("created_by")
-                .annotate(type=Value("job"))
+                .values("created_by", "created_by__username")
+                .annotate(jobs_count=Count("created_by"), type=Value("jobs"))
+                .order_by("-jobs_count")
             )
             deltas_created_by_organization_members: QuerySet = (
                 Delta.objects.filter(
-                    project__in=organization_projects,
+                    project__in=organization_projects_pk,
                     created_by__in=organization_active_users_dict,
                 )
-                .values("created_by")
-                .annotate(type=Value("delta"))
+                .values("created_by", "created_by__username")
+                .annotate(jobs_count=Count("created_by"), type=Value("delta"))
+                .order_by("-jobs_count")
             )
 
-            users_scheduled: Dict[str, Union[str, int]] = {}
-            for scheduled in chain(
+            # Join querysets
+            for sched in chain(
                 jobs_created_by_organization_members,
                 deltas_created_by_organization_members,
             ):
-                creator_id = scheduled["created_by"]
+                user_id = sched["created_by"]
+                sched_type = sched["type"]
 
-                if creator_id not in users_scheduled:
-                    creator_username = organization_active_users_dict[creator_id]
-                    users_scheduled[creator_id] = {
-                        "user_id": creator_id,
-                        "username": creator_username,
-                        "jobs_counts": 0,
-                        "deltas_count": 0,
-                    }
+                if user_id not in payload:
+                    payload[user_id] = {"user_id": user_id}
 
-                if scheduled["type"] == "job":
-                    users_scheduled[creator_id]["deltas_count"] += 1
+                payload[user_id][f"{sched_type}_count"] = sched[f"{sched_type}_count"]
 
-                elif scheduled["type"] == "delta":
-                    users_scheduled[creator_id]["jobs_count"] += 1
-
-            list_active_users = self.fields["list_active_users"]
-            list_active_users.initial = users_scheduled
+            # Set the model form field
+            self.fields["list_active_users"].widget.extra_widget_data = list(
+                payload.values()
+            )
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
