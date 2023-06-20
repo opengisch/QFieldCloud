@@ -2,9 +2,9 @@
     <table>
         <thead>
             <tr style="font-weight:bold; border-top:2px solid #DDDDDD;">
-                <th>User</th>
+                <th>User id</th>
+                <th>User name</th>
                 <th>Jobs count</th>
-                <th>Jobs</th>
             </tr>
         </thead>
         <tbody>
@@ -12,8 +12,7 @@
         <tr>
             <td> {{ item.user_id }} </td>
             <td> {{ item.user_name }} </td>
-            <td> {{ item.project_id }} </td>
-            <td> {{ item.job_id }} </td>
+            <td> {{ item.jobs_count }} </td>
         </tr>
         {% endfor %}
         </tbody>

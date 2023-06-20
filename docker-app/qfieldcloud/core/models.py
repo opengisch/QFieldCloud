@@ -692,57 +692,57 @@ class Organization(User):
             is_staff=False,
         ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
 
-    def list_active_users(self) -> List[Dict[str, str]]:
-        """
-        List as dicts all jobs scheduled by members of the current organization in
-        the last 4 weeks.
-        """
-        delta = timedelta(weeks=4)
-        now = datetime.now()
-        then = now - delta
-        fields = ("pk", "created_by", "project")
+    # def list_active_users(self) -> List[Dict[str, str]]:
+    #     """
+    #     List as dicts all jobs scheduled by members of the current organization in
+    #     the last 4 weeks.
+    #     """
+    #     delta = timedelta(weeks=4)
+    #     now = datetime.now()
+    #     then = now - delta
+    #     fields = ("pk", "created_by", "project")
 
-        # ValuesQuerySet of recent deltas
-        recent_deltas_vqs = Delta.objects.filter(
-            project__in=self.projects.all(),
-            created_at__gte=then,
-            created_at__lte=now,
-        ).values(*fields)
+    #     # ValuesQuerySet of recent deltas
+    #     recent_deltas_vqs = Delta.objects.filter(
+    #         project__in=self.projects.all(),
+    #         created_at__gte=then,
+    #         created_at__lte=now,
+    #     ).values(*fields)
 
-        # ValuesQuerySet of recent jobs
-        recent_jobs_vqs = Job.objects.filter(
-            project__in=self.projects.all(),
-            created_at__gte=then,
-            created_at__lte=now,
-        ).values(*fields)
+    #     # ValuesQuerySet of recent jobs
+    #     recent_jobs_vqs = Job.objects.filter(
+    #         project__in=self.projects.all(),
+    #         created_at__gte=then,
+    #         created_at__lte=now,
+    #     ).values(*fields)
 
-        # Union of the above
-        recent_scheduled_set = set(chain(recent_jobs_vqs, recent_deltas_vqs))
+    #     # Union of the above
+    #     recent_scheduled_set = set(chain(recent_jobs_vqs, recent_deltas_vqs))
 
-        # Set of users primary keys who have scheduled jobs recently
-        members_ids = {scheduled["created_by"] for scheduled in recent_scheduled_set}
+    #     # Set of users primary keys who have scheduled jobs recently
+    #     members_ids = {scheduled["created_by"] for scheduled in recent_scheduled_set}
 
-        # Mapping a user's id into their username
-        members = Person.objects.filter(is_staff=False, id__in=members_ids).values(
-            "id", "username"
-        )
+    #     # Mapping a user's id into their username
+    #     members = Person.objects.filter(is_staff=False, id__in=members_ids).values(
+    #         "id", "username"
+    #     )
 
-        users_dict = {user["id"]: user["username"] for user in members}
+    #     users_dict = {user["id"]: user["username"] for user in members}
 
-        # Extracting & collecting values
-        listed_scheduled = []
-        for scheduled in recent_scheduled_set:
-            user_pk = scheduled["created_by"]
-            listed_scheduled.append(
-                {
-                    "user_id": user_pk,
-                    "user_name": users_dict[user_pk],
-                    "project_id": scheduled["project"],
-                    "job_id": scheduled["pk"],
-                }
-            )
+    #     # Extracting & collecting values
+    #     listed_scheduled = []
+    #     for scheduled in recent_scheduled_set:
+    #         user_pk = scheduled["created_by"]
+    #         listed_scheduled.append(
+    #             {
+    #                 "user_id": user_pk,
+    #                 "user_name": users_dict[user_pk],
+    #                 "project_id": scheduled["project"],
+    #                 "job_id": scheduled["pk"],
+    #             }
+    #         )
 
-        return listed_scheduled
+    #     return listed_scheduled
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION

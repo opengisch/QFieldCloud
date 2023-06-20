@@ -1072,6 +1072,14 @@ class OrganizationForm(forms.ModelForm):
         model = Organization
         fields = "__all__"
 
+    def __init__(self, *args, **kwargs):
+        # user_name, user_id, jobs_count, deltas_count
+        super().__init__(*args, **kwargs)
+        # instance = kwargs.get("instance", None)
+        # storage_field.initial = subscription.active_storage_package_quantity
+        # storage_field.disabled = subscription.stripe_id is None
+        # # TEST ME: storage_field.disabled = subscription.stripe_id is not None
+        
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
     form = OrganizationForm
