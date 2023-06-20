@@ -2,7 +2,7 @@ import csv
 import json
 import time
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import chain
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
@@ -1073,13 +1073,72 @@ class OrganizationForm(forms.ModelForm):
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
-        # user_name, user_id, jobs_count, deltas_count
+        """
+        Initialize model form's 'list_active_users' field with a Dictionary mapping user ids into the following values:
+        - username
+        - number of jobs scheduled by the user
+        - number of deltas scheduled by the user
+        """
         super().__init__(*args, **kwargs)
-        # instance = kwargs.get("instance", None)
-        # storage_field.initial = subscription.active_storage_package_quantity
-        # storage_field.disabled = subscription.stripe_id is None
-        # # TEST ME: storage_field.disabled = subscription.stripe_id is not None
-        
+        instance = kwargs.get("instance", None)
+
+        if instance:
+            delta = timedelta(weeks=4)
+            now = datetime.now()
+            four_weeks_ago = now - delta
+
+            jobs_created_by_organization_members: QuerySet = (
+                Job.objects.filter(
+                    project__in=organization_projects,
+                    created_by__in=organization_active_users_dict,
+                )
+                .values("created_by")
+                .annotate(type="job")
+            )
+
+            deltas_created_by_organization_members: QuerySet = (
+                Delta.objects.filter(
+                    project__in=organization_projects,
+                    created_by__in=organization_active_users_dict,
+                )
+                .values("created_by")
+                .annotate(type="delta")
+            )
+
+            organization_projects = set(
+                Project.objects.filter(owner=instance.pk).values_list("pk", flat=True)
+            )
+            organization_active_users_dict = dict(
+                self.instance.active_users(four_weeks_ago, now).values_list(
+                    "pk", "username"
+                )
+            )
+
+            users_scheduled: Dict[str, str] = {}
+            for scheduled in chain(
+                jobs_created_by_organization_members,
+                deltas_created_by_organization_members,
+            ):
+                creator_id = scheduled["created_by"]
+
+                if creator_id not in users_scheduled:
+                    creator_username = organization_active_users_dict[creator_id]
+                    users_scheduled[creator_id] = {
+                        "user_id": creator_id,
+                        "username": creator_username,
+                        "jobs_counts": 0,
+                        "deltas_count": 0,
+                    }
+
+                if scheduled["type"] == "job":
+                    users_scheduled[creator_id]["deltas_count"] += 1
+
+                elif scheduled["type"] == "delta":
+                    users_scheduled[creator_id]["jobs_count"] += 1
+
+            list_active_users = self.fields["list_active_users"]
+            list_active_users.initial = users_scheduled
+
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
     form = OrganizationForm

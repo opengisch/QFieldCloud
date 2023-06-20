@@ -11,8 +11,9 @@
         {% for item in list_active_users %}
         <tr>
             <td> {{ item.user_id }} </td>
-            <td> {{ item.user_name }} </td>
+            <td> {{ item.username }} </td>
             <td> {{ item.jobs_count }} </td>
+            <td> {{ item.deltas_count }} </td>
         </tr>
         {% endfor %}
         </tbody>
