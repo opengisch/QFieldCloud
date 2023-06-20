@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 from itertools import chain
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -20,7 +20,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, Value
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
@@ -1087,24 +1087,6 @@ class OrganizationForm(forms.ModelForm):
             now = datetime.now()
             four_weeks_ago = now - delta
 
-            jobs_created_by_organization_members: QuerySet = (
-                Job.objects.filter(
-                    project__in=organization_projects,
-                    created_by__in=organization_active_users_dict,
-                )
-                .values("created_by")
-                .annotate(type="job")
-            )
-
-            deltas_created_by_organization_members: QuerySet = (
-                Delta.objects.filter(
-                    project__in=organization_projects,
-                    created_by__in=organization_active_users_dict,
-                )
-                .values("created_by")
-                .annotate(type="delta")
-            )
-
             organization_projects = set(
                 Project.objects.filter(owner=instance.pk).values_list("pk", flat=True)
             )
@@ -1114,7 +1096,24 @@ class OrganizationForm(forms.ModelForm):
                 )
             )
 
-            users_scheduled: Dict[str, str] = {}
+            jobs_created_by_organization_members: QuerySet = (
+                Job.objects.filter(
+                    project__in=organization_projects,
+                    created_by__in=organization_active_users_dict,
+                )
+                .values("created_by")
+                .annotate(type=Value("job"))
+            )
+            deltas_created_by_organization_members: QuerySet = (
+                Delta.objects.filter(
+                    project__in=organization_projects,
+                    created_by__in=organization_active_users_dict,
+                )
+                .values("created_by")
+                .annotate(type=Value("delta"))
+            )
+
+            users_scheduled: Dict[str, Union[str, int]] = {}
             for scheduled in chain(
                 jobs_created_by_organization_members,
                 deltas_created_by_organization_members,
