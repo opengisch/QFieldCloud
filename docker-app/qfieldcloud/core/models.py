@@ -5,7 +5,8 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional, cast
+from itertools import chain
+from typing import Dict, List, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -15,7 +16,7 @@ from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Q
+from django.db.models import Case, Exists, F, OuterRef, Q, QuerySet
 from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
@@ -656,7 +657,7 @@ class Organization(User):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
-    def active_users(self, period_since: datetime, period_until: datetime):
+    def active_users(self, period_since: datetime, period_until: datetime) -> QuerySet:
         """Returns the queryset of active users in the given time interval.
 
         Active users are users triggering a job or pushing a delta on a project owned by the organization.
@@ -690,6 +691,58 @@ class Organization(User):
         return Person.objects.filter(
             is_staff=False,
         ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
+
+    def list_active_users(self) -> List[Dict[str, str]]:
+        """
+        List as dicts all jobs scheduled by members of the current organization in
+        the last 4 weeks.
+        """
+        delta = timedelta(weeks=4)
+        now = datetime.now()
+        then = now - delta
+        fields = ("pk", "created_by", "project")
+
+        # ValuesQuerySet of recent deltas
+        recent_deltas_vqs = Delta.objects.filter(
+            project__in=self.projects.all(),
+            created_at__gte=then,
+            created_at__lte=now,
+        ).values(*fields)
+
+        # ValuesQuerySet of recent jobs
+        recent_jobs_vqs = Job.objects.filter(
+            project__in=self.projects.all(),
+            created_at__gte=then,
+            created_at__lte=now,
+        ).values(*fields)
+
+        # Union of the above
+        recent_scheduled_set = set(chain(recent_jobs_vqs, recent_deltas_vqs))
+
+        # Set of users primary keys who have scheduled jobs recently
+        members_ids = {scheduled["created_by"] for scheduled in recent_scheduled_set}
+
+        # Mapping a user's id into their username
+        members = Person.objects.filter(is_staff=False, id__in=members_ids).values(
+            "id", "username"
+        )
+
+        users_dict = {user["id"]: user["username"] for user in members}
+
+        # Extracting & collecting values
+        listed_scheduled = []
+        for scheduled in recent_scheduled_set:
+            user_pk = scheduled["created_by"]
+            listed_scheduled.append(
+                {
+                    "user_id": user_pk,
+                    "user_name": users_dict[user_pk],
+                    "project_id": scheduled["project"],
+                    "job_id": scheduled["pk"],
+                }
+            )
+
+        return listed_scheduled
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION

@@ -2,9 +2,9 @@ import csv
 import json
 import time
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -1060,56 +1060,17 @@ class ActiveUsersFilter(admin.SimpleListFilter):
 
 
 class OrganizationFormActiveUsersWidget(widgets.Textarea):
-    template_name = "admin/organization_jobs_active_users.html"
+    template_name = "admin/list_active_users_widget.html"
 
 
 class OrganizationForm(forms.ModelForm):
+    list_active_users = fields.CharField(
+        disabled=True, required=False, widget=OrganizationFormActiveUsersWidget
+    )
+
     class Meta:
         model = Organization
         fields = "__all__"
-
-    organization_projects_active_users = forms.JSONField(
-        label="Active users",
-        help_text="Are considered <em>active</em> users who have been scheduling Jobs in the recent past.",
-        widget=OrganizationFormActiveUsersWidget,
-    )
-
-    def __init__(self, *args, **kwargs):
-        """Add initial value to 'organization_projects_active_users' custom, extra field."""
-        instance = kwargs["instance"]
-        delta = timedelta(weeks=4)
-        now = datetime.now()
-        then = now - delta
-
-        # Get all active users under organization
-        # where 'active' means 'has scheduled a job in the last 4 weeks'
-        organization_active_users: Set[Tuple[str, str]] = {
-            (user.pk, user.username) for user in instance.active_users(then, now)
-        }
-        # Get jobs under any project under organization
-        organization_jobs = Job.objects.filter(project__owner=instance.pk)
-        builder: List[Dict[str, Any]] = [{"adrien": {"jobs": [], "jobs_count": 1}}]
-
-        # Build a mapping of users into projects into jobs
-        for pk, name in organization_active_users:
-            jobs = organization_jobs.filter(created_by=pk).values_list(
-                "id", "project", "created_by"
-            )
-
-            builder.append(
-                {
-                    "id": pk,
-                    "name": name,
-                    "jobs": jobs,
-                    "jobs_count": len(jobs),
-                }
-            )
-
-        initial = kwargs.get("initial", {})
-        initial["organization_projects_active_users"] = builder
-
-        super().__init__(*args, **kwargs)
-        self.initial.update(initial)
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
@@ -1129,7 +1090,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner",
         "date_joined",
         "active_users",
-        "organization_projects_active_users",
+        "list_active_users",
     )
     list_display = (
         "username",

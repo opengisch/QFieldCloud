@@ -1,4 +1,4 @@
-<div class="organization_projects_active_users">
+<div>
     <table>
         <thead>
             <tr style="font-weight:bold; border-top:2px solid #DDDDDD;">
@@ -8,12 +8,12 @@
             </tr>
         </thead>
         <tbody>
-        {% for user in active_users %}
+        {% for item in list_active_users %}
         <tr>
-            <td> {{ user.id }} </td>
-            <td> {{ user.name }} </td>
-            <td> {{ username.jobs_count }} </td>
-            <td> {{ username.jobs }} </td>
+            <td> {{ item.user_id }} </td>
+            <td> {{ item.user_name }} </td>
+            <td> {{ item.project_id }} </td>
+            <td> {{ item.job_id }} </td>
         </tr>
         {% endfor %}
         </tbody>
