@@ -183,7 +183,7 @@ jobs:
           IMG_HEAD_SHA: ${{ github.head_ref }}.${{ github.sha }}
         run: |
           ./scripts/setup.sh
-          docker compose run app python manage.py test -v2 --no-migrations --keepdb qfieldcloud.${{ matrix.django_apps }}
+          docker compose run app python manage.py test --keepdb -v2 qfieldcloud.${{ matrix.django_apps }}
 
       - name: Add comment to pr
         if: failure() && github.event_name == 'pull_request'
