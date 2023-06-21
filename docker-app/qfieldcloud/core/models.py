@@ -5,7 +5,8 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional, cast
+from itertools import chain
+from typing import Dict, List, Optional, Set, Union, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -690,6 +691,64 @@ class Organization(User):
         return Person.objects.filter(
             is_staff=False,
         ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
+
+    def list_active_users_jobs_deltas_count(self) -> List[Dict[str, Union[str, int]]]:
+        """Return a List of Dictionaries mapping user ids into the following values:
+        - user_id
+        - username
+        - number of jobs scheduled by the user
+        - number of deltas scheduled by the user
+        """
+        delta = timedelta(weeks=4)
+        now = datetime.now()
+        four_weeks_ago = now - delta
+
+        # Get the organization's projects & active users
+        organization_projects_pk: Set[str] = set(
+            Project.objects.filter(owner=self.pk).values_list("pk", flat=True)
+        )
+        organization_active_users_dict = dict(
+            self.active_users(four_weeks_ago, now).values_list("pk", "username")
+        )
+
+        # Get the jobs & deltas scheduled by the latter for the former
+        jobs_created_by_organization_members: QuerySet = (
+            Job.objects.filter(
+                project__in=organization_projects_pk,
+                created_by__in=organization_active_users_dict,
+            )
+            .values("created_by", "created_by__username")
+            .annotate(jobs_count=Count("created_by"), type=V("jobs"))
+            .order_by("-jobs_count")
+        )
+        deltas_created_by_organization_members: QuerySet = (
+            Delta.objects.filter(
+                project__in=organization_projects_pk,
+                created_by__in=organization_active_users_dict,
+            )
+            .values("created_by", "created_by__username")
+            .annotate(deltas_count=Count("created_by"), type=V("deltas"))
+            .order_by("-deltas_count")
+        )
+
+        # Join querysets
+        payload: Dict[str, Union[str, int]] = {}
+        for sched in chain(
+            jobs_created_by_organization_members,
+            deltas_created_by_organization_members,
+        ):
+            user_id = sched["created_by"]
+            username = sched["created_by__username"]
+            sched_type = sched["type"]
+
+            if user_id not in payload:
+                payload[user_id] = {"user_id": user_id, "username": username}
+
+            payload[user_id].update(
+                {f"{sched_type}_count": sched[f"{sched_type}_count"]}
+            )
+
+        return list(payload.values())
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION

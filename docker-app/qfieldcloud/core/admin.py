@@ -2,9 +2,9 @@ import csv
 import json
 import time
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -20,7 +20,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Q, QuerySet, Value
+from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
@@ -1063,12 +1063,12 @@ class OrganizationFormActiveUsersWidget(widgets.Textarea):
     template_name = "admin/list_active_users_widget.html"
 
     def __init__(self, attrs=None, extra_widget_data=None):
-        # Construct instance with data passed-in
+        """Construct instance with data passed-in"""
         self.extra_widget_data = extra_widget_data
         super().__init__()
 
     def get_context(self, name, value, attrs) -> Dict[str, Any]:
-        # Add the data to the context used for rendering the widget
+        """Add the data to the context used for rendering the widget"""
         context = super().get_context(name, value, attrs)
         context["items"] = self.extra_widget_data
         return context
@@ -1085,68 +1085,19 @@ class OrganizationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """
-        Initialize model form's 'list_active_users' field with a Dictionary mapping user ids into the following values:
-        - user_id
-        - username
-        - number of jobs scheduled by the user
-        - number of deltas scheduled by the user
+        Set model form's 'list_active_users' to a list
+        of Dicts of active users with a count of the jobs & deltas they have scheduled in the last 4 weeks.
         """
         super().__init__(*args, **kwargs)
-        instance = kwargs.get("instance", None)
-        payload: Dict[str, Union[str, int]] = {}
+        organization = kwargs.get("instance", None)
 
-        if instance:
-            delta = timedelta(weeks=4)
-            now = datetime.now()
-            four_weeks_ago = now - delta
-
-            # Get the organization's projects & active users
-            organization_projects_pk: Set[str] = set(
-                Project.objects.filter(owner=instance.pk).values_list("pk", flat=True)
-            )
-            organization_active_users_dict = dict(
-                self.instance.active_users(four_weeks_ago, now).values_list(
-                    "pk", "username"
-                )
-            )
-
-            # Get the jobs & deltas scheduled by the latter for the former
-            jobs_created_by_organization_members: QuerySet = (
-                Job.objects.filter(
-                    project__in=organization_projects_pk,
-                    created_by__in=organization_active_users_dict,
-                )
-                .values("created_by", "created_by__username")
-                .annotate(jobs_count=Count("created_by"), type=Value("jobs"))
-                .order_by("-jobs_count")
-            )
-            deltas_created_by_organization_members: QuerySet = (
-                Delta.objects.filter(
-                    project__in=organization_projects_pk,
-                    created_by__in=organization_active_users_dict,
-                )
-                .values("created_by", "created_by__username")
-                .annotate(jobs_count=Count("created_by"), type=Value("delta"))
-                .order_by("-jobs_count")
-            )
-
-            # Join querysets
-            for sched in chain(
-                jobs_created_by_organization_members,
-                deltas_created_by_organization_members,
-            ):
-                user_id = sched["created_by"]
-                sched_type = sched["type"]
-
-                if user_id not in payload:
-                    payload[user_id] = {"user_id": user_id}
-
-                payload[user_id][f"{sched_type}_count"] = sched[f"{sched_type}_count"]
-
-            # Set the model form field
-            self.fields["list_active_users"].widget.extra_widget_data = list(
-                payload.values()
-            )
+        if organization:
+            list_active_users: List[
+                Dict[str, Union[str, int]]
+            ] = organization.list_active_users_jobs_deltas_count()
+            self.fields[
+                "list_active_users"
+            ].widget.extra_widget_data = list_active_users
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
