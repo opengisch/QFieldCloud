@@ -15,7 +15,7 @@ echo "Checking environment..."
 # docker compose config > config.txt
 
 if [[ -z "$IMG_REG_REPO" ]]
-then 
+then
     echo "IMG_REG_REPO found empty!"
     exit 1
 else
@@ -23,7 +23,7 @@ else
 fi
 
 if [[ -z "$IMG_HEAD_SHA" ]]
-then 
+then
     echo "IMG_HEAD_SHA found empty!"
     exit 1
 else
@@ -42,9 +42,3 @@ docker compose up -d --no-build
 
 echo "Checking migrations..."
 docker compose exec app python manage.py makemigrations --check --noinput
-
-echo "Migrating..."
-docker compose exec app python manage.py migrate --noinput
-
-echo "Collecting static files..."
-docker compose exec app python manage.py collectstatic --noinput
