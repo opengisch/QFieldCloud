@@ -41,4 +41,6 @@ echo "Running Compose..."
 docker compose up -d --no-build
 
 echo "Checking migrations..."
-docker compose exec app python manage.py makemigrations --check --noinput
+docker compose run app python manage.py makemigrations --no-input --check
+docker compose run app python manage.py migrate
+docker compose run app python manage.py collectstatic
