@@ -51,6 +51,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./docker-app
+          file: ./docker-app/Dockerfile
           target: webserver_test
           build-args: DEBUG_BUILD=1
           tags: ${{ env.REGISTRY }}/${{ github.repository }}/app:${{ github.head_ref }}.${{ github.sha }}
@@ -79,6 +80,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./docker-app
+          file: ./docker-app/Dockerfile
           target: worker_wrapper_runtime
           build-args: DEBUG_BUILD=1
           tags: ${{ env.REGISTRY }}/${{ github.repository }}/worker_wrapper:${{ github.head_ref }}.${{ github.sha }}
