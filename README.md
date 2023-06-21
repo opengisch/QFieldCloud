@@ -147,8 +147,8 @@ debugpy.wait_for_client()  # optional
 
 Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`.
 
-    docker compose run app -p 5680:5680 python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
-    docker compose run worker_wrapper -p 5681:5681 python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
+    docker compose run -p 5680:5680 app python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
+    docker compose run -p 5681:5681 worker_wrapper python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
 
 Note if you run tests using the `docker-compose.test.yml` configuration, the `app` and `worker-wrapper` containers expose ports `5680` and `5681` respectively.
 
