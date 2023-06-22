@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from enum import Enum
 from itertools import chain
-from typing import Dict, List, Optional, Set, Union, cast
+from typing import Dict, List, Optional, Union, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -703,13 +703,11 @@ class Organization(User):
         now = datetime.now()
         four_weeks_ago = now - delta
 
-        # Get the organization's projects & active users
-        organization_projects_pk: Set[str] = set(
-            self.projects.all().values_list("pk", flat=True)
-        )
+        # Get the organization's projects
+        organization_projects_pk = self.projects.all()
 
-        # Get the jobs & deltas scheduled by the latter for the former
-        jobs_created_by_organization_members: QuerySet = (
+        # Get the jobs & deltas by users in the target time-window
+        recent_jobs: QuerySet = (
             Job.objects.filter(
                 project__in=organization_projects_pk,
                 created_at__gte=four_weeks_ago,
@@ -719,7 +717,7 @@ class Organization(User):
             .annotate(jobs_count=Count("created_by"), type=V("jobs"))
             .order_by("-jobs_count")
         )
-        deltas_created_by_organization_members: QuerySet = (
+        recent_deltas: QuerySet = (
             Delta.objects.filter(
                 project__in=organization_projects_pk,
                 created_at__gte=four_weeks_ago,
@@ -730,11 +728,11 @@ class Organization(User):
             .order_by("-deltas_count")
         )
 
-        # Join querysets
+        # Join querysets' values
         payload: Dict[str, Union[str, int]] = {}
         for sched in chain(
-            jobs_created_by_organization_members,
-            deltas_created_by_organization_members,
+            recent_jobs,
+            recent_deltas,
         ):
             user_id = sched["created_by"]
             username = sched["created_by__username"]
