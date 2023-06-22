@@ -707,15 +707,13 @@ class Organization(User):
         organization_projects_pk: Set[str] = set(
             self.projects.all().values_list("pk", flat=True)
         )
-        organization_active_users_dict = dict(
-            self.active_users(four_weeks_ago, now).values_list("pk", "username")
-        )
 
         # Get the jobs & deltas scheduled by the latter for the former
         jobs_created_by_organization_members: QuerySet = (
             Job.objects.filter(
                 project__in=organization_projects_pk,
-                created_by__in=organization_active_users_dict,
+                created_at__gte=four_weeks_ago, 
+                created_at__lte=now,
             )
             .values("created_by", "created_by__username")
             .annotate(jobs_count=Count("created_by"), type=V("jobs"))
@@ -724,7 +722,8 @@ class Organization(User):
         deltas_created_by_organization_members: QuerySet = (
             Delta.objects.filter(
                 project__in=organization_projects_pk,
-                created_by__in=organization_active_users_dict,
+                created_at__gte=four_weeks_ago, 
+                created_at__lte=now,
             )
             .values("created_by", "created_by__username")
             .annotate(deltas_count=Count("created_by"), type=V("deltas"))
