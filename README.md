@@ -302,6 +302,14 @@ users. The template db has the following extensions installed:
 
 You can use either the integrated `minio` object storage, or use an external provider (e. g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
 
+## Collaboration
+
+Contributions welcome!
+
+Any PR including the `[WIP]` should be:
+- able to be checked-out without breaking the stack;
+- the specific feature being developed/modified should testable locally (does not mean it should work correctly).
+
 ## Resources
 
 -   [QField Cloud "marketing" page](https://qfield.cloud)
