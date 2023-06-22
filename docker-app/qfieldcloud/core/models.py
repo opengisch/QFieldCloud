@@ -722,6 +722,25 @@ class Organization(User):
             .order_by("-deltas_count")
         )
 
+        # Join querysets' values
+        payload: Dict[str, Union[str, int]] = {}
+        for sched in chain(
+            recent_jobs,
+            recent_deltas,
+        ):
+            user_id = sched["created_by"]
+            username = sched["created_by__username"]
+            sched_type = sched["type"]
+
+            if user_id not in payload:
+                payload[user_id] = {"user_id": user_id, "username": username}
+
+            payload[user_id].update(
+                {f"{sched_type}_count": sched[f"{sched_type}_count"]}
+            )
+
+        return list(payload.values())
+
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
         if getattr(self, "created_by", None) is not None:
