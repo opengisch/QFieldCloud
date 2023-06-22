@@ -1074,7 +1074,10 @@ class OrganizationFormActiveUsersWidget(widgets.Textarea):
 
 class OrganizationForm(forms.ModelForm):
     list_active_users = fields.CharField(
-        disabled=True, required=False, widget=OrganizationFormActiveUsersWidget
+        disabled=True,
+        required=False,
+        widget=OrganizationFormActiveUsersWidget,
+        help_text="Active users have triggererd at least one job or uploaded at least one delta in the current billing period. These are all the users who will be billed -- plan included or additional.",
     )
 
     class Meta:
