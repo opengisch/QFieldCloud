@@ -17,18 +17,20 @@ def report_serialization_diff_to_sentry(
         post_serialization: str representing the request `files` keys and meta information after serialization and middleware.
         buffer: StringIO buffer from which to extract traceback capturing callstack ahead of the calling function.
     """
-
-    traceback = bytes(buffer.getvalue(), encoding="utf-8")
-    report = f"Pre:\n{pre_serialization}\n\nPost:{post_serialization}"
-
     with sentry_sdk.configure_scope() as scope:
         try:
             filename = f"{name}_contents.txt"
-            scope.add_attachment(bytes=bytes(report), filename=filename)
+            scope.add_attachment(
+                bytes=bytes(
+                    f"Pre:\n{pre_serialization}\n\nPost:{post_serialization}",
+                    encoding="utf8",
+                ),
+                filename=filename,
+            )
 
             filename = f"{name}_traceback.txt"
             scope.add_attachment(
-                bytes=traceback,
+                bytes=bytes(buffer.getvalue(), encoding="utf8"),
                 filename=filename,
             )
         except Exception as error:
