@@ -308,7 +308,7 @@ Contributions welcome!
 
 Any PR including the `[WIP]` should be:
 - able to be checked-out without breaking the stack;
-- the specific feature being developed/modified should testable locally (does not mean it should work correctly).
+- the specific feature being developed/modified should be testable locally (does not mean it should work correctly).
 
 ## Resources
 
