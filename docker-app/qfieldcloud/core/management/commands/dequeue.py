@@ -5,7 +5,7 @@ from time import sleep
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import connection, transaction
 from qfieldcloud.core.models import Job
 from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
@@ -51,6 +51,9 @@ class Command(BaseCommand):
             queued_job = None
 
             with transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+
                 busy_projects_ids_qs = Job.objects.filter(
                     status__in=[
                         Job.Status.QUEUED,
