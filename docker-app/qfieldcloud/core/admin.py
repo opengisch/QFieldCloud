@@ -1050,9 +1050,7 @@ class ActiveUsersFilter(admin.SimpleListFilter):
 
     def queryset(self, request: HttpRequest, qs: QuerySet) -> QuerySet:
         if self.value() == "only_with_active_users":
-            return qs.filter(
-                useraccount__current_subscription_vw__isnull=False
-            )
+            return qs.filter(useraccount__current_subscription_vw__isnull=False)
         elif self.value() == "only_without_active_users":
             return qs.filter(useraccount__current_subscription_vw__isnull=True)
         else:
