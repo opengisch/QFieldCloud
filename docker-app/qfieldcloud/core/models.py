@@ -705,7 +705,7 @@ class Organization(User):
 
         # Get the organization's projects & active users
         organization_projects_pk: Set[str] = set(
-            Project.objects.filter(owner=self.pk).values_list("pk", flat=True)
+            self.projects.all().values_list("pk", flat=True)
         )
         organization_active_users_dict = dict(
             self.active_users(four_weeks_ago, now).values_list("pk", "username")

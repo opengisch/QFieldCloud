@@ -273,7 +273,7 @@ class QfcTestCase(APITestCase):
             role=OrganizationMember.Roles.MEMBER,
         )
 
-        # Idem for user3
+        # Let user3 be a member of organization 1
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user3,
