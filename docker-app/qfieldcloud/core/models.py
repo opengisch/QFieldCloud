@@ -665,8 +665,6 @@ class Organization(User):
             period_since (datetime): inclusive beginning of the interval
             period_until (datetime): inclusive end of the interval
         """
-        assert period_since
-        assert period_until
 
         users_with_delta = (
             Delta.objects.filter(
