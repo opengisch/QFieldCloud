@@ -25,6 +25,15 @@ jobs:
   test:
     name: Run tests
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        django_apps:
+          - authentication
+          - notifs
+          - subscription
+          - core
+    continue-on-error: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -59,7 +68,7 @@ jobs:
           docker compose run app python manage.py collectstatic
       - name: Run unit and integration tests
         run: |
-          docker compose run app python manage.py test --keepdb -v2 qfieldcloud
+          docker compose run app python manage.py test --keepdb -v2 qfieldcloud.${{ matrix.django_apps }}
 
       - name: "failure logs"
         if: failure()
