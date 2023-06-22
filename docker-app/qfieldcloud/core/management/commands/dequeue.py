@@ -48,6 +48,15 @@ class Command(BaseCommand):
 
             cancel_orphaned_workers()
 
+            with connection.cursor() as cursor:
+                # NOTE `pg_is_in_recovery` returns `FALSE` if connected to the master node
+                cursor.execute("SELECT pg_is_in_recovery()")
+                # there is no way `cursor.fetchone()` returns no rows, therefore ignore the type warning
+                if cursor.fetchone()[0]:  # type: ignore
+                    raise Exception(
+                        "Expected `worker_wrapper` to be connected to the master DB node!"
+                    )
+
             queued_job = None
 
             with transaction.atomic():
