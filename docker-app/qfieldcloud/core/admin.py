@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Tuple, Union
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -20,7 +20,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, QuerySet
+from django.db.models import Case, Count, Q, QuerySet, Value, When
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
@@ -1141,14 +1141,19 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
     autocomplete_fields = ("organization_owner",)
 
+    def get_queryset(self, request) -> QuerySet:
+        qs = super().get_queryset(request)
+        qs = qs.annotate(
+            active_users_count=Case(
+                When(useraccount__current_subscription_vw__isnull=True, then=Value(0)),
+                default=Count("useraccount__current_subscription_vw"),
+            ),
+        )
+        return qs
+
     @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> Optional[int]:
-        # The relation 'current_subscription_vw' is not instantiated unless the organization
-        # does have a current subscription
-        if hasattr(instance, "current_subscription_vw"):
-            return instance.current_subscription_vw.active_users_count
-        else:
-            return None
+    def active_users(self, instance) -> int:
+        return instance.active_users_count
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
