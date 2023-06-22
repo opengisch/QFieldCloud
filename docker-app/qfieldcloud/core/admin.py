@@ -1052,7 +1052,7 @@ class ActiveUsersFilter(admin.SimpleListFilter):
         if self.value() == "only_with_active_users":
             return qs.filter(
                 useraccount__current_subscription_vw__isnull=False
-            ).order_by("useraccount__current_subscription_vw")
+            )
         elif self.value() == "only_without_active_users":
             return qs.filter(useraccount__current_subscription_vw__isnull=True)
         else:
