@@ -657,6 +657,22 @@ class Organization(User):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
+    def jobs(self, period_since: datetime, period_until: datetime) -> QuerySet:
+        """Returns the queryset of jobs scheduled within the given time interval."""
+        return Job.objects.filter(
+            project__in=self.projects.all(),
+            created_at__gte=period_since,
+            created_at__lte=period_until,
+        )
+
+    def deltas(self, period_since: datetime, period_until: datetime) -> QuerySet:
+        """Returns the queryset of deltas scheduled within the given time interval."""
+        return Delta.objects.filter(
+            project__in=self.projects.all(),
+            created_at__gte=period_since,
+            created_at__lte=period_until,
+        )
+
     def active_users(self, period_since: datetime, period_until: datetime) -> QuerySet:
         """Returns the queryset of active users in the given time interval.
 
@@ -670,20 +686,13 @@ class Organization(User):
         assert period_until
 
         users_with_delta = (
-            Delta.objects.filter(
-                project__in=self.projects.all(),
-                created_at__gte=period_since,
-                created_at__lte=period_until,
-            )
+            self.deltas(period_since, period_until)
             .values_list("created_by_id", flat=True)
             .distinct()
         )
+
         users_with_jobs = (
-            Job.objects.filter(
-                project__in=self.projects.all(),
-                created_at__gte=period_since,
-                created_at__lte=period_until,
-            )
+            self.deltas(period_since, period_until)
             .values_list("created_by_id", flat=True)
             .distinct()
         )
@@ -692,37 +701,23 @@ class Organization(User):
             is_staff=False,
         ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
 
-    def list_active_users_jobs_deltas_count(self) -> List[Dict[str, Union[str, int]]]:
+    def list_active_users_jobs_deltas_count(
+        self, period_since: datetime, period_until: datetime
+    ) -> List[Dict[str, Union[str, int]]]:
         """Return a List of Dictionaries mapping user ids into the following values:
         - user_id
         - username
         - number of jobs scheduled by the user
         - number of deltas scheduled by the user
         """
-        delta = timedelta(weeks=4)
-        now = datetime.now()
-        four_weeks_ago = now - delta
-
-        # Get the organization's projects
-        organization_projects_pk = self.projects.all()
-
-        # Get the jobs & deltas by users in the target time-window
         recent_jobs: QuerySet = (
-            Job.objects.filter(
-                project__in=organization_projects_pk,
-                created_at__gte=four_weeks_ago,
-                created_at__lte=now,
-            )
+            self.jobs(period_since, period_until)
             .values("created_by", "created_by__username")
             .annotate(jobs_count=Count("created_by"), type=V("jobs"))
             .order_by("-jobs_count")
         )
         recent_deltas: QuerySet = (
-            Delta.objects.filter(
-                project__in=organization_projects_pk,
-                created_at__gte=four_weeks_ago,
-                created_at__lte=now,
-            )
+            self.deltas(period_since, period_until)
             .values("created_by", "created_by__username")
             .annotate(deltas_count=Count("created_by"), type=V("deltas"))
             .order_by("-deltas_count")
