@@ -1091,32 +1091,33 @@ class OrganizationForm(forms.ModelForm):
         """
         super().__init__(*args, **kwargs)
         organization = kwargs.get("instance", None)
-        current_subscription = (organization.useraccount.current_subscription,)
-        current_period_since = (
-            organization.useraccount.current_subscription.current_period_since,
-        )
-        current_period_until = (
-            organization.useraccount.current_subscription.current_period_until
-        )
 
-        if all(
-            value is not None
-            for value in (
-                organization,
-                current_subscription,
-                current_period_since,
-                current_period_until,
+        if organization:
+            current_subscription = organization.useraccount.current_subscription
+            current_period_since = (
+                organization.useraccount.current_subscription.current_period_since
             )
-        ):
-            list_active_users: list[
-                Dict[str, str | int]
-            ] = organization.list_active_users_jobs_deltas_count(
-                current_period_since, current_period_until
+            current_period_until = (
+                organization.useraccount.current_subscription.current_period_until
             )
 
-            self.fields[
-                "list_active_users"
-            ].widget.extra_widget_data = list_active_users
+            if all(
+                value is not None
+                for value in (
+                    current_subscription,
+                    current_period_since,
+                    current_period_until,
+                )
+            ):
+                list_active_users: list[
+                    Dict[str, str | int]
+                ] = organization.list_active_users_jobs_deltas_count(
+                    current_period_since, current_period_until
+                )
+
+                self.fields[
+                    "list_active_users"
+                ].widget.extra_widget_data = list_active_users
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
