@@ -62,10 +62,13 @@ class QfcTestCase(APITransactionTestCase):
         with self.subTest(
             "Ensure that '/api/v1/files' handles missing resources correctly."
         ):
-            one = self.client.get(f"/api/v1/files/{empty_string}")
-            two = self.client.get(f"/api/v1/files/{nonexistent_id}")
-            assert all(r.status_code == 404 for r in (one, two))
-
+            self.assertEqual(
+                self.client.get(f"/api/v1/files/{empty_string}").status_code, 404
+            )
+            self.assertEqual(
+                self.client.get(f"/api/v1/files/{nonexistent_id}").status_code, 404
+            )
+    
     def test_push_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
