@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator, List, Tuple, Union
+from typing import Any, Dict, Generator
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -1042,7 +1042,7 @@ class ActiveUsersFilter(admin.SimpleListFilter):
     title = _("active")
     parameter_name = "active_users"
 
-    def lookups(self, request: Any, model_admin: Any) -> List[Tuple[Any, str]]:
+    def lookups(self, request: Any, model_admin: Any) -> list[tuple[Any, str]]:
         return [
             ("only_with_active_users", _("Yes")),
             ("only_without_active_users", _("No")),
@@ -1065,7 +1065,7 @@ class OrganizationFormActiveUsersWidget(widgets.Textarea):
         self.extra_widget_data = extra_widget_data
         super().__init__()
 
-    def get_context(self, name, value, attrs) -> Dict[str, Any]:
+    def get_context(self, name, value, attrs) -> dict[str, Any]:
         """Add the data to the context used for rendering the widget"""
         context = super().get_context(name, value, attrs)
         context["items"] = self.extra_widget_data
@@ -1108,8 +1108,8 @@ class OrganizationForm(forms.ModelForm):
                 current_period_until,
             )
         ):
-            list_active_users: List[
-                Dict[str, Union[str, int]]
+            list_active_users: list[
+                Dict[str, str | int]
             ] = organization.list_active_users_jobs_deltas_count(
                 current_period_since, current_period_until
             )

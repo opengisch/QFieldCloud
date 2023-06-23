@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from enum import Enum
 from itertools import chain
-from typing import Dict, List, Optional, Union, cast
+from typing import List, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -703,8 +703,8 @@ class Organization(User):
 
     def list_active_users_jobs_deltas_count(
         self, period_since: datetime, period_until: datetime
-    ) -> List[Dict[str, Union[str, int]]]:
-        """Return a List of Dictionaries mapping user ids into the following values:
+    ) -> list[dict[str, str | int]]:
+        """Return a list of dictionaries mapping user ids into the following values:
         - user_id
         - username
         - number of jobs scheduled by the user
@@ -724,7 +724,7 @@ class Organization(User):
         )
 
         # Join querysets' values
-        builder: Dict[str, Union[str, int]] = {}
+        builder: dict[str, str | int] = {}
         for job_or_delta in chain(
             recent_jobs,
             recent_deltas,
