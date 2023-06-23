@@ -1,7 +1,7 @@
 import calendar
 import logging
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
@@ -298,7 +298,14 @@ class QfcTestCase(APITestCase):
             created_by=self.user2,
         )
 
-        results = self.organization1.list_active_users_jobs_deltas_count()
+        # Approximates the duration of a current subscription
+        four_weeks = timedelta(weeks=4)
+        now = datetime.now()
+        four_weeks_ago = now - four_weeks
+
+        results = self.organization1.list_active_users_jobs_deltas_count(
+            four_weeks_ago, now
+        )
         expected = [
             {
                 "user_id": self.user2.pk,

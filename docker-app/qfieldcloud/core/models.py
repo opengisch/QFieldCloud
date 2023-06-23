@@ -724,23 +724,27 @@ class Organization(User):
         )
 
         # Join querysets' values
-        payload: Dict[str, Union[str, int]] = {}
-        for sched in chain(
+        builder: Dict[str, Union[str, int]] = {}
+        for job_or_delta in chain(
             recent_jobs,
             recent_deltas,
         ):
-            user_id = sched["created_by"]
-            username = sched["created_by__username"]
-            sched_type = sched["type"]
+            user_id = job_or_delta["created_by"]
+            username = job_or_delta["created_by__username"]
+            job_or_delta_type = job_or_delta["type"]
 
-            if user_id not in payload:
-                payload[user_id] = {"user_id": user_id, "username": username}
+            if user_id not in builder:
+                builder[user_id] = {"user_id": user_id, "username": username}
 
-            payload[user_id].update(
-                {f"{sched_type}_count": sched[f"{sched_type}_count"]}
+            builder[user_id].update(
+                {
+                    f"{job_or_delta_type}_count": job_or_delta[
+                        f"{job_or_delta_type}_count"
+                    ]
+                }
             )
 
-        return list(payload.values())
+        return list(builder.values())
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
