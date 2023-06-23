@@ -692,7 +692,7 @@ class Organization(User):
         )
 
         users_with_jobs = (
-            self.deltas(period_since, period_until)
+            self.jobs(period_since, period_until)
             .values_list("created_by_id", flat=True)
             .distinct()
         )
