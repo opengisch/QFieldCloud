@@ -657,15 +657,17 @@ class Organization(User):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
-    def jobs(self, period_since, period_until) -> QuerySet:
-        Job.objects.filter(
+    def jobs(self, period_since: datetime, period_until: datetime) -> QuerySet:
+        """Returns the queryset of jobs scheduled within the given time interval."""
+        return Job.objects.filter(
             project__in=self.projects.all(),
             created_at__gte=period_since,
             created_at__lte=period_until,
         )
 
-    def deltas(self, period_since, period_until) -> QuerySet:
-        Delta.objects.filter(
+    def deltas(self, period_since: datetime, period_until: datetime) -> QuerySet:
+        """Returns the queryset of deltas scheduled within the given time interval."""
+        return Delta.objects.filter(
             project__in=self.projects.all(),
             created_at__gte=period_since,
             created_at__lte=period_until,
@@ -682,7 +684,7 @@ class Organization(User):
         """
         assert period_since
         assert period_until
-            
+
         users_with_delta = (
             self.deltas(period_since, period_until)
             .values_list("created_by_id", flat=True)
@@ -708,7 +710,6 @@ class Organization(User):
         - number of jobs scheduled by the user
         - number of deltas scheduled by the user
         """
-
         recent_jobs: QuerySet = (
             self.jobs(period_since, period_until)
             .values("created_by", "created_by__username")
