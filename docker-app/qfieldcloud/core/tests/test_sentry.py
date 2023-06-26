@@ -12,7 +12,7 @@ class QfcTestCase(APITestCase):
             "pre_serialization": str({
                 "data": ["some", "pre-serialization", "data", "keys"],
                 "files": ["some", "files", "to be", "listed"],
-                "meta": ["metadata": "of the request pre-serialization"],
+                "meta": ["metadata", "of the request pre-serialization"],
             }),
             "post_serialization": str({
                 "data": ["some", "post-serialization", "data", "keys"],
