@@ -18,8 +18,9 @@ from qfieldcloud.core.utils2.storage import (
     purge_old_file_versions,
 )
 from rest_framework import permissions, status, views
-from rest_framework.exceptions import NotFound, server_error
+from rest_framework.exceptions import NotFound
 from rest_framework.parsers import MultiPartParser
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -42,23 +43,13 @@ class ListFilesView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, ListFilesViewPermissions]
 
-    def get(self, request, projectid):
+    def get(self, request: Request, projectid: str) -> Response:
         try:
             project = Project.objects.get(id=projectid)
-            bucket = utils.get_s3_bucket()
-            if not bucket.creation_date:
-                # Let DRF return 500 when bucket does not exist, since it needed but
-                # not what the client tried to get
-                return server_error(
-                    request=request,
-                    reason=f"Unable to fetch needed resource for {projectid}",
-                )
         except ObjectDoesNotExist:
-            # map failure to get from db into failure to GET from API
             raise NotFound(detail=projectid)
-        except Exception as unknown_reason:
-            return server_error(request=request, reason=str(unknown_reason))
 
+        bucket = utils.get_s3_bucket()
         prefix = f"projects/{projectid}/files/"
 
         files = {}
