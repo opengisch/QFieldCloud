@@ -1173,7 +1173,10 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         )
         return qs
 
-    @admin.display(description=_("Active users (last billing period)"))
+    @admin.display(
+        description=_("Active users (last billing period)"),
+        ordering="active_users_count",
+    )
     def active_users(self, instance) -> int:
         return instance.active_users_count
 
