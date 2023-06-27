@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 def report_serialization_diff_to_sentry(
-    name: str, pre_serialization: str, post_serialization: str, buffer: StringIO
+    name: str,
+    pre_serialization: str,
+    post_serialization: str,
+    buffer: StringIO,
+    capture_message=False,
 ) -> bool:
     """
     Sends a report to sentry to debug QF-2540. The report includes request information from before and after middleware handle the request as well as a traceback.
@@ -33,6 +37,8 @@ def report_serialization_diff_to_sentry(
                 bytes=bytes(buffer.getvalue(), encoding="utf8"),
                 filename=filename,
             )
+            if capture_message:
+                sentry_sdk.capture_message("Sending to Sentry...", scope=scope)
             return True
         except Exception as error:
             sentry_sdk.capture_exception(error)
