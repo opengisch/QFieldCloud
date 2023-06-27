@@ -6,6 +6,8 @@ from datetime import datetime
 from itertools import chain
 from typing import Any, Dict, Generator
 
+from django import forms
+
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
@@ -1037,7 +1039,40 @@ class TeamInline(admin.TabularInline):
         return False
 
 
+class ActiveUsersWidget(forms.Widget):
+    template_name = "admin/active_users_widget.html"
+
+    def get_context(self, name, value, attrs=None):
+        context = super().get_context(name, value, attrs)
+        context["active_users"] = self.extra_widget_data
+        return context
+
+
+class OrganizationForm(ModelForm):
+    active_users = fields.CharField(
+        disabled=True,
+        required=False,
+        widget=ActiveUsersWidget,
+        help_text="Active users have triggererd at least one job or uploaded at least one delta in the current billing period. These are all the users who will be billed -- plan included or additional.",
+    )
+
+    class Meta:
+        model = Organization
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        organization = kwargs.get("instance", None)
+
+        if organization:
+            self.fields[
+                "active_users"
+            ].widget.extra_widget_data = organization.useraccount.current_subscription.active_users_jobs_deltas_count
+
+
 class OrganizationAdmin(QFieldCloudModelAdmin):
+    form = OrganizationForm
+
     inlines = (
         UserAccountInline,
         GeodbInline,
@@ -1051,6 +1086,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner",
         "date_joined",
+        "active_users"
     )
     list_display = (
         "username",
@@ -1058,7 +1094,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__link",
         "date_joined",
         # "storage_usage__field",
-        "active_users",
+        "active_users_count",
     )
 
     search_fields = (
@@ -1068,7 +1104,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__email__iexact",
     )
 
-    readonly_fields = ("date_joined", "storage_usage__field", "active_users")
+    readonly_fields = ("date_joined", "storage_usage__field", "active_users_count")
 
     list_select_related = ("organization_owner",)
 
@@ -1077,7 +1113,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     autocomplete_fields = ("organization_owner",)
 
     @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> int | None:
+    def active_users_count(self, instance) -> int | None:
         # The relation 'current_subscription_vw' is not instantiated unless the organization
         # does have a current subscription
         if hasattr(instance, "current_subscription_vw"):

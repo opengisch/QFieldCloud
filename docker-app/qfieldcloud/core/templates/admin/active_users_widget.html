@@ -1,0 +1,33 @@
+{% load i18n %}
+{% load admin_urls %}
+
+<div>
+    <table>
+        <thead>
+            <tr style="font-weight:bold; border-top:2px solid #DDDDDD;">
+                <th>{% trans 'Username' %}</th>
+                <th>{% trans 'Jobs count' %}</th>
+                <th>{% trans 'Deltas count' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if active_users %}
+            {% for user in active_users %}
+            <tr>
+                <td><a href="{% url 'admin:core_person_change' user.id %}">{{ user.username }}</a></td>
+                <td> {{ user.jobs_count }} </td>
+                <td> {{ user.deltas_count }} </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td>-</td>
+                <td>0</td>
+                <td>0</td>
+            </tr>
+            {% endif %}
+
+
+        </tbody>
+    </table>
+</div>

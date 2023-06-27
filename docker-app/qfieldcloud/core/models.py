@@ -5,7 +5,6 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from itertools import chain
 from typing import List, Optional, cast
 
 import django_cryptography.fields
@@ -658,7 +657,6 @@ class Organization(User):
     updated_at = models.DateTimeField(auto_now=True)
 
     def jobs(self, period_since: datetime, period_until: datetime) -> QuerySet:
-        """Returns the queryset of jobs scheduled within the given time interval."""
         return Job.objects.filter(
             project__in=self.projects.all(),
             created_at__gte=period_since,
@@ -666,7 +664,6 @@ class Organization(User):
         )
 
     def deltas(self, period_since: datetime, period_until: datetime) -> QuerySet:
-        """Returns the queryset of deltas scheduled within the given time interval."""
         return Delta.objects.filter(
             project__in=self.projects.all(),
             created_at__gte=period_since,
@@ -701,44 +698,35 @@ class Organization(User):
             is_staff=False,
         ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
 
-    def list_active_users_jobs_deltas_count(
+    def active_users_jobs_deltas_count(
         self, period_since: datetime, period_until: datetime
-    ) -> list[dict[str, str | int]]:
-        """Return a list of dictionaries mapping user ids into the following values:
-        - user_id
-        - username
-        - number of jobs scheduled by the user
-        - number of deltas scheduled by the user
-        """
-        recent_jobs: QuerySet = (
+    ) -> List[Person]:
+        """Returns the list of active users annotated with jobs_count and deltas_count."""
+        active_users = self.active_users(period_since, period_until)
+
+        jobs_created: QuerySet = (
             self.jobs(period_since, period_until)
-            .values("created_by", "created_by__username")
-            .annotate(jobs_count=Count("created_by"), type=V("jobs"))
-            .order_by("-jobs_count")
+            .values("created_by")
+            .annotate(jobs_count=Count("created_by"))
         )
-        recent_deltas: QuerySet = (
+        deltas_created: QuerySet = (
             self.deltas(period_since, period_until)
-            .values("created_by", "created_by__username")
-            .annotate(deltas_count=Count("created_by"), type=V("deltas"))
-            .order_by("-deltas_count")
+            .values("created_by")
+            .annotate(deltas_count=Count("created_by"))
         )
+        for user in active_users:
+            # NOTE calling qs.first() is wrongly returning 1 instead of the count value
+            qs = jobs_created.filter(created_by=user)
+            user.jobs_count = qs.values_list("jobs_count", flat=True)[0] if qs else 0
 
-        # Join querysets' values
-        builder: dict[str, str | int] = {}
-        for obj in chain(
-            recent_jobs,
-            recent_deltas,
-        ):
-            user_id = obj["created_by"]
-            username = obj["created_by__username"]
-            obj_type = obj["type"]
+            qs = deltas_created.filter(created_by=user)
+            user.deltas_count = qs.values_list("deltas_count", flat=True)[0] if qs else 0
 
-            if user_id not in builder:
-                builder[user_id] = {"user_id": user_id, "username": username}
-
-            builder[user_id].update({f"{obj_type}_count": obj[f"{obj_type}_count"]})
-
-        return list(builder.values())
+        return sorted(
+            list(active_users),
+            key=lambda obj: (obj.jobs_count, obj.deltas_count),
+            reverse=True,
+        )
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION

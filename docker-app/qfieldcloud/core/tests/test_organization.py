@@ -1,7 +1,7 @@
 import calendar
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
@@ -265,31 +265,65 @@ class QfcTestCase(APITestCase):
         self.assertEqual(_active_users_count(), 2)
 
     def test_active_users_jobs_deltas_count(self):
+        """
+        Tests billable users jobs and deltas count calculations
 
-        # Let user2 be a member of organization 1
+        NOTE implements approximately same story like test_active_users_count
+        as it should return the same users annnotated with counts
+        """
+
+        # Set user1 and user2 as member of organization1
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
             role=OrganizationMember.Roles.MEMBER,
         )
-
-        # Let user3 be a member of organization 1
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user3,
             role=OrganizationMember.Roles.MEMBER,
         )
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user4,
+            role=OrganizationMember.Roles.MEMBER,
+        )
 
-        # Create a project
+        # Create a project owned by the organization
         project1 = Project.objects.create(name="p1", owner=self.organization1)
 
-        # User 2 creates a job
+        def _active_users_jobs_deltas_count(base_date=None):
+            """Helper to get count billable users jobs and deltas"""
+            if base_date is None:
+                base_date = now()
+
+            # Note: we can't easily mock dates as the worker can update jobs in the background
+            # with the current date
+            start_date = base_date.replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+            end_date = base_date.replace(
+                day=calendar.monthrange(base_date.year, base_date.month)[1]
+            )
+            return self.organization1.active_users_jobs_deltas_count(
+                start_date, end_date
+            )
+
+        # Initially, there is no billable user
+        self.assertEqual(len(_active_users_jobs_deltas_count()), 0)
+
+        # User 1 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user2,
         )
+        # The first user in the list should have 1 job and 0 deltas
+        active_user = _active_users_jobs_deltas_count()[0]
+        self.assertEqual(active_user.username, "user2")
+        self.assertEqual(active_user.jobs_count, 1)
+        self.assertEqual(active_user.deltas_count, 0)
 
-        # User 2 creates a delta
+        # User 1 creates a delta
         Delta.objects.create(
             deltafile_id=uuid.uuid4(),
             project=project1,
@@ -297,21 +331,41 @@ class QfcTestCase(APITestCase):
             client_id=uuid.uuid4(),
             created_by=self.user2,
         )
+        # The first user in the list should have 1 job and 1 deltas
+        active_user = _active_users_jobs_deltas_count()[0]
+        self.assertEqual(active_user.jobs_count, 1)
+        self.assertEqual(active_user.deltas_count, 1)
 
-        # Approximates the duration of a current subscription
-        four_weeks = timedelta(weeks=4)
-        now = datetime.now()
-        four_weeks_ago = now - four_weeks
-
-        results = self.organization1.list_active_users_jobs_deltas_count(
-            four_weeks_ago, now
+        # User 2 creates a job
+        Job.objects.create(
+            project=project1,
+            created_by=self.user3,
         )
-        expected = [
-            {
-                "user_id": self.user2.pk,
-                "username": self.user2.username,
-                "jobs_count": 1,
-                "deltas_count": 1,
-            }
-        ]
-        self.assertListEqual(results, expected)
+        # There are now 2 Users in the list sorted after
+        # jobs count first and then after deltas count
+        active_user1 = _active_users_jobs_deltas_count()[0]
+        self.assertEqual(active_user1.jobs_count, 1)
+        self.assertEqual(active_user1.deltas_count, 1)
+        active_user2 = _active_users_jobs_deltas_count()[1]
+        self.assertEqual(active_user2.jobs_count, 1)
+        self.assertEqual(active_user2.deltas_count, 0)
+
+        # User 2 leaves the organization
+        OrganizationMember.objects.filter(member=self.user3).delete()
+
+        # User 2 still shows up in the list
+        active_user2 = _active_users_jobs_deltas_count()[1]
+        self.assertEqual(active_user2.jobs_count, 1)
+
+        # Report at a different time is empty
+        self.assertEqual(
+            _active_users_jobs_deltas_count(now() + timedelta(days=365)), []
+        )
+
+        # User 3 creates a job
+        Job.objects.create(
+            project=project1,
+            created_by=self.user4,
+        )
+        # There are still 2 billable users, because self.user4 is staff
+        self.assertEqual(len(_active_users_jobs_deltas_count()), 2)

@@ -583,7 +583,7 @@ class AbstractSubscription(models.Model):
             return None
 
         if self.has_current_period:
-            return self.account.user.active_users(
+            return (
                 self.current_period_since,
                 self.current_period_until,
             )
@@ -595,7 +595,7 @@ class AbstractSubscription(models.Model):
         now = timezone.now()
         month_ago = now - timedelta(days=28)
 
-        return month_ago, now
+        return (month_ago, now)
 
     @property
     def active_users(self):
@@ -616,11 +616,11 @@ class AbstractSubscription(models.Model):
         return self.active_users.count()
 
     @property
-    def list_active_users_jobs_deltas_count(self):
+    def active_users_jobs_deltas_count(self):
         if not self.active_users_period:
             return None
 
-        return self.account.user.list_active_users_jobs_deltas_count(
+        return self.account.user.active_users_jobs_deltas_count(
             *self.active_users_period
         )
 
