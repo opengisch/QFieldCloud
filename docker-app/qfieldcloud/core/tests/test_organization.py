@@ -259,7 +259,7 @@ class QfcTestCase(APITestCase):
         # User 3 creates a job
         Job.objects.create(
             project=project1,
-            created_by=self.user3,
+            created_by=self.user4,
         )
-        # There are still 2 billable users, because self.user3 is staff
+        # There are still 2 billable users, because self.user4 is staff
         self.assertEqual(_active_users_count(), 2)
