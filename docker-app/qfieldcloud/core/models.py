@@ -5,6 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
+from itertools import chain
 from typing import List, Optional, cast
 
 import django_cryptography.fields
@@ -15,7 +16,7 @@ from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Q
+from django.db.models import Case, Exists, F, OuterRef, Q, QuerySet
 from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
@@ -656,7 +657,23 @@ class Organization(User):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
-    def active_users(self, period_since: datetime, period_until: datetime):
+    def jobs(self, period_since: datetime, period_until: datetime) -> QuerySet:
+        """Returns the queryset of jobs scheduled within the given time interval."""
+        return Job.objects.filter(
+            project__in=self.projects.all(),
+            created_at__gte=period_since,
+            created_at__lte=period_until,
+        )
+
+    def deltas(self, period_since: datetime, period_until: datetime) -> QuerySet:
+        """Returns the queryset of deltas scheduled within the given time interval."""
+        return Delta.objects.filter(
+            project__in=self.projects.all(),
+            created_at__gte=period_since,
+            created_at__lte=period_until,
+        )
+
+    def active_users(self, period_since: datetime, period_until: datetime) -> QuerySet:
         """Returns the queryset of active users in the given time interval.
 
         Active users are users triggering a job or pushing a delta on a project owned by the organization.
@@ -669,20 +686,13 @@ class Organization(User):
         assert period_until
 
         users_with_delta = (
-            Delta.objects.filter(
-                project__in=self.projects.all(),
-                created_at__gte=period_since,
-                created_at__lte=period_until,
-            )
+            self.deltas(period_since, period_until)
             .values_list("created_by_id", flat=True)
             .distinct()
         )
+
         users_with_jobs = (
-            Job.objects.filter(
-                project__in=self.projects.all(),
-                created_at__gte=period_since,
-                created_at__lte=period_until,
-            )
+            self.jobs(period_since, period_until)
             .values_list("created_by_id", flat=True)
             .distinct()
         )
@@ -690,6 +700,45 @@ class Organization(User):
         return Person.objects.filter(
             is_staff=False,
         ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
+
+    def list_active_users_jobs_deltas_count(
+        self, period_since: datetime, period_until: datetime
+    ) -> list[dict[str, str | int]]:
+        """Return a list of dictionaries mapping user ids into the following values:
+        - user_id
+        - username
+        - number of jobs scheduled by the user
+        - number of deltas scheduled by the user
+        """
+        recent_jobs: QuerySet = (
+            self.jobs(period_since, period_until)
+            .values("created_by", "created_by__username")
+            .annotate(jobs_count=Count("created_by"), type=V("jobs"))
+            .order_by("-jobs_count")
+        )
+        recent_deltas: QuerySet = (
+            self.deltas(period_since, period_until)
+            .values("created_by", "created_by__username")
+            .annotate(deltas_count=Count("created_by"), type=V("deltas"))
+            .order_by("-deltas_count")
+        )
+
+        # Join querysets' values
+        builder: dict[str, str | int] = {}
+        for obj in chain(
+            recent_jobs,
+            recent_deltas,
+        ):
+            user_id = obj["created_by"]
+            username = obj["created_by__username"]
+            obj_type = obj["type"]
+
+            if user_id not in builder:
+                builder[user_id] = {"user_id": user_id, "username": username}
+
+            builder[user_id].update({f"{obj_type}_count": obj[f"{obj_type}_count"]})
+
+        return list(builder.values())
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION

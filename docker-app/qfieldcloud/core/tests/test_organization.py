@@ -1,7 +1,7 @@
 import calendar
 import logging
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
@@ -263,3 +263,55 @@ class QfcTestCase(APITestCase):
         )
         # There are still 2 billable users, because self.user3 is staff
         self.assertEqual(_active_users_count(), 2)
+
+    def test_active_users_jobs_deltas_count(self):
+
+        # Let user2 be a member of organization 1
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+
+        # Let user3 be a member of organization 1
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user3,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+
+        # Create a project
+        project1 = Project.objects.create(name="p1", owner=self.organization1)
+
+        # User 2 creates a job
+        Job.objects.create(
+            project=project1,
+            created_by=self.user2,
+        )
+
+        # User 2 creates a delta
+        Delta.objects.create(
+            deltafile_id=uuid.uuid4(),
+            project=project1,
+            content="delta",
+            client_id=uuid.uuid4(),
+            created_by=self.user2,
+        )
+
+        # Approximates the duration of a current subscription
+        four_weeks = timedelta(weeks=4)
+        now = datetime.now()
+        four_weeks_ago = now - four_weeks
+
+        results = self.organization1.list_active_users_jobs_deltas_count(
+            four_weeks_ago, now
+        )
+        expected = [
+            {
+                "user_id": self.user2.pk,
+                "username": self.user2.username,
+                "jobs_count": 1,
+                "deltas_count": 1,
+            }
+        ]
+        self.assertListEqual(results, expected)
