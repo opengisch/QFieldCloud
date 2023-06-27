@@ -40,7 +40,7 @@ class QfcTestCase(APITestCase):
                 }
             ),
             "buffer": StringIO("The traceback of the exception to raise"),
-            "capture_message": True,
+            "capture_message": True,  # so that sentry receives attachments even when there's no exception/event
         }
         is_sent = report_serialization_diff_to_sentry(**mock_payload)
         self.assertTrue(is_sent)
