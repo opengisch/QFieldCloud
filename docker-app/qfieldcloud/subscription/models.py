@@ -578,7 +578,7 @@ class AbstractSubscription(models.Model):
         )
 
     @property
-    def active_users(self):
+    def active_users_period(self):
         if not self.account.user.is_organization:
             return None
 
@@ -595,10 +595,14 @@ class AbstractSubscription(models.Model):
         now = timezone.now()
         month_ago = now - timedelta(days=28)
 
-        return self.account.user.active_users(
-            month_ago,
-            now,
-        )
+        return month_ago, now
+
+    @property
+    def active_users(self):
+        if not self.active_users_period:
+            return None
+
+        return self.account.user.active_users(*self.active_users_period)
 
     @property
     def active_users_count(self) -> int:
@@ -610,6 +614,15 @@ class AbstractSubscription(models.Model):
             return 0
 
         return self.active_users.count()
+
+    @property
+    def list_active_users_jobs_deltas_count(self):
+        if not self.active_users_period:
+            return None
+
+        return self.account.user.list_active_users_jobs_deltas_count(
+            *self.active_users_period
+        )
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)
