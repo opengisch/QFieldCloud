@@ -6,8 +6,6 @@ from datetime import datetime
 from itertools import chain
 from typing import Any, Dict, Generator
 
-from django import forms
-
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
@@ -16,6 +14,7 @@ from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
+from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
@@ -1067,7 +1066,9 @@ class OrganizationForm(ModelForm):
         if organization:
             self.fields[
                 "active_users"
-            ].widget.extra_widget_data = organization.useraccount.current_subscription.active_users_jobs_deltas_count
+            ].widget.extra_widget_data = (
+                organization.useraccount.current_subscription.active_users_jobs_deltas_count
+            )
 
 
 class OrganizationAdmin(QFieldCloudModelAdmin):
@@ -1086,7 +1087,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner",
         "date_joined",
-        "active_users"
+        "active_users",
     )
     list_display = (
         "username",
