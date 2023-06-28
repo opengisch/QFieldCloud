@@ -312,18 +312,22 @@ class QfcTestCase(APITestCase):
         # Initially, there is no billable user
         self.assertEqual(len(_active_users_jobs_deltas_count()), 0)
 
-        # User 1 creates a job
+        # User 1 creates a 2 jobs
         Job.objects.create(
             project=project1,
             created_by=self.user2,
         )
-        # The first user in the list should have 1 job and 0 deltas
+        Job.objects.create(
+            project=project1,
+            created_by=self.user2,
+        )
+        # The first user in the list should have 2 jobs and 0 deltas
         active_user = _active_users_jobs_deltas_count()[0]
         self.assertEqual(active_user.username, "user2")
-        self.assertEqual(active_user.jobs_count, 1)
+        self.assertEqual(active_user.jobs_count, 2)
         self.assertEqual(active_user.deltas_count, 0)
 
-        # User 1 creates a delta
+        # User 1 creates a 2 deltas
         Delta.objects.create(
             deltafile_id=uuid.uuid4(),
             project=project1,
@@ -331,12 +335,27 @@ class QfcTestCase(APITestCase):
             client_id=uuid.uuid4(),
             created_by=self.user2,
         )
-        # The first user in the list should have 1 job and 1 deltas
+        Delta.objects.create(
+            deltafile_id=uuid.uuid4(),
+            project=project1,
+            content="delta",
+            client_id=uuid.uuid4(),
+            created_by=self.user2,
+        )
+        # The first user in the list should have 2 jobs and 2 deltas
         active_user = _active_users_jobs_deltas_count()[0]
-        self.assertEqual(active_user.jobs_count, 1)
-        self.assertEqual(active_user.deltas_count, 1)
+        self.assertEqual(active_user.jobs_count, 2)
+        self.assertEqual(active_user.deltas_count, 2)
 
-        # User 2 creates a job
+        # User 2 creates a 3 jobs
+        Job.objects.create(
+            project=project1,
+            created_by=self.user3,
+        )
+        Job.objects.create(
+            project=project1,
+            created_by=self.user3,
+        )
         Job.objects.create(
             project=project1,
             created_by=self.user3,
@@ -344,18 +363,20 @@ class QfcTestCase(APITestCase):
         # There are now 2 Users in the list sorted after
         # jobs count first and then after deltas count
         active_user1 = _active_users_jobs_deltas_count()[0]
-        self.assertEqual(active_user1.jobs_count, 1)
-        self.assertEqual(active_user1.deltas_count, 1)
+        self.assertEqual(active_user1.username, "user3")
+        self.assertEqual(active_user1.jobs_count, 3)
+        self.assertEqual(active_user1.deltas_count, 0)
         active_user2 = _active_users_jobs_deltas_count()[1]
-        self.assertEqual(active_user2.jobs_count, 1)
-        self.assertEqual(active_user2.deltas_count, 0)
+        self.assertEqual(active_user2.jobs_count, 2)
+        self.assertEqual(active_user2.deltas_count, 2)
 
         # User 2 leaves the organization
         OrganizationMember.objects.filter(member=self.user3).delete()
 
         # User 2 still shows up in the list
         active_user2 = _active_users_jobs_deltas_count()[1]
-        self.assertEqual(active_user2.jobs_count, 1)
+        self.assertEqual(active_user2.username, "user2")
+        self.assertEqual(active_user2.jobs_count, 2)
 
         # Report at a different time is empty
         self.assertEqual(
