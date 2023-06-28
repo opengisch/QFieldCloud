@@ -720,7 +720,9 @@ class Organization(User):
             user.jobs_count = qs.values_list("jobs_count", flat=True)[0] if qs else 0
 
             qs = deltas_created.filter(created_by=user)
-            user.deltas_count = qs.values_list("deltas_count", flat=True)[0] if qs else 0
+            user.deltas_count = (
+                qs.values_list("deltas_count", flat=True)[0] if qs else 0
+            )
 
         return sorted(
             list(active_users),
