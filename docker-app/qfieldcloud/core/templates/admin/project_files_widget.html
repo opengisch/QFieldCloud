@@ -43,14 +43,14 @@
                         <td></td>
                         <td class="qfc-admin-project-files-text-right"></td>
                         <td>
-                            <select id="qgc-admin-projects-files-version-selector">
-                                <option value="">{% trans 'Select a version to download' %}</option>
+                            <select>
+                                <option value="">{% trans 'Download latest/Delete all version(s)' %}</option>
                             </select>
                         </td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Detail versions' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download (defaults to latest version)' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete file (all versions)' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Detail all file versions' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download file version (defaults to latest version)' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete file version' %}</button>
                         </td>
                     </tr>
                 </template>
