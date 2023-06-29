@@ -43,14 +43,13 @@
                         <td></td>
                         <td class="qfc-admin-project-files-text-right"></td>
                         <td>
-                            <label for="qgc-admin-projects-files-version-selector">Actions apply to <em>files</em>. Versions are not considered.</label>
                             <select id="qgc-admin-projects-files-version-selector">
-                                <option value="">{% trans 'See all versions' %}</option>
+                                <option value="">{% trans 'Select a version to download' %}</option>
                             </select>
                         </td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'File info' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download latest version' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Detail versions' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download (defaults to latest version)' %}</button>
                             <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete file (all versions)' %}</button>
                         </td>
                     </tr>
@@ -96,8 +95,7 @@
         width: 100%; /* Full width */
         height: 100%; /* Full height */
         overflow: auto; /* Enable scroll if needed */
-        background-color: rgb(0,0,0
-        ); /* Fallback color */
+        background-color: rgb(0,0,0); /* Fallback color */
         background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
     }
 
