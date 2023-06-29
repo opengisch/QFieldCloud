@@ -243,10 +243,12 @@
 
                         $downloadBtn.addEventListener('click', () => {
                             const pathToFile = `files/${projectId}/${file.name}/`
-                            const buildApiUrlWithPath = () => buildApiUrl(pathToFile, {
-                                version: $versionsSelect.value,
-                            });
-                            window.open($versionsSelect.value ? buildApiUrlWithPath() : pathToFile);
+                            const version_id = $versionsSelect.value || file.versions[0]?.version_id;
+                            if (version_id) {
+                                window.open(buildApiUrl(pathToFile, {version: version_id}))
+                            } else {
+                                window.open(pathToFile)
+                            }
                         });
 
                         $deleteBtn.addEventListener('click', () => {
