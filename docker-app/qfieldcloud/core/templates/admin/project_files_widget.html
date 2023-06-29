@@ -44,13 +44,13 @@
                         <td class="qfc-admin-project-files-text-right"></td>
                         <td>
                             <select>
-                                <option value="">{% trans 'Download latest/Delete all version(s)' %}</option>
+                                <option value="">{% trans 'See all versions' %}</option>
                             </select>
                         </td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Info' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'File info' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download latest version' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete file' %}</button>
                         </td>
                     </tr>
                 </template>
@@ -95,7 +95,8 @@
         width: 100%; /* Full width */
         height: 100%; /* Full height */
         overflow: auto; /* Enable scroll if needed */
-        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgb(0,0,0
+        ); /* Fallback color */
         background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
     }
 
@@ -215,9 +216,6 @@
                             $option.innerHTML = `${version.display} (${version.size} bytes)`;
 
                             $versionsSelect.appendChild($option);
-                            $infoBtn.disabled = true;
-                            $downloadBtn.disabled = true;
-                            $deleteBtn.disabled = true;
                         }
 
                         $tbody.appendChild($trow);
@@ -227,15 +225,6 @@
                             $dialog.close();
                         });
 
-                        $versionsSelect.addEventListener('change', event => {
-                            versions_ids = file.versions.map(obj => obj.version_id)
-                            selected_version_id = event.target.value
-                            disable_if_not_version = !versions_ids.includes(selected_version_id)
-                            $infoBtn.disabled = disable_if_not_version;
-                            $downloadBtn.disabled = disable_if_not_version;
-                            $deleteBtn.disabled = disable_if_not_version;
-                        })
-
                         $infoBtn.addEventListener('click', () => {
                             $dialog.showModal();
                             $dialogPre.innerHTML = JSON.stringify(file, null, 2);
@@ -243,10 +232,9 @@
 
                         $downloadBtn.addEventListener('click', () => {
                             const pathToFile = `files/${projectId}/${file.name}/`
-                            const buildApiUrlWithPath = () => buildApiUrl(pathToFile, {
-                                version: $versionsSelect.value,
-                            });
-                            window.open($versionsSelect.value ? buildApiUrlWithPath() : pathToFile);
+                            const version = $versionsSelect.value || file.versions.map(obj => obj.version_id).sort((a, b) => a-b).slice(-1)
+                            const buildApiUrlWithPath = () => buildApiUrl(pathToFile, { version })
+                            window.open(buildApiUrlWithPath());
                         });
 
                         $deleteBtn.addEventListener('click', () => {
