@@ -43,14 +43,15 @@
                         <td></td>
                         <td class="qfc-admin-project-files-text-right"></td>
                         <td>
-                            <select>
+                            <label for="qgc-admin-projects-files-version-selector">Actions apply to <em>files</em>. Versions are not considered.</label>
+                            <select id="qgc-admin-projects-files-version-selector">
                                 <option value="">{% trans 'See all versions' %}</option>
                             </select>
                         </td>
                         <td>
                             <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'File info' %}</button>
                             <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download latest version' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete file' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete file (all versions)' %}</button>
                         </td>
                     </tr>
                 </template>
