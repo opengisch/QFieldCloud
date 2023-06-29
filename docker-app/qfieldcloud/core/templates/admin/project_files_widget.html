@@ -226,7 +226,7 @@
                         $dialogBtn.addEventListener('click', () => {
                             $dialog.close();
                         });
-                        
+
                         $versionsSelect.addEventListener('change', event => {
                             versions_ids = file.versions.map(obj => obj.version_id)
                             selected_version_id = event.target.value
@@ -235,7 +235,7 @@
                             $downloadBtn.disabled = disable_if_not_version;
                             $deleteBtn.disabled = disable_if_not_version;
                         })
-                        
+
                         $infoBtn.addEventListener('click', () => {
                             $dialog.showModal();
                             $dialogPre.innerHTML = JSON.stringify(file, null, 2);
