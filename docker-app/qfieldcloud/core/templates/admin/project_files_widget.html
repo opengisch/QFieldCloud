@@ -231,7 +231,8 @@
 
                         $downloadBtn.addEventListener('click', () => {
                             const pathToFile = `files/${projectId}/${file.name}/`;
-                            const version = $versionsSelect.value || file.versions.map(obj => obj.version_id).sort((a, b) => b-a).slice(-1);
+                            //selected or last file version
+                            const version = $versionsSelect.value || file.versions.map(obj => obj.version_id).sort((a, b) => b-a)[0];
                             window.open(buildApiUrl(pathToFile, { version }));
                         });
 
