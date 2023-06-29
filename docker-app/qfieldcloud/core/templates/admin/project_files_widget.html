@@ -215,6 +215,9 @@
                             $option.innerHTML = `${version.display} (${version.size} bytes)`;
 
                             $versionsSelect.appendChild($option);
+                            $infoBtn.disabled = true;
+                            $downloadBtn.disabled = true;
+                            $deleteBtn.disabled = true;
                         }
 
                         $tbody.appendChild($trow);
@@ -223,7 +226,16 @@
                         $dialogBtn.addEventListener('click', () => {
                             $dialog.close();
                         });
-
+                        
+                        $versionsSelect.addEventListener('change', event => {
+                            versions_ids = file.versions.map(obj => obj.version_id)
+                            selected_version_id = event.target.value
+                            disable_if_not_version = !versions_ids.includes(selected_version_id)
+                            $infoBtn.disabled = disable_if_not_version;
+                            $downloadBtn.disabled = disable_if_not_version;
+                            $deleteBtn.disabled = disable_if_not_version;
+                        })
+                        
                         $infoBtn.addEventListener('click', () => {
                             $dialog.showModal();
                             $dialogPre.innerHTML = JSON.stringify(file, null, 2);
