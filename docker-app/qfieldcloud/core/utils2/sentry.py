@@ -20,6 +20,7 @@ def report_serialization_diff_to_sentry(
         pre_serialization: str representing the request `files` keys and meta information before serialization and middleware.
         post_serialization: str representing the request `files` keys and meta information after serialization and middleware.
         buffer: StringIO buffer from which to extract traceback capturing callstack ahead of the calling function.
+        capture_message: bool used as a flag by the caller to create an extra event against Sentry to attach the files to.
     """
     with sentry_sdk.configure_scope() as scope:
         try:

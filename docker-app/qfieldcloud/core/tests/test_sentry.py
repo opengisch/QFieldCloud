@@ -1,4 +1,6 @@
 from io import StringIO
+from os import environ
+from unittest import skipIf
 
 from rest_framework.test import APITestCase
 
@@ -6,6 +8,10 @@ from ..utils2.sentry import report_serialization_diff_to_sentry
 
 
 class QfcTestCase(APITestCase):
+    @skipIf(
+        environ.get("SENTRY_DSN", False),
+        "Do not run this test when Sentry's DSN is not set.",
+    )
     def test_logging_with_sentry(self):
         mock_payload = {
             "name": "request_id_file_name",
