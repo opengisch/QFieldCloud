@@ -994,7 +994,7 @@ class Project(models.Model):
     is_public = models.BooleanField(
         default=False,
         help_text=_(
-            "Projects that are marked as public would be visible and editable to anyone."
+            "Projects marked as public are visible to (but not editable by) anyone."
         ),
     )
     owner = models.ForeignKey(
