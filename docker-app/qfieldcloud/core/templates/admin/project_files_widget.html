@@ -238,7 +238,7 @@
                             const version = $versionsSelect.value || (
                                 file.versions
                                     .map(obj => obj.version_id)
-                                    .sort((a, b) => String(b).localeCompare(String(a).localeCompare()))[0]
+                                    .sort((a, b) => String(b).localeCompare(String(a)))[0]
                             );
                             window.open(buildApiUrl(pathToFile, { version }));
                         });
