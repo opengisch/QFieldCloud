@@ -18,12 +18,13 @@
                     <th>{% trans 'Filename' %}</th>
                     <th>{% trans 'Last modified' %}</th>
                     <th class="qfc-admin-project-files-text-right">{% trans 'Last size' %}</th>
-                    <th>{% trans 'Version' %}</th>
+                    <th>{% trans 'Details' %}</th>
+                    <th>{% trans 'File version' %}</th>
                     <th>{% trans 'Actions' %}</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="5">{% trans 'Click the "Refresh Files List" button to get the files list.' %}</td></tr>
+                <tr><td colspan="6">{% trans 'Click the "Refresh Files List" button to get the files list.' %}</td></tr>
 
                 <template class="qfc-admin-project-files-table-loading-row-template">
                     <tr><td colspan="5">{% trans 'Loading...' %}</td></tr>
@@ -43,13 +44,15 @@
                         <td></td>
                         <td class="qfc-admin-project-files-text-right"></td>
                         <td>
+                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Details' %}</button>
+                        </td>
+                        <td>
                             <select>
-                                <option value="">{% trans 'Download latest/Delete all version(s)' %}</option>
+                                <option value="">{% trans 'Select a version...' %}</option>
                             </select>
                         </td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Info' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-download-btn">{% trans 'Download' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-download-btn" title="{% trans 'Download the selected version or, by default the latest' %}">{% trans 'Download' %}</button>
                             <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete' %}</button>
                         </td>
                     </tr>
@@ -230,11 +233,14 @@
                         });
 
                         $downloadBtn.addEventListener('click', () => {
-                            const pathToFile = `files/${projectId}/${file.name}/`
-                            const buildApiUrlWithPath = () => buildApiUrl(pathToFile, {
-                                version: $versionsSelect.value,
-                            });
-                            window.open($versionsSelect.value ? buildApiUrlWithPath() : pathToFile);
+                            const pathToFile = `files/${projectId}/${file.name}/`;
+                            // selected or most recent file version
+                            const version = $versionsSelect.value || (
+                                file.versions
+                                    .map(obj => obj.version_id)
+                                    .sort((a, b) => String(b).localeCompare(String(a)))[0]
+                            );
+                            window.open(buildApiUrl(pathToFile, { version }));
                         });
 
                         $deleteBtn.addEventListener('click', () => {
