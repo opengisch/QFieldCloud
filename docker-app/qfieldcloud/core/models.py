@@ -1055,6 +1055,26 @@ class Project(models.Model):
     )
 
     @property
+    def owner_aware_storage_keep_versions(self) -> int:
+        """Determine the storage versions to keep based on the owner's subscription plan and project settings.
+
+        Returns:
+            int: the number of file versions, should be always greater than 1
+        """
+        subscription = self.owner.useraccount.current_subscription
+
+        if subscription.plan.is_premium:
+            keep_count = (
+                self.storage_keep_versions or subscription.plan.storage_keep_versions
+            )
+        else:
+            keep_count = subscription.plan.storage_keep_versions
+
+        assert keep_count >= 1, "Ensure that we don't destroy all file versions!"
+
+        return keep_count
+
+    @property
     def thumbnail_url(self):
         if self.thumbnail_uri:
             return reverse_lazy(
