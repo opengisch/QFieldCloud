@@ -402,14 +402,9 @@ def purge_old_file_versions(
     accounts
     """
 
-    logger.info(f"Cleaning up old files for {project}")
+    keep_count = project.owner_aware_storage_keep_versions
 
-    # Number of versions to keep is determined by the account type
-    keep_count = (
-        project.owner.useraccount.current_subscription.plan.storage_keep_versions
-    )
-
-    logger.debug(f"Keeping {keep_count} versions")
+    logger.info(f"Cleaning up old files for {project} to {keep_count} versions")
 
     # Process file by file
     for file in qfieldcloud.core.utils.get_project_files_with_versions(project.pk):

@@ -109,13 +109,22 @@ def get_s3_session() -> boto3.Session:
 
 
 def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
-    """Get a new S3 Bucket instance using Django settings"""
+    """
+    Get a new S3 Bucket instance using Django settings.
+    """
+
+    bucket_name = settings.STORAGE_BUCKET_NAME
+
+    assert bucket_name, "Expected `bucket_name` to be non-empty string!"
 
     session = get_s3_session()
-
-    # Get the bucket objects
     s3 = session.resource("s3", endpoint_url=settings.STORAGE_ENDPOINT_URL)
-    return s3.Bucket(settings.STORAGE_BUCKET_NAME)
+
+    # Ensure the bucket exists
+    s3.meta.client.head_bucket(Bucket=bucket_name)
+
+    # Get the bucket resource
+    return s3.Bucket(bucket_name)
 
 
 def get_s3_client() -> mypy_boto3_s3.Client:
