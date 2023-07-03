@@ -288,6 +288,16 @@ def can_delete_files(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_delete_unnecessary_file_versions(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+        ],
+    )
+
+
 def can_create_deltas(user: QfcUser, project: Project) -> bool:
     """Whether the user can store deltas in a project."""
     return user_has_project_roles(
