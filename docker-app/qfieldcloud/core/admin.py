@@ -1089,14 +1089,16 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Active members"))
     def active_users_links(self, instance) -> str:
         persons = instance.useraccount.current_subscription.active_users
-        if persons.exists():
+        userlinks = "<p> - </p>"
+        if persons:
             userlinks = " ".join(model_admin_url(p, p.username) for p in persons)
-            help_text = """
-            <p style='font-size: 11px; color: var(--body-quiet-color)'>
-                Active users have triggererd at least one job or uploaded at least one delta in the current billing period. These are all the users who will be billed -- plan included or additional.
-            </p>
-            """
-            return format_html(f"{userlinks} <br> {help_text}")
+        help_text = """
+        <p style='font-size: 11px; color: var(--body-quiet-color)'>
+            Active users have triggererd at least one job or uploaded at least one delta in the current billing period.
+            These are all the users who will be billed -- plan included or additional.
+        </p>
+        """
+        return format_html(f"{userlinks} {help_text}")
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
