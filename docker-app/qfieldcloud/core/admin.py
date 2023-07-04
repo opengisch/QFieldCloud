@@ -1051,6 +1051,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner",
         "date_joined",
+        "active_users",
     )
     list_display = (
         "username",
@@ -1068,7 +1069,12 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__email__iexact",
     )
 
-    readonly_fields = ("date_joined", "storage_usage__field", "active_users_count")
+    readonly_fields = (
+        "date_joined",
+        "storage_usage__field",
+        "active_users_count",
+        "active_users",
+    )
 
     list_select_related = ("organization_owner", "useraccount")
 
@@ -1079,6 +1085,14 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Active members"))
     def active_users_count(self, instance) -> int | None:
         return instance.useraccount.current_subscription.active_users_count
+
+    @admin.display(description=_("Active members"))
+    def active_users(self, instance) -> str:
+        persons = instance.useraccount.current_subscription.active_users
+        if persons.exists():
+            userlinks = " ".join(model_admin_url(p, p.username) for p in persons)
+            help_text = "<p>(Active users have triggererd at least one job or uploaded at least one delta in the current billing period. These are all the users who will be billed -- plan included or additional.)</p>"
+            return format_html(f"{userlinks} <br> {help_text}")
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
