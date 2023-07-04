@@ -656,7 +656,9 @@ class Organization(User):
     # updated at
     updated_at = models.DateTimeField(auto_now=True)
 
-    def active_users(self, period_since: datetime, period_until: datetime):
+    def active_users(
+        self, period_since: datetime, period_until: datetime
+    ) -> models.Queryset:
         """Returns the queryset of active users in the given time interval.
 
         Active users are users triggering a job or pushing a delta on a project owned by the organization.

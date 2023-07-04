@@ -581,7 +581,7 @@ class AbstractSubscription(models.Model):
         )
 
     @property
-    def active_users(self):
+    def active_users(self) -> models.Queryset | None:
         if not self.account.user.is_organization:
             return None
 
