@@ -1083,7 +1083,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     autocomplete_fields = ("organization_owner",)
 
     @admin.display(description=_("Active members"))
-    def active_users_count(self, instance) -> int | None:
+    def active_users_count(self, instance) -> int:
         return instance.useraccount.current_subscription.active_users_count
 
     @admin.display(description=_("Active members"))
