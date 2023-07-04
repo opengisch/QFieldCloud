@@ -13,3 +13,17 @@ class LimitOffsetPaginationResults(pagination.LimitOffsetPagination):
 
     def get_paginated_response(self, data) -> response.Response:
         return response.Response(data)
+
+
+class MultiplePaginationMixin:
+    def get_pagination_class(self):
+        return self.pagination_class()
+
+    @property
+    def paginator(self):
+        if not hasattr(self, "_paginator"):
+            if self.get_pagination_class() is None:
+                self._paginator = None
+            else:
+                self._paginator = self.get_pagination_class()
+        return self._paginator

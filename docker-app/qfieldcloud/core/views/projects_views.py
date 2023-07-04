@@ -9,6 +9,7 @@ from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import generics, permissions, viewsets
+from rest_framework.pagination import CursorPagination
 
 User = get_user_model()
 
@@ -97,12 +98,20 @@ include_public_param = openapi.Parameter(
         operation_id="Create a project",
     ),
 )
-class ProjectViewSet(viewsets.ModelViewSet):
+class ProjectViewSet(paginators.MultiplePaginationMixin, viewsets.ModelViewSet):
 
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.LimitOffsetPaginationResults
+
+    def get_pagination_class(self):
+        if self.request.GET.get("use_cursor", False):
+            paginator = CursorPagination
+            paginator.ordering = "created_at"
+            return paginator()
+        else:
+            return pagination.LimitOffsetPaginationResults()
 
     def get_queryset(self):
 

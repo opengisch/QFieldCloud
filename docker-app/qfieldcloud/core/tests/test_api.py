@@ -83,3 +83,16 @@ class QfcTestCase(APITransactionTestCase):
 
         # Test length (this is super slow -- 1 minute or so -- because of serialization)
         self.assertEqual(len(results_without_pagination), unlimited_count)
+        
+    def test_api_default_paginator_cursor(self):
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+        response = self.client.get("/api/v1/projects/", {"use_cursor": True})
+
+        previous_created_at = None
+        with self.subTest():
+            for result in response.data["results"]:
+                if previous_created_at:
+                    cur_created_at = result["created_at"]
+                    self.assertLess(previous_created_at, cur_created_at)
+                    previous_created_at = cur_created_at
