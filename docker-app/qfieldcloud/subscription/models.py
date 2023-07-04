@@ -479,11 +479,14 @@ class AbstractSubscription(models.Model):
     billing_cycle_anchor_at = models.DateTimeField(null=True, blank=True)
 
     # the timestamp when the current billing period started
-    # NOTE this field remains currently unused.
+    # NOTE ignored when checking if subscription is 'current' (see `active_since and `active_until`).
+    # `current_period_since` and `current_period_until` are both either `None` or `datetime`
     current_period_since = models.DateTimeField(null=True, blank=True)
 
     # the timestamp when the current billing period ends
-    # NOTE ignored for subscription validity checks, but used to calculate the activation date when additional packages change
+    # NOTE ignored when checking if subscription is 'current' (see `active_since and `active_until`),
+    # but used to calculate the activation date when additional packages change.
+    # `current_period_since` and `current_period_until` are both either `None` or `datetime`
     current_period_until = models.DateTimeField(null=True, blank=True)
 
     # admin only notes, not visible to end users
@@ -588,17 +591,7 @@ class AbstractSubscription(models.Model):
                 self.current_period_until,
             )
 
-        assert (
-            self.current_period_since == self.current_period_until
-        ), "Both current_period _since and _until must be set."
-
-        now = timezone.now()
-        month_ago = now - timedelta(days=28)
-
-        return self.account.user.active_users(
-            month_ago,
-            now,
-        )
+        return None
 
     @property
     def active_users_count(self) -> int:
@@ -606,7 +599,7 @@ class AbstractSubscription(models.Model):
         if not self.account.user.is_organization:
             return 1
 
-        if not self.current_period_since or not self.current_period_until:
+        if self.active_users is None:
             return 0
 
         return self.active_users.count()
