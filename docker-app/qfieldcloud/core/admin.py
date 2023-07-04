@@ -1058,7 +1058,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__link",
         "date_joined",
         # "storage_usage__field",
-        "active_users",
+        "active_users_count",
     )
 
     search_fields = (
@@ -1068,22 +1068,17 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__email__iexact",
     )
 
-    readonly_fields = ("date_joined", "storage_usage__field", "active_users")
+    readonly_fields = ("date_joined", "storage_usage__field", "active_users_count")
 
-    list_select_related = ("organization_owner",)
+    list_select_related = ("organization_owner", "useraccount")
 
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("organization_owner",)
 
-    @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> int | None:
-        # The relation 'current_subscription_vw' is not instantiated unless the organization
-        # does have a current subscription
-        if hasattr(instance, "current_subscription_vw"):
-            return instance.current_subscription_vw.active_users_count
-        else:
-            return None
+    @admin.display(description=_("Active members"))
+    def active_users_count(self, instance) -> int | None:
+        return instance.useraccount.current_subscription.active_users_count
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
