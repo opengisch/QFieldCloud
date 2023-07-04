@@ -1087,7 +1087,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
             userlinks = " ".join(model_admin_url(p, p.username) for p in persons)
         help_text = """
         <p style='font-size: 11px; color: var(--body-quiet-color)'>
-            Active users have triggererd at least one job or uploaded at least one delta in the current billing period.
+            Active members have triggererd at least one job or uploaded at least one delta in the current billing period.
             These are all the users who will be billed -- plan included or additional.
         </p>
         """
