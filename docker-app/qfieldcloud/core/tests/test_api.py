@@ -56,6 +56,8 @@ class QfcTestCase(APITransactionTestCase):
         response_rendered = response.render()
         next = response_rendered.data["next"]
         results_with_pagination = response_rendered.data["results"]
+        self.assertEqual(len(results_with_pagination), page_size)
+        self.assertIsNotNone(next)
 
         # request-response with limit and offset
         request_with_offset = APIRequestFactory().get(
@@ -66,6 +68,8 @@ class QfcTestCase(APITransactionTestCase):
         response_rendered = response.render()
         previous = response_rendered.data["previous"]
         results_with_offset = response_rendered.data["results"]
+        self.assertEqual(len(results_with_offset), page_size)
+        self.assertIsNotNone(previous)
 
         # request-response without pagination (aka control test)
         request_without_pagination = APIRequestFactory().get(
@@ -75,12 +79,4 @@ class QfcTestCase(APITransactionTestCase):
         response = view(request_without_pagination)
         response_rendered = response.render()
         results_without_pagination = response_rendered.data
-
-        with self.subTest():
-            self.assertEqual(len(results_with_pagination), page_size)
-            self.assertIsNotNone(next)
-            self.assertEqual(len(results_with_offset), page_size)
-            self.assertIsNotNone(previous)
-            self.assertEqual(
-                len(results_without_pagination), Project.objects.all().count()
-            )
+        self.assertEqual(len(results_without_pagination), Project.objects.all().count())
