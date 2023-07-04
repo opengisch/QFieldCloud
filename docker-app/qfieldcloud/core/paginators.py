@@ -39,4 +39,4 @@ class LargeTablePaginator(Paginator):
 
 
 class LimitOffsetPagination(pagination.LimitOffsetPagination):
-    ...
+    pass

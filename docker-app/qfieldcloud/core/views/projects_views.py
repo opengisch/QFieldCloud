@@ -102,7 +102,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
-    pagination_class = paginators.DefaultPagination
+    pagination_class = paginators.LimitOffsetPagination
 
     def get_queryset(self):
 
