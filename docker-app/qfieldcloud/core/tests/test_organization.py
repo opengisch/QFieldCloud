@@ -220,7 +220,7 @@ class QfcTestCase(APITestCase):
         # Initially, there is no billable user
         self.assertEqual(_active_users_count(), 0)
 
-        # 1. user2 creates a job
+        # user2 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user2,
@@ -228,7 +228,7 @@ class QfcTestCase(APITestCase):
         # There is now 1 billable user
         self.assertEqual(_active_users_count(), 1)
 
-        # 2. user2 creates a delta
+        # user2 creates a delta
         Delta.objects.create(
             deltafile_id=uuid.uuid4(),
             project=project1,
@@ -239,7 +239,7 @@ class QfcTestCase(APITestCase):
         # There is still 1 billable user
         self.assertEqual(_active_users_count(), 1)
 
-        # 3. user3 creates a job
+        # user3 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user3,
@@ -247,7 +247,7 @@ class QfcTestCase(APITestCase):
         # There are 2 billable users
         self.assertEqual(_active_users_count(), 2)
 
-        # 4. user3 leaves the organization
+        # user3 leaves the organization
         OrganizationMember.objects.filter(member=self.user3).delete()
 
         # There are still 2 billable users
@@ -256,7 +256,7 @@ class QfcTestCase(APITestCase):
         # Report at a different time is empty
         self.assertEqual(_active_users_count(now() + timedelta(days=365)), 0)
 
-        # 5. user4 creates a job
+        # user4 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user4,
