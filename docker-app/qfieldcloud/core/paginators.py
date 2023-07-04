@@ -38,5 +38,5 @@ class LargeTablePaginator(Paginator):
         return len(self.object_list)
 
 
-class DefaultPagination(pagination.LimitOffsetPagination):
-    limit_query_param = "items_per_page"
+class LimitOffsetPagination(pagination.LimitOffsetPagination):
+    ...
