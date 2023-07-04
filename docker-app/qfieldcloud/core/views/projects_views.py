@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils
+from qfieldcloud.core import paginators, permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
@@ -102,6 +102,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
+    pagination_class = paginators.DefaultPagination
 
     def get_queryset(self):
 

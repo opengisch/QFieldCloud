@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.db import connection
 from django.utils.functional import cached_property
 from django.utils.inspect import method_has_no_args
+from rest_framework import pagination
 
 
 class LargeTablePaginator(Paginator):
@@ -35,3 +36,7 @@ class LargeTablePaginator(Paginator):
             else:
                 return estimate
         return len(self.object_list)
+
+
+class DefaultPagination(pagination.LimitOffsetPagination):
+    limit_query_param = "items_per_page"
