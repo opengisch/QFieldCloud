@@ -595,6 +595,10 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
                 "QFieldSync/is_geometry_locked"
             ),
             "qfs_photo_naming": layer.customProperty("QFieldSync/photo_naming"),
+            "qfc_source_data_pk_name": layer_source.pk_attr_name,
+            "qfs_unsupported_source_pk": layer.customProperty(
+                "QFieldSync/unsupported_source_pk"
+            ),
             "is_valid": layer.isValid(),
             "datasource": layer.dataProvider().uri().uri()
             if layer.dataProvider()
