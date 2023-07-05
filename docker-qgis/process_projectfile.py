@@ -56,6 +56,8 @@ def check_valid_project_file(project_filename: Path) -> None:
             project_filename=project_filename, extension=project_filename.suffix
         )
 
+    logger.info("QGIS project file is valid!")
+
 
 def load_project_file(project_filename: Path) -> QgsProject:
     logger.info("Open QGIS project file…")
@@ -63,6 +65,8 @@ def load_project_file(project_filename: Path) -> QgsProject:
     project = QgsProject.instance()
     if not project.read(str(project_filename)):
         raise InvalidXmlFileException(error=project.error())
+
+    logger.info("QGIS project file opened!")
 
     return project
 
@@ -176,6 +180,8 @@ def generate_thumbnail(project: QgsProject, thumbnail_filename: Path) -> None:
 
     if not img.save(str(thumbnail_filename)):
         raise FailedThumbnailGenerationException(reason="Failed to save.")
+
+    logger.info("Project thumbnail image generated!")
 
 
 if __name__ == "__main__":
