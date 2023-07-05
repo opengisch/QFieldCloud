@@ -582,6 +582,11 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
         error = layer.error()
         layer_id = layer.id()
         layer_source = LayerSource(layer)
+        datasource = None
+
+        if layer.dataProvider():
+            datasource = layer.dataProvider().uri().uri()
+
         layers_by_id[layer_id] = {
             "id": layer_id,
             "name": layer.name(),
@@ -600,9 +605,7 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
                 "QFieldSync/unsupported_source_pk"
             ),
             "is_valid": layer.isValid(),
-            "datasource": layer.dataProvider().uri().uri()
-            if layer.dataProvider()
-            else None,
+            "datasource": datasource,
             "type": layer.type(),
             "type_name": layer.type().name,
             "error_code": "no_error",
