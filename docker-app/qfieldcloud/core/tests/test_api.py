@@ -57,7 +57,10 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertGreater(toc - tic, 0)
 
-    def test_api_default_paginator_offset(self):
+    def test_api_pagination_limitoffset(self):
+        expected_count = Project.objects.all().count()
+        assert expected_count == 500
+
         view = ProjectViewSet.as_view({"get": "list"})
         factory = APIRequestFactory()
         page_size = 35
@@ -105,4 +108,4 @@ class QfcTestCase(APITransactionTestCase):
 
         # testing length
         results_without_pagination = response_rendered.data
-        self.assertEqual(len(results_without_pagination), Project.objects.all().count())
+        self.assertEqual(len(results_without_pagination), expected_count)
