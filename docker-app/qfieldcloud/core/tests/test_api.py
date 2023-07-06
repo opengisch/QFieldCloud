@@ -5,6 +5,7 @@ from urllib import parse
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
+from qfieldcloud.core.pagination import LimitOffsetPagination
 from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import (
@@ -61,6 +62,8 @@ class QfcTestCase(APITransactionTestCase):
         expected_count = Project.objects.all().count()
         self.assertEqual(expected_count, 500)
 
+        # picked randomly: ProjectViewSet
+        ProjectViewSet.pagination_class = LimitOffsetPagination
         view = ProjectViewSet.as_view({"get": "list"})
         factory = APIRequestFactory()
         page_size = 35
@@ -109,3 +112,15 @@ class QfcTestCase(APITransactionTestCase):
         # testing length
         results_without_pagination = response_rendered.data
         self.assertEqual(len(results_without_pagination), expected_count)
+
+    def test_api_pagination_projects(self):
+        factory = APIRequestFactory()
+        request = factory.get("/api/v1/projects/", {"limit": 10})
+        force_authenticate(request, user=self.user, token=self.token)
+
+        # ProjectViewSet uses 'LimitOffsetPaginationResults' by default
+        view = ProjectViewSet.as_view({"get": "list"})
+        response = view(request)
+
+        response_rendered = response.render()
+        self.assertEqual(len(response_rendered.data), 10)
