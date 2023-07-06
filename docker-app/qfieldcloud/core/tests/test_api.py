@@ -60,6 +60,8 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_api_pagination_limitoffset(self):
         """Test LimitOffset pagination blank implementation"""
+        page_size = 35
+        offset = 36
         expected_count = Project.objects.all().count()
         self.assertEqual(expected_count, 500)
 
@@ -67,7 +69,6 @@ class QfcTestCase(APITransactionTestCase):
         # with LimitOffsetPagination to test it
         ProjectViewSet.pagination_class = LimitOffsetPagination
         view = ProjectViewSet.as_view({"get": "list"})
-        page_size = 35
 
         # Using  APIRequest with ViewSet to be able to construct the specific Request object
         factory = APIRequestFactory()
@@ -81,7 +82,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(results_with_pagination), page_size)
 
         # Obtain response with LIMIT and OFFSET
-        offset = 36
         request_with_offset = factory.get(
             "api/v1/projects/", {"limit": page_size, "offset": offset}
         )
