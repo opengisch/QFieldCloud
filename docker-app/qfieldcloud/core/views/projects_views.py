@@ -98,7 +98,7 @@ include_public_param = openapi.Parameter(
         operation_id="Create a project",
     ),
 )
-class ProjectViewSet(paginators.MultiplePaginationMixin, viewsets.ModelViewSet):
+class ProjectViewSet(pagination.MultiplePaginationMixin, viewsets.ModelViewSet):
 
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
@@ -109,6 +109,7 @@ class ProjectViewSet(paginators.MultiplePaginationMixin, viewsets.ModelViewSet):
         if self.request.GET.get("use_cursor", False):
             paginator = CursorPagination
             paginator.ordering = "created_at"
+            paginator.page_size = 100
             return paginator()
         else:
             return pagination.LimitOffsetPaginationResults()
