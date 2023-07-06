@@ -2,6 +2,10 @@ from rest_framework import pagination, response
 
 
 def parameterize_pagination(cls):
+    """
+    Set as class attributes the items passed as kwargs.
+    """
+
     def capture_args(*args, **kwargs):
         for k, v in kwargs.items():
             setattr(cls, k, v)
