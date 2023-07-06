@@ -6,12 +6,12 @@ def parameterize_pagination(cls):
     Set as class attributes the items passed as kwargs.
     """
 
-    def capture_args(*args, **kwargs):
+    def configure_class_object(*args, **kwargs):
         for k, v in kwargs.items():
             setattr(cls, k, v)
         return cls
 
-    return capture_args
+    return configure_class_object
 
 
 @parameterize_pagination
