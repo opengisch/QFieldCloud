@@ -32,10 +32,10 @@ class QfcTestCase(APITransactionTestCase):
         self.token = AuthToken.objects.get_or_create(user=self.user)[0]
 
         # Create a bunch of public projects
-        projects = [
+        projects = (
             Project(name=f"project{n}", is_public=True, owner=self.user)
             for n in range(500)
-        ]
+        )
         Project.objects.bulk_create(projects)
 
     def test_api_status(self):
