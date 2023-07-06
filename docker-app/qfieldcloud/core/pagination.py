@@ -1,9 +1,9 @@
 from rest_framework import pagination, response
 
 
-class LimitOffsetPaginationResults(pagination.LimitOffsetPagination):
+class PaginateResults(pagination.LimitOffsetPagination):
     """
-    Custom implementation such that response.data = (DRF blanket implementation's response).data.results
+    Based on LimitOffsetPagination. Custom implementation such that response.data = (DRF's blanket LimitOffsetPagination response).data.results
     For comparison, the DRF's blanket implementation defines:
     - response.data["results"]
     - response.data["count"]
