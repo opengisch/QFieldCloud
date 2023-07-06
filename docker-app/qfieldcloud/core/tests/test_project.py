@@ -383,12 +383,12 @@ class QfcTestCase(APITransactionTestCase):
         p.save()
         assert_no_role()
 
-        # Making the owner an organisation is not enough as user is not member of that org
+        # Making the owner an organization is not enough as user is not member of that org
         p.owner = o
         p.save()
         assert_no_role()
 
-        # As the user must be member of the organisation
+        # As the user must be member of the organization
         OrganizationMember.objects.create(organization=o, member=self.user1)
         assert_role("manager", "collaborator")
 
