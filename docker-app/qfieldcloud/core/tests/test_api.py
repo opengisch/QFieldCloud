@@ -99,7 +99,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(params["offset"], 71)
 
         # obtain without pagination (aka control test)
-        request_without_pagination = APIRequestFactory().get(
+        request_without_pagination = factory.get(
             "/api/v1/projects/",
         )
         force_authenticate(request_without_pagination, user=self.user, token=self.token)
