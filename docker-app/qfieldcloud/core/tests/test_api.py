@@ -5,14 +5,8 @@ from urllib import parse
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
-from qfieldcloud.core.pagination import LimitOffsetPagination
-from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
-from rest_framework.test import (
-    APIRequestFactory,
-    APITransactionTestCase,
-    force_authenticate,
-)
+from rest_framework.test import APITransactionTestCase
 
 from .utils import setup_subscription_plans
 
@@ -60,67 +54,32 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_api_pagination_limitoffset(self):
         """Test LimitOffset pagination blank implementation"""
-        page_size = 35
-        offset = 36
-        expected_count = Project.objects.all().count()
-        self.assertEqual(expected_count, 500)
-
-        # Replacing ProjectViewSet's current pagination class
-        # with LimitOffsetPagination to test it
-        ProjectViewSet.pagination_class = LimitOffsetPagination
-        view = ProjectViewSet.as_view({"get": "list"})
-
-        # Using  APIRequest with ViewSet to be able to construct the specific Request object
-        factory = APIRequestFactory()
-
-        # Obtain response with LIMIT
-        request_with_pagination = factory.get("/api/v1/projects/", {"limit": page_size})
-        force_authenticate(request_with_pagination, user=self.user, token=self.token)
-        response = view(request_with_pagination)
-        response_rendered = response.render()
-        results_with_pagination = response_rendered.data["results"]
-        self.assertEqual(len(results_with_pagination), page_size)
-
-        # Obtain response with LIMIT and OFFSET
-        request_with_offset = factory.get(
-            "api/v1/projects/", {"limit": page_size, "offset": offset}
-        )
-        force_authenticate(request_with_offset, user=self.user, token=self.token)
-        response = view(request_with_offset)
-        response_rendered = response.render()
-
-        # Test page size
-        results_with_offset = response_rendered.data["results"]
-        self.assertEqual(len(results_with_offset), page_size)
-
-        # Test 'previous' params
-        previous_url = response_rendered.data["previous"]
-        params = parse_numeric_query_params_from_url(previous_url)
-        self.assertEqual(params["limit"], 35)
-        self.assertEqual(params["offset"], 1)
-
-        # Test 'next' params
-        next_url = response_rendered.data["next"]
-        params = parse_numeric_query_params_from_url(next_url)
-        self.assertEqual(params["limit"], 35)
-        self.assertEqual(params["offset"], 71)
-
-        # Obtain without pagination (aka control test)
-        request_without_pagination = factory.get(
-            "/api/v1/projects/",
-        )
-        force_authenticate(request_without_pagination, user=self.user, token=self.token)
-        response = view(request_without_pagination)
-        response_rendered = response.render()
-
-        # Test length
-        results_without_pagination = response_rendered.data
-        self.assertEqual(len(results_without_pagination), expected_count)
-
-    def test_api_pagination_projects(self):
-        """Test ProjectViewSet current, custom pagination"""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        response = self.client.get("/api/v1/projects/", {"limit": 10})
-        self.assertEqual(len(response.data), 10)
+        page_size = 35
+        offset = 36
+        unlimited_count = Project.objects.all().count()
+        self.assertEqual(unlimited_count, 500)
+
+        # Obtain response with LIMIT
+        results_with_pagination = self.client.get(
+            "/api/v1/projects/", {"limit": page_size}
+        ).json()
+        self.assertEqual(len(results_with_pagination), page_size)
+
+        # Obtain response with LIMIT and OFFSET
+        results_with_offset = self.client.get(
+            "/api/v1/projects/", {"limit": page_size, "offset": offset}
+        ).json()
+
+        # Test page size
+        self.assertEqual(len(results_with_offset), page_size)
+
+        # Obtain without pagination (= control test)
+        results_without_pagination = self.client.get(
+            "/api/v1/projects/",
+        ).json()
+
+        # Test length (this is super slow because of serialization)
+        self.assertEqual(len(results_without_pagination), unlimited_count)
