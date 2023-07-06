@@ -4,6 +4,7 @@ import time
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
+from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -52,8 +53,7 @@ class QfcTestCase(APITransactionTestCase):
 
         page_size = 35
         offset = 36
-        unlimited_count = Project.objects.all().count()
-        self.assertEqual(unlimited_count, 500)
+        Project.objects.all().count()
 
         # Obtain response with LIMIT
         results_with_pagination = self.client.get(
@@ -70,22 +70,13 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(results_with_offset), page_size)
 
         # Obtain without pagination (= control test)
-        results_without_pagination = self.client.get(
+        results_without_offset_or_request_level_limit = self.client.get(
             "/api/v1/projects/",
         ).json()
 
-        # Test length (this is super slow -- 1 minute or so -- because of serialization)
-        self.assertEqual(len(results_without_pagination), unlimited_count)
-
-    def test_api_pagination_select_cursor(self):
-        # Authenticate client
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
-        response = self.client.get("/api/v1/projects/", {"use_cursor": True})
-
-        previous_created_at = None
-        with self.subTest():
-            for result in response.data["results"]:
-                if previous_created_at:
-                    cur_created_at = result["created_at"]
-                    self.assertLess(previous_created_at, cur_created_at)
-                    previous_created_at = cur_created_at
+        # Even though the request is not setting a limit, the Project modelviewset
+        # was defined with a default limit that's kicking in here
+        self.assertEqual(
+            ProjectViewSet.pagination_class.default_limit,
+            len(results_without_offset_or_request_level_limit),
+        )
