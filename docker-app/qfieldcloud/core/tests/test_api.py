@@ -53,7 +53,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertGreater(toc - tic, 0)
 
     def test_api_pagination_limitoffset(self):
-        """Test LimitOffset pagination blank implementation"""
+        """Test LimitOffset pagination custom implementation"""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
