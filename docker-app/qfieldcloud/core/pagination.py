@@ -1,7 +1,7 @@
 from rest_framework import pagination, response
 
 
-def parameterize_pagination(_class):
+def parameterize_pagination(_class: type):
     """
     Set as class attributes the items passed as kwargs.
     """
