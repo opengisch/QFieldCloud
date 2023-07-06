@@ -16,9 +16,9 @@ def parameterize_pagination(cls):
 @parameterize_pagination
 class PaginateResults(pagination.LimitOffsetPagination):
     """
-    Custom implementation such that response.data = (DRF blanket implementation's response).data.results
+    Based on LimitOffsetPagination. Custom implementation such that response.data = (DRF's blanket LimitOffsetPagination response).data.results
     For comparison, the DRF's blanket implementation defines:
-    - response.data.["results"]
+    - response.data["results"]
     - response.data["count"]
     - response.data["next"]
     - response.data["previous"]

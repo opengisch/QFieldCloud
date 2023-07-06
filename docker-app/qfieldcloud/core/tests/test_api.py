@@ -26,9 +26,10 @@ class QfcTestCase(APITransactionTestCase):
         self.token = AuthToken.objects.get_or_create(user=self.user)[0]
 
         # Create a bunch of public projects
+        self.total_projects = 50
         projects = (
             Project(name=f"project{n}", is_public=True, owner=self.user)
-            for n in range(500)
+            for n in range(self.total_projects)
         )
         Project.objects.bulk_create(projects)
 
@@ -51,9 +52,10 @@ class QfcTestCase(APITransactionTestCase):
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        page_size = 35
+        page_size = 14
         offset = 36
-        Project.objects.all().count()
+        unlimited_count = Project.objects.all().count()
+        self.assertEqual(unlimited_count, self.total_projects)
 
         # Obtain response with LIMIT
         results_with_pagination = self.client.get(
