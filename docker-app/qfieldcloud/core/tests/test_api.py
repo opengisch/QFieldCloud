@@ -1,6 +1,5 @@
 import logging
 import time
-from urllib import parse
 
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
@@ -11,12 +10,6 @@ from rest_framework.test import APITransactionTestCase
 from .utils import setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
-
-
-def parse_numeric_query_params_from_url(url: str) -> dict[str, int]:
-    parsed_url = parse.urlparse(url).query
-    parsed_query = parse.parse_qs(parsed_url)
-    return {k: int(v[0]) for k, v in parsed_query.items()}
 
 
 class QfcTestCase(APITransactionTestCase):
