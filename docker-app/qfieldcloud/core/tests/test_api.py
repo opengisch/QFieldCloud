@@ -59,7 +59,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_api_pagination_limitoffset(self):
         expected_count = Project.objects.all().count()
-        assert expected_count == 500
+        self.assertEqual(expected_count, 500)
 
         view = ProjectViewSet.as_view({"get": "list"})
         factory = APIRequestFactory()
