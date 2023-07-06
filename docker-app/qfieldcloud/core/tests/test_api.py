@@ -60,8 +60,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_api_pagination_limitoffset(self):
         """Test LimitOffset pagination blank implementation"""
-
-        # Authenticate client
         expected_count = Project.objects.all().count()
         self.assertEqual(expected_count, 500)
 
