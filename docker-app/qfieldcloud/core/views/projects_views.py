@@ -98,12 +98,14 @@ include_public_param = openapi.Parameter(
     ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
+
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.PaginateResults(default_limit=25)
 
     def get_queryset(self):
+
         projects = Project.objects.for_user(self.request.user)
 
         # In the list endpoint, by default we filter out public projects. They can be
@@ -161,6 +163,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     ),
 )
 class PublicProjectsListView(generics.ListAPIView):
+
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
