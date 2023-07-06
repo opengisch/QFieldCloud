@@ -81,5 +81,5 @@ class QfcTestCase(APITransactionTestCase):
             "/api/v1/projects/",
         ).json()
 
-        # Test length (this is super slow because of serialization)
+        # Test length (this is super slow -- 1 minute or so -- because of serialization)
         self.assertEqual(len(results_without_pagination), unlimited_count)
