@@ -59,16 +59,22 @@ class QfcTestCase(APITransactionTestCase):
         self.assertGreater(toc - tic, 0)
 
     def test_api_pagination_limitoffset(self):
+        """Test LimitOffset pagination blank implementation"""
+
+        # Authenticate client
         expected_count = Project.objects.all().count()
         self.assertEqual(expected_count, 500)
 
-        # picked randomly: ProjectViewSet
+        # Replacing ProjectViewSet's current pagination class
+        # with LimitOffsetPagination to test it
         ProjectViewSet.pagination_class = LimitOffsetPagination
         view = ProjectViewSet.as_view({"get": "list"})
-        factory = APIRequestFactory()
         page_size = 35
 
-        # obtain response with LIMIT
+        # Using  APIRequest with ViewSet to be able to construct the specific Request object
+        factory = APIRequestFactory()
+
+        # Obtain response with LIMIT
         request_with_pagination = factory.get("/api/v1/projects/", {"limit": page_size})
         force_authenticate(request_with_pagination, user=self.user, token=self.token)
         response = view(request_with_pagination)
@@ -76,7 +82,7 @@ class QfcTestCase(APITransactionTestCase):
         results_with_pagination = response_rendered.data["results"]
         self.assertEqual(len(results_with_pagination), page_size)
 
-        # obtain response with LIMIT and OFFSET
+        # Obtain response with LIMIT and OFFSET
         offset = 36
         request_with_offset = factory.get(
             "api/v1/projects/", {"limit": page_size, "offset": offset}
@@ -85,23 +91,23 @@ class QfcTestCase(APITransactionTestCase):
         response = view(request_with_offset)
         response_rendered = response.render()
 
-        # test page size
+        # Test page size
         results_with_offset = response_rendered.data["results"]
         self.assertEqual(len(results_with_offset), page_size)
 
-        # test 'previous' params
+        # Test 'previous' params
         previous_url = response_rendered.data["previous"]
         params = parse_numeric_query_params_from_url(previous_url)
         self.assertEqual(params["limit"], 35)
         self.assertEqual(params["offset"], 1)
 
-        # test 'next' params
+        # Test 'next' params
         next_url = response_rendered.data["next"]
         params = parse_numeric_query_params_from_url(next_url)
         self.assertEqual(params["limit"], 35)
         self.assertEqual(params["offset"], 71)
 
-        # obtain without pagination (aka control test)
+        # Obtain without pagination (aka control test)
         request_without_pagination = factory.get(
             "/api/v1/projects/",
         )
@@ -109,18 +115,14 @@ class QfcTestCase(APITransactionTestCase):
         response = view(request_without_pagination)
         response_rendered = response.render()
 
-        # testing length
+        # Test length
         results_without_pagination = response_rendered.data
         self.assertEqual(len(results_without_pagination), expected_count)
 
     def test_api_pagination_projects(self):
-        factory = APIRequestFactory()
-        request = factory.get("/api/v1/projects/", {"limit": 10})
-        force_authenticate(request, user=self.user, token=self.token)
+        """Test ProjectViewSet current, custom pagination"""
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        # ProjectViewSet uses 'LimitOffsetPaginationResults' by default
-        view = ProjectViewSet.as_view({"get": "list"})
-        response = view(request)
-
-        response_rendered = response.render()
-        self.assertEqual(len(response_rendered.data), 10)
+        response = self.client.get("/api/v1/projects/", {"limit": 10})
+        self.assertEqual(len(response.data), 10)
