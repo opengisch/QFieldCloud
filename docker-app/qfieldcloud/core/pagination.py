@@ -20,16 +20,28 @@ def parameterize_pagination(_class: type) -> Callable:
 @parameterize_pagination
 class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     """
-    Based on LimitOffsetPagination. Custom implementation such that response.data = (DRF's blanket LimitOffsetPagination response).data.results
-    For comparison, the DRF's blanket implementation defines:
-    - response.data["results"]
-    - response.data["count"]
-    - response.data["next"]
-    - response.data["previous"]
-    which are not available from instances of the present class.
+    Based on LimitOffsetPagination.
+    Custom implementation such that response.data = (DRF's blanket LimitOffsetPagination response).data.results
+    Optionally sets a new header ('X-Total-Count') to the number of entries in the paginated response.
+    Use it only if you can afford the performance cost.
+    Can be customized when assigning 'pagination_class'.
     """
 
     default_limit = QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT
+    count_entries = True
+
+    def get_headers(self) -> dict[str, None]:
+        """Initializes a new header field to carry the number of paginated entries."""
+        return {"X-Total-Count": None}
 
     def get_paginated_response(self, data) -> response.Response:
-        return response.Response(data)
+        """
+        Sets the header field initialized in the previous method to the number of paginated entries.
+        Return just the entries in the response body.
+        """
+        if self.count_entries:
+            headers = self.get_headers()
+            headers["X-Total-Count"] = len(data)
+            return response.Response(data, headers=headers)
+        else:
+            return response.Response(data)

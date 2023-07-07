@@ -82,3 +82,15 @@ class QfcTestCase(APITransactionTestCase):
             ProjectViewSet.pagination_class.default_limit,
             len(results_without_offset_or_request_level_limit),
         )
+
+    def test_api_headers_count(self):
+        """Test LimitOffset pagination custom implementation"""
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+
+        limit = 3
+
+        response = self.client.get("/api/v1/projects/", {"limit": limit})
+
+        print(response.headers)
+        self.assertEqual(len(response.json()), limit)
