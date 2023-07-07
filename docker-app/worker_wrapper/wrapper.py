@@ -12,6 +12,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 import docker
 import requests
 from constance import config
+from django.conf import settings
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
@@ -294,6 +295,7 @@ class JobRun:
                 "type": self.job.type,
                 "job_id": str(self.job.id),
                 "project_id": str(self.job.project_id),
+                "environment": settings.ENVIRONMENT,
             },
         )
 
@@ -573,8 +575,9 @@ def cancel_orphaned_workers():
     client: DockerClient = docker.from_env()
 
     running_workers: List[Container] = client.containers.list(
-        filters={"label": "app=worker"}
+        filters={"label": ["app=worker", f"environment={settings.ENVIRONMENT}"]},
     )
+
     if len(running_workers) == 0:
         return
 
