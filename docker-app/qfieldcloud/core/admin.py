@@ -1051,14 +1051,13 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner",
         "date_joined",
+        "active_users_links",
     )
     list_display = (
         "username",
         "email",
         "organization_owner__link",
         "date_joined",
-        # "storage_usage__field",
-        "active_users",
     )
 
     search_fields = (
@@ -1068,22 +1067,31 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__email__iexact",
     )
 
-    readonly_fields = ("date_joined", "storage_usage__field", "active_users")
+    readonly_fields = (
+        "date_joined",
+        "storage_usage__field",
+        "active_users_links",
+    )
 
-    list_select_related = ("organization_owner",)
+    list_select_related = ("organization_owner", "useraccount")
 
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("organization_owner",)
 
-    @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> int | None:
-        # The relation 'current_subscription_vw' is not instantiated unless the organization
-        # does have a current subscription
-        if hasattr(instance, "current_subscription_vw"):
-            return instance.current_subscription_vw.active_users_count
-        else:
-            return None
+    @admin.display(description=_("Active members"))
+    def active_users_links(self, instance) -> str:
+        persons = instance.useraccount.current_subscription.active_users
+        userlinks = "<p> - </p>"
+        if persons:
+            userlinks = "<br>".join(model_admin_url(p, p.username) for p in persons)
+        help_text = """
+        <p style="font-size: 11px; color: var(--body-quiet-color)">
+            Active members have triggererd at least one job or uploaded at least one delta in the current billing period.
+            These are all the users who will be billed -- plan included or additional.
+        </p>
+        """
+        return format_html(f"{userlinks} {help_text}")
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):
