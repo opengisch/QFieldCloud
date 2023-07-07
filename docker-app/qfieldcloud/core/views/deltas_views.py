@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import exceptions, permissions_utils, utils
+from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
@@ -50,6 +50,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def post(self, request, projectid):
 
@@ -167,6 +168,7 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]

@@ -1,5 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
-from qfieldcloud.core import permissions_utils, serializers
+from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job, Project
 from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
@@ -23,6 +23,7 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.JobSerializer
     lookup_url_kwarg = "job_id"
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_serializer_by_job_type(self, job_type, *args, **kwargs):
         if job_type == Job.Type.DELTA_APPLY:
