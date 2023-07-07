@@ -1,7 +1,9 @@
+from typing import Callable
+
 from rest_framework import pagination, response
 
 
-def parameterize_pagination(_class: type):
+def parameterize_pagination(_class: type) -> Callable:
     """
     Set as class attributes the items passed as kwargs.
     """
@@ -14,7 +16,7 @@ def parameterize_pagination(_class: type):
     return configure_class_object
 
 
-@parameterize_pagination
+@parameterize_pagination()
 class PaginateResults(pagination.LimitOffsetPagination):
     """
     Based on LimitOffsetPagination. Custom implementation such that response.data = (DRF's blanket LimitOffsetPagination response).data.results
@@ -23,6 +25,7 @@ class PaginateResults(pagination.LimitOffsetPagination):
     - response.data["count"]
     - response.data["next"]
     - response.data["previous"]
+    which are not available from instances of the present class.
     """
 
     def get_paginated_response(self, data) -> response.Response:
