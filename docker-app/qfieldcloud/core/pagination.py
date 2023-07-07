@@ -1,5 +1,6 @@
 from typing import Callable
 
+from qfieldcloud.settings import QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT
 from rest_framework import pagination, response
 
 
@@ -28,7 +29,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     which are not available from instances of the present class.
     """
 
-    default_limit = 15
+    default_limit = QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT
 
     def get_paginated_response(self, data) -> response.Response:
         return response.Response(data)
