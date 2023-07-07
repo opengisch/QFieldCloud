@@ -52,8 +52,8 @@ class QfcTestCase(APITransactionTestCase):
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        page_size = 14
-        offset = 36
+        page_size = 5
+        offset = 3
         unlimited_count = Project.objects.all().count()
         self.assertEqual(unlimited_count, self.total_projects)
 
