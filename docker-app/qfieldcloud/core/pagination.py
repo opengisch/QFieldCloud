@@ -16,7 +16,7 @@ def parameterize_pagination(_class: type) -> Callable:
     return configure_class_object
 
 
-@parameterize_pagination()
+@parameterize_pagination
 class PaginateResults(pagination.LimitOffsetPagination):
     """
     Based on LimitOffsetPagination. Custom implementation such that response.data = (DRF's blanket LimitOffsetPagination response).data.results
