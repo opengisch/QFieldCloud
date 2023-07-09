@@ -4,6 +4,7 @@ import time
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
+from qfieldcloud.core.pagination import QfcLimitOffsetPagination
 from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -87,10 +88,8 @@ class QfcTestCase(APITransactionTestCase):
         """Test LimitOffset pagination custom implementation"""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
-
-        limit = 3
-
-        response = self.client.get("/api/v1/projects/", {"limit": limit})
-
-        print(response.headers)
-        self.assertEqual(len(response.json()), limit)
+        response = self.client.get("/api/v1/projects/")
+        self.assertEqual(
+            int(response.headers["X-Total-Count"]),
+            QfcLimitOffsetPagination().default_limit,
+        )
