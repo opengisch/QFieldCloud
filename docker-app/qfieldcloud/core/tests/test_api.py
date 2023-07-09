@@ -85,9 +85,10 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_api_headers_count(self):
-        """Test LimitOffset pagination custom implementation"""
+        """Test LimitOffset pagination custom 'X-Total-Count' headers implementation"""
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+        
         response = self.client.get("/api/v1/projects/")
         self.assertEqual(
             int(response.headers["X-Total-Count"]),
