@@ -30,7 +30,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     count_entries = True
     default_limit = settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT
 
-    def get_headers(self) -> dict[str, None]:
+    def get_headers(self) -> dict[str, Any]:
         """
         Initializes a new header field to carry the number of paginated entries
         if the class method 'count_entries' is True.
