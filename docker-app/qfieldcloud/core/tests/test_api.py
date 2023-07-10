@@ -92,5 +92,5 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get("/api/v1/projects/")
         self.assertEqual(
             int(response.headers["X-Total-Count"]),
-            QfcLimitOffsetPagination().default_limit,
+            self.total_projects,
         )

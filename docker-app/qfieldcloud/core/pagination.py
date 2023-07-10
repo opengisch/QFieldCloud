@@ -1,6 +1,6 @@
 from typing import Callable
 
-from qfieldcloud.settings import QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT
+from django.conf import settings
 from rest_framework import pagination, response
 
 
@@ -27,11 +27,12 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     Can be customized when assigning 'pagination_class'.
     """
 
-    default_limit = QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT
+    default_limit = settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT
+    count_entries = False
 
     def get_headers(self) -> dict[str, None]:
         """Initializes a new header field to carry the number of paginated entries."""
-        return {"X-Total-Count": None}
+        return {"X-Total-Count": self.count}
 
     def get_paginated_response(self, data) -> response.Response:
         """
@@ -39,8 +40,6 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         Return just the entries in the response body.
         """
         if self.count_entries:
-            headers = self.get_headers()
-            headers["X-Total-Count"] = len(data)
-            return response.Response(data, headers=headers)
+            return response.Response(data, headers=self.get_headers())
         else:
             return response.Response(data)
