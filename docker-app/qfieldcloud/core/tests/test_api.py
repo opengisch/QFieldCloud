@@ -89,13 +89,19 @@ class QfcTestCase(APITransactionTestCase):
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        # Mutating project viewset for testing purposes
+        # Forcing 'count_entries' to be True
         ProjectViewSet.pagination_class = pagination.QfcLimitOffsetPagination(
             count_entries=True
         )
-
         response = self.client.get("/api/v1/projects/")
         self.assertEqual(
             int(response.headers["X-Total-Count"]),
             self.total_projects,
         )
+
+        # Forcing 'count_entries' to be False
+        ProjectViewSet.pagination_class = pagination.QfcLimitOffsetPagination(
+            count_entries=False
+        )
+        response = self.client.get("/api/v1/projects/")
+        self.assertFalse("X-Total-Count" in response.headers)
