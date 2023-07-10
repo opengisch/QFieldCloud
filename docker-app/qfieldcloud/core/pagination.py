@@ -32,14 +32,14 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
 
     def get_headers(self) -> dict[str, None]:
         """Initializes a new header field to carry the number of paginated entries."""
-        return {"X-Total-Count": self.count}
+        if self.count_entries:
+            return {"X-Total-Count": self.count}
+        else:
+            return {}
 
     def get_paginated_response(self, data) -> response.Response:
         """
         Sets the header field initialized in the previous method to the number of paginated entries.
         Return just the entries in the response body.
         """
-        if self.count_entries:
-            return response.Response(data, headers=self.get_headers())
-        else:
-            return response.Response(data)
+        return response.Response(data, headers=self.get_headers())
