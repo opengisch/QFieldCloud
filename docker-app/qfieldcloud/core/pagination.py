@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable
 
 from django.conf import settings
 from rest_framework import pagination, response
