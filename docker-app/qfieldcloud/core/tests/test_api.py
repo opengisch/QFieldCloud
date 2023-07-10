@@ -104,4 +104,4 @@ class QfcTestCase(APITransactionTestCase):
             count_entries=False
         )
         response = self.client.get("/api/v1/projects/")
-        self.assertFalse("X-Total-Count" in response.headers)
+        self.assertNotIn("X-Total-Count", response.headers)
