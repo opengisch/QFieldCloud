@@ -4,7 +4,6 @@ import time
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
-from qfieldcloud.core.pagination import QfcLimitOffsetPagination
 from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
