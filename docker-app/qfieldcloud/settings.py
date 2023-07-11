@@ -284,6 +284,7 @@ if SENTRY_DSN:
             PlanInsufficientError,
             QuotaError,
         )
+        from rest_framework.exceptions import ValidationError as RestValidationError
 
         ignored_exceptions = (
             ValidationError,
@@ -291,6 +292,7 @@ if SENTRY_DSN:
             QuotaError,
             PlanInsufficientError,
             InactiveSubscriptionError,
+            RestValidationError,
         )
 
         if "exc_info" in hint:
