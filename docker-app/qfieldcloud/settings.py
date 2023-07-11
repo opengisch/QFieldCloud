@@ -431,7 +431,7 @@ QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
 # Use pg meta table estimate for pagination and display above n entries
 QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 
-# Default limit for paginating data from views using QfcLimitOffsetPagination
+# Default limit for paginating data from views using `QfcLimitOffsetPagination`
 QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT = 50
 
 # Admin sort URLs which will be skipped from checking if they return HTTP 200

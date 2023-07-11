@@ -21,10 +21,10 @@ def parameterize_pagination(_class: type) -> Callable:
 class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     """
     Based on LimitOffsetPagination.
-    Custom implementation such that response.data = (DRF's blanket LimitOffsetPagination response).data.results
-    Optionally sets a new header ('X-Total-Count') to the number of entries in the paginated response.
+    Custom implementation such that `response.data = LimitOffsetPagination.data.results` from DRF's blanket implementation.
+    Optionally sets a new header `X-Total-Count` to the number of entries in the paginated response.
     Use it only if you can afford the performance cost.
-    Can be customized when assigning 'pagination_class'.
+    Can be customized when assigning `pagination_class`.
     """
 
     count_entries = True
@@ -33,7 +33,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     def get_headers(self) -> dict[str, Any]:
         """
         Initializes a new header field to carry the number of paginated entries
-        if the class method 'count_entries' is True.
+        if the class method `count_entries` is `True`.
         """
         if self.count_entries:
             return {"X-Total-Count": self.count}
