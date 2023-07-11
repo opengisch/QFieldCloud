@@ -135,12 +135,15 @@ UserEmailDetails = namedtuple(
         "type",
         "email",
         "date_joined",
+        "last_login",
+        "verified",
         "owner_id",
         "owner_username",
         "owner_email",
         "owner_first_name",
         "owner_last_name",
         "owner_date_joined",
+        "owner_last_login",
     ],
 )
 
@@ -149,12 +152,12 @@ class EmailAddressAdmin(EmailAddressAdminBase):
     def get_urls(self):
         urls = super().get_urls()
         return [
-            *urls,
             path(
                 "admin/export_emails_to_csv/",
                 self.admin_site.admin_view(self.export_emails_to_csv),
                 name="export_emails_to_csv",
             ),
+            *urls,
         ]
 
     def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
@@ -168,6 +171,7 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                     u.first_name,
                     u.last_name,
                     u.type,
+                    u.last_login,
                     u.date_joined
                 FROM
                     core_user u
@@ -186,13 +190,16 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 u.first_name,
                 u.last_name,
                 u.date_joined,
+                u.last_login,
                 u.type,
+                ae.verified,
                 oo.id AS "owner_id",
                 oo.username AS "owner_username",
                 oo.email AS "owner_email",
                 oo.first_name AS "owner_first_name",
                 oo.last_name AS "owner_last_name",
-                oo.date_joined AS "owner_date_joined"
+                oo.date_joined AS "owner_date_joined",
+                oo.last_login AS "owner_last_login"
             FROM
                 u
                 LEFT JOIN account_emailaddress ae ON ae.user_id = u.id
@@ -210,12 +217,15 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 row.type,
                 row.email,
                 row.date_joined,
+                row.last_login,
+                row.verified,
                 row.owner_id,
                 row.owner_username,
                 row.owner_email,
                 row.owner_first_name,
                 row.owner_last_name,
                 row.owner_date_joined,
+                row.owner_last_login,
             )
             for row in raw_queryset
         )
