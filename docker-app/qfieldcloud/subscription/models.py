@@ -817,7 +817,7 @@ class AbstractSubscription(models.Model):
         TODO Python 3.11 the actual return type is Self
         """
         if active_since:
-            # remove milliseconds as there will be slight shift with the remote system data
+            # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
 
         if plan.is_trial:
