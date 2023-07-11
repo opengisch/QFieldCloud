@@ -45,7 +45,7 @@ class AuthToken(models.Model):
             return AuthToken.ClientType.QFIELDSYNC
 
         if re.search(
-            r"Mozilla\/5.0 .+(AppleWebKit\/\d+.\d+ \(KHTML, like Gecko\)|Firefox\/[\d\.]+)",
+            r"^Mozilla\/5.0 .+(AppleWebKit\/\d+.\d+ \(KHTML, like Gecko\)|Firefox\/[\d\.]+)",
             user_agent,
         ):
             return AuthToken.ClientType.BROWSER
