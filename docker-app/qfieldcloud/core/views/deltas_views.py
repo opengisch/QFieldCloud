@@ -35,14 +35,14 @@ class DeltaFilePermissions(permissions.BasePermission):
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
-        operation_description="List all deltas of a project",
-        operation_id="List deltas",
+        operation_description="Get all deltas of the given project. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
+        operation_id="Get deltas of project",
     ),
 )
 @method_decorator(
     name="post",
     decorator=swagger_auto_schema(
-        operation_description="Add a deltafile to a project",
+        operation_description="Add a deltafile to the given project",
         operation_id="Add deltafile",
     ),
 )

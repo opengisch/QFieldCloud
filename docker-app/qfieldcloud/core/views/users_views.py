@@ -23,8 +23,8 @@ class ListUsersViewPermissions(permissions.BasePermission):
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
-        operation_description="List all users and organizations",
-        operation_id="List users and organizations",
+        operation_description="List users and/or organizations. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
+        operation_id="List users and/or organizations",
     ),
 )
 class ListUsersView(generics.ListAPIView):
@@ -88,12 +88,12 @@ class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
 
 
 @method_decorator(
-    name="get",
+    name="retrieve",
     decorator=swagger_auto_schema(
-        operation_description="""Get a single user's (or organization) publicly
+        operation_description="""Retrieve a single user's (or organization) publicly
         information or complete info if the request is done by the user
         himself""",
-        operation_id="Get user",
+        operation_id="Retrieve user",
     ),
 )
 @method_decorator(
@@ -154,6 +154,13 @@ class ListUserOrganizationsViewPermissions(permissions.BasePermission):
         return False
 
 
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="List a user's organization",
+        operation_id="List a user's organizations",
+    ),
+)
 class ListUserOrganizationsView(generics.ListAPIView):
     """Get user's organizations"""
 
