@@ -3,7 +3,9 @@ import time
 
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core import pagination
 from qfieldcloud.core.models import Person, Project
+from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -51,8 +53,8 @@ class QfcTestCase(APITransactionTestCase):
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        page_size = 14
-        offset = 36
+        page_size = 5
+        offset = 3
         unlimited_count = Project.objects.all().count()
         self.assertEqual(unlimited_count, self.total_projects)
 
@@ -71,9 +73,35 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(results_with_offset), page_size)
 
         # Obtain without pagination (= control test)
-        results_without_pagination = self.client.get(
+        results_without_offset_or_request_level_limit = self.client.get(
             "/api/v1/projects/",
         ).json()
 
-        # Test length (this is super slow -- 1 minute or so -- because of serialization)
-        self.assertEqual(len(results_without_pagination), unlimited_count)
+        # Even though the request is not setting a limit, the Project modelviewset
+        # was defined with a default limit that's kicking in here
+        self.assertEqual(
+            ProjectViewSet.pagination_class.default_limit,
+            len(results_without_offset_or_request_level_limit),
+        )
+
+    def test_api_headers_count(self):
+        """Test LimitOffset pagination custom 'X-Total-Count' headers implementation"""
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+
+        # Forcing 'count_entries' to be True
+        ProjectViewSet.pagination_class = pagination.QfcLimitOffsetPagination(
+            count_entries=True
+        )
+        response = self.client.get("/api/v1/projects/")
+        self.assertEqual(
+            int(response.headers["X-Total-Count"]),
+            self.total_projects,
+        )
+
+        # Forcing 'count_entries' to be False
+        ProjectViewSet.pagination_class = pagination.QfcLimitOffsetPagination(
+            count_entries=False
+        )
+        response = self.client.get("/api/v1/projects/")
+        self.assertNotIn("X-Total-Count", response.headers)
