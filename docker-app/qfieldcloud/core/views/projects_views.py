@@ -166,6 +166,7 @@ class PublicProjectsListView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
         return Project.objects.for_user(self.request.user).filter(is_public=True)

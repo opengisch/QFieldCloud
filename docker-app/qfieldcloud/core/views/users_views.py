@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils, querysets_utils
+from qfieldcloud.core import pagination, permissions_utils, querysets_utils
 from qfieldcloud.core.models import Organization, Project
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
@@ -31,7 +31,7 @@ class ListUsersView(generics.ListAPIView):
 
     serializer_class = PublicInfoUserSerializer
     permission_classes = [permissions.IsAuthenticated, ListUsersViewPermissions]
-    paginate_by = 100
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
         params = self.request.GET
