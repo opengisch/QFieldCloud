@@ -833,7 +833,6 @@ class AbstractSubscription(models.Model):
                 plan=plan,
                 account=account,
                 created_by=created_by,
-                # TODO in the future the status can be configured in the `Plan.initial_subscription_status`
                 status=plan.initial_subscription_status,
                 active_since=active_since,
                 active_until=active_until,
