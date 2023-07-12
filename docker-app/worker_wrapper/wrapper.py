@@ -291,11 +291,10 @@ class JobRun:
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
             labels={
-                "app": "worker",
+                "app": f"{settings.ENVIRONMENT}_worker",
                 "type": self.job.type,
                 "job_id": str(self.job.id),
                 "project_id": str(self.job.project_id),
-                "environment": settings.ENVIRONMENT,
             },
         )
 
@@ -575,7 +574,7 @@ def cancel_orphaned_workers():
     client: DockerClient = docker.from_env()
 
     running_workers: List[Container] = client.containers.list(
-        filters={"label": ["app=worker", f"environment={settings.ENVIRONMENT}"]},
+        filters={"label": f"app={settings.ENVIRONMENT}_worker"},
     )
 
     if len(running_workers) == 0:
