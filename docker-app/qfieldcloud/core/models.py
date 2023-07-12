@@ -1188,6 +1188,7 @@ class Project(models.Model):
             problems.append(
                 {
                     "layer": None,
+                    "level": "error",
                     "code": "missing_projectfile",
                     "description": _("Missing QGIS project file (.qgs/.qgz)."),
                     "solution": _(
@@ -1203,6 +1204,7 @@ class Project(models.Model):
                     problems.append(
                         {
                             "layer": layer_name,
+                            "level": "warning",
                             "code": "layer_problem",
                             "description": _(
                                 'Layer "{}" has an error with code "{}": {}'
@@ -1221,6 +1223,7 @@ class Project(models.Model):
                     problems.append(
                         {
                             "layer": layer_name,
+                            "level": "warning",
                             "code": "layer_problem",
                             "description": _(
                                 'Layer "{}" does not have supported primary key attribute. The layer will be read-only on QField.'
@@ -1236,6 +1239,7 @@ class Project(models.Model):
             problems.append(
                 {
                     "layer": None,
+                    "level": "error",
                     "code": "missing_project_details",
                     "description": _("Failed to parse metadata from project."),
                     "solution": _("Re-upload the QGIS project file (.qgs/.qgz)."),
@@ -1259,7 +1263,7 @@ class Project(models.Model):
             )
 
             # TODO use self.problems to get if there are project problems
-            if not self.project_filename:
+            if not self.project_filename or not self.project_details:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
             elif (
