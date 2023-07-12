@@ -1263,7 +1263,7 @@ class Project(models.Model):
             )
 
             # TODO use self.problems to get if there are project problems
-            if not self.project_filename:
+            if not self.project_filename or not self.project_details:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
             elif (
