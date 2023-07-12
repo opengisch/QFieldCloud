@@ -3,4 +3,4 @@ typing-extensions>=3.7.4.3,<3.7.5
 tabulate==v0.8.9
 sentry-sdk
 requests>=2.28.1
-qfieldcloud-sdk==0.6.1
+qfieldcloud-sdk==0.7.0
