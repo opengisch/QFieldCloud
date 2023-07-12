@@ -1181,6 +1181,70 @@ class Project(models.Model):
             return True
 
     @property
+    def problems(self) -> list[dict]:
+        problems = []
+
+        if not self.project_filename:
+            problems.append(
+                {
+                    "layer": None,
+                    "code": "missing_projectfile",
+                    "description": _("Missing QGIS project file (.qgs/.qgz)."),
+                    "solution": _(
+                        "Make sure a QGIS project file (.qgs/.qgz) is uploaded to QFieldCloud. Reupload the file if problem persists."
+                    ),
+                }
+            )
+        elif self.project_details:
+            for layer_data in self.project_details.get("layers_by_id", {}).values():
+                layer_name = layer_data.get("name")
+
+                if layer_data.get("error_code") != "no_error":
+                    problems.append(
+                        {
+                            "layer": layer_name,
+                            "code": "layer_problem",
+                            "description": _(
+                                'Layer "{}" has an error with code "{}": {}'
+                            ).format(
+                                layer_name,
+                                layer_data.get("error_code"),
+                                layer_data.get("error_summary"),
+                            ),
+                            "solution": _(
+                                'Check the last "process_projectfile" logs for more info and reupload the project files with the required changes.'
+                            ),
+                        }
+                    )
+                # the layer is missing a primary key, warn it is going to be read-only
+                elif layer_data.get("qfc_source_data_pk_name") == "":
+                    problems.append(
+                        {
+                            "layer": layer_name,
+                            "code": "layer_problem",
+                            "description": _(
+                                'Layer "{}" does not have supported primary key attribute. The layer will be read-only on QField.'
+                            ).format(
+                                layer_name,
+                            ),
+                            "solution": _(
+                                "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer with single column primary key."
+                            ),
+                        }
+                    )
+        else:
+            problems.append(
+                {
+                    "layer": None,
+                    "code": "missing_project_details",
+                    "description": _("Failed to parse metadata from project."),
+                    "solution": _("Re-upload the QGIS project file (.qgs/.qgz)."),
+                }
+            )
+
+        return problems
+
+    @property
     def status(self) -> Status:
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
@@ -1194,6 +1258,7 @@ class Project(models.Model):
                 self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
             )
 
+            # TODO use self.problems to get if there are project problems
             if not self.project_filename:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
