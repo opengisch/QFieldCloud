@@ -459,10 +459,19 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
+        active_storage_total = filesizeformat10(
+            instance.useraccount.current_subscription.active_storage_total_bytes
+        )
         used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
         used_storage_perc = instance.useraccount.storage_used_ratio * 100
-        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
+        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
+
+        return _("total: {}; used: {} ({:.2f}%); free: {}").format(
+            active_storage_total,
+            used_storage,
+            used_storage_perc,
+            free_storage,
+        )
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
