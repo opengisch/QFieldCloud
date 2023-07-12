@@ -91,7 +91,7 @@ class QfcTestCase(APITransactionTestCase):
         cur.execute(
             """
             CREATE TABLE point (
-                id          integer,
+                id          integer primary key,
                 geometry   geometry(point, 2056)
             );
             """
