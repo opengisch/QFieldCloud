@@ -20,7 +20,7 @@ QField and QFieldCloud documentation is deployed [here](https://docs.qfield.org)
 
 Clone the repository and all its submodules:
 
-    git clone --recurse-submodules git://github.com/opengisch/qfieldcloud.git
+    git clone --recurse-submodules git@github.com:opengisch/qfieldcloud.git
 
 To fetch upstream development, don't forget to update the submodules too:
 
