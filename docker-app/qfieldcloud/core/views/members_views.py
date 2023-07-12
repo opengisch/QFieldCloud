@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils
+from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Organization, OrganizationMember
 from qfieldcloud.core.serializers import OrganizationMemberSerializer
 from rest_framework import generics, permissions, status
@@ -34,21 +34,22 @@ class ListCreateMembersViewPermissions(permissions.BasePermission):
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
-        operation_description="List members of an organization",
-        operation_id="List memebers",
+        operation_description="Get members of an organization",
+        operation_id="Get members of organization",
     ),
 )
 @method_decorator(
     name="post",
     decorator=swagger_auto_schema(
         operation_description="Add a user as member of an organization",
-        operation_id="Create member",
+        operation_id="Add member",
     ),
 )
 class ListCreateMembersView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated, ListCreateMembersViewPermissions]
     serializer_class = OrganizationMemberSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
         organization = self.request.parser_context["kwargs"]["organization"]
@@ -100,13 +101,13 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
     name="get",
     decorator=swagger_auto_schema(
         operation_description="Get the role of a member of an organization",
-        operation_id="Get memeber",
+        operation_id="Get role of organization member",
     ),
 )
 @method_decorator(
     name="put",
     decorator=swagger_auto_schema(
-        operation_description="Update a memeber of an organization",
+        operation_description="Update a member of an organization",
         operation_id="Update member",
     ),
 )

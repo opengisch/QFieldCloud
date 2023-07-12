@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import exceptions, permissions_utils, utils
+from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
@@ -35,14 +35,14 @@ class DeltaFilePermissions(permissions.BasePermission):
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
-        operation_description="List all deltas of a project",
-        operation_id="List deltas",
+        operation_description="Get all deltas of the given project. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
+        operation_id="Get deltas of project",
     ),
 )
 @method_decorator(
     name="post",
     decorator=swagger_auto_schema(
-        operation_description="Add a deltafile to a project",
+        operation_description="Add a deltafile to the given project",
         operation_id="Add deltafile",
     ),
 )
@@ -50,6 +50,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def post(self, request, projectid):
 
@@ -167,6 +168,7 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]

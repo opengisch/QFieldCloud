@@ -119,7 +119,7 @@ def start_app():
     global QGISAPP
 
     if QGISAPP is None:
-        qgs_stderr_logger.info(
+        logging.info(
             f"Starting QGIS app version {Qgis.versionInt()} ({Qgis.devVersion()})..."
         )
         argvb = []
@@ -141,6 +141,8 @@ def start_app():
         def exitQgis():
             stop_app()
 
+        logging.info("QGIS app started!")
+
     return QGISAPP
 
 
@@ -157,7 +159,7 @@ def stop_app():
     QgsProject.instance().read("")
 
     if QGISAPP is not None:
-        qgs_stderr_logger.info("Stopping QGIS app…")
+        logging.info("Stopping QGIS app…")
         QGISAPP.exitQgis()
         del QGISAPP
 
@@ -167,6 +169,8 @@ def download_project(
 ) -> Path:
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""
+    logging.info("Preparing a temporary directory for project files…")
+
     if not destination:
         # Create a temporary directory
         destination = Path(tempfile.mkdtemp())
@@ -181,6 +185,8 @@ def download_project(
     if skip_attachments:
         files = [file for file in files if not file["is_attachment"]]
 
+    logging.info("Downloading project files…")
+
     client.download_files(
         files,
         project_id,
@@ -191,6 +197,8 @@ def download_project(
         show_progress=False,
     )
 
+    logging.info("Downloading project files finished!")
+
     list_local_files(project_id, working_dir)
 
     return destination
@@ -199,6 +207,9 @@ def download_project(
 def upload_package(project_id: str, package_dir: Path) -> None:
     client = sdk.Client()
     list_local_files(project_id, package_dir)
+
+    logging.info("Uploading packaged project files…")
+
     client.upload_files(
         project_id,
         sdk.FileTransferType.PACKAGE,
@@ -209,11 +220,16 @@ def upload_package(project_id: str, package_dir: Path) -> None:
         job_id=JOB_ID,
     )
 
+    logging.info("Uploading packaged project files finished!")
+
 
 def upload_project(project_id: str, project_dir: Path) -> None:
     """Upload the files from the `project_dir` to the permanent file storage."""
     client = sdk.Client()
     list_local_files(project_id, project_dir)
+
+    logging.info("Uploading project files…")
+
     client.upload_files(
         project_id,
         sdk.FileTransferType.PROJECT,
@@ -223,9 +239,14 @@ def upload_project(project_id: str, project_dir: Path) -> None:
         show_progress=False,
     )
 
+    logging.info("Uploading packaged project files finished!")
+
 
 def list_local_files(project_id: str, project_dir: Path):
     client = sdk.Client()
+
+    logging.info("Getting project files list…")
+
     files = client.list_local_files(str(project_dir), "*")
     if files:
         logging.info(
@@ -582,6 +603,11 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
         error = layer.error()
         layer_id = layer.id()
         layer_source = LayerSource(layer)
+        datasource = None
+
+        if layer.dataProvider():
+            datasource = layer.dataProvider().uri().uri()
+
         layers_by_id[layer_id] = {
             "id": layer_id,
             "name": layer.name(),
@@ -595,10 +621,12 @@ def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
                 "QFieldSync/is_geometry_locked"
             ),
             "qfs_photo_naming": layer.customProperty("QFieldSync/photo_naming"),
+            "qfc_source_data_pk_name": layer_source.pk_attr_name,
+            "qfs_unsupported_source_pk": layer.customProperty(
+                "QFieldSync/unsupported_source_pk"
+            ),
             "is_valid": layer.isValid(),
-            "datasource": layer.dataProvider().uri().uri()
-            if layer.dataProvider()
-            else None,
+            "datasource": datasource,
             "type": layer.type(),
             "type_name": layer.type().name,
             "error_code": "no_error",

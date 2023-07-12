@@ -135,12 +135,15 @@ UserEmailDetails = namedtuple(
         "type",
         "email",
         "date_joined",
+        "last_login",
+        "verified",
         "owner_id",
         "owner_username",
         "owner_email",
         "owner_first_name",
         "owner_last_name",
         "owner_date_joined",
+        "owner_last_login",
     ],
 )
 
@@ -149,12 +152,12 @@ class EmailAddressAdmin(EmailAddressAdminBase):
     def get_urls(self):
         urls = super().get_urls()
         return [
-            *urls,
             path(
                 "admin/export_emails_to_csv/",
                 self.admin_site.admin_view(self.export_emails_to_csv),
                 name="export_emails_to_csv",
             ),
+            *urls,
         ]
 
     def gen_users_email_addresses(self) -> Generator[UserEmailDetails, None, None]:
@@ -168,6 +171,7 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                     u.first_name,
                     u.last_name,
                     u.type,
+                    u.last_login,
                     u.date_joined
                 FROM
                     core_user u
@@ -186,13 +190,16 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 u.first_name,
                 u.last_name,
                 u.date_joined,
+                u.last_login,
                 u.type,
+                ae.verified,
                 oo.id AS "owner_id",
                 oo.username AS "owner_username",
                 oo.email AS "owner_email",
                 oo.first_name AS "owner_first_name",
                 oo.last_name AS "owner_last_name",
-                oo.date_joined AS "owner_date_joined"
+                oo.date_joined AS "owner_date_joined",
+                oo.last_login AS "owner_last_login"
             FROM
                 u
                 LEFT JOIN account_emailaddress ae ON ae.user_id = u.id
@@ -210,12 +217,15 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 row.type,
                 row.email,
                 row.date_joined,
+                row.last_login,
+                row.verified,
                 row.owner_id,
                 row.owner_username,
                 row.owner_email,
                 row.owner_first_name,
                 row.owner_last_name,
                 row.owner_date_joined,
+                row.owner_last_login,
             )
             for row in raw_queryset
         )
@@ -459,10 +469,19 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
+        active_storage_total = filesizeformat10(
+            instance.useraccount.current_subscription.active_storage_total_bytes
+        )
         used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
         used_storage_perc = instance.useraccount.storage_used_ratio * 100
-        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
+        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
+
+        return _("total: {}; used: {} ({:.2f}%); free: {}").format(
+            active_storage_total,
+            used_storage,
+            used_storage_perc,
+            free_storage,
+        )
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -1051,14 +1070,13 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "email",
         "organization_owner",
         "date_joined",
+        "active_users_links",
     )
     list_display = (
         "username",
         "email",
         "organization_owner__link",
         "date_joined",
-        # "storage_usage__field",
-        "active_users",
     )
 
     search_fields = (
@@ -1068,22 +1086,31 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "organization_owner__email__iexact",
     )
 
-    readonly_fields = ("date_joined", "storage_usage__field", "active_users")
+    readonly_fields = (
+        "date_joined",
+        "storage_usage__field",
+        "active_users_links",
+    )
 
-    list_select_related = ("organization_owner",)
+    list_select_related = ("organization_owner", "useraccount")
 
     list_filter = ("date_joined",)
 
     autocomplete_fields = ("organization_owner",)
 
-    @admin.display(description=_("Active users (last billing period)"))
-    def active_users(self, instance) -> int | None:
-        # The relation 'current_subscription_vw' is not instantiated unless the organization
-        # does have a current subscription
-        if hasattr(instance, "current_subscription_vw"):
-            return instance.current_subscription_vw.active_users_count
-        else:
-            return None
+    @admin.display(description=_("Active members"))
+    def active_users_links(self, instance) -> str:
+        persons = instance.useraccount.current_subscription.active_users
+        userlinks = "<p> - </p>"
+        if persons:
+            userlinks = "<br>".join(model_admin_url(p, p.username) for p in persons)
+        help_text = """
+        <p style="font-size: 11px; color: var(--body-quiet-color)">
+            Active members have triggererd at least one job or uploaded at least one delta in the current billing period.
+            These are all the users who will be billed -- plan included or additional.
+        </p>
+        """
+        return format_html(f"{userlinks} {help_text}")
 
     @admin.display(description=_("Owner"))
     def organization_owner__link(self, instance):

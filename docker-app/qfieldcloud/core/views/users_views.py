@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils, querysets_utils
+from qfieldcloud.core import pagination, permissions_utils, querysets_utils
 from qfieldcloud.core.models import Organization, Project
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
@@ -23,15 +23,15 @@ class ListUsersViewPermissions(permissions.BasePermission):
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
-        operation_description="List all users and organizations",
-        operation_id="List users and organizations",
+        operation_description="List users and/or organizations. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
+        operation_id="List users and/or organizations",
     ),
 )
 class ListUsersView(generics.ListAPIView):
 
     serializer_class = PublicInfoUserSerializer
     permission_classes = [permissions.IsAuthenticated, ListUsersViewPermissions]
-    paginate_by = 100
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
         params = self.request.GET
@@ -88,12 +88,12 @@ class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
 
 
 @method_decorator(
-    name="get",
+    name="retrieve",
     decorator=swagger_auto_schema(
-        operation_description="""Get a single user's (or organization) publicly
+        operation_description="""Retrieve a single user's (or organization) publicly
         information or complete info if the request is done by the user
         himself""",
-        operation_id="Get user",
+        operation_id="Retrieve user",
     ),
 )
 @method_decorator(
@@ -154,6 +154,13 @@ class ListUserOrganizationsViewPermissions(permissions.BasePermission):
         return False
 
 
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_description="List a user's organization",
+        operation_id="List a user's organizations",
+    ),
+)
 class ListUserOrganizationsView(generics.ListAPIView):
     """Get user's organizations"""
 

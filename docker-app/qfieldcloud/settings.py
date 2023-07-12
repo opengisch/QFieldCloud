@@ -284,6 +284,7 @@ if SENTRY_DSN:
             PlanInsufficientError,
             QuotaError,
         )
+        from rest_framework.exceptions import ValidationError as RestValidationError
 
         ignored_exceptions = (
             ValidationError,
@@ -291,6 +292,7 @@ if SENTRY_DSN:
             QuotaError,
             PlanInsufficientError,
             InactiveSubscriptionError,
+            RestValidationError,
         )
 
         if "exc_info" in hint:
@@ -430,6 +432,9 @@ QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
 
 # Use pg meta table estimate for pagination and display above n entries
 QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
+
+# Default limit for paginating data from views using QfcLimitOffsetPagination
+QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT = 50
 
 # Admin sort URLs which will be skipped from checking if they return HTTP 200
 QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)

@@ -58,40 +58,50 @@ class ListFilesView(views.APIView):
             if version.key not in files:
                 files[version.key] = {"versions": []}
 
-            head = version.head()
             path = PurePath(version.key)
             filename = str(path.relative_to(*path.parts[:3]))
             last_modified = version.last_modified.strftime("%d.%m.%Y %H:%M:%S %Z")
 
-            # We cannot be sure of the metadata's first letter case
-            # https://github.com/boto/boto3/issues/1709
-            metadata = head["Metadata"]
-            if "sha256sum" in metadata:
-                sha256sum = metadata["sha256sum"]
+            version_data = {
+                "size": version.size,
+                "md5sum": version.e_tag.replace('"', ""),
+                "version_id": version.version_id,
+                "last_modified": last_modified,
+                "is_latest": version.is_latest,
+                "display": S3ObjectVersion(version.key, version).display,
+            }
+
+            # NOTE Some clients (e.g. QField, QFieldSync) are still requiring the `sha256` key to check whether the files needs to be reuploaded.
+            # Since we do not have control on these old client versions, we need to keep the API backward compatible for some time and assume `skip_metadata=0` by default.
+            skip_metadata_param = request.GET.get("skip_metadata", "0")
+            if skip_metadata_param == "0":
+                skip_metadata = False
             else:
-                sha256sum = metadata["Sha256sum"]
+                skip_metadata = bool(skip_metadata_param)
+
+            if not skip_metadata:
+                head = version.head()
+                # We cannot be sure of the metadata's first letter case
+                # https://github.com/boto/boto3/issues/1709
+                metadata = head["Metadata"]
+                if "sha256sum" in metadata:
+                    sha256sum = metadata["sha256sum"]
+                else:
+                    sha256sum = metadata["Sha256sum"]
+                files[version.key]["sha256"] = sha256sum
+
+                version_data["sha256"] = sha256sum
 
             if version.is_latest:
                 is_attachment = get_attachment_dir_prefix(project, filename) != ""
 
                 files[version.key]["name"] = filename
                 files[version.key]["size"] = version.size
-                files[version.key]["sha256"] = sha256sum
                 files[version.key]["md5sum"] = version.e_tag.replace('"', "")
                 files[version.key]["last_modified"] = last_modified
                 files[version.key]["is_attachment"] = is_attachment
 
-            files[version.key]["versions"].append(
-                {
-                    "size": version.size,
-                    "sha256": sha256sum,
-                    "md5sum": version.e_tag.replace('"', ""),
-                    "version_id": version.version_id,
-                    "last_modified": last_modified,
-                    "is_latest": version.is_latest,
-                    "display": S3ObjectVersion(version.key, version).display,
-                }
-            )
+            files[version.key]["versions"].append(version_data)
 
         result_list = [files[key] for key in files]
         return Response(result_list)

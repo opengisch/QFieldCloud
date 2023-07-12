@@ -191,7 +191,9 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_list_files_for_qfield(self):
         cur = self.conn.cursor()
-        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        cur.execute(
+            "CREATE TABLE point (id integer primary key, geometry geometry(point, 2056))"
+        )
         self.conn.commit()
         cur.execute(
             "INSERT INTO point(id, geometry) VALUES(1, ST_GeomFromText('POINT(2725505 1121435)', 2056))"
@@ -412,7 +414,9 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_needs_repackaging_with_online_vector(self):
         cur = self.conn.cursor()
-        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        cur.execute(
+            "CREATE TABLE point (id integer primary key, geometry geometry(point, 2056))"
+        )
         self.conn.commit()
         cur.execute(
             "INSERT INTO point(id, geometry) VALUES(1, ST_GeomFromText('POINT(2725505 1121435)', 2056))"
@@ -443,7 +447,9 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_connects_via_pgservice(self):
         cur = self.conn.cursor()
-        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        cur.execute(
+            "CREATE TABLE point (id integer primary key, geometry geometry(point, 2056))"
+        )
         self.conn.commit()
 
         Secret.objects.create(
@@ -503,7 +509,9 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_has_online_vector_data(self):
         cur = self.conn.cursor()
-        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        cur.execute(
+            "CREATE TABLE point (id integer primary key, geometry geometry(point, 2056))"
+        )
         self.conn.commit()
 
         self.upload_files(
@@ -629,7 +637,9 @@ class QfcTestCase(APITransactionTestCase):
         subscription.plan.save()
 
         cur = self.conn.cursor()
-        cur.execute("CREATE TABLE point (id integer, geometry geometry(point, 2056))")
+        cur.execute(
+            "CREATE TABLE point (id integer primary key, geometry geometry(point, 2056))"
+        )
         self.conn.commit()
         cur.execute(
             "INSERT INTO point(id, geometry) VALUES(1, ST_GeomFromText('POINT(2725505 1121435)', 2056))"

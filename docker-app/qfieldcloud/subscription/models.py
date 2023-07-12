@@ -479,11 +479,14 @@ class AbstractSubscription(models.Model):
     billing_cycle_anchor_at = models.DateTimeField(null=True, blank=True)
 
     # the timestamp when the current billing period started
-    # NOTE this field remains currently unused.
+    # NOTE ignored when checking if subscription is 'current' (see `active_since and `active_until`).
+    # `current_period_since` and `current_period_until` are both either `None` or `datetime`
     current_period_since = models.DateTimeField(null=True, blank=True)
 
     # the timestamp when the current billing period ends
-    # NOTE ignored for subscription validity checks, but used to calculate the activation date when additional packages change
+    # NOTE ignored when checking if subscription is 'current' (see `active_since and `active_until`),
+    # but used to calculate the activation date when additional packages change.
+    # `current_period_since` and `current_period_until` are both either `None` or `datetime`
     current_period_until = models.DateTimeField(null=True, blank=True)
 
     # admin only notes, not visible to end users
@@ -579,6 +582,7 @@ class AbstractSubscription(models.Model):
 
     @property
     def active_users(self):
+        "Returns the queryset of active users for running stripe billing period or None."
         if not self.account.user.is_organization:
             return None
 
@@ -588,17 +592,7 @@ class AbstractSubscription(models.Model):
                 self.current_period_until,
             )
 
-        assert (
-            self.current_period_since == self.current_period_until
-        ), "Both current_period _since and _until must be set."
-
-        now = timezone.now()
-        month_ago = now - timedelta(days=28)
-
-        return self.account.user.active_users(
-            month_ago,
-            now,
-        )
+        return None
 
     @property
     def active_users_count(self) -> int:
@@ -606,7 +600,7 @@ class AbstractSubscription(models.Model):
         if not self.account.user.is_organization:
             return 1
 
-        if not self.current_period_since or not self.current_period_until:
+        if self.active_users is None:
             return 0
 
         return self.active_users.count()
@@ -823,7 +817,7 @@ class AbstractSubscription(models.Model):
         TODO Python 3.11 the actual return type is Self
         """
         if active_since:
-            # remove milliseconds as there will be slight shift with the remote system data
+            # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
 
         if plan.is_trial:
@@ -839,7 +833,6 @@ class AbstractSubscription(models.Model):
                 plan=plan,
                 account=account,
                 created_by=created_by,
-                # TODO in the future the status can be configured in the `Plan.initial_subscription_status`
                 status=plan.initial_subscription_status,
                 active_since=active_since,
                 active_until=active_until,

@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from qfieldcloud.core import permissions_utils
+from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
@@ -54,8 +54,8 @@ include_public_param = openapi.Parameter(
 @method_decorator(
     name="retrieve",
     decorator=swagger_auto_schema(
-        operation_description="Get a project",
-        operation_id="Get a project",
+        operation_description="Retrieve a project",
+        operation_id="Retrieve a project",
     ),
 )
 @method_decorator(
@@ -84,7 +84,7 @@ include_public_param = openapi.Parameter(
     decorator=swagger_auto_schema(
         operation_description="""List projects owned by the authenticated
         user or that the authenticated user has explicit permission to access
-        (i.e. she is a project collaborator)""",
+        (i.e. she is a project collaborator).  Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.""",
         operation_id="List projects",
         manual_parameters=[include_public_param],
     ),
@@ -102,6 +102,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
 
@@ -157,7 +158,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 @method_decorator(
     name="get",
     decorator=swagger_auto_schema(
-        operation_description="List public projects",
+        operation_description="List all public projects. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
         operation_id="List public projects",
     ),
 )
@@ -165,6 +166,7 @@ class PublicProjectsListView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
         return Project.objects.for_user(self.request.user).filter(is_public=True)

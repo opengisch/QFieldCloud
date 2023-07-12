@@ -1,5 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
-from qfieldcloud.core import permissions_utils, serializers
+from django.utils.decorators import method_decorator
+from drf_yasg.utils import swagger_auto_schema
+from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job, Project
 from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
@@ -18,11 +20,19 @@ class JobPermissions(permissions.BasePermission):
         return permissions_utils.can_read_jobs(request.user, project)
 
 
+@method_decorator(
+    name="list",
+    decorator=swagger_auto_schema(
+        operation_description="List all jobs scheduled against the given project. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
+        operation_id="List all jobs",
+    ),
+)
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = serializers.JobSerializer
     lookup_url_kwarg = "job_id"
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_serializer_by_job_type(self, job_type, *args, **kwargs):
         if job_type == Job.Type.DELTA_APPLY:
@@ -37,11 +47,13 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
     def get_serializer(self, *args, **kwargs):
         kwargs.setdefault("context", self.get_serializer_context())
 
-        if self.action in ("create"):
+        if self.action in ("create",):
             if "data" in kwargs:
                 job_type = kwargs["data"]["type"]
-            else:
+            elif args:
                 job_type = args[0].type
+            else:
+                return super().get_serializer(*args, **kwargs)
 
             return self.get_serializer_by_job_type(job_type, *args, **kwargs)
 
