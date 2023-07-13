@@ -84,7 +84,7 @@ INSTALLED_APPS = [
     # style
     "rest_framework",
     "rest_framework.authtoken",
-    "drf_yasg",
+    "drf_spectacular",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -254,18 +254,13 @@ REST_FRAMEWORK = {
         "qfieldcloud.authentication.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
-    "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "qfieldcloud.core.rest_utils.exception_handler",
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 SITE_ID = 1
-
-SWAGGER_SETTINGS = {
-    "LOGIN_URL": "rest_framework:login",
-    "LOGOUT_URL": "rest_framework:logout",
-}
 
 LOGIN_URL = "account_login"
 
@@ -561,3 +556,11 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
         "model": "subscription.subscription",
     },
 ]
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "QFieldCloud JSON API",
+    "DESCRIPTION": "QFieldCloud JSON API",
+    "VERSION": "v1",
+    "CONTACT": {"email": "info@opengis.ch"},
+    "LICENSE": {"name": "License"},
+}

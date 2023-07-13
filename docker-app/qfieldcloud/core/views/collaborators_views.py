@@ -1,7 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Project, ProjectCollaborator
 from qfieldcloud.core.serializers import ProjectCollaboratorSerializer
@@ -28,20 +26,6 @@ class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
         return False
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Get all collaborators to the given project. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
-        operation_id="Get collaborators of project",
-    ),
-)
-@method_decorator(
-    name="post",
-    decorator=swagger_auto_schema(
-        operation_description="Add a user as collaborator of the project",
-        operation_id="Add collaborator to project",
-    ),
-)
 class ListCreateCollaboratorsView(generics.ListCreateAPIView):
 
     permission_classes = [
@@ -95,34 +79,6 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
         return False
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Get the role of a collaborator",
-        operation_id="Get role of collaborator to project",
-    ),
-)
-@method_decorator(
-    name="put",
-    decorator=swagger_auto_schema(
-        operation_description="Update a collaborator to the project",
-        operation_id="Update collaborator",
-    ),
-)
-@method_decorator(
-    name="patch",
-    decorator=swagger_auto_schema(
-        operation_description="Partial update of collaborator to the project",
-        operation_id="Patch collaborator",
-    ),
-)
-@method_decorator(
-    name="delete",
-    decorator=swagger_auto_schema(
-        operation_description="Remove a collaborator from the project",
-        operation_id="Delete collaborator",
-    ),
-)
 class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
 
     permission_classes = [

@@ -1,20 +1,11 @@
 from django.conf import settings
 from django.core.cache import cache
-from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import geodb_utils, utils
 from rest_framework import status, views
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Get the current status of the APIs",
-        operation_id="Get status",
-    ),
-)
 class APIStatusView(views.APIView):
     permission_classes = [AllowAny]
 

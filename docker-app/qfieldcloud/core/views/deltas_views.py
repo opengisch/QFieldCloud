@@ -4,9 +4,7 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
-from drf_yasg.utils import swagger_auto_schema
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
 from qfieldcloud.core.serializers import DeltaSerializer
@@ -32,20 +30,6 @@ class DeltaFilePermissions(permissions.BasePermission):
         return False
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Get all deltas of the given project. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
-        operation_id="Get deltas of project",
-    ),
-)
-@method_decorator(
-    name="post",
-    decorator=swagger_auto_schema(
-        operation_description="Add a deltafile to the given project",
-        operation_id="Add deltafile",
-    ),
-)
 class ListCreateDeltasView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
@@ -157,13 +141,6 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         return Delta.objects.filter(project=project_obj)
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="List deltas of a deltafile",
-        operation_id="List deltas of deltafile",
-    ),
-)
 class ListDeltasByDeltafileView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
@@ -177,13 +154,6 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
         return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
 
 
-@method_decorator(
-    name="post",
-    decorator=swagger_auto_schema(
-        operation_description="Trigger apply delta",
-        operation_id="Apply delta",
-    ),
-)
 class ApplyView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
