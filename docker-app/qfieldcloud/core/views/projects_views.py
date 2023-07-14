@@ -43,6 +43,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
 
 @extend_schema_view(
+    retrieve=extend_schema(description="Retrieve a project"),
+    update=extend_schema(description="Update a project"),
+    partial_update=extend_schema(description="Partially update a project"),
+    destroy=extend_schema(description="Delete a project"),
     list=extend_schema(
         parameters=[
             OpenApiParameter(
@@ -51,18 +55,23 @@ class ProjectViewSetPermissions(permissions.BasePermission):
                 OpenApiParameter.QUERY,
                 description="Include public projects",
             )
-        ]
-    )
+        ],
+        description="""List projects owned by the authenticated
+        user or that the authenticated user has explicit permission to access
+        (i.e. she is a project collaborator)""",
+    ),
+    create=extend_schema(
+        description="""Create a new project owned by the specified
+        user or organization"""
+    ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
-
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
-
         projects = Project.objects.for_user(self.request.user)
 
         # In the list endpoint, by default we filter out public projects. They can be
@@ -112,8 +121,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return super().destroy(request, projectid)
 
 
+@extend_schema_view(get=extend_schema(description="List all public projects"))
 class PublicProjectsListView(generics.ListAPIView):
-
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()

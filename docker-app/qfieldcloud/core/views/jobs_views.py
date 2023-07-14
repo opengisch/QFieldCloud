@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job, Project
 from rest_framework import generics, permissions, viewsets
@@ -18,6 +19,9 @@ class JobPermissions(permissions.BasePermission):
         return permissions_utils.can_read_jobs(request.user, project)
 
 
+@extend_schema_view(
+    list=extend_schema(description="List all jobs scheduled against the given project.")
+)
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = serializers.JobSerializer

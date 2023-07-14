@@ -5,6 +5,7 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.translation import gettext as _
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
 from qfieldcloud.core.serializers import DeltaSerializer
@@ -30,6 +31,10 @@ class DeltaFilePermissions(permissions.BasePermission):
         return False
 
 
+@extend_schema_view(
+    get=extend_schema(description="Get all deltas of the given project."),
+    post=extend_schema(description="Add a deltafile to the given project"),
+)
 class ListCreateDeltasView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
@@ -141,6 +146,9 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         return Delta.objects.filter(project=project_obj)
 
 
+@extend_schema_view(
+    get=extend_schema(description="List deltas of the given deltafile.")
+)
 class ListDeltasByDeltafileView(generics.ListAPIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
@@ -154,6 +162,7 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
         return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
 
 
+@extend_schema_view(post=extend_schema(description="Trigger apply delta."))
 class ApplyView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]

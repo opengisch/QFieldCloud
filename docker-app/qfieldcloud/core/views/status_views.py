@@ -1,11 +1,15 @@
 from django.conf import settings
 from django.core.cache import cache
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import geodb_utils, utils
 from rest_framework import status, views
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 
+@extend_schema_view(
+    get=extend_schema(description="Get the current status of the API"),
+)
 class APIStatusView(views.APIView):
     permission_classes = [AllowAny]
 

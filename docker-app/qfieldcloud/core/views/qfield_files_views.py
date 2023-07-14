@@ -3,6 +3,7 @@ from pathlib import PurePath
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http.response import HttpResponseRedirect
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import exceptions, permissions_utils, serializers, utils
 from qfieldcloud.core.models import PackageJob, Project
 from qfieldcloud.core.permissions_utils import check_supported_regarding_owner_account
@@ -22,6 +23,10 @@ class PackageViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(user, project)
 
 
+@extend_schema_view(
+    post=extend_schema(description="Launch QField packaging project"),
+    get=extend_schema(description="Get QField packaging status"),
+)
 class PackageView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
@@ -79,6 +84,9 @@ class PackageView(views.APIView):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    get=extend_schema(description="List QField project files"),
+)
 class ListFilesView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
@@ -148,6 +156,9 @@ class ListFilesView(views.APIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(description="Download file for QField"),
+)
 class DownloadFileView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]

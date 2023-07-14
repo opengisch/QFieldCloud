@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Project, ProjectCollaborator
 from qfieldcloud.core.serializers import ProjectCollaboratorSerializer
@@ -26,6 +27,12 @@ class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
         return False
 
 
+@extend_schema_view(
+    get=extend_schema(description="Get all collaborators to the given project."),
+    post=extend_schema(
+        description="Add a user as collaborator to the project",
+    ),
+)
 class ListCreateCollaboratorsView(generics.ListCreateAPIView):
 
     permission_classes = [
@@ -79,6 +86,12 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
         return False
 
 
+@extend_schema_view(
+    get=extend_schema(description="Get the role of a collaborator"),
+    put=extend_schema(description="Update of a collaborator"),
+    patch=extend_schema(description="Partial update of a collaborator"),
+    delete=extend_schema(description="Remove a collaborator from the project"),
+)
 class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
 
     permission_classes = [
