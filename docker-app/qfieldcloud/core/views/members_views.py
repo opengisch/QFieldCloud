@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Organization, OrganizationMember
 from qfieldcloud.core.serializers import OrganizationMemberSerializer
@@ -29,6 +30,10 @@ class ListCreateMembersViewPermissions(permissions.BasePermission):
         return False
 
 
+@extend_schema_view(
+    get=extend_schema(description="Get members of an organization"),
+    post=extend_schema(description="Add a user as a member of an organization"),
+)
 class ListCreateMembersView(generics.ListCreateAPIView):
 
     permission_classes = [permissions.IsAuthenticated, ListCreateMembersViewPermissions]
@@ -81,6 +86,12 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
         return False
 
 
+@extend_schema_view(
+    get=extend_schema(description="Get the role of a member of an organization"),
+    put=extend_schema(description="Update a member of an organization"),
+    patch=extend_schema(description="Partially update a member of an organization"),
+    delete=extend_schema(description="Remove a member from an organization"),
+)
 class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
 
     permission_classes = [
