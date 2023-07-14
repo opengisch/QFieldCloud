@@ -41,16 +41,20 @@ urlpatterns = [
         RedirectView.as_view(url=settings.QFIELDCLOUD_ADMIN_URI, permanent=False),
         name="index",
     ),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path(
-        "api/schema/swagger-ui/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
-        name="swagger-ui",
+    re_path(
+        r"^swagger(?P<format>\.json|\.yaml)$",
+        SpectacularAPIView.as_view(),
+        name="schema-json",
     ),
     path(
-        "api/schema/redoc/",
+        "swagger/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="schema-swagger-ui",
+    ),
+    path(
+        "docs/",
         SpectacularRedocView.as_view(url_name="schema"),
-        name="redoc",
+        name="schema-redoc",
     ),
     path(
         settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/",
