@@ -1,11 +1,10 @@
 import logging
 import time
 
+from django.conf import settings
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core import pagination
 from qfieldcloud.core.models import Person, Project
-from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -53,35 +52,42 @@ class QfcTestCase(APITransactionTestCase):
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        page_size = 5
-        offset = 3
-        unlimited_count = Project.objects.all().count()
-        self.assertEqual(unlimited_count, self.total_projects)
-
-        # Obtain response with LIMIT
-        results_with_pagination = self.client.get(
-            "/api/v1/projects/", {"limit": page_size}
-        ).json()
-        self.assertEqual(len(results_with_pagination), page_size)
-
-        # Obtain response with LIMIT and OFFSET
-        results_with_offset = self.client.get(
-            "/api/v1/projects/", {"limit": page_size, "offset": offset}
-        ).json()
-
-        # Test page size
-        self.assertEqual(len(results_with_offset), page_size)
-
         # Obtain without pagination (= control test)
         results_without_offset_or_request_level_limit = self.client.get(
             "/api/v1/projects/",
         ).json()
 
-        # Even though the request is not setting a limit, the Project modelviewset
-        # was defined with a default limit that's kicking in here
+        # Since the request is not setting a limit, we can the full count of model instances
         self.assertEqual(
-            ProjectViewSet.pagination_class.default_limit,
             len(results_without_offset_or_request_level_limit),
+            self.total_projects,
+        )
+
+        page_size = 5
+        offset = 3
+        unlimited_count = Project.objects.all().count()
+
+        self.assertEqual(unlimited_count, self.total_projects)
+
+        # Obtain response with LIMIT in request
+        results_with_pagination = self.client.get(
+            "/api/v1/projects/", {"limit": page_size}
+        ).json()
+        self.assertEqual(len(results_with_pagination), page_size)
+
+        # Obtain response with LIMIT and OFFSET in request
+        results_with_offset = self.client.get(
+            "/api/v1/projects/", {"limit": page_size, "offset": offset}
+        ).json()
+        self.assertEqual(len(results_with_offset), page_size)
+
+        # Obtain response with OFFSET but not LIMIT (so the default model's limit kicks in)
+        results_with_default_pagination = self.client.get(
+            "/api/v1/projects/", {"offset": 10}
+        ).json()
+        self.assertEqual(
+            len(results_with_default_pagination),
+            settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT,
         )
 
     def test_api_headers_count(self):
@@ -89,19 +95,13 @@ class QfcTestCase(APITransactionTestCase):
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        # Forcing 'count_entries' to be True
-        ProjectViewSet.pagination_class = pagination.QfcLimitOffsetPagination(
-            count_entries=True
-        )
-        response = self.client.get("/api/v1/projects/")
+        # Get paginated response with X-Total-Count as header
+        response = self.client.get("/api/v1/projects/", {"limit": 25})
         self.assertEqual(
             int(response.headers["X-Total-Count"]),
             self.total_projects,
         )
 
-        # Forcing 'count_entries' to be False
-        ProjectViewSet.pagination_class = pagination.QfcLimitOffsetPagination(
-            count_entries=False
-        )
+        # Get unpaginated response without X-Total-Count as header
         response = self.client.get("/api/v1/projects/")
         self.assertNotIn("X-Total-Count", response.headers)
