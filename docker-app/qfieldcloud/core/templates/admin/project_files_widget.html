@@ -167,7 +167,10 @@
             const refreshFiles = () => {
                 refreshTableContents({ isLoading: true });
 
-                return apiCall(`files/${projectId}/`)
+                const params = {
+                    skip_metadata: "1",
+                };
+                return apiCall(`files/${projectId}/`, { params })
                     .then((resp) => resp.json())
                     .then((files) => refreshTableContents({ files }))
                     .catch((error) => refreshTableContents({ error }));
