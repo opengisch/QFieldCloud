@@ -1227,12 +1227,12 @@ class Project(models.Model):
                                 "level": "warning",
                                 "code": "layer_problem",
                                 "description": _(
-                                    'Layer "{}" does not have supported primary key attribute. The layer will be read-only on QField.'
+                                    'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
                                 ).format(
                                     layer_name,
                                 ),
                                 "solution": _(
-                                    "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer with single column primary key."
+                                    "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key."
                                 ),
                             }
                         )
