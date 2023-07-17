@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
+from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -105,3 +106,19 @@ class QfcTestCase(APITransactionTestCase):
         # Get unpaginated response without X-Total-Count as header
         response = self.client.get("/api/v1/projects/")
         self.assertNotIn("X-Total-Count", response.headers)
+
+    def test_api_pagination_controls(self):
+        """Test opt-in pagination controls"""
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+
+        # Set up viewset
+        ProjectViewSet.pagination_class.pagination_controls_in_response = True
+
+        # Get paginated response with controls in responses
+        response = self.client.get("/api/v1/projects/", {"limit": 20})
+        data = response.json()
+
+        self.assertIn("next", data)
+        self.assertIn("previous", data)
+        self.assertIn("count", data)
