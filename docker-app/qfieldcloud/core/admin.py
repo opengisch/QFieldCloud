@@ -907,6 +907,8 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         "created_by",
         "created_at",
         "updated_at",
+        "old_geom_truncated",
+        "new_geom_truncated",
     )
     fields = (
         "project",
@@ -918,6 +920,8 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         "content",
         "last_feedback__pre",
         "last_modified_pk",
+        "old_geom_truncated",
+        "new_geom_truncated",
     )
     search_fields = (
         "project__name__iexact",
@@ -936,7 +940,18 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     change_form_template = "admin/delta_change_form.html"
 
+    def old_geom_truncated(self, instance):
+        return self.geom_truncated(instance.old_geom)
+
+    def new_geom_truncated(self, instance):
+        return self.geom_truncated(instance.new_geom)
+
+    # Show geometries only truncated as they are fully shown in content
+    def geom_truncated(self, geom):
+        return f"{str(geom)[:70]} ..." if geom else "-"
+
     # This will disable add functionality
+
     def has_add_permission(self, request):
         return False
 
