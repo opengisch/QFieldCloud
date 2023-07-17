@@ -45,7 +45,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         When it's true, return the original payload with navigation controls.
         """
         if self.request.GET.get("offset") and not self.request.GET.get("limit"):
-            payload = islice(data, settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT)
+            data = islice(data, settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT)
 
         if self.pagination_controls_in_response:
             payload = {
@@ -55,5 +55,5 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
                 "count": self.count,
             }
             return response.Response(payload)
-        else:
-            return response.Response(payload, headers=self.get_headers())
+
+        return response.Response(payload, headers=self.get_headers())

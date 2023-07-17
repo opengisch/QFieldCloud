@@ -119,6 +119,33 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get("/api/v1/projects/", {"limit": 20})
         data = response.json()
 
+        # Controls
         self.assertIn("next", data)
         self.assertIn("previous", data)
         self.assertIn("count", data)
+        self.assertIn("results", data)
+        self.assertEqual(len(data["results"]), 20)
+
+        # Next
+        next_url = f"/{data['next'].split('/', 3)[3]}"
+        next_data = self.client.get(next_url).json()
+        self.assertEqual(len(next_data["results"]), 20)
+
+        # Previous
+        previous_url = f"/{next_data['previous'].split('/', 3)[3]}"
+        previous_data = self.client.get(previous_url).json()
+        self.assertEqual(len(previous_data["results"]), 20)
+
+        # Traverse in both directions: Next
+        items = set({el["id"] for el in data["results"]})
+        while current_url := data["next"]:
+            data = self.client.get(current_url).json()
+            items.update({el["id"] for el in data["results"]})
+        self.assertEqual(len(items), 50)
+
+        # Traverse in both directions: Previous
+        items = set({el["id"] for el in data["results"]})
+        while current_url := data["previous"]:
+            data = self.client.get(current_url).json()
+            items.update({el["id"] for el in data["results"]})
+        self.assertEqual(len(items), 50)
