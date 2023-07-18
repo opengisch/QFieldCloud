@@ -75,7 +75,7 @@ class S3Config:
     @classmethod
     def inject_to_settings(cls):
         """To avoid passing s3 config as parameters"""
-        for key, value in cls._config._asdict():
+        for key, value in cls._config._asdict().items():
             setattr(settings, key, value)
 
 
