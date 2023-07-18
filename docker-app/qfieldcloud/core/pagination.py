@@ -39,15 +39,19 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
 
     def get_paginated_response(self, data) -> response.Response:
         """
-        When `pagination_controls_in_response` is False,
-        sets the header field initialized in the previous method to the number of paginated entries
-        and return just the entries in the response body, slicing them to never exceed `settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT`.
-        When it's true, return the original payload with navigation controls.
+        When `pagination_controls_in_response` is False
+        and when the user didn't ask for pagination controls in the request with the `pagination_controls: True` parameter,
+        sets the header field initialized in the previous method to the number of paginated entries and return just the entries in the response body,
+        slicing them to never exceed `settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT`.
+        Otherwise return the original payload with navigation controls.
         """
         if self.request.GET.get("offset") and not self.request.GET.get("limit"):
             data = islice(data, settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT)
 
-        if self.pagination_controls_in_response:
+        if self.pagination_controls_in_response or self.request.GET.get(
+            "pagination_controls", False
+        ):
+            # show results along with pagination controls
             data = {
                 "results": data,
                 "next": self.get_next_link(),
@@ -56,4 +60,5 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
             }
             return response.Response(data)
         else:
+            # show only results
             return response.Response(data, headers=self.get_headers())
