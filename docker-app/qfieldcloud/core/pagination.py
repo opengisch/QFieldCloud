@@ -48,12 +48,12 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
             data = islice(data, settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT)
 
         if self.pagination_controls_in_response:
-            payload = {
+            data = {
                 "results": data,
                 "next": self.get_next_link(),
                 "previous": self.get_previous_link(),
                 "count": self.count,
             }
-            return response.Response(payload)
-
-        return response.Response(payload, headers=self.get_headers())
+            return response.Response(data)
+        else:
+            return response.Response(data, headers=self.get_headers())
