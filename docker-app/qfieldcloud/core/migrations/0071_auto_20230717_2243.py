@@ -16,4 +16,9 @@ class Migration(migrations.Migration):
             sql="\n            DROP TRIGGER IF EXISTS core_delta_geom_insert_trigger ON core_delta\n        ",
             reverse_sql="\n            CREATE TRIGGER core_delta_geom_insert_trigger BEFORE INSERT ON core_delta\n            FOR EACH ROW\n            EXECUTE FUNCTION core_delta_geom_trigger_func()\n        ",
         ),
+        migrate_sql.operations.CreateSQL(
+            name="core_delta_geom_insert_trigger",
+            sql="\n            CREATE TRIGGER core_delta_geom_insert_trigger BEFORE INSERT ON core_delta\n            FOR EACH ROW\n            EXECUTE FUNCTION core_delta_geom_trigger_func()\n        ",
+            reverse_sql="\n            DROP TRIGGER IF EXISTS core_delta_geom_insert_trigger ON core_delta\n        ",
+        ),
     ]
