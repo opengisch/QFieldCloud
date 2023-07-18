@@ -95,7 +95,7 @@ class Command(BaseCommand):
         if options.get("config_file"):
             path = Path(options["config_file"])
 
-            if not (path.exists() and path.is_file()):
+            if not path.is_file():
                 logger.error(f"This path does not exist or is not a file: {path}")
                 sys.exit(1)
 
