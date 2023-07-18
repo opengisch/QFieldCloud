@@ -1,6 +1,7 @@
 import csv
 import logging
 import sys
+from collections import namedtuple
 from functools import reduce
 from pathlib import Path
 from typing import Any, Generator
@@ -22,7 +23,7 @@ s3_credentials_keys = [
 
 
 class S3Config:
-    config: "S3Config" | None = None
+    _config = None
 
     @staticmethod
     def from_file(path_to_config: Path) -> dict[str, Any]:
@@ -58,7 +59,7 @@ class S3Config:
     @classmethod
     def get_or_create_from(cls, path_to_file: str | None) -> "S3Config":
         """Get or create configuation for S3 storage."""
-        if not cls.config:
+        if not cls._config:
             if not path_to_file:
                 logger.error(
                     "You need to pass a valid path to your YAML configuration file"
@@ -66,15 +67,15 @@ class S3Config:
                 sys.exit(1)
             maybe_valid_config = cls.from_file(path_to_file)
             valid_config = cls.validate(maybe_valid_config)
-            cls.config = cls(**valid_config)
+            config_container = namedtuple("S3ConfigObject", s3_credentials_keys)
+            cls._config = config_container(**valid_config)
 
-        return cls.config
+        return cls._config
 
-    def __init__(self, **params):
-        """Construct a valid, safe S3Config object and re-set Django's settings accordingly"""
-        for key, value in params.items():
-            setattr(self, key, value)
-            # to avoid passing s3 config as parameters
+    @classmethod
+    def inject_to_settings(cls):
+        """To avoid passing s3 config as parameters"""
+        for key, value in cls._config._asdict():
             setattr(settings, key, value)
 
 
@@ -84,7 +85,10 @@ class Command(BaseCommand):
     def add_arguments(self, parser: CommandParser):
         parser.add_argument("-o", "--output", type=str, help="Name of output file")
         parser.add_argument(
-            "-f", "--config_file", type=str, help="YAML file with your S3 credentials"
+            "-f",
+            "--config_file",
+            type=str,
+            help="Path to YAML file with your S3 credentials",
         )
 
     def handle(self, *args, **options):
@@ -95,7 +99,8 @@ class Command(BaseCommand):
                 logger.error(f"This path does not exist or is not a file: {path}")
                 sys.exit(1)
 
-            S3Config.get_or_create_from(path)
+            config = S3Config.get_or_create_from(path)
+            config.inject_to_settings()
 
         output_name = options.get("output")
 
@@ -108,7 +113,7 @@ class Command(BaseCommand):
         else:
             output_name = "s3_storage_files.csv"
 
-        interesting_fields = ["id", "key", "e_tag", "size"]
+        interesting_fields = ["id", "key", "e_tag", "size", "create_time"]
         bucket = utils.get_s3_bucket()
 
         def gen_rows() -> Generator[list[str], None, None]:
@@ -118,8 +123,10 @@ class Command(BaseCommand):
                 for field in interesting_fields:
                     if hasattr(file, field):
                         item = getattr(file, field)
+
                         if not isinstance(item, str):
                             item = str(item)
+
                         item = item.strip('"')
                         row.append(item)
 
