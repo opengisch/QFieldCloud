@@ -1219,22 +1219,23 @@ class Project(models.Model):
                         }
                     )
                 # the layer is missing a primary key, warn it is going to be read-only
-                elif layer_data.get("qfc_source_data_pk_name") == "":
-                    problems.append(
-                        {
-                            "layer": layer_name,
-                            "level": "warning",
-                            "code": "layer_problem",
-                            "description": _(
-                                'Layer "{}" does not have supported primary key attribute. The layer will be read-only on QField.'
-                            ).format(
-                                layer_name,
-                            ),
-                            "solution": _(
-                                "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer with single column primary key."
-                            ),
-                        }
-                    )
+                elif layer_data.get("layer_type_name") in ("VectorLayer", "Vector"):
+                    if layer_data.get("qfc_source_data_pk_name") == "":
+                        problems.append(
+                            {
+                                "layer": layer_name,
+                                "level": "warning",
+                                "code": "layer_problem",
+                                "description": _(
+                                    'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
+                                ).format(
+                                    layer_name,
+                                ),
+                                "solution": _(
+                                    "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key."
+                                ),
+                            }
+                        )
         else:
             problems.append(
                 {
