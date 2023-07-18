@@ -102,7 +102,7 @@ class QfcTestCase(APITransactionTestCase):
             self.total_projects,
         )
 
-        # Get unpaginated response without X-Total-Count as header
+        # Get unpaginated response without X-Total-Count in headers
         response = self.client.get("/api/v1/projects/")
         self.assertNotIn("X-Total-Count", response.headers)
 
