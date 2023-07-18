@@ -57,7 +57,7 @@ class S3Config:
         return contents
 
     @classmethod
-    def get_or_create_from(cls, path_to_file: str | None) -> "S3Config":
+    def get_or_load(cls, path_to_file: str | None) -> "S3Config":
         """Get or create configuation for S3 storage."""
         if not cls._config:
             if not path_to_file:
@@ -99,8 +99,8 @@ class Command(BaseCommand):
                 logger.error(f"This path does not exist or is not a file: {path}")
                 sys.exit(1)
 
-            config = S3Config.get_or_create_from(path)
-            config.inject_to_settings()
+            S3Config.get_or_load(path)
+            S3Config.inject_to_settings()
 
         output_name = options.get("output")
 
