@@ -1,5 +1,5 @@
 from itertools import islice
-from typing import Callable
+from typing import Any, Callable
 
 from django.conf import settings
 from rest_framework import pagination, response
@@ -28,14 +28,21 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     Can be customized when assigning `pagination_class`.
     """
 
-    pagination_controls_in_response = False
+    def get_headers(self) -> dict[str, Any]:
+        """
+        Initializes a new header field to carry the pagination controls.
+        """
+        headers = {"X-Total-Count": self.count}
 
-    def get_headers(self) -> dict[str, int]:
-        """
-        Initializes a new header field to carry the number of paginated entries
-        if the class method `count_entries` is `True`.
-        """
-        return {"X-Total-Count": self.count}
+        next_link = self.get_next_link()
+        if next_link:
+            headers["X-Next"] = next_link
+
+        previous_link = self.get_previous_link()
+        if previous_link:
+            headers["X-Previous"] = previous_link
+
+        return headers
 
     def get_paginated_response(self, data) -> response.Response:
         """
@@ -49,17 +56,5 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
             # slice serialized data to enforce the application wide limit
             data = islice(data, settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT)
 
-        if self.pagination_controls_in_response or self.request.GET.get(
-            "pagination_controls", False
-        ):
-            # return results along with pagination controls
-            data = {
-                "results": data,
-                "next": self.get_next_link(),
-                "previous": self.get_previous_link(),
-                "count": self.count,
-            }
-            return response.Response(data)
-        else:
-            # return only results
-            return response.Response(data, headers=self.get_headers())
+        # return only results, injecting pagination controls into headers
+        return response.Response(data, headers=self.get_headers())

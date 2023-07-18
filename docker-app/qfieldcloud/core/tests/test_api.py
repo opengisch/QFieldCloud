@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.cache import cache
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
-from qfieldcloud.core.views.projects_views import ProjectViewSet
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -112,40 +111,42 @@ class QfcTestCase(APITransactionTestCase):
         # Authenticate client
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
-        # Set up viewset
-        ProjectViewSet.pagination_class.pagination_controls_in_response = True
-
         # Get paginated response with controls in responses
         response = self.client.get("/api/v1/projects/", {"limit": 20})
-        data = response.json()
-
-        # Controls
-        self.assertIn("next", data)
-        self.assertIn("previous", data)
-        self.assertIn("count", data)
-        self.assertIn("results", data)
-        self.assertEqual(len(data["results"]), 20)
 
         # Next
-        next_url = f"/{data['next'].split('/', 3)[3]}"
-        next_data = self.client.get(next_url).json()
-        self.assertEqual(len(next_data["results"]), 20)
+        next_url = f"/{response.headers['X-Next'].split('/', 3)[3]}"
+        next_response = self.client.get(next_url)
+        next_data = next_response.json()
+        self.assertEqual(len(next_data), 20)
 
         # Previous
-        previous_url = f"/{next_data['previous'].split('/', 3)[3]}"
-        previous_data = self.client.get(previous_url).json()
-        self.assertEqual(len(previous_data["results"]), 20)
+        previous_url = f"/{next_response.headers['X-Previous'].split('/', 3)[3]}"
+        previous_response = self.client.get(previous_url)
+        previous_data = previous_response.json()
+        self.assertEqual(len(previous_data), 20)
+
+    def test_api_pagination_traversals(self):
+        """Test opt-in pagination traversals"""
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
 
         # Traverse in both directions: Next
-        items = set({el["id"] for el in data["results"]})
-        while current_url := data["next"]:
-            data = self.client.get(current_url).json()
-            items.update({el["id"] for el in data["results"]})
+        response = self.client.get("/api/v1/projects/", {"limit": 20})
+        data = response.json()
+        items = set({el["id"] for el in data})
+        while next_url := response.headers.get("X-Next"):
+            response = self.client.get(next_url)
+            results = response.json()
+            items.update({el["id"] for el in results})
         self.assertEqual(len(items), self.total_projects)
 
         # Traverse in both directions: Previous
-        items = set({el["id"] for el in data["results"]})
-        while current_url := data["previous"]:
-            data = self.client.get(current_url).json()
-            items.update({el["id"] for el in data["results"]})
+        response = self.client.get(
+            "/api/v1/projects/", {"limit": 20, "offset": self.total_projects}
+        )
+        while previous_url := response.headers.get("X-Previous"):
+            response = self.client.get(previous_url)
+            results = response.json()
+            items.update({el["id"] for el in results})
         self.assertEqual(len(items), self.total_projects)
