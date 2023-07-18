@@ -141,11 +141,11 @@ class QfcTestCase(APITransactionTestCase):
         while current_url := data["next"]:
             data = self.client.get(current_url).json()
             items.update({el["id"] for el in data["results"]})
-        self.assertEqual(len(items), 50)
+        self.assertEqual(len(items), self.total_projects)
 
         # Traverse in both directions: Previous
         items = set({el["id"] for el in data["results"]})
         while current_url := data["previous"]:
             data = self.client.get(current_url).json()
             items.update({el["id"] for el in data["results"]})
-        self.assertEqual(len(items), 50)
+        self.assertEqual(len(items), self.total_projects)
