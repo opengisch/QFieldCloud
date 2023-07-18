@@ -6,7 +6,7 @@ import os
 import posixpath
 from datetime import datetime
 from pathlib import PurePath
-from typing import IO, Iterable, List, NamedTuple, Optional, Union
+from typing import IO, Generator, Iterable, List, NamedTuple, Optional, Union
 
 import boto3
 import jsonschema
@@ -330,8 +330,10 @@ def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:
     return list_files(bucket, prefix, root_prefix)
 
 
-def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVersions]:
-    """Returns a list of files and their versions.
+def get_project_files_with_versions(
+    project_id: str,
+) -> Generator[S3ObjectWithVersions, None, None]:
+    """Returns a generator of files and their versions.
 
     Args:
         project_id (str): the project id
@@ -471,7 +473,7 @@ def list_files_with_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: str = "",
-) -> Iterable[S3ObjectWithVersions]:
+) -> Generator[S3ObjectWithVersions, None, None]:
     """Yields an object with all it's versions
 
     Returns:
