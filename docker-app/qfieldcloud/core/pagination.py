@@ -46,6 +46,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         Otherwise return the original payload with navigation controls.
         """
         if self.request.GET.get("offset") and not self.request.GET.get("limit"):
+            # slice serialized data to enforce the limit set by the consuming modelviewset
             data = islice(data, settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT)
 
         if self.pagination_controls_in_response or self.request.GET.get(
