@@ -52,7 +52,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         if self.pagination_controls_in_response or self.request.GET.get(
             "pagination_controls", False
         ):
-            # show results along with pagination controls
+            # return results along with pagination controls
             data = {
                 "results": data,
                 "next": self.get_next_link(),
@@ -61,5 +61,5 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
             }
             return response.Response(data)
         else:
-            # show only results
+            # return only results
             return response.Response(data, headers=self.get_headers())
