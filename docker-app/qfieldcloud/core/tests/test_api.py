@@ -115,13 +115,13 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get("/api/v1/projects/", {"limit": 20})
 
         # Next
-        next_url = f"/{response.headers['X-Next'].split('/', 3)[3]}"
+        next_url = f"/{response.headers['X-Next-Page'].split('/', 3)[3]}"
         next_response = self.client.get(next_url)
         next_data = next_response.json()
         self.assertEqual(len(next_data), 20)
 
         # Previous
-        previous_url = f"/{next_response.headers['X-Previous'].split('/', 3)[3]}"
+        previous_url = f"/{next_response.headers['X-Previous-Page'].split('/', 3)[3]}"
         previous_response = self.client.get(previous_url)
         previous_data = previous_response.json()
         self.assertEqual(len(previous_data), 20)
@@ -135,7 +135,7 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get("/api/v1/projects/", {"limit": 20})
         data = response.json()
         items = set({el["id"] for el in data})
-        while next_url := response.headers.get("X-Next"):
+        while next_url := response.headers.get("X-Next-Page"):
             response = self.client.get(next_url)
             results = response.json()
             items.update({el["id"] for el in results})
@@ -145,7 +145,7 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get(
             "/api/v1/projects/", {"limit": 20, "offset": self.total_projects}
         )
-        while previous_url := response.headers.get("X-Previous"):
+        while previous_url := response.headers.get("X-Previous-Page"):
             response = self.client.get(previous_url)
             results = response.json()
             items.update({el["id"] for el in results})

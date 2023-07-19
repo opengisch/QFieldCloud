@@ -35,11 +35,11 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
 
         next_link = self.get_next_link()
         if next_link:
-            headers["X-Next"] = next_link
+            headers["X-Next-Page"] = next_link
 
         previous_link = self.get_previous_link()
         if previous_link:
-            headers["X-Previous"] = previous_link
+            headers["X-Previous-Page"] = previous_link
 
         return headers
 
