@@ -21,6 +21,8 @@ s3_credentials_keys = [
     "STORAGE_ENDPOINT_URL",
 ]
 
+S3ConfigObject = namedtuple("S3ConfigObject", s3_credentials_keys)
+
 
 class S3Config:
     _config = None
@@ -57,7 +59,7 @@ class S3Config:
         return contents
 
     @classmethod
-    def get_or_load(cls, path_to_file: str | None) -> "S3Config":
+    def get_or_load(cls, path_to_file: str | None) -> S3ConfigObject:
         """Get or create configuation for S3 storage."""
         if not cls._config:
             if not path_to_file:
@@ -67,8 +69,7 @@ class S3Config:
                 sys.exit(1)
             maybe_valid_config = cls.from_file(path_to_file)
             valid_config = cls.validate(maybe_valid_config)
-            config_container = namedtuple("S3ConfigObject", s3_credentials_keys)
-            cls._config = config_container(**valid_config)
+            cls._config = S3ConfigObject(**valid_config)
 
         return cls._config
 
