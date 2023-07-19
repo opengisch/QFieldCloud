@@ -1,10 +1,11 @@
 import csv
-import yaml
-from django.test import TestCase
-from django.core.management import call_command
 
+import yaml
+from django.core.management import call_command
+from django.test import TestCase
+from qfieldcloud import settings
 from qfieldcloud.core.management.commands.extractstoragemetadata import S3Config
-from qfieldcloud import settings 
+
 
 class QfcTestCase(TestCase):
     @classmethod
@@ -14,18 +15,18 @@ class QfcTestCase(TestCase):
             "STORAGE_ENDPOINT_URL": settings.STORAGE_ENDPOINT_URL,
             "STORAGE_BUCKET_NAME": settings.STORAGE_BUCKET_NAME,
             "STORAGE_REGION_NAME": settings.STORAGE_REGION_NAME,
-            "STORAGE_SECRET_ACCESS_KEY": settings.STORAGE_SECRET_ACCESS_KEY
+            "STORAGE_SECRET_ACCESS_KEY": settings.STORAGE_SECRET_ACCESS_KEY,
         }
         cls.credentials_file = "s3_credentials.yaml"
         cls.outputfile = "extracted.csv"
-        
+
         with open(cls.credentials_file, "w") as fh:
             yaml.dump(cls.credentials, fh)
 
     def test_output(self):
         call_command("extractstoragemetadata", "-o", self.outputfile)
 
-        with open(self.outputfile, "r", newline="") as fh:
+        with open(self.outputfile, newline="") as fh:
             reader = csv.reader(fh, delimiter=",")
             self.assertGreater(len(list(reader)), 1)
 
