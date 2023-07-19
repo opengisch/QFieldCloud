@@ -126,6 +126,12 @@ class QfcTestCase(APITransactionTestCase):
         previous_data = previous_response.json()
         self.assertEqual(len(previous_data), 20)
 
+        # Neither when results are not paginated
+        response = self.client.get("/api/v1/projects/")
+        self.assertNotIn("X-Next-Page", response.headers)
+        self.assertNotIn("X-Previous-Page", response.headers)
+        self.assertNotIn("X-Total-Count", response.headers)
+
     def test_api_pagination_traversals(self):
         """Test opt-in pagination traversals"""
         # Authenticate client
