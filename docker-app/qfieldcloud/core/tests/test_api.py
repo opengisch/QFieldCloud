@@ -102,6 +102,60 @@ class QfcTestCase(APITransactionTestCase):
             self.total_projects,
         )
 
-        # Get unpaginated response without X-Total-Count as header
+        # Get unpaginated response without X-Total-Count in headers
         response = self.client.get("/api/v1/projects/")
         self.assertNotIn("X-Total-Count", response.headers)
+
+    def test_api_pagination_controls(self):
+        """Test opt-in pagination controls"""
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+
+        # Get paginated response with controls in responses
+        response = self.client.get("/api/v1/projects/", {"limit": 20})
+
+        # Next
+        next_url = f"/{response.headers['X-Next-Page'].split('/', 3)[3]}"
+        next_response = self.client.get(next_url)
+        next_data = next_response.json()
+        self.assertEqual(len(next_data), 20)
+
+        # Previous
+        previous_url = f"/{next_response.headers['X-Previous-Page'].split('/', 3)[3]}"
+        previous_response = self.client.get(previous_url)
+        previous_data = previous_response.json()
+        self.assertEqual(len(previous_data), 20)
+
+        # Neither when results are not paginated
+        response = self.client.get("/api/v1/projects/")
+        self.assertNotIn("X-Next-Page", response.headers)
+        self.assertNotIn("X-Previous-Page", response.headers)
+        self.assertNotIn("X-Total-Count", response.headers)
+
+    def test_api_pagination_traversals(self):
+        """Test opt-in pagination traversals"""
+        # Authenticate client
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+
+        # Traverse in both directions: Next
+        response = self.client.get("/api/v1/projects/", {"limit": 20})
+        data = response.json()
+
+        items = {el["id"] for el in data}
+        while next_url := response.headers.get("X-Next-Page"):
+            response = self.client.get(next_url)
+            results = response.json()
+            items.update({el["id"] for el in results})
+        self.assertEqual(len(items), self.total_projects)
+
+        # Traverse in both directions: Previous
+        response = self.client.get(
+            "/api/v1/projects/", {"limit": 20, "offset": self.total_projects}
+        )
+
+        items.clear()
+        while previous_url := response.headers.get("X-Previous-Page"):
+            response = self.client.get(previous_url)
+            results = response.json()
+            items.update({el["id"] for el in results})
+        self.assertEqual(len(items), self.total_projects)
