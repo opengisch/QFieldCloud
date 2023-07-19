@@ -19,18 +19,24 @@ class QfcTestCase(TestCase):
             "STORAGE_SECRET_ACCESS_KEY": settings.STORAGE_SECRET_ACCESS_KEY,
         }
         cls.credentials_file = "s3_credentials.yaml"
-        cls.outputfile = "extracted.csv"
+        cls.output_file = "extracted.csv"
 
         with open(cls.credentials_file, "w") as fh:
             yaml.dump(cls.credentials, fh)
 
-    def test_output(self):
-        call_command("extractstoragemetadata", "-o", self.outputfile)
-
-        with open(self.outputfile, newline="") as fh:
-            reader = csv.reader(fh, delimiter=",")
-            self.assertGreater(len(list(reader)), 1)
-
     def test_config(self):
         config = S3Config.get_or_load(self.credentials_file)
         self.assertDictEqual(config._asdict(), self.credentials)
+
+    def test_output_with_user_credentials(self):
+        call_command(
+            "extractstoragemetadata",
+            "-o",
+            self.output_file,
+            "-f",
+            self.credentials_file,
+        )
+
+        with open(self.output_file, newline="") as fh:
+            reader = csv.reader(fh, delimiter=",")
+            self.assertGreater(len(list(reader)), 1)
