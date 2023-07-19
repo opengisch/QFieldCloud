@@ -3,7 +3,7 @@ import csv
 import yaml
 from django.core.management import call_command
 from django.test import TestCase
-from qfieldcloud.core.management.commands.extractstoragemetadata import S3Config
+from qfieldcloud.core.utils import S3Config
 
 
 class QfcTestCase(TestCase):

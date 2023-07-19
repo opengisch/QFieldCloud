@@ -1,76 +1,13 @@
 import csv
 import logging
 import sys
-from collections import namedtuple
-from functools import reduce
 from pathlib import Path
-from typing import Any, Generator
+from typing import Generator
 
-import yaml
 from django.core.management.base import BaseCommand, CommandParser
 from qfieldcloud.core import utils
 
 logger = logging.getLogger(__name__)
-
-s3_credentials_keys = [
-    "STORAGE_ACCESS_KEY_ID",
-    "STORAGE_SECRET_ACCESS_KEY",
-    "STORAGE_BUCKET_NAME",
-    "STORAGE_REGION_NAME",
-    "STORAGE_ENDPOINT_URL",
-]
-
-S3ConfigObject = namedtuple("S3ConfigObject", s3_credentials_keys)
-
-
-class S3Config:
-    _config = None
-
-    @staticmethod
-    def from_file(path_to_config: Path) -> dict[str, Any]:
-        """Load a YAML file exposing credentials used by S3 storage"""
-        with open(path_to_config) as fh:
-            contents = yaml.safe_load(fh)
-        return contents
-
-    @staticmethod
-    def validate(contents: dict[str, Any]) -> dict[str, Any]:
-        """Validate key/values used by S3 storage"""
-        reporter = {"missing_value": [], "extra_key": []}
-
-        def reducer(acc, item):
-            key, val = item
-            if key not in s3_credentials_keys:
-                acc["extra_key"].append(key)
-            if val in ("", None):
-                acc["missing_value"].append(key)
-            return acc
-
-        reported = reduce(reducer, contents.items(), reporter)
-        reported["missing_key"] = [
-            key for key in s3_credentials_keys if key not in contents.keys()
-        ]
-
-        if any(reported.values()):
-            logger.error(f"Invalid config!: {reported}")
-            sys.exit(1)
-
-        return contents
-
-    @classmethod
-    def get_or_load(cls, path_to_file: str | None) -> S3ConfigObject:
-        """Get or create configuation for S3 storage."""
-        if not cls._config:
-            if not path_to_file:
-                logger.error(
-                    "You need to pass a valid path to your YAML configuration file"
-                )
-                sys.exit(1)
-            maybe_valid_config = cls.from_file(path_to_file)
-            valid_config = cls.validate(maybe_valid_config)
-            cls._config = S3ConfigObject(**valid_config)
-
-        return cls._config
 
 
 class Command(BaseCommand):
@@ -95,7 +32,7 @@ class Command(BaseCommand):
                 logger.error(f"This path does not exist or is not a file: {path}")
                 sys.exit(1)
 
-            config = S3Config.get_or_load(path)
+            config = utils.S3Config.get_or_load(path)
 
         output_name = options.get("output")
 
