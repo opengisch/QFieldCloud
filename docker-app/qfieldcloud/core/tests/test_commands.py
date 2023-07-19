@@ -1,0 +1,34 @@
+import csv
+import yaml
+from django.test import TestCase
+from django.core.management import call_command
+
+from qfieldcloud.core.management.commands.extractstoragemetadata import S3Config
+from qfieldcloud import settings 
+
+class QfcTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.credentials = {
+            "STORAGE_ACCESS_KEY_ID": settings.STORAGE_ACCESS_KEY_ID,
+            "STORAGE_ENDPOINT_URL": settings.STORAGE_ENDPOINT_URL,
+            "STORAGE_BUCKET_NAME": settings.STORAGE_BUCKET_NAME,
+            "STORAGE_REGION_NAME": settings.STORAGE_REGION_NAME,
+            "STORAGE_SECRET_ACCESS_KEY": settings.STORAGE_SECRET_ACCESS_KEY
+        }
+        cls.credentials_file = "s3_credentials.yaml"
+        cls.outputfile = "extracted.csv"
+        
+        with open(cls.credentials_file, "w") as fh:
+            yaml.dump(cls.credentials, fh)
+
+    def test_output(self):
+        call_command("extractstoragemetadata", "-o", self.outputfile)
+
+        with open(self.outputfile, "r", newline="") as fh:
+            reader = csv.reader(fh, delimiter=",")
+            self.assertGreater(len(list(reader)), 1)
+
+    def test_config(self):
+        config = S3Config.from_file(self.credentials_file)
+        self.assertDictEqual(config, self.credentials)
