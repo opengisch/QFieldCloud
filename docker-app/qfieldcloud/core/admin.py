@@ -753,6 +753,8 @@ class JobAdmin(QFieldCloudModelAdmin):
         "updated_at",
         "started_at",
         "finished_at",
+        "docker_started_at",
+        "docker_finished_at",
         "output__pre",
         "feedback__pre",
     )
