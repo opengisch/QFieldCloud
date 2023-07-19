@@ -140,7 +140,8 @@ class QfcTestCase(APITransactionTestCase):
         # Traverse in both directions: Next
         response = self.client.get("/api/v1/projects/", {"limit": 20})
         data = response.json()
-        items = set({el["id"] for el in data})
+
+        items = {el["id"] for el in data}
         while next_url := response.headers.get("X-Next-Page"):
             response = self.client.get(next_url)
             results = response.json()
@@ -151,6 +152,8 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get(
             "/api/v1/projects/", {"limit": 20, "offset": self.total_projects}
         )
+
+        items.clear()
         while previous_url := response.headers.get("X-Previous-Page"):
             response = self.client.get(previous_url)
             results = response.json()
