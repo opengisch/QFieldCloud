@@ -5,7 +5,6 @@ import logging
 import os
 import posixpath
 import sys
-from collections import namedtuple
 from datetime import datetime
 from functools import reduce
 from pathlib import Path, PurePath
@@ -22,15 +21,13 @@ from redis import Redis, exceptions
 
 logger = logging.getLogger(__name__)
 
-s3_credentials_keys = [
-    "STORAGE_ACCESS_KEY_ID",
-    "STORAGE_SECRET_ACCESS_KEY",
-    "STORAGE_BUCKET_NAME",
-    "STORAGE_REGION_NAME",
-    "STORAGE_ENDPOINT_URL",
-]
 
-S3ConfigObject = namedtuple("S3ConfigObject", s3_credentials_keys)
+class S3ConfigObject(NamedTuple):
+    STORAGE_ACCESS_KEY_ID: str
+    STORAGE_SECRET_ACCESS_KEY: str
+    STORAGE_BUCKET_NAME: str
+    STORAGE_REGION_NAME: str
+    STORAGE_ENDPOINT_URL: str
 
 
 class S3Config:
@@ -50,15 +47,17 @@ class S3Config:
 
         def reducer(acc, item):
             key, val = item
-            if key not in s3_credentials_keys:
+            if key not in S3ConfigObject._fields:
                 acc["extra_key"].append(key)
-            if val in ("", None):
+            if val is None:
                 acc["missing_value"].append(key)
+            if val == "":
+                logger.warning(f"{key} was found to have an empty string for value!")
             return acc
 
         reported = reduce(reducer, contents.items(), reporter)
         reported["missing_key"] = [
-            key for key in s3_credentials_keys if key not in contents.keys()
+            key for key in S3ConfigObject._fields if key not in contents.keys()
         ]
 
         if any(reported.values()):
@@ -161,7 +160,7 @@ def redis_is_running() -> bool:
     return True
 
 
-def get_s3_session(config: Optional[NamedTuple] = None) -> boto3.Session:
+def get_s3_session(config: Optional[S3ConfigObject] = None) -> boto3.Session:
     """Get a new S3 Session instance using Django settings"""
 
     session = boto3.Session(
@@ -179,7 +178,7 @@ def get_s3_session(config: Optional[NamedTuple] = None) -> boto3.Session:
 
 
 def get_s3_bucket(
-    config: Optional[NamedTuple] = None,
+    config: Optional[S3ConfigObject] = None,
 ) -> mypy_boto3_s3.service_resource.Bucket:
     """
     Get a new S3 Bucket instance using Django settings.

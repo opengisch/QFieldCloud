@@ -15,7 +15,8 @@ class QfcTestCase(TestCase):
             "STORAGE_ACCESS_KEY_ID": settings.STORAGE_ACCESS_KEY_ID,
             "STORAGE_ENDPOINT_URL": settings.STORAGE_ENDPOINT_URL,
             "STORAGE_BUCKET_NAME": settings.STORAGE_BUCKET_NAME,
-            "STORAGE_REGION_NAME": "eu-west-2",  # FIXME: Currently settings doesn't define this,
+            "STORAGE_REGION_NAME": settings.STORAGE_REGION_NAME
+            or "eu-west-2",  # FIXME: .env-example doesn't define this
             "STORAGE_SECRET_ACCESS_KEY": settings.STORAGE_SECRET_ACCESS_KEY,
         }
         cls.credentials_file = "s3_credentials.yaml"
