@@ -31,7 +31,9 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         """
         Set new header fields to carry pagination controls.
         """
-        headers = {"X-Total-Count": self.count}
+        headers = {
+            "X-Total-Count": self.count,
+        }
 
         next_link = self.get_next_link()
         if next_link:
