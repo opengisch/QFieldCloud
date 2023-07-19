@@ -3,13 +3,14 @@ import csv
 import yaml
 from django.core.management import call_command
 from django.test import TestCase
-from qfieldcloud import settings
 from qfieldcloud.core.management.commands.extractstoragemetadata import S3Config
 
 
 class QfcTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
+        from qfieldcloud import settings
+
         cls.credentials = {
             "STORAGE_ACCESS_KEY_ID": settings.STORAGE_ACCESS_KEY_ID,
             "STORAGE_ENDPOINT_URL": settings.STORAGE_ENDPOINT_URL,
