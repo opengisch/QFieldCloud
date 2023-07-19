@@ -97,28 +97,39 @@ def redis_is_running() -> bool:
     return True
 
 
-def get_s3_session() -> boto3.Session:
+def get_s3_session(config: Optional[NamedTuple] = None) -> boto3.Session:
     """Get a new S3 Session instance using Django settings"""
 
     session = boto3.Session(
-        aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
-        region_name=settings.STORAGE_REGION_NAME,
+        aws_access_key_id=config.STORAGE_ACCESS_KEY_ID
+        if config
+        else settings.STORAGE_ACCESS_KEY_ID,
+        aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY
+        if config
+        else settings.STORAGE_SECRET_ACCESS_KEY,
+        region_name=config.STORAGE_REGION_NAME
+        if config
+        else settings.STORAGE_REGION_NAME,
     )
     return session
 
 
-def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
+def get_s3_bucket(config=None) -> mypy_boto3_s3.service_resource.Bucket:
     """
     Get a new S3 Bucket instance using Django settings.
     """
 
-    bucket_name = settings.STORAGE_BUCKET_NAME
+    bucket_name = config.STORAGE_BUCKET_NAME if config else settings.STORAGE_BUCKET_NAME
 
     assert bucket_name, "Expected `bucket_name` to be non-empty string!"
 
     session = get_s3_session()
-    s3 = session.resource("s3", endpoint_url=settings.STORAGE_ENDPOINT_URL)
+    s3 = session.resource(
+        "s3",
+        endpoint_url=config.STORAGE_ENDPOINT_URL
+        if config
+        else settings.STORAGE_ENDPOINT_URL,
+    )
 
     # Ensure the bucket exists
     s3.meta.client.head_bucket(Bucket=bucket_name)

@@ -8,7 +8,6 @@ from typing import Any, Generator
 
 import yaml
 from django.core.management.base import BaseCommand, CommandParser
-from qfieldcloud import settings
 from qfieldcloud.core import utils
 
 logger = logging.getLogger(__name__)
@@ -73,12 +72,6 @@ class S3Config:
 
         return cls._config
 
-    @classmethod
-    def inject_to_settings(cls):
-        """To avoid passing s3 config as parameters"""
-        for key, value in cls._config._asdict().items():
-            setattr(settings, key, value)
-
 
 class Command(BaseCommand):
     """Save metadata from S3 storage project files to disk."""
@@ -93,6 +86,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        config = None
+
         if options.get("config_file"):
             path = Path(options["config_file"])
 
@@ -100,8 +95,7 @@ class Command(BaseCommand):
                 logger.error(f"This path does not exist or is not a file: {path}")
                 sys.exit(1)
 
-            S3Config.get_or_load(path)
-            S3Config.inject_to_settings()
+            config = S3Config.get_or_load(path)
 
         output_name = options.get("output")
 
@@ -115,7 +109,7 @@ class Command(BaseCommand):
             output_name = "s3_storage_files.csv"
 
         interesting_fields = ["id", "key", "e_tag", "size", "create_time"]
-        bucket = utils.get_s3_bucket()
+        bucket = utils.get_s3_bucket(config)
 
         def gen_rows() -> Generator[list[str], None, None]:
             for file in bucket.object_versions.all():
