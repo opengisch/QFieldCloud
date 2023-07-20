@@ -58,12 +58,12 @@ class Command(BaseCommand):
         else:
             output_name = "s3_storage_files.csv"
 
-        interesting_fields = ["id", "key", "e_tag", "size", "create_time"]
+        fields = ["id", "key", "e_tag", "size", "create_time"]
 
         with open(output_name, "w") as fh:
             writer = csv.writer(fh, delimiter=",")
-            writer.writerow(interesting_fields)
-            writer.writerows(self.read_bucket_files(bucket, interesting_fields))
+            writer.writerow(fields)
+            writer.writerows(self.read_bucket_files(bucket, fields))
 
         logger.info(f"Successfully exported data to {output_name}")
 
@@ -95,19 +95,18 @@ class Command(BaseCommand):
 
     @staticmethod
     def read_bucket_files(
-        bucket, interesting_fields: list[str]
+        bucket, fields: list[str]
     ) -> Generator[list[str], None, None]:
         for file in bucket.object_versions.all():
             row = []
 
-            for field in interesting_fields:
-                if hasattr(file, field):
-                    item = getattr(file, field)
+            for field in fields:
+                item = getattr(file, field)
 
-                    if not isinstance(item, str):
-                        item = str(item)
+                if not isinstance(item, str):
+                    item = str(item)
 
-                    item = item.strip('"')
-                    row.append(item)
+                item = item.strip('"')
+                row.append(item)
 
             yield row
