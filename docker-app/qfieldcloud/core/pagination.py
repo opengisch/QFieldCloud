@@ -46,3 +46,6 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         Return just the entries in the response body.
         """
         return response.Response(data, headers=self.get_headers())
+
+    def get_paginated_response_schema(self):
+        
