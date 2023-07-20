@@ -336,7 +336,6 @@ class QfcTestCase(APITransactionTestCase):
             {"file": open(file_path, "rb")},
             format="multipart",
         )
-        print(response.json())
         project = Project.objects.get(pk=self.project1.pk)
 
         self.assertTrue(status.is_success(response.status_code))
