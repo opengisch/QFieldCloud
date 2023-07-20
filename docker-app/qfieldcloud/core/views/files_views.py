@@ -9,7 +9,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
@@ -128,6 +133,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
 
 
 @extend_schema_view(
+    get=extend_schema(responses={200: OpenApiResponse(response=ListFilesView)}),
     post=extend_schema(
         parameters=[
             OpenApiParameter(
@@ -138,7 +144,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
                 description="Path to the file to upload",
             )
         ],
-    )
+    ),
 )
 class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
