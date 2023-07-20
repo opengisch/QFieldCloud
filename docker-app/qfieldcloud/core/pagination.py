@@ -49,4 +49,4 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
 
     def get_paginated_response_schema(self, schema) -> dict[str, Any]:
         """Overrides schema with just the results"""
-        return {"results": schema}
+        return {"type": "object", "properties": {"results": schema}}
