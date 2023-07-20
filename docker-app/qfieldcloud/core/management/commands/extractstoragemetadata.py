@@ -2,8 +2,10 @@ import csv
 import logging
 import sys
 from pathlib import Path
-from typing import Generator
+from typing import Generator, NamedTuple
 
+import mypy_boto3_s3
+import yaml
 from django.core.management.base import BaseCommand, CommandParser
 from qfieldcloud.core import utils
 
@@ -12,6 +14,13 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     """Save metadata from S3 storage project files to disk."""
+
+    class S3ConfigObject(NamedTuple):
+        STORAGE_ACCESS_KEY_ID: str
+        STORAGE_SECRET_ACCESS_KEY: str
+        STORAGE_BUCKET_NAME: str
+        STORAGE_REGION_NAME: str
+        STORAGE_ENDPOINT_URL: str
 
     def add_arguments(self, parser: CommandParser):
         parser.add_argument("-o", "--output", type=str, help="Name of output file")
@@ -32,7 +41,11 @@ class Command(BaseCommand):
                 logger.error(f"This path does not exist or is not a file: {path}")
                 sys.exit(1)
 
-            config = utils.S3Config.get_or_load(path)
+            config = self.from_file(path)
+            bucket = self.get_s3_bucket(config)
+
+        else:
+            bucket = utils.get_s3_bucket()
 
         output_name = options.get("output")
 
@@ -46,27 +59,55 @@ class Command(BaseCommand):
             output_name = "s3_storage_files.csv"
 
         interesting_fields = ["id", "key", "e_tag", "size", "create_time"]
-        bucket = utils.get_s3_bucket(config)
-
-        def gen_rows() -> Generator[list[str], None, None]:
-            for file in bucket.object_versions.all():
-                row = []
-
-                for field in interesting_fields:
-                    if hasattr(file, field):
-                        item = getattr(file, field)
-
-                        if not isinstance(item, str):
-                            item = str(item)
-
-                        item = item.strip('"')
-                        row.append(item)
-
-                yield row
 
         with open(output_name, "w") as fh:
             writer = csv.writer(fh, delimiter=",")
             writer.writerow(interesting_fields)
-            writer.writerows(gen_rows())
+            writer.writerows(self.read_bucket_files(bucket, interesting_fields))
 
         logger.info(f"Successfully exported data to {output_name}")
+
+    @staticmethod
+    def from_file(path_to_config: Path) -> S3ConfigObject:
+        """Load a YAML file exposing credentials used by S3 storage"""
+        with open(path_to_config) as fh:
+            contents = yaml.safe_load(fh)
+        return Command.S3ConfigObject(**contents)
+
+    @staticmethod
+    def get_s3_bucket(config: S3ConfigObject) -> mypy_boto3_s3.service_resource.Bucket:
+        """
+        Get a new S3 Bucket instance using Django settings.
+        """
+
+        bucket_name = config.STORAGE_BUCKET_NAME
+
+        assert bucket_name, "Expected `bucket_name` to be non-empty string!"
+
+        session = utils.get_s3_session()
+        s3 = session.resource("s3", endpoint_url=config.STORAGE_ENDPOINT_URL)
+
+        # Ensure the bucket exists
+        s3.meta.client.head_bucket(Bucket=bucket_name)
+
+        # Get the bucket resource
+        return s3.Bucket(bucket_name)
+
+    @staticmethod
+    def read_bucket_files(
+        bucket, interesting_fields: list[str]
+    ) -> Generator[list[str], None, None]:
+        for file in bucket.object_versions.all():
+            row = []
+
+            for field in interesting_fields:
+                if hasattr(file, field):
+                    item = getattr(file, field)
+
+                    if not isinstance(item, str):
+                        item = str(item)
+
+                    item = item.strip('"')
+                    row.append(item)
+
+            yield row

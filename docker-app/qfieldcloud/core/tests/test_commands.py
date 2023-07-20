@@ -4,9 +4,10 @@ import io
 import yaml
 from django.core.management import call_command
 from django.test import TestCase
+from qfieldcloud.core.management.commands.extractstoragemetadata import Command
 from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
-from qfieldcloud.core.utils import S3Config, get_s3_bucket
+from qfieldcloud.core.utils import get_s3_bucket
 from qfieldcloud.core.utils2 import storage
 
 
@@ -41,7 +42,7 @@ class QfcTestCase(TestCase):
         storage.upload_project_file(p, file, "project.qgs")
 
     def test_config(self):
-        config = S3Config.get_or_load(self.credentials_file)
+        config = Command.from_file(self.credentials_file)
         self.assertDictEqual(config._asdict(), self.credentials)
 
     def test_output_with_user_credentials(self):

@@ -4,82 +4,19 @@ import json
 import logging
 import os
 import posixpath
-import sys
 from datetime import datetime
-from functools import reduce
-from pathlib import Path, PurePath
-from typing import IO, Any, Generator, List, NamedTuple, Optional, Union
+from pathlib import PurePath
+from typing import IO, Generator, NamedTuple, Optional, Union
 
 import boto3
 import jsonschema
 import mypy_boto3_s3
-import yaml
 from botocore.errorfactory import ClientError
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from redis import Redis, exceptions
 
 logger = logging.getLogger(__name__)
-
-
-class S3ConfigObject(NamedTuple):
-    STORAGE_ACCESS_KEY_ID: str
-    STORAGE_SECRET_ACCESS_KEY: str
-    STORAGE_BUCKET_NAME: str
-    STORAGE_REGION_NAME: str
-    STORAGE_ENDPOINT_URL: str
-
-
-class S3Config:
-    _config = None
-
-    @staticmethod
-    def from_file(path_to_config: Path) -> dict[str, Any]:
-        """Load a YAML file exposing credentials used by S3 storage"""
-        with open(path_to_config) as fh:
-            contents = yaml.safe_load(fh)
-        return contents
-
-    @staticmethod
-    def validate(contents: dict[str, Any]) -> dict[str, Any]:
-        """Validate key/values used by S3 storage"""
-        reporter = {"missing_value": [], "extra_key": []}
-
-        def reducer(acc, item):
-            key, val = item
-            if key not in S3ConfigObject._fields:
-                acc["extra_key"].append(key)
-            if val is None:
-                acc["missing_value"].append(key)
-            if val == "":
-                logger.warning(f"{key} was found to have an empty string for value!")
-            return acc
-
-        reported = reduce(reducer, contents.items(), reporter)
-        reported["missing_key"] = [
-            key for key in S3ConfigObject._fields if key not in contents.keys()
-        ]
-
-        if any(reported.values()):
-            logger.error(f"Invalid config!: {reported}")
-            sys.exit(1)
-
-        return contents
-
-    @classmethod
-    def get_or_load(cls, path_to_file: str | None) -> S3ConfigObject:
-        """Get or create configuation for S3 storage."""
-        if not cls._config:
-            if not path_to_file:
-                logger.error(
-                    "You need to pass a valid path to your YAML configuration file"
-                )
-                sys.exit(1)
-            maybe_valid_config = cls.from_file(path_to_file)
-            valid_config = cls.validate(maybe_valid_config)
-            cls._config = S3ConfigObject(**valid_config)
-
-        return cls._config
 
 
 class S3PrefixPath(NamedTuple):
@@ -139,7 +76,7 @@ class S3ObjectVersion:
 
 class S3ObjectWithVersions(NamedTuple):
     latest: S3ObjectVersion
-    versions: List[S3ObjectVersion]
+    versions: list[S3ObjectVersion]
 
     @property
     def total_size(self) -> int:
@@ -160,41 +97,28 @@ def redis_is_running() -> bool:
     return True
 
 
-def get_s3_session(config: Optional[S3ConfigObject] = None) -> boto3.Session:
+def get_s3_session() -> boto3.Session:
     """Get a new S3 Session instance using Django settings"""
 
     session = boto3.Session(
-        aws_access_key_id=config.STORAGE_ACCESS_KEY_ID
-        if config
-        else settings.STORAGE_ACCESS_KEY_ID,
-        aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY
-        if config
-        else settings.STORAGE_SECRET_ACCESS_KEY,
-        region_name=config.STORAGE_REGION_NAME
-        if config
-        else settings.STORAGE_REGION_NAME,
+        aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
+        region_name=settings.STORAGE_REGION_NAME,
     )
     return session
 
 
-def get_s3_bucket(
-    config: Optional[S3ConfigObject] = None,
-) -> mypy_boto3_s3.service_resource.Bucket:
+def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
     """
     Get a new S3 Bucket instance using Django settings.
     """
 
-    bucket_name = config.STORAGE_BUCKET_NAME if config else settings.STORAGE_BUCKET_NAME
+    bucket_name = settings.STORAGE_BUCKET_NAME
 
     assert bucket_name, "Expected `bucket_name` to be non-empty string!"
 
     session = get_s3_session()
-    s3 = session.resource(
-        "s3",
-        endpoint_url=config.STORAGE_ENDPOINT_URL
-        if config
-        else settings.STORAGE_ENDPOINT_URL,
-    )
+    s3 = session.resource("s3", endpoint_url=settings.STORAGE_ENDPOINT_URL)
 
     # Ensure the bucket exists
     s3.meta.client.head_bucket(Bucket=bucket_name)
@@ -389,7 +313,7 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
     return jsonschema.Draft7Validator(schema_dict)
 
 
-def get_project_files(project_id: str, path: str = "") -> List[S3Object]:
+def get_project_files(project_id: str, path: str = "") -> list[S3Object]:
     """Returns a list of files and their versions.
 
     Args:
@@ -397,7 +321,7 @@ def get_project_files(project_id: str, path: str = "") -> List[S3Object]:
         path (str): additional filter prefix
 
     Returns:
-        List[S3ObjectWithVersions]: the list of files
+        list[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
     root_prefix = f"projects/{project_id}/files/"
@@ -432,7 +356,7 @@ def get_project_file_with_versions(
         project_id (str): the project id
 
     Returns:
-        List[S3ObjectWithVersions]: the list of files
+        list[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
     root_prefix = f"projects/{project_id}/files/"
@@ -446,14 +370,14 @@ def get_project_file_with_versions(
     return files[0] if files else None
 
 
-def get_project_package_files(project_id: str, package_id: str) -> List[S3Object]:
+def get_project_package_files(project_id: str, package_id: str) -> list[S3Object]:
     """Returns a list of package files.
 
     Args:
         project_id (str): the project id
 
     Returns:
-        List[S3ObjectWithVersions]: the list of package files
+        list[S3ObjectWithVersions]: the list of package files
     """
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/packages/{package_id}/"
@@ -498,8 +422,8 @@ def list_files(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: str = "",
-) -> List[S3Object]:
-    """Iterator that lists a bucket's objects under prefix."""
+) -> list[S3Object]:
+    """List a bucket's objects under prefix."""
     files = []
     for f in bucket.objects.filter(Prefix=prefix):
         if strip_prefix:
@@ -528,7 +452,7 @@ def list_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: str = "",
-) -> List[S3ObjectVersion]:
+) -> list[S3ObjectVersion]:
     """Iterator that lists a bucket's objects under prefix."""
     versions = []
     for v in bucket.object_versions.filter(Prefix=prefix):
@@ -555,7 +479,7 @@ def list_files_with_versions(
         Generator[S3ObjectWithVersions]: the object with its versions
     """
     last_key = None
-    versions: List[S3ObjectVersion] = []
+    versions: list[S3ObjectVersion] = []
     latest: Optional[S3ObjectVersion] = None
 
     for v in list_versions(bucket, prefix, strip_prefix):
