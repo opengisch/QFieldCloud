@@ -72,7 +72,7 @@ class Command(BaseCommand):
     @staticmethod
     def from_file(path_to_config: Path) -> S3ConfigObject:
         """Load a YAML file exposing credentials used by S3 storage"""
-        with open(path_to_config) as fh:
+        with open(path_to_config, "r") as fh:
             contents = yaml.safe_load(fh)
 
         config = {
