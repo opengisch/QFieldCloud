@@ -53,11 +53,12 @@ class Command(BaseCommand):
             output_name = "s3_storage_files.csv"
 
         fields = ["id", "key", "e_tag", "size", "create_time"]
+        rows = self.read_bucket_files(bucket, fields)
 
         with open(output_name, "w") as fh:
             writer = csv.writer(fh, delimiter=",")
             writer.writerow(fields)
-            writer.writerows(self.read_bucket_files(bucket, fields))
+            writer.writerows(rows)
 
         logger.info(f"Successfully exported data to {output_name}")
 
