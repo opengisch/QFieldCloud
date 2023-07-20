@@ -8,6 +8,7 @@ import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
@@ -37,6 +38,7 @@ class ListFilesViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(request.user, project)
 
 
+@extend_schema(exclude=True)
 class ListFilesView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
@@ -125,6 +127,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
         return False
 
 
+@extend_schema(exclude=True)
 class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
@@ -292,6 +295,7 @@ class DownloadPushDeleteFileView(views.APIView):
         return Response(status=status.HTTP_200_OK)
 
 
+@extend_schema(exclude=True)
 class ProjectMetafilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [
@@ -304,6 +308,7 @@ class ProjectMetafilesView(views.APIView):
         return utils2.storage.file_response(request, key, presigned=True)
 
 
+@extend_schema(exclude=True)
 class PublicFilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = []
