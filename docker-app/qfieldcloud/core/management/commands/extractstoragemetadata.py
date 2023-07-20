@@ -72,7 +72,7 @@ class Command(BaseCommand):
     @staticmethod
     def from_file(path_to_config: Path) -> S3ConfigObject:
         """Load a YAML file exposing credentials used by S3 storage"""
-        with open(path_to_config, "r") as fh:
+        with open(path_to_config) as fh:
             contents = yaml.safe_load(fh)
 
         config = {
@@ -85,10 +85,13 @@ class Command(BaseCommand):
         """Get a new S3 Bucket instance using S3ConfigObject"""
 
         bucket_name = config.STORAGE_BUCKET_NAME
-
         assert bucket_name, "Expected `bucket_name` to be non-empty string!"
 
-        session = utils.get_s3_session()
+        session = boto3.Session(
+            aws_access_key_id=config.STORAGE_ACCESS_KEY_ID,
+            aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY,
+            region_name=config.STORAGE_REGION_NAME,
+        )
         s3 = session.resource("s3", endpoint_url=config.STORAGE_ENDPOINT_URL)
 
         # Ensure the bucket exists
@@ -96,16 +99,6 @@ class Command(BaseCommand):
 
         # Get the bucket resource
         return s3.Bucket(bucket_name)
-
-    @staticmethod
-    def get_s3_session(config: S3ConfigObject) -> boto3.Session:
-        """Get a new S3 Session instance using S3ConfigObject"""
-
-        return boto3.Session(
-            aws_access_key_id=config.STORAGE_ACCESS_KEY_ID,
-            aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY,
-            region_name=config.STORAGE_REGION_NAME,
-        )
 
     @staticmethod
     def read_bucket_files(
