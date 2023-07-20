@@ -168,6 +168,7 @@ class DownloadPushDeleteFileView(views.APIView):
 
     # TODO refactor this function by moving the actual upload and Project model updates to library function outside the view
     def post(self, request, projectid, filename, format=None):
+
         if len(request.FILES.getlist("file")) > 1:
             raise exceptions.MultipleContentsError()
 
