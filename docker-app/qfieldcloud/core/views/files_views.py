@@ -307,7 +307,6 @@ class DownloadPushDeleteFileView(views.APIView):
         return Response(status=status.HTTP_200_OK)
 
 
-@extend_schema(exclude=True)
 class ProjectMetafilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [
@@ -320,7 +319,6 @@ class ProjectMetafilesView(views.APIView):
         return utils2.storage.file_response(request, key, presigned=True)
 
 
-@extend_schema(exclude=True)
 class PublicFilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = []
