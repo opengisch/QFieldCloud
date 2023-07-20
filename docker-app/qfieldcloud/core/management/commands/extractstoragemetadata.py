@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import Generator, NamedTuple
 
+import boto3
 import mypy_boto3_s3
 import yaml
 from django.core.management.base import BaseCommand, CommandParser
@@ -14,13 +15,6 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     """Save metadata from S3 storage project files to disk."""
-
-    class S3ConfigObject(NamedTuple):
-        STORAGE_ACCESS_KEY_ID: str
-        STORAGE_SECRET_ACCESS_KEY: str
-        STORAGE_BUCKET_NAME: str
-        STORAGE_REGION_NAME: str
-        STORAGE_ENDPOINT_URL: str
 
     def add_arguments(self, parser: CommandParser):
         parser.add_argument("-o", "--output", type=str, help="Name of output file")
@@ -67,18 +61,27 @@ class Command(BaseCommand):
 
         logger.info(f"Successfully exported data to {output_name}")
 
+    class S3ConfigObject(NamedTuple):
+        STORAGE_ACCESS_KEY_ID: str
+        STORAGE_SECRET_ACCESS_KEY: str
+        STORAGE_BUCKET_NAME: str
+        STORAGE_REGION_NAME: str
+        STORAGE_ENDPOINT_URL: str
+
     @staticmethod
     def from_file(path_to_config: Path) -> S3ConfigObject:
         """Load a YAML file exposing credentials used by S3 storage"""
         with open(path_to_config) as fh:
             contents = yaml.safe_load(fh)
-        return Command.S3ConfigObject(**contents)
+
+        config = {
+            k: v for k, v in contents.items() if k in Command.S3ConfigObject._fields
+        }
+        return Command.S3ConfigObject(**config)
 
     @staticmethod
     def get_s3_bucket(config: S3ConfigObject) -> mypy_boto3_s3.service_resource.Bucket:
-        """
-        Get a new S3 Bucket instance using Django settings.
-        """
+        """Get a new S3 Bucket instance using S3ConfigObject"""
 
         bucket_name = config.STORAGE_BUCKET_NAME
 
@@ -94,9 +97,20 @@ class Command(BaseCommand):
         return s3.Bucket(bucket_name)
 
     @staticmethod
+    def get_s3_session(config: S3ConfigObject) -> boto3.Session:
+        """Get a new S3 Session instance using S3ConfigObject"""
+
+        return boto3.Session(
+            aws_access_key_id=config.STORAGE_ACCESS_KEY_ID,
+            aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY,
+            region_name=config.STORAGE_REGION_NAME,
+        )
+
+    @staticmethod
     def read_bucket_files(
         bucket, fields: list[str]
     ) -> Generator[list[str], None, None]:
+        """Generator yielding file metadata 1 by 1"""
         for file in bucket.object_versions.all():
             row = []
 
