@@ -34,8 +34,22 @@ admin.site.site_header = _("QFieldCloud Admin")
 admin.site.site_title = _("QFieldCloud Admin")
 admin.site.index_title = _("Welcome to QFieldCloud Admin")
 
+internal_apis = [
+    path(
+        settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/",
+        files_views.ListFilesView.as_view(permission_classes=[permissions.IsAdminUser]),
+    ),
+    path(
+        settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/<path:filename>/",
+        files_views.DownloadPushDeleteFileView.as_view(
+            permission_classes=[permissions.IsAdminUser]
+        ),
+        name="project_file_download",
+    ),
+    path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
+]
 
-urlpatterns = [
+urlpatterns = internal_apis + [
     path(
         "",
         RedirectView.as_view(url=settings.QFIELDCLOUD_ADMIN_URI, permanent=False),
@@ -51,18 +65,6 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="schema-swagger-ui",
     ),
-    path(
-        settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/",
-        files_views.ListFilesView.as_view(permission_classes=[permissions.IsAdminUser]),
-    ),
-    path(
-        settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/<path:filename>/",
-        files_views.DownloadPushDeleteFileView.as_view(
-            permission_classes=[permissions.IsAdminUser]
-        ),
-        name="project_file_download",
-    ),
-    path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
     path(
         "docs/",
         SpectacularRedocView.as_view(url_name="schema"),

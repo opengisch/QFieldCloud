@@ -291,7 +291,6 @@ if SENTRY_DSN:
         )
 
         if "exc_info" in hint:
-
             exc_class, _exc_object, _exc_tb = hint["exc_info"]
 
             # Skip sending errors
@@ -563,4 +562,5 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "v1",
     "CONTACT": {"email": "info@opengis.ch"},
     "LICENSE": {"name": "License"},
+    "PREPROCESSING_HOOKS": ["qfieldcloud.core.urls_excluded.custom_preprocessing_hook"],
 }

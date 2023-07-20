@@ -8,7 +8,8 @@ import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
@@ -38,7 +39,6 @@ class ListFilesViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(request.user, project)
 
 
-@extend_schema(exclude=True)
 class ListFilesView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
@@ -127,7 +127,19 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
         return False
 
 
-@extend_schema(exclude=True)
+@extend_schema_view(
+    post=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "file",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                required=True,
+                description="Path to the file to upload",
+            )
+        ],
+    )
+)
 class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
@@ -156,7 +168,6 @@ class DownloadPushDeleteFileView(views.APIView):
 
     # TODO refactor this function by moving the actual upload and Project model updates to library function outside the view
     def post(self, request, projectid, filename, format=None):
-
         if len(request.FILES.getlist("file")) > 1:
             raise exceptions.MultipleContentsError()
 
