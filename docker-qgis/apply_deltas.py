@@ -2,7 +2,7 @@
 
 import re
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
 
 try:
     # 3.8
@@ -506,6 +506,10 @@ def apply_deltas_without_transaction(
                     provider_errors=layer.dataProvider().errors(),
                 )
 
+            pk_attr_name = get_pk_attr_name(layer)
+            if not pk_attr_name:
+                raise DeltaException(f'Layer "{layer.name()}" has no primary key.')
+
             has_edit_buffer = layer.editBuffer() and not isinstance(
                 layer.editBuffer(), QgsVectorLayerEditPassthrough
             )
@@ -565,16 +569,13 @@ def apply_deltas_without_transaction(
                 QCoreApplication.processEvents()
                 layer.committedFeaturesAdded.disconnect(committed_features_added_cb)
 
-            logger.info(f'Successfully applied delta on layer "{layer_id}"')
+            logger.info(
+                f'Successfully applied delta "{delta.get("uuid")}" on layer "{layer_id}"!'
+            )
 
             feature_pk = delta.get("sourcePk")
             modified_pk = None
             if feature.isValid():
-                _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
-
-                if not pk_attr_name:
-                    raise DeltaException(f'Layer "{layer.name()}" has no primary key.')
-
                 modified_pk = feature.attribute(pk_attr_name)
 
                 if (
@@ -757,24 +758,58 @@ def cleanup_backups(layer_paths: Set[str]) -> bool:
     return is_success
 
 
-def find_layer_pk(layer: QgsVectorLayer) -> Tuple[int, str]:
+# NOTE this is very similar to the implementation in `libqfieldsync`.
+# I preferred to copy-paste it, rather than adding `libqfieldsync` as a dependency on the `apply_deltas`.
+@lru_cache()
+def get_pk_attr_name(layer: QgsVectorLayer) -> str:
+    pk_attr_name: str = ""
+
+    if layer.type() != QgsMapLayer.VectorLayer:
+        raise DeltaException(f"Expected layer {layer.name()} to be a vector layer!")
+
+    pk_indexes = layer.primaryKeyAttributes()
     fields = layer.fields()
-    pk_attrs = [*layer.primaryKeyAttributes(), fields.indexFromName("fid")]
-    # we assume the first index to be the primary key index... kinda stupid, but memory layers don't have primary key at all, but we use it on geopackages, but... snap!
-    pk_attr_idx = pk_attrs[0]
 
-    if pk_attr_idx == -1:
-        return (-1, "")
+    if len(pk_indexes) == 1:
+        pk_attr_name = fields[pk_indexes[0]].name()
+    elif len(pk_indexes) > 1:
+        raise DeltaException("Composite (multi-column) primary keys are not supported!")
+    else:
+        logger.info(
+            f'Layer "{layer.name()}" does not have a primary key. Trying to fallback to `fid`…'
+        )
 
-    pk_attr_name = fields.at(pk_attr_idx).name()
+        # NOTE `QgsFields.lookupField(str)` is case insensitive (so we support "fid", "FID", "Fid" etc),
+        # but also looks for the field alias, that's why we check the `field.name().lower() == "fid"`
+        fid_idx = fields.lookupField("fid")
+        if fid_idx >= 0 and fields.at(fid_idx).name().lower() == "fid":
+            fid_name = fields.at(fid_idx).name()
+            logger.info(
+                f'Layer "{layer.name()}" does not have a primary key so it uses the `fid` attribute as a fallback primary key. '
+                "This is an unstable feature! "
+                "Consider [converting to GeoPackages instead](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
+            )
+            pk_attr_name = fid_name
 
-    return (pk_attr_idx, pk_attr_name)
+    if not pk_attr_name:
+        raise DeltaException(
+            f'Layer "{layer.name()}" neither has a primary key, nor an attribute `fid`! '
+        )
+
+    if "," in pk_attr_name:
+        raise DeltaException(f'Comma in field name "{pk_attr_name}" is not allowed!')
+
+    logger.info(
+        f'Layer "{layer.name()}" will use attribute "{pk_attr_name}" as a primary key.'
+    )
+
+    return pk_attr_name
 
 
 def get_feature(
     layer: QgsVectorLayer, delta: Delta, client_pks: Dict[str, str] = None
 ) -> QgsFeature:
-    _pk_attr_idx, pk_attr_name = find_layer_pk(layer)
+    pk_attr_name = get_pk_attr_name(layer)
 
     assert pk_attr_name
 
