@@ -118,6 +118,7 @@ class Command(BaseCommand):
                 if not isinstance(item, str):
                     item = str(item)
 
+                # some fields (e.g. `e_tag`) have unnecessary `"` (double quotes) in their value.
                 item = item.strip('"')
                 row.append(item)
 
