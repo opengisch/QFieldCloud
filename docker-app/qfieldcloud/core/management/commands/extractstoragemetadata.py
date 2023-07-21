@@ -1,12 +1,10 @@
 import csv
 import logging
 import sys
-from pathlib import Path
-from typing import Generator, NamedTuple, Optional
+from typing import Generator, NamedTuple
 
 import boto3
 import mypy_boto3_s3
-import yaml
 from django.core.management.base import BaseCommand, CommandParser
 from qfieldcloud.core import utils
 
@@ -17,25 +15,17 @@ class Command(BaseCommand):
     """Save metadata from S3 storage project files to disk."""
 
     def add_arguments(self, parser: CommandParser):
-        parser.add_argument("-o", "--output", type=str, help="Name of output file")
-        parser.add_argument(
-            "-f",
-            "--config_file",
-            type=str,
-            help="Path to YAML file with your S3 credentials",
-        )
+        parser.add_argument("-o", "--output", type=str, help="Optional: Name of output file")
+        parser.add_argument("-s3","--s3_credentials",type=str,help="""
+            Optional: S3 credentials as comma-separated key=value pairs.
+            Example: -s3 STORAGE_ACCESS_KEY_ID=...,STORAGE_SECRET_ACCESS_KEY=...,...
+        """)
 
     def handle(self, *args, **options):
         config = None
 
-        if options.get("config_file"):
-            path = Path(options["config_file"])
-
-            if not path.is_file():
-                logger.error(f"This path does not exist or is not a file: {path}")
-                sys.exit(1)
-
-            config = self.from_file(path)
+        if options.get("s3_credentials"):
+            config = self.from_shell(options["s3_credentials"])
             bucket = self.get_s3_bucket(config)
 
         else:
@@ -52,7 +42,7 @@ class Command(BaseCommand):
         else:
             output_name = "s3_storage_files.csv"
 
-        fields = ["id", "key", "e_tag", "size", "last_modified"]
+        fields = ("id", "key", "e_tag", "size", "last_modified",)
         rows = self.read_bucket_files(bucket, fields)
 
         with open(output_name, "w") as fh:
@@ -64,21 +54,26 @@ class Command(BaseCommand):
 
     class S3ConfigObject(NamedTuple):
         STORAGE_ACCESS_KEY_ID: str
-        STORAGE_SECRET_ACCESS_KEY: str
         STORAGE_BUCKET_NAME: str
-        STORAGE_REGION_NAME: str
         STORAGE_ENDPOINT_URL: str
+        STORAGE_REGION_NAME: str
+        STORAGE_SECRET_ACCESS_KEY: str
 
     @staticmethod
-    def from_file(path_to_config: Path) -> S3ConfigObject:
-        """Load a YAML file exposing credentials used by S3 storage"""
-        with open(path_to_config) as fh:
-            contents = yaml.safe_load(fh)
-
-        config = {
-            k: v for k, v in contents.items() if k in Command.S3ConfigObject._fields
-        }
-        return Command.S3ConfigObject(**config)
+    def from_shell(user_input: str) -> S3ConfigObject:
+        try:
+            keys_vals = user_input.split(",")
+            builder = {}
+            
+            for key_val in keys_vals:
+                key, val = key_val.split("=", 1)
+                builder[key] = val
+            
+            config = Command.S3ConfigObject(**builder)
+        except Exception:
+            logger.error(f"Unable to extract valid S3 storage credentials from your input: {user_input}")
+            sys.exit(1)
+        return config
 
     @staticmethod
     def get_s3_bucket(config: S3ConfigObject) -> mypy_boto3_s3.service_resource.Bucket:
@@ -86,22 +81,20 @@ class Command(BaseCommand):
 
         bucket_name = config.STORAGE_BUCKET_NAME
         assert bucket_name, "Expected `bucket_name` to be non-empty string!"
-
+        
         session = boto3.Session(
             aws_access_key_id=config.STORAGE_ACCESS_KEY_ID,
             aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY,
             region_name=config.STORAGE_REGION_NAME,
         )
         s3 = session.resource("s3", endpoint_url=config.STORAGE_ENDPOINT_URL)
-
-        # Get the bucket resource
         return s3.Bucket(bucket_name)
 
     @staticmethod
     def read_bucket_files(
-        bucket, fields: list[str], prefix: str = ""
+        bucket, fields: tuple[str], prefix: str = ""
     ) -> Generator[list[str], None, None]:
-        """Generator yielding file metadata 1 by 1. Empty prefix acts as if all()"""
+        """Generator yielding file metadata 1 by 1. `...object_versions.filter(prefix="")` == `...object_versions.all()`"""
         
         for file in bucket.object_versions.filter(Prefix=prefix):
             row = []
