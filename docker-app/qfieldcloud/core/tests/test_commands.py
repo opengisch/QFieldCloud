@@ -23,7 +23,9 @@ class QfcTestCase(TestCase):
             "STORAGE_REGION_NAME": settings.STORAGE_REGION_NAME,
             "STORAGE_SECRET_ACCESS_KEY": settings.STORAGE_SECRET_ACCESS_KEY,
         }
-        cls.user_input = ",".join(f"{key}={val}" for key, val in cls.credentials.items())
+        cls.user_input = ",".join(
+            f"{key}={val}" for key, val in cls.credentials.items()
+        )
         cls.output_file = "extracted.csv"
 
         # User
@@ -56,11 +58,7 @@ class QfcTestCase(TestCase):
 
     def test_output_with_user_credentials(self):
         call_command(
-            "extractstoragemetadata",
-            "-o",
-            self.output_file,
-            "-s3",
-            self.user_input
+            "extractstoragemetadata", "-o", self.output_file, "-s3", self.user_input
         )
 
         with open(self.output_file, newline="") as fh:

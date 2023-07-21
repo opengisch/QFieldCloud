@@ -15,11 +15,18 @@ class Command(BaseCommand):
     """Save metadata from S3 storage project files to disk."""
 
     def add_arguments(self, parser: CommandParser):
-        parser.add_argument("-o", "--output", type=str, help="Optional: Name of output file")
-        parser.add_argument("-s3","--s3_credentials",type=str,help="""
+        parser.add_argument(
+            "-o", "--output", type=str, help="Optional: Name of output file"
+        )
+        parser.add_argument(
+            "-s3",
+            "--s3_credentials",
+            type=str,
+            help="""
             Optional: S3 credentials as comma-separated key=value pairs.
             Example: -s3 STORAGE_ACCESS_KEY_ID=...,STORAGE_SECRET_ACCESS_KEY=...,...
-        """)
+        """,
+        )
 
     def handle(self, *args, **options):
         config = None
@@ -42,7 +49,13 @@ class Command(BaseCommand):
         else:
             output_name = "s3_storage_files.csv"
 
-        fields = ("id", "key", "e_tag", "size", "last_modified",)
+        fields = (
+            "id",
+            "key",
+            "e_tag",
+            "size",
+            "last_modified",
+        )
         rows = self.read_bucket_files(bucket, fields)
 
         with open(output_name, "w") as fh:
@@ -64,14 +77,16 @@ class Command(BaseCommand):
         try:
             keys_vals = user_input.split(",")
             builder = {}
-            
+
             for key_val in keys_vals:
                 key, val = key_val.split("=", 1)
                 builder[key] = val
-            
+
             config = Command.S3ConfigObject(**builder)
         except Exception:
-            logger.error(f"Unable to extract valid S3 storage credentials from your input: {user_input}")
+            logger.error(
+                f"Unable to extract valid S3 storage credentials from your input: {user_input}"
+            )
             sys.exit(1)
         return config
 
@@ -81,7 +96,7 @@ class Command(BaseCommand):
 
         bucket_name = config.STORAGE_BUCKET_NAME
         assert bucket_name, "Expected `bucket_name` to be non-empty string!"
-        
+
         session = boto3.Session(
             aws_access_key_id=config.STORAGE_ACCESS_KEY_ID,
             aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY,
@@ -95,7 +110,7 @@ class Command(BaseCommand):
         bucket, fields: tuple[str], prefix: str = ""
     ) -> Generator[list[str], None, None]:
         """Generator yielding file metadata 1 by 1. `...object_versions.filter(prefix="")` == `...object_versions.all()`"""
-        
+
         for file in bucket.object_versions.filter(Prefix=prefix):
             row = []
 
