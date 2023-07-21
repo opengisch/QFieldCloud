@@ -94,9 +94,6 @@ class Command(BaseCommand):
         )
         s3 = session.resource("s3", endpoint_url=config.STORAGE_ENDPOINT_URL)
 
-        # Ensure the bucket exists
-        s3.meta.client.head_bucket(Bucket=bucket_name)
-
         # Get the bucket resource
         return s3.Bucket(bucket_name)
 
