@@ -569,7 +569,9 @@ def apply_deltas_without_transaction(
                 QCoreApplication.processEvents()
                 layer.committedFeaturesAdded.disconnect(committed_features_added_cb)
 
-            logger.info(f'Successfully applied delta on layer "{layer_id}"')
+            logger.info(
+                f'Successfully applied delta "{delta.get("uuid")}" on layer "{layer_id}"!'
+            )
 
             feature_pk = delta.get("sourcePk")
             modified_pk = None
