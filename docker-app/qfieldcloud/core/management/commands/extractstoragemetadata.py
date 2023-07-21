@@ -109,7 +109,14 @@ class Command(BaseCommand):
             row = []
 
             for field in fields:
-                item = getattr(file, field)
+
+                try:
+                    item = getattr(file, field)
+                except AttributeError:
+                    logger.error(
+                        f"Unable to find attribute '{field}', perhaps you were trying to get one of these instead {vars(file)}?"
+                    )
+                    sys.exit(1)
 
                 if not isinstance(item, str):
                     item = str(item)
