@@ -37,11 +37,11 @@ admin.site.index_title = _("Welcome to QFieldCloud Admin")
 internal_apis = [
     path(
         settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/",
-        files_views.ListFilesView.as_view(permission_classes=[permissions.IsAdminUser]),
+        files_views.AdminListFilesViews.as_view(permission_classes=[permissions.IsAdminUser]),
     ),
     path(
         settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/<path:filename>/",
-        files_views.DownloadPushDeleteFileView.as_view(
+        files_views.AdminDownloadPushDeleteFileView.as_view(
             permission_classes=[permissions.IsAdminUser]
         ),
         name="project_file_download",

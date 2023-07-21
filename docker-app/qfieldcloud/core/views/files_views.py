@@ -331,3 +331,13 @@ class PublicFilesView(views.APIView):
 
     def get(self, request, filename):
         return utils2.storage.file_response(request, filename)
+
+@extend_schema(exclude=True)
+class AdminDownloadPushDeleteFileView(DownloadPushDeleteFileView):
+    """Allowing `DownloadPushDeleteFileView` to be excluded from the OpenAPI schema documentation"""
+    pass
+
+@extend_schema(exclude=True)
+class AdminListFilesViews(ListFilesView):
+    """Allowing `ListFilesView` to be excluded from the OpenAPI schema documentation"""
+    pass
