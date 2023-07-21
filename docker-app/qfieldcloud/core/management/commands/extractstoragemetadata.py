@@ -2,7 +2,7 @@ import csv
 import logging
 import sys
 from pathlib import Path
-from typing import Generator, NamedTuple
+from typing import Generator, NamedTuple, Optional
 
 import boto3
 import mypy_boto3_s3
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         else:
             output_name = "s3_storage_files.csv"
 
-        fields = ["id", "key", "e_tag", "size", "create_time"]
+        fields = ["id", "key", "e_tag", "size", "last_modified"]
         rows = self.read_bucket_files(bucket, fields)
 
         with open(output_name, "w") as fh:
@@ -99,10 +99,11 @@ class Command(BaseCommand):
 
     @staticmethod
     def read_bucket_files(
-        bucket, fields: list[str]
+        bucket, fields: list[str], prefix: str = ""
     ) -> Generator[list[str], None, None]:
-        """Generator yielding file metadata 1 by 1"""
-        for file in bucket.object_versions.all():
+        """Generator yielding file metadata 1 by 1. Empty prefix acts as if all()"""
+        
+        for file in bucket.object_versions.filter(Prefix=prefix):
             row = []
 
             for field in fields:
