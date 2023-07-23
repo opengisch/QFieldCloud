@@ -34,8 +34,6 @@ admin.site.site_header = _("QFieldCloud Admin")
 admin.site.site_title = _("QFieldCloud Admin")
 admin.site.index_title = _("Welcome to QFieldCloud Admin")
 
-internal_apis = [
-]
 
 urlpatterns = [
     path(

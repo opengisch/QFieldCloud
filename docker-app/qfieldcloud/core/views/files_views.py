@@ -9,12 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiResponse,
-    extend_schema,
-    extend_schema_view,
-)
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
@@ -24,7 +19,7 @@ from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
     purge_old_file_versions,
 )
-from rest_framework import permissions, status, views
+from rest_framework import permissions, serializers, status, views
 from rest_framework.exceptions import NotFound
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
@@ -44,8 +39,22 @@ class ListFilesViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(request.user, project)
 
 
+class FileVersionSerializer(serializers.Serializer):
+    version_id = serializers.CharField()
+    size = serializers.IntegerField()
+    md5sum = serializers.CharField()
+    last_modified = serializers.DateTimeField()
+    display = serializers.CharField()
+    is_attachment = serializers.BooleanField(required=False)
+
+
+@extend_schema_view(
+    get=extend_schema(
+        description="Get all the project's file versions",
+        responses={200: serializers.ListSerializer(child=FileVersionSerializer)},
+    ),
+)
 class ListFilesView(views.APIView):
-    # TODO: swagger doc
     # TODO: docstring
 
     permission_classes = [permissions.IsAuthenticated, ListFilesViewPermissions]
@@ -133,8 +142,14 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
 
 
 @extend_schema_view(
-    get=extend_schema(responses={200: OpenApiResponse(response=ListFilesView)}),
+    get=extend_schema(
+        description="Download a file from a project",
+        responses={
+            (200, "text/html"): OpenApiTypes.BINARY,
+        },
+    ),
     post=extend_schema(
+        description="Upload a file to the project",
         parameters=[
             OpenApiParameter(
                 "file",
@@ -145,6 +160,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
             )
         ],
     ),
+    delete=extend_schema(description="Delete a file from a project"),
 )
 class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
@@ -313,6 +329,14 @@ class DownloadPushDeleteFileView(views.APIView):
         return Response(status=status.HTTP_200_OK)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Download the metadata of a project's file",
+        responses={
+            (200, "text/html"): OpenApiTypes.BINARY,
+        },
+    )
+)
 class ProjectMetafilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [
@@ -325,6 +349,14 @@ class ProjectMetafilesView(views.APIView):
         return utils2.storage.file_response(request, key, presigned=True)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Download a file belonging to a public project",
+        responses={
+            (200, "text/html"): OpenApiTypes.BINARY,
+        },
+    )
+)
 class PublicFilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = []
