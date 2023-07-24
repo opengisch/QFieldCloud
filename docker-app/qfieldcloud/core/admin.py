@@ -449,6 +449,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         "is_active",
         "groups",
         "remaining_invitations",
+        "remaining_trial_organizations",
         "has_newsletter_subscription",
         "has_accepted_tos",
     )
