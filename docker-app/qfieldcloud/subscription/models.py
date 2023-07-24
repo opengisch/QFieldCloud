@@ -857,6 +857,15 @@ class AbstractSubscription(models.Model):
             regular_plan = plan
             regular_active_since = active_since
 
+            # Set the remaining_trial_organization
+            # NOTE in case the user had a custom amount set (e.g manually set by support) this will
+            # be overwritten by a subscription plan change, which could cause some confusion.
+            # But taking care of this would add quite some complexity.
+            created_by.remaining_trial_organizations = (
+                regular_plan.max_trial_organizations
+            )
+            created_by.save(update_fields=["remaining_trial_organizations"])
+
         logger.info(f"Creating regular subscription from {regular_active_since}")
         regular_subscription = cls.objects.create(
             plan=regular_plan,
