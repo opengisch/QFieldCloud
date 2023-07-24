@@ -80,7 +80,9 @@ class Command(BaseCommand):
 
             for key_val in keys_vals:
                 key, val = key_val.split("=", 1)
-                builder[key] = val
+                if val is None or val.strip() == "":
+                    logger.warning(f"Blank or None value at key {key}")
+                builder[key] = val.strip()
 
             config = Command.S3ConfigObject(**builder)
         except Exception:
@@ -93,10 +95,7 @@ class Command(BaseCommand):
     @staticmethod
     def get_s3_bucket(config: S3ConfigObject) -> mypy_boto3_s3.service_resource.Bucket:
         """Get a new S3 Bucket instance using S3ConfigObject"""
-
         bucket_name = config.STORAGE_BUCKET_NAME
-        assert bucket_name, "Expected `bucket_name` to be non-empty string!"
-
         session = boto3.Session(
             aws_access_key_id=config.STORAGE_ACCESS_KEY_ID,
             aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY,
@@ -109,7 +108,7 @@ class Command(BaseCommand):
     def read_bucket_files(
         bucket, fields: tuple[str], prefix: str = ""
     ) -> Generator[list[str], None, None]:
-        """Generator yielding file metadata 1 by 1. `...object_versions.filter(prefix="")` == `...object_versions.all()`"""
+        """Yield file metadata 1 by 1. `...object_versions.filter(prefix="")` == `...object_versions.all()`"""
 
         for file in bucket.object_versions.filter(Prefix=prefix):
             row = []
