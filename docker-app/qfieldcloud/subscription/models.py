@@ -839,6 +839,11 @@ class AbstractSubscription(models.Model):
             )
             # NOTE to get annotations, mostly `is_active`
             trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
+
+            if created_by.remaining_trial_organizations > 0:
+                created_by.remaining_trial_organizations -= 1
+                created_by.save(update_fields=["remaining_trial_organizations"])
+
             # the trial plan should be the default plan
             regular_plan = Plan.objects.get(
                 user_type=account.user.type,
