@@ -51,7 +51,7 @@ class FileVersionSerializer(serializers.Serializer):
 @extend_schema_view(
     get=extend_schema(
         description="Get all the project's file versions",
-        responses={200: serializers.ListSerializer(child=FileVersionSerializer)},
+        responses={200: serializers.ListSerializer(child=FileVersionSerializer())},
     ),
 )
 class ListFilesView(views.APIView):
