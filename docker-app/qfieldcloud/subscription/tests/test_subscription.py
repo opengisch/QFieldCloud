@@ -4,7 +4,7 @@ from datetime import timedelta
 import django.db.utils
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Person, Project
+from qfieldcloud.core.models import Organization, Person, Project
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from rest_framework.test import APITransactionTestCase
 
@@ -723,6 +723,41 @@ class QfcTestCase(APITransactionTestCase):
 
         with self.assertRaises(django.db.utils.IntegrityError):
             Subscription.create_default_plan_subscription(u1.useraccount)
+
+    def test_remaining_trial_organizations_is_set_and_decremented(
+        self,
+    ):
+        user_plan = Plan.objects.get(code="default_user")
+        user_plan.max_trial_organizations = 2
+        user_plan.save(update_fields=["max_trial_organizations"])
+        u1 = Person.objects.create(username="u1")
+
+        # remaining_trial_organizations is set on create_subscription
+        self.assertEqual(u1.remaining_trial_organizations, 2)
+
+        trial_plan = Plan.objects.get(code="default_org")
+        trial_plan.is_trial = True
+        trial_plan.save(update_fields=["is_trial"])
+
+        # remaining_trial_organizations is decremented when creating a trial organization
+        self.assert_create_org_decrements_count("org1", u1, 1)
+
+        # remaining_trial_organizations is decremented down to 0
+        self.assert_create_org_decrements_count("org2", u1, 0)
+
+        # It doesn't directly prevent creating more trials, is just a counter that stays at 0
+        self.assert_create_org_decrements_count("org3", u1, 0)
+
+    def assert_create_org_decrements_count(
+        self, org_name, user, remaining_trial_organizations
+    ):
+        Organization.objects.create(
+            username=org_name, organization_owner=user, created_by=user
+        )
+        user.refresh_from_db()
+        self.assertEqual(
+            user.remaining_trial_organizations, remaining_trial_organizations
+        )
 
     def test_project_lists_duplicates_if_multiple_subscriptions(self):
         u1 = Person.objects.create(username="u1")
