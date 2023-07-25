@@ -777,13 +777,19 @@ class AbstractSubscription(models.Model):
             is_default=True,
         )
 
+        if account.user.is_organization:
+            # NOTE sometimes `account.user` is not an organization instance for unknown reasons
+            created_by = Organization.objects.get(pk=account.pk).organization_owner
+        else:
+            created_by = account.user
+
         if active_since is None:
             active_since = timezone.now()
 
         _trial_subscription, regular_subscription = cls.create_subscription(
             account=account,
             plan=plan,
-            created_by=account.user,
+            created_by=created_by,
             active_since=active_since,
         )
 
@@ -813,12 +819,6 @@ class AbstractSubscription(models.Model):
         if active_since:
             # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
-
-        if account.user.is_organization:
-            # NOTE sometimes `account.user` is not an organization instance for unknown reasons
-            created_by = Organization.objects.get(pk=account.pk).organization_owner
-        else:
-            created_by = account.user
 
         if plan.is_trial:
             assert isinstance(
