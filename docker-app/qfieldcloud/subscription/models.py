@@ -778,7 +778,8 @@ class AbstractSubscription(models.Model):
         )
 
         if account.user.is_organization:
-            # NOTE sometimes `account.user` is not an organization instance for unknown reasons
+            # NOTE sometimes `account.user` is not an organization, e.g. when setting
+            # `active_until` on an organization account
             created_by = Organization.objects.get(pk=account.pk).organization_owner
         else:
             created_by = account.user
