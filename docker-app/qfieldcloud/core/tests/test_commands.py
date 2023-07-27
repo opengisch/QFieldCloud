@@ -36,11 +36,7 @@ class QfcTestCase(TestCase):
         get_s3_bucket().objects.filter(Prefix="projects/").delete()
         storage.upload_project_file(p, file, "project.qgs")
 
-    def tearDown(self):
-        super().tearDown()
-        os.remove(self.output_file)
-
-    def test_output_with_user_credentials(self):
+    def test_output_to_file(self):
         call_command(
             "extractstoragemetadata",
             "-o",
@@ -62,3 +58,20 @@ class QfcTestCase(TestCase):
             entries = list(reader)
             print(entries)
             self.assertGreater(len(entries), 1)
+
+        os.remove(self.output_file)
+
+    def test_output_to_sdout(self):
+        call_command(
+            "extractstoragemetadata",
+            "--storage_access_key_id",
+            self.credentials["storage_access_key_id"],
+            "--storage_bucket_name",
+            self.credentials["storage_bucket_name"],
+            "--storage_endpoint_url",
+            self.credentials["storage_endpoint_url"],
+            "--storage_region_name",
+            self.credentials["storage_region_name"],
+            "--storage_secret_access_key",
+            self.credentials["storage_secret_access_key"],
+        )

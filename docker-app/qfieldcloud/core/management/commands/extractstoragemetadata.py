@@ -1,5 +1,6 @@
 import csv
 import logging
+from sys import stdout
 from typing import Generator, NamedTuple
 
 import boto3
@@ -59,8 +60,7 @@ class Command(BaseCommand):
             }
         )
         bucket = self.get_s3_bucket(config)
-        output_name = options.get("output", "s3_storage_files.csv")
-
+        output_name = options.get("output")
         fields = (
             "id",
             "key",
@@ -70,10 +70,11 @@ class Command(BaseCommand):
         )
         rows = self.read_bucket_files(bucket, fields)
 
-        with open(output_name, "w") as fh:
-            writer = csv.writer(fh, delimiter=",")
-            writer.writerow(fields)
-            writer.writerows(rows)
+        handle = open(output_name, "w") if output_name else stdout
+        writer = csv.writer(handle, delimiter=",")
+        writer.writerow(fields)
+        writer.writerows(rows)
+        handle.close() if not stdout else ()
 
         logger.info(f"Successfully exported data to {output_name}")
 
