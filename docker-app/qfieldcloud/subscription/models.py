@@ -778,7 +778,8 @@ class AbstractSubscription(models.Model):
         )
 
         if account.user.is_organization:
-            # NOTE sometimes `account.user` is not an organization instance for unknown reasons
+            # NOTE sometimes `account.user` is not an organization, e.g. when setting
+            # `active_until` on an organization account
             created_by = Organization.objects.get(pk=account.pk).organization_owner
         else:
             created_by = account.user
@@ -839,6 +840,11 @@ class AbstractSubscription(models.Model):
             )
             # NOTE to get annotations, mostly `is_active`
             trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
+
+            if created_by.remaining_trial_organizations > 0:
+                created_by.remaining_trial_organizations -= 1
+                created_by.save(update_fields=["remaining_trial_organizations"])
+
             # the trial plan should be the default plan
             regular_plan = Plan.objects.get(
                 user_type=account.user.type,
@@ -851,6 +857,14 @@ class AbstractSubscription(models.Model):
             trial_subscription_obj = None
             regular_plan = plan
             regular_active_since = active_since
+
+            # NOTE in case the user had a custom amount set (e.g manually set by support) this will
+            # be overwritten by a subscription plan change.
+            # But taking care of this would add quite some complexity.
+            created_by.remaining_trial_organizations = (
+                regular_plan.max_trial_organizations
+            )
+            created_by.save(update_fields=["remaining_trial_organizations"])
 
         logger.info(f"Creating regular subscription from {regular_active_since}")
         regular_subscription = cls.objects.create(
