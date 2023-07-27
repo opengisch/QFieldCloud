@@ -740,15 +740,15 @@ class QfcTestCase(APITransactionTestCase):
         trial_plan.save(update_fields=["is_trial"])
 
         def assert_create_org_decrements_count(
-	        org_name, user, remaining_trial_organizations
-	    ):
-	        Organization.objects.create(
-	            username=org_name, organization_owner=user, created_by=user
-	        )
-	        user.refresh_from_db()
-	        self.assertEqual(
-	            user.remaining_trial_organizations, remaining_trial_organizations
-	        )
+            org_name, user, remaining_trial_organizations
+        ):
+            Organization.objects.create(
+                username=org_name, organization_owner=user, created_by=user
+            )
+            user.refresh_from_db()
+            self.assertEqual(
+                user.remaining_trial_organizations, remaining_trial_organizations
+            )
 
         # remaining_trial_organizations is decremented when creating a trial organization
         assert_create_org_decrements_count("org1", u1, 1)
