@@ -1,14 +1,20 @@
 import csv
 import logging
-import sys
 from typing import Generator, NamedTuple
 
 import boto3
 import mypy_boto3_s3
 from django.core.management.base import BaseCommand, CommandParser
-from qfieldcloud.core import utils
 
 logger = logging.getLogger(__name__)
+
+
+class S3ConfigObject(NamedTuple):
+    storage_access_key_id: str
+    storage_secret_access_key: str
+    storage_bucket_name: str
+    storage_endpoint_url: str
+    storage_region_name: str
 
 
 class Command(BaseCommand):
@@ -19,35 +25,41 @@ class Command(BaseCommand):
             "-o", "--output", type=str, help="Optional: Name of output file"
         )
         parser.add_argument(
-            "-s3",
-            "--s3_credentials",
+            "--storage_access_key_id",
             type=str,
-            help="""
-            Optional: S3 credentials as comma-separated key=value pairs.
-            Example: -s3 STORAGE_ACCESS_KEY_ID=...,STORAGE_SECRET_ACCESS_KEY=...,...
-        """,
+            help="S3 access key ID",
+        )
+        parser.add_argument(
+            "--storage_secret_access_key",
+            type=str,
+            help="S3 access key secret",
+        )
+        parser.add_argument(
+            "--storage_bucket_name",
+            type=str,
+            help="S3 bucket name",
+        )
+        parser.add_argument(
+            "--storage_endpoint_url",
+            type=str,
+            help="S3 endpoint url",
+        )
+        parser.add_argument(
+            "--storage_region_name",
+            type=str,
+            help="S3 region name",
         )
 
-    def handle(self, *args, **options):
-        config = None
-
-        if options.get("s3_credentials"):
-            config = self.from_shell(options["s3_credentials"])
-            bucket = self.get_s3_bucket(config)
-
-        else:
-            bucket = utils.get_s3_bucket()
-
-        output_name = options.get("output")
-
-        if output_name:
-            name_suffix = output_name.rsplit(".", 1)
-
-            if len(name_suffix) != 2 or name_suffix[1] != "csv":
-                logger.error("The name of the output file should end with '.csv'")
-                sys.exit(1)
-        else:
-            output_name = "s3_storage_files.csv"
+    def handle(self, **options):
+        config = S3ConfigObject(
+            **{
+                key: value
+                for key, value in options.items()
+                if key in S3ConfigObject._fields
+            }
+        )
+        bucket = self.get_s3_bucket(config)
+        output_name = options.get("output", "s3_storage_files.csv")
 
         fields = (
             "id",
@@ -65,43 +77,16 @@ class Command(BaseCommand):
 
         logger.info(f"Successfully exported data to {output_name}")
 
-    class S3ConfigObject(NamedTuple):
-        STORAGE_ACCESS_KEY_ID: str
-        STORAGE_BUCKET_NAME: str
-        STORAGE_ENDPOINT_URL: str
-        STORAGE_REGION_NAME: str
-        STORAGE_SECRET_ACCESS_KEY: str
-
-    @staticmethod
-    def from_shell(user_input: str) -> S3ConfigObject:
-        try:
-            keys_vals = user_input.split(",")
-            builder = {}
-
-            for key_val in keys_vals:
-                key, val = key_val.split("=", 1)
-                if val is None or val.strip() == "":
-                    logger.warning(f"Blank or None value at key {key}")
-                builder[key] = val.strip()
-
-            config = Command.S3ConfigObject(**builder)
-        except Exception:
-            logger.error(
-                f"Unable to extract valid S3 storage credentials from your input: {user_input}"
-            )
-            sys.exit(1)
-        return config
-
     @staticmethod
     def get_s3_bucket(config: S3ConfigObject) -> mypy_boto3_s3.service_resource.Bucket:
         """Get a new S3 Bucket instance using S3ConfigObject"""
-        bucket_name = config.STORAGE_BUCKET_NAME
+        bucket_name = config.storage_bucket_name
         session = boto3.Session(
-            aws_access_key_id=config.STORAGE_ACCESS_KEY_ID,
-            aws_secret_access_key=config.STORAGE_SECRET_ACCESS_KEY,
-            region_name=config.STORAGE_REGION_NAME,
+            aws_access_key_id=config.storage_access_key_id,
+            aws_secret_access_key=config.storage_secret_access_key,
+            region_name=config.storage_region_name,
         )
-        s3 = session.resource("s3", endpoint_url=config.STORAGE_ENDPOINT_URL)
+        s3 = session.resource("s3", endpoint_url=config.storage_endpoint_url)
         return s3.Bucket(bucket_name)
 
     @staticmethod
@@ -115,13 +100,7 @@ class Command(BaseCommand):
 
             for field in fields:
 
-                try:
-                    item = getattr(file, field)
-                except AttributeError:
-                    logger.error(
-                        f"Unable to find attribute '{field}', perhaps you were trying to get one of these instead {vars(file)}?"
-                    )
-                    sys.exit(1)
+                item = getattr(file, field)
 
                 if not isinstance(item, str):
                     item = str(item)

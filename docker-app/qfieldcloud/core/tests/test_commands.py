@@ -17,15 +17,12 @@ class QfcTestCase(TestCase):
 
         # Credentials
         cls.credentials = {
-            "STORAGE_ACCESS_KEY_ID": settings.STORAGE_ACCESS_KEY_ID,
-            "STORAGE_ENDPOINT_URL": settings.STORAGE_ENDPOINT_URL,
-            "STORAGE_BUCKET_NAME": settings.STORAGE_BUCKET_NAME,
-            "STORAGE_REGION_NAME": settings.STORAGE_REGION_NAME,
-            "STORAGE_SECRET_ACCESS_KEY": settings.STORAGE_SECRET_ACCESS_KEY,
+            "storage_access_key_id": settings.STORAGE_ACCESS_KEY_ID,
+            "storage_endpoint_url": settings.STORAGE_ENDPOINT_URL,
+            "storage_bucket_name": settings.STORAGE_BUCKET_NAME,
+            "storage_region_name": settings.STORAGE_REGION_NAME,
+            "storage_secret_access_key": settings.STORAGE_SECRET_ACCESS_KEY,
         }
-        cls.user_input = ",".join(
-            f"{key}={val}" for key, val in cls.credentials.items()
-        )
         cls.output_file = "extracted.csv"
 
         # User
@@ -43,22 +40,21 @@ class QfcTestCase(TestCase):
         super().tearDown()
         os.remove(self.output_file)
 
-    def test_output_without_user_credentials(self):
+    def test_output_with_user_credentials(self):
         call_command(
             "extractstoragemetadata",
             "-o",
             self.output_file,
-        )
-
-        with open(self.output_file, newline="") as fh:
-            reader = csv.reader(fh, delimiter=",")
-            entries = list(reader)
-            print(entries)
-            self.assertGreater(len(entries), 1)
-
-    def test_output_with_user_credentials(self):
-        call_command(
-            "extractstoragemetadata", "-o", self.output_file, "-s3", self.user_input
+            "--storage_access_key_id",
+            self.credentials["storage_access_key_id"],
+            "--storage_bucket_name",
+            self.credentials["storage_bucket_name"],
+            "--storage_endpoint_url",
+            self.credentials["storage_endpoint_url"],
+            "--storage_region_name",
+            self.credentials["storage_region_name"],
+            "--storage_secret_access_key",
+            self.credentials["storage_secret_access_key"],
         )
 
         with open(self.output_file, newline="") as fh:
