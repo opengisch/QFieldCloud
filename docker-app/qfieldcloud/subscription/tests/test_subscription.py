@@ -739,25 +739,25 @@ class QfcTestCase(APITransactionTestCase):
         trial_plan.is_trial = True
         trial_plan.save(update_fields=["is_trial"])
 
+        def assert_create_org_decrements_count(
+	        org_name, user, remaining_trial_organizations
+	    ):
+	        Organization.objects.create(
+	            username=org_name, organization_owner=user, created_by=user
+	        )
+	        user.refresh_from_db()
+	        self.assertEqual(
+	            user.remaining_trial_organizations, remaining_trial_organizations
+	        )
+
         # remaining_trial_organizations is decremented when creating a trial organization
-        self.assert_create_org_decrements_count("org1", u1, 1)
+        assert_create_org_decrements_count("org1", u1, 1)
 
         # remaining_trial_organizations is decremented down to 0
-        self.assert_create_org_decrements_count("org2", u1, 0)
+        assert_create_org_decrements_count("org2", u1, 0)
 
         # It doesn't directly prevent creating more trials, is just a counter that stays at 0
-        self.assert_create_org_decrements_count("org3", u1, 0)
-
-    def assert_create_org_decrements_count(
-        self, org_name, user, remaining_trial_organizations
-    ):
-        Organization.objects.create(
-            username=org_name, organization_owner=user, created_by=user
-        )
-        user.refresh_from_db()
-        self.assertEqual(
-            user.remaining_trial_organizations, remaining_trial_organizations
-        )
+        assert_create_org_decrements_count("org3", u1, 0)
 
     def test_project_lists_duplicates_if_multiple_subscriptions(self):
         u1 = Person.objects.create(username="u1")
