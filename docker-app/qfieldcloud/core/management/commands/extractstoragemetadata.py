@@ -108,7 +108,7 @@ class Command(BaseCommand):
     def read_bucket_files(
         bucket, fields: tuple[str], prefix: str = ""
     ) -> Generator[list[str], None, None]:
-        """Yield file metadata 1 by 1. `...object_versions.filter(prefix="")` == `...object_versions.all()`"""
+        """Yield file metadata 1 by 1. Passing `prefix=""` will list all bucket objects."""
 
         for file in bucket.object_versions.filter(Prefix=prefix):
             row = []
