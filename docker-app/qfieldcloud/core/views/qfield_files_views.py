@@ -3,8 +3,7 @@ from pathlib import PurePath
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http.response import HttpResponseRedirect
-from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import exceptions, permissions_utils, serializers, utils
 from qfieldcloud.core.models import PackageJob, Project
 from qfieldcloud.core.permissions_utils import check_supported_regarding_owner_account
@@ -24,19 +23,9 @@ class PackageViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(user, project)
 
 
-@method_decorator(
-    name="post",
-    decorator=swagger_auto_schema(
-        operation_description="Launch QField packaging project",
-        operation_id="Launch qfield packaging",
-    ),
-)
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Get QField packaging status",
-        operation_id="Get qfield packaging status",
-    ),
+@extend_schema_view(
+    post=extend_schema(description="Launch QField packaging project"),
+    get=extend_schema(description="Get QField packaging status"),
 )
 class PackageView(views.APIView):
 
@@ -95,12 +84,8 @@ class PackageView(views.APIView):
         return Response(serializer.data)
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="List QField project files",
-        operation_id="List qfield project files",
-    ),
+@extend_schema_view(
+    get=extend_schema(description="List QField project files"),
 )
 class ListFilesView(views.APIView):
 
@@ -171,12 +156,8 @@ class ListFilesView(views.APIView):
         )
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Download file for QField",
-        operation_id="Download qfield file",
-    ),
+@extend_schema_view(
+    get=extend_schema(description="Download file for QField"),
 )
 class DownloadFileView(views.APIView):
 

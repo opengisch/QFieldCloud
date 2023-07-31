@@ -1,8 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.utils.decorators import method_decorator
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
@@ -43,69 +42,36 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         return False
 
 
-include_public_param = openapi.Parameter(
-    "include-public",
-    openapi.IN_QUERY,
-    description="Include public projects",
-    type=openapi.TYPE_BOOLEAN,
-)
-
-
-@method_decorator(
-    name="retrieve",
-    decorator=swagger_auto_schema(
-        operation_description="Retrieve a project",
-        operation_id="Retrieve a project",
-    ),
-)
-@method_decorator(
-    name="update",
-    decorator=swagger_auto_schema(
-        operation_description="Update a project",
-        operation_id="Update a project",
-    ),
-)
-@method_decorator(
-    name="partial_update",
-    decorator=swagger_auto_schema(
-        operation_description="Patch a project",
-        operation_id="Patch a project",
-    ),
-)
-@method_decorator(
-    name="destroy",
-    decorator=swagger_auto_schema(
-        operation_description="Delete a project",
-        operation_id="Delete a project",
-    ),
-)
-@method_decorator(
-    name="list",
-    decorator=swagger_auto_schema(
-        operation_description="""List projects owned by the authenticated
+@extend_schema_view(
+    retrieve=extend_schema(description="Retrieve a project"),
+    update=extend_schema(description="Update a project"),
+    partial_update=extend_schema(description="Partially update a project"),
+    destroy=extend_schema(description="Delete a project"),
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "include-public",
+                OpenApiTypes.BOOL,
+                OpenApiParameter.QUERY,
+                description="Include public projects",
+            )
+        ],
+        description="""List projects owned by the authenticated
         user or that the authenticated user has explicit permission to access
-        (i.e. she is a project collaborator).  Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.""",
-        operation_id="List projects",
-        manual_parameters=[include_public_param],
+        (i.e. she is a project collaborator)""",
     ),
-)
-@method_decorator(
-    name="create",
-    decorator=swagger_auto_schema(
-        operation_description="""Create a new project owned by the specified
-        user or organization""",
-        operation_id="Create a project",
+    create=extend_schema(
+        description="""Create a new project owned by the specified
+        user or organization"""
     ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
-
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
-
         projects = Project.objects.for_user(self.request.user)
 
         # In the list endpoint, by default we filter out public projects. They can be
@@ -155,15 +121,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return super().destroy(request, projectid)
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="List all public projects. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
-        operation_id="List public projects",
-    ),
-)
+@extend_schema_view(get=extend_schema(description="List all public projects"))
 class PublicProjectsListView(generics.ListAPIView):
-
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()

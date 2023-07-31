@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
 from qfieldcloud.core.models import Organization, Project
 from qfieldcloud.core.serializers import (
@@ -20,12 +19,8 @@ class ListUsersViewPermissions(permissions.BasePermission):
         return permissions_utils.can_list_users_organizations(request.user)
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="List users and/or organizations. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
-        operation_id="List users and/or organizations",
-    ),
+@extend_schema_view(
+    get=extend_schema(description="List users and/or organizations"),
 )
 class ListUsersView(generics.ListAPIView):
 
@@ -87,28 +82,14 @@ class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
         return False
 
 
-@method_decorator(
-    name="retrieve",
-    decorator=swagger_auto_schema(
-        operation_description="""Retrieve a single user's (or organization) publicly
+@extend_schema_view(
+    retrieve=extend_schema(
+        """Retrieve a single user's (or organization) publicly
         information or complete info if the request is done by the user
-        himself""",
-        operation_id="Retrieve user",
+        himself"""
     ),
-)
-@method_decorator(
-    name="put",
-    decorator=swagger_auto_schema(
-        operation_description="Update a user",
-        operation_id="Update a user",
-    ),
-)
-@method_decorator(
-    name="patch",
-    decorator=swagger_auto_schema(
-        operation_description="Patch a user",
-        operation_id="Patch a user",
-    ),
+    put=extend_schema("Update a user"),
+    patch=extend_schema("Partially update a user"),
 )
 class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
     """Get or Update the authenticated user"""
@@ -154,12 +135,8 @@ class ListUserOrganizationsViewPermissions(permissions.BasePermission):
         return False
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="List a user's organization",
-        operation_id="List a user's organizations",
-    ),
+@extend_schema_view(
+    get=extend_schema(description="Get a user's organization"),
 )
 class ListUserOrganizationsView(generics.ListAPIView):
     """Get user's organizations"""
