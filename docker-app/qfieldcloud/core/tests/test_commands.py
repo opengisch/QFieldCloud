@@ -38,7 +38,7 @@ class QfcTestCase(TestCase):
 
     def test_output_to_file(self):
         call_command(
-            "extractstoragemetadata",
+            "extracts3data",
             "-o",
             self.output_file,
             "--storage_access_key_id",
@@ -56,14 +56,13 @@ class QfcTestCase(TestCase):
         with open(self.output_file, newline="") as fh:
             reader = csv.reader(fh, delimiter=",")
             entries = list(reader)
-            print(entries)
             self.assertGreater(len(entries), 1)
 
         os.remove(self.output_file)
 
     def test_output_to_sdout(self):
         call_command(
-            "extractstoragemetadata",
+            "extracts3data",
             "--storage_access_key_id",
             self.credentials["storage_access_key_id"],
             "--storage_bucket_name",
