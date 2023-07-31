@@ -17,7 +17,8 @@ def report_serialization_diff_to_sentry(
     Sends a report to sentry to debug QF-2540. The report includes request information from before and after middleware handle the request as well as a traceback.
 
     Args:
-        pre_serialization: str representing the request `files` keys and meta information before serialization and middleware.
+        pre_serialization: str representing the request `files` keys and meta information before serialization and middleware
+            along with the the (raw) request body.
         post_serialization: str representing the request `files` keys and meta information after serialization and middleware.
         buffer: StringIO buffer from which to extract traceback capturing callstack ahead of the calling function.
         capture_message: bool used as a flag by the caller to create an extra event against Sentry to attach the files to.
