@@ -1,3 +1,5 @@
+import copy
+
 from django.http import HttpRequest, HttpResponse
 
 
@@ -10,13 +12,14 @@ def attach_keys(get_response):
 
     def middleware(request: HttpRequest) -> HttpResponse:
         request_attributes = {
-            "file_key": str(request.FILES.keys()),
             "meta": str(request.META),
+            "files": str(request.FILES),
         }
         if hasattr(request, "POST"):
-            request_attributes["raw"] = request.POST.copy()
-        if hasattr(request, "FILES") and "file" in request.FILES.keys():
-            request_attributes["files"] = request.FILES.getlist("file")
+            copied_body = copy.copy(
+                request.body
+            )  # not copying would exhaust the data, raising at serialization
+            request_attributes["body"] = str(copied_body)
         request.attached_keys = str(request_attributes)
         response = get_response(request)
         return response

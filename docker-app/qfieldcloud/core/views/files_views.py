@@ -200,9 +200,9 @@ class DownloadPushDeleteFileView(views.APIView):
         buffer = io.StringIO()
         print_stack(limit=50, file=buffer)
         request_attributes = {
-            "data": str(copy.copy(self.request.data).keys()),
-            "files": str(self.request.FILES.keys()),
             "meta": str(self.request.META),
+            "files": str(self.request.FILES),
+            "data": str(self.request.data),
         }
         missing_error = ""
 
