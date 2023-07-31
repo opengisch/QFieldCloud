@@ -19,7 +19,19 @@ class S3ConfigObject(NamedTuple):
 
 
 class Command(BaseCommand):
-    """Save metadata from S3 storage project files to disk."""
+    """
+    Save metadata from S3 storage project files to disk.
+    Example usage:
+    ```
+    docker compose exec app python manage.py extracts3data \
+        --output results.csv \
+        --storage_access_key_id ... \
+        --storage_secret_access_key ... \
+        --storage_bucket_name ... \
+        --storage_endpoint_url ... \
+        --storage_region_name ...
+    ```
+    """
 
     def add_arguments(self, parser: CommandParser):
         parser.add_argument(
@@ -52,13 +64,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, **options):
-        config = S3ConfigObject(
-            **{
-                key: value
-                for key, value in options.items()
-                if key in S3ConfigObject._fields
-            }
-        )
+        build_config = {}
+        for key, value in options.items():
+            if key in S3ConfigObject._fields:
+                build_config[key] = value
+
+        config = S3ConfigObject(**build_config)
         bucket = self.get_s3_bucket(config)
         output_name = options.get("output")
         fields = (
@@ -70,11 +81,17 @@ class Command(BaseCommand):
         )
         rows = self.read_bucket_files(bucket, fields)
 
-        handle = open(output_name, "w") if output_name else stdout
+        if output_name:
+            handle = open(output_name, "w")
+        else:
+            handle = stdout
+
         writer = csv.writer(handle, delimiter=",")
         writer.writerow(fields)
         writer.writerows(rows)
-        handle.close() if not stdout else ()
+
+        if output_name:
+            handle.close()
 
         logger.info(f"Successfully exported data to {output_name}")
 
@@ -100,7 +117,6 @@ class Command(BaseCommand):
             row = []
 
             for field in fields:
-
                 item = getattr(file, field)
 
                 if not isinstance(item, str):
