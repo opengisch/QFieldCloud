@@ -25,9 +25,9 @@ class JobPermissions(permissions.BasePermission):
         description="List all jobs scheduled against the given project.",
         parameters=[
             OpenApiParameter(
-                "projectid",
-                OpenApiTypes.STR,
-                OpenApiParameter.QUERY,
+                name="project_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
                 required=True,
                 description="File to be uploaded",
             )
