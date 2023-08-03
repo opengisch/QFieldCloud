@@ -353,9 +353,9 @@ class ProjectMetafilesView(views.APIView):
 
 @extend_schema_view(
     get=extend_schema(
-        description="Download a file belonging to a public project",
+        description="Download a public file, e.g. user avatar.",
         responses={
-            (200, "text/html"): OpenApiTypes.BINARY,
+            (200, "*/*"): OpenApiTypes.BINARY,
         },
     )
 )
