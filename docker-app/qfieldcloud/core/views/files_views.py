@@ -147,7 +147,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
     get=extend_schema(
         description="Download a file from a project",
         responses={
-            (200, "text/html"): OpenApiTypes.BINARY,
+            (200, "*/*"): OpenApiTypes.BINARY,
         },
     ),
     post=extend_schema(
