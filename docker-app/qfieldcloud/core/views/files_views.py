@@ -335,7 +335,7 @@ class DownloadPushDeleteFileView(views.APIView):
     get=extend_schema(
         description="Download the metadata of a project's file",
         responses={
-            (200, "text/html"): OpenApiTypes.BINARY,
+            (200, "*/*"): OpenApiTypes.BINARY,
         },
     )
 )
