@@ -6,7 +6,7 @@ import os
 import posixpath
 from datetime import datetime
 from pathlib import PurePath
-from typing import IO, Iterable, List, NamedTuple, Optional, Union
+from typing import IO, Generator, NamedTuple, Optional, Union
 
 import boto3
 import jsonschema
@@ -76,7 +76,7 @@ class S3ObjectVersion:
 
 class S3ObjectWithVersions(NamedTuple):
     latest: S3ObjectVersion
-    versions: List[S3ObjectVersion]
+    versions: list[S3ObjectVersion]
 
     @property
     def total_size(self) -> int:
@@ -313,7 +313,7 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
     return jsonschema.Draft7Validator(schema_dict)
 
 
-def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:
+def get_project_files(project_id: str, path: str = "") -> list[S3Object]:
     """Returns a list of files and their versions.
 
     Args:
@@ -321,7 +321,7 @@ def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:
         path (str): additional filter prefix
 
     Returns:
-        Iterable[S3ObjectWithVersions]: the list of files
+        list[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
     root_prefix = f"projects/{project_id}/files/"
@@ -330,14 +330,16 @@ def get_project_files(project_id: str, path: str = "") -> Iterable[S3Object]:
     return list_files(bucket, prefix, root_prefix)
 
 
-def get_project_files_with_versions(project_id: str) -> Iterable[S3ObjectWithVersions]:
-    """Returns a list of files and their versions.
+def get_project_files_with_versions(
+    project_id: str,
+) -> Generator[S3ObjectWithVersions, None, None]:
+    """Returns a generator of files and their versions.
 
     Args:
         project_id (str): the project id
 
     Returns:
-        Iterable[S3ObjectWithVersions]: the list of files
+        Generator[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/files/"
@@ -354,7 +356,7 @@ def get_project_file_with_versions(
         project_id (str): the project id
 
     Returns:
-        Iterable[S3ObjectWithVersions]: the list of files
+        list[S3ObjectWithVersions]: the list of files
     """
     bucket = get_s3_bucket()
     root_prefix = f"projects/{project_id}/files/"
@@ -368,14 +370,14 @@ def get_project_file_with_versions(
     return files[0] if files else None
 
 
-def get_project_package_files(project_id: str, package_id: str) -> Iterable[S3Object]:
+def get_project_package_files(project_id: str, package_id: str) -> list[S3Object]:
     """Returns a list of package files.
 
     Args:
         project_id (str): the project id
 
     Returns:
-        Iterable[S3ObjectWithVersions]: the list of package files
+        list[S3ObjectWithVersions]: the list of package files
     """
     bucket = get_s3_bucket()
     prefix = f"projects/{project_id}/packages/{package_id}/"
@@ -420,8 +422,8 @@ def list_files(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: str = "",
-) -> List[S3Object]:
-    """Iterator that lists a bucket's objects under prefix."""
+) -> list[S3Object]:
+    """List a bucket's objects under prefix."""
     files = []
     for f in bucket.objects.filter(Prefix=prefix):
         if strip_prefix:
@@ -450,7 +452,7 @@ def list_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: str = "",
-) -> List[S3ObjectVersion]:
+) -> list[S3ObjectVersion]:
     """Iterator that lists a bucket's objects under prefix."""
     versions = []
     for v in bucket.object_versions.filter(Prefix=prefix):
@@ -471,17 +473,13 @@ def list_files_with_versions(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
     strip_prefix: str = "",
-) -> Iterable[S3ObjectWithVersions]:
+) -> Generator[S3ObjectWithVersions, None, None]:
     """Yields an object with all it's versions
-
-    Returns:
-        Iterable[S3ObjectWithVersions]: an iterator with the objects with their versions
-
     Yields:
-        Iterator[Iterable[S3ObjectWithVersions]]: the object with its versions
+        Generator[S3ObjectWithVersions]: the object with its versions
     """
     last_key = None
-    versions: List[S3ObjectVersion] = []
+    versions: list[S3ObjectVersion] = []
     latest: Optional[S3ObjectVersion] = None
 
     for v in list_versions(bucket, prefix, strip_prefix):
