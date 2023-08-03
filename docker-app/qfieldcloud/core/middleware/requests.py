@@ -17,9 +17,14 @@ def attach_keys(get_response):
             "meta": str(request.META),
         }
 
+        content_type = request.headers.get("Content-Type") or request.headers.get(
+            "content-type"
+        )
+
         # only report rawbody of less-than-10MBs multipart requests
         if (
-            "multipart/form-data;boundary" in request.headers["Content-Type"]
+            content_type
+            and "multipart/form-data;boundary" in content_type
             and input_stream.tell() < 10000000
         ):
             output_stream = io.BytesIO()
