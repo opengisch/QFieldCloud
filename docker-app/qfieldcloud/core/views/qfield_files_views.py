@@ -23,6 +23,10 @@ class PackageViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(user, project)
 
 
+@extend_schema(
+    deprecated=True,
+    summary="This endpoint is deprecated and will be removed in the future. Please use `/jobs/` endpoint instead.",
+)
 @extend_schema_view(
     post=extend_schema(description="Launch QField packaging project"),
     get=extend_schema(description="Get QField packaging status"),
@@ -84,6 +88,10 @@ class PackageView(views.APIView):
         return Response(serializer.data)
 
 
+@extend_schema(
+    deprecated=True,
+    summary="This endpoint is deprecated and will be removed in the future. Please use `/packages/{project_id}/latest/` endpoint instead.",
+)
 @extend_schema_view(
     get=extend_schema(description="List QField project files"),
 )
@@ -156,6 +164,10 @@ class ListFilesView(views.APIView):
         )
 
 
+@extend_schema(
+    deprecated=True,
+    summary="This endpoint is deprecated and will be removed in the future. Please use `/packages/{project_id}/latest/files/{filename}/` endpoint instead.",
+)
 @extend_schema_view(
     get=extend_schema(description="Download file for QField"),
 )
