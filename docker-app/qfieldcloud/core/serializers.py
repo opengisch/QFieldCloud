@@ -501,3 +501,14 @@ class FileSerializer(serializers.Serializer):
     md5sum = serializers.CharField()
     last_modified = serializers.DateTimeField()
     is_attachment = serializers.BooleanField()
+
+
+class LatestPackageSerializer(serializers.Serializer):
+    """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
+
+    files = serializers.ListSerializer(child=FileSerializer())
+    layers = serializers.JSONField()
+    status = serializers.ChoiceField(Job.Status)
+    package_id = serializers.UUIDField()
+    packaged_at = serializers.DateTimeField()
+    data_last_updated_at = serializers.DateTimeField()

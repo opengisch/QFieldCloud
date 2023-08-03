@@ -1,9 +1,16 @@
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core import permissions_utils as perms
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import PackageJob, Project
+from qfieldcloud.core.serializers import LatestPackageSerializer
 from qfieldcloud.core.utils import (
     check_s3_key,
     get_project_files,
@@ -50,6 +57,12 @@ class PackageUploadViewPermissions(permissions.BasePermission):
             return False
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Get all the files in a project package with files.",
+        responses={200: LatestPackageSerializer()},
+    ),
+)
 class LatestPackageView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
@@ -125,6 +138,14 @@ class LatestPackageView(views.APIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Download a file from a project package.",
+        responses={
+            (200, "*/*"): OpenApiTypes.BINARY,
+        },
+    ),
+)
 class LatestPackageDownloadFilesView(views.APIView):
 
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
@@ -158,6 +179,20 @@ class LatestPackageDownloadFilesView(views.APIView):
         )
 
 
+@extend_schema_view(
+    post=extend_schema(
+        description="Upload a file to the package",
+        parameters=[
+            OpenApiParameter(
+                name="file",
+                type=OpenApiTypes.BINARY,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="File to be uploaded",
+            )
+        ],
+    )
+)
 class PackageUploadFilesView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, PackageUploadViewPermissions]
 
