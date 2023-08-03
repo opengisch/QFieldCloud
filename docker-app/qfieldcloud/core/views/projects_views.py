@@ -1,7 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer

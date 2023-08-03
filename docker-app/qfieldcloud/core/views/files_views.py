@@ -8,8 +8,12 @@ import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
 from qfieldcloud.core.serializers import FileSerializer

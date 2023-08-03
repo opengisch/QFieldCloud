@@ -1,6 +1,10 @@
 from django.core.exceptions import ObjectDoesNotExist
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job, Project
 from rest_framework import generics, permissions, viewsets
