@@ -162,6 +162,10 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
         return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
 
 
+@extend_schema(
+    deprecated=True,
+    summary="This endpoint is deprecated and will be removed in the future. Please use `/jobs/` endpoint instead.",
+)
 @extend_schema_view(post=extend_schema(description="Trigger apply delta."))
 class ApplyView(views.APIView):
 
