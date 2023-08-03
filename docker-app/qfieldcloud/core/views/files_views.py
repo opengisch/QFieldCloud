@@ -158,9 +158,9 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
         description="Upload a file to the project",
         parameters=[
             OpenApiParameter(
-                "file",
-                OpenApiTypes.BINARY,
-                OpenApiParameter.QUERY,
+                name="file",
+                type=OpenApiTypes.BINARY,
+                location=OpenApiParameter.QUERY,
                 required=True,
                 description="File to be uploaded",
             )
