@@ -222,6 +222,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 pre_serialization=request.attached_keys,
                 post_serialization=str(request_attributes),
                 buffer=buffer,
+                body_stream=request.body_stream,
             )
             raise exceptions.EmptyContentError()
 
