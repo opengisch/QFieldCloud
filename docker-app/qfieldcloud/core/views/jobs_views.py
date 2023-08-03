@@ -30,7 +30,16 @@ class JobPermissions(permissions.BasePermission):
                 location=OpenApiParameter.QUERY,
                 required=True,
                 description="File to be uploaded",
-            )
+            ),
+            OpenApiParameter(
+                name="force",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                default=0,
+                enum=[1, 0],
+                description="Force creating the job.",
+            ),
         ],
     )
 )
