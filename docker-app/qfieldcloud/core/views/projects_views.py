@@ -50,11 +50,14 @@ class ProjectViewSetPermissions(permissions.BasePermission):
     list=extend_schema(
         parameters=[
             OpenApiParameter(
-                "include-public",
-                OpenApiTypes.BOOL,
-                OpenApiParameter.QUERY,
+                name="include-public",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                default=0,
+                enum=[1, 0],
                 description="Include public projects",
-            )
+            ),
         ],
         description="""List projects owned by the authenticated
         user or that the authenticated user has explicit permission to access
