@@ -11,7 +11,7 @@ def report_serialization_diff_to_sentry(
     pre_serialization: str,
     post_serialization: str,
     buffer: StringIO,
-    body_stream: BytesIO,
+    body_stream: BytesIO | None,
     capture_message=False,
 ) -> bool:
     """
@@ -42,8 +42,9 @@ def report_serialization_diff_to_sentry(
                 filename=filename,
             )
 
-            filename = f"{name}_rawbody.txt"
-            scope.add_attachment(bytes=body_stream.getvalue(), filename=filename)
+            if body_stream:
+                filename = f"{name}_rawbody.txt"
+                scope.add_attachment(bytes=body_stream.getvalue(), filename=filename)
 
             if capture_message:
                 sentry_sdk.capture_message("Sending to Sentry...", scope=scope)
