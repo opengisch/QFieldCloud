@@ -222,9 +222,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 pre_serialization=request.attached_keys,
                 post_serialization=str(request_attributes),
                 buffer=buffer,
-                body_stream=request.body_stream
-                if hasattr(request, "body_stream")
-                else None,
+                body_stream=getattr(request, "body_stream", None),
             )
             raise exceptions.EmptyContentError()
 
