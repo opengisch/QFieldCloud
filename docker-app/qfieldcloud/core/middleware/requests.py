@@ -20,10 +20,7 @@ def attach_keys(get_response):
         )
 
         # only report raw body multipart requests
-        if (
-            content_type
-            and "multipart/form-data;boundary" in content_type
-        ):
+        if content_type and "multipart/form-data;boundary" in content_type:
             request_attributes["content_type"] = content_type
             input_stream = io.BytesIO(request.body)
             output_stream = io.BytesIO()
