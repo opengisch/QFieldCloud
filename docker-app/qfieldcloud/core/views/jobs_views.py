@@ -1,5 +1,10 @@
 from django.core.exceptions import ObjectDoesNotExist
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job, Project
 from rest_framework import generics, permissions, viewsets
@@ -20,10 +25,29 @@ class JobPermissions(permissions.BasePermission):
 
 
 @extend_schema_view(
-    list=extend_schema(description="List all jobs scheduled against the given project.")
+    list=extend_schema(
+        description="List all jobs scheduled against the given project.",
+        parameters=[
+            OpenApiParameter(
+                name="project_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="File to be uploaded",
+            ),
+            OpenApiParameter(
+                name="force",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                default=0,
+                enum=[1, 0],
+                description="Force creating the job.",
+            ),
+        ],
+    )
 )
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
-
     serializer_class = serializers.JobSerializer
     lookup_url_kwarg = "job_id"
     permission_classes = [permissions.IsAuthenticated]

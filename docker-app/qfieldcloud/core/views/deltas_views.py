@@ -5,7 +5,12 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.translation import gettext as _
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
 from qfieldcloud.core.models import Delta, Project
 from qfieldcloud.core.serializers import DeltaSerializer
@@ -33,7 +38,22 @@ class DeltaFilePermissions(permissions.BasePermission):
 
 @extend_schema_view(
     get=extend_schema(description="Get all deltas of the given project."),
-    post=extend_schema(description="Add a deltafile to the given project"),
+    post=extend_schema(
+        description="Add a deltafile to the given project",
+        parameters=[
+            OpenApiParameter(
+                name="file",
+                type=OpenApiTypes.BINARY,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Deltafille to be uploaded.",
+            ),
+        ],
+        request=None,
+        responses={
+            200: OpenApiTypes.NONE,
+        },
+    ),
 )
 class ListCreateDeltasView(generics.ListCreateAPIView):
 
@@ -162,6 +182,10 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
         return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
 
 
+@extend_schema(
+    deprecated=True,
+    summary="This endpoint is deprecated and will be removed in the future. Please use `/jobs/` endpoint instead.",
+)
 @extend_schema_view(post=extend_schema(description="Trigger apply delta."))
 class ApplyView(views.APIView):
 

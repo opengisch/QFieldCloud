@@ -8,10 +8,15 @@ import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
+from qfieldcloud.core.serializers import FileSerializer
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.core.utils2.sentry import report_serialization_diff_to_sentry
@@ -39,19 +44,20 @@ class ListFilesViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(request.user, project)
 
 
-class FileVersionSerializer(serializers.Serializer):
-    version_id = serializers.CharField()
-    size = serializers.IntegerField()
-    md5sum = serializers.CharField()
-    last_modified = serializers.DateTimeField()
-    display = serializers.CharField()
-    is_attachment = serializers.BooleanField(required=False)
-
-
 @extend_schema_view(
     get=extend_schema(
         description="Get all the project's file versions",
-        responses={200: serializers.ListSerializer(child=FileVersionSerializer())},
+        responses={200: serializers.ListSerializer(child=FileSerializer())},
+        parameters=[
+            OpenApiParameter(
+                name="skip_metadata",
+                type=OpenApiTypes.INT,
+                required=False,
+                default=0,
+                enum=[1, 0],
+                description="Skip obtaining file metadata (e.g. `sha256`). Makes responses much faster. In the future `skip_metadata=1` might be default behaviour.",
+            ),
+        ],
     ),
 )
 class ListFilesView(views.APIView):
@@ -145,16 +151,16 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
     get=extend_schema(
         description="Download a file from a project",
         responses={
-            (200, "text/html"): OpenApiTypes.BINARY,
+            (200, "*/*"): OpenApiTypes.BINARY,
         },
     ),
     post=extend_schema(
         description="Upload a file to the project",
         parameters=[
             OpenApiParameter(
-                "file",
-                OpenApiTypes.BINARY,
-                OpenApiParameter.QUERY,
+                name="file",
+                type=OpenApiTypes.BINARY,
+                location=OpenApiParameter.QUERY,
                 required=True,
                 description="File to be uploaded",
             )
@@ -333,7 +339,7 @@ class DownloadPushDeleteFileView(views.APIView):
     get=extend_schema(
         description="Download the metadata of a project's file",
         responses={
-            (200, "text/html"): OpenApiTypes.BINARY,
+            (200, "*/*"): OpenApiTypes.BINARY,
         },
     )
 )
@@ -351,9 +357,9 @@ class ProjectMetafilesView(views.APIView):
 
 @extend_schema_view(
     get=extend_schema(
-        description="Download a file belonging to a public project",
+        description="Download a public file, e.g. user avatar.",
         responses={
-            (200, "text/html"): OpenApiTypes.BINARY,
+            (200, "*/*"): OpenApiTypes.BINARY,
         },
     )
 )

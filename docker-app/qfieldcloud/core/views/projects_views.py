@@ -1,7 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
@@ -50,11 +54,14 @@ class ProjectViewSetPermissions(permissions.BasePermission):
     list=extend_schema(
         parameters=[
             OpenApiParameter(
-                "include-public",
-                OpenApiTypes.BOOL,
-                OpenApiParameter.QUERY,
+                name="include-public",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                default=0,
+                enum=[1, 0],
                 description="Include public projects",
-            )
+            ),
         ],
         description="""List projects owned by the authenticated
         user or that the authenticated user has explicit permission to access
