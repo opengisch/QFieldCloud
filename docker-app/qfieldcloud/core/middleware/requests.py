@@ -10,7 +10,7 @@ def attach_keys(get_response):
     """
 
     def middleware(request):
-        input_stream = io.BufferedReader(io.BytesIO(request.body))
+        input_stream = io.BytesIO(request.body)
 
         request_attributes = {
             "file_key": str(request.FILES.keys()),
@@ -27,6 +27,7 @@ def attach_keys(get_response):
             and "multipart/form-data;boundary" in content_type
             and input_stream.tell() < 10000000
         ):
+            request_attributes["content_type"] = content_type
             output_stream = io.BytesIO()
             shutil.copyfileobj(input_stream, output_stream)
             request.body_stream = output_stream
