@@ -25,7 +25,7 @@ def attach_keys(get_response):
         request_attributes = {
             "file_key": str(request.FILES.keys()),
             "meta": str(request.META),
-            "files": request.FILES.getlist("file")
+            "files": request.FILES.getlist("file"),
         }
         request.attached_keys = str(request_attributes)
         response = get_response(request)
