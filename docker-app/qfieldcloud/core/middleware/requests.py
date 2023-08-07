@@ -17,11 +17,11 @@ def attach_keys(get_response):
             "file_key": str(request.FILES.keys()),
             "meta": str(request.META),
         }
-
         # only report raw body of POST requests with a < 10MBs content length
         if (
             request.META["REQUEST_METHOD"] == "POST"
-            and int(request.headers["CONTENT_LENGTH"]) < 10000000
+            and "Content-Length" in request.headers
+            and int(request.headers["Content-Length"]) < 10000000
         ):
             output_stream = io.BytesIO()
             shutil.copyfileobj(input_stream, output_stream)
