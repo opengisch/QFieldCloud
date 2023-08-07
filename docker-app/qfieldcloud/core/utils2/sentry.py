@@ -43,8 +43,9 @@ def report_serialization_diff_to_sentry(
             )
 
             if body_stream:
+                initial_chunk = body_stream.read(500)
                 filename = f"{name}_rawbody.txt"
-                scope.add_attachment(bytes=body_stream.getvalue(), filename=filename)
+                scope.add_attachment(bytes=initial_chunk, filename=filename)
 
             if capture_message:
                 sentry_sdk.capture_message("Sending to Sentry...", scope=scope)
