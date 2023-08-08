@@ -320,6 +320,10 @@ if SENTRY_DSN:
         # environment=ENVIRONMENT,
     )
 
+# QF-2704
+# Flag to turn on/off byte-for-byte copy of request's body
+# Only requests with a < 10MB body will be reported
+SENTRY_REPORT_FULL_BODY = True
 
 # Django allauth configurations
 # https://django-allauth.readthedocs.io/en/latest/configuration.html

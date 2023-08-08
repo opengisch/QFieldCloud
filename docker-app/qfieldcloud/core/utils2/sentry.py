@@ -2,6 +2,7 @@ import logging
 from io import BytesIO, StringIO
 
 import sentry_sdk
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def report_serialization_diff_to_sentry(
                 filename=filename,
             )
 
-            if body_stream:
+            if body_stream and settings.SENTRY_REPORT_FULL_BODY:
                 filename = f"{name}_rawbody.txt"
                 scope.add_attachment(bytes=body_stream.getvalue(), filename=filename)
 
