@@ -1,11 +1,13 @@
 import shutil
 from io import BytesIO, StringIO
-from os import environ
 from unittest import skipIf
 
+from django.conf import settings
 from django.test import Client, TestCase
 
 from ..utils2.sentry import report_serialization_diff_to_sentry
+
+sentry_is_configured = all([settings.SENTRY_DSN, settings.SENTRY_REPORT_FULL_BODY])
 
 
 class QfcTestCase(TestCase):
@@ -25,7 +27,7 @@ class QfcTestCase(TestCase):
         cls.body_stream = output_stream
 
     @skipIf(
-        environ.get("SENTRY_DSN", False),
+        not sentry_is_configured,
         "Do not run this test when Sentry's DSN is not set.",
     )
     def test_logging_with_sentry(self):
@@ -63,3 +65,4 @@ class QfcTestCase(TestCase):
         }
         will_be_sent = report_serialization_diff_to_sentry(**mock_payload)
         self.assertTrue(will_be_sent)
+        print(f"Body sent to Sentry: {self.body_stream.getvalue()}")
