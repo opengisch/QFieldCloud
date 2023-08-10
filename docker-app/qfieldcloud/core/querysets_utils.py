@@ -25,20 +25,14 @@ def get_team_members(team):
     return TeamMember.objects.filter(team=team)
 
 
-def get_organization_members(organization):
-    return (
-        Person.objects.filter(organizationmember__organization=organization)
-        .annotate(
-            role=F("organizationmember__role"),
-            # organization=F("organizationmember__organization"),
-        )
-        .union(
-            Person.objects.filter(pk=organization.organization_owner.id).annotate(
-                role=V("owner"),
-                # organization=V(organization),
-            )
-        )
+def get_organization_members(organization) -> QuerySet[Person]:
+    non_owning_members = Person.objects.filter(
+        organizationmember__organization=organization
+    ).annotate(role=F("organizationmember__role"))
+    owner = Person.objects.filter(pk=organization.organization_owner.id).annotate(
+        role=V("owner")
     )
+    return non_owning_members.union(owner)
 
 
 def get_project_deltas(project):
