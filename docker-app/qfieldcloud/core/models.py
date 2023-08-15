@@ -416,11 +416,6 @@ class UserAccount(models.Model):
         return Subscription.get_or_create_current_subscription(self)
 
     @property
-    @deprecated("Use `current_subscription` instead")
-    def active_subscription(self):
-        return self.current_subscription()
-
-    @property
     def upcoming_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
@@ -438,13 +433,6 @@ class UserAccount(models.Model):
             return None
 
     @property
-    @deprecated("Use `UserAccount().storage_used_bytes` instead")
-    # TODO delete this method after refactoring tests so it's no longer used there
-    def storage_used_mb(self) -> float:
-        """Returns the storage used in MB"""
-        return self.storage_used_bytes / 1000 / 1000
-
-    @property
     def storage_used_bytes(self) -> float:
         """Returns the storage used in bytes"""
         used_quota = (
@@ -456,14 +444,6 @@ class UserAccount(models.Model):
         )
 
         return used_quota
-
-    @property
-    @deprecated("Use `UserAccount().storage_free_bytes` instead")
-    # TODO delete this method after refactoring tests so it's no longer used there
-    def storage_free_mb(self) -> float:
-        """Returns the storage quota left in MB (quota from account and packages minus storage of all owned projects)"""
-
-        return self.storage_free_bytes / 1000 / 1000
 
     @property
     def storage_free_bytes(self) -> float:
