@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.10'
       - name: Check code formatting
-        uses: pre-commit/action@v2.0.3
+        uses: pre-commit/action@v3.0.0
 
   test:
     name: Run tests
