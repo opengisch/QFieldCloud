@@ -1,13 +1,14 @@
 from functools import reduce
 from operator import and_, or_
 
-from django.db.models import Q, QuerySet
+from django.db.models import F, Q, QuerySet
 from django.db.models import Value as V
 from django.db.models.functions import StrIndex
 from qfieldcloud.core.models import (
     Delta,
     Organization,
     OrganizationMember,
+    Person,
     Project,
     ProjectCollaborator,
     Team,
@@ -24,8 +25,14 @@ def get_team_members(team):
     return TeamMember.objects.filter(team=team)
 
 
-def get_organization_members(organization):
-    return OrganizationMember.objects.filter(organization=organization)
+def get_organization_members(organization) -> QuerySet[Person]:
+    org_members = Person.objects.filter(
+        organizationmember__organization=organization
+    ).annotate(role=F("organizationmember__role"))
+    owner = Person.objects.filter(pk=organization.organization_owner.id).annotate(
+        role=V("owner")
+    )
+    return org_members.union(owner)
 
 
 def get_project_deltas(project):
