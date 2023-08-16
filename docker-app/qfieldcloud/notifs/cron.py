@@ -1,4 +1,5 @@
 import logging
+import os
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -43,12 +44,14 @@ class SendNotificationsJob(CronJobBase):
                     logging.warning(f"{user} has notifications, but no email set !")
                     continue
 
+                QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+
                 logging.debug(f"Sending an email to {user} !")
 
                 context = {
                     "notifs": notifs,
                     "username": user.username,
-                    "hostname": settings.ALLOWED_HOSTS[0],
+                    "hostname": QFIELDCLOUD_HOST,
                 }
 
                 subject = render_to_string(
