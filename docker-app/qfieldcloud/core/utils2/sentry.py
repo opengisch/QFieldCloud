@@ -26,6 +26,7 @@ def report_serialization_diff_to_sentry(
     """
     with sentry_sdk.configure_scope() as scope:
         try:
+            logger.info("Sending explicit sentry report!")
 
             filename = f"{name}_contents.txt"
             scope.add_attachment(
@@ -47,10 +48,10 @@ def report_serialization_diff_to_sentry(
                 scope.add_attachment(bytes=body_stream.getvalue(), filename=filename)
 
             if capture_message:
-                sentry_sdk.capture_message("Sending to Sentry...", scope=scope)
+                sentry_sdk.capture_message("Explicit Sentry report!", scope=scope)
             return True
 
         except Exception as error:
+            logger.error(f"Unable to send file to Sentry: failed on {error}")
             sentry_sdk.capture_exception(error)
-            logging.error(f"Unable to send file to Sentry: failed on {error}")
             return False
