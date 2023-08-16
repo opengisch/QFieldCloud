@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Organization, OrganizationMember
 from qfieldcloud.core.serializers import OrganizationMemberSerializer
@@ -31,19 +30,9 @@ class ListCreateMembersViewPermissions(permissions.BasePermission):
         return False
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Get members of an organization",
-        operation_id="Get members of organization",
-    ),
-)
-@method_decorator(
-    name="post",
-    decorator=swagger_auto_schema(
-        operation_description="Add a user as member of an organization",
-        operation_id="Add member",
-    ),
+@extend_schema_view(
+    get=extend_schema(description="Get members of an organization"),
+    post=extend_schema(description="Add a user as a member of an organization"),
 )
 class ListCreateMembersView(generics.ListCreateAPIView):
 
@@ -97,33 +86,11 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
         return False
 
 
-@method_decorator(
-    name="get",
-    decorator=swagger_auto_schema(
-        operation_description="Get the role of a member of an organization",
-        operation_id="Get role of organization member",
-    ),
-)
-@method_decorator(
-    name="put",
-    decorator=swagger_auto_schema(
-        operation_description="Update a member of an organization",
-        operation_id="Update member",
-    ),
-)
-@method_decorator(
-    name="patch",
-    decorator=swagger_auto_schema(
-        operation_description="Partial update a member of an organization",
-        operation_id="Patch member",
-    ),
-)
-@method_decorator(
-    name="delete",
-    decorator=swagger_auto_schema(
-        operation_description="Remove a member from an organization",
-        operation_id="Delete member",
-    ),
+@extend_schema_view(
+    get=extend_schema(description="Get the role of a member of an organization"),
+    put=extend_schema(description="Update a member of an organization"),
+    patch=extend_schema(description="Partially update a member of an organization"),
+    delete=extend_schema(description="Remove a member from an organization"),
 )
 class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
 

@@ -233,7 +233,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.auth_tokens.order_by("-created_at").count(), 1)
         self.assertEqual(o1.auth_tokens.order_by("-created_at").count(), 0)
         self.assertEqual(t1.auth_tokens.order_by("-created_at").count(), 0)
-        self.assertEqual(response.json(), {"code": "api_error", "message": "API Error"})
+        self.assertEqual(
+            response.json(),
+            {"code": "authentication_failed", "message": "Authentication failed"},
+        )
 
         # teams cannot login
         response = self.login("t1", "abc123", success=False)
@@ -241,4 +244,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.auth_tokens.order_by("-created_at").count(), 1)
         self.assertEqual(o1.auth_tokens.order_by("-created_at").count(), 0)
         self.assertEqual(t1.auth_tokens.order_by("-created_at").count(), 0)
-        self.assertEqual(response.json(), {"code": "api_error", "message": "API Error"})
+        self.assertEqual(
+            response.json(),
+            {"code": "authentication_failed", "message": "Authentication failed"},
+        )

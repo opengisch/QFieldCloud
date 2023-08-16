@@ -1,5 +1,5 @@
 from itertools import islice
-from typing import Callable
+from typing import Any, Callable
 
 from django.conf import settings
 from rest_framework import pagination, response
@@ -23,25 +23,38 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     """
     Based on LimitOffsetPagination.
     Custom implementation such that `response.data = LimitOffsetPagination.data.results` from DRF's blanket implementation.
-    Optionally sets a new header `X-Total-Count` to the number of entries in the paginated response.
-    Use it only if you can afford the performance cost.
+    Inject pagination controls and counter into the response headers.
     Can be customized when assigning `pagination_class`.
     """
 
-    count_entries = True
+    def get_headers(self) -> dict[str, Any]:
+        """
+        Set new header fields to carry pagination controls.
+        """
+        headers = {
+            "X-Total-Count": self.count,
+        }
 
-    def get_headers(self) -> dict[str, int]:
-        """
-        Initializes a new header field to carry the number of paginated entries
-        if the class method `count_entries` is `True`.
-        """
-        return {"X-Total-Count": self.count}
+        next_link = self.get_next_link()
+        if next_link:
+            headers["X-Next-Page"] = next_link
+
+        previous_link = self.get_previous_link()
+        if previous_link:
+            headers["X-Previous-Page"] = previous_link
+
+        return headers
 
     def get_paginated_response(self, data) -> response.Response:
         """
-        Sets the header field initialized in the previous method to the number of paginated entries.
-        Return just the entries in the response body, slicing them to never exceed `settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT`.
+        Paginate results injecting pagination controls and counter into response headers.
         """
         if self.request.GET.get("offset") and not self.request.GET.get("limit"):
+            # slice serialized data to enforce the application wide limit
             data = islice(data, settings.QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT)
+
         return response.Response(data, headers=self.get_headers())
+
+    def get_paginated_response_schema(self, schema) -> dict[str, Any]:
+        """Overrides schema with just the results"""
+        return schema

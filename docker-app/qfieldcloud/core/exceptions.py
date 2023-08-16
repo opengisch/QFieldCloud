@@ -58,6 +58,14 @@ class NotAuthenticatedError(QFieldCloudException):
     status_code = status.HTTP_401_UNAUTHORIZED
 
 
+class TooManyLoginAttemptsError(QFieldCloudException):
+    """Raised when QFieldCloud had too many failed login attempts."""
+
+    code = "too_many_failed_login_attempts"
+    message = "Too many failed login attempts!"
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+
 class PermissionDeniedError(QFieldCloudException):
     """Raised when the user has not the required permission for an action."""
 

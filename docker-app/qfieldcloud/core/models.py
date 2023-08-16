@@ -346,6 +346,12 @@ class Person(User):
         help_text=_("Remaining invitations that can be sent by the user himself."),
     )
 
+    # The number of trial organizations the user can create.
+    remaining_trial_organizations = models.PositiveIntegerField(
+        default=0,
+        help_text=_("Remaining trial organizations the user can create."),
+    )
+
     # Whether the user agreed to subscribe for the newsletter
     has_newsletter_subscription = models.BooleanField(default=False)
 

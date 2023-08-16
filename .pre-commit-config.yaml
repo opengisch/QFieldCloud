@@ -46,7 +46,7 @@ repos:
     rev: "3.9.0"
     hooks:
       - id: flake8
-        additional_dependencies: [flake8-match==1.0.0]
+        additional_dependencies: [flake8-match==1.0.0, flake8-walrus==1.1.0]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: 'v1.3.0'

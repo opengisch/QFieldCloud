@@ -1,6 +1,10 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job, Project
 from rest_framework import generics, permissions, viewsets
@@ -20,15 +24,30 @@ class JobPermissions(permissions.BasePermission):
         return permissions_utils.can_read_jobs(request.user, project)
 
 
-@method_decorator(
-    name="list",
-    decorator=swagger_auto_schema(
-        operation_description="List all jobs scheduled against the given project. Results are paginated: use 'limit' (integer) to limit the number of results and/or 'offset' (integer) to skip results in the reponse.",
-        operation_id="List all jobs",
-    ),
+@extend_schema_view(
+    list=extend_schema(
+        description="List all jobs scheduled against the given project.",
+        parameters=[
+            OpenApiParameter(
+                name="project_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="File to be uploaded",
+            ),
+            OpenApiParameter(
+                name="force",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                default=0,
+                enum=[1, 0],
+                description="Force creating the job.",
+            ),
+        ],
+    )
 )
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
-
     serializer_class = serializers.JobSerializer
     lookup_url_kwarg = "job_id"
     permission_classes = [permissions.IsAuthenticated]

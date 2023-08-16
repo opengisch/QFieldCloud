@@ -8,8 +8,15 @@ import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
+from qfieldcloud.core.serializers import FileSerializer
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.core.utils2.sentry import report_serialization_diff_to_sentry
@@ -17,7 +24,7 @@ from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
     purge_old_file_versions,
 )
-from rest_framework import permissions, status, views
+from rest_framework import permissions, serializers, status, views
 from rest_framework.exceptions import NotFound
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
@@ -37,8 +44,23 @@ class ListFilesViewPermissions(permissions.BasePermission):
         return permissions_utils.can_read_files(request.user, project)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Get all the project's file versions",
+        responses={200: serializers.ListSerializer(child=FileSerializer())},
+        parameters=[
+            OpenApiParameter(
+                name="skip_metadata",
+                type=OpenApiTypes.INT,
+                required=False,
+                default=0,
+                enum=[1, 0],
+                description="Skip obtaining file metadata (e.g. `sha256`). Makes responses much faster. In the future `skip_metadata=1` might be default behaviour.",
+            ),
+        ],
+    ),
+)
 class ListFilesView(views.APIView):
-    # TODO: swagger doc
     # TODO: docstring
 
     permission_classes = [permissions.IsAuthenticated, ListFilesViewPermissions]
@@ -125,6 +147,27 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
         return False
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Download a file from a project",
+        responses={
+            (200, "*/*"): OpenApiTypes.BINARY,
+        },
+    ),
+    post=extend_schema(
+        description="Upload a file to the project",
+        parameters=[
+            OpenApiParameter(
+                name="file",
+                type=OpenApiTypes.BINARY,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="File to be uploaded",
+            )
+        ],
+    ),
+    delete=extend_schema(description="Delete a file from a project"),
+)
 class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
@@ -292,6 +335,14 @@ class DownloadPushDeleteFileView(views.APIView):
         return Response(status=status.HTTP_200_OK)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Download the metadata of a project's file",
+        responses={
+            (200, "*/*"): OpenApiTypes.BINARY,
+        },
+    )
+)
 class ProjectMetafilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = [
@@ -304,9 +355,27 @@ class ProjectMetafilesView(views.APIView):
         return utils2.storage.file_response(request, key, presigned=True)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Download a public file, e.g. user avatar.",
+        responses={
+            (200, "*/*"): OpenApiTypes.BINARY,
+        },
+    )
+)
 class PublicFilesView(views.APIView):
     parser_classes = [MultiPartParser]
     permission_classes = []
 
     def get(self, request, filename):
         return utils2.storage.file_response(request, filename)
+
+
+@extend_schema(exclude=True)
+class AdminDownloadPushDeleteFileView(DownloadPushDeleteFileView):
+    """Allowing `DownloadPushDeleteFileView` to be excluded from the OpenAPI schema documentation"""
+
+
+@extend_schema(exclude=True)
+class AdminListFilesViews(ListFilesView):
+    """Allowing `ListFilesView` to be excluded from the OpenAPI schema documentation"""

@@ -703,8 +703,10 @@ def get_file_md5sum(filename: str) -> str:
     hasher = hashlib.md5()
 
     with open(filename, "rb") as f:
-        while chunk := f.read(BLOCKSIZE):
+        chunk = f.read(BLOCKSIZE)
+        while chunk:
             hasher.update(chunk)
+            chunk = f.read(BLOCKSIZE)
 
     return hasher.hexdigest()
 

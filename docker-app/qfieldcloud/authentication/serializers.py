@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import AuthenticationFailed
 
 from .models import AuthToken
 
@@ -26,7 +26,7 @@ class LoginSerializer(serializers.Serializer):
             user = self.authenticate(email=email, password=password)
         else:
             msg = _('Must include "email" and "password".')
-            raise ValidationError(msg)
+            raise AuthenticationFailed(msg)
 
         return user
 
@@ -37,7 +37,7 @@ class LoginSerializer(serializers.Serializer):
             user = self.authenticate(username=username, password=password)
         else:
             msg = _('Must include "username" and "password".')
-            raise ValidationError(msg)
+            raise AuthenticationFailed(msg)
 
         return user
 
@@ -50,7 +50,7 @@ class LoginSerializer(serializers.Serializer):
             user = self.authenticate(username=username, password=password)
         else:
             msg = _('Must include either "username" or "email" and "password".')
-            raise ValidationError(msg)
+            raise AuthenticationFailed(msg)
 
         return user
 
@@ -97,10 +97,10 @@ class LoginSerializer(serializers.Serializer):
         if user:
             if not user.is_active:
                 msg = _("User account is disabled.")
-                raise ValidationError(msg)
+                raise AuthenticationFailed(msg)
         else:
             msg = _("Unable to log in with provided credentials.")
-            raise ValidationError(msg)
+            raise AuthenticationFailed(msg)
 
         attrs["user"] = user
         return attrs
