@@ -65,4 +65,3 @@ class QfcTestCase(TestCase):
         }
         will_be_sent = report_serialization_diff_to_sentry(**mock_payload)
         self.assertTrue(will_be_sent)
-        print(f"Body sent to Sentry: {self.body_stream.getvalue()}")
