@@ -1,4 +1,3 @@
-import shutil
 from io import BytesIO, StringIO
 from unittest import skipIf
 
@@ -19,10 +18,7 @@ class QfcTestCase(TestCase):
             format="multipart",
         )
         request = response.wsgi_request
-        input_stream = BytesIO(request.body)
-        output_stream = BytesIO()
-        shutil.copyfileobj(input_stream, output_stream)
-        cls.body_stream = output_stream
+        cls.body_stream = BytesIO(request.read())
 
     @skipIf(
         not settings.SENTRY_DSN,
