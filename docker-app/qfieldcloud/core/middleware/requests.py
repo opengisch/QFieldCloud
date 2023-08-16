@@ -1,7 +1,11 @@
 import io
+import logging
 import shutil
 
 from constance import config
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def attach_keys(get_response):
@@ -17,9 +21,14 @@ def attach_keys(get_response):
         if (
             request.method == "POST"
             and "Content-Length" in request.headers
-            and int(request.headers["Content-Length"])
-            < config.SENTRY_REQUEST_MAX_SIZE_TO_SEND
+            and (
+                int(request.headers["Content-Length"])
+                < config.SENTRY_REQUEST_MAX_SIZE_TO_SEND
+            )
+            and settings.SENTRY_DSN
         ):
+            logger.info("Making a temporary copy for request body.")
+
             input_stream = io.BytesIO(request.body)
             output_stream = io.BytesIO()
             shutil.copyfileobj(input_stream, output_stream)
