@@ -7,8 +7,6 @@ from django.test import Client, TestCase
 
 from ..utils2.sentry import report_serialization_diff_to_sentry
 
-sentry_is_configured = all([settings.SENTRY_DSN, settings.SENTRY_REPORT_FULL_BODY])
-
 
 class QfcTestCase(TestCase):
     @classmethod
@@ -27,7 +25,7 @@ class QfcTestCase(TestCase):
         cls.body_stream = output_stream
 
     @skipIf(
-        not sentry_is_configured,
+        not settings.SENTRY_DSN,
         "Do not run this test when Sentry's DSN is not set.",
     )
     def test_logging_with_sentry(self):
