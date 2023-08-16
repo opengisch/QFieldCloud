@@ -1,6 +1,8 @@
 import io
 import shutil
 
+from constance import config
+
 
 def attach_keys(get_response):
     """
@@ -15,7 +17,8 @@ def attach_keys(get_response):
         if (
             request.method == "POST"
             and "Content-Length" in request.headers
-            and int(request.headers["Content-Length"]) < 10000000
+            and int(request.headers["Content-Length"])
+            < config.SENTRY_REQUEST_MAX_SIZE_TO_SEND
         ):
             input_stream = io.BytesIO(request.body)
             output_stream = io.BytesIO()
