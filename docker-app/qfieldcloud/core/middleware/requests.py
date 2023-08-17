@@ -17,15 +17,15 @@ def attach_keys(get_response):
     """
 
     def middleware(request):
-        # only report raw body of POST requests with a < 10MBs content length
+        # add a copy of the request body to the request
         if (
-            request.method == "POST"
+            settings.SENTRY_DSN
+            and request.method == "POST"
             and "Content-Length" in request.headers
             and (
                 int(request.headers["Content-Length"])
                 < config.SENTRY_REQUEST_MAX_SIZE_TO_SEND
             )
-            and settings.SENTRY_DSN
         ):
             logger.info("Making a temporary copy for request body.")
 
