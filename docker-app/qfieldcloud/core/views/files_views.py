@@ -214,23 +214,25 @@ class DownloadPushDeleteFileView(views.APIView):
         # QF-2540
         # Getting traceback in case the traceback provided by Sentry is too short
         # Add post-serialization keys for diff-ing with pre-serialization keys
-        buffer = io.StringIO()
-        print_stack(limit=50, file=buffer)
-        request_attributes = {
-            "data": str(copy.copy(self.request.data).keys()),
-            "files": str(self.request.FILES.keys()),
-            "meta": str(self.request.META),
-        }
-        missing_error = ""
+        if "file" not in request.data and not request.FILES.getlist("file"):
+            if "file" not in request.data:
+                logger.warning(
+                    'The key "file" was not found in `request.data`. Sending report to Sentry.'
+                )
 
-        if "file" not in request.data:
-            missing_error = 'The key "file" was not found in `request.data`. Sending report to Sentry.'
+            if not request.FILES.getlist("file"):
+                logger.warning(
+                    'The key "file" occurs in `request.data` but maps to an empty list. Sending report to Sentry.'
+                )
 
-        if not request.FILES.getlist("file"):
-            missing_error = 'The key "file" occurs in `request.data` but maps to an empty list. Sending report to Sentry.'
+            callstack_buffer = io.StringIO()
+            print_stack(limit=50, file=callstack_buffer)
 
-        if missing_error:
-            logging.warning(missing_error)
+            request_attributes = {
+                "data": str(copy.copy(self.request.data).keys()),
+                "files": str(self.request.FILES.keys()),
+                "meta": str(self.request.META),
+            }
 
             # QF-2540
             report_serialization_diff_to_sentry(
@@ -239,7 +241,7 @@ class DownloadPushDeleteFileView(views.APIView):
                 pre_serialization=request.attached_keys,
                 post_serialization=",".join(QfcMultiPartSerializer.errors)
                 + str(request_attributes),
-                buffer=buffer,
+                buffer=callstack_buffer,
                 body_stream=getattr(request, "body_stream", None),
             )
             raise exceptions.EmptyContentError()
