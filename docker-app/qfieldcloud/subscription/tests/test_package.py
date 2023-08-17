@@ -64,8 +64,8 @@ class QfcTestCase(APITransactionTestCase):
         future_storage_package_quantity,
         future_storage_package_mb,
         future_storage_package_changed_mb,
-        storage_used_bytes,
-        storage_free_bytes,
+        storage_used_mb,
+        storage_free_mb,
         user=None,
     ):
         if user is None:
@@ -107,8 +107,8 @@ class QfcTestCase(APITransactionTestCase):
             user.useraccount.current_subscription.future_storage_package_changed_mb,
             future_storage_package_changed_mb,
         )
-        self.assertEqual(user.useraccount.storage_used_bytes, storage_used_bytes)
-        self.assertEqual(user.useraccount.storage_free_bytes, storage_free_bytes)
+        self.assertEqual(user.useraccount.storage_used_bytes, storage_used_mb * 1000 * 1000)
+        self.assertEqual(user.useraccount.storage_free_bytes, storage_free_mb * 1000 * 1000)
 
     def test_get_storage_package_type(self):
         PackageType.objects.all().delete()
@@ -139,8 +139,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=self.plan_default.storage_mb * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=self.plan_default.storage_mb,
         )
 
     def test_default_plan_raises_when_adding_active_storage(self):
@@ -163,8 +163,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=self.plan_default.storage_mb * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=self.plan_default.storage_mb,
         )
 
     def test_default_plan_ignores_active_package(self):
@@ -190,8 +190,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=self.plan_default.storage_mb * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=self.plan_default.storage_mb,
         )
 
     def test_premium_plan_without_additional_storage(self):
@@ -205,8 +205,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1,
         )
 
     def test_premium_plan_with_active_storage(self):
@@ -228,8 +228,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=-1000,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
     def test_premium_plan_with_active_storage_without_end_date(self):
@@ -251,8 +251,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
     def test_premium_plan_with_expired_storage(self):
@@ -274,8 +274,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1,
         )
 
     def test_premium_plan_with_future_storage(self):
@@ -297,8 +297,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=1000,
-            storage_used_bytes=0,
-            storage_free_bytes=1 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1,
         )
 
     def test_premium_plan_with_active_and_future_and_expired_storage(self):
@@ -335,8 +335,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
     def test_premium_plan_can_add_active_storage(self):
@@ -354,8 +354,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
     def test_premium_plan_can_add_active_storage_with_quantity_of_42(self):
@@ -373,8 +373,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=42,
             future_storage_package_mb=42000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=42001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=42001,
         )
 
     def test_premium_plan_can_add_future_storage(self):
@@ -394,8 +394,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=1000,
-            storage_used_bytes=0,
-            storage_free_bytes=1 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1,
         )
 
     def test_premium_plan_can_replace_active_storage(self):
@@ -417,8 +417,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
         (
@@ -443,8 +443,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=2,
             future_storage_package_mb=2000,
             future_storage_package_changed_mb=1000,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
     def test_storage_with_custom_additional_storage(self):
@@ -475,8 +475,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=2,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=3 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=3,
         )
 
     def test_storage_cannot_have_packages_with_time_overlaps(self):
@@ -499,8 +499,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=-1000,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
         with self.assertRaises(django.db.utils.IntegrityError):
@@ -523,8 +523,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=-1000,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
     def test_storage_cannot_add_new_package_when_active_until_is_null(self):
@@ -546,8 +546,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
         with self.assertRaises(django.db.utils.IntegrityError):
@@ -569,8 +569,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1001 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1001,
         )
 
     def test_used_storage_changes_when_uploading_and_deleting_files_and_versions(self):
@@ -584,8 +584,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1,
         )
 
         p1 = Project.objects.create(name="p1", owner=self.u1)
@@ -604,8 +604,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0.3 * 1000 * 1000,
-            storage_free_bytes=0.7 * 1000 * 1000,
+            storage_used_mb=0.3,
+            storage_free_mb=0.7,
         )
 
         bucket.upload_fileobj(get_random_file(mb=0.1), storage_path)
@@ -621,8 +621,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0.4 * 1000 * 1000,
-            storage_free_bytes=0.6 * 1000 * 1000,
+            storage_used_mb=0.4,
+            storage_free_mb=0.6,
         )
 
         version = list(list_versions(bucket, storage_path))[0]
@@ -639,8 +639,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0.1 * 1000 * 1000,
-            storage_free_bytes=0.9 * 1000 * 1000,
+            storage_used_mb=0.1,
+            storage_free_mb=0.9,
         )
 
         delete_project_file_permanently(p1, "test.data")
@@ -656,8 +656,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0 * 1000 * 1000,
-            storage_free_bytes=1 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1,
         )
 
     def test_api_enforces_storage_limit(self):
@@ -711,8 +711,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=10 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=10,
             user=u10mb,
         )
         self.assertStorage(
@@ -725,8 +725,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=20 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=20,
             user=u20mb,
         )
 
@@ -749,8 +749,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=0,
             future_storage_package_mb=0,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=15 * 1000 * 1000,
-            storage_free_bytes=5 * 1000 * 1000,
+            storage_used_mb=15,
+            storage_free_mb=5,
             user=u20mb,
         )
 
@@ -779,8 +779,8 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=0,
-            storage_free_bytes=1010 * 1000 * 1000,
+            storage_used_mb=0,
+            storage_free_mb=1010,
             user=u10mb,
         )
 
@@ -799,7 +799,7 @@ class QfcTestCase(APITransactionTestCase):
             future_storage_package_quantity=1,
             future_storage_package_mb=1000,
             future_storage_package_changed_mb=0,
-            storage_used_bytes=15 * 1000 * 1000,
-            storage_free_bytes=995 * 1000 * 1000,
+            storage_used_mb=15,
+            storage_free_mb=995,
             user=u10mb,
         )
