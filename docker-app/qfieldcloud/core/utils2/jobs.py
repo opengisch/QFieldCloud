@@ -31,9 +31,13 @@ def apply_deltas(
     # 2. Check if there are any pending deltas.
     # We need to call .select_for_update() to make sure there would not be a concurrent
     # request that will try to apply these deltas.
-    pending_deltas = models.Delta.objects.select_for_update().filter(
-        project=project,
-        last_status=models.Delta.Status.PENDING,
+    pending_deltas = (
+        models.Delta.objects.select_for_update()
+        .filter(
+            project=project,
+            last_status=models.Delta.Status.PENDING,
+        )
+        .order_by("created_at")
     )
 
     # 2.1. Filter only the deltas of interest.
