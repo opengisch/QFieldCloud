@@ -368,10 +368,6 @@ class SubscriptionQuerySet(models.QuerySet):
 
         return qs
 
-    @deprecated("Use `current` instead. Remove this once parent repo uses current")
-    def active(self):
-        return self.current()
-
     def managed_by(self, user_id: int):
         """Returns all subscriptions that are managed by given `user_id`. It means the owner personal account and all organizations they own.
 
@@ -697,11 +693,6 @@ class AbstractSubscription(models.Model):
             subscription = cls.create_default_plan_subscription(account)
 
         return subscription
-
-    @property
-    @deprecated("Use `get_or_create_current_subscription` instead")
-    def get_or_create_active_subscription(cls, account: UserAccount) -> "Subscription":
-        return cls.get_or_create_current_subscription(account)
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":

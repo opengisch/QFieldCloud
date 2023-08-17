@@ -107,8 +107,12 @@ class QfcTestCase(APITransactionTestCase):
             user.useraccount.current_subscription.future_storage_package_changed_mb,
             future_storage_package_changed_mb,
         )
-        self.assertEqual(user.useraccount.storage_used_mb, storage_used_mb)
-        self.assertEqual(user.useraccount.storage_free_mb, storage_free_mb)
+        self.assertEqual(
+            user.useraccount.storage_used_bytes, storage_used_mb * 1000 * 1000
+        )
+        self.assertEqual(
+            user.useraccount.storage_free_bytes, storage_free_mb * 1000 * 1000
+        )
 
     def test_get_storage_package_type(self):
         PackageType.objects.all().delete()
