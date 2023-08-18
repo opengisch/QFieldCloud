@@ -83,7 +83,11 @@ class ListFilesView(views.APIView):
             path = PurePath(version.key)
             filename = str(path.relative_to(*path.parts[:3]))
             last_modified = version.last_modified.strftime("%d.%m.%Y %H:%M:%S %Z")
-            md5sum = version.e_tag.replace('"', "") if version.e_tag is not None else ""
+
+            if version.e_tag is None:
+                md5sum = ""
+            else:
+                md5sum = version.e_tag.replace('"', "")
 
             version_data = {
                 "size": version.size,

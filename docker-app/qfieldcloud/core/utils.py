@@ -59,10 +59,7 @@ class S3ObjectVersion:
 
     @property
     def e_tag(self) -> str:
-        if self._data.e_tag is None:
-            return ""
-        else:
-            return self._data.e_tag
+        return self._data.e_tag
 
     @property
     def md5sum(self) -> str:
