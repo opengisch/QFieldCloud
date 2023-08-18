@@ -83,10 +83,11 @@ class ListFilesView(views.APIView):
             path = PurePath(version.key)
             filename = str(path.relative_to(*path.parts[:3]))
             last_modified = version.last_modified.strftime("%d.%m.%Y %H:%M:%S %Z")
+            md5sum = version.e_tag.replace('"', "")
 
             version_data = {
                 "size": version.size,
-                "md5sum": version.e_tag.replace('"', ""),
+                "md5sum": md5sum,
                 "version_id": version.version_id,
                 "last_modified": last_modified,
                 "is_latest": version.is_latest,
@@ -119,7 +120,7 @@ class ListFilesView(views.APIView):
 
                 files[version.key]["name"] = filename
                 files[version.key]["size"] = version.size
-                files[version.key]["md5sum"] = version.e_tag.replace('"', "")
+                files[version.key]["md5sum"] = md5sum
                 files[version.key]["last_modified"] = last_modified
                 files[version.key]["is_attachment"] = is_attachment
 
