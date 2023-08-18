@@ -1478,7 +1478,12 @@ class ProjectCollaborator(models.Model):
             if self.collaborator.is_person:
                 members_qs = organization.members.filter(member=self.collaborator)
 
-                if not members_qs.exists():
+                # for organizations-owned projects, the candidate collaborator
+                # must be a member of the organization or the organization's owner
+                if not (
+                    members_qs.exists()
+                    or self.collaborator == organization.organization_owner
+                ):
                     raise ValidationError(
                         _(
                             "Cannot add a user who is not a member of the organization as a project collaborator."
