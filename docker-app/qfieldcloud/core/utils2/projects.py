@@ -12,7 +12,7 @@ def create_collaborator(
 
     Args:
         project (Project): the project to add collaborator to
-        user (User | Team): the user to be added as collaborator
+        user (Person | Team): the user to be added as collaborator
         created_by (Person): the user that initiated the collaborator creation
 
     Returns:
