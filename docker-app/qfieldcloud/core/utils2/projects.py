@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 from qfieldcloud.core import invitations_utils as invitation
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core.models import Person, Project, ProjectCollaborator, Team, User
+from qfieldcloud.core.models import Person, Project, ProjectCollaborator, Team
 
 
 def create_collaborator(
@@ -39,7 +39,7 @@ def create_collaborator(
     except perms.UserOrganizationRoleError:
         message = _(
             f"{user_type_name} '{user.username}' is not a member of the organization that owns the project. "
-            "Please add this user to the organization first."
+            f"Please add this {user_type_name.lower()} to the organization first."
         )
     except (
         perms.AlreadyCollaboratorError,
