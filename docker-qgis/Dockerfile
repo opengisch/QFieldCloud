@@ -34,4 +34,5 @@ COPY ./schemas/deltafile_01.json ./schemas/
 ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a \"$@\"", ""]
 
 FROM base AS dev
+# Install libqfieldsync in development mode (see https://setuptools.pypa.io/en/latest/userguide/development_mode.html)
 ENTRYPOINT ["/bin/sh", "-c", "pip install -e /libqfieldsync && /usr/bin/xvfb-run -a \"$@\"", ""]
