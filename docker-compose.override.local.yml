@@ -128,12 +128,12 @@ services:
   qgis:
     build:
       target: dev
-    # Uncomment to use a local clone of the libqfieldsync repository
-    # that will be bind-mounted into this container for an editable installation
-      # environment:
-      #   - HOST_PATH_LIBQFIELDSYNC
-      # volumes:
-      #   - ${HOST_PATH_LIBQFIELDSYNC}:/libqfieldsync
+    environment:
+      - HOST_PATH_LIBQFIELDSYNC
+  # Uncomment to use a local clone of the libqfieldsync repository
+  # that will be bind-mounted into this container for an editable installation
+    # volumes:
+    #   - ${HOST_PATH_LIBQFIELDSYNC}:/libqfieldsync
 
 volumes:
   postgres_data:
