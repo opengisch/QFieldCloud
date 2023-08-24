@@ -7,7 +7,7 @@ import traceback
 import uuid
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Iterable
 
 import docker
 import requests
@@ -45,6 +45,7 @@ TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
 QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
+TMP_FILE = Path("/tmp")
 
 assert QGIS_CONTAINER_NAME
 assert QFIELDCLOUD_HOST
@@ -63,9 +64,9 @@ class JobRun:
         try:
             self.job_id = job_id
             self.job = self.job_class.objects.select_related().get(id=job_id)
-            self.shared_tempdir = Path(tempfile.mkdtemp(dir="/tmp"))
+            self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
         except Exception as err:
-            feedback: Dict[str, Any] = {}
+            feedback: dict[str, Any] = {}
             (_type, _value, tb) = sys.exc_info()
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
@@ -82,7 +83,7 @@ class JobRun:
             else:
                 logger.critical(msg, exc_info=err)
 
-    def get_context(self) -> Dict[str, Any]:
+    def get_context(self) -> dict[str, Any]:
         context = model_to_dict(self.job)
 
         for key, value in model_to_dict(self.job.project).items():
@@ -92,18 +93,17 @@ class JobRun:
 
         return context
 
-    def get_command(self) -> List[str]:
-        return [
-            p % self.get_context() for p in ["python3", "entrypoint.py", *self.command]
-        ]
+    def get_command(self) -> list[str]:
+        context = self.get_context()
+        return [p % context for p in ["python3", "entrypoint.py", *self.command]]
 
-    def before_docker_run(self) -> None:
+    def before_docker_run(self):
         pass
 
-    def after_docker_run(self) -> None:
+    def after_docker_run(self):
         pass
 
-    def after_docker_exception(self) -> None:
+    def after_docker_exception(self):
         pass
 
     def run(self):
@@ -231,8 +231,8 @@ class JobRun:
                 )
 
     def _run_docker(
-        self, command: List[str], volumes: List[str], run_opts: Dict[str, Any] = {}
-    ) -> Tuple[int, bytes]:
+        self, command: list[str], volumes: list[str], run_opts: dict[str, Any] = {}
+    ) -> tuple[int, bytes]:
         QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
         QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ.get(
@@ -364,11 +364,11 @@ class PackageJobRun(JobRun):
     command = ["package", "%(project__id)s", "%(project__project_filename)s"]
     data_last_packaged_at = None
 
-    def before_docker_run(self) -> None:
+    def before_docker_run(self):
         # at the start of docker we assume we make the snapshot of the data
         self.data_last_packaged_at = timezone.now()
 
-    def after_docker_run(self) -> None:
+    def after_docker_run(self):
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
         self.job.project.last_package_job = self.job
@@ -415,13 +415,13 @@ class DeltaApplyJobRun(JobRun):
     job_class = ApplyJob
     command = ["delta_apply", "%(project__id)s", "%(project__project_filename)s"]
 
-    def __init__(self, job_id: str) -> None:
+    def __init__(self, job_id: str):
         super().__init__(job_id)
 
         if self.job.overwrite_conflicts:
             self.command = [*self.command, "--overwrite-conflicts"]
 
-    def _prepare_deltas(self, deltas: Iterable[Delta]):
+    def _prepare_deltas(self, deltas: Iterable[Delta]) -> dict[str, Any]:
         delta_contents = []
         delta_client_ids = []
 
@@ -454,7 +454,7 @@ class DeltaApplyJobRun(JobRun):
         return deltafile_contents
 
     @transaction.atomic()
-    def before_docker_run(self) -> None:
+    def before_docker_run(self):
         deltas = self.job.deltas_to_apply.all()
         deltafile_contents = self._prepare_deltas(deltas)
 
@@ -470,7 +470,7 @@ class DeltaApplyJobRun(JobRun):
         with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
             json.dump(deltafile_contents, f)
 
-    def after_docker_run(self) -> None:
+    def after_docker_run(self):
         delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]
         is_data_modified = False
 
@@ -512,7 +512,7 @@ class DeltaApplyJobRun(JobRun):
             self.job.project.data_last_updated_at = timezone.now()
             self.job.project.save(update_fields=("data_last_updated_at",))
 
-    def after_docker_exception(self) -> None:
+    def after_docker_exception(self):
         Delta.objects.filter(
             id__in=self.delta_ids,
         ).update(last_status=Delta.Status.ERROR)
@@ -533,7 +533,7 @@ class ProcessProjectfileJobRun(JobRun):
         "%(project__project_filename)s",
     ]
 
-    def get_context(self, *args) -> Dict[str, Any]:
+    def get_context(self, *args) -> dict[str, Any]:
         context = super().get_context(*args)
 
         if not context.get("project__project_filename"):
@@ -543,7 +543,7 @@ class ProcessProjectfileJobRun(JobRun):
 
         return context
 
-    def after_docker_run(self) -> None:
+    def after_docker_run(self):
         project = self.job.project
         project.project_details = self.job.feedback["outputs"]["project_details"][
             "project_details"
@@ -562,7 +562,7 @@ class ProcessProjectfileJobRun(JobRun):
             )
         )
 
-    def after_docker_exception(self) -> None:
+    def after_docker_exception(self):
         project = self.job.project
 
         if project.project_details is not None:
@@ -573,7 +573,7 @@ class ProcessProjectfileJobRun(JobRun):
 def cancel_orphaned_workers():
     client: DockerClient = docker.from_env()
 
-    running_workers: List[Container] = client.containers.list(
+    running_workers: list[Container] = client.containers.list(
         filters={"label": f"app={settings.ENVIRONMENT}_worker"},
     )
 

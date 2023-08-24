@@ -4,7 +4,7 @@ import argparse
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Union
+from typing import Union
 
 import qfieldcloud.qgis.apply_deltas
 import qfieldcloud.qgis.process_projectfile
@@ -135,13 +135,13 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     return packaged_project_filename
 
 
-def _extract_layer_data(project_filename: Union[str, Path]) -> Dict:
+def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
     logging.info("Extracting QGIS project layer data…")
 
     project_filename = str(project_filename)
     project = QgsProject.instance()
     project.read(project_filename)
-    layers_by_id = get_layers_data(project)
+    layers_by_id: dict = get_layers_data(project)
 
     logging.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
@@ -150,7 +150,7 @@ def _extract_layer_data(project_filename: Union[str, Path]) -> Dict:
     return layers_by_id
 
 
-def cmd_package_project(args):
+def cmd_package_project(args: argparse.Namespace):
     workflow = Workflow(
         id="package_project",
         name="Package Project",
@@ -228,7 +228,7 @@ def cmd_package_project(args):
     )
 
 
-def cmd_apply_deltas(args):
+def cmd_apply_deltas(args: argparse.Namespace):
     workflow = Workflow(
         id="apply_changes",
         name="Apply Changes",
@@ -286,7 +286,7 @@ def cmd_apply_deltas(args):
     )
 
 
-def cmd_process_projectfile(args):
+def cmd_process_projectfile(args: argparse.Namespace):
     workflow = Workflow(
         id="process_projectfile",
         name="Process Projectfile",
@@ -399,5 +399,5 @@ if __name__ == "__main__":
     )
     parser_process_projectfile.set_defaults(func=cmd_process_projectfile)
 
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
     args.func(args)
