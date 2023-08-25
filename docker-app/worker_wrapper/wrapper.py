@@ -97,13 +97,13 @@ class JobRun:
         context = self.get_context()
         return [p % context for p in ["python3", "entrypoint.py", *self.command]]
 
-    def before_docker_run(self):
+    def before_docker_run(self) -> None:
         pass
 
-    def after_docker_run(self):
+    def after_docker_run(self) -> None:
         pass
 
-    def after_docker_exception(self):
+    def after_docker_exception(self) -> None:
         pass
 
     def run(self):
@@ -364,11 +364,11 @@ class PackageJobRun(JobRun):
     command = ["package", "%(project__id)s", "%(project__project_filename)s"]
     data_last_packaged_at = None
 
-    def before_docker_run(self):
+    def before_docker_run(self) -> None:
         # at the start of docker we assume we make the snapshot of the data
         self.data_last_packaged_at = timezone.now()
 
-    def after_docker_run(self):
+    def after_docker_run(self) -> None:
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
         self.job.project.last_package_job = self.job
@@ -415,7 +415,7 @@ class DeltaApplyJobRun(JobRun):
     job_class = ApplyJob
     command = ["delta_apply", "%(project__id)s", "%(project__project_filename)s"]
 
-    def __init__(self, job_id: str):
+    def __init__(self, job_id: str) -> None:
         super().__init__(job_id)
 
         if self.job.overwrite_conflicts:
@@ -454,7 +454,7 @@ class DeltaApplyJobRun(JobRun):
         return deltafile_contents
 
     @transaction.atomic()
-    def before_docker_run(self):
+    def before_docker_run(self) -> None:
         deltas = self.job.deltas_to_apply.all()
         deltafile_contents = self._prepare_deltas(deltas)
 
@@ -470,7 +470,7 @@ class DeltaApplyJobRun(JobRun):
         with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
             json.dump(deltafile_contents, f)
 
-    def after_docker_run(self):
+    def after_docker_run(self) -> None:
         delta_feedback = self.job.feedback["outputs"]["apply_deltas"]["delta_feedback"]
         is_data_modified = False
 
@@ -512,7 +512,7 @@ class DeltaApplyJobRun(JobRun):
             self.job.project.data_last_updated_at = timezone.now()
             self.job.project.save(update_fields=("data_last_updated_at",))
 
-    def after_docker_exception(self):
+    def after_docker_exception(self) -> None:
         Delta.objects.filter(
             id__in=self.delta_ids,
         ).update(last_status=Delta.Status.ERROR)
@@ -543,7 +543,7 @@ class ProcessProjectfileJobRun(JobRun):
 
         return context
 
-    def after_docker_run(self):
+    def after_docker_run(self) -> None:
         project = self.job.project
         project.project_details = self.job.feedback["outputs"]["project_details"][
             "project_details"
@@ -562,7 +562,7 @@ class ProcessProjectfileJobRun(JobRun):
             )
         )
 
-    def after_docker_exception(self):
+    def after_docker_exception(self) -> None:
         project = self.job.project
 
         if project.project_details is not None:
