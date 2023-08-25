@@ -1,26 +1,25 @@
-from typing import Tuple
-
 from django.db.models import Q
 from django.utils.translation import gettext as _
 from qfieldcloud.core import invitations_utils as invitation
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core.models import Person, Project, ProjectCollaborator, Team, User
+from qfieldcloud.core.models import Person, Project, ProjectCollaborator, Team
 
 
 def create_collaborator(
-    project: Project, user: User, created_by: Person
-) -> Tuple[bool, str]:
+    project: Project, user: Person | Team, created_by: Person
+) -> tuple[bool, str]:
     """Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible
 
     Args:
         project (Project): the project to add collaborator to
-        user (User): the user to be added as collaborator
+        user (Person | Team): the user to be added as collaborator
         created_by (Person): the user that initiated the collaborator creation
 
     Returns:
-        Tuple[bool, str]: success, message - whether the collaborator creation was success and explanation message of the outcome
+        tuple[bool, str]: success, message - whether the collaborator creation was success and explanation message of the outcome
     """
     success, message = False, ""
+    user_type_name = "Team" if isinstance(user, Team) else "User"
 
     try:
         perms.check_can_become_collaborator(user, project)
@@ -34,12 +33,14 @@ def create_collaborator(
             updated_by=created_by,
         )
         success = True
-        message = _('User "{}" has been invited to the project.').format(user.username)
+        message = _(
+            f'{user_type_name} "{user.username}" has been invited to the project.'
+        )
     except perms.UserOrganizationRoleError:
         message = _(
-            "User '{}' is not a member of the organization that owns the project. "
-            "Please add this user to the organization first."
-        ).format(user.username)
+            f"{user_type_name} '{user.username}' is not a member of the organization that owns the project. "
+            f"Please add this {user_type_name.lower()} to the organization first."
+        )
     except (
         perms.AlreadyCollaboratorError,
         perms.ReachedCollaboratorLimitError,

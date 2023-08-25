@@ -1,15 +1,27 @@
-from io import StringIO
-from os import environ
+from io import BytesIO, StringIO
 from unittest import skipIf
 
-from rest_framework.test import APITestCase
+from django.conf import settings
+from django.test import Client, TestCase
 
 from ..utils2.sentry import report_serialization_diff_to_sentry
 
 
-class QfcTestCase(APITestCase):
+class QfcTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        # Let's set up a WSGI request the body of which we'll extract
+        response = Client().post(
+            "test123",
+            data={"file": BytesIO(b"Hello World")},
+            format="multipart",
+        )
+        request = response.wsgi_request
+        cls.body_stream = BytesIO(request.read())
+
     @skipIf(
-        environ.get("SENTRY_DSN", False),
+        not settings.SENTRY_DSN,
         "Do not run this test when Sentry's DSN is not set.",
     )
     def test_logging_with_sentry(self):
@@ -42,7 +54,8 @@ class QfcTestCase(APITestCase):
                 }
             ),
             "buffer": StringIO("The traceback of the exception to raise"),
-            "capture_message": True,  # so that sentry receives attachments even when there's no exception/event
+            "body_stream": self.body_stream,
+            "capture_message": True,  # so that sentry receives attachments even when there's no exception/event,
         }
         will_be_sent = report_serialization_diff_to_sentry(**mock_payload)
         self.assertTrue(will_be_sent)

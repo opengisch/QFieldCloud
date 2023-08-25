@@ -26,7 +26,7 @@ from qfieldcloud.core.utils2.storage import (
 )
 from rest_framework import permissions, serializers, status, views
 from rest_framework.exceptions import NotFound
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import DataAndFiles, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -83,10 +83,11 @@ class ListFilesView(views.APIView):
             path = PurePath(version.key)
             filename = str(path.relative_to(*path.parts[:3]))
             last_modified = version.last_modified.strftime("%d.%m.%Y %H:%M:%S %Z")
+            md5sum = version.e_tag.replace('"', "")
 
             version_data = {
                 "size": version.size,
-                "md5sum": version.e_tag.replace('"', ""),
+                "md5sum": md5sum,
                 "version_id": version.version_id,
                 "last_modified": last_modified,
                 "is_latest": version.is_latest,
@@ -119,7 +120,7 @@ class ListFilesView(views.APIView):
 
                 files[version.key]["name"] = filename
                 files[version.key]["size"] = version.size
-                files[version.key]["md5sum"] = version.e_tag.replace('"', "")
+                files[version.key]["md5sum"] = md5sum
                 files[version.key]["last_modified"] = last_modified
                 files[version.key]["is_attachment"] = is_attachment
 
@@ -147,6 +148,23 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
         return False
 
 
+class QfcMultiPartSerializer(MultiPartParser):
+
+    errors: list[str] = []
+
+    # QF-2540
+    def parse(self, stream, media_type=None, parser_context=None) -> DataAndFiles:
+        """Substitute to MultiPartParser for debugging `EmptyContentError`"""
+        parsed: DataAndFiles = super().parse(stream, media_type, parser_context)
+
+        if "file" not in parsed.files or not parsed.files["file"]:
+            self.errors.append(
+                f"QfcMultiPartParser was able to obtain `DataAndFiles` from the request's input stream, but `MultiValueDict` either lacks a `file` key or a value at `file`! parser_context: {parser_context}. `EmptyContentError` expected."
+            )
+
+        return parsed
+
+
 @extend_schema_view(
     get=extend_schema(
         description="Download a file from a project",
@@ -171,7 +189,7 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
 class DownloadPushDeleteFileView(views.APIView):
     # TODO: swagger doc
     # TODO: docstring
-    parser_classes = [MultiPartParser]
+    parser_classes = [QfcMultiPartSerializer]
     permission_classes = [
         permissions.IsAuthenticated,
         DownloadPushDeleteFileViewPermissions,
@@ -203,31 +221,35 @@ class DownloadPushDeleteFileView(views.APIView):
         # QF-2540
         # Getting traceback in case the traceback provided by Sentry is too short
         # Add post-serialization keys for diff-ing with pre-serialization keys
-        buffer = io.StringIO()
-        print_stack(limit=50, file=buffer)
-        request_attributes = {
-            "data": str(copy.copy(self.request.data).keys()),
-            "files": str(self.request.FILES.keys()),
-            "meta": str(self.request.META),
-        }
-        missing_error = ""
+        if "file" not in request.data and not request.FILES.getlist("file"):
+            if "file" not in request.data:
+                logger.warning(
+                    'The key "file" was not found in `request.data`. Sending report to Sentry.'
+                )
 
-        if "file" not in request.data:
-            missing_error = 'The key "file" was not found in `request.data`. Sending report to Sentry.'
+            if not request.FILES.getlist("file"):
+                logger.warning(
+                    'The key "file" occurs in `request.data` but maps to an empty list. Sending report to Sentry.'
+                )
 
-        if not request.FILES.getlist("file"):
-            missing_error = 'The key "file" occurs in `request.data` but maps to an empty list. Sending report to Sentry.'
+            callstack_buffer = io.StringIO()
+            print_stack(limit=50, file=callstack_buffer)
 
-        if missing_error:
-            logging.warning(missing_error)
+            request_attributes = {
+                "data": str(copy.copy(self.request.data).keys()),
+                "files": str(self.request.FILES.keys()),
+                "meta": str(self.request.META),
+            }
 
             # QF-2540
             report_serialization_diff_to_sentry(
                 # using the 'X-Request-Id' added to the request by RequestIDMiddleware
                 name=f"{request.META.get('X-Request-Id')}_{projectid}",
                 pre_serialization=request.attached_keys,
-                post_serialization=str(request_attributes),
-                buffer=buffer,
+                post_serialization=",".join(QfcMultiPartSerializer.errors)
+                + str(request_attributes),
+                buffer=callstack_buffer,
+                body_stream=getattr(request, "body_stream", None),
             )
             raise exceptions.EmptyContentError()
 

@@ -320,6 +320,10 @@ if SENTRY_DSN:
         # environment=ENVIRONMENT,
     )
 
+# QF-2704
+# Flag to turn on/off byte-for-byte copy of request's body
+# Only requests with a < 10MB body will be reported
+SENTRY_REPORT_FULL_BODY = True
 
 # Django allauth configurations
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
@@ -457,6 +461,10 @@ CONSTANCE_CONFIG = {
         "1000m",
         "Maximum memory for each QGIS worker container.",
     ),
+    "SENTRY_REQUEST_MAX_SIZE_TO_SEND": (
+        0,
+        "Maximum request size to send the raw request to Sentry. Value 0 disables the raw request copy.",
+    ),
     "WORKER_QGIS_CPU_SHARES": (
         512,
         "Share of CPUs for each QGIS worker container. By default all containers have value 1024 set by docker.",
@@ -477,6 +485,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "WORKER_QGIS_MEMORY_LIMIT",
         "WORKER_QGIS_CPU_SHARES",
     ),
+    "Debug": ("SENTRY_REQUEST_MAX_SIZE_TO_SEND",),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
 }
 

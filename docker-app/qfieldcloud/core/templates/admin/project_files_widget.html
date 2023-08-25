@@ -247,8 +247,8 @@
                         });
 
                         $deleteBtn.addEventListener('click', () => {
-                            const passPhrase = 'Here be dragons!';
-                            const confirmation = prompt(`Are you sure you want to delete file "${file.name}"? This operation is irreversible, the file is deleted forever and the project may be damaged forever! Type "${passPhrase}" to confirm your destructive action!`);
+                            const passPhrase = file.name;
+                            const confirmation = prompt(`Are you sure you want to delete file "${passPhrase}"? This operation is irreversible, the file is deleted forever and the project may be damaged forever! Type "${passPhrase}" to confirm your destructive action!`);
 
                             if (confirmation !== passPhrase) {
                                 $dialog.close();

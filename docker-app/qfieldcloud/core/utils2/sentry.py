@@ -1,5 +1,5 @@
 import logging
-from io import StringIO
+from io import BytesIO, StringIO
 
 import sentry_sdk
 
@@ -11,6 +11,7 @@ def report_serialization_diff_to_sentry(
     pre_serialization: str,
     post_serialization: str,
     buffer: StringIO,
+    body_stream: BytesIO | None,
     capture_message=False,
 ) -> bool:
     """
@@ -20,10 +21,13 @@ def report_serialization_diff_to_sentry(
         pre_serialization: str representing the request `files` keys and meta information before serialization and middleware.
         post_serialization: str representing the request `files` keys and meta information after serialization and middleware.
         buffer: StringIO buffer from which to extract traceback capturing callstack ahead of the calling function.
+        bodystream: BytesIO buffer capturing the request's raw body.
         capture_message: bool used as a flag by the caller to create an extra event against Sentry to attach the files to.
     """
     with sentry_sdk.configure_scope() as scope:
         try:
+            logger.info("Sending explicit sentry report!")
+
             filename = f"{name}_contents.txt"
             scope.add_attachment(
                 bytes=bytes(
@@ -38,10 +42,16 @@ def report_serialization_diff_to_sentry(
                 bytes=bytes(buffer.getvalue(), encoding="utf8"),
                 filename=filename,
             )
+
+            if body_stream:
+                filename = f"{name}_rawbody.txt"
+                scope.add_attachment(bytes=body_stream.getvalue(), filename=filename)
+
             if capture_message:
-                sentry_sdk.capture_message("Sending to Sentry...", scope=scope)
+                sentry_sdk.capture_message("Explicit Sentry report!", scope=scope)
             return True
+
         except Exception as error:
+            logger.error(f"Unable to send file to Sentry: failed on {error}")
             sentry_sdk.capture_exception(error)
-            logging.error(f"Unable to send file to Sentry: failed on {error}")
             return False

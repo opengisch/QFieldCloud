@@ -1,6 +1,5 @@
 from typing import List, Literal, Union
 
-from deprecated import deprecated
 from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -336,33 +335,6 @@ def can_apply_pending_deltas_for_project(user: QfcUser, project: Project) -> boo
     )
 
 
-@deprecated("Use `can_set_delta_status_for_project` instead")
-def can_apply_deltas(user: QfcUser, project: Project) -> bool:
-    return user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-        ],
-    )
-
-
-@deprecated("Use `can_set_delta_status_for_project` instead")
-def can_overwrite_deltas(user: QfcUser, project: Project) -> bool:
-    return user_has_project_roles(
-        user,
-        project,
-        [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-        ],
-    )
-
-
 def can_set_delta_status_for_project(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
@@ -412,47 +384,6 @@ def can_create_delta(user: QfcUser, delta: Delta) -> bool:
             return True
 
     return False
-
-
-@deprecated("Use `can_set_delta_status` instead")
-def can_retry_delta(user: QfcUser, delta: Delta) -> bool:
-    if not can_apply_deltas(user, delta.project):
-        return False
-
-    if delta.last_status not in (
-        Delta.Status.CONFLICT,
-        Delta.Status.NOT_APPLIED,
-        Delta.Status.ERROR,
-    ):
-        return False
-
-    return True
-
-
-@deprecated("Use `can_set_delta_status` instead")
-def can_overwrite_delta(user: QfcUser, delta: Delta) -> bool:
-    if not can_overwrite_deltas(user, delta.project):
-        return False
-
-    if delta.last_status not in (Delta.Status.CONFLICT):
-        return False
-
-    return True
-
-
-@deprecated("Use `can_set_delta_status` instead")
-def can_ignore_delta(user: QfcUser, delta: Delta) -> bool:
-    if not can_apply_deltas(user, delta.project):
-        return False
-
-    if delta.last_status not in (
-        Delta.Status.CONFLICT,
-        Delta.Status.NOT_APPLIED,
-        Delta.Status.ERROR,
-    ):
-        return False
-
-    return True
 
 
 def can_read_jobs(user: QfcUser, project: Project) -> bool:
