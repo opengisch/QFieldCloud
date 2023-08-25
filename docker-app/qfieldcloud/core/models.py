@@ -1312,22 +1312,6 @@ class Project(models.Model):
 
         return is_supported_regarding_owner_account(self)
 
-    def check_can_be_created(self):
-        from qfieldcloud.core.permissions_utils import (
-            check_supported_regarding_owner_account,
-        )
-
-        check_supported_regarding_owner_account(self, ignore_online_layers=True)
-
-    def clean(self) -> None:
-        """
-        Prevent creating new projects if the user is inactive or over quota
-        """
-        if self._state.adding:
-            self.check_can_be_created()
-
-        return super().clean()
-
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
         logger.info(f"Saving project {self}...")
