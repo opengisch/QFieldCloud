@@ -15,7 +15,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, IO, Optional
 
 from libqfieldsync.layer import LayerSource
 from qfieldcloud_sdk import sdk
@@ -37,6 +37,44 @@ qgs_stderr_logger = logging.getLogger("QGSSTDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
 qgs_msglog_logger = logging.getLogger("QGSMSGLOG")
 qgs_msglog_logger.setLevel(logging.DEBUG)
+
+
+class QfcWorkerException(Exception):
+    """QFieldCloud Exception"""
+
+    message = ""
+
+    def __init__(self, message: str = None, **kwargs):
+        self.message = (message or self.message) % kwargs
+        self.details = kwargs
+
+        super().__init__(self.message)
+
+
+class ProjectFileNotFoundException(QfcWorkerException):
+    message = 'Project file "%(project_filename)s" does not exist'
+
+
+class InvalidFileExtensionException(QfcWorkerException):
+    message = (
+        'Project file "%(project_filename)s" has unknown file extension "%(extension)s"'
+    )
+
+
+class InvalidXmlFileException(QfcWorkerException):
+    message = "Project file is an invalid XML document:\n%(xml_error)s"
+
+
+class InvalidQgisFileException(QfcWorkerException):
+    message = 'Project file "%(project_filename)s" is invalid QGIS file:\n%(error)s'
+
+
+class InvalidLayersException(QfcWorkerException):
+    message = 'Project file "%(project_filename)s" contains invalid layers'
+
+
+class FailedThumbnailGenerationException(QfcWorkerException):
+    message = "Failed to generate project thumbnail:\n%(reason)s"
 
 
 def _qt_message_handler(mode, context, message):
@@ -268,7 +306,7 @@ class Workflow:
         id: str,
         version: str,
         name: str,
-        steps: List["Step"],
+        steps: list["Step"],
         description: str = "",
     ):
         self.id = id
@@ -331,9 +369,9 @@ class Step:
         id: str,
         name: str,
         method: Callable,
-        arguments: Dict[str, Any] = {},
-        return_names: List[str] = [],
-        outputs: List[str] = [],
+        arguments: dict[str, Any] = {},
+        return_names: list[str] = [],
+        outputs: list[str] = [],
     ):
         self.id = id
         self.name = name
@@ -364,18 +402,6 @@ class WorkDirPath:
             path.mkdir(parents=True, exist_ok=True)
 
         return path
-
-
-class BaseException(Exception):
-    """QFieldCloud Exception"""
-
-    message = ""
-
-    def __init__(self, message: str = None, **kwargs):
-        self.message = (message or self.message) % kwargs
-        self.details = kwargs
-
-        super().__init__(self.message)
 
 
 @contextmanager
@@ -437,7 +463,7 @@ def get_layer_filename(layer: QgsMapLayer) -> Optional[str]:
     return None
 
 
-def extract_project_details(project: QgsProject) -> Dict[str, str]:
+def extract_project_details(project: QgsProject) -> dict[str, str]:
     """Extract project details"""
     map_settings = QgsMapSettings()
     details = {}
@@ -487,8 +513,8 @@ def json_default(obj):
 
 def run_workflow(
     workflow: Workflow,
-    feedback_filename: Optional[Union[IO, Path]],
-) -> Dict:
+    feedback_filename: Path | IO,
+) -> dict[str, Any]:
     """Executes the steps required to run a task and return structured feedback from the execution
 
     Each step has a method that is executed.
@@ -501,7 +527,7 @@ def run_workflow(
         workflow (Workflow): workflow to be executed
         feedback_filename (Optional[Union[IO, Path]]): write feedback to an IO device, to Path filename, or don't write it
     """
-    feedback: Dict[str, Any] = {
+    feedback: dict[str, Any] = {
         "feedback_version": "2.0",
         "workflow_version": workflow.version,
         "workflow_id": workflow.id,
@@ -552,10 +578,12 @@ def run_workflow(
                 feedback["error_type"] = "API_OTHER"
         elif isinstance(err, FileNotFoundError):
             feedback["error_type"] = "FILE_NOT_FOUND"
+        elif isinstance(err, InvalidXmlFileException):
+            feedback["error_type"] = "INVALID_PROJECT_FILE"
         else:
             feedback["error_type"] = "UNKNOWN"
 
-        (_type, _value, tb) = sys.exc_info()
+        _type, _value, tb = sys.exc_info()
         feedback["error_class"] = type(err).__name__
         feedback["error_stack"] = traceback.format_tb(tb)
     finally:
@@ -596,7 +624,7 @@ def run_workflow(
         return feedback
 
 
-def get_layers_data(project: QgsProject) -> Dict[str, Dict]:
+def get_layers_data(project: QgsProject) -> dict[str, dict]:
     layers_by_id = {}
 
     for layer in project.mapLayers().values():
@@ -711,7 +739,7 @@ def get_file_md5sum(filename: str) -> str:
     return hasher.hexdigest()
 
 
-def files_list_to_string(files: List[Dict[str, Any]]) -> str:
+def files_list_to_string(files: list[dict[str, Any]]) -> str:
     table = [
         [
             d["name"],

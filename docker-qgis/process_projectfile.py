@@ -1,9 +1,17 @@
+import io
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import NamedTuple, Optional
 from xml.etree import ElementTree
 
-from qfieldcloud.qgis.utils import BaseException, get_layers_data, layers_data_to_string
+from qfieldcloud.qgis.utils import (
+    FailedThumbnailGenerationException,
+    InvalidFileExtensionException,
+    InvalidXmlFileException,
+    ProjectFileNotFoundException,
+    get_layers_data,
+    layers_data_to_string,
+)
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
@@ -11,30 +19,43 @@ from qgis.PyQt.QtGui import QColor
 logger = logging.getLogger("PROCPRJ")
 
 
-class ProjectFileNotFoundException(BaseException):
-    message = 'Project file "%(project_filename)s" does not exist'
+class XmlLocationError(NamedTuple):
+    line: int
+    column: int
 
 
-class InvalidFileExtensionException(BaseException):
-    message = (
-        'Project file "%(project_filename)s" has unknown file extension "%(extension)s"'
-    )
+def get_location(invalid_token_error_msg: str) -> Optional[XmlLocationError]:
+    """Get column and line numbers from the provided error message."""
+    if "invalid token" not in invalid_token_error_msg.casefold():
+        logger.error("Unable to find 'invalid token' details in the given message")
+        return None
+
+    _, details = invalid_token_error_msg.split(":")
+    line, column = details.split(",")
+    _, line_number = line.strip().split(" ")
+    _, column_number = column.strip().split(" ")
+
+    return XmlLocationError(int(line_number), int(column_number))
 
 
-class InvalidXmlFileException(BaseException):
-    message = "Project file is an invalid XML document:\n%(xml_error)s"
+def contextualize(invalid_token_error_msg: str, fh: io.BufferedReader) -> Optional[str]:
+    """Get a sanitized slice of the line where the exception occurred, with all faulty occurrences sanitized."""
+    location = get_location(invalid_token_error_msg)
+    if location:
+        substitute = "?"
+        fh.seek(0)
+        for cursor_pos, line in enumerate(fh, start=1):
+            if location.line == cursor_pos:
+                faulty_char = line[location.column]
+                suffix_slice = line[: location.column - 1]
+                clean_safe_slice = suffix_slice.decode("utf-8").strip() + substitute
 
+                return f"""
+                    Unable to parse this character: {repr(faulty_char)}.
+                    It was replaced by '{substitute}' on line {location.line} that starts with: '{clean_safe_slice}'
+                """
 
-class InvalidQgisFileException(BaseException):
-    message = 'Project file "%(project_filename)s" is invalid QGIS file:\n%(error)s'
-
-
-class InvalidLayersException(BaseException):
-    message = 'Project file "%(project_filename)s" contains invalid layers'
-
-
-class FailedThumbnailGenerationException(BaseException):
-    message = "Failed to generate project thumbnail:\n%(reason)s"
+    return None
 
 
 def check_valid_project_file(project_filename: Path) -> None:
@@ -44,13 +65,16 @@ def check_valid_project_file(project_filename: Path) -> None:
         raise ProjectFileNotFoundException(project_filename=project_filename)
 
     if project_filename.suffix == ".qgs":
-        try:
-            with open(project_filename) as f:
-                ElementTree.fromstring(f.read())
-        except ElementTree.ParseError as err:
-            raise InvalidXmlFileException(
-                project_filename=project_filename, xml_error=err
-            )
+        with open(project_filename, "rb") as fh:
+            try:
+                for event, elem in ElementTree.iterparse(fh):
+                    continue
+            except ElementTree.ParseError as error:
+                error_msg = str(error)
+                raise InvalidXmlFileException(
+                    project_filename=project_filename,
+                    xml_error=contextualize(error_msg, fh) or error_msg,
+                )
     elif project_filename.suffix != ".qgz":
         raise InvalidFileExtensionException(
             project_filename=project_filename, extension=project_filename.suffix
@@ -71,7 +95,7 @@ def load_project_file(project_filename: Path) -> QgsProject:
     return project
 
 
-def extract_project_details(project: QgsProject) -> Dict[str, str]:
+def extract_project_details(project: QgsProject) -> dict[str, str]:
     """Extract project details"""
     logger.info("Extract project details…")
 
