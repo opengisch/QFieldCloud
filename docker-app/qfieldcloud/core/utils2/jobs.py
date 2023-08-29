@@ -10,9 +10,6 @@ from qfieldcloud.core import exceptions
 
 logger = logging.getLogger(__name__)
 
-# Any number
-DELTAS_APPLY_LOCK_ID = 1001
-
 
 @transaction.atomic
 def apply_deltas(
@@ -32,9 +29,11 @@ def apply_deltas(
     if not project.owner_can_create_job:
         return []
 
-    with advisory_lock(DELTAS_APPLY_LOCK_ID):
+    with advisory_lock(project.id):
         # Ensure there is no concurrent request trying to apply these deltas.
-        # This block of code is only executed when the pg lock is released from previous transaction.
+        # This block of code can only run one at a time per project.
+        #
+        # NOTE Deltas could still be modified from elsewhere!
         #
         # NOTE `select_for_update` seem to create deadlocks sometimes
         # probably due to race conditions during the locking.
