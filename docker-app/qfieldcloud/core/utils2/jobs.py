@@ -29,7 +29,7 @@ def apply_deltas(
     if not project.owner_can_create_job:
         return []
 
-    with advisory_lock(project.id):
+    with advisory_lock(int(project.created_at.timestamp())):
         # Ensure there is no concurrent request trying to apply these deltas.
         # This block of code can only run one at a time per project.
         #
