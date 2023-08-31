@@ -819,7 +819,7 @@ def can_always_upload_files(client_type) -> bool:
     )
 
 
-def check_can_upload_file(project, client_type, file_size_bytes: int) -> Literal[True]:
+def check_can_upload_file(project, client_type, file_size_bytes: int) -> bool:
     if can_always_upload_files(client_type):
         return True
 
@@ -828,3 +828,5 @@ def check_can_upload_file(project, client_type, file_size_bytes: int) -> Literal
         raise QuotaError(
             f"Requiring {file_size_bytes} bytes of storage but only {quota_left_bytes} bytes available."
         )
+    else:
+        return True
