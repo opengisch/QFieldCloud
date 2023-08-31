@@ -794,7 +794,7 @@ class AbstractSubscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: Optional[datetime] = None,
-    ) -> tuple["AbstractSubscription" | None, "AbstractSubscription"]:
+    ) -> tuple[Optional["AbstractSubscription"], "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
