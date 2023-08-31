@@ -279,7 +279,7 @@ class PackageType(models.Model):
 
     @classmethod
     @lru_cache
-    def get_storage_package_type(cls):
+    def get_storage_package_type(cls) -> "PackageType":
         # NOTE if the cache is still returning the old result, please restart the whole `app` container
         try:
             return cls.objects.get(type=cls.Type.STORAGE)
