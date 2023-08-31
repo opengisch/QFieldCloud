@@ -18,7 +18,7 @@ class QfcTestCase(TestCase):
             format="multipart",
         )
         request = response.wsgi_request
-        cls.body_stream = BytesIO(request.read()) #type: ignore
+        cls.body_stream = BytesIO(request.read())  # type: ignore
 
     @skipIf(
         not settings.SENTRY_DSN,
