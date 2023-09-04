@@ -40,7 +40,7 @@ def get_location(invalid_token_error_msg: str) -> Optional[XmlLocationError]:
 
 def contextualize(
     invalid_token_error_msg: str, fh: io.BufferedReader
-) -> Optional[tuple[str]]:
+) -> Optional[tuple[str, str, str]]:
     """
     Get a sanitized slice of the line where the exception occurred, with all faulty occurrences sanitized.
     Returns the string as a 3-substring tuple to avoid tripping Docker Compose's stdout limitations.
