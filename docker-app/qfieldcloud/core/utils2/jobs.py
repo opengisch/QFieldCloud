@@ -52,6 +52,7 @@ def apply_deltas(
         status=[
             models.Job.Status.PENDING,
             models.Job.Status.QUEUED,
+            models.Job.Status.STARTED,
         ],
     )
 
