@@ -1475,12 +1475,10 @@ class ProjectCollaborator(models.Model):
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
             if self.collaborator.is_person:
-                members_qs = organization.members.filter(member=self.collaborator)  # type: ignore
-
                 # for organizations-owned projects, the candidate collaborator
                 # must be a member of the organization or the organization's owner
                 if not (
-                    members_qs.exists()
+                    organization.members.filter(member=self.collaborator).exists()  # type: ignore
                     or self.collaborator == organization.organization_owner
                 ):
                     raise ValidationError(

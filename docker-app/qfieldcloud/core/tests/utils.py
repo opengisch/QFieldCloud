@@ -51,16 +51,11 @@ def setup_subscription_plans():
 
 
 def set_subscription(
-    some_user: User | Iterable[User],
+    users: User | Iterable[User],
     code: str = None,
     **kwargs,
 ):
-    users: list[User] = []
-
-    if isinstance(some_user, User):
-        users.append(some_user)
-    else:
-        users += some_user
+    users: list[User] = [users] if isinstance(users, User) else users
     assert len(
         users
     ), "When iterable, the first argument must contain at least 1 element."
