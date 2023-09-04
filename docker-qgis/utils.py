@@ -15,7 +15,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, IO, Optional
+from typing import IO, Any, Callable, Optional
 
 from libqfieldsync.layer import LayerSource
 from qfieldcloud_sdk import sdk
@@ -513,7 +513,7 @@ def json_default(obj):
 
 def run_workflow(
     workflow: Workflow,
-    feedback_filename: Path | IO,
+    feedback_filename: Optional[Path | IO],
 ) -> dict[str, Any]:
     """Executes the steps required to run a task and return structured feedback from the execution
 
@@ -525,7 +525,7 @@ def run_workflow(
 
     Args:
         workflow (Workflow): workflow to be executed
-        feedback_filename (Optional[Union[IO, Path]]): write feedback to an IO device, to Path filename, or don't write it
+        feedback_filename (IO | Path): write feedback to an IO device, to Path filename, or don't write it
     """
     feedback: dict[str, Any] = {
         "feedback_version": "2.0",

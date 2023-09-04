@@ -38,8 +38,13 @@ def get_location(invalid_token_error_msg: str) -> Optional[XmlLocationError]:
     return XmlLocationError(int(line_number), int(column_number))
 
 
-def contextualize(invalid_token_error_msg: str, fh: io.BufferedReader) -> Optional[str]:
-    """Get a sanitized slice of the line where the exception occurred, with all faulty occurrences sanitized."""
+def contextualize(
+    invalid_token_error_msg: str, fh: io.BufferedReader
+) -> Optional[tuple[str]]:
+    """
+    Get a sanitized slice of the line where the exception occurred, with all faulty occurrences sanitized.
+    Returns the string as a 3-substring tuple to avoid tripping Docker Compose's stdout limitations.
+    """
     location = get_location(invalid_token_error_msg)
     if location:
         substitute = "?"
@@ -50,10 +55,11 @@ def contextualize(invalid_token_error_msg: str, fh: io.BufferedReader) -> Option
                 suffix_slice = line[: location.column - 1]
                 clean_safe_slice = suffix_slice.decode("utf-8").strip() + substitute
 
-                return f"""
-                    Unable to parse this character: {repr(faulty_char)}.
-                    It was replaced by '{substitute}' on line {location.line} that starts with: '{clean_safe_slice}'
-                """
+                return (
+                    f"Unable to parse this character: {repr(faulty_char)}",
+                    f"It was replaced by '{substitute}' on line {location.line} that starts with:",
+                    clean_safe_slice,
+                )
 
     return None
 
@@ -71,9 +77,13 @@ def check_valid_project_file(project_filename: Path) -> None:
                     continue
             except ElementTree.ParseError as error:
                 error_msg = str(error)
+                xml_error = contextualize(error_msg, fh)
+                if xml_error:
+                    for segment in xml_error:
+                        logger.error(segment)
                 raise InvalidXmlFileException(
+                    xml_error="".join(xml_error) if xml_error else error_msg,
                     project_filename=project_filename,
-                    xml_error=contextualize(error_msg, fh) or error_msg,
                 )
     elif project_filename.suffix != ".qgz":
         raise InvalidFileExtensionException(
