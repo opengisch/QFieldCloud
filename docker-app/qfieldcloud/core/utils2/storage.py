@@ -470,7 +470,7 @@ def delete_all_project_files_permanently(project_id: str) -> None:
             f"Suspicious S3 deletion of all project files with {prefix=}"
         )
 
-    _delete_by_prefix_versioned(prefix)
+    _delete_by_prefix_permanently(prefix)
 
 
 def delete_project_file_permanently(
