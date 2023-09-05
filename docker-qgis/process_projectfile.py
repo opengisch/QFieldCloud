@@ -19,12 +19,12 @@ from qgis.PyQt.QtGui import QColor
 logger = logging.getLogger("PROCPRJ")
 
 
-class XmlLocationError(NamedTuple):
+class XmlErrorLocation(NamedTuple):
     line: int
     column: int
 
 
-def get_location(invalid_token_error_msg: str) -> Optional[XmlLocationError]:
+def get_location(invalid_token_error_msg: str) -> Optional[XmlErrorLocation]:
     """Get column and line numbers from the provided error message."""
     if "invalid token" not in invalid_token_error_msg.casefold():
         logger.error("Unable to find 'invalid token' details in the given message")
@@ -35,7 +35,7 @@ def get_location(invalid_token_error_msg: str) -> Optional[XmlLocationError]:
     _, line_number = line.strip().split(" ")
     _, column_number = column.strip().split(" ")
 
-    return XmlLocationError(int(line_number), int(column_number))
+    return XmlErrorLocation(int(line_number), int(column_number))
 
 
 def contextualize(
@@ -44,6 +44,7 @@ def contextualize(
     """
     Get a sanitized slice of the line where the exception occurred, with all faulty occurrences sanitized.
     Returns the string as a 3-substring tuple to avoid tripping Docker Compose's stdout limitations.
+    Makes no use of '.decode(..., errors="replace")' because it still throws on some entities.
     """
     location = get_location(invalid_token_error_msg)
     if location:
