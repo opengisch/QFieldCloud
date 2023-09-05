@@ -1,6 +1,7 @@
 import logging
+from datetime import datetime
 
-from django.utils.timezone import datetime, now
+from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, Person, Team
 from qfieldcloud.core.tests.utils import setup_subscription_plans

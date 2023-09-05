@@ -4,7 +4,7 @@ import time
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator
+from typing import Any, Generator
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -95,7 +95,7 @@ class ModelAdminEstimateCountMixin:
     list_per_page = settings.QFIELDCLOUD_ADMIN_LIST_PER_PAGE
 
 
-class QFieldCloudModelAdmin(
+class QFieldCloudModelAdmin(  # type: ignore
     ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, admin.ModelAdmin
 ):
     pass
@@ -230,7 +230,7 @@ class EmailAddressAdmin(EmailAddressAdminBase):
             for row in raw_queryset
         )
 
-    @admin.action(description="Export all users' email contact details to .csv")
+    @admin.action(description="Export all users' email contact details to .csv")  # type: ignore
     def export_emails_to_csv(self, request) -> StreamingHttpResponse:
         """ "Export all users' email contact details to .csv"""
 
@@ -274,15 +274,15 @@ class PrettyJSONWidget(widgets.Textarea):
 
 
 def search_parser(
-    _request, _queryset, search_term: str, filter_config: Dict[str, Dict[str, str]]
-) -> Dict[str, Any]:
+    _request, _queryset, search_term: str, filter_config: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
     custom_filter = {}
     CUSTOM_SEARCH_DIVIDER = ":"
     if CUSTOM_SEARCH_DIVIDER in search_term:
         prefix, search = search_term.split(CUSTOM_SEARCH_DIVIDER, 1)
         prefix_config = filter_config.get(prefix)
         if prefix_config:
-            extra_filters = prefix_config.get("extra_filters", {})
+            extra_filters: dict[str, Any] = prefix_config.get("extra_filters") or {}
             filter_keyword = prefix_config["filter"]
 
             custom_filter = {**custom_filter, **extra_filters}
@@ -796,17 +796,17 @@ class JobAdmin(QFieldCloudModelAdmin):
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
 
-    project__owner.admin_order_field = "project__owner"
+    project__owner.admin_order_field = "project__owner"  # type: ignore
 
     def project__name(self, instance):
         return model_admin_url(instance.project, instance.project.name)
 
-    project__name.admin_order_field = "project__name"
+    project__name.admin_order_field = "project__name"  # type: ignore
 
     def created_by__link(self, instance):
         return model_admin_url(instance.created_by)
 
-    created_by__link.admin_order_field = "created_by"
+    created_by__link.admin_order_field = "created_by"  # type: ignore
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -964,12 +964,12 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
 
-    project__owner.admin_order_field = "project__owner"
+    project__owner.admin_order_field = "project__owner"  # type: ignore
 
     def project__name(self, instance):
         return model_admin_url(instance.project, instance.project.name)
 
-    project__name.admin_order_field = "project__name"
+    project__name.admin_order_field = "project__name"  # type: ignore
 
     def set_status_pending(self, request, queryset):
         queryset.update(last_status=Delta.Status.PENDING)
@@ -1215,7 +1215,7 @@ class InvitationAdmin(InvitationAdminBase):
 class UserAccountAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
-    ordering = (Lower("user__username"),)
+    ordering = (Lower("user__username"),)  # type: ignore
     search_fields = ("user__username__icontains",)
     list_select_related = ("user",)
 
@@ -1227,7 +1227,7 @@ class UserAccountAdmin(QFieldCloudModelAdmin):
 class UserAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
-    ordering = (Lower("username"),)
+    ordering = (Lower("username"),)  # type: ignore
     search_fields = ("username__icontains",)
 
     def has_module_permission(self, request: HttpRequest) -> bool:

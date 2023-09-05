@@ -23,7 +23,9 @@ def is_valid_email(email: str) -> bool:
         return False
 
 
-def invite_user_by_email(email: str, inviter: Person, send: bool = True) -> tuple:
+def invite_user_by_email(
+    email: str, inviter: Person, send: bool = True
+) -> tuple[bool, str]:
     """
     Sends an invite for a given email address
 

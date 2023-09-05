@@ -67,7 +67,7 @@ class PersonQueryset(models.QuerySet):
         is_org_member_q = Q(
             project_roles__project__owner__type=User.Type.ORGANIZATION
         ) & Exists(
-            Organization.objects.of_user(OuterRef("project_roles__user"))
+            Organization.objects.of_user(OuterRef("project_roles__user"))  # type: ignore
             .select_related(None)
             .filter(id=OuterRef("project_roles__project__owner"))
         )
@@ -482,7 +482,7 @@ class UserAccount(models.Model):
             return False
 
         if (
-            Organization.objects.of_user(self.user)
+            Organization.objects.of_user(self.user)  # type: ignore
             .filter(
                 membership_role=OrganizationMember.Roles.ADMIN,
             )
@@ -520,11 +520,11 @@ def random_password() -> str:
 
 
 def default_hostname() -> str:
-    return os.environ.get("GEODB_HOST")
+    return os.environ["GEODB_HOST"]
 
 
 def default_port() -> str:
-    return os.environ.get("GEODB_PORT")
+    return os.environ["GEODB_PORT"]
 
 
 class Geodb(models.Model):
@@ -656,7 +656,7 @@ class Organization(User):
 
         users_with_delta = (
             Delta.objects.filter(
-                project__in=self.projects.all(),
+                project__in=self.projects.all(),  # type: ignore
                 created_at__gte=period_since,
                 created_at__lte=period_until,
             )
@@ -665,7 +665,7 @@ class Organization(User):
         )
         users_with_jobs = (
             Job.objects.filter(
-                project__in=self.projects.all(),
+                project__in=self.projects.all(),  # type: ignore
                 created_at__gte=period_since,
                 created_at__lte=period_until,
             )
@@ -752,10 +752,10 @@ class OrganizationMember(models.Model):
         return super().clean()
 
     @transaction.atomic
-    def delete(self, *args, **kwargs) -> None:
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         super().delete(*args, **kwargs)
 
-        TeamMember.objects.filter(
+        return TeamMember.objects.filter(
             team__team_organization=self.organization,
             member=self.member,
         ).delete()
@@ -883,12 +883,11 @@ class ProjectQueryset(models.QuerySet):
             "collaborators",
             filter=Q(collaborators__collaborator__type=User.Type.PERSON),
         )
-
         is_public_q = Q(is_public=True)
         is_person_q = Q(owner__type=User.Type.PERSON)
         is_org_q = Q(owner__type=User.Type.ORGANIZATION)
         is_org_member_q = Q(owner__type=User.Type.ORGANIZATION) & Exists(
-            Organization.objects.of_user(user)
+            Organization.objects.of_user(user)  # type: ignore
             .select_related(None)
             .filter(id=OuterRef("owner"))
         )
@@ -1239,7 +1238,7 @@ class Project(models.Model):
     def status(self) -> Status:
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])
+            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])  # type: ignore
         ).exists():
             return Project.Status.BUSY
         else:
@@ -1476,12 +1475,10 @@ class ProjectCollaborator(models.Model):
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
             if self.collaborator.is_person:
-                members_qs = organization.members.filter(member=self.collaborator)
-
                 # for organizations-owned projects, the candidate collaborator
                 # must be a member of the organization or the organization's owner
                 if not (
-                    members_qs.exists()
+                    organization.members.filter(member=self.collaborator).exists()  # type: ignore
                     or self.collaborator == organization.organization_owner
                 ):
                     raise ValidationError(
@@ -1490,9 +1487,7 @@ class ProjectCollaborator(models.Model):
                         )
                     )
             elif self.collaborator.is_team:
-                team_qs = organization.teams.filter(pk=self.collaborator)
-                if not team_qs.exists():
-
+                if not organization.teams.filter(pk=self.collaborator).exists():  # type: ignore
                     raise ValidationError(_("Team does not exist."))
 
         return super().clean()

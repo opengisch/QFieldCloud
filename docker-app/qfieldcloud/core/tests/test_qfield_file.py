@@ -6,11 +6,11 @@ import time
 
 import psycopg2
 import requests
-from django.http.response import HttpResponse, HttpResponseRedirect
+from django.http.response import HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Geodb, Job, PackageJob, Person, Project
-from rest_framework import status
+from rest_framework import response, status
 from rest_framework.test import APITransactionTestCase
 
 from .utils import setup_subscription_plans, testdata_path
@@ -77,7 +77,7 @@ class QfcTestCase(APITransactionTestCase):
 
         super().fail(msg)
 
-    def assertHttpOk(self, response: HttpResponse):
+    def assertHttpOk(self, response: response.Response):
         try:
             self.assertTrue(status.is_success(response.status_code), response.json())
         except Exception:
