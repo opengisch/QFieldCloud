@@ -1,3 +1,4 @@
+import html
 import io
 import logging
 from pathlib import Path
@@ -42,8 +43,7 @@ def contextualize(
     invalid_token_error_msg: str, fh: io.BufferedReader
 ) -> Optional[tuple[str, str, str]]:
     """
-    Get a sanitized slice of the line where the exception occurred, with all faulty occurrences sanitized.
-    Returns the string as a 3-substring tuple to avoid tripping Docker Compose's stdout limitations.
+    Get an html-safe slice of the line where the exception occurred, with all faulty occurrences sanitized.
     Makes no use of '.decode(..., errors="replace")' because it still throws on some entities.
     """
     location = get_location(invalid_token_error_msg)
@@ -59,7 +59,7 @@ def contextualize(
                 return (
                     f"Unable to parse this character: {repr(faulty_char)}",
                     f"It was replaced by '{substitute}' on line {location.line} that starts with:",
-                    clean_safe_slice,
+                    html.escape(clean_safe_slice),
                 )
 
     return None
