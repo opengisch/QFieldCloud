@@ -1079,6 +1079,10 @@ class Project(models.Model):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
     @property
+    def name_with_owner(self) -> str:
+        return f"{self.owner.username}/{self.name}"
+
+    @property
     def attachment_dirs(self) -> List[str]:
         """Returns a list of configured attachment dirs for the project.
 
