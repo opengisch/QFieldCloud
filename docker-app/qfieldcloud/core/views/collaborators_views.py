@@ -34,7 +34,6 @@ class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
     ),
 )
 class ListCreateCollaboratorsView(generics.ListCreateAPIView):
-
     permission_classes = [
         permissions.IsAuthenticated,
         ListCreateCollaboratorsViewPermissions,
@@ -43,14 +42,12 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
-
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
 
         return ProjectCollaborator.objects.filter(project=project_obj)
 
     def post(self, request, projectid):
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         collaborator = User.objects.get(username=request.data["collaborator"])
@@ -93,7 +90,6 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
     delete=extend_schema(description="Remove a collaborator from the project"),
 )
 class GetUpdateDestroyCollaboratorView(generics.RetrieveUpdateDestroyAPIView):
-
     permission_classes = [
         permissions.IsAuthenticated,
         GetUpdateDestroyCollaboratorViewPermissions,

@@ -78,7 +78,6 @@ def populate_plans(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("subscription", "0001_initial"),
     ]

@@ -808,7 +808,7 @@ def check_supported_regarding_owner_account(
 def is_supported_regarding_owner_account(project: Project) -> bool:
     try:
         return check_supported_regarding_owner_account(project)
-    except (SubscriptionException):
+    except SubscriptionException:
         return False
 
 

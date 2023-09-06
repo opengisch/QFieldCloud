@@ -17,7 +17,6 @@ def set_project_details(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0045_auto_20211012_2234"),
     ]

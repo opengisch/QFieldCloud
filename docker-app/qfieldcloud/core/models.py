@@ -368,7 +368,6 @@ class Person(User):
 
 
 class UserAccount(models.Model):
-
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
     NOTIFS_DAILY = timedelta(days=1)
@@ -528,7 +527,6 @@ def default_port() -> str:
 
 
 class Geodb(models.Model):
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
@@ -703,7 +701,6 @@ class OrganizationMemberQueryset(models.QuerySet):
 
 
 class OrganizationMember(models.Model):
-
     objects = OrganizationMemberQueryset.as_manager()
 
     class Roles(models.TextChoices):
@@ -788,7 +785,6 @@ class OrganizationRolesView(models.Model):
 
 
 class Team(User):
-
     team_organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
@@ -1593,7 +1589,6 @@ class Delta(models.Model):
 
 
 class Job(models.Model):
-
     objects = InheritanceManager()
 
     class Type(models.TextChoices):
@@ -1712,7 +1707,6 @@ class ProcessProjectfileJob(Job):
 
 
 class ApplyJob(Job):
-
     deltas_to_apply = models.ManyToManyField(
         to=Delta,
         through="ApplyJobDelta",

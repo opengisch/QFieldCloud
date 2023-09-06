@@ -35,7 +35,6 @@ def _get_s3_bucket(env, bucket_name):
 
 
 def _get_s3_client(env):
-
     s3_client = boto3.client(
         "s3",
         region_name=env["STORAGE_REGION_NAME"],

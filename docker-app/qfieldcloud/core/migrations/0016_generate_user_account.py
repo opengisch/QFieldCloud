@@ -10,7 +10,6 @@ def generate_user_account(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0015_auto_20210123_0116"),
     ]

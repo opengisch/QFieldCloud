@@ -17,7 +17,6 @@ def update_site_name(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0042_auto_20211001_2217"),
         ("sites", "0002_alter_domain_unique"),

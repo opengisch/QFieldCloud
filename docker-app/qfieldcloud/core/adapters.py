@@ -34,7 +34,6 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
             if Person.objects.filter(
                 **{f"{username_field}__iexact": username},
             ).exists():
-
                 error_message = Person._meta.get_field(
                     username_field
                 ).error_messages.get("unique")

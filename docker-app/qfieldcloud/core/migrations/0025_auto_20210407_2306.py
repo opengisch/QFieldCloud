@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0024_auto_20210407_2002"),
         ("auth", "0012_alter_user_first_name_max_length"),

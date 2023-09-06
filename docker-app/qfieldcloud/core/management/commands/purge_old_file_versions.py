@@ -23,7 +23,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-
         # Determine project ids to work on
         proj_ids = options.get("projects")
 

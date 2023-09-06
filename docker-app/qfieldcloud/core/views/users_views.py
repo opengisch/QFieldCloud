@@ -23,7 +23,6 @@ class ListUsersViewPermissions(permissions.BasePermission):
     get=extend_schema(description="List users and/or organizations"),
 )
 class ListUsersView(generics.ListAPIView):
-
     serializer_class = PublicInfoUserSerializer
     permission_classes = [permissions.IsAuthenticated, ListUsersViewPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
@@ -66,7 +65,6 @@ class ListUsersView(generics.ListAPIView):
 
 class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-
         username = permissions_utils.get_param_from_request(request, "username")
 
         try:
@@ -105,7 +103,6 @@ class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
         return User.objects.get(username=username)
 
     def get(self, request, username):
-
         user = User.objects.get(username=username)
 
         if user.type == User.Type.ORGANIZATION:

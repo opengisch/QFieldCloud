@@ -1,7 +1,7 @@
 repos:
   # Fix end of files
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.4.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -11,7 +11,7 @@ repos:
 
   # Remove unused imports/variables
   - repo: https://github.com/myint/autoflake
-    rev: v1.4
+    rev: v2.2.1
     hooks:
       - id: autoflake
         args:
@@ -28,20 +28,20 @@ repos:
 
   # Black formatting
   - repo: https://github.com/psf/black
-    rev: "22.3.0"
+    rev: "23.7.0"
     hooks:
       - id: black
 
   # tool to automatically upgrade syntax for newer versions of the language
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
+    rev: v3.10.1
     hooks:
       - id: pyupgrade
         args: [--py37-plus]
 
   # Lint files
   - repo: https://github.com/pycqa/flake8
-    rev: "3.9.0"
+    rev: "6.1.0"
     hooks:
       - id: flake8
         additional_dependencies: [flake8-match==1.0.0, flake8-walrus==1.1.0]

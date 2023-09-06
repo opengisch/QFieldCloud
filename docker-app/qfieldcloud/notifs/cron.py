@@ -19,7 +19,6 @@ class SendNotificationsJob(CronJobBase):
     # TODO : not sure if/how this is logged somewhere
     def do(self):
         try:
-
             users = User.objects.filter(type=User.Type.PERSON).filter(
                 Exists(
                     Notification.objects.filter(
