@@ -279,6 +279,7 @@ if SENTRY_DSN:
             PlanInsufficientError,
             QuotaError,
         )
+        from rest_framework.exceptions import UnsupportedMediaType
         from rest_framework.exceptions import ValidationError as RestValidationError
 
         ignored_exceptions = (
@@ -288,6 +289,7 @@ if SENTRY_DSN:
             PlanInsufficientError,
             InactiveSubscriptionError,
             RestValidationError,
+            UnsupportedMediaType,
         )
 
         if "exc_info" in hint:
