@@ -599,7 +599,7 @@ class ProcessProjectfileJobRun(JobRun):
             project.save(update_fields=("project_details",))
 
 
-def cancel_orphaned_workers():
+def cancel_orphaned_workers() -> None:
     client: DockerClient = docker.from_env()
 
     running_workers: list[Container] = client.containers.list(

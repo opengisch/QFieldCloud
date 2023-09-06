@@ -1,6 +1,7 @@
 import csv
 import json
 import time
+import uuid
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
@@ -23,7 +24,7 @@ from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
@@ -54,7 +55,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
-from qfieldcloud.core.utils2 import jobs
+from qfieldcloud.core.utils2 import delta_utils, jobs
 from rest_framework.authtoken.models import TokenProxy
 
 admin.site.unregister(LogEntry)
@@ -787,6 +788,17 @@ class JobAdmin(QFieldCloudModelAdmin):
 
         return inlines
 
+    def get_urls(self):
+        urls = super().get_urls()
+        return [
+            path(
+                "<uuid:apply_job_id>/export-deltafile",
+                self.admin_site.admin_view(self.export_applyjob_deltafile),
+                name="export_applyjob_deltafile",
+            ),
+            *urls,
+        ]
+
     def error_type(self, instance):
         if instance.feedback and "error_type" in instance.feedback:
             return f"{instance.feedback['error_type']}".strip()
@@ -822,6 +834,26 @@ class JobAdmin(QFieldCloudModelAdmin):
 
     def feedback__pre(self, instance):
         return format_pre_json(instance.feedback)
+
+    def export_applyjob_deltafile(
+        self, request: HttpRequest, apply_job_id: uuid.UUID
+    ) -> HttpResponse:
+        apply_job = ApplyJob.objects.get(id=apply_job_id)
+        deltas_qs = apply_job.deltas_to_apply.all().values_list("content", flat=True)
+        project_id = apply_job.project_id
+        deltafile = delta_utils.generate_deltafile(deltas_qs, project_id)
+
+        return JsonResponse(
+            deltafile,
+            content_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename=applyjob_deltas_{project_id}.json"
+            },
+            json_dumps_params={
+                "indent": 2,
+                "sort_keys": True,
+            },
+        )
 
 
 class ApplyJobDeltaInline(admin.TabularInline):
@@ -900,6 +932,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         "set_status_ignored",
         "set_status_unpermitted",
         "apply_selected_deltas",
+        "download_deltafile",
     )
 
     readonly_fields = (
@@ -982,28 +1015,53 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     def response_change(self, request, delta):
         if "_apply_delta_btn" in request.POST:
-            if not delta.project.project_filename:
-                self.message_user(request, "Missing project file")
-                raise exceptions.NoQGISProjectError()
-
-            if not jobs.apply_deltas(
-                delta.project,
-                request.user,
-                delta.project.project_filename,
-                delta.project.overwrite_conflicts,
-                delta_ids=[str(delta.id)],
-            ):
-                self.message_user(request, "No deltas to apply")
-                raise exceptions.NoDeltasToApplyError()
-
-            self.message_user(request, "Delta application started")
-
-            # we need to sleep 1 second, just to make sure the apply delta started
-            time.sleep(1)
-
-            return HttpResponseRedirect(".")
+            return self.apply_delta(request, delta)
 
         return super().response_change(request, delta)
+
+    def apply_delta(self, request, delta):
+        if not delta.project.project_filename:
+            self.message_user(request, "Missing project file")
+            raise exceptions.NoQGISProjectError()
+
+        if not jobs.apply_deltas(
+            delta.project,
+            request.user,
+            delta.project.project_filename,
+            delta.project.overwrite_conflicts,
+            delta_ids=[str(delta.id)],
+        ):
+            self.message_user(request, "No deltas to apply")
+            raise exceptions.NoDeltasToApplyError()
+
+        self.message_user(request, "Delta application started")
+
+        # we need to sleep 1 second, just to make sure the apply delta started
+        time.sleep(1)
+
+        return HttpResponseRedirect(".")
+
+    @admin.action(description="Download deltas as deltafile")
+    def download_deltafile(self, request, queryset: QuerySet) -> HttpResponse | None:
+        if queryset.values_list("project_id").distinct().count() != 1:
+            messages.error(request, "Selected deltas must be part of the same project!")
+            return None
+
+        project_id = queryset[0].project_id
+        deltas_qs = queryset.values_list("content", flat=True)
+        deltafile = delta_utils.generate_deltafile(deltas_qs, project_id)
+
+        return JsonResponse(
+            deltafile,
+            content_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename=deltas_{project_id}.json"
+            },
+            json_dumps_params={
+                "indent": 2,
+                "sort_keys": True,
+            },
+        )
 
 
 class GeodbAdmin(QFieldCloudModelAdmin):
