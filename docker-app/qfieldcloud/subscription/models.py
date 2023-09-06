@@ -313,7 +313,6 @@ class PackageQuerySet(models.QuerySet):
 
 
 class Package(models.Model):
-
     objects = PackageQuerySet.as_manager()
 
     subscription = models.ForeignKey(
@@ -731,7 +730,9 @@ class AbstractSubscription(models.Model):
                 subscription.active_since is None
                 and kwargs.get("active_since") is not None
             ):
-                cls.objects.current().filter(account=subscription.account,).exclude(  # type: ignore
+                cls.objects.current().filter(
+                    account=subscription.account,
+                ).exclude(  # type: ignore
                     pk=subscription.pk,
                 ).update(
                     status=Subscription.Status.INACTIVE_CANCELLED,

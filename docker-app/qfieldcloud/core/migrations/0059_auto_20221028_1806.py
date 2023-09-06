@@ -42,7 +42,6 @@ def add_organization_created_by_and_created_at(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0058_auto_20220914_2049"),
         ("subscription", "0004_auto_20220923_1602"),

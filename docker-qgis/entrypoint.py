@@ -57,7 +57,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     else:
         vl_extent = QgsRectangle()
         for layer in layers.values():
-            if type(layer) != QgsVectorLayer:
+            if isinstance(layer, QgsVectorLayer):
                 continue
 
             layer_extent = layer.extent()

@@ -376,7 +376,6 @@ class QfcTestCase(APITransactionTestCase):
             )
             payload = response.json()
             if payload["status"] == "STATUS_EXPORTED":
-
                 response = self.client.get(
                     f"/api/v1/qfield-files/{self.project1.id}/",
                 )

@@ -15,7 +15,6 @@ def update_site_name(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0007_project_overwrite_conflicts"),
         ("sites", "0002_alter_domain_unique"),

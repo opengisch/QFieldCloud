@@ -68,7 +68,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_list_public_projects(self):
-
         # Create a public project of user2
         self.project1 = Project.objects.create(
             name="project1", is_public=True, owner=self.user2
@@ -99,7 +98,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(response.data), 0)
 
     def test_list_collaborators_of_project(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -125,7 +123,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[0]["role"], "manager")
 
     def test_list_projects_of_authenticated_user(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -172,7 +169,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[2]["user_role_origin"], "collaborator")
 
     def test_create_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -195,7 +191,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.EDITOR)
 
     def test_get_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -217,7 +212,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json["role"], "reporter")
 
     def test_update_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -247,7 +241,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.ADMIN)
 
     def test_delete_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1

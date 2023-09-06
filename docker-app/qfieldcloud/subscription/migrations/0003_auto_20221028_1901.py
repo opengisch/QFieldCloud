@@ -43,7 +43,6 @@ def recreate_storage_package_types(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0058_auto_20220914_2049"),
         ("subscription", "0002_populate_plans"),

@@ -17,7 +17,6 @@ class QFieldCloudException(Exception):
     status_code = None
 
     def __init__(self, detail="", status_code=None):
-
         self.detail = detail
 
         if status_code:

@@ -72,7 +72,6 @@ class QfcTestCase(TestCase):
         self.assertNotifs(0, {"recipient": self.user1})
 
     def test_organization(self):
-
         _set_current_user(self.otheruser)
 
         # Org owner is notified of creation
@@ -86,7 +85,6 @@ class QfcTestCase(TestCase):
         self.assertNotifs(2, {"recipient": self.user1})
 
     def test_organization_members(self):
-
         org1 = Organization.objects.create(
             username="org1", organization_owner=self.user1
         )
@@ -119,7 +117,6 @@ class QfcTestCase(TestCase):
         self.assertNotifs(2, {"recipient": self.user3})
 
     def test_team_members(self):
-
         org1 = Organization.objects.create(
             username="org1", organization_owner=self.user1
         )
@@ -148,7 +145,6 @@ class QfcTestCase(TestCase):
         self.assertNotifs(5, {"recipient": self.user3})
 
     def test_projects(self):
-
         org1 = Organization.objects.create(
             username="org1", organization_owner=self.user1
         )

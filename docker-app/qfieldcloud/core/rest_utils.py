@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 def exception_handler(exc, context):
-
     # Map exceptions to qfc exceptions
     is_error = False
     if isinstance(exc, rest_exceptions.AuthenticationFailed):

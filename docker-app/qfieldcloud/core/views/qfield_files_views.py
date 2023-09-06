@@ -32,11 +32,9 @@ class PackageViewPermissions(permissions.BasePermission):
     get=extend_schema(description="Get QField packaging status"),
 )
 class PackageView(views.APIView):
-
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def post(self, request, projectid):
-
         project_obj = Project.objects.get(id=projectid)
         check_supported_regarding_owner_account(project_obj)
 
@@ -96,11 +94,9 @@ class PackageView(views.APIView):
     get=extend_schema(description="List QField project files"),
 )
 class ListFilesView(views.APIView):
-
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, projectid):
-
         project_obj = Project.objects.get(id=projectid)
 
         # Check if the project was exported at least once
@@ -172,11 +168,9 @@ class ListFilesView(views.APIView):
     get=extend_schema(description="Download file for QField"),
 )
 class DownloadFileView(views.APIView):
-
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, projectid, filename):
-
         project_obj = Project.objects.get(id=projectid)
         package_job = project_obj.last_package_job
 
