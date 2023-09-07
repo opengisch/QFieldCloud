@@ -844,6 +844,7 @@ def setup_basic_logging_config():
     for handler in logging.root.handlers:
         handler.setFormatter(formatter)
 
+
 class XmlErrorLocation(NamedTuple):
     line: int
     column: int
