@@ -1,6 +1,7 @@
 import atexit
 import hashlib
 import inspect
+import html
 import io
 import json
 import logging
@@ -15,7 +16,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Any, Callable, Optional
+from typing import IO, Any, Callable, NamedTuple, Optional
 
 from libqfieldsync.layer import LayerSource
 from qfieldcloud_sdk import sdk
@@ -842,3 +843,45 @@ def setup_basic_logging_config():
 
     for handler in logging.root.handlers:
         handler.setFormatter(formatter)
+
+class XmlErrorLocation(NamedTuple):
+    line: int
+    column: int
+
+
+def get_qgis_xml_error_location(
+    invalid_token_error_msg: str,
+) -> Optional[XmlErrorLocation]:
+    """Get column and line numbers from the provided error message."""
+    if "invalid token" not in invalid_token_error_msg.casefold():
+        return None
+
+    _, details = invalid_token_error_msg.split(":")
+    line, column = details.split(",")
+    _, line_number = line.strip().split(" ")
+    _, column_number = column.strip().split(" ")
+
+    return XmlErrorLocation(int(line_number), int(column_number))
+
+
+def get_qgis_xml_error_context(
+    invalid_token_error_msg: str, fh: io.BufferedReader
+) -> Optional[tuple[str, str, str]]:
+    """Get a slice of the line where the exception occurred, with all faulty occurrences sanitized."""
+    location = get_qgis_xml_error_location(invalid_token_error_msg)
+    if location:
+        substitute = "?"
+        fh.seek(0)
+        for cursor_pos, line in enumerate(fh, start=1):
+            if location.line == cursor_pos:
+                faulty_char = line[location.column]
+                suffix_slice = line[: location.column - 1]
+                clean_safe_slice = suffix_slice.decode("utf-8").strip() + substitute
+
+                return (
+                    f"Unable to parse character: {repr(faulty_char)}",
+                    f"Replaced by '{substitute}' on line {location.line} that starts with:",
+                    html.escape(clean_safe_slice),
+                )
+
+    return None
