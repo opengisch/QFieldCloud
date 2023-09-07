@@ -25,7 +25,9 @@ class XmlErrorLocation(NamedTuple):
     column: int
 
 
-def get_location(invalid_token_error_msg: str) -> Optional[XmlErrorLocation]:
+def get_qgis_xml_error_location(
+    invalid_token_error_msg: str,
+) -> Optional[XmlErrorLocation]:
     """Get column and line numbers from the provided error message."""
     if "invalid token" not in invalid_token_error_msg.casefold():
         logger.error("Unable to find 'invalid token' details in the given message")
@@ -39,14 +41,11 @@ def get_location(invalid_token_error_msg: str) -> Optional[XmlErrorLocation]:
     return XmlErrorLocation(int(line_number), int(column_number))
 
 
-def contextualize(
+def get_qgis_xml_error_context(
     invalid_token_error_msg: str, fh: io.BufferedReader
 ) -> Optional[tuple[str, str, str]]:
-    """
-    Get an html-safe slice of the line where the exception occurred, with all faulty occurrences sanitized.
-    Makes no use of '.decode(..., errors="replace")' because it still throws on some entities.
-    """
-    location = get_location(invalid_token_error_msg)
+    """Get a slice of the line where the exception occurred, with all faulty occurrences sanitized."""
+    location = get_qgis_xml_error_location(invalid_token_error_msg)
     if location:
         substitute = "?"
         fh.seek(0)
@@ -78,7 +77,7 @@ def check_valid_project_file(project_filename: Path) -> None:
                     continue
             except ElementTree.ParseError as error:
                 error_msg = str(error)
-                xml_error = contextualize(error_msg, fh)
+                xml_error = get_qgis_xml_error_context(error_msg, fh)
                 if xml_error:
                     for segment in xml_error:
                         logger.error(segment)
