@@ -1,4 +1,4 @@
-import json
+import html
 import logging
 import os
 import secrets
@@ -6,7 +6,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, List, Optional, cast
+from typing import List, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -22,7 +22,6 @@ from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
-from django.utils import html
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
@@ -1611,17 +1610,6 @@ class Delta(models.Model):
         return self.content.get("method")
 
 
-class HtmlSafeDecoder(json.JSONDecoder):
-    def __init__(self, *args, **kwargs):
-        super().__init__(self, object_hook=self.object_hook, *args, **kwargs)
-
-    def object_hook(self, obj) -> dict[str, Any]:
-        """Ensure that the value at `error` is html-escaped."""
-        if "error" in obj:
-            obj["error"] = html.escape(obj["error"])
-        return obj
-
-
 class Job(models.Model):
 
     objects = InheritanceManager()
@@ -1650,7 +1638,7 @@ class Job(models.Model):
         max_length=32, choices=Status.choices, default=Status.PENDING, db_index=True
     )
     output = models.TextField(null=True)
-    feedback = JSONField(null=True, decoder=HtmlSafeDecoder)
+    feedback = JSONField(null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
@@ -1662,6 +1650,10 @@ class Job(models.Model):
     container_id = models.CharField(
         max_length=64, default="", blank=True, db_index=True
     )
+
+    @property
+    def escaped_output(self) -> str:
+        return html.escape(self.output)
 
     @property
     def short_id(self) -> str:
