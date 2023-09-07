@@ -1,6 +1,5 @@
 import atexit
 import hashlib
-import html
 import inspect
 import io
 import json
@@ -882,7 +881,7 @@ def get_qgis_xml_error_context(
                 return (
                     f"Unable to parse character: {repr(faulty_char)}",
                     f"Replaced by '{substitute}' on line {location.line} that starts with:",
-                    html.escape(clean_safe_slice),
+                    clean_safe_slice,
                 )
 
     return None
