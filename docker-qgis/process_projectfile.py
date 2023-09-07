@@ -57,8 +57,8 @@ def contextualize(
                 clean_safe_slice = suffix_slice.decode("utf-8").strip() + substitute
 
                 return (
-                    f"Unable to parse this character: {repr(faulty_char)}",
-                    f"It was replaced by '{substitute}' on line {location.line} that starts with:",
+                    f"Unable to parse character: {repr(faulty_char)}",
+                    f"Replaced by '{substitute}' on line {location.line} that starts with:",
                     html.escape(clean_safe_slice),
                 )
 
