@@ -6,7 +6,7 @@ import os
 import posixpath
 from datetime import datetime
 from pathlib import PurePath
-from typing import IO, Generator, NamedTuple, Optional, Union
+from typing import IO, Generator, NamedTuple
 
 import boto3
 import jsonschema
@@ -146,9 +146,7 @@ def get_sha256(file: IO) -> str:
         return _get_sha256_file(file)
 
 
-def _get_sha256_memory_file(
-    file: Union[InMemoryUploadedFile, TemporaryUploadedFile]
-) -> str:
+def _get_sha256_memory_file(file: InMemoryUploadedFile | TemporaryUploadedFile) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.sha256()
 
@@ -178,9 +176,7 @@ def get_md5sum(file: IO) -> str:
         return _get_md5sum_file(file)
 
 
-def _get_md5sum_memory_file(
-    file: Union[InMemoryUploadedFile, TemporaryUploadedFile]
-) -> str:
+def _get_md5sum_memory_file(file: InMemoryUploadedFile | TemporaryUploadedFile) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.md5()
 
@@ -258,7 +254,7 @@ def is_qgis_project_file(filename: str) -> bool:
     return False
 
 
-def get_qgis_project_file(project_id: str) -> Optional[str]:
+def get_qgis_project_file(project_id: str) -> str | None:
     """Return the relative path inside the project of the qgs/qgz file or
     None if no qgs/qgz file is present"""
 
@@ -274,7 +270,7 @@ def get_qgis_project_file(project_id: str) -> Optional[str]:
     return None
 
 
-def check_s3_key(key: str) -> Optional[str]:
+def check_s3_key(key: str) -> str | None:
     """Check to see if an object exists on S3. It it exists, the function
     returns the sha256 of the file from the metadata"""
 
@@ -349,7 +345,7 @@ def get_project_files_with_versions(
 
 def get_project_file_with_versions(
     project_id: str, filename: str
-) -> Optional[S3ObjectWithVersions]:
+) -> S3ObjectWithVersions | None:
     """Returns a list of files and their versions.
 
     Args:
@@ -480,7 +476,7 @@ def list_files_with_versions(
     """
     last_key = None
     versions: list[S3ObjectVersion] = []
-    latest: Optional[S3ObjectVersion] = None
+    latest: S3ObjectVersion | None = None
 
     for v in list_versions(bucket, prefix, strip_prefix):
         if last_key != v.key:

@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 from django.contrib.sites.models import Site
 from qfieldcloud.authentication.models import AuthToken
@@ -361,7 +360,7 @@ class JobMixin:
 
         return internal_data
 
-    def get_lastest_not_finished_job(self) -> Optional[Job]:
+    def get_lastest_not_finished_job(self) -> Job | None:
         ModelClass: Job = self.Meta.model
         last_active_job = (
             ModelClass.objects.filter(
@@ -405,7 +404,7 @@ class JobMixin:
 
 
 class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
-    def get_lastest_not_finished_job(self) -> Optional[Job]:
+    def get_lastest_not_finished_job(self) -> Job | None:
         job = super().get_lastest_not_finished_job()
         if job:
             return job

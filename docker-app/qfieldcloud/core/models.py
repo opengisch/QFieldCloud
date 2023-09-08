@@ -5,7 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional, cast
+from typing import cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -1079,7 +1079,7 @@ class Project(models.Model):
         return f"{self.owner.username}/{self.name}"
 
     @property
-    def attachment_dirs(self) -> List[str]:
+    def attachment_dirs(self) -> list[str]:
         """Returns a list of configured attachment dirs for the project.
 
         Attachment dir is a special directory in the QField infrastructure that holds attachment files
@@ -1089,7 +1089,7 @@ class Project(models.Model):
         neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
 
         Returns:
-            List[str]: A list configured attachment dirs for the project.
+            list[str]: A list configured attachment dirs for the project.
         """
         attachment_dirs = []
 
@@ -1107,7 +1107,7 @@ class Project(models.Model):
         return not self.is_public
 
     @cached_property
-    def files(self) -> List[utils.S3ObjectWithVersions]:
+    def files(self) -> list[utils.S3ObjectWithVersions]:
         """Gets all the files from S3 storage. This is potentially slow. Results are cached on the instance."""
         return list(utils.get_project_files_with_versions(self.id))
 
@@ -1121,7 +1121,7 @@ class Project(models.Model):
         return User.objects.for_project(self)
 
     @property
-    def has_online_vector_data(self) -> Optional[bool]:
+    def has_online_vector_data(self) -> bool | None:
         """Returns None if project details or layers details are not available"""
 
         if not self.project_details:

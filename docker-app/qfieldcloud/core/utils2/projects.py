@@ -82,8 +82,8 @@ def create_collaborator_by_username_or_email(
         )
     elif users[0].is_organization:
         message = _(
-            f'Organization "{username}" cannot be added. Only users and teams can be collaborators.'
-        )
+            'Organization "{}" cannot be added. Only users and teams can be collaborators.'
+        ).format(username)
     else:
         success, message = create_collaborator(project, users[0], created_by)
 

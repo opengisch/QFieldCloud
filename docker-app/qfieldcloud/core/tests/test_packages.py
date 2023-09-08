@@ -3,7 +3,6 @@ import logging
 import os
 import tempfile
 import time
-from typing import List, Tuple
 
 import psycopg2
 from django.http import FileResponse
@@ -69,7 +68,7 @@ class QfcTestCase(APITransactionTestCase):
         self,
         token: str,
         project: Project,
-        files: List[Tuple[str, str]],
+        files: list[tuple[str, str]],
     ):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
         for local_filename, remote_filename in files:
@@ -88,11 +87,11 @@ class QfcTestCase(APITransactionTestCase):
         self,
         token: str,
         project: Project,
-        files: List[Tuple[str, str]],
-        expected_files: List[str],
-        job_create_error: Tuple[int, str] = None,
+        files: list[tuple[str, str]],
+        expected_files: list[str],
+        job_create_error: tuple[int, str] = None,
         tempdir: str = None,
-        invalid_layers: List[str] = [],
+        invalid_layers: list[str] = [],
     ):
         self.upload_files(token, project, files)
         self.check_package(
@@ -103,10 +102,10 @@ class QfcTestCase(APITransactionTestCase):
         self,
         token: str,
         project: Project,
-        expected_files: List[str],
-        job_create_error: Tuple[int, str] = None,
+        expected_files: list[str],
+        job_create_error: tuple[int, str] = None,
         tempdir: str = None,
-        invalid_layers: List[str] = [],
+        invalid_layers: list[str] = [],
     ):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
 
