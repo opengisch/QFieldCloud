@@ -1,4 +1,4 @@
-from typing import List, Literal, Union
+from typing import Literal
 
 from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
@@ -76,7 +76,7 @@ def _organization_of_owner(user: QfcUser, organization: Organization):
 def user_has_project_roles(
     user: QfcUser,
     project: Project,
-    roles: List[ProjectCollaborator.Roles],
+    roles: list[ProjectCollaborator.Roles],
     skip_invalid: bool = False,
 ):
     return (
@@ -87,7 +87,7 @@ def user_has_project_roles(
 
 
 def check_user_has_project_role_origins(
-    user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
+    user: QfcUser, project: Project, origins: list[ProjectQueryset.RoleOrigins]
 ) -> Literal[True]:
     if (
         _project_for_owner(user, project, skip_invalid=False)
@@ -106,7 +106,7 @@ def check_user_has_project_role_origins(
 
 
 def user_has_project_role_origins(
-    user: QfcUser, project: Project, origins: List[ProjectQueryset.RoleOrigins]
+    user: QfcUser, project: Project, origins: list[ProjectQueryset.RoleOrigins]
 ) -> bool:
     try:
         return check_user_has_project_role_origins(user, project, origins)
@@ -115,7 +115,7 @@ def user_has_project_role_origins(
 
 
 def check_user_has_organization_roles(
-    user: QfcUser, organization: Organization, roles: List[OrganizationMember.Roles]
+    user: QfcUser, organization: Organization, roles: list[OrganizationMember.Roles]
 ) -> Literal[True]:
     if (
         _organization_of_owner(user, organization)
@@ -134,7 +134,7 @@ def check_user_has_organization_roles(
 
 
 def user_has_organization_roles(
-    user: QfcUser, organization: Organization, roles: List[OrganizationMember.Roles]
+    user: QfcUser, organization: Organization, roles: list[OrganizationMember.Roles]
 ) -> bool:
     try:
         return check_user_has_organization_roles(user, organization, roles)
@@ -145,7 +145,7 @@ def user_has_organization_roles(
 def user_has_organization_role_origins(
     user: QfcUser,
     organization: Organization,
-    origins: List[OrganizationQueryset.RoleOrigins],
+    origins: list[OrganizationQueryset.RoleOrigins],
 ):
     return (
         _organization_of_owner(user, organization)
@@ -165,7 +165,7 @@ def get_param_from_request(request, param):
 
 
 def can_create_project(
-    user: QfcUser, organization: Union[QfcUser, Organization] = None
+    user: QfcUser, organization: QfcUser | Organization = None
 ) -> bool:
     """Return True if the `user` can create a project. Accepts additional
     `organization` to check whether the user has permissions to do so on

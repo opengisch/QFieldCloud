@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import qfieldcloud.core.models as models
 from django.conf import settings
@@ -16,8 +15,8 @@ def apply_deltas(
     user: "models.User",
     project_file: str,
     overwrite_conflicts: bool,
-    delta_ids: List[str] = [],
-) -> List["models.ApplyJob"]:
+    delta_ids: list[str] = [],
+) -> list["models.ApplyJob"]:
     """Apply a deltas"""
 
     logger.info(

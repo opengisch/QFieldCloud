@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Optional, TypedDict, cast
+from typing import Type, TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -794,15 +794,15 @@ class AbstractSubscription(models.Model):
         account: UserAccount,
         plan: Plan,
         created_by: Person,
-        active_since: Optional[datetime] = None,
-    ) -> tuple[Optional["AbstractSubscription"], "AbstractSubscription"]:
+        active_since: datetime | None = None,
+    ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
             plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
             created_by (Person): created by.
-            active_since (Optional[datetime]): active since for the subscription.
+            active_since (datetime | None): active since for the subscription.
 
         Returns:
             tuple[AbstractSubscription | None, AbstractSubscription]: the created trial subscription if the given plan was a trial and the regular subscription.
