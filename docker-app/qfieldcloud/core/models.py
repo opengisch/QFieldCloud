@@ -1,4 +1,3 @@
-import html
 import logging
 import os
 import secrets
@@ -1650,10 +1649,6 @@ class Job(models.Model):
     container_id = models.CharField(
         max_length=64, default="", blank=True, db_index=True
     )
-
-    @property
-    def escaped_output(self) -> str:
-        return html.escape(self.output)
 
     @property
     def short_id(self) -> str:
