@@ -31,12 +31,8 @@ def check_valid_project_file(project_filename: Path) -> None:
                     continue
             except ElementTree.ParseError as error:
                 error_msg = str(error)
-                xml_error = get_qgis_xml_error_context(error_msg, fh)
-                if xml_error:
-                    for segment in xml_error:
-                        logger.error(segment)
                 raise InvalidXmlFileException(
-                    xml_error="".join(xml_error) if xml_error else error_msg,
+                    xml_error=get_qgis_xml_error_context(error_msg, fh) or error_msg,
                     project_filename=project_filename,
                 )
     elif project_filename.suffix != ".qgz":

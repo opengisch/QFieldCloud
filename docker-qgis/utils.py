@@ -866,7 +866,7 @@ def get_qgis_xml_error_location(
 
 def get_qgis_xml_error_context(
     invalid_token_error_msg: str, fh: io.BufferedReader
-) -> Optional[tuple[str, str, str]]:
+) -> Optional[str]:
     """Get a slice of the line where the exception occurred, with all faulty occurrences sanitized."""
     location = get_qgis_xml_error_location(invalid_token_error_msg)
     if location:
@@ -878,10 +878,6 @@ def get_qgis_xml_error_context(
                 suffix_slice = line[: location.column - 1]
                 clean_safe_slice = suffix_slice.decode("utf-8").strip() + substitute
 
-                return (
-                    f"Unable to parse character: {repr(faulty_char)}",
-                    f"Replaced by '{substitute}' on line {location.line} that starts with:",
-                    clean_safe_slice,
-                )
+                return f"Unable to parse character: {repr(faulty_char)}. Replaced by '{substitute}' on line {location.line} that starts with: {clean_safe_slice}"
 
     return None
