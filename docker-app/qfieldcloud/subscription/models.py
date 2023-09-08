@@ -813,8 +813,7 @@ class AbstractSubscription(models.Model):
             # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
 
-        assert active_since
-
+        regular_active_since: datetime | None = None
         if plan.is_trial:
             assert isinstance(
                 active_since, datetime
