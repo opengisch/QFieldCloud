@@ -61,13 +61,13 @@ def _send_notif(verb, action_object, recipient, target=None):
 def _concerned_users_in_entity(entity: User):
     """Returns a list of users (of User.Type.PERSON) concerned by updates to an user (any type)"""
 
-    return Person.objects.for_entity(entity)
+    return Person.objects.for_entity(entity)  # type: ignore
 
 
 def _concerned_users_in_project(project: Project):
     """Returns a list of users concerned by updates to a project"""
 
-    return Person.objects.for_project(project).exclude(
+    return Person.objects.for_project(project).exclude(  # type: ignore
         project_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
     )
 

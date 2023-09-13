@@ -35,7 +35,6 @@ class ListCreateMembersViewPermissions(permissions.BasePermission):
     post=extend_schema(description="Add a user as a member of an organization"),
 )
 class ListCreateMembersView(generics.ListCreateAPIView):
-
     permission_classes = [permissions.IsAuthenticated, ListCreateMembersViewPermissions]
     serializer_class = OrganizationMemberSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
@@ -47,7 +46,6 @@ class ListCreateMembersView(generics.ListCreateAPIView):
         return OrganizationMember.objects.filter(organization=organization_obj)
 
     def post(self, request, organization):
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -93,7 +91,6 @@ class GetUpdateDestroyMemberViewPermissions(permissions.BasePermission):
     delete=extend_schema(description="Remove a member from an organization"),
 )
 class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
-
     permission_classes = [
         permissions.IsAuthenticated,
         GetUpdateDestroyMemberViewPermissions,

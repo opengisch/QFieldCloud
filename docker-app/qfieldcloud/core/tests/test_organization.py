@@ -55,7 +55,6 @@ class QfcTestCase(APITestCase):
         set_subscription(self.organization1, "default_org")
 
     def test_list_members(self):
-
         # Set user2 as member of organization1
         OrganizationMember.objects.create(
             organization=self.organization1,
@@ -85,7 +84,6 @@ class QfcTestCase(APITestCase):
         self.assertEqual(json[1]["role"], "admin")
 
     def test_create_member(self):
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         response = self.client.post(
             "/api/v1/members/organization1/",
@@ -128,7 +126,6 @@ class QfcTestCase(APITestCase):
         self.assertEqual(members[0].role, OrganizationMember.Roles.MEMBER)
 
     def test_delete_member(self):
-
         # Set user2 as member of organization1
         OrganizationMember.objects.create(
             organization=self.organization1,

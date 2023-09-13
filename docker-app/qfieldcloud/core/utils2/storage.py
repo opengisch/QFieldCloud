@@ -408,7 +408,6 @@ def purge_old_file_versions(
 
     # Process file by file
     for file in qfieldcloud.core.utils.get_project_files_with_versions(project.pk):
-
         # Skip the newest N
         old_versions_to_purge = sorted(
             file.versions, key=lambda v: v.last_modified, reverse=True
@@ -470,7 +469,7 @@ def delete_all_project_files_permanently(project_id: str) -> None:
             f"Suspicious S3 deletion of all project files with {prefix=}"
         )
 
-    _delete_by_prefix_versioned(prefix)
+    _delete_by_prefix_permanently(prefix)
 
 
 def delete_project_file_permanently(
@@ -577,7 +576,6 @@ def delete_project_file_version_permanently(
 
     with transaction.atomic():
         for file_version in versions_to_delete:
-
             if (
                 not re.match(
                     r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/.+$",

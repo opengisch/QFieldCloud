@@ -5,7 +5,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional, cast
+from typing import cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -67,7 +67,7 @@ class PersonQueryset(models.QuerySet):
         is_org_member_q = Q(
             project_roles__project__owner__type=User.Type.ORGANIZATION
         ) & Exists(
-            Organization.objects.of_user(OuterRef("project_roles__user"))
+            Organization.objects.of_user(OuterRef("project_roles__user"))  # type: ignore
             .select_related(None)
             .filter(id=OuterRef("project_roles__project__owner"))
         )
@@ -368,7 +368,6 @@ class Person(User):
 
 
 class UserAccount(models.Model):
-
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
     NOTIFS_DAILY = timedelta(days=1)
@@ -482,7 +481,7 @@ class UserAccount(models.Model):
             return False
 
         if (
-            Organization.objects.of_user(self.user)
+            Organization.objects.of_user(self.user)  # type: ignore
             .filter(
                 membership_role=OrganizationMember.Roles.ADMIN,
             )
@@ -520,15 +519,14 @@ def random_password() -> str:
 
 
 def default_hostname() -> str:
-    return os.environ.get("GEODB_HOST")
+    return os.environ["GEODB_HOST"]
 
 
 def default_port() -> str:
-    return os.environ.get("GEODB_PORT")
+    return os.environ["GEODB_PORT"]
 
 
 class Geodb(models.Model):
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
@@ -656,7 +654,7 @@ class Organization(User):
 
         users_with_delta = (
             Delta.objects.filter(
-                project__in=self.projects.all(),
+                project__in=self.projects.all(),  # type: ignore
                 created_at__gte=period_since,
                 created_at__lte=period_until,
             )
@@ -665,7 +663,7 @@ class Organization(User):
         )
         users_with_jobs = (
             Job.objects.filter(
-                project__in=self.projects.all(),
+                project__in=self.projects.all(),  # type: ignore
                 created_at__gte=period_since,
                 created_at__lte=period_until,
             )
@@ -703,7 +701,6 @@ class OrganizationMemberQueryset(models.QuerySet):
 
 
 class OrganizationMember(models.Model):
-
     objects = OrganizationMemberQueryset.as_manager()
 
     class Roles(models.TextChoices):
@@ -752,10 +749,10 @@ class OrganizationMember(models.Model):
         return super().clean()
 
     @transaction.atomic
-    def delete(self, *args, **kwargs) -> None:
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         super().delete(*args, **kwargs)
 
-        TeamMember.objects.filter(
+        return TeamMember.objects.filter(
             team__team_organization=self.organization,
             member=self.member,
         ).delete()
@@ -788,7 +785,6 @@ class OrganizationRolesView(models.Model):
 
 
 class Team(User):
-
     team_organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
@@ -883,12 +879,11 @@ class ProjectQueryset(models.QuerySet):
             "collaborators",
             filter=Q(collaborators__collaborator__type=User.Type.PERSON),
         )
-
         is_public_q = Q(is_public=True)
         is_person_q = Q(owner__type=User.Type.PERSON)
         is_org_q = Q(owner__type=User.Type.ORGANIZATION)
         is_org_member_q = Q(owner__type=User.Type.ORGANIZATION) & Exists(
-            Organization.objects.of_user(user)
+            Organization.objects.of_user(user)  # type: ignore
             .select_related(None)
             .filter(id=OuterRef("owner"))
         )
@@ -1080,7 +1075,11 @@ class Project(models.Model):
         return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
 
     @property
-    def attachment_dirs(self) -> List[str]:
+    def name_with_owner(self) -> str:
+        return f"{self.owner.username}/{self.name}"
+
+    @property
+    def attachment_dirs(self) -> list[str]:
         """Returns a list of configured attachment dirs for the project.
 
         Attachment dir is a special directory in the QField infrastructure that holds attachment files
@@ -1090,7 +1089,7 @@ class Project(models.Model):
         neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
 
         Returns:
-            List[str]: A list configured attachment dirs for the project.
+            list[str]: A list configured attachment dirs for the project.
         """
         attachment_dirs = []
 
@@ -1108,7 +1107,7 @@ class Project(models.Model):
         return not self.is_public
 
     @cached_property
-    def files(self) -> List[utils.S3ObjectWithVersions]:
+    def files(self) -> list[utils.S3ObjectWithVersions]:
         """Gets all the files from S3 storage. This is potentially slow. Results are cached on the instance."""
         return list(utils.get_project_files_with_versions(self.id))
 
@@ -1122,7 +1121,7 @@ class Project(models.Model):
         return User.objects.for_project(self)
 
     @property
-    def has_online_vector_data(self) -> Optional[bool]:
+    def has_online_vector_data(self) -> bool | None:
         """Returns None if project details or layers details are not available"""
 
         if not self.project_details:
@@ -1239,7 +1238,7 @@ class Project(models.Model):
     def status(self) -> Status:
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])
+            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])  # type: ignore
         ).exists():
             return Project.Status.BUSY
         else:
@@ -1311,22 +1310,6 @@ class Project(models.Model):
         )
 
         return is_supported_regarding_owner_account(self)
-
-    def check_can_be_created(self):
-        from qfieldcloud.core.permissions_utils import (
-            check_supported_regarding_owner_account,
-        )
-
-        check_supported_regarding_owner_account(self, ignore_online_layers=True)
-
-    def clean(self) -> None:
-        """
-        Prevent creating new projects if the user is inactive or over quota
-        """
-        if self._state.adding:
-            self.check_can_be_created()
-
-        return super().clean()
 
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
@@ -1476,12 +1459,10 @@ class ProjectCollaborator(models.Model):
         if self.project.owner.is_organization:
             organization = Organization.objects.get(pk=self.project.owner.pk)
             if self.collaborator.is_person:
-                members_qs = organization.members.filter(member=self.collaborator)
-
                 # for organizations-owned projects, the candidate collaborator
                 # must be a member of the organization or the organization's owner
                 if not (
-                    members_qs.exists()
+                    organization.members.filter(member=self.collaborator).exists()  # type: ignore
                     or self.collaborator == organization.organization_owner
                 ):
                     raise ValidationError(
@@ -1490,9 +1471,7 @@ class ProjectCollaborator(models.Model):
                         )
                     )
             elif self.collaborator.is_team:
-                team_qs = organization.teams.filter(pk=self.collaborator)
-                if not team_qs.exists():
-
+                if not organization.teams.filter(pk=self.collaborator).exists():  # type: ignore
                     raise ValidationError(_("Team does not exist."))
 
         return super().clean()
@@ -1610,7 +1589,6 @@ class Delta(models.Model):
 
 
 class Job(models.Model):
-
     objects = InheritanceManager()
 
     class Type(models.TextChoices):
@@ -1729,7 +1707,6 @@ class ProcessProjectfileJob(Job):
 
 
 class ApplyJob(Job):
-
     deltas_to_apply = models.ManyToManyField(
         to=Delta,
         through="ApplyJobDelta",

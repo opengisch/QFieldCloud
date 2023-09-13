@@ -6,7 +6,7 @@ from unittest import mock, skip
 
 import fiona
 import rest_framework
-from django.http.response import FileResponse, HttpResponse
+from django.http.response import FileResponse
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import (
@@ -19,7 +19,7 @@ from qfieldcloud.core.models import (
     ProjectCollaborator,
 )
 from qfieldcloud.subscription.models import Subscription
-from rest_framework import status
+from rest_framework import response, status
 from rest_framework.test import APITransactionTestCase
 from shapely.geometry import shape
 
@@ -127,7 +127,7 @@ class QfcTestCase(APITransactionTestCase):
 
         super().fail(msg)
 
-    def assertHttpOk(self, response: HttpResponse):
+    def assertHttpOk(self, response: response.Response):
         try:
             self.assertTrue(
                 rest_framework.status.is_success(response.status_code), response.json()
@@ -1134,7 +1134,6 @@ class QfcTestCase(APITransactionTestCase):
         ).latest("updated_at")
 
         for _ in range(10):
-
             time.sleep(2)
             response = self.client.get(uri)
 

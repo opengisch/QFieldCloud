@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from auditlog.models import LogEntry
 from django.contrib.auth.models import AnonymousUser, User
@@ -9,7 +9,7 @@ from django_currentuser.middleware import get_current_authenticated_user
 def audit(
     instance,
     action: LogEntry.Action,
-    changes: Union[Dict[str, Any], List[Any], str] = None,
+    changes: dict[str, Any] | list[Any] | str | None = None,
     actor: User = None,
     remote_addr: str = None,
     additional_data: Any = None,

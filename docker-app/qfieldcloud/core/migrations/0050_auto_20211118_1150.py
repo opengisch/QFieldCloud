@@ -14,7 +14,6 @@ def rename_package_to_export(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0049_auto_20211117_1843"),
     ]

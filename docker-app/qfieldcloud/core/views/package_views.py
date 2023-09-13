@@ -64,7 +64,6 @@ class PackageUploadViewPermissions(permissions.BasePermission):
     ),
 )
 class LatestPackageView(views.APIView):
-
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, project_id):
@@ -147,7 +146,6 @@ class LatestPackageView(views.APIView):
     ),
 )
 class LatestPackageDownloadFilesView(views.APIView):
-
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, project_id, filename):

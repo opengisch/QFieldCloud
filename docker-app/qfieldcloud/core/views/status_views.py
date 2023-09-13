@@ -17,7 +17,6 @@ class APIStatusView(views.APIView):
         # Try to get the status from the cache
         results = cache.get("status_results", {})
         if not results:
-
             results["redis"] = "ok"
             # Check if redis is visible
             if not utils.redis_is_running():

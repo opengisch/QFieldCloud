@@ -2,7 +2,7 @@ import io
 import os
 from datetime import timedelta
 from time import sleep
-from typing import IO, Iterable, Union
+from typing import IO, Iterable
 
 from django.utils import timezone
 from qfieldcloud.core.models import Job, Project, User
@@ -51,13 +51,11 @@ def setup_subscription_plans():
 
 
 def set_subscription(
-    users: Union[User, Iterable[User]],
+    users: User | Iterable[User],
     code: str = None,
     **kwargs,
 ):
-    if isinstance(users, User):
-        users = [users]
-
+    users: list[User] = [users] if isinstance(users, User) else users
     assert len(
         users
     ), "When iterable, the first argument must contain at least 1 element."

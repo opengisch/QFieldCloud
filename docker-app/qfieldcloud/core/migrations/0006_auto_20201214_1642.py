@@ -15,7 +15,6 @@ def jsonify_output_field(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0005_auto_20201203_1037"),
     ]

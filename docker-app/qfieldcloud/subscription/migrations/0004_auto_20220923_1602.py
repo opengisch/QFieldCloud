@@ -78,7 +78,6 @@ def add_packages_to_accounts(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("subscription", "0003_auto_20221028_1901"),
     ]

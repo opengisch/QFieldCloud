@@ -56,13 +56,11 @@ class DeltaFilePermissions(permissions.BasePermission):
     ),
 )
 class ListCreateDeltasView(generics.ListCreateAPIView):
-
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def post(self, request, projectid):
-
         project_obj = Project.objects.get(id=projectid)
         project_file = project_obj.project_filename
 
@@ -170,7 +168,6 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     get=extend_schema(description="List deltas of the given deltafile.")
 )
 class ListDeltasByDeltafileView(generics.ListAPIView):
-
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
@@ -188,7 +185,6 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
 )
 @extend_schema_view(post=extend_schema(description="Trigger apply delta."))
 class ApplyView(views.APIView):
-
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
 

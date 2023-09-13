@@ -403,8 +403,8 @@ def is_localhost(hostname: str, port: int = None) -> bool:
         localhost = socket.gethostname()
         localaddrs = socket.getaddrinfo(localhost, port)
         targetaddrs = socket.getaddrinfo(hostname, port)
-        for (_family, _socktype, _proto, _canonname, sockaddr) in localaddrs:
-            for (_rfamily, _rsocktype, _rproto, _rcanonname, rsockaddr) in targetaddrs:
+        for _family, _socktype, _proto, _canonname, sockaddr in localaddrs:
+            for _rfamily, _rsocktype, _rproto, _rcanonname, rsockaddr in targetaddrs:
                 if rsockaddr[0] == sockaddr[0]:
                     return True
         return False

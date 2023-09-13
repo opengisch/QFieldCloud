@@ -12,7 +12,6 @@ def fill_in_datetime_fields(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0044_alter_user_username"),
     ]

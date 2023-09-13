@@ -1,10 +1,11 @@
 import csv
 import json
 import time
+import uuid
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
-from typing import Any, Dict, Generator
+from typing import Any, Generator
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -23,7 +24,7 @@ from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
@@ -54,7 +55,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
-from qfieldcloud.core.utils2 import jobs
+from qfieldcloud.core.utils2 import delta_utils, jobs
 from rest_framework.authtoken.models import TokenProxy
 
 admin.site.unregister(LogEntry)
@@ -95,7 +96,7 @@ class ModelAdminEstimateCountMixin:
     list_per_page = settings.QFIELDCLOUD_ADMIN_LIST_PER_PAGE
 
 
-class QFieldCloudModelAdmin(
+class QFieldCloudModelAdmin(  # type: ignore
     ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, admin.ModelAdmin
 ):
     pass
@@ -230,7 +231,7 @@ class EmailAddressAdmin(EmailAddressAdminBase):
             for row in raw_queryset
         )
 
-    @admin.action(description="Export all users' email contact details to .csv")
+    @admin.action(description="Export all users' email contact details to .csv")  # type: ignore
     def export_emails_to_csv(self, request) -> StreamingHttpResponse:
         """ "Export all users' email contact details to .csv"""
 
@@ -274,15 +275,15 @@ class PrettyJSONWidget(widgets.Textarea):
 
 
 def search_parser(
-    _request, _queryset, search_term: str, filter_config: Dict[str, Dict[str, str]]
-) -> Dict[str, Any]:
+    _request, _queryset, search_term: str, filter_config: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
     custom_filter = {}
     CUSTOM_SEARCH_DIVIDER = ":"
     if CUSTOM_SEARCH_DIVIDER in search_term:
         prefix, search = search_term.split(CUSTOM_SEARCH_DIVIDER, 1)
         prefix_config = filter_config.get(prefix)
         if prefix_config:
-            extra_filters = prefix_config.get("extra_filters", {})
+            extra_filters: dict[str, Any] = prefix_config.get("extra_filters") or {}
             filter_keyword = prefix_config["filter"]
 
             custom_filter = {**custom_filter, **extra_filters}
@@ -787,6 +788,17 @@ class JobAdmin(QFieldCloudModelAdmin):
 
         return inlines
 
+    def get_urls(self):
+        urls = super().get_urls()
+        return [
+            path(
+                "<uuid:apply_job_id>/export-deltafile",
+                self.admin_site.admin_view(self.export_applyjob_deltafile),
+                name="export_applyjob_deltafile",
+            ),
+            *urls,
+        ]
+
     def error_type(self, instance):
         if instance.feedback and "error_type" in instance.feedback:
             return f"{instance.feedback['error_type']}".strip()
@@ -796,17 +808,17 @@ class JobAdmin(QFieldCloudModelAdmin):
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
 
-    project__owner.admin_order_field = "project__owner"
+    project__owner.admin_order_field = "project__owner"  # type: ignore
 
     def project__name(self, instance):
         return model_admin_url(instance.project, instance.project.name)
 
-    project__name.admin_order_field = "project__name"
+    project__name.admin_order_field = "project__name"  # type: ignore
 
     def created_by__link(self, instance):
         return model_admin_url(instance.created_by)
 
-    created_by__link.admin_order_field = "created_by"
+    created_by__link.admin_order_field = "created_by"  # type: ignore
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -822,6 +834,26 @@ class JobAdmin(QFieldCloudModelAdmin):
 
     def feedback__pre(self, instance):
         return format_pre_json(instance.feedback)
+
+    def export_applyjob_deltafile(
+        self, request: HttpRequest, apply_job_id: uuid.UUID
+    ) -> HttpResponse:
+        apply_job = ApplyJob.objects.get(id=apply_job_id)
+        deltas_qs = apply_job.deltas_to_apply.all().values_list("content", flat=True)
+        project_id = apply_job.project_id
+        deltafile = delta_utils.generate_deltafile(deltas_qs, project_id)
+
+        return JsonResponse(
+            deltafile,
+            content_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename=applyjob_deltas_{project_id}.json"
+            },
+            json_dumps_params={
+                "indent": 2,
+                "sort_keys": True,
+            },
+        )
 
 
 class ApplyJobDeltaInline(admin.TabularInline):
@@ -900,6 +932,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         "set_status_ignored",
         "set_status_unpermitted",
         "apply_selected_deltas",
+        "download_deltafile",
     )
 
     readonly_fields = (
@@ -964,12 +997,12 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
 
-    project__owner.admin_order_field = "project__owner"
+    project__owner.admin_order_field = "project__owner"  # type: ignore
 
     def project__name(self, instance):
         return model_admin_url(instance.project, instance.project.name)
 
-    project__name.admin_order_field = "project__name"
+    project__name.admin_order_field = "project__name"  # type: ignore
 
     def set_status_pending(self, request, queryset):
         queryset.update(last_status=Delta.Status.PENDING)
@@ -982,28 +1015,53 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     def response_change(self, request, delta):
         if "_apply_delta_btn" in request.POST:
-            if not delta.project.project_filename:
-                self.message_user(request, "Missing project file")
-                raise exceptions.NoQGISProjectError()
-
-            if not jobs.apply_deltas(
-                delta.project,
-                request.user,
-                delta.project.project_filename,
-                delta.project.overwrite_conflicts,
-                delta_ids=[str(delta.id)],
-            ):
-                self.message_user(request, "No deltas to apply")
-                raise exceptions.NoDeltasToApplyError()
-
-            self.message_user(request, "Delta application started")
-
-            # we need to sleep 1 second, just to make sure the apply delta started
-            time.sleep(1)
-
-            return HttpResponseRedirect(".")
+            return self.apply_delta(request, delta)
 
         return super().response_change(request, delta)
+
+    def apply_delta(self, request, delta):
+        if not delta.project.project_filename:
+            self.message_user(request, "Missing project file")
+            raise exceptions.NoQGISProjectError()
+
+        if not jobs.apply_deltas(
+            delta.project,
+            request.user,
+            delta.project.project_filename,
+            delta.project.overwrite_conflicts,
+            delta_ids=[str(delta.id)],
+        ):
+            self.message_user(request, "No deltas to apply")
+            raise exceptions.NoDeltasToApplyError()
+
+        self.message_user(request, "Delta application started")
+
+        # we need to sleep 1 second, just to make sure the apply delta started
+        time.sleep(1)
+
+        return HttpResponseRedirect(".")
+
+    @admin.action(description="Download deltas as deltafile")
+    def download_deltafile(self, request, queryset: QuerySet) -> HttpResponse | None:
+        if queryset.values_list("project_id").distinct().count() != 1:
+            messages.error(request, "Selected deltas must be part of the same project!")
+            return None
+
+        project_id = queryset[0].project_id
+        deltas_qs = queryset.values_list("content", flat=True)
+        deltafile = delta_utils.generate_deltafile(deltas_qs, project_id)
+
+        return JsonResponse(
+            deltafile,
+            content_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename=deltas_{project_id}.json"
+            },
+            json_dumps_params={
+                "indent": 2,
+                "sort_keys": True,
+            },
+        )
 
 
 class GeodbAdmin(QFieldCloudModelAdmin):
@@ -1215,7 +1273,7 @@ class InvitationAdmin(InvitationAdminBase):
 class UserAccountAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
-    ordering = (Lower("user__username"),)
+    ordering = (Lower("user__username"),)  # type: ignore
     search_fields = ("user__username__icontains",)
     list_select_related = ("user",)
 
@@ -1227,7 +1285,7 @@ class UserAccountAdmin(QFieldCloudModelAdmin):
 class UserAdmin(QFieldCloudModelAdmin):
     """The sole purpose of this admin module is only to support autocomplete fields in Django admin."""
 
-    ordering = (Lower("username"),)
+    ordering = (Lower("username"),)  # type: ignore
     search_fields = ("username__icontains",)
 
     def has_module_permission(self, request: HttpRequest) -> bool:

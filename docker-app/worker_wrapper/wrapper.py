@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 import docker
 import requests
+import sentry_sdk
 from constance import config
 from django.conf import settings
 from django.db import transaction
@@ -107,12 +108,40 @@ class JobRun:
         pass
 
     def run(self):
+        """The main and first method to be called on `JobRun`.
+
+        Should not be overloaded by inheriting classes,
+        they should use `before_docker_run`, `after_docker_run`
+        and `after_docker_exception` hooks.
+        """
         feedback = {}
 
         try:
             self.job.status = Job.Status.STARTED
             self.job.started_at = timezone.now()
             self.job.save(update_fields=["status", "started_at"])
+
+            # # # CONCURRENCY CHECK # # #
+            # safety check whether there are no concurrent jobs running for that particular project
+            # if there are, reset the job back to `PENDING`
+            concurrent_jobs_count = (
+                self.job.project.jobs.filter(
+                    status__in=[Job.Status.QUEUED, Job.Status.STARTED],
+                )
+                .exclude(pk=self.job.pk)
+                .count()
+            )
+
+            if concurrent_jobs_count > 0:
+                self.job.status = Job.Status.PENDING
+                self.job.started_at = None
+                self.job.save(update_fields=["status", "started_at"])
+                logger.warning(f"Concurrent jobs occured for job {self.job}.")
+                sentry_sdk.capture_message(
+                    f"Concurrent jobs occured for job {self.job}."
+                )
+                return
+            # # # /CONCURRENCY CHECK # # #
 
             self.before_docker_run()
 
@@ -570,7 +599,7 @@ class ProcessProjectfileJobRun(JobRun):
             project.save(update_fields=("project_details",))
 
 
-def cancel_orphaned_workers():
+def cancel_orphaned_workers() -> None:
     client: DockerClient = docker.from_env()
 
     running_workers: list[Container] = client.containers.list(

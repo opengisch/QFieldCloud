@@ -11,7 +11,6 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
-from qfieldcloud.subscription.exceptions import InactiveSubscriptionError, QuotaError
 from qfieldcloud.subscription.models import Subscription
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -69,7 +68,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_list_public_projects(self):
-
         # Create a public project of user2
         self.project1 = Project.objects.create(
             name="project1", is_public=True, owner=self.user2
@@ -100,7 +98,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(response.data), 0)
 
     def test_list_collaborators_of_project(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -126,7 +123,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[0]["role"], "manager")
 
     def test_list_projects_of_authenticated_user(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -173,7 +169,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[2]["user_role_origin"], "collaborator")
 
     def test_create_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -196,7 +191,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.EDITOR)
 
     def test_get_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -218,7 +212,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json["role"], "reporter")
 
     def test_update_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -248,7 +241,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.ADMIN)
 
     def test_delete_collaborator(self):
-
         # Create a project of user1
         self.project1 = Project.objects.create(
             name="project1", is_public=False, owner=self.user1
@@ -496,14 +488,13 @@ class QfcTestCase(APITransactionTestCase):
         # Make sure the user is inactive
         self.assertFalse(self.user1.useraccount.current_subscription.is_active)
 
-        # Cannot create project if user's subscription is inactive
-        with self.assertRaises(InactiveSubscriptionError):
-            Project.objects.create(
-                name="p2",
-                owner=self.user1,
-            )
+        # Can create project if user's subscription is inactive
+        Project.objects.create(
+            name="p2",
+            owner=self.user1,
+        )
 
-        # Cant still modify existing project
+        # Can still modify existing project
         p1.name = "p1-modified"
         p1.save()
 
@@ -518,13 +509,12 @@ class QfcTestCase(APITransactionTestCase):
             file_storage_bytes=more_bytes_than_plan,
         )
 
-        # Cannot create another project if the user's plan is over quota
-        with self.assertRaises(QuotaError):
-            Project.objects.create(
-                name="p2",
-                owner=self.user1,
-            )
+        # Can create another project if the user's plan is over quota
+        Project.objects.create(
+            name="p2",
+            owner=self.user1,
+        )
 
-        # Cant still modify existing project
+        # Can still modify existing project
         p1.name = "p1-modified"
         p1.save()

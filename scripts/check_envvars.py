@@ -176,7 +176,6 @@ if __name__ == "__main__":
 
             for environment in occurrences:
                 if environment not in k8s_environments:
-
                     problems.append(
                         f'Envvar "{varname}" should be in all k8s environments, but missing not found neither in configuration or secrets of "{environment}".'
                     )

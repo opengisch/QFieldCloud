@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Optional, Tuple, TypedDict, cast
+from typing import Type, TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -279,7 +279,7 @@ class PackageType(models.Model):
 
     @classmethod
     @lru_cache
-    def get_storage_package_type(cls):
+    def get_storage_package_type(cls) -> "PackageType":
         # NOTE if the cache is still returning the old result, please restart the whole `app` container
         try:
             return cls.objects.get(type=cls.Type.STORAGE)
@@ -313,7 +313,6 @@ class PackageQuerySet(models.QuerySet):
 
 
 class Package(models.Model):
-
     objects = PackageQuerySet.as_manager()
 
     subscription = models.ForeignKey(
@@ -429,10 +428,10 @@ class AbstractSubscription(models.Model):
     Status = SubscriptionStatus
 
     class UpdateSubscriptionKwargs(TypedDict):
-        status: "Subscription.Status"
+        status: "Subscription.Status"  # type: ignore
         active_since: datetime
-        active_until: Optional[datetime]
-        requested_cancel_at: Optional[datetime]
+        active_until: datetime | None
+        requested_cancel_at: datetime | None
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
 
@@ -602,7 +601,7 @@ class AbstractSubscription(models.Model):
         return self.active_users.count()
 
     def get_active_package(self, package_type: PackageType) -> Package:
-        storage_package_qs = self.packages.active().filter(type=package_type)
+        storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
 
         return storage_package_qs.first()
 
@@ -611,7 +610,7 @@ class AbstractSubscription(models.Model):
         return package.quantity if package else 0
 
     def get_future_package(self, package_type: PackageType) -> Package:
-        storage_package_qs = self.packages.future().filter(type=package_type)
+        storage_package_qs = self.packages.future().filter(type=package_type)  # type: ignore
 
         return storage_package_qs.first()
 
@@ -646,14 +645,14 @@ class AbstractSubscription(models.Model):
             # delete future packages for that subscription, as we would create a new one if needed
             # NOTE first delete the future package and then create the new one,
             # otherwise the active period overlap constraint will complain
-            Package.objects.future().filter(
+            Package.objects.future().filter(  # type: ignore
                 subscription=self,
                 type=package_type,
             ).delete()
 
             try:
                 old_package = (
-                    Package.objects.active()
+                    Package.objects.active()  # type: ignore
                     .select_for_update()
                     .get(
                         subscription=self,
@@ -688,7 +687,7 @@ class AbstractSubscription(models.Model):
         TODO Python 3.11 the actual return type is Self
         """
         try:
-            subscription = cls.objects.current().get(account_id=account.pk)
+            subscription = cls.objects.current().get(account_id=account.pk)  # type: ignore
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
@@ -724,14 +723,16 @@ class AbstractSubscription(models.Model):
             return subscription
 
         with transaction.atomic():
-            cls.objects.select_for_update().get(id=subscription.id)
+            cls.objects.select_for_update().get(id=subscription.id)  # type: ignore
             update_fields = []
 
             if (
                 subscription.active_since is None
                 and kwargs.get("active_since") is not None
             ):
-                cls.objects.current().filter(account=subscription.account,).exclude(
+                cls.objects.current().filter(
+                    account=subscription.account,
+                ).exclude(  # type: ignore
                     pk=subscription.pk,
                 ).update(
                     status=Subscription.Status.INACTIVE_CANCELLED,
@@ -751,7 +752,7 @@ class AbstractSubscription(models.Model):
     @classmethod
     def create_default_plan_subscription(
         cls, account: UserAccount, active_since: datetime = None
-    ) -> "Subscription":
+    ) -> "AbstractSubscription":
         """Creates the default subscription for a given account.
 
         Args:
@@ -793,18 +794,18 @@ class AbstractSubscription(models.Model):
         account: UserAccount,
         plan: Plan,
         created_by: Person,
-        active_since: Optional[datetime] = None,
-    ) -> Tuple["Subscription", "Subscription"]:
+        active_since: datetime | None = None,
+    ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
             plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
             created_by (Person): created by.
-            active_since (Optional[datetime]): active since for the subscription.
+            active_since (datetime | None): active since for the subscription.
 
         Returns:
-            Tuple[Subscription, Subscription]: the created trial subscription if the given plan was a trial and the regular subscription.
+            tuple[AbstractSubscription | None, AbstractSubscription]: the created trial subscription if the given plan was a trial and the regular subscription.
 
         TODO Python 3.11 the actual return type is Self
         """
@@ -812,6 +813,7 @@ class AbstractSubscription(models.Model):
             # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
 
+        regular_active_since: datetime | None = None
         if plan.is_trial:
             assert isinstance(
                 active_since, datetime

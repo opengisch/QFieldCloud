@@ -9,7 +9,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("subscription", "0002_populate_plans"),
         ("core", "0054_project_last_package"),

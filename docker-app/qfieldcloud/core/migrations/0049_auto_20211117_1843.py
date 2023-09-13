@@ -21,7 +21,6 @@ def fill_in_last_apply_attempt_at(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0048_useraccount_notifs_frequency"),
     ]

@@ -1,7 +1,5 @@
 import os
-from typing import Optional
 
-from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
@@ -16,19 +14,18 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     Team,
+    User,
 )
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-User = get_user_model()
 
-
-def get_avatar_url(user: User) -> Optional[str]:
-    if hasattr(user, "useraccount") and user.useraccount.avatar_url:
-        site = Site.objects.get_current()
+def get_avatar_url(user: User) -> str | None:
+    if hasattr(user, "useraccount") and user.useraccount.avatar_url:  # type: ignore
+        site = Site.objects.get_current()  # type: ignore
         port = os.environ.get("WEB_HTTPS_PORT")
         port = f":{port}" if port != "443" else ""
-        return f"https://{site.domain}{port}{user.useraccount.avatar_url}"
+        return f"https://{site.domain}{port}{user.useraccount.avatar_url}"  # type: ignore
     return None
 
 
@@ -363,11 +360,11 @@ class JobMixin:
 
         return internal_data
 
-    def get_lastest_not_finished_job(self) -> Optional[Job]:
+    def get_lastest_not_finished_job(self) -> Job | None:
         ModelClass: Job = self.Meta.model
         last_active_job = (
             ModelClass.objects.filter(
-                project=self.initial_data.get("project_id"),
+                project=self.initial_data.get("project_id"),  # type: ignore
                 status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
             )
             .only("id")
@@ -407,7 +404,7 @@ class JobMixin:
 
 
 class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
-    def get_lastest_not_finished_job(self) -> Optional[Job]:
+    def get_lastest_not_finished_job(self) -> Job | None:
         job = super().get_lastest_not_finished_job()
         if job:
             return job

@@ -50,7 +50,6 @@ def create_role_and_db(geodb):
     """
 
     with GeodbConnection() as conn:
-
         # CREATE DATABASE cannot run inside a transaction block
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 

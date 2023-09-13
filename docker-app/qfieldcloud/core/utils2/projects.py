@@ -53,7 +53,7 @@ def create_collaborator(
 
 def create_collaborator_by_username_or_email(
     project: Project, username: str, created_by: Person
-):
+) -> tuple[bool, str]:
     """Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible
 
     Args:
@@ -62,7 +62,7 @@ def create_collaborator_by_username_or_email(
         created_by (Person): the user that initiated the collaborator creation
 
     Returns:
-        Tuple[bool, str]: success, message - whether the collaborator creation was success and explanation message of the outcome
+        tuple[bool, str]: success, message - whether the collaborator creation was success and explanation message of the outcome
     """
     success, message = False, ""
     users = list(
@@ -81,11 +81,9 @@ def create_collaborator_by_username_or_email(
             username
         )
     elif users[0].is_organization:
-        message = (
-            _(
-                'Organization "{}" cannot be added. Only users and teams can be collaborators.'
-            ).format(username),
-        )
+        message = _(
+            'Organization "{}" cannot be added. Only users and teams can be collaborators.'
+        ).format(username)
     else:
         success, message = create_collaborator(project, users[0], created_by)
 
