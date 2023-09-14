@@ -14,7 +14,6 @@ import mypy_boto3_s3
 from botocore.errorfactory import ClientError
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
-from redis import Redis, exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -83,18 +82,6 @@ class S3ObjectWithVersions(NamedTuple):
         """Total size of all versions"""
         # latest is also in versions
         return sum(v.size for v in self.versions if v.size is not None)
-
-
-def redis_is_running() -> bool:
-    try:
-        connection = Redis(
-            "redis", password=os.environ.get("REDIS_PASSWORD"), port=6379
-        )
-        connection.set("foo", "bar")
-    except exceptions.ConnectionError:
-        return False
-
-    return True
 
 
 def get_s3_session() -> boto3.Session:

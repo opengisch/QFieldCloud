@@ -3,7 +3,6 @@ import os
 from time import sleep, time
 
 import psycopg2
-import redis
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -41,26 +40,3 @@ def wait_for_postgres():
 
 
 wait_for_postgres()
-
-
-def wait_for_redis():
-    logger.info("Waiting for redis...")
-    start_time = time()
-    while time() - start_time < TIMEOUT:
-        logger.info("Waiting for redis...")
-        try:
-            r = redis.Redis(
-                host="redis", password=os.environ.get("REDIS_PASSWORD"), db=0
-            )
-            if not r.ping():
-                raise Exception
-            logger.info("Redis is ready! ✨ 💅")
-            return True
-        except Exception as e:
-            logger.info("Redis isn't ready.\n%s" % e)
-        sleep(INTERVAL)
-
-    return False
-
-
-wait_for_redis()

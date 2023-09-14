@@ -51,6 +51,6 @@ repos:
     rev: 'v1.5.1'
     hooks:
       - id: mypy
-        additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-redis, types-tabulate, types-jsonschema, django-stubs]
+        additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs]
         pass_filenames: false
-        entry: bash -c 'mypy -p docker-qgis -p docker-app -p docker-redis "$@"' --
+        entry: bash -c 'mypy -p docker-qgis -p docker-app "$@"' --
