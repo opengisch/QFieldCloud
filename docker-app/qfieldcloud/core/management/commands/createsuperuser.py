@@ -1,5 +1,6 @@
-from django.contrib.auth.management.commands.createsuperuser import Command as SuperUserCommand
-
+from django.contrib.auth.management.commands.createsuperuser import (
+    Command as SuperUserCommand,
+)
 from qfieldcloud.core.models import Person
 
 
