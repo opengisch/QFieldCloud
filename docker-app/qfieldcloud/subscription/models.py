@@ -836,10 +836,12 @@ class AbstractSubscription(models.Model):
 
             if (
                 account.user.is_organization
-                and account.user.owner.remaining_trial_organizations > 0
+                and account.user.organization_owner.remaining_trial_organizations > 0
             ):
-                account.user.owner.remaining_trial_organizations -= 1
-                account.user.owner.save(update_fields=["remaining_trial_organizations"])
+                account.user.organization_owner.remaining_trial_organizations -= 1
+                account.user.organization_owner.save(
+                    update_fields=["remaining_trial_organizations"]
+                )
 
             # the trial plan should be the default plan
             regular_plan = Plan.objects.get(
