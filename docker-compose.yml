@@ -148,7 +148,7 @@ services:
       args:
         REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
-    expose:
+    ports:
       - "6379:6379"
     logging: *default-logging
 
@@ -191,7 +191,7 @@ services:
 
   memcached:
     image: memcached:1
-    expose:
+    ports:
       - "11211:11211"
 
 volumes:
