@@ -764,6 +764,8 @@ class QfcTestCase(APITransactionTestCase):
         u2.refresh_from_db()
         self.assertEqual(u2.remaining_trial_organizations, 0)
 
+        # NOTE changing ownership does not affect the `remaining_trial_organizations` and is not tested
+
     def test_project_lists_duplicates_if_multiple_subscriptions(self):
         u1 = Person.objects.create(username="u1")
         old_subscription = u1.useraccount.current_subscription
