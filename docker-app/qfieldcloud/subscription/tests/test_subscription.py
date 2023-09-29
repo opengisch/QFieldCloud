@@ -748,7 +748,7 @@ class QfcTestCase(APITransactionTestCase):
         u2.refresh_from_db()
         self.assertEqual(u2.remaining_trial_organizations, 1)
         u1.refresh_from_db()
-        self.assertEqual(u2.remaining_trial_organizations, 2)
+        self.assertEqual(u1.remaining_trial_organizations, 2)
 
         # remaining_trial_organizations is decremented down to 0
         Organization.objects.create(
