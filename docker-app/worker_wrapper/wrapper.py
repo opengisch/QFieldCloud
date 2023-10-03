@@ -602,9 +602,14 @@ class ProcessProjectfileJobRun(JobRun):
 def cancel_orphaned_workers() -> None:
     client: DockerClient = docker.from_env()
 
-    running_workers: list[Container] = client.containers.list(
-        filters={"label": f"app={settings.ENVIRONMENT}_worker"},
-    )
+    try:
+        running_workers: list[Container] = client.containers.list(
+            filters={"label": f"app={settings.ENVIRONMENT}_worker"},
+        )
+    except docker.errors.NotFound:
+        # We don't mind empty references since they mean there is no
+        # orphan to cancel.
+        return
 
     if len(running_workers) == 0:
         return
