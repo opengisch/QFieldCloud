@@ -834,9 +834,14 @@ class AbstractSubscription(models.Model):
             # NOTE to get annotations, mostly `is_active`
             trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
 
-            if created_by.remaining_trial_organizations > 0:
-                created_by.remaining_trial_organizations -= 1
-                created_by.save(update_fields=["remaining_trial_organizations"])
+            if (
+                account.user.is_organization
+                and account.user.organization_owner.remaining_trial_organizations > 0
+            ):
+                account.user.organization_owner.remaining_trial_organizations -= 1
+                account.user.organization_owner.save(
+                    update_fields=["remaining_trial_organizations"]
+                )
 
             # the trial plan should be the default plan
             regular_plan = Plan.objects.get(
@@ -854,10 +859,11 @@ class AbstractSubscription(models.Model):
             # NOTE in case the user had a custom amount set (e.g manually set by support) this will
             # be overwritten by a subscription plan change.
             # But taking care of this would add quite some complexity.
-            created_by.remaining_trial_organizations = (
-                regular_plan.max_trial_organizations
-            )
-            created_by.save(update_fields=["remaining_trial_organizations"])
+            if account.user.is_person:
+                account.user.remaining_trial_organizations = (
+                    regular_plan.max_trial_organizations
+                )
+                account.user.save(update_fields=["remaining_trial_organizations"])
 
         logger.info(f"Creating regular subscription from {regular_active_since}")
         regular_subscription = cls.objects.create(
