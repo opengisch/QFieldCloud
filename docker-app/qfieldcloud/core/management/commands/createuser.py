@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from qfieldcloud.core.models import Person
 from django.core.management.base import BaseCommand
 
 
@@ -26,9 +26,8 @@ class Command(BaseCommand):
         email = options.get("email")
         is_superuser = options.get("superuser")
         try:
-            User = get_user_model()
-            if not User.objects.filter(username=username).exists():
-                User.objects.create_user(
+            if not Person.objects.filter(username=username).exists():
+                Person.objects.create_user(
                     username=username,
                     email=email,
                     password=password,
