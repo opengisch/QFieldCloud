@@ -42,14 +42,19 @@ urlpatterns = [
         name="index",
     ),
     path(
-        "schema/",
+        "swagger.yaml",
         SpectacularAPIView.as_view(),
-        name="schema",
+        name="openapi_schema",
     ),
     path(
         "swagger/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
-        name="schema-swagger-ui",
+        SpectacularSwaggerView.as_view(url_name="openapi_schema"),
+        name="openapi_swaggerui",
+    ),
+    path(
+        "docs/",
+        SpectacularRedocView.as_view(url_name="openapi_schema"),
+        name="openapi_redoc",
     ),
     path(
         settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:projectid>/",
@@ -65,11 +70,6 @@ urlpatterns = [
         name="project_file_download",
     ),
     path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
-    path(
-        "docs/",
-        SpectacularRedocView.as_view(url_name="schema"),
-        name="schema-redoc",
-    ),
     path("api/v1/auth/login/", auth_views.LoginView.as_view()),
     path("api/v1/auth/token/", auth_views.LoginView.as_view()),
     path("api/v1/auth/user/", auth_views.UserView.as_view()),
