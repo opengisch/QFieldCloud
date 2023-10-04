@@ -776,6 +776,9 @@ class AbstractSubscription(models.Model):
         else:
             created_by = account.user
 
+        if not isinstance(created_by, Person):
+            created_by = Person.objects.get(pk=created_by.pk)
+
         if active_since is None:
             active_since = timezone.now()
 

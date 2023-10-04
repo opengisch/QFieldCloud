@@ -68,7 +68,6 @@ CACHES = {
 INSTALLED_APPS = [
     # django contrib
     "django.contrib.admin",
-    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.gis",
     "django.contrib.sessions",
@@ -96,6 +95,8 @@ INSTALLED_APPS = [
     "auditlog",
     # Local
     "qfieldcloud.core",
+    # listed after core because we overwrite createsuperuser command
+    "django.contrib.auth",
     "qfieldcloud.subscription",
     "qfieldcloud.notifs",
     "qfieldcloud.authentication",
