@@ -1,5 +1,5 @@
-from qfieldcloud.core.models import Person
 from django.core.management.base import BaseCommand
+from qfieldcloud.core.models import Person
 
 
 class Command(BaseCommand):
