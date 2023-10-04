@@ -9,11 +9,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         results = {}
 
-        results["redis"] = "ok"
-        # Check if redis is visible
-        if not utils.redis_is_running():
-            results["redis"] = "error"
-
         results["geodb"] = "ok"
         # Check geodb
         if not geodb_utils.geodb_is_running():
