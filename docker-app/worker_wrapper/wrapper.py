@@ -610,6 +610,10 @@ def cancel_orphaned_workers() -> None:
         # We don't mind empty references since they mean there is no
         # orphan to cancel.
         return
+    except docker.errors.APIError as api_error:
+        # Some APIErrors are actually NotFound in disguise. But let's log for good measure.
+        logger.warning(f"Tried to cancel orphans, bumped into: {api_error}. Aborted.")
+        return
 
     if len(running_workers) == 0:
         return
