@@ -44,7 +44,7 @@ jobs:
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
 
-      - name: Check env vars coniguration
+      - name: Check env vars configuration
         run: |
           scripts/check_envvars.sh
 
