@@ -48,6 +48,14 @@ class AuthenticationFailedError(QFieldCloudException):
     status_code = status.HTTP_401_UNAUTHORIZED
 
 
+class AuthenticationViaTokenFailedError(QFieldCloudException):
+    """Raised when QFieldCloud incoming request includes incorrect authentication token."""
+
+    code = "token_authentication_failed"
+    message = "Token authentication failed"
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+
 class NotAuthenticatedError(QFieldCloudException):
     """Raised when QFieldCloud unauthenticated request fails the permission checks."""
 
