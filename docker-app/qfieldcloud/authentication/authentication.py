@@ -4,11 +4,11 @@ from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from qfieldcloud.core.models import User
-from rest_framework import exceptions
 from rest_framework.authentication import (
     TokenAuthentication as DjangoRestFrameworkTokenAuthentication,
 )
 
+from ..core.exceptions import AuthenticationViaTokenFailedError
 from .models import AuthToken
 
 
@@ -54,13 +54,13 @@ class TokenAuthentication(DjangoRestFrameworkTokenAuthentication):
         try:
             token = model.objects.get(key=key)
         except model.DoesNotExist:
-            raise exceptions.AuthenticationFailed(_("Invalid token."))
+            raise AuthenticationViaTokenFailedError(_("Invalid token."))
 
         if not token.is_active:
-            raise exceptions.AuthenticationFailed(_("Token has expired."))
+            raise AuthenticationViaTokenFailedError(_("Token has expired."))
 
         if not token.user.is_active:
-            raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
+            raise AuthenticationViaTokenFailedError(_("User inactive or deleted."))
 
         # update the token last used time
         # NOTE the UPDATE may be performed already on the `token = model.objects.get(key=key)`, but we lose "token has expired" exception.
