@@ -99,11 +99,3 @@ jobs:
           tags: |
             opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.docker_tag }}
             opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.docker_commit }}
-
-      - name: Trigger deployment on private repository
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: ${{ secrets.GIT_ACCESS_TOKEN }}
-          repository: opengisch/qfieldcloud-private
-          event-type: public_dispatch
-          client-payload: '{"version": "${{ steps.prepare.outputs.docker_tag }}"}'
