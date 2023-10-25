@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - docker_tags
     tags:
       - "v*.*.*"
 jobs:
