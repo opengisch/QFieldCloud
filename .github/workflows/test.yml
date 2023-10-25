@@ -1,7 +1,14 @@
 name: Test
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
+    branches:
+      - master
+      - release
   pull_request:
 
 jobs:
