@@ -21,7 +21,7 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
           fi
           TAG=${VERSION}
-          echo ::set-output name=tag::${TAG}
+          echo ::set-output name=docker_tag::${TAG}
           git submodule update --init --recursive --depth 1
 
       - name: Set up Docker Buildx
@@ -61,7 +61,7 @@ jobs:
           context: ./docker-app
           file: ./docker-app/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-app:${{ steps.prepare.outputs.tag }}
+          tags: opengisch/qfieldcloud-app:${{ steps.prepare.outputs.docker_tag }}
 
       - name: Docker Build and Push Worker
         id: docker_build_and_push_worker
@@ -72,7 +72,7 @@ jobs:
           context: ./docker-app
           file: ./docker-app/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-worker-wrapper:${{ steps.prepare.outputs.tag }}
+          tags: opengisch/qfieldcloud-worker-wrapper:${{ steps.prepare.outputs.docker_tag }}
 
       # QGIS
       - name: Docker Test QGIS
@@ -91,7 +91,7 @@ jobs:
           context: ./docker-qgis
           file: ./docker-qgis/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.tag }}
+          tags: opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.docker_tag }}
 
       - name: Trigger deployment on private repository
         uses: peter-evans/repository-dispatch@v1
@@ -99,4 +99,4 @@ jobs:
           token: ${{ secrets.GIT_ACCESS_TOKEN }}
           repository: opengisch/qfieldcloud-private
           event-type: public_dispatch
-          client-payload: '{"version": "${{ steps.prepare.outputs.tag }}"}'
+          client-payload: '{"version": "${{ steps.prepare.outputs.docker_tag }}"}'
