@@ -21,7 +21,7 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
           fi
           TAG=${VERSION}
-          echo ::set-output name=docker_tag::${TAG}
+          echo "docker_tag=${TAG}" >> $GITHUB_OUTPUT
           git submodule update --init --recursive --depth 1
 
       - name: Set up Docker Buildx
