@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import sys
 import tempfile
 import traceback
@@ -222,6 +223,8 @@ class JobRun:
             self.job.project.refresh_from_db()
 
             self.after_docker_run()
+
+            shutil.rmtree(str(self.shared_tempdir), ignore_errors=True)
 
             self.job.finished_at = timezone.now()
             self.job.status = Job.Status.FINISHED
