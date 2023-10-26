@@ -1,7 +1,14 @@
 name: Test
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
+    branches:
+      - master
+      - release
   pull_request:
 
 jobs:
@@ -44,7 +51,7 @@ jobs:
         run: |
           ln -s docker-compose.override.local.yml docker-compose.override.yml
 
-      - name: Check env vars coniguration
+      - name: Check env vars configuration
         run: |
           scripts/check_envvars.sh
 
@@ -83,9 +90,9 @@ jobs:
             Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
           gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
 
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
-        with:
-          limit-access-to-actor: true
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
+      #   timeout-minutes: 30
+      #   with:
+      #     limit-access-to-actor: true

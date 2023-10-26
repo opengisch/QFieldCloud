@@ -15,13 +15,13 @@ jobs:
       - name: Prepare
         id: prepare
         run: |
-          VERSION="latest"
-          TAG=""
+          TAG="latest"
+          COMMIT="commit-$(git rev-parse --short ${{ github.sha }})"
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
+            TAG=${GITHUB_REF#refs/tags/v}
           fi
-          TAG=${VERSION}
-          echo ::set-output name=tag::${TAG}
+          echo "docker_tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "docker_commit=${COMMIT}" >> $GITHUB_OUTPUT
           git submodule update --init --recursive --depth 1
 
       - name: Set up Docker Buildx
@@ -61,7 +61,9 @@ jobs:
           context: ./docker-app
           file: ./docker-app/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-app:${{ steps.prepare.outputs.tag }}
+          tags: |
+            opengisch/qfieldcloud-app:${{ steps.prepare.outputs.docker_tag }}
+            opengisch/qfieldcloud-app:${{ steps.prepare.outputs.docker_commit }}
 
       - name: Docker Build and Push Worker
         id: docker_build_and_push_worker
@@ -72,26 +74,9 @@ jobs:
           context: ./docker-app
           file: ./docker-app/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-worker-wrapper:${{ steps.prepare.outputs.tag }}
-
-      # Redis
-      - name: Docker Test Redis
-        id: docker_test_redis
-        uses: docker/build-push-action@v2
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: ./docker-redis
-          file: ./docker-redis/Dockerfile
-
-      - name: Docker Build and Push Redis
-        id: docker_build_and_push_redis
-        uses: docker/build-push-action@v2
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: ./docker-redis
-          file: ./docker-redis/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-redis:${{ steps.prepare.outputs.tag }}
+          tags: |
+            opengisch/qfieldcloud-worker-wrapper:${{ steps.prepare.outputs.docker_tag }}
+            opengisch/qfieldcloud-worker-wrapper:${{ steps.prepare.outputs.docker_commit }}
 
       # QGIS
       - name: Docker Test QGIS
@@ -110,12 +95,6 @@ jobs:
           context: ./docker-qgis
           file: ./docker-qgis/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.tag }}
-
-      - name: Trigger deployment on private repository
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: ${{ secrets.GIT_ACCESS_TOKEN }}
-          repository: opengisch/qfieldcloud-private
-          event-type: public_dispatch
-          client-payload: '{"version": "${{ steps.prepare.outputs.tag }}"}'
+          tags: |
+            opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.docker_tag }}
+            opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.docker_commit }}

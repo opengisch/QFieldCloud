@@ -18,7 +18,6 @@ services:
     command: python3 -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000
     depends_on:
       - db
-      - redis
 
   worker_wrapper:
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
@@ -61,10 +60,6 @@ services:
     ports:
       - ${HOST_POSTGRES_PORT}:5432
     command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
-
-  redis:
-    ports:
-      - "${REDIS_PORT}:6379"
 
   memcached:
     ports:

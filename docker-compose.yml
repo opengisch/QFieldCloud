@@ -49,7 +49,6 @@ services:
       STORAGE_REGION_NAME: ${STORAGE_REGION_NAME}
       STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL}
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
       GEODB_HOST: ${GEODB_HOST}
       GEODB_PORT: ${GEODB_PORT}
       GEODB_USER: ${GEODB_USER}
@@ -87,8 +86,6 @@ services:
       ofelia.job-exec.runcrons.no-overlap: "true"
       ofelia.job-exec.runcrons.schedule: "@every 1m"
       ofelia.job-exec.runcrons.command: python manage.py runcrons
-    depends_on:
-      - redis
 
   nginx:
     image: nginx:stable
@@ -139,17 +136,6 @@ services:
       network: host
     tty: true
     command: bash -c "echo QGIS built"
-    logging: *default-logging
-
-  redis:
-    build:
-      context: ./docker-redis
-      network: host
-      args:
-        REDIS_PASSWORD: ${REDIS_PASSWORD}
-    restart: unless-stopped
-    expose:
-      - "6379:6379"
     logging: *default-logging
 
   worker_wrapper:

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import sys
 import tempfile
 import traceback
@@ -222,6 +223,8 @@ class JobRun:
             self.job.project.refresh_from_db()
 
             self.after_docker_run()
+
+            shutil.rmtree(str(self.shared_tempdir), ignore_errors=True)
 
             self.job.finished_at = timezone.now()
             self.job.status = Job.Status.FINISHED
@@ -602,9 +605,14 @@ class ProcessProjectfileJobRun(JobRun):
 def cancel_orphaned_workers() -> None:
     client: DockerClient = docker.from_env()
 
-    running_workers: list[Container] = client.containers.list(
-        filters={"label": f"app={settings.ENVIRONMENT}_worker"},
-    )
+    try:
+        running_workers: list[Container] = client.containers.list(
+            filters={"label": f"app={settings.ENVIRONMENT}_worker"},
+        )
+    except docker.errors.NotFound:
+        # We don't mind empty references since they mean there is no
+        # orphan to cancel.
+        return
 
     if len(running_workers) == 0:
         return

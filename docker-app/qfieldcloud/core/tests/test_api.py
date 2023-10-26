@@ -36,7 +36,6 @@ class QfcTestCase(APITransactionTestCase):
     def test_api_status(self):
         response = self.client.get("/api/v1/status/")
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.json()["redis"], "ok")
         self.assertEqual(response.json()["storage"], "ok")
         self.assertEqual(response.json()["geodb"], "ok")
 

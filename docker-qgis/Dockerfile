@@ -1,4 +1,4 @@
-FROM qgis/qgis:final-3_30_3
+FROM qgis/qgis:final-3_32_3
 
 RUN apt-get update \
     && apt-get upgrade -y \
