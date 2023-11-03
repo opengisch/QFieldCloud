@@ -11,6 +11,7 @@ import qfieldcloud.qgis.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.project import ProjectConfiguration
 from libqfieldsync.utils.file_utils import get_project_in_folder
+from libqfieldsync.utils.qgis import set_bad_layer_handler
 from qfieldcloud.qgis.utils import (
     Step,
     StepOutput,
@@ -43,6 +44,8 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
 
     if not project.read(str(project_filename)):
         raise Exception(f"Unable to open file with QGIS: {project_filename}")
+
+    set_bad_layer_handler(project)
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
