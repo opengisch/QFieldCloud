@@ -654,6 +654,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                 "QFieldSync/unsupported_source_pk"
             ),
             "is_valid": layer.isValid(),
+            "is_localized": layer_source.is_localized_path,
             "datasource": datasource,
             "type": layer.type(),
             "type_name": layer.type().name,
@@ -678,7 +679,10 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                 # there might be another reason why the layer is not valid, other than the data provider
                 layers_by_id[layer_id]["error_code"] = "invalid_layer"
             else:
-                layers_by_id[layer_id]["error_code"] = "invalid_dataprovider"
+                if layer_source.is_localized_path:
+                    layers_by_id[layer_id]["error_code"] = "localized_dataprovider"
+                else:
+                    layers_by_id[layer_id]["error_code"] = "invalid_dataprovider"
 
             layers_by_id[layer_id]["provider_error_summary"] = (
                 data_provider_error.summary()
