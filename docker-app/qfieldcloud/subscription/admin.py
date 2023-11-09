@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib import admin
-from django.contrib.admin import register
 from django.http import HttpRequest
 from django.utils.translation import gettext as _
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, model_admin_url
@@ -8,7 +7,6 @@ from qfieldcloud.core.admin import QFieldCloudModelAdmin, model_admin_url
 from .models import PackageType, Plan, Subscription
 
 
-@register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = [
         "code",
@@ -20,7 +18,6 @@ class PlanAdmin(admin.ModelAdmin):
     ]
 
 
-@register(PackageType)
 class PackageTypeAdmin(admin.ModelAdmin):
     list_display = [
         "code",
@@ -160,4 +157,6 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         return super().save_model(request, obj, form, change)
 
 
+admin.site.register(Plan, PlanAdmin)
+admin.site.register(PackageType, PackageTypeAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
