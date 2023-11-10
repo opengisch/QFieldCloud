@@ -598,6 +598,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "status_code",
         "project_filename",
         "file_storage_bytes",
+        "storage_keep_versions",
         "created_at",
         "updated_at",
         "data_last_updated_at",
@@ -625,6 +626,15 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     autocomplete_fields = ("owner",)
 
     ordering = ("-updated_at",)
+
+    def get_form(self, *args, **kwargs):
+        help_texts = {
+            "file_storage_bytes": _(
+                "Use this value to limit the maximum number of file versions. When empty current plan's default will be used. Usually availlable to Premium users only."
+            )
+        }
+        kwargs.update({"help_texts": help_texts})
+        return super().get_form(*args, **kwargs)
 
     def get_search_results(self, request, queryset, search_term):
         filters = search_parser(
