@@ -99,7 +99,20 @@ class ModelAdminEstimateCountMixin:
 class QFieldCloudModelAdmin(  # type: ignore
     ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, admin.ModelAdmin
 ):
-    pass
+    def has_delete_permission(self, request, obj=None):
+        """Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
+
+        If one tries to delete a Project with already ran Jobs, they cannot, because the Job ModelAdmin has  def has_delete_permission: return True .
+        """
+        if hasattr(self, "has_direct_delete_permission"):
+            perm = f"admin:{self.model._meta.app_label}_{self.model._meta.model_name}"
+            if request.resolver_match.view_name.startswith(perm):
+                if callable(self.has_direct_delete_permission):
+                    return self.has_direct_delete_permission()
+                else:
+                    return self.has_direct_delete_permission
+
+        return super().has_delete_permission(request, obj)
 
 
 def admin_urlname_by_obj(value, arg):
@@ -312,11 +325,9 @@ def format_pre_json(value):
 class GeodbInline(admin.TabularInline):
     model = Geodb
     extra = 0
+    has_direct_delete_permission = False
 
     def has_add_permission(self, request, obj):
-        return False
-
-    def has_delete_permission(self, request, obj):
         return False
 
     def has_change_permission(self, request, obj):
@@ -332,7 +343,7 @@ class MemberOrganizationInline(admin.TabularInline):
             return True
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
-    def has_delete_permission(self, request, obj):
+    def has_direct_delete_permission(self, request, obj):
         if obj is None:
             return True
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
@@ -352,7 +363,7 @@ class MemberTeamInline(admin.TabularInline):
             return True
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
-    def has_delete_permission(self, request, obj):
+    def has_direct_delete_permission(self, request, obj):
         if obj is None:
             return True
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
@@ -366,12 +377,10 @@ class MemberTeamInline(admin.TabularInline):
 class UserAccountInline(admin.StackedInline):
     model = UserAccount
     extra = 1
+    has_direct_delete_permission = False
 
     def has_add_permission(self, request, obj):
         return obj is None
-
-    def has_delete_permission(self, request, obj):
-        return False
 
 
 class ProjectInline(admin.TabularInline):
@@ -380,14 +389,12 @@ class ProjectInline(admin.TabularInline):
 
     fields = ("owned_project", "is_public", "overwrite_conflicts")
     readonly_fields = ("owned_project",)
+    has_direct_delete_permission = False
 
     def owned_project(self, obj):
         return model_admin_url(obj, obj.name)
 
     def has_add_permission(self, request, obj):
-        return False
-
-    def has_delete_permission(self, request, obj):
         return False
 
     def has_change_permission(self, request, obj):
@@ -403,7 +410,7 @@ class UserProjectCollaboratorInline(admin.TabularInline):
             return True
         return obj.type == User.Type.PERSON
 
-    def has_delete_permission(self, request, obj):
+    def has_direct_delete_permission(self, request, obj):
         if obj is None:
             return True
         return obj.type == User.Type.PERSON
@@ -683,11 +690,9 @@ class DeltaInline(admin.TabularInline):
         # TODO find a way to use dynamic fields
         # "feedback__pre",
     )
+    has_direct_delete_permission = False
 
     def has_add_permission(self, request, obj):
-        return False
-
-    def has_delete_permission(self, request, obj):
         return False
 
     # def feedback__pre(self, instance):
@@ -760,6 +765,7 @@ class JobAdmin(QFieldCloudModelAdmin):
         "output__pre",
         "feedback__pre",
     )
+    has_direct_delete_permission = False
 
     def get_queryset(self, request):
         return super().get_queryset(request).defer("output", "feedback")
@@ -826,9 +832,6 @@ class JobAdmin(QFieldCloudModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
-
     def output__pre(self, instance):
         return format_pre(instance.output)
 
@@ -870,6 +873,7 @@ class ApplyJobDeltaInline(admin.TabularInline):
         "status",
         "output__pre",
     )
+    has_direct_delete_permission = False
 
     def job_id(self, instance):
         return model_admin_url(instance.apply_job)
@@ -878,9 +882,6 @@ class ApplyJobDeltaInline(admin.TabularInline):
         return format_pre_json(instance.output)
 
     def has_add_permission(self, request, obj):
-        return False
-
-    def has_delete_permission(self, request, obj):
         return False
 
 
@@ -1121,11 +1122,9 @@ class TeamInline(admin.TabularInline):
     extra = 0
 
     fields = ("username",)
+    has_direct_delete_permission = False
 
     def has_add_permission(self, request, obj):
-        return False
-
-    def has_delete_permission(self, request, obj):
         return False
 
     def has_change_permission(self, request, obj):
