@@ -365,9 +365,8 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
-        versions = sorted(
-            response.json()[0]["versions"], key=lambda k: k["last_modified"]
-        )
+        payload = response.json()
+        versions = sorted(payload[0]["versions"], key=lambda k: k["last_modified"])
 
         self.assertEqual(len(versions), 2)
         self.assertNotEqual(versions[0]["last_modified"], versions[1]["last_modified"])
@@ -380,6 +379,7 @@ class QfcTestCase(APITransactionTestCase):
             versions[1]["sha256"],
             "fcc85fb502bd772aa675a0263b5fa665bccd5d8d93349d1dbc9f0f6394dd37b9",
         )
+        self.assertEqual(payload[0]["sha256"], versions[1]["sha256"])
 
         self.assertEqual(versions[0]["size"], 13)
         self.assertEqual(versions[1]["size"], 13)
