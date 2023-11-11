@@ -1259,7 +1259,11 @@ class TeamAdmin(QFieldCloudModelAdmin):
         obj.save()
 
     def get_form(
-        self, request: Any, obj: Any | None = None, change: bool | None = None, **kwargs: Any
+        self,
+        request: Any,
+        obj: Any | None = None,
+        change: bool | None = None,
+        **kwargs: Any,
     ) -> Any:
         if obj:
             # hide the organization prefix of the team, so the Team admin can be saved without
