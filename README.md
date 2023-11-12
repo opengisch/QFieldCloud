@@ -222,15 +222,22 @@ Run the django database migrations
     docker compose exec app python manage.py migrate
 
 
-## Create or renew a certificate using Let's Encrypt
+## Using certificate from Let's Encrypt
 
-If you are running the server on a server with a public domain, you can install Let's Encrypt certificate by running the following command:
+By default, QFieldCloud is using a self-signed certificate. For production use you should use a valid certificate.
+
+To use Let's Encrypt with certbot you just need to uncomment the following lines in your `.env`:
+
+    QFIELDCLOUD_TLS_CERT: /etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
+    QFIELDCLOUD_TLS_KEY: /etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
+
+On a server with a public domain, you then need to install Let's Encrypt certificate by running the following command:
 
     ./scripts/init_letsencrypt.sh
 
-The same command can also be used to update an expired certificate.
+The certificates will be renewed automatically. You can also use your own certificates by changing them in `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY`.
 
-Note you may want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
+Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
 
 ### Infrastructure
 

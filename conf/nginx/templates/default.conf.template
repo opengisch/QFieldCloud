@@ -57,8 +57,8 @@ server {
 server {
   listen 443 ssl;
 
-  ssl_certificate     certs/${QFIELDCLOUD_HOST}.pem;
-  ssl_certificate_key certs/${QFIELDCLOUD_HOST}-key.pem;
+  ssl_certificate     ${QFIELDCLOUD_TLS_CERT};
+  ssl_certificate_key ${QFIELDCLOUD_TLS_KEY};
 
   ssl_dhparam /etc/nginx/ssl-dhparams.pem;
   include /etc/nginx/options-ssl-nginx.conf;

@@ -33,10 +33,7 @@ docker compose run --rm --entrypoint "\
 
 echo
 
-echo "### Copy the certificate and key to their final destination ..."
-cp ${CONFIG_PATH}/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem ${CONFIG_PATH}/nginx/certs/${QFIELDCLOUD_HOST}.pem
-cp ${CONFIG_PATH}/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem ${CONFIG_PATH}/nginx/certs/${QFIELDCLOUD_HOST}-key.pem
-echo
+chmod 755 "$CONFIG_PATH/nginx/99-autoreload.sh"
 
 echo "### Reloading nginx ..."
 docker compose exec nginx nginx -s reload
