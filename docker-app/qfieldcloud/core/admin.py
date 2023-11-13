@@ -1268,6 +1268,22 @@ class TeamAdmin(QFieldCloudModelAdmin):
             obj.username = f"@{obj.team_organization.username}/{obj.username}"
         obj.save()
 
+    def get_form(
+        self,
+        request: Any,
+        obj: Any | None = None,
+        change: bool | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        if obj:
+            # hide the organization prefix of the team, so the Team admin can be saved without
+            # the need to manually edit the username
+            obj.username = obj.username.replace(
+                f"@{obj.team_organization.username}/", ""
+            )
+
+        return super().get_form(request, obj, bool(change), **kwargs)
+
 
 class InvitationAdmin(InvitationAdminBase):
     list_display = ("email", "inviter", "created", "sent", "accepted")
