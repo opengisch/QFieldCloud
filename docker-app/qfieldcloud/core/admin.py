@@ -108,7 +108,7 @@ class QFieldCloudModelAdmin(  # type: ignore
             perm = f"admin:{self.model._meta.app_label}_{self.model._meta.model_name}"
             if request.resolver_match.view_name.startswith(perm):
                 if callable(self.has_direct_delete_permission):
-                    return self.has_direct_delete_permission()
+                    return self.has_direct_delete_permission(request, obj)
                 else:
                     return self.has_direct_delete_permission
 
