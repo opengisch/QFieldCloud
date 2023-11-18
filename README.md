@@ -36,6 +36,9 @@ desire with a good editor:
     cp .env.example .env
     emacs .env
 
+
+Make sure the host's firewall allows port _8009_, required by the `minio` service. Failing to meet this requirement is likely to result in the service being unable to start.
+
 To build development images and run the containers:
 
     docker compose up -d --build
