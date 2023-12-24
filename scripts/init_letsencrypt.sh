@@ -9,10 +9,9 @@ set +o allexport
 
 CONFIG_PATH="${CONFIG_PATH:-'./conf'}"
 
-if [ ! -e "$CONFIG_PATH/nginx/options-ssl-nginx.conf" ] || [ ! -e "$CONFIG_PATH/nginx/ssl-dhparams.pem" ]; then
-  echo "### Downloading recommended TLS parameters ..."
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "$CONFIG_PATH/nginx/options-ssl-nginx.conf"
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "$CONFIG_PATH/nginx/ssl-dhparams.pem"
+if [ ! -e "$CONFIG_PATH/nginx/ssl-dhparams.pem" ]; then
+  echo "### Create DH parameters ..."
+  openssl dhparam -out "$CONFIG_PATH/nginx/ssl-dhparams.pem" 4096
   echo
 fi
 
