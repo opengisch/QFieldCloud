@@ -9,7 +9,7 @@ set +o allexport
 
 CONFIG_PATH="${CONFIG_PATH:-'./conf'}"
 
-if [ ! -e "$CONFIG_PATH/nginx/ssl-dhparams.pem" ]; then
+if [ ! -e "$CONFIG_PATH/nginx/dhparams/dhparams4096.pem" ]; then
   echo "### Create DH parameters ..."
   openssl dhparam -out "$CONFIG_PATH/nginx/dhparams/dhparams4096.pem" 4096
   echo
