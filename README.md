@@ -221,21 +221,28 @@ Run the django database migrations
 
     docker compose exec app python manage.py migrate
 
+Collect the static files
+
+    docker compose exec app python manage.py collectstatic
 
 ## Using certificate from Let's Encrypt
 
 By default, QFieldCloud is using a self-signed certificate. For production use you should use a valid certificate.
 
-To use Let's Encrypt with certbot you just need to uncomment the following lines in your `.env`:
-
-    QFIELDCLOUD_TLS_CERT: /etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
-    QFIELDCLOUD_TLS_KEY: /etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
-
-On a server with a public domain, you then need to install Let's Encrypt certificate by running the following command:
+On a server with a public domain, you should install Let's Encrypt certificate by running the following command:
 
     ./scripts/init_letsencrypt.sh
 
-The certificates will be renewed automatically. You can also use your own certificates by changing them in `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY`.
+The certificates will be renewed automatically.
+
+To use Let's Encrypt with certbot you just need to uncomment the following lines in your `.env`:
+
+    QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
+    QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
+    QFIELDCLOUD_TLS_DHPARAMS=/etc/nginx/dhparams/dhparams4096.pem
+
+You can also use your own certificates by changing them in `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY`.
+Don't forget to create your Diffie-Hellman parameters.
 
 Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
 
