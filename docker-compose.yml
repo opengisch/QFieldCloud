@@ -98,6 +98,7 @@ services:
       - ./conf/nginx/dhparams:/etc/nginx/dhparams/:ro
       - ./conf/nginx/99-autoreload.sh:/docker-entrypoint.d/99-autoreload.sh
       - ./conf/certbot/conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot
     ports:
       - ${WEB_HTTP_PORT}:80
       - ${WEB_HTTPS_PORT}:443
