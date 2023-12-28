@@ -200,6 +200,9 @@ Code style done with precommit
 
 ### Launch a server instance
 
+For small self-hosted environments you can run QFieldCloud on a single server. Therefore use `docker-compose.override.standalone.yml`.
+For large instances use dedicated DB and Storage Servers.
+
 Copy the `.env.example` into `.env` file and configure it to your
 desire with a good editor
 
@@ -207,9 +210,11 @@ desire with a good editor
     emacs .env
 
 Do not forget to set DEBUG=0 and to adapt COMPOSE_FILE to not load local
-development configurations.
+development configurations. For a standalone server use this:
 
-Create the directory for qfieldcloud logs and supervisor socket file
+    COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml
+
+If you plan to use supervisord create the directory for qfieldcloud logs and supervisor socket file
 
     mkdir /var/local/qfieldcloud
 
