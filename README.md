@@ -225,28 +225,28 @@ Collect the static files
 
     docker compose exec app python manage.py collectstatic
 
-## Using certificate from Let's Encrypt
+### Using certificate from Let's Encrypt
 
 By default, QFieldCloud is using a self-signed certificate. For production use you should use a valid certificate.
 
-On a server with a public domain, you should install Let's Encrypt certificate by running the following command:
+Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables in `.env`.
+
+On a server with a public domain, you can get a certificate issued by Let's Encrypt using certbot running the following command:
 
     ./scripts/init_letsencrypt.sh
 
 The certificates will be renewed automatically.
 
-To use Let's Encrypt with certbot you just need to uncomment the following lines in your `.env`:
+To use this Let's Encrypt certificate within QFieldCloud you just need to uncomment the following lines in your `.env`:
 
     QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
     QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
     QFIELDCLOUD_TLS_DHPARAMS=/etc/nginx/dhparams/dhparams4096.pem
 
-You can also use your own certificates by changing them in `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY`.
+You can also use your own certificates by placing them in `conf/nginx/certs/` ànd changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
 Don't forget to create your Diffie-Hellman parameters.
 
-Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
-
-### Infrastructure
+## Infrastructure
 
 Based on this example
 <https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/>
