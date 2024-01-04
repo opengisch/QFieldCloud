@@ -8,6 +8,7 @@ def replace_with_single_storage_package_type(apps, schema_editor):
     PackageType = apps.get_model("subscription", "PackageType")
     PackageType.objects.all().delete()
     PackageType.objects.create(
+        id=1,
         code="storage",
         display_name="Additional storage",
         is_public=True,
