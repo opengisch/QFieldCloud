@@ -135,6 +135,7 @@ services:
       context: ./docker-qgis
       network: host
     image: qfieldcloud-qgis
+    pull_policy: build
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
