@@ -62,7 +62,7 @@ jobs:
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
       - name: Pull docker containers
-        run: docker compose pull
+        run: docker compose pull --ignore-buildable
 
       - name: Build and run docker containers
         run: |
