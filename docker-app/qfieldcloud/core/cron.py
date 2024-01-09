@@ -1,5 +1,4 @@
 import logging
-import os
 from datetime import timedelta
 
 from constance import config
@@ -13,10 +12,6 @@ from ..core.utils2 import storage
 from .invitations_utils import send_invitation
 
 logger = logging.getLogger(__name__)
-
-QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
-
-assert QGIS_CONTAINER_NAME
 
 
 class DeleteExpiredInvitationsJob(CronJobBase):

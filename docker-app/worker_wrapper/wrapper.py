@@ -45,11 +45,11 @@ logger = logging.getLogger(__name__)
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
-QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
+QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ.get("QFIELDCLOUD_QGIS_IMAGE_NAME", None)
 QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 TMP_FILE = Path("/tmp")
 
-assert QGIS_CONTAINER_NAME
+assert QFIELDCLOUD_QGIS_IMAGE_NAME
 assert QFIELDCLOUD_HOST
 
 
@@ -265,7 +265,6 @@ class JobRun:
     def _run_docker(
         self, command: list[str], volumes: list[str], run_opts: dict[str, Any] = {}
     ) -> tuple[int, bytes]:
-        QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
         QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
         QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ.get(
             "QFIELDCLOUD_WORKER_QFIELDCLOUD_URL", None
@@ -274,7 +273,6 @@ class JobRun:
             "TRANSFORMATION_GRIDS_VOLUME_NAME", None
         )
 
-        assert QGIS_CONTAINER_NAME
         assert QFIELDCLOUD_HOST
         assert QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
         assert TRANSFORMATION_GRIDS_VOLUME_NAME
@@ -305,7 +303,7 @@ class JobRun:
         self.job.save(update_fields=["docker_started_at"])
 
         container: Container = client.containers.run(  # type:ignore
-            QGIS_CONTAINER_NAME,
+            QFIELDCLOUD_QGIS_IMAGE_NAME,
             command,
             environment={
                 "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
