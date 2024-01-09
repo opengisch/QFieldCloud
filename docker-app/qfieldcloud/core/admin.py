@@ -606,6 +606,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "project_filename",
         "file_storage_bytes",
         "storage_keep_versions",
+        "packaging_offliner",
         "created_at",
         "updated_at",
         "data_last_updated_at",
