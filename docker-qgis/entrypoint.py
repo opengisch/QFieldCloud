@@ -33,7 +33,7 @@ def _call_qfieldsync_packager(
     project_filename: Path, package_dir: Path, offliner_type: OfflinerType
 ) -> str:
     """Call the function of QFieldSync to package a project for QField"""
-    logging.info("Preparing QGIS project for packaging…")
+    logger.info("Preparing QGIS project for packaging…")
 
     project = QgsProject.instance()
     if not project_filename.exists():
@@ -49,7 +49,7 @@ def _call_qfieldsync_packager(
     vl_extent_wkt = QgsRectangle()
     vl_extent_crs = project.crs()
 
-    logging.info("Getting project area of interest…")
+    logger.info("Getting project area of interest…")
 
     if project_config.area_of_interest and project_config.area_of_interest_crs:
         vl_extent_wkt = project_config.area_of_interest
@@ -99,7 +99,7 @@ def _call_qfieldsync_packager(
         vl_extent_wkt = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs()
 
-    logging.info(
+    logger.info(
         f"Project area of interest is `{vl_extent_wkt}` in `{vl_extent_crs}` CRS."
     )
 
@@ -111,7 +111,9 @@ def _call_qfieldsync_packager(
     else:
         raise NotImplementedError(f"Offliner type {offliner_type} is not supported.")
 
-    logging.info("Packaging…")
+    logger.info(f'Offliner set to "{offliner_type.value}"')
+
+    logger.info("Packaging…")
 
     offline_converter = OfflineConverter(
         project,
@@ -129,7 +131,7 @@ def _call_qfieldsync_packager(
     offline_converter.project_configuration.create_base_map = False
     offline_converter.convert()
 
-    logging.info("Packaging finished!")
+    logger.info("Packaging finished!")
 
     packaged_project_filename = get_project_in_folder(str(package_dir))
     if Path(packaged_project_filename).stat().st_size == 0:
@@ -139,14 +141,14 @@ def _call_qfieldsync_packager(
 
 
 def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
-    logging.info("Extracting QGIS project layer data…")
+    logger.info("Extracting QGIS project layer data…")
 
     project_filename = str(project_filename)
     project = QgsProject.instance()
     project.read(project_filename)
     layers_by_id: dict = get_layers_data(project)
 
-    logging.info(
+    logger.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
     )
 
