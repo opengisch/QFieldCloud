@@ -9,6 +9,7 @@ from typing import Union
 import qfc_worker.apply_deltas
 import qfc_worker.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
+from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from libqfieldsync.utils.qgis import set_bad_layer_handler
@@ -20,13 +21,7 @@ from qfc_worker.utils import (
     get_layers_data,
     layers_data_to_string,
 )
-from qgis.core import (
-    QgsCoordinateTransform,
-    QgsOfflineEditing,
-    QgsProject,
-    QgsRectangle,
-    QgsVectorLayer,
-)
+from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle, QgsVectorLayer
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -34,7 +29,9 @@ logger = logging.getLogger("ENTRYPNT")
 logger.setLevel(logging.INFO)
 
 
-def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
+def _call_qfieldsync_packager(
+    project_filename: Path, package_dir: Path, offliner_type: OfflinerType
+) -> str:
     """Call the function of QFieldSync to package a project for QField"""
     logging.info("Preparing QGIS project for packaging…")
 
@@ -107,7 +104,12 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     )
 
     attachment_dirs, _ = project.readListEntry("QFieldSync", "attachmentDirs", ["DCIM"])
-    offline_editing = QgsOfflineEditing()
+    if offliner_type == OfflinerType.QGISCORE:
+        offliner = QgisCoreOffliner()
+    elif offliner_type == OfflinerType.PYTHONMINI:
+        offliner = PythonMiniOffliner()
+    else:
+        raise NotImplementedError(f"Offliner type {offliner_type} is not supported.")
 
     logging.info("Packaging…")
 
@@ -117,7 +119,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
         vl_extent_wkt,
         vl_extent_crs,
         attachment_dirs,
-        offline_editing,
+        offliner=offliner,
         export_type=ExportType.Cloud,
         create_basemap=False,
     )
@@ -190,6 +192,7 @@ def cmd_package_project(args: argparse.Namespace):
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                     "package_dir": WorkDirPath("export", mkdir=True),
+                    "offliner_type": args.offliner_type,
                 },
                 method=_call_qfieldsync_packager,
                 return_names=["qfield_project_filename"],
@@ -380,6 +383,12 @@ if __name__ == "__main__":
     parser_package = subparsers.add_parser("package", help="Package a project")
     parser_package.add_argument("projectid", type=str, help="projectid")
     parser_package.add_argument("project_file", type=str, help="QGIS project file path")
+    parser_package.add_argument(
+        "offliner_type",
+        type=str,
+        choices=(OfflinerType.QGISCORE, OfflinerType.PYTHONMINI),
+        default=OfflinerType.QGISCORE,
+    )
     parser_package.set_defaults(func=cmd_package_project)
 
     parser_delta = subparsers.add_parser("delta_apply", help="Apply deltafile")
