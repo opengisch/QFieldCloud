@@ -10,14 +10,14 @@ services:
       # run flush, migrate and collectstatic in entrypoint
       DEBUG: 1
       # we must use the same db for test and runserver
-      SQL_DATABASE: test_${POSTGRES_DB}
-      SQL_DATABASE_TEST: test_${POSTGRES_DB}
+      POSTGRES_DB: test_${POSTGRES_DB}
+      POSTGRES_DB_TEST: test_${POSTGRES_DB}
 
   worker_wrapper:
     environment:
       # we must use the same db for test and runserver
-      SQL_DATABASE: test_${POSTGRES_DB}
-      SQL_DATABASE_TEST: test_${POSTGRES_DB}
+      POSTGRES_DB: test_${POSTGRES_DB}
+      POSTGRES_DB_TEST: test_${POSTGRES_DB}
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   db:
