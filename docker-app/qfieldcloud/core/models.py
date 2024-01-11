@@ -1,5 +1,4 @@
 import logging
-import os
 import secrets
 import string
 import uuid
@@ -9,6 +8,7 @@ from typing import cast
 
 import django_cryptography.fields
 from deprecated import deprecated
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
@@ -518,20 +518,14 @@ def random_password() -> str:
     return secure_str
 
 
-def default_hostname() -> str:
-    return os.environ["GEODB_HOST"]
-
-
-def default_port() -> str:
-    return os.environ["GEODB_PORT"]
-
-
 class Geodb(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
-    hostname = models.CharField(blank=False, max_length=255, default=default_hostname)
-    port = models.PositiveIntegerField(default=default_port)
+    hostname = models.CharField(
+        blank=False, max_length=255, default=settings.GEODB_HOST
+    )
+    port = models.PositiveIntegerField(default=settings.GEODB_PORT)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # The password is generated but not stored into the db

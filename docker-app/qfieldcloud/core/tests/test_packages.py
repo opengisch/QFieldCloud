@@ -5,6 +5,7 @@ import tempfile
 import time
 
 import psycopg2
+from django.conf import settings
 from django.http import FileResponse
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
@@ -55,10 +56,10 @@ class QfcTestCase(APITransactionTestCase):
 
         self.conn = psycopg2.connect(
             dbname="test",
-            user=os.environ.get("GEODB_USER"),
-            password=os.environ.get("GEODB_PASSWORD"),
-            host="geodb",
-            port=5432,
+            user=settings.GEODB_USER,
+            password=settings.GEODB_PASSWORD,
+            host=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
 
     def tearDown(self):
@@ -461,8 +462,8 @@ class QfcTestCase(APITransactionTestCase):
                 "dbname=test\n"
                 "host=geodb\n"
                 "port=5432\n"
-                f"user={os.environ.get('GEODB_USER')}\n"
-                f"password={os.environ.get('GEODB_PASSWORD')}\n"
+                f"user={settings.GEODB_USER}\n"
+                f"password={settings.GEODB_PASSWORD}\n"
                 "sslmode=disable\n"
             ),
         )
@@ -477,8 +478,8 @@ class QfcTestCase(APITransactionTestCase):
                 "dbname=test\n"
                 "host=geodb\n"
                 "port=5432\n"
-                f"user={os.environ.get('GEODB_USER')}\n"
-                f"password={os.environ.get('GEODB_PASSWORD')}\n"
+                f"user={settings.GEODB_USER}\n"
+                f"password={settings.GEODB_PASSWORD}\n"
                 "sslmode=disable\n"
             ),
         )
