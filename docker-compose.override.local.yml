@@ -26,6 +26,8 @@ services:
         - DEBUG_BUILD=1
     ports:
       - ${DEBUG_DEBUGPY_WORKER_WRAPPER_PORT:-5679}:5679
+    environment:
+      QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH: ${QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -64,6 +66,11 @@ services:
   memcached:
     ports:
       - "${MEMCACHED_PORT}:11211"
+
+  qgis:
+    volumes:
+      # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
+      - ./docker-qgis/libqfieldsync:/libqfieldsync:ro
 
   geodb:
     image: postgis/postgis:12-3.0

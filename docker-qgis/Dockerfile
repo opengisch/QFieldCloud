@@ -19,6 +19,8 @@ ENV LIBC_FATAL_STDERR_=1
 # other env
 ENV LANG=C.UTF-8
 ENV XDG_RUNTIME_DIR=/root
+# allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
+ENV PYTHONPATH=/libqfieldsync:${PYTHONPATH}
 
 # upgrade `pip`. If not upgraded, installing from GitHub repo (needed for `libqfieldsync`) will result in UNKNOWN package.
 RUN pip3 install --upgrade pip
@@ -31,7 +33,8 @@ RUN pip3 install -r /tmp/requirements.txt
 COPY requirements_libqfieldsync.txt /tmp/
 RUN pip3 install --use-deprecated=legacy-resolver -r /tmp/requirements_libqfieldsync.txt
 
-
-COPY . .
+COPY schemas schemas
+COPY qfc_worker qfc_worker
+COPY entrypoint.py .
 
 ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a \"$@\"", ""]

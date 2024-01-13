@@ -272,6 +272,9 @@ class JobRun:
         TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
             "TRANSFORMATION_GRIDS_VOLUME_NAME", None
         )
+        QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH = os.environ.get(
+            "QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH", None
+        )
 
         assert QFIELDCLOUD_HOST
         assert QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
@@ -297,6 +300,10 @@ class JobRun:
 
         logger.info(f"Execute: {' '.join(command)}")
         volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
+
+        # used for local development of QFieldCloud
+        if QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH:
+            volumes.append(f"{QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}:/libqfieldsync:ro")
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
