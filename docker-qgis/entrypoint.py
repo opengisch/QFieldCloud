@@ -32,7 +32,7 @@ logger.setLevel(logging.INFO)
 def _call_qfieldsync_packager(
     project_filename: Path, package_dir: Path, offliner_type: OfflinerType
 ) -> str:
-    """Call the function of QFieldSync to package a project for QField"""
+    """Call `libqfieldsync` to package a project for QField"""
     logger.info("Preparing QGIS project for packaging…")
 
     project = QgsProject.instance()
@@ -41,8 +41,6 @@ def _call_qfieldsync_packager(
 
     if not project.read(str(project_filename)):
         raise Exception(f"Unable to open file with QGIS: {project_filename}")
-
-    set_bad_layer_handler(project)
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
@@ -145,8 +143,10 @@ def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
 
     project_filename = str(project_filename)
     project = QgsProject.instance()
-    project.read(project_filename)
-    layers_by_id: dict = get_layers_data(project)
+
+    with set_bad_layer_handler(project):
+        project.read(project_filename)
+        layers_by_id: dict = get_layers_data(project)
 
     logger.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
