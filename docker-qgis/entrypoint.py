@@ -111,7 +111,7 @@ def _call_qfieldsync_packager(
     else:
         raise NotImplementedError(f"Offliner type {offliner_type} is not supported.")
 
-    logger.info(f'Offliner set to "{offliner_type.value}"')
+    logger.info(f'Offliner set to "{offliner_type}"')
 
     logger.info("Packaging…")
 
