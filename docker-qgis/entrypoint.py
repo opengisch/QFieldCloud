@@ -11,8 +11,8 @@ import qfc_worker.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
+from libqfieldsync.utils.bad_layer_handler import set_bad_layer_handler
 from libqfieldsync.utils.file_utils import get_project_in_folder
-from libqfieldsync.utils.qgis import set_bad_layer_handler
 from qfc_worker.utils import (
     Step,
     StepOutput,
