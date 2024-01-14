@@ -944,8 +944,8 @@ class Project(models.Model):
         TOO_MANY_COLLABORATORS = "too_many_collaborators", _("Too many collaborators")
 
     class PackagingOffliner(models.TextChoices):
-        QGISCORE = "qgiscore", _("QGIS Core Offline Editing")
-        PYTHONMINI = "pythonmini", _("Optimized Offliner")
+        QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
+        PYTHONMINI = "pythonmini", _("Optimized Packager")
 
     objects = ProjectQueryset.as_manager()
 
@@ -1043,10 +1043,10 @@ class Project(models.Model):
     packaging_offliner = models.CharField(
         _("Packaging Offliner"),
         help_text=_(
-            'The packaging offliner is used withing jobs to convert QGIS projects into QField projects. The new "Optimized Offliner" should be selected over the legacy "QGIS Core Offline Editing" for new projects.'
+            'The packaging offliner is is used to package data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for newer projects.'
         ),
         max_length=100,
-        default=PackagingOffliner.PYTHONMINI,
+        default=PackagingOffliner.QGISCORE,
         choices=PackagingOffliner.choices,
     )
 

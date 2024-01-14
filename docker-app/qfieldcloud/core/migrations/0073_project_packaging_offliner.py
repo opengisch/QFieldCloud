@@ -14,13 +14,11 @@ class Migration(migrations.Migration):
             name="packaging_offliner",
             field=models.CharField(
                 choices=[
-                    ("qgiscore", "QGIS Core Offline Editing"),
-                    ("pythonmini", "Optimized Offliner"),
+                    ("qgiscore", "QGIS Core Offline Editing (deprecated)"),
+                    ("pythonmini", "Optimized Packager"),
                 ],
-                default="pythonmini",
-                help_text=(
-                    'The packaging offliner is used withing jobs to convert QGIS projects into QField projects. The new "Optimized Offliner" should be selected over the legacy "QGIS Core Offline Editing" for new projects.'
-                ),
+                default="qgiscore",
+                help_text='The packaging offliner is is used to package data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for newer projects.',
                 max_length=100,
                 verbose_name="Packaging Offliner",
             ),
