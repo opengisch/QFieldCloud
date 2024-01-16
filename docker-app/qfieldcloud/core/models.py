@@ -1043,7 +1043,7 @@ class Project(models.Model):
     packaging_offliner = models.CharField(
         _("Packaging Offliner"),
         help_text=_(
-            'The packaging offliner is is used to package data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for newer projects.'
+            'The Packaging Offliner packages data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for new projects.'
         ),
         max_length=100,
         default=PackagingOffliner.QGISCORE,
