@@ -65,18 +65,18 @@ Now you can get started by adding the first user that would also be a super user
 
 ### Tests
 
-To run all the unit and functional tests (on a throwaway test
-database and a throwaway test storage directory):
+To run all the unit and functional tests, in addition to the `.env` file, 
+also `cp .env.test.example .env.test` and configure it to your taste. 
+The `.env.test` overrides some environment variables for the test environment, however `.env` is still needed. 
+You can then launch the tests:
 
-    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
-    # (Re-)build the app service to install necessary test utilities (requirements_test.txt)
-    docker compose up -d --build
-    docker compose run app python manage.py migrate
-    docker compose run app python manage.py test --keepdb
+    docker compose --env-file .env --env-file .env.test up -d --build
+    docker compose --env-file .env --env-file .env.test run app python manage.py migrate
+    docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
 
 To run only a test module (e.g. `test_permission.py`)
 
-    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
+    docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
 
 ### Debugging
 
