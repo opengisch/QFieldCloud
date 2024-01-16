@@ -29,7 +29,7 @@ logger = logging.getLogger("ENTRYPNT")
 logger.setLevel(logging.INFO)
 
 
-def _call_qfieldsync_packager(
+def _call_libqfieldsync_packager(
     project_filename: Path, package_dir: Path, offliner_type: OfflinerType
 ) -> str:
     """Call the function of QFieldSync to package a project for QField"""
@@ -196,7 +196,7 @@ def cmd_package_project(args: argparse.Namespace):
                     "package_dir": WorkDirPath("export", mkdir=True),
                     "offliner_type": args.offliner_type,
                 },
-                method=_call_qfieldsync_packager,
+                method=_call_libqfieldsync_packager,
                 return_names=["qfield_project_filename"],
             ),
             Step(
