@@ -1,0 +1,30 @@
+[build-system]
+requires = [
+    "setuptools>=68.0",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["qfc_worker"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt", "requirements_libqfieldsync.txt"] }
+
+[project]
+name = "qfc_worker"
+description = "the QFieldCloud worker library"
+version = "1.0"
+authors = [
+    { name = "OPENGIS.ch", email = "info@opengis.ch" }
+]
+requires-python = ">=3.8"
+
+[project.urls]
+homepage = "https://github.com/opengisch/QFieldCloud"
+documentation = "https://docs.qfield.org/get-started/"
+repository = "https://github.com/opengisch/QFieldCloud"
+tracker = "https://github.com/opengisch/QFieldCloud/issues"
+
+[project.optional-dependencies]
+dev = ["pre-commit"]

@@ -6,13 +6,14 @@ import os
 from pathlib import Path
 from typing import Union
 
-import qfieldcloud.qgis.apply_deltas
-import qfieldcloud.qgis.process_projectfile
+import qfc_worker.apply_deltas
+import qfc_worker.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
+from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from libqfieldsync.utils.qgis import set_bad_layer_handler
-from qfieldcloud.qgis.utils import (
+from qfc_worker.utils import (
     Step,
     StepOutput,
     WorkDirPath,
@@ -20,13 +21,7 @@ from qfieldcloud.qgis.utils import (
     get_layers_data,
     layers_data_to_string,
 )
-from qgis.core import (
-    QgsCoordinateTransform,
-    QgsOfflineEditing,
-    QgsProject,
-    QgsRectangle,
-    QgsVectorLayer,
-)
+from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle, QgsVectorLayer
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -34,9 +29,11 @@ logger = logging.getLogger("ENTRYPNT")
 logger.setLevel(logging.INFO)
 
 
-def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
+def _call_libqfieldsync_packager(
+    project_filename: Path, package_dir: Path, offliner_type: OfflinerType
+) -> str:
     """Call the function of QFieldSync to package a project for QField"""
-    logging.info("Preparing QGIS project for packaging…")
+    logger.info("Preparing QGIS project for packaging…")
 
     project = QgsProject.instance()
     if not project_filename.exists():
@@ -52,7 +49,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     vl_extent_wkt = QgsRectangle()
     vl_extent_crs = project.crs()
 
-    logging.info("Getting project area of interest…")
+    logger.info("Getting project area of interest…")
 
     if project_config.area_of_interest and project_config.area_of_interest_crs:
         vl_extent_wkt = project_config.area_of_interest
@@ -85,9 +82,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
             logger.info("Failed to obtain the project extent from project layers.")
 
             try:
-                vl_extent = qfieldcloud.qgis.utils.extract_project_details(project)[
-                    "extent"
-                ]
+                vl_extent = qfc_worker.utils.extract_project_details(project)["extent"]
                 vl_extent = QgsRectangle.fromWkt(vl_extent)
             except Exception as err:
                 logger.error(
@@ -104,14 +99,21 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
         vl_extent_wkt = vl_extent.asWktPolygon()
         vl_extent_crs = project.crs()
 
-    logging.info(
+    logger.info(
         f"Project area of interest is `{vl_extent_wkt}` in `{vl_extent_crs}` CRS."
     )
 
     attachment_dirs, _ = project.readListEntry("QFieldSync", "attachmentDirs", ["DCIM"])
-    offline_editing = QgsOfflineEditing()
+    if offliner_type == OfflinerType.QGISCORE:
+        offliner = QgisCoreOffliner()
+    elif offliner_type == OfflinerType.PYTHONMINI:
+        offliner = PythonMiniOffliner()
+    else:
+        raise NotImplementedError(f"Offliner type {offliner_type} is not supported.")
 
-    logging.info("Packaging…")
+    logger.info(f'Offliner set to "{offliner_type}"')
+
+    logger.info("Packaging…")
 
     offline_converter = OfflineConverter(
         project,
@@ -119,7 +121,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
         vl_extent_wkt,
         vl_extent_crs,
         attachment_dirs,
-        offline_editing,
+        offliner=offliner,
         export_type=ExportType.Cloud,
         create_basemap=False,
     )
@@ -129,7 +131,7 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
     offline_converter.project_configuration.create_base_map = False
     offline_converter.convert()
 
-    logging.info("Packaging finished!")
+    logger.info("Packaging finished!")
 
     packaged_project_filename = get_project_in_folder(str(package_dir))
     if Path(packaged_project_filename).stat().st_size == 0:
@@ -139,14 +141,14 @@ def _call_qfieldsync_packager(project_filename: Path, package_dir: Path) -> str:
 
 
 def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
-    logging.info("Extracting QGIS project layer data…")
+    logger.info("Extracting QGIS project layer data…")
 
     project_filename = str(project_filename)
     project = QgsProject.instance()
     project.read(project_filename)
     layers_by_id: dict = get_layers_data(project)
 
-    logging.info(
+    logger.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
     )
 
@@ -163,7 +165,7 @@ def cmd_package_project(args: argparse.Namespace):
             Step(
                 id="start_qgis_app",
                 name="Start QGIS Application",
-                method=qfieldcloud.qgis.utils.start_app,
+                method=qfc_worker.utils.start_app,
             ),
             Step(
                 id="download_project_directory",
@@ -173,7 +175,7 @@ def cmd_package_project(args: argparse.Namespace):
                     "destination": WorkDirPath(mkdir=True),
                     "skip_attachments": True,
                 },
-                method=qfieldcloud.qgis.utils.download_project,
+                method=qfc_worker.utils.download_project,
                 return_names=["tmp_project_dir"],
             ),
             Step(
@@ -192,8 +194,9 @@ def cmd_package_project(args: argparse.Namespace):
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                     "package_dir": WorkDirPath("export", mkdir=True),
+                    "offliner_type": args.offliner_type,
                 },
-                method=_call_qfieldsync_packager,
+                method=_call_libqfieldsync_packager,
                 return_names=["qfield_project_filename"],
             ),
             Step(
@@ -211,7 +214,7 @@ def cmd_package_project(args: argparse.Namespace):
             Step(
                 id="stop_qgis_app",
                 name="Stop QGIS Application",
-                method=qfieldcloud.qgis.utils.stop_app,
+                method=qfc_worker.utils.stop_app,
             ),
             Step(
                 id="upload_packaged_project",
@@ -220,12 +223,12 @@ def cmd_package_project(args: argparse.Namespace):
                     "project_id": args.projectid,
                     "package_dir": WorkDirPath("export", mkdir=True),
                 },
-                method=qfieldcloud.qgis.utils.upload_package,
+                method=qfc_worker.utils.upload_package,
             ),
         ],
     )
 
-    qfieldcloud.qgis.utils.run_workflow(
+    qfc_worker.utils.run_workflow(
         workflow,
         Path("/io/feedback.json"),
     )
@@ -240,7 +243,7 @@ def cmd_apply_deltas(args: argparse.Namespace):
             Step(
                 id="start_qgis_app",
                 name="Start QGIS Application",
-                method=qfieldcloud.qgis.utils.start_app,
+                method=qfc_worker.utils.start_app,
             ),
             Step(
                 id="download_project_directory",
@@ -250,7 +253,7 @@ def cmd_apply_deltas(args: argparse.Namespace):
                     "destination": WorkDirPath(mkdir=True),
                     "skip_attachments": True,
                 },
-                method=qfieldcloud.qgis.utils.download_project,
+                method=qfc_worker.utils.download_project,
                 return_names=["tmp_project_dir"],
             ),
             Step(
@@ -262,14 +265,14 @@ def cmd_apply_deltas(args: argparse.Namespace):
                     "inverse": args.inverse,
                     "overwrite_conflicts": args.overwrite_conflicts,
                 },
-                method=qfieldcloud.qgis.apply_deltas.delta_apply,
+                method=qfc_worker.apply_deltas.delta_apply,
                 return_names=["delta_feedback"],
                 outputs=["delta_feedback"],
             ),
             Step(
                 id="stop_qgis_app",
                 name="Stop QGIS Application",
-                method=qfieldcloud.qgis.utils.stop_app,
+                method=qfc_worker.utils.stop_app,
             ),
             Step(
                 id="upload_exported_project",
@@ -278,12 +281,12 @@ def cmd_apply_deltas(args: argparse.Namespace):
                     "project_id": args.projectid,
                     "project_dir": WorkDirPath("files"),
                 },
-                method=qfieldcloud.qgis.utils.upload_project,
+                method=qfc_worker.utils.upload_project,
             ),
         ],
     )
 
-    qfieldcloud.qgis.utils.run_workflow(
+    qfc_worker.utils.run_workflow(
         workflow,
         Path("/io/feedback.json"),
     )
@@ -298,7 +301,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
             Step(
                 id="start_qgis_app",
                 name="Start QGIS Application",
-                method=qfieldcloud.qgis.utils.start_app,
+                method=qfc_worker.utils.start_app,
             ),
             Step(
                 id="download_project_directory",
@@ -308,7 +311,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                     "destination": WorkDirPath(mkdir=True),
                     "skip_attachments": True,
                 },
-                method=qfieldcloud.qgis.utils.download_project,
+                method=qfc_worker.utils.download_project,
                 return_names=["tmp_project_dir"],
             ),
             Step(
@@ -317,7 +320,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                 },
-                method=qfieldcloud.qgis.process_projectfile.check_valid_project_file,
+                method=qfc_worker.process_projectfile.check_valid_project_file,
             ),
             Step(
                 id="opening_check",
@@ -325,7 +328,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                 },
-                method=qfieldcloud.qgis.process_projectfile.load_project_file,
+                method=qfc_worker.process_projectfile.load_project_file,
                 return_names=["project"],
             ),
             Step(
@@ -334,7 +337,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 arguments={
                     "project": StepOutput("opening_check", "project"),
                 },
-                method=qfieldcloud.qgis.process_projectfile.extract_project_details,
+                method=qfc_worker.process_projectfile.extract_project_details,
                 return_names=["project_details"],
                 outputs=["project_details"],
             ),
@@ -345,24 +348,24 @@ def cmd_process_projectfile(args: argparse.Namespace):
                     "project": StepOutput("opening_check", "project"),
                     "thumbnail_filename": Path("/io/thumbnail.png"),
                 },
-                method=qfieldcloud.qgis.process_projectfile.generate_thumbnail,
+                method=qfc_worker.process_projectfile.generate_thumbnail,
             ),
             Step(
                 id="stop_qgis_app",
                 name="Stop QGIS Application",
-                method=qfieldcloud.qgis.utils.stop_app,
+                method=qfc_worker.utils.stop_app,
             ),
         ],
     )
 
-    qfieldcloud.qgis.utils.run_workflow(
+    qfc_worker.utils.run_workflow(
         workflow,
         Path("/io/feedback.json"),
     )
 
 
 if __name__ == "__main__":
-    from qfieldcloud.qgis.utils import setup_basic_logging_config
+    from qfc_worker.utils import setup_basic_logging_config
 
     setup_basic_logging_config()
 
@@ -382,6 +385,12 @@ if __name__ == "__main__":
     parser_package = subparsers.add_parser("package", help="Package a project")
     parser_package.add_argument("projectid", type=str, help="projectid")
     parser_package.add_argument("project_file", type=str, help="QGIS project file path")
+    parser_package.add_argument(
+        "offliner_type",
+        type=str,
+        choices=(OfflinerType.QGISCORE, OfflinerType.PYTHONMINI),
+        default=OfflinerType.QGISCORE,
+    )
     parser_package.set_defaults(func=cmd_package_project)
 
     parser_delta = subparsers.add_parser("delta_apply", help="Apply deltafile")
