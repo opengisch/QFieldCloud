@@ -11,8 +11,8 @@ import qfc_worker.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
+from libqfieldsync.utils.bad_layer_handler import set_bad_layer_handler
 from libqfieldsync.utils.file_utils import get_project_in_folder
-from libqfieldsync.utils.qgis import set_bad_layer_handler
 from qfc_worker.utils import (
     Step,
     StepOutput,
@@ -32,7 +32,7 @@ logger.setLevel(logging.INFO)
 def _call_libqfieldsync_packager(
     project_filename: Path, package_dir: Path, offliner_type: OfflinerType
 ) -> str:
-    """Call the function of QFieldSync to package a project for QField"""
+    """Call `libqfieldsync` to package a project for QField"""
     logger.info("Preparing QGIS project for packaging…")
 
     project = QgsProject.instance()
@@ -41,8 +41,6 @@ def _call_libqfieldsync_packager(
 
     if not project.read(str(project_filename)):
         raise Exception(f"Unable to open file with QGIS: {project_filename}")
-
-    set_bad_layer_handler(project)
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
@@ -145,8 +143,10 @@ def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
 
     project_filename = str(project_filename)
     project = QgsProject.instance()
-    project.read(project_filename)
-    layers_by_id: dict = get_layers_data(project)
+
+    with set_bad_layer_handler(project):
+        project.read(project_filename)
+        layers_by_id: dict = get_layers_data(project)
 
     logger.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",

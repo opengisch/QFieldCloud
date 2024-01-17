@@ -12,3 +12,4 @@ conf/nginx/certs/*
 conf/certbot/*
 Pipfile*
 **/site-packages
+docker-qgis/libqfieldsync
