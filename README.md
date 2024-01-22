@@ -81,7 +81,7 @@ To run a specific test:
 <summary>
 Instructions to have a test instance running in parallel to a dev instance
 </summary>
-Create an `.env.test` file with the following variables that override the ones in `.env` :
+Create an <code>.env.test</code> file with the following variables that override the ones in <code>.env</code>:
 
     ENVIRONMENT=test
     QFIELDCLOUD_HOST=nginx
