@@ -69,8 +69,9 @@ CACHES = {
 
 # Application definition
 INSTALLED_APPS = [
+    # admin theme
+    "jazzmin",
     # django contrib
-    "jazzmin",  # admin theme
     "django.contrib.admin",
     "django.contrib.contenttypes",
     "django.contrib.gis",
@@ -606,22 +607,22 @@ SPECTACULAR_SETTINGS = {
 }
 
 JAZZMIN_SETTINGS = {
-    # title of the window (Will default to current_admin_site.site_title if absent or None)
+    # Page title. Defaults to `current_admin_site.site_title` if empty.
     "site_title": "QFieldCloud: Admin",
-    # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    # Site header title (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
     "site_header": "QFieldCloud",
-    # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    # Brand name (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
     "site_brand": "QFieldCloud",
-    # Relative path to a favicon for your site, will default to site_logo if absent (ideally 32x32 px)
-    # "site_icon": "img/astun_favicon.png",
-    # Logo to use for your site, must be present in static files, used for brand on top left
+    # Favicon filename. Defaults to `site_logo` if empty.
+    "site_icon": "favicon.ico",
+    # Logo filename.
     "site_logo": "img/opengis_powering_qfc.png",
-    # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
+    # Sign-in form logo filename. Defaults to `site_logo` if empty.
     "login_logo": "img/opengis_powering_qfc.png",
-    # Welcome text on the login screen
+    # Sign-in form welcome text.
     "welcome_sign": "Welcome to QFieldCloud",
-    # Copyright on the footer
-    "copyright": "Opengis.ch",
-    # Custom css
-    "custom_css": "css/login.css",
+    # Copyright on the footer.
+    "copyright": "OPENGIS.ch",
+    # Additional custom CSS file for the Django Admin pages.
+    "custom_css": "css/admin.css",
 }
