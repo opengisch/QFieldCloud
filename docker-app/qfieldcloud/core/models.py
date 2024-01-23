@@ -22,6 +22,7 @@ from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
 from django.utils.functional import cached_property
+from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
@@ -1201,21 +1202,35 @@ class Project(models.Model):
                 layer_name = layer_data.get("name")
 
                 if layer_data.get("error_code") != "no_error":
+                    solution: str | SafeString
+                    if layer_data.get("error_code") == "localized_dataprovider":
+                        description = _('Layer "{}" dataprovider is localized').format(
+                            layer_name
+                        )
+                        solution = mark_safe(
+                            _(
+                                'Make sure your <a href="https://docs.qfield.org/fr/how-to/outside-layers/">localized layer</a> is available on your QField device.'
+                            )
+                        )
+                    else:
+                        description = _(
+                            'Layer "{}" has an error with code "{}": {}'
+                        ).format(
+                            layer_name,
+                            layer_data.get("error_code"),
+                            layer_data.get("error_summary"),
+                        )
+                        solution = _(
+                            'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
+                        )
+
                     problems.append(
                         {
                             "layer": layer_name,
                             "level": "warning",
                             "code": "layer_problem",
-                            "description": _(
-                                'Layer "{}" has an error with code "{}": {}'
-                            ).format(
-                                layer_name,
-                                layer_data.get("error_code"),
-                                layer_data.get("error_summary"),
-                            ),
-                            "solution": _(
-                                'Check the last "process_projectfile" logs for more info and reupload the project files with the required changes.'
-                            ),
+                            "description": description,
+                            "solution": solution,
                         }
                     )
                 # the layer is missing a primary key, warn it is going to be read-only
