@@ -4,6 +4,7 @@ from pathlib import Path
 from time import sleep
 
 import psycopg2
+from django.conf import settings
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import Delta, Geodb, Job, Person, Project
@@ -77,15 +78,15 @@ class QfcTestCase(APITransactionTestCase):
             user=u1,
             username="usr1",
             password="pwd",
-            hostname="geodb",
-            port=5432,
+            hostname=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
         conn = psycopg2.connect(
             dbname="test",
             user="usr1",
             password="pwd",
-            host="geodb",
-            port=5432,
+            host=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
         conn.cursor().execute("CREATE TABLE point (id integer PRIMARY KEY, name text)")
         conn.commit()

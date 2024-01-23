@@ -1,6 +1,5 @@
-import os
-
 import psycopg2
+from django.conf import settings
 from psycopg2 import sql
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
@@ -10,8 +9,8 @@ class GeodbConnection:
         pass
 
     def __enter__(self):
-        host = os.environ.get("GEODB_HOST")
-        port = os.environ.get("GEODB_PORT")
+        host = settings.GEODB_HOST
+        port = settings.GEODB_PORT
 
         # If geodb is running on the same machine we connect trough
         # the internal docker net
@@ -19,9 +18,9 @@ class GeodbConnection:
             port = 5432
 
         self.connection = psycopg2.connect(
-            dbname=os.environ.get("GEODB_DB"),
-            user=os.environ.get("GEODB_USER"),
-            password=os.environ.get("GEODB_PASSWORD"),
+            dbname=settings.GEODB_DB,
+            user=settings.GEODB_USER,
+            password=settings.GEODB_PASSWORD,
             host=host,
             port=port,
         )
