@@ -70,6 +70,7 @@ CACHES = {
 # Application definition
 INSTALLED_APPS = [
     # django contrib
+    "jazzmin",  # admin theme
     "django.contrib.admin",
     "django.contrib.contenttypes",
     "django.contrib.gis",
@@ -602,4 +603,25 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "v1",
     "CONTACT": {"email": "info@opengis.ch"},
     "LICENSE": {"name": "License"},
+}
+
+JAZZMIN_SETTINGS = {
+    # title of the window (Will default to current_admin_site.site_title if absent or None)
+    "site_title": "QFieldCloud: Admin",
+    # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_header": "QFieldCloud",
+    # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_brand": "QFieldCloud",
+    # Relative path to a favicon for your site, will default to site_logo if absent (ideally 32x32 px)
+    # "site_icon": "img/astun_favicon.png",
+    # Logo to use for your site, must be present in static files, used for brand on top left
+    "site_logo": "img/opengis_powering_qfc.png",
+    # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
+    "login_logo": "img/opengis_powering_qfc.png",
+    # Welcome text on the login screen
+    "welcome_sign": "Welcome to QFieldCloud",
+    # Copyright on the footer
+    "copyright": "Opengis.ch",
+    # Custom css
+    "custom_css": "css/login.css",
 }
