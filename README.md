@@ -65,7 +65,15 @@ Now you can get started by adding the first user that would also be a super user
 
 ### Tests
 
-Once you have built an instance following the previous step `Launch a local instance`, you can run all the unit and functional tests:
+Rebuild the docker compose stack with the `docker-compose.override.test.yml` file added to the `COMPOSE_FILE` environment variable:
+
+    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
+    # (Re-)build the app service to install necessary test utilities (requirements_test.txt)
+    docker compose up -d --build
+    docker compose run app python manage.py migrate
+    docker compose run app python manage.py collectstatic --noinput
+
+You can then run all the unit and functional tests:
 
     docker compose run app python manage.py test --keepdb
 
