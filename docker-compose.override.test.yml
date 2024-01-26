@@ -7,8 +7,6 @@ services:
       context: ./docker-app
       target: webserver_test
     environment:
-      # run flush, migrate and collectstatic in entrypoint
-      DEBUG: 1
       # we must use the same db for test and runserver
       POSTGRES_DB: test_${POSTGRES_DB}
       POSTGRES_DB_TEST: test_${POSTGRES_DB}
