@@ -7,6 +7,7 @@ import time
 import psycopg2
 from django.conf import settings
 from django.http import FileResponse
+from django.test import tag
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
@@ -445,6 +446,7 @@ class QfcTestCase(APITransactionTestCase):
         # projects with online vector layer should always show as it needs repackaging
         self.assertTrue(self.project1.needs_repackaging)
 
+    @tag("flaky")
     def test_connects_via_pgservice(self):
         cur = self.conn.cursor()
         cur.execute(
