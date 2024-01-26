@@ -13,8 +13,6 @@ services:
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
-    environment:
-      DEBUG: 1
     command: python3 -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000
     depends_on:
       - db
