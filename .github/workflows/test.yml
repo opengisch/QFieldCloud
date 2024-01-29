@@ -89,7 +89,7 @@ jobs:
           docker compose logs
 
       - name: Post Google Chat message on failure
-        if: ${{ failure() }}
+        if: failure() && matrix.django_app != '__flaky__'
         uses: julb/action-post-googlechat-message@v1
         with:
           message: |
