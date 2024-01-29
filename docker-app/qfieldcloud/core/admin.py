@@ -577,8 +577,10 @@ class OwnerTypeFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         value = self.value()
+
         if value is None:
             return queryset
+
         return queryset.filter(owner__type=value)
 
 
