@@ -17,7 +17,7 @@ services:
       POSTGRES_USER: ${GEODB_USER}
       POSTGRES_PASSWORD: ${GEODB_PASSWORD}
     ports:
-      - ${GEODB_PORT}:5432
+      - ${HOST_GEODB_PORT}:5432
 
   nginx:
     volumes:

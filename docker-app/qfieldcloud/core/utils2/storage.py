@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 from enum import Enum
 from pathlib import PurePath
@@ -18,9 +17,6 @@ from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 
 logger = logging.getLogger(__name__)
-
-QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
-WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT", None)
 
 
 def _delete_by_prefix_versioned(prefix: str):
@@ -216,7 +212,7 @@ def file_response(
     http_host = request.META.get("HTTP_HOST", "")
     https_port = http_host.split(":")[-1] if ":" in http_host else "443"
 
-    if https_port == WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
+    if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
         if presigned:
             if as_attachment:
                 extra_params["ResponseContentType"] = "application/force-download"

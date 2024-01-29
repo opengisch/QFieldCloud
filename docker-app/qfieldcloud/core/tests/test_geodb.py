@@ -2,6 +2,7 @@ import logging
 import unittest
 
 import psycopg2
+from django.conf import settings
 from qfieldcloud.core.models import Geodb, Person
 
 from .utils import setup_subscription_plans
@@ -23,8 +24,8 @@ class QfcTestCase(unittest.TestCase):
 
         geodb = Geodb.objects.create(
             user=user1,
-            hostname="geodb",
-            port=5432,
+            hostname=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
 
         conn = psycopg2.connect(

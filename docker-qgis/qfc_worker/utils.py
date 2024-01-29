@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import IO, Any, Callable, NamedTuple, Optional
 
 from libqfieldsync.layer import LayerSource
+from libqfieldsync.utils.bad_layer_handler import bad_layer_handler
 from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
@@ -180,6 +181,9 @@ def start_app():
             stop_app()
 
         logging.info("QGIS app started!")
+
+    # we set the `bad_layer_handler` and assume we always have only one single `QgsProject` instance within the job's life
+    QgsProject.instance().setBadLayerHandler(bad_layer_handler)
 
     return QGISAPP
 

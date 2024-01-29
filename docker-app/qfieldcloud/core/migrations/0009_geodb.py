@@ -41,15 +41,13 @@ class Migration(migrations.Migration):
                 (
                     "hostname",
                     models.CharField(
-                        default=qfieldcloud.core.models.default_hostname,
+                        default=settings.GEODB_HOST,
                         max_length=255,
                     ),
                 ),
                 (
                     "port",
-                    models.PositiveIntegerField(
-                        default=qfieldcloud.core.models.default_port
-                    ),
+                    models.PositiveIntegerField(default=settings.GEODB_PORT),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],

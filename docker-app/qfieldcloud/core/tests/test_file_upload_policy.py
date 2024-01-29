@@ -1,7 +1,7 @@
 import logging
-import os
 
 import psycopg2
+from django.conf import settings
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import ApplyJob, Geodb, Job, PackageJob, Person, Project
@@ -70,16 +70,16 @@ class QfcTestCase(APITransactionTestCase):
         self.geodb = Geodb.objects.create(
             user=self.user,
             dbname="test",
-            hostname="geodb",
-            port=5432,
+            hostname=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
 
         self.conn = psycopg2.connect(
             dbname="test",
-            user=os.environ.get("GEODB_USER"),
-            password=os.environ.get("GEODB_PASSWORD"),
-            host="geodb",
-            port=5432,
+            user=settings.GEODB_USER,
+            password=settings.GEODB_PASSWORD,
+            host=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
 
         cur = self.conn.cursor()
