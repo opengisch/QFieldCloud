@@ -74,10 +74,12 @@ jobs:
           docker compose run app python manage.py makemigrations --no-input --check
           docker compose run app python manage.py migrate
           docker compose run app python manage.py collectstatic
+
       - name: Run mandatory unit and integration tests
         if: matrix.django_app != '__flaky__'
         run: |
           docker compose run app python manage.py test --keepdb -v2 --exclude-tag="flaky" qfieldcloud.${{ matrix.django_app }}
+
       - name: Run flaky unit and integration tests
         if: matrix.django_app == '__flaky__'
         run: |
@@ -89,7 +91,7 @@ jobs:
           docker compose logs
 
       - name: Post Google Chat message on failure
-        if: ${{ failure() }}
+        if: failure() && matrix.django_app != '__flaky__'
         uses: julb/action-post-googlechat-message@v1
         with:
           message: |
