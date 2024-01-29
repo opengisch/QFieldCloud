@@ -569,24 +569,17 @@ class ProjectFilesWidget(widgets.Input):
 
 
 class OwnerTypeFilter(admin.SimpleListFilter):
-    # "owner__type" for the filter would suffice,
-    # But the filter title would then be "By type" in the UI,
-    # which is semantically unclear, hence the SimpleListFilter subclass
-    title = "owner type"
+    title = _("owner type")
     parameter_name = "owner_type"
 
     def lookups(self, request, model_admin):
-        return [
-            (User.Type.PERSON, "Person"),
-            (User.Type.ORGANIZATION, "Organization"),
-            (User.Type.TEAM, "Team"),
-        ]
+        return [(User.Type.PERSON, "Person"), (User.Type.ORGANIZATION, "Organization")]
 
     def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(owner__type=self.value())
-        else:
+        value = self.value()
+        if value is None:
             return queryset
+        return queryset.filter(owner__type=value)
 
 
 class ProjectForm(ModelForm):
