@@ -568,6 +568,22 @@ class ProjectFilesWidget(widgets.Input):
     template_name = "admin/project_files_widget.html"
 
 
+class OwnerTypeFilter(admin.SimpleListFilter):
+    title = _("owner type")
+    parameter_name = "owner_type"
+
+    def lookups(self, request, model_admin):
+        return [(User.Type.PERSON, "Person"), (User.Type.ORGANIZATION, "Organization")]
+
+    def queryset(self, request, queryset):
+        value = self.value()
+
+        if value is None:
+            return queryset
+
+        return queryset.filter(owner__type=value)
+
+
 class ProjectForm(ModelForm):
     project_files = fields.CharField(
         disabled=True, required=False, widget=ProjectFilesWidget
@@ -594,6 +610,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "is_public",
         "created_at",
         "updated_at",
+        OwnerTypeFilter,
     )
     fields = (
         "id",
