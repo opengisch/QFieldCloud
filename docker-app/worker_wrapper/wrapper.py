@@ -307,7 +307,7 @@ class JobRun:
                 "QT_QPA_PLATFORM": "offscreen",
             },
             volumes=volumes,
-            # TODO keep the logs somewhere or even better -> pipe them to redis and store them there
+            # TODO stream the logs to something like redis, so they can be streamed back in project jobs page to the user live
             # auto_remove=True,
             network=settings.QFIELDCLOUD_DEFAULT_NETWORK,
             detach=True,
