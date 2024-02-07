@@ -15,12 +15,12 @@ INTERVAL = 2
 def wait_for_postgres():
     logger.info("Waiting for postgres...")
     config = {
-        "dbname": os.environ.get("SQL_DATABASE"),
-        "user": os.environ.get("SQL_USER"),
-        "password": os.environ.get("SQL_PASSWORD"),
-        "host": os.environ.get("SQL_HOST"),
-        "port": os.environ.get("SQL_PORT"),
-        "sslmode": os.environ.get("SQL_SSLMODE"),
+        "dbname": os.environ.get("POSTGRES_DB"),
+        "user": os.environ.get("POSTGRES_USER"),
+        "password": os.environ.get("POSTGRES_PASSWORD"),
+        "host": os.environ.get("POSTGRES_HOST"),
+        "port": os.environ.get("POSTGRES_PORT"),
+        "sslmode": os.environ.get("POSTGRES_SSLMODE"),
     }
     start_time = time()
     while time() - start_time < TIMEOUT:

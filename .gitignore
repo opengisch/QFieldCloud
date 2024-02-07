@@ -13,3 +13,4 @@ conf/nginx/dhparams/dhparams4096.pem
 conf/certbot/*
 Pipfile*
 **/site-packages
+docker-qgis/libqfieldsync

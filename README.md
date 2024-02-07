@@ -36,6 +36,9 @@ desire with a good editor:
     cp .env.example .env
     emacs .env
 
+
+Make sure the host's firewall allows port _8009_, required by the `minio` service. Failing to meet this requirement is likely to result in the service being unable to start.
+
 To build development images and run the containers:
 
     docker compose up -d --build
@@ -62,18 +65,66 @@ Now you can get started by adding the first user that would also be a super user
 
 ### Tests
 
-To run all the unit and functional tests (on a throwaway test
-database and a throwaway test storage directory):
+Rebuild the docker compose stack with the `docker-compose.override.test.yml` file added to the `COMPOSE_FILE` environment variable:
 
     export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
     # (Re-)build the app service to install necessary test utilities (requirements_test.txt)
     docker compose up -d --build
     docker compose run app python manage.py migrate
+    docker compose run app python manage.py collectstatic --noinput
+
+You can then run all the unit and functional tests:
+
     docker compose run app python manage.py test --keepdb
 
-To run only a test module (e.g. `test_permission.py`)
+To run only a test module (e.g. `test_permission.py`):
 
     docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
+
+To run a specific test:
+
+    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission.QfcTestCase.test_collaborator_project_takeover
+
+<details>
+<summary>
+Instructions to have a test instance running in parallel to a dev instance
+</summary>
+Create an <code>.env.test</code> file with the following variables that override the ones in <code>.env</code>:
+
+    ENVIRONMENT=test
+    QFIELDCLOUD_HOST=nginx
+    DJANGO_SETTINGS_MODULE=qfieldcloud.settings
+    STORAGE_ENDPOINT_URL=http://172.17.0.1:8109
+    MINIO_API_PORT=8109
+    MINIO_BROWSER_PORT=8110
+    WEB_HTTP_PORT=8101
+    WEB_HTTPS_PORT=8102
+    HOST_POSTGRES_PORT=8103
+    HOST_GEODB_PORT=8107
+    MEMCACHED_PORT=11212
+    QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
+    QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
+    DJANGO_DEV_PORT=8111
+    SMTP4DEV_WEB_PORT=8112
+    SMTP4DEV_SMTP_PORT=8125
+    SMTP4DEV_IMAP_PORT=8143
+    COMPOSE_PROJECT_NAME=qfieldcloud_test
+    COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
+    DEBUG_DEBUGPY_APP_PORT=5781
+    DEBUG_DEBUGPY_WORKER_WRAPPER_PORT=5780
+    DEMGEN_PORT=8201
+
+Build the test docker compose stack:
+
+    docker compose --env-file .env --env-file .env.test up -d --build
+    docker compose --env-file .env --env-file .env.test run app python manage.py migrate
+    docker compose --env-file .env --env-file .env.test run app python manage.py collectstatic --noinput
+
+You can then launch the tests:
+
+    docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
+
+</details>
 
 ### Debugging
 

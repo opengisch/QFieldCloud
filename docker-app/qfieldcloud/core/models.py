@@ -1,5 +1,4 @@
 import logging
-import os
 import secrets
 import string
 import uuid
@@ -9,6 +8,7 @@ from typing import cast
 
 import django_cryptography.fields
 from deprecated import deprecated
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
@@ -22,6 +22,7 @@ from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse_lazy
 from django.utils.functional import cached_property
+from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from qfieldcloud.core import geodb_utils, utils, validators
@@ -518,20 +519,14 @@ def random_password() -> str:
     return secure_str
 
 
-def default_hostname() -> str:
-    return os.environ["GEODB_HOST"]
-
-
-def default_port() -> str:
-    return os.environ["GEODB_PORT"]
-
-
 class Geodb(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     username = models.CharField(blank=False, max_length=255, default=random_string)
     dbname = models.CharField(blank=False, max_length=255, default=random_string)
-    hostname = models.CharField(blank=False, max_length=255, default=default_hostname)
-    port = models.PositiveIntegerField(default=default_port)
+    hostname = models.CharField(
+        blank=False, max_length=255, default=settings.GEODB_HOST
+    )
+    port = models.PositiveIntegerField(default=settings.GEODB_PORT)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # The password is generated but not stored into the db
@@ -943,6 +938,10 @@ class Project(models.Model):
         )
         TOO_MANY_COLLABORATORS = "too_many_collaborators", _("Too many collaborators")
 
+    class PackagingOffliner(models.TextChoices):
+        QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
+        PYTHONMINI = "pythonmini", _("Optimized Packager")
+
     objects = ProjectQueryset.as_manager()
 
     _status_code = StatusCode.OK
@@ -1033,6 +1032,17 @@ class Project(models.Model):
         null=True,
         blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(100)],
+    )
+
+    # Packaging offliner to be used by the QGIS worker container.
+    packaging_offliner = models.CharField(
+        _("Packaging Offliner"),
+        help_text=_(
+            'The Packaging Offliner packages data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for new projects.'
+        ),
+        max_length=100,
+        default=PackagingOffliner.QGISCORE,
+        choices=PackagingOffliner.choices,
     )
 
     @property
@@ -1186,21 +1196,35 @@ class Project(models.Model):
                 layer_name = layer_data.get("name")
 
                 if layer_data.get("error_code") != "no_error":
+                    solution: str | SafeString
+                    if layer_data.get("error_code") == "localized_dataprovider":
+                        description = _('Layer "{}" dataprovider is localized').format(
+                            layer_name
+                        )
+                        solution = mark_safe(
+                            _(
+                                'Make sure your <a href="https://docs.qfield.org/fr/how-to/outside-layers/">localized layer</a> is available on your QField device.'
+                            )
+                        )
+                    else:
+                        description = _(
+                            'Layer "{}" has an error with code "{}": {}'
+                        ).format(
+                            layer_name,
+                            layer_data.get("error_code"),
+                            layer_data.get("error_summary"),
+                        )
+                        solution = _(
+                            'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
+                        )
+
                     problems.append(
                         {
                             "layer": layer_name,
                             "level": "warning",
                             "code": "layer_problem",
-                            "description": _(
-                                'Layer "{}" has an error with code "{}": {}'
-                            ).format(
-                                layer_name,
-                                layer_data.get("error_code"),
-                                layer_data.get("error_summary"),
-                            ),
-                            "solution": _(
-                                'Check the last "process_projectfile" logs for more info and reupload the project files with the required changes.'
-                            ),
+                            "description": description,
+                            "solution": solution,
                         }
                     )
                 # the layer is missing a primary key, warn it is going to be read-only

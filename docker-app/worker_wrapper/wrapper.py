@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import shutil
 import sys
 import tempfile
@@ -45,12 +44,7 @@ logger = logging.getLogger(__name__)
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
-QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
-QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
 TMP_FILE = Path("/tmp")
-
-assert QGIS_CONTAINER_NAME
-assert QFIELDCLOUD_HOST
 
 
 class QgisException(Exception):
@@ -265,19 +259,8 @@ class JobRun:
     def _run_docker(
         self, command: list[str], volumes: list[str], run_opts: dict[str, Any] = {}
     ) -> tuple[int, bytes]:
-        QGIS_CONTAINER_NAME = os.environ.get("QGIS_CONTAINER_NAME", None)
-        QFIELDCLOUD_HOST = os.environ.get("QFIELDCLOUD_HOST", None)
-        QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ.get(
-            "QFIELDCLOUD_WORKER_QFIELDCLOUD_URL", None
-        )
-        TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
-            "TRANSFORMATION_GRIDS_VOLUME_NAME", None
-        )
-
-        assert QGIS_CONTAINER_NAME
-        assert QFIELDCLOUD_HOST
-        assert QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
-        assert TRANSFORMATION_GRIDS_VOLUME_NAME
+        assert settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
+        assert settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME
 
         token = AuthToken.objects.create(
             user=self.job.created_by,
@@ -298,27 +281,35 @@ class JobRun:
                 raise NotImplementedError(f"Unknown secret type: {secret.type}")
 
         logger.info(f"Execute: {' '.join(command)}")
-        volumes.append(f"{TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro")
+        volumes.append(
+            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro"
+        )
+
+        # used for local development of QFieldCloud
+        if settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH:
+            volumes.append(
+                f"{settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}:/libqfieldsync:ro"
+            )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
         self.job.save(update_fields=["docker_started_at"])
 
         container: Container = client.containers.run(  # type:ignore
-            QGIS_CONTAINER_NAME,
+            settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
             command,
             environment={
                 "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
                 "QFIELDCLOUD_TOKEN": token.key,
-                "QFIELDCLOUD_URL": QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+                "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
                 "JOB_ID": self.job_id,
                 "PROJ_DOWNLOAD_DIR": "/transformation_grids",
                 "QT_QPA_PLATFORM": "offscreen",
             },
             volumes=volumes,
-            # TODO keep the logs somewhere or even better -> pipe them to redis and store them there
+            # TODO stream the logs to something like redis, so they can be streamed back in project jobs page to the user live
             # auto_remove=True,
-            network=os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK"),
+            network=settings.QFIELDCLOUD_DEFAULT_NETWORK,
             detach=True,
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,
@@ -393,7 +384,12 @@ class JobRun:
 
 class PackageJobRun(JobRun):
     job_class = PackageJob
-    command = ["package", "%(project__id)s", "%(project__project_filename)s"]
+    command = [
+        "package",
+        "%(project__id)s",
+        "%(project__project_filename)s",
+        "%(project__packaging_offliner)s",
+    ]
     data_last_packaged_at = None
 
     def before_docker_run(self) -> None:

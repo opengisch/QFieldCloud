@@ -5,7 +5,9 @@ import tempfile
 import time
 
 import psycopg2
+from django.conf import settings
 from django.http import FileResponse
+from django.test import tag
 from django.utils import timezone
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
@@ -55,10 +57,10 @@ class QfcTestCase(APITransactionTestCase):
 
         self.conn = psycopg2.connect(
             dbname="test",
-            user=os.environ.get("GEODB_USER"),
-            password=os.environ.get("GEODB_PASSWORD"),
-            host="geodb",
-            port=5432,
+            user=settings.GEODB_USER,
+            password=settings.GEODB_PASSWORD,
+            host=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
 
     def tearDown(self):
@@ -444,6 +446,7 @@ class QfcTestCase(APITransactionTestCase):
         # projects with online vector layer should always show as it needs repackaging
         self.assertTrue(self.project1.needs_repackaging)
 
+    @tag("flaky")
     def test_connects_via_pgservice(self):
         cur = self.conn.cursor()
         cur.execute(
@@ -461,8 +464,8 @@ class QfcTestCase(APITransactionTestCase):
                 "dbname=test\n"
                 "host=geodb\n"
                 "port=5432\n"
-                f"user={os.environ.get('GEODB_USER')}\n"
-                f"password={os.environ.get('GEODB_PASSWORD')}\n"
+                f"user={settings.GEODB_USER}\n"
+                f"password={settings.GEODB_PASSWORD}\n"
                 "sslmode=disable\n"
             ),
         )
@@ -477,8 +480,8 @@ class QfcTestCase(APITransactionTestCase):
                 "dbname=test\n"
                 "host=geodb\n"
                 "port=5432\n"
-                f"user={os.environ.get('GEODB_USER')}\n"
-                f"password={os.environ.get('GEODB_PASSWORD')}\n"
+                f"user={settings.GEODB_USER}\n"
+                f"password={settings.GEODB_PASSWORD}\n"
                 "sslmode=disable\n"
             ),
         )

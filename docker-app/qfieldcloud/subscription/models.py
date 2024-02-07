@@ -882,7 +882,10 @@ class AbstractSubscription(models.Model):
         return trial_subscription_obj, regular_subscription_obj
 
     def __str__(self):
-        return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{self.active_storage_total_mb}MB"
+        active_storage_total_mb = (
+            self.active_storage_package_mb if hasattr(self, "packages") else 0
+        )
+        return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{active_storage_total_mb}MB"
 
 
 class Subscription(AbstractSubscription):

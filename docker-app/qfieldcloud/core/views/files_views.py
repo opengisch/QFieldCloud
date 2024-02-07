@@ -111,7 +111,6 @@ class ListFilesView(views.APIView):
                     sha256sum = metadata["sha256sum"]
                 else:
                     sha256sum = metadata["Sha256sum"]
-                files[version.key]["sha256"] = sha256sum
 
                 version_data["sha256"] = sha256sum
 
@@ -123,6 +122,9 @@ class ListFilesView(views.APIView):
                 files[version.key]["md5sum"] = md5sum
                 files[version.key]["last_modified"] = last_modified
                 files[version.key]["is_attachment"] = is_attachment
+
+                if not skip_metadata:
+                    files[version.key]["sha256"] = sha256sum
 
             files[version.key]["versions"].append(version_data)
 

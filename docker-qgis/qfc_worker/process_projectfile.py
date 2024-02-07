@@ -2,7 +2,11 @@ import logging
 from pathlib import Path
 from xml.etree import ElementTree
 
-from qfieldcloud.qgis.utils import (
+from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
+from qgis.PyQt.QtCore import QEventLoop, QSize
+from qgis.PyQt.QtGui import QColor
+
+from .utils import (
     FailedThumbnailGenerationException,
     InvalidFileExtensionException,
     InvalidXmlFileException,
@@ -11,9 +15,6 @@ from qfieldcloud.qgis.utils import (
     get_qgis_xml_error_context,
     layers_data_to_string,
 )
-from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
-from qgis.PyQt.QtCore import QEventLoop, QSize
-from qgis.PyQt.QtGui import QColor
 
 logger = logging.getLogger("PROCPRJ")
 

@@ -49,6 +49,9 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT")
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 
+WEB_HTTP_PORT = os.environ.get("WEB_HTTP_PORT")
+WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT")
+
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
     # custom QFC backend that extends the `allauth` specific authentication methods
@@ -168,17 +171,24 @@ WSGI_APPLICATION = "qfieldcloud.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("SQL_DATABASE"),
-        "USER": os.environ.get("SQL_USER"),
-        "PASSWORD": os.environ.get("SQL_PASSWORD"),
-        "HOST": os.environ.get("SQL_HOST"),
-        "PORT": os.environ.get("SQL_PORT"),
-        "OPTIONS": {"sslmode": os.environ.get("SQL_SSLMODE")},
+        "NAME": os.environ.get("POSTGRES_DB"),
+        "USER": os.environ.get("POSTGRES_USER"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+        "HOST": os.environ.get("POSTGRES_HOST"),
+        "PORT": os.environ.get("POSTGRES_PORT"),
+        "OPTIONS": {"sslmode": os.environ.get("POSTGRES_SSLMODE")},
         "TEST": {
-            "NAME": os.environ.get("SQL_DATABASE_TEST"),
+            "NAME": os.environ.get("POSTGRES_DB_TEST"),
         },
     }
 }
+
+# Connection details for the geodb
+GEODB_HOST = os.environ.get("GEODB_HOST")
+GEODB_PORT = os.environ.get("GEODB_PORT")
+GEODB_DB = os.environ.get("GEODB_DB")
+GEODB_USER = os.environ.get("GEODB_USER")
+GEODB_PASSWORD = os.environ.get("GEODB_PASSWORD")
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -491,6 +501,24 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Subscription": ("TRIAL_PERIOD_DAYS",),
 }
 
+# Name of the qgis docker image used as a worker by worker_wrapper
+QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
+
+# URL the qgis worker will use to access the running API endpoint on the app service
+QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ["QFIELDCLOUD_WORKER_QFIELDCLOUD_URL"]
+
+# Absolute path on the docker host where `libqfieldsync` is mounted from for development
+QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH = os.environ.get(
+    "QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH"
+)
+
+# Volume name where transformation grids required by `PROJ` are downloaded to
+QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
+    "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME"
+)
+
+# Name of the docker compose network to be used by the worker containers
+QFIELDCLOUD_DEFAULT_NETWORK = os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK")
 
 # `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
 AUDITLOG_INCLUDE_TRACKING_MODELS = [

@@ -1,4 +1,4 @@
-FROM qgis/qgis:final-3_32_3
+FROM qgis/qgis:final-3_34_2
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -18,17 +18,23 @@ ENV LIBC_FATAL_STDERR_=1
 
 # other env
 ENV LANG=C.UTF-8
-ENV PYTHONPATH="/usr/src/app/lib:${PYTHONPATH}"
 ENV XDG_RUNTIME_DIR=/root
+# allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
+ENV PYTHONPATH=/libqfieldsync:${PYTHONPATH}
 
-COPY ./requirements.txt /tmp/
+# upgrade `pip`. If not upgraded, installing from GitHub repo (needed for `libqfieldsync`) will result in UNKNOWN package.
+RUN pip3 install --upgrade pip
+
+# Install regular dependencies that rarely change
+COPY requirements.txt /tmp/
 RUN pip3 install -r /tmp/requirements.txt
 
+# Install `libqfieldsync` dependecy since it changes more frequently compared to regular dependencies
+COPY requirements_libqfieldsync.txt /tmp/
+RUN pip3 install --use-deprecated=legacy-resolver -r /tmp/requirements_libqfieldsync.txt
+
+COPY schemas schemas
+COPY qfc_worker qfc_worker
 COPY entrypoint.py .
-COPY ./apply_deltas.py ./lib/qfieldcloud/qgis/
-COPY ./process_projectfile.py ./lib/qfieldcloud/qgis/
-COPY ./utils.py ./lib/qfieldcloud/qgis/
-COPY ./schemas/deltafile_01.json ./schemas/
-COPY ./libqfieldsync ./lib/libqfieldsync
 
 ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a \"$@\"", ""]

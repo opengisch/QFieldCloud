@@ -6,6 +6,7 @@ import time
 
 import psycopg2
 import requests
+from django.conf import settings
 from django.http.response import HttpResponseRedirect
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
@@ -42,16 +43,16 @@ class QfcTestCase(APITransactionTestCase):
         self.geodb = Geodb.objects.create(
             user=self.user1,
             dbname="test",
-            hostname="geodb",
-            port=5432,
+            hostname=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
 
         self.conn = psycopg2.connect(
             dbname="test",
-            user=os.environ.get("GEODB_USER"),
-            password=os.environ.get("GEODB_PASSWORD"),
-            host="geodb",
-            port=5432,
+            user=settings.GEODB_USER,
+            password=settings.GEODB_PASSWORD,
+            host=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
         )
 
     def tearDown(self):
