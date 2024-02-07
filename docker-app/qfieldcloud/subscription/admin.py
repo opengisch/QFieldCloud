@@ -121,6 +121,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     autocomplete_fields = ("account",)
 
     search_fields = (
+        "id",
         "account__user__email__iexact",
         "account__user__username__iexact",
     )
