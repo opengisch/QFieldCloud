@@ -26,7 +26,7 @@ django-countries==7.5.1
 django-cron==0.6.0
 django-cryptography==1.1
 django-currentuser==0.6.1
-django-debug-toolbar==4.1.0
+django-debug-toolbar==4.3.0
 django-extensions==3.2.1
 django-filter==23.2
 django-invitations==2.0.0
