@@ -36,7 +36,7 @@ django-migrate-sql-deux==0.5.0
 django-model-utils==4.3.1
 django-nonrelated-inlines==0.2
 django-notifications-hq==1.8.3
-django-phonenumber-field==7.1.0
+django-phonenumber-field==7.3.0
 django-picklefield==3.1
 django-storages==1.14.2
 django-log-request-id==2.1.0
