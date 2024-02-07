@@ -28,7 +28,7 @@ django-cryptography==1.1
 django-currentuser==0.6.1
 django-debug-toolbar==4.3.0
 django-extensions==3.2.3
-django-filter==23.2
+django-filter==23.5
 django-invitations==2.1.0
 django-ipware==5.0.0
 django-jsonfield==1.4.1
