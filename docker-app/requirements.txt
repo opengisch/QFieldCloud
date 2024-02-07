@@ -38,7 +38,7 @@ django-nonrelated-inlines==0.2
 django-notifications-hq==1.7.0
 django-phonenumber-field==7.1.0
 django-picklefield==3.1
-django-storages==1.11.1
+django-storages==1.14.2
 django-log-request-id==2.1.0
 django-tables2==2.7.0
 django-timezone-field==5.0
