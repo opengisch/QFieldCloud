@@ -16,7 +16,7 @@ Deprecated==1.2.13
 Django==3.2.23
 django-allauth==0.44.0
 django-appconf==1.0.6
-django-auditlog==2.2.2
+django-auditlog==2.3.0
 django-axes==5.40.1
 django-bootstrap4==23.1
 django-classy-tags==4.0.0
