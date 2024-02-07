@@ -13,7 +13,7 @@ coreschema==0.0.4
 cryptography==42.0.0
 defusedxml==0.7.1
 Deprecated==1.2.13
-Django==3.2.23
+Django==3.2.24
 django-allauth==0.44.0
 django-appconf==1.0.5
 django-auditlog==2.2.2
