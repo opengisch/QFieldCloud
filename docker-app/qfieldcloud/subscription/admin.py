@@ -108,6 +108,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     list_filter = (
         SubscriptionPeriodFilter,
         "status",
+        "plan",
     )
 
     readonly_fields = (
