@@ -21,6 +21,7 @@ def wait_for_postgres():
         "host": os.environ.get("POSTGRES_HOST"),
         "port": os.environ.get("POSTGRES_PORT"),
         "sslmode": os.environ.get("POSTGRES_SSLMODE"),
+        "connect_timeout": TIMEOUT,
     }
     start_time = time()
     while time() - start_time < TIMEOUT:
@@ -30,10 +31,14 @@ def wait_for_postgres():
             conn.close()
             return True
         except psycopg2.OperationalError as e:
-            logger.info(
-                f"Postgres isn't ready.\n{e}\n Waiting for {INTERVAL} second(s)..."
-            )
-            sleep(INTERVAL)
+            if time() - start_time < TIMEOUT:
+                logger.info(
+                    f"Postgres isn't ready.\n{e}\n Waiting for {INTERVAL} second(s)..."
+                )
+                sleep(INTERVAL)
+            else:
+                logger.error(f"Postgres never responded in {TIMEOUT} seconds.\n{e}")
+
     logger.error(f"We could not connect to Postgres within {TIMEOUT} seconds.")
 
     return False
