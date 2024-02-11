@@ -31,8 +31,5 @@ docker compose run --rm --entrypoint "\
     --force-renewal" certbot
 
 echo
-
-chmod 755 "$CONFIG_PATH/nginx/99-autoreload.sh"
-
 echo "### Reloading nginx ..."
 docker compose exec nginx nginx -s reload
