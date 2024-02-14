@@ -30,14 +30,16 @@ def wait_for_postgres():
             logger.info("Postgres is ready! ✨ 💅")
             conn.close()
             return True
-        except psycopg2.OperationalError as e:
+        except psycopg2.OperationalError as error:
             if time() - start_time < TIMEOUT:
                 logger.info(
-                    f"Postgres isn't ready.\n{e}\n Waiting for {INTERVAL} second(s)..."
+                    f"Postgres isn't ready.\npsycopg2 {type(error).__name__}\n{error}\nWaiting for {INTERVAL} second(s)..."
                 )
                 sleep(INTERVAL)
             else:
-                logger.error(f"Postgres never responded in {TIMEOUT} seconds.\n{e}")
+                logger.error(
+                    f"Postgres never responded in {TIMEOUT} seconds.\npsycopg2 {type(error).__name__}\n{error}"
+                )
 
     logger.error(f"We could not connect to Postgres within {TIMEOUT} seconds.")
 
