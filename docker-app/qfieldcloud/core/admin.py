@@ -26,7 +26,7 @@ from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
-from django.shortcuts import resolve_url
+from django.shortcuts import redirect, resolve_url
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
@@ -778,6 +778,8 @@ class JobAdmin(QFieldCloudModelAdmin):
     )
     has_direct_delete_permission = False
 
+    change_form_template = "admin/job_change_form.html"
+
     def get_queryset(self, request):
         return super().get_queryset(request).defer("output", "feedback")
 
@@ -812,6 +814,11 @@ class JobAdmin(QFieldCloudModelAdmin):
                 "<uuid:apply_job_id>/export-deltafile",
                 self.admin_site.admin_view(self.export_applyjob_deltafile),
                 name="export_applyjob_deltafile",
+            ),
+            path(
+                "<path:object_id>/rerun/",
+                self.admin_site.admin_view(self.rerun_job),
+                name="rerun_job",
             ),
             *urls,
         ]
@@ -868,6 +875,10 @@ class JobAdmin(QFieldCloudModelAdmin):
                 "sort_keys": True,
             },
         )
+
+    def rerun_job(self, request, object_id):
+        Job.objects.filter(pk=object_id).update(status="pending")
+        return redirect(request.META.get("HTTP_REFERER", "../.."))
 
 
 class ApplyJobDeltaInline(admin.TabularInline):
