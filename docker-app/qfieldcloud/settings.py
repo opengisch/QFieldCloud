@@ -614,11 +614,13 @@ JAZZMIN_SETTINGS = {
     # Site header title (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
     "site_header": "QFieldCloud",
     # Brand name (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
-    "site_brand": "QFieldCloud",
+    "site_brand": "QFieldCloud admin",
     # Favicon filename. Defaults to `site_logo` if empty.
     "site_icon": "favicon.ico",
     # Logo filename.
-    "site_logo": "img/opengis_powering_qfc.png",
+    "site_logo": "logo_notext.svg",
+    # CSS classes that are applied to the logo above, emptied to avoid class "img-circle"
+    "site_logo_classes": "",
     # Sign-in form logo filename. Defaults to `site_logo` if empty.
     "login_logo": "img/opengis_powering_qfc.png",
     # Sign-in form welcome text.
