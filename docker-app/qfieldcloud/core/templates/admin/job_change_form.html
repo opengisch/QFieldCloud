@@ -1,0 +1,11 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n %}
+
+{% block submit_buttons_bottom %}
+  {{ block.super }}
+
+  <div class="submit-row">
+    {% if original %}<a href="{% url 'admin:rerun_job' original.pk %}" class="button">{% trans 'Re-run job' %}</a>
+    {% endif %}
+  </div>
+{% endblock %}
