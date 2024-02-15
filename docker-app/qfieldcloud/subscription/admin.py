@@ -57,9 +57,9 @@ class ActiveUntilFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return [
-            ("1", "Next week"),
-            ("2", "Next 2 weeks"),
-            ("4", "Next 4 weeks"),
+            ("1", _("Next week")),
+            ("2", _("Next 2 weeks")),
+            ("4", _("Next 4 weeks")),
         ]
 
     def queryset(self, request, queryset):
