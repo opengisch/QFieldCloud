@@ -26,7 +26,7 @@ from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
-from django.shortcuts import redirect, resolve_url
+from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
@@ -878,7 +878,7 @@ class JobAdmin(QFieldCloudModelAdmin):
 
     def rerun_job(self, request, object_id):
         Job.objects.filter(pk=object_id).update(status="pending")
-        return redirect(request.META.get("HTTP_REFERER", "../.."))
+        return HttpResponseRedirect("..")
 
 
 class ApplyJobDeltaInline(admin.TabularInline):
