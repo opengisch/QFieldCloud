@@ -52,7 +52,7 @@ class SubscriptionPeriodFilter(admin.SimpleListFilter):
 
 
 class ActiveUntilFilter(admin.SimpleListFilter):
-    title = "expiration date"
+    title = _("expiration date")
     parameter_name = "active_until"
 
     def lookups(self, request, model_admin):
