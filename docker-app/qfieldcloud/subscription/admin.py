@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django import forms
 from django.contrib import admin
 from django.http import HttpRequest
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, model_admin_url
 
@@ -46,6 +49,24 @@ class SubscriptionPeriodFilter(admin.SimpleListFilter):
             return queryset.current()
 
         return queryset
+
+
+class ActiveUntilFilter(admin.SimpleListFilter):
+    title = _("expiration date")
+    parameter_name = "active_until"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("1", "Next week"),
+            ("2", "Next 2 weeks"),
+            ("4", "Next 4 weeks"),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            now = timezone.now()
+            future_date = now + timedelta(weeks=int(self.value()))
+            return queryset.filter(active_until__range=(now, future_date))
 
 
 class SubscriptionModelForm(forms.ModelForm):
@@ -109,6 +130,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         SubscriptionPeriodFilter,
         "status",
         "plan",
+        ActiveUntilFilter,
     )
 
     readonly_fields = (
