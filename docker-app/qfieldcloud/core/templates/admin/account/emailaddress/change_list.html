@@ -4,6 +4,6 @@
 {% block object-tools-items %}
     {{ block.super }}
     <li>
-        <a href="{% url 'admin:export_emails_to_csv' %}" class="btn btn-high btn-success">CSV export</a>
+        <a href="{% url 'admin:export_emails_to_csv' %}" class="btn btn-high btn-success">{% trans 'CSV export' %}</a>
     </li>
 {% endblock %}
