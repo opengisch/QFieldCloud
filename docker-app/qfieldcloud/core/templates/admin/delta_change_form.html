@@ -1,14 +1,15 @@
 {% extends 'admin/change_form.html' %}
+{% load i18n %}
 
 {% block submit_buttons_bottom %}
   {{ block.super }}
 
-  <div class="submit-row">
+  <div class="form-group">
     <input
       type="submit"
       name="_apply_delta_btn"
-      class="button default"
-      value="Apply delta"
+      class="btn btn-info form-control"
+      value="{% trans 'Apply delta' %}"
     >
   </div>
 {% endblock %}

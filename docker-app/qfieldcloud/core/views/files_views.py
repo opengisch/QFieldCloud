@@ -94,7 +94,7 @@ class ListFilesView(views.APIView):
                 "display": S3ObjectVersion(version.key, version).display,
             }
 
-            # NOTE Some clients (e.g. QField, QFieldSync) are still requiring the `sha256` key to check whether the files needs to be reuploaded.
+            # NOTE Some clients (e.g. QFieldSync) are still requiring the `sha256` key to check whether the files needs to be reuploaded.
             # Since we do not have control on these old client versions, we need to keep the API backward compatible for some time and assume `skip_metadata=0` by default.
             skip_metadata_param = request.GET.get("skip_metadata", "0")
             if skip_metadata_param == "0":

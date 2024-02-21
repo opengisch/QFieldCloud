@@ -1,0 +1,18 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n %}
+
+{% block submit_buttons_bottom %}
+  {{ block.super }}
+
+  {% if original.type == 'delta_apply' %}
+  <div class="form-group">
+    <a href="{% url 'admin:export_applyjob_deltafile' original.pk %}" class="btn btn-secondary form-control">
+      {% trans 'Download deltafile' %}
+    </a>
+  </div>
+  {% endif %}
+  <div class="form-group">
+    {% if original %}<a href="{% url 'admin:rerun_job' original.pk %}" class="btn btn-info form-control">{% trans 'Re-run job' %}</a>
+    {% endif %}
+  </div>
+{% endblock %}

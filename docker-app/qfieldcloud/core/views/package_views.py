@@ -79,18 +79,28 @@ class LatestPackageView(views.APIView):
         filenames = set()
         files = []
 
+        # NOTE Some clients (e.g. QFieldSync) are still requiring the `sha256` key to check whether the files needs to be reuploaded.
+        # Since we do not have control on these old client versions, we need to keep the API backward compatible for some time and assume `skip_metadata=0` by default.
+        skip_metadata_param = request.GET.get("skip_metadata", "0")
+        if skip_metadata_param == "0":
+            skip_metadata = False
+        else:
+            skip_metadata = bool(skip_metadata_param)
+
         for f in get_project_package_files(project_id, project.last_package_job_id):
+            file_data = {
+                "name": f.name,
+                "size": f.size,
+                "last_modified": f.last_modified,
+                "md5sum": f.md5sum,
+                "is_attachment": False,
+            }
+
+            if not skip_metadata:
+                file_data["sha256"] = check_s3_key(f.key)
+
             filenames.add(f.name)
-            files.append(
-                {
-                    "name": f.name,
-                    "size": f.size,
-                    "last_modified": f.last_modified,
-                    "sha256": check_s3_key(f.key),
-                    "md5sum": f.md5sum,
-                    "is_attachment": False,
-                }
-            )
+            files.append(file_data)
 
         # get attachment files directly from the original project files, not from the package
         for attachment_dir in project.attachment_dirs:
@@ -99,17 +109,19 @@ class LatestPackageView(views.APIView):
                 if f.name in filenames:
                     continue
 
+                file_data = {
+                    "name": f.name,
+                    "size": f.size,
+                    "last_modified": f.last_modified,
+                    "md5sum": f.md5sum,
+                    "is_attachment": True,
+                }
+
+                if not skip_metadata:
+                    file_data["sha256"] = check_s3_key(f.key)
+
                 filenames.add(f.name)
-                files.append(
-                    {
-                        "name": f.name,
-                        "size": f.size,
-                        "last_modified": f.last_modified,
-                        "sha256": check_s3_key(f.key),
-                        "md5sum": f.md5sum,
-                        "is_attachment": True,
-                    }
-                )
+                files.append(file_data)
 
         if not files:
             raise exceptions.InvalidJobError("Empty project package.")
