@@ -69,6 +69,8 @@ CACHES = {
 
 # Application definition
 INSTALLED_APPS = [
+    # admin theme
+    "jazzmin",
     # django contrib
     "django.contrib.admin",
     "django.contrib.contenttypes",
@@ -235,7 +237,9 @@ LANGUAGES = [
 
 STATIC_URL = "/staticfiles/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-STATICFILES_DIRS = []
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "qfieldcloud", "core", "staticfiles"),
+]
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 
@@ -602,4 +606,27 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "v1",
     "CONTACT": {"email": "info@opengis.ch"},
     "LICENSE": {"name": "License"},
+}
+
+JAZZMIN_SETTINGS = {
+    # Page title. Defaults to `current_admin_site.site_title` if empty.
+    "site_title": "QFieldCloud: Admin",
+    # Site header title (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
+    "site_header": "QFieldCloud",
+    # Brand name (max 19 chars). Defaults to  `current_admin_site.site_header` if empty.
+    "site_brand": "QFieldCloud admin",
+    # Favicon filename. Defaults to `site_logo` if empty.
+    "site_icon": "favicon.ico",
+    # Logo filename.
+    "site_logo": "logo_notext.svg",
+    # CSS classes that are applied to the logo above, emptied to avoid class "img-circle"
+    "site_logo_classes": "",
+    # Sign-in form logo filename. Defaults to `site_logo` if empty.
+    "login_logo": "img/opengis_powering_qfc.png",
+    # Sign-in form welcome text.
+    "welcome_sign": "Welcome to QFieldCloud",
+    # Copyright on the footer.
+    "copyright": "OPENGIS.ch",
+    # Additional custom CSS file for the Django Admin pages.
+    "custom_css": "css/admin.css",
 }

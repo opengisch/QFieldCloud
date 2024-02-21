@@ -795,6 +795,8 @@ class JobAdmin(QFieldCloudModelAdmin):
     )
     has_direct_delete_permission = False
 
+    change_form_template = "admin/job_change_form.html"
+
     def get_queryset(self, request):
         return super().get_queryset(request).defer("output", "feedback")
 
@@ -829,6 +831,11 @@ class JobAdmin(QFieldCloudModelAdmin):
                 "<uuid:apply_job_id>/export-deltafile",
                 self.admin_site.admin_view(self.export_applyjob_deltafile),
                 name="export_applyjob_deltafile",
+            ),
+            path(
+                "<path:object_id>/rerun/",
+                self.admin_site.admin_view(self.rerun_job),
+                name="rerun_job",
             ),
             *urls,
         ]
@@ -885,6 +892,10 @@ class JobAdmin(QFieldCloudModelAdmin):
                 "sort_keys": True,
             },
         )
+
+    def rerun_job(self, request, object_id):
+        Job.objects.filter(pk=object_id).update(status="pending")
+        return HttpResponseRedirect("..")
 
 
 class ApplyJobDeltaInline(admin.TabularInline):
