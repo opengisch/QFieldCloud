@@ -629,4 +629,9 @@ JAZZMIN_SETTINGS = {
     "copyright": "OPENGIS.ch",
     # Additional custom CSS file for the Django Admin pages.
     "custom_css": "css/admin.css",
+    "show_ui_builder": True,
+}
+JAZZMIN_UI_TWEAKS = {
+    # CSS dark theme used, options here: https://django-jazzmin.readthedocs.io/ui_customisation/#light-themes
+    "dark_mode_theme": "superhero",
 }
