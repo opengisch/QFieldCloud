@@ -29,18 +29,13 @@ logger = logging.getLogger("ENTRYPNT")
 logger.setLevel(logging.INFO)
 
 
-def _call_libqfieldsync_packager(
-    project_filename: Path, package_dir: Path, offliner_type: OfflinerType
-) -> str:
+def _call_libqfieldsync_packager(package_dir: Path, offliner_type: OfflinerType) -> str:
     """Call `libqfieldsync` to package a project for QField"""
     logger.info("Preparing QGIS project for packaging…")
 
     project = QgsProject.instance()
-    if not project_filename.exists():
-        raise FileNotFoundError(project_filename)
-
-    if not project.read(str(project_filename)):
-        raise Exception(f"Unable to open file with QGIS: {project_filename}")
+    if not project.fileName():
+        raise Exception("Project is empty")
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
@@ -127,7 +122,7 @@ def _call_libqfieldsync_packager(
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
     offline_converter.project_configuration.create_base_map = False
-    offline_converter.convert()
+    offline_converter.convert(reload_original_project=False)
 
     logger.info("Packaging finished!")
 
@@ -138,21 +133,30 @@ def _call_libqfieldsync_packager(
     return packaged_project_filename
 
 
-def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
+def _extract_layer_data() -> dict:
     logger.info("Extracting QGIS project layer data…")
 
-    project_filename = str(project_filename)
     project = QgsProject.instance()
-
-    with set_bad_layer_handler(project):
-        project.read(project_filename)
-        layers_by_id: dict = get_layers_data(project)
+    layers_by_id: dict = get_layers_data(project)
 
     logger.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
     )
 
     return layers_by_id
+
+
+def _open_project(project_filename: Union[str, Path]):
+    logger.info("Loading QGIS project…")
+
+    project_filename = str(project_filename)
+    project = QgsProject.instance()
+    with set_bad_layer_handler(project):
+        if not project.read(project_filename):
+            project.setFileName("")
+            raise Exception(f"Unable to open project with QGIS: {project_filename}")
+
+    logger.info("Project loaded.")
 
 
 def cmd_package_project(args: argparse.Namespace):
@@ -179,11 +183,16 @@ def cmd_package_project(args: argparse.Namespace):
                 return_names=["tmp_project_dir"],
             ),
             Step(
-                id="qgis_layers_data",
-                name="QGIS Layers Data",
+                id="qgis_open_project",
+                name="Open Project",
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                 },
+                method=_open_project,
+            ),
+            Step(
+                id="qgis_layers_data",
+                name="Original Project Layers Data",
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
                 outputs=["layers_by_id"],
@@ -192,7 +201,6 @@ def cmd_package_project(args: argparse.Namespace):
                 id="package_project",
                 name="Package Project",
                 arguments={
-                    "project_filename": WorkDirPath("files", args.project_file),
                     "package_dir": WorkDirPath("export", mkdir=True),
                     "offliner_type": args.offliner_type,
                 },
@@ -201,12 +209,7 @@ def cmd_package_project(args: argparse.Namespace):
             ),
             Step(
                 id="qfield_layer_data",
-                name="Packaged Layers Data",
-                arguments={
-                    "project_filename": StepOutput(
-                        "package_project", "qfield_project_filename"
-                    ),
-                },
+                name="Packaged Project Layers Data",
                 method=_extract_layer_data,
                 return_names=["layers_by_id"],
                 outputs=["layers_by_id"],
