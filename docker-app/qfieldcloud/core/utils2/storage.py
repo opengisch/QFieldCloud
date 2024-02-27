@@ -196,7 +196,6 @@ def get_attachment_dir_prefix(
 def file_response(
     request: HttpRequest,
     key: str,
-    presigned: bool = False,
     expires: int = 60,
     version: str | None = None,
     as_attachment: bool = False,
@@ -213,25 +212,22 @@ def file_response(
     https_port = http_host.split(":")[-1] if ":" in http_host else "443"
 
     if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
-        if presigned:
-            if as_attachment:
-                extra_params["ResponseContentType"] = "application/force-download"
-                extra_params[
-                    "ResponseContentDisposition"
-                ] = f'attachment;filename="{filename}"'
+        if as_attachment:
+            extra_params["ResponseContentType"] = "application/force-download"
+            extra_params[
+                "ResponseContentDisposition"
+            ] = f'attachment;filename="{filename}"'
 
-            url = qfieldcloud.core.utils.get_s3_client().generate_presigned_url(
-                "get_object",
-                Params={
-                    **extra_params,
-                    "Key": key,
-                    "Bucket": qfieldcloud.core.utils.get_s3_bucket().name,
-                },
-                ExpiresIn=expires,
-                HttpMethod="GET",
-            )
-        else:
-            url = qfieldcloud.core.utils.get_s3_object_url(key)
+        url = qfieldcloud.core.utils.get_s3_client().generate_presigned_url(
+            "get_object",
+            Params={
+                **extra_params,
+                "Key": key,
+                "Bucket": qfieldcloud.core.utils.get_s3_bucket().name,
+            },
+            ExpiresIn=expires,
+            HttpMethod="GET",
+        )
 
         # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
         response = HttpResponse()
