@@ -207,7 +207,6 @@ class DownloadPushDeleteFileView(views.APIView):
         return utils2.storage.file_response(
             request,
             key,
-            presigned=True,
             expires=600,
             version=version,
             as_attachment=True,
@@ -374,7 +373,7 @@ class ProjectMetafilesView(views.APIView):
 
     def get(self, request, projectid, filename):
         key = utils.safe_join(f"projects/{projectid}/meta/", filename)
-        return utils2.storage.file_response(request, key, presigned=True)
+        return utils2.storage.file_response(request, key)
 
 
 @extend_schema_view(
