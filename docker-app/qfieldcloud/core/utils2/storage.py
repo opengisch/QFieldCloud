@@ -289,7 +289,6 @@ def upload_user_avatar(
         file,
         key,
         {
-            "ACL": "public-read",
             "ContentType": mimetype.value,
         },
     )
@@ -353,8 +352,6 @@ def upload_project_thumbail(
         file,
         key,
         {
-            # TODO most probably this is not public-read, since the project might be private
-            "ACL": "public-read",
             "ContentType": mimetype,
         },
     )
