@@ -110,7 +110,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           context: ./nginx
           file: ./nginx/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          # push: ${{ github.event_name != 'pull_request' }}
           tags: |
             opengisch/qfieldcloud-nginx:${{ steps.prepare.outputs.docker_tag }}
             opengisch/qfieldcloud-nginx:${{ steps.prepare.outputs.docker_commit }}
