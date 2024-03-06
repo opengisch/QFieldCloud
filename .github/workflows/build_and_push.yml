@@ -5,6 +5,9 @@ on:
       - master
     tags:
       - "v*.*.*"
+  pull_request:
+    branches:
+      - master
 jobs:
   build_and_push:
     runs-on: ubuntu-22.04
