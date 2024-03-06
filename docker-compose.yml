@@ -88,14 +88,11 @@ services:
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
   nginx:
-    image: nginx:stable
+    build:
+      context: ./nginx
     restart: unless-stopped
     volumes:
-      - ./nginx/pages/:/var/www/html/pages/
-      - ./nginx/templates/:/etc/nginx/templates/
       - ./nginx/certs/:/etc/nginx/certs/:ro
-      - ./nginx/options-ssl-nginx.conf:/etc/nginx/options-ssl-nginx.conf
-      - ./nginx/ssl-dhparams.pem:/etc/nginx/ssl-dhparams.pem
       - certbot_www:/var/www/certbot
     ports:
       - ${WEB_HTTP_PORT}:80
