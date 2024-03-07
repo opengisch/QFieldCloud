@@ -8,7 +8,7 @@ __pycache__/
 .env
 docker-compose.override.yml
 client/projects
-nginx/certs/*
+docker-nginx/certs/*
 conf/certbot/*
 Pipfile*
 **/site-packages
