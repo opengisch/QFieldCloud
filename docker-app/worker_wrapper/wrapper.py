@@ -160,7 +160,7 @@ class JobRun:
                     self.job.output = output.decode("utf-8")
                     self.job.feedback = feedback
                     self.job.status = Job.Status.FAILED
-                    self.job.save(update_fields=["output", "feedback"])
+                    self.job.save(update_fields=["output", "feedback", "status"])
                     logger.info(
                         "Set job status to `failed` due to being killed by the docker engine.",
                     )
