@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import IO, Any, Callable, NamedTuple, Optional
 
 from libqfieldsync.layer import LayerSource
-from libqfieldsync.utils.bad_layer_handler import bad_layer_handler
+from libqfieldsync.utils.bad_layer_handler import set_bad_layer_handler
 from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
@@ -182,9 +182,6 @@ def start_app():
 
         logging.info("QGIS app started!")
 
-    # we set the `bad_layer_handler` and assume we always have only one single `QgsProject` instance within the job's life
-    QgsProject.instance().setBadLayerHandler(bad_layer_handler)
-
     return QGISAPP
 
 
@@ -204,6 +201,33 @@ def stop_app():
         logging.info("Stopping QGIS app…")
         QGISAPP.exitQgis()
         del QGISAPP
+
+
+def open_qgis_project(project_filename: str, force_reload: bool = False) -> QgsProject:
+    logging.info(f'Loading QGIS project "{project_filename}"…')
+
+    if not Path(project_filename).exists():
+        raise FileNotFoundError(project_filename)
+
+    project = QgsProject.instance()
+
+    if project.fileName() == str(project_filename) and not force_reload:
+        logging.info(
+            f'Skip loading QGIS project "{project_filename}", it is already loaded'
+        )
+        return project
+
+    with set_bad_layer_handler(project):
+        if not project.read(str(project_filename)):
+            logging.error(f'Failed to load QGIS project "{project_filename}"!')
+
+            project.setFileName("")
+
+            raise Exception(f"Unable to open project with QGIS: {project_filename}")
+
+    logging.info("Project loaded.")
+
+    return project
 
 
 def download_project(
