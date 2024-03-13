@@ -11,7 +11,6 @@ import qfc_worker.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
-from libqfieldsync.utils.bad_layer_handler import set_bad_layer_handler
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from qfc_worker.utils import (
     Step,
@@ -20,8 +19,9 @@ from qfc_worker.utils import (
     Workflow,
     get_layers_data,
     layers_data_to_string,
+    open_qgis_project,
 )
-from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle, QgsVectorLayer
+from qgis.core import QgsCoordinateTransform, QgsRectangle, QgsVectorLayer
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -35,17 +35,7 @@ def _call_libqfieldsync_packager(
     """Call `libqfieldsync` to package a project for QField"""
     logger.info("Preparing QGIS project for packaging…")
 
-    if not project_filename.exists():
-        raise FileNotFoundError(project_filename)
-
-    project = QgsProject.instance()
-
-    project_filename_string = str(project_filename)
-    if project.fileName() != project_filename_string:
-        with set_bad_layer_handler(project):
-            if not project.read(project_filename_string):
-                project.setFileName("")
-                raise Exception(f"Unable to open file with QGIS: {project_filename}")
+    project = open_qgis_project(str(project_filename))
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
@@ -146,14 +136,7 @@ def _call_libqfieldsync_packager(
 def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
     logger.info("Extracting QGIS project layer data…")
 
-    project = QgsProject.instance()
-
-    if project.fileName() != str(project_filename):
-        with set_bad_layer_handler(project):
-            if not project.read(str(project_filename)):
-                project.setFileName("")
-                raise Exception(f"Unable to open file with QGIS: {project_filename}")
-
+    project = open_qgis_project(str(project_filename))
     layers_by_id: dict = get_layers_data(project)
 
     logger.info(
@@ -164,16 +147,7 @@ def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
 
 
 def _open_project(project_filename: Union[str, Path]):
-    logger.info("Loading QGIS project…")
-
-    project = QgsProject.instance()
-
-    with set_bad_layer_handler(project):
-        if not project.read(str(project_filename)):
-            project.setFileName("")
-            raise Exception(f"Unable to open project with QGIS: {project_filename}")
-
-    logger.info("Project loaded.")
+    open_qgis_project(str(project_filename), force_reload=True)
 
 
 def cmd_package_project(args: argparse.Namespace):
@@ -200,16 +174,8 @@ def cmd_package_project(args: argparse.Namespace):
                 return_names=["tmp_project_dir"],
             ),
             Step(
-                id="qgis_open_project",
-                name="Open Project",
-                arguments={
-                    "project_filename": WorkDirPath("files", args.project_file),
-                },
-                method=_open_project,
-            ),
-            Step(
                 id="qgis_layers_data",
-                name="Original Project Layers Data",
+                name="QGIS Layers Data",
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                 },
@@ -230,7 +196,7 @@ def cmd_package_project(args: argparse.Namespace):
             ),
             Step(
                 id="qfield_layer_data",
-                name="Packaged Project Layers Data",
+                name="Packaged Layers Data",
                 arguments={
                     "project_filename": StepOutput(
                         "package_project", "qfield_project_filename"
