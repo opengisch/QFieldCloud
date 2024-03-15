@@ -261,7 +261,7 @@ def strip_feature_count_from_project_xml(project_filename: str) -> None:
 
             raise Exception(f"Failed to unzip {project_filename} file!")
 
-    logging.error("Parsing QGIS project file XML…")
+    logging.info("Parsing QGIS project file XML…")
 
     tree = ET.parse(xml_file)
     root = tree.getroot()
