@@ -12,6 +12,7 @@ import sys
 import tempfile
 import traceback
 import uuid
+import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -26,7 +27,9 @@ from qgis.core import (
     QgsMapLayer,
     QgsMapSettings,
     QgsProject,
+    QgsProjectArchive,
     QgsProviderRegistry,
+    QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
 from tabulate import tabulate
@@ -203,7 +206,11 @@ def stop_app():
         del QGISAPP
 
 
-def open_qgis_project(project_filename: str, force_reload: bool = False) -> QgsProject:
+def open_qgis_project(
+    project_filename: str,
+    force_reload: bool = False,
+    disable_feature_count: bool = False,
+) -> QgsProject:
     logging.info(f'Loading QGIS project "{project_filename}"…')
 
     if not Path(project_filename).exists():
@@ -217,6 +224,9 @@ def open_qgis_project(project_filename: str, force_reload: bool = False) -> QgsP
         )
         return project
 
+    if disable_feature_count:
+        strip_feature_count_from_project_xml(project_filename)
+
     with set_bad_layer_handler(project):
         if not project.read(str(project_filename)):
             logging.error(f'Failed to load QGIS project "{project_filename}"!')
@@ -228,6 +238,49 @@ def open_qgis_project(project_filename: str, force_reload: bool = False) -> QgsP
     logging.info("Project loaded.")
 
     return project
+
+
+def strip_feature_count_from_project_xml(project_filename: str) -> None:
+    """Rewrites project XML file with feature count disabled.
+
+    Args:
+        project_filename (str): filename of the QGIS project file (.qgs or .qgz)
+    """
+    archive = None
+    xml_file = project_filename
+    if QgsZipUtils.isZipFile(project_filename):
+        archive = QgsProjectArchive()
+
+        if archive.unzip(project_filename):
+            xml_file = archive.projectFile()
+        else:
+            raise Exception(f"Failed to unzip {project_filename} file!")
+
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    for node in root.findall(".//legendlayer"):
+        node.set("showFeatureCount", "0")
+
+    for node in root.findall(
+        './/layer-tree-layer/customproperties/Option[@type="Map"]/Option[@name="showFeatureCount"]'
+    ):
+        node.set("value", "0")
+
+    tmp_filename = tempfile.NamedTemporaryFile().name
+    tree.write(tmp_filename, short_empty_elements=False)
+
+    if archive:
+        if not archive.clearProjectFile():
+            raise Exception("Failed to clear project path from the archive!")
+
+        if not Path(tmp_filename).rename(xml_file):
+            raise Exception("Failed to move the temp xml file into archive dir!")
+
+        archive.addFile(xml_file)
+
+        if not archive.zip(project_filename):
+            raise Exception(f"Failed to zip {project_filename} file!")
 
 
 def download_project(

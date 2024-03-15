@@ -147,7 +147,9 @@ def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
 
 
 def _open_project(project_filename: Union[str, Path]):
-    return open_qgis_project(str(project_filename), force_reload=True)
+    return open_qgis_project(
+        str(project_filename), force_reload=True, disable_feature_count=True
+    )
 
 
 def cmd_package_project(args: argparse.Namespace):
