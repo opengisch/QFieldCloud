@@ -11,7 +11,6 @@ import qfc_worker.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
-from libqfieldsync.utils.bad_layer_handler import set_bad_layer_handler
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from qfc_worker.utils import (
     Step,
@@ -20,8 +19,9 @@ from qfc_worker.utils import (
     Workflow,
     get_layers_data,
     layers_data_to_string,
+    open_qgis_project,
 )
-from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle, QgsVectorLayer
+from qgis.core import QgsCoordinateTransform, QgsRectangle, QgsVectorLayer
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -35,12 +35,7 @@ def _call_libqfieldsync_packager(
     """Call `libqfieldsync` to package a project for QField"""
     logger.info("Preparing QGIS project for packaging…")
 
-    project = QgsProject.instance()
-    if not project_filename.exists():
-        raise FileNotFoundError(project_filename)
-
-    if not project.read(str(project_filename)):
-        raise Exception(f"Unable to open file with QGIS: {project_filename}")
+    project = open_qgis_project(str(project_filename))
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
@@ -127,7 +122,7 @@ def _call_libqfieldsync_packager(
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
     offline_converter.project_configuration.create_base_map = False
-    offline_converter.convert()
+    offline_converter.convert(reload_original_project=False)
 
     logger.info("Packaging finished!")
 
@@ -141,18 +136,18 @@ def _call_libqfieldsync_packager(
 def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
     logger.info("Extracting QGIS project layer data…")
 
-    project_filename = str(project_filename)
-    project = QgsProject.instance()
-
-    with set_bad_layer_handler(project):
-        project.read(project_filename)
-        layers_by_id: dict = get_layers_data(project)
+    project = open_qgis_project(str(project_filename))
+    layers_by_id: dict = get_layers_data(project)
 
     logger.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
     )
 
     return layers_by_id
+
+
+def _open_project(project_filename: Union[str, Path]):
+    return open_qgis_project(str(project_filename), force_reload=True)
 
 
 def cmd_package_project(args: argparse.Namespace):
@@ -328,7 +323,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                 },
-                method=qfc_worker.process_projectfile.load_project_file,
+                method=_open_project,
                 return_names=["project"],
             ),
             Step(
