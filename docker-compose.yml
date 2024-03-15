@@ -131,6 +131,8 @@ services:
     build:
       context: ./docker-qgis
       network: host
+      args:
+        DEBUG_BUILD: ${DEBUG}
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
