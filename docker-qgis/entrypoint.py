@@ -147,7 +147,7 @@ def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
 
 
 def _open_project(project_filename: Union[str, Path]):
-    open_qgis_project(str(project_filename), force_reload=True)
+    return open_qgis_project(str(project_filename), force_reload=True)
 
 
 def cmd_package_project(args: argparse.Namespace):
@@ -323,7 +323,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 arguments={
                     "project_filename": WorkDirPath("files", args.project_file),
                 },
-                method=qfc_worker.process_projectfile.load_project_file,
+                method=_open_project,
                 return_names=["project"],
             ),
             Step(

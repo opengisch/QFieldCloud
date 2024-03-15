@@ -44,18 +44,6 @@ def check_valid_project_file(project_filename: Path) -> None:
     logger.info("QGIS project file is valid!")
 
 
-def load_project_file(project_filename: Path) -> QgsProject:
-    logger.info("Open QGIS project file…")
-
-    project = QgsProject.instance()
-    if not project.read(str(project_filename)):
-        raise InvalidXmlFileException(error=project.error())
-
-    logger.info("QGIS project file opened!")
-
-    return project
-
-
 def extract_project_details(project: QgsProject) -> dict[str, str]:
     """Extract project details"""
     logger.info("Extract project details…")
