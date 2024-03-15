@@ -249,15 +249,24 @@ def strip_feature_count_from_project_xml(project_filename: str) -> None:
     archive = None
     xml_file = project_filename
     if QgsZipUtils.isZipFile(project_filename):
+        logging.info("The project file is zipped as .qgz, unzipping…")
+
         archive = QgsProjectArchive()
 
         if archive.unzip(project_filename):
+            logging.info("The project file is unzipped successfully!")
             xml_file = archive.projectFile()
         else:
+            logging.error("The project file is unzipping failed!")
+
             raise Exception(f"Failed to unzip {project_filename} file!")
+
+    logging.error("Parsing QGIS project file XML…")
 
     tree = ET.parse(xml_file)
     root = tree.getroot()
+
+    logging.info("QGIS project parsed!")
 
     for node in root.findall(".//legendlayer"):
         node.set("showFeatureCount", "0")
@@ -267,10 +276,12 @@ def strip_feature_count_from_project_xml(project_filename: str) -> None:
     ):
         node.set("value", "0")
 
-    tmp_filename = tempfile.NamedTemporaryFile().name
-    tree.write(tmp_filename, short_empty_elements=False)
+    logging.info("Writing the QGIS project XML into a file…")
 
     if archive:
+        tmp_filename = tempfile.NamedTemporaryFile().name
+        tree.write(tmp_filename, short_empty_elements=False)
+
         if not archive.clearProjectFile():
             raise Exception("Failed to clear project path from the archive!")
 
@@ -281,6 +292,10 @@ def strip_feature_count_from_project_xml(project_filename: str) -> None:
 
         if not archive.zip(project_filename):
             raise Exception(f"Failed to zip {project_filename} file!")
+    else:
+        tree.write(xml_file, short_empty_elements=False)
+
+    logging.info("QGIS project file re-written!")
 
 
 def download_project(
