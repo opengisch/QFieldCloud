@@ -1,10 +1,12 @@
 import logging
 from pathlib import Path
+from typing import Callable
 from xml.etree import ElementTree
 
 from qgis.core import QgsMapRendererParallelJob, QgsMapSettings, QgsProject
 from qgis.PyQt.QtCore import QEventLoop, QSize
 from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtXml import QDomDocument
 
 from .utils import (
     FailedThumbnailGenerationException,
@@ -53,33 +55,52 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
     logger.info("Reading QGIS project file…")
     map_settings = QgsMapSettings()
 
-    def on_project_read(doc):
-        r, _success = project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
-        g, _success = project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
-        b, _success = project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
-        background_color = QColor(r, g, b)
-        map_settings.setBackgroundColor(background_color)
+    def on_project_read_wrapper(
+        tmp_project: QgsProject,
+    ) -> Callable[[QDomDocument], None]:
+        def on_project_read(doc: QDomDocument) -> None:
+            r, _success = tmp_project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
+            g, _success = tmp_project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
+            b, _success = tmp_project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
+            background_color = QColor(r, g, b)
+            map_settings.setBackgroundColor(background_color)
 
-        details["background_color"] = background_color.name()
+            details["background_color"] = background_color.name()
 
-        nodes = doc.elementsByTagName("mapcanvas")
+            nodes = doc.elementsByTagName("mapcanvas")
 
-        for i in range(nodes.size()):
-            node = nodes.item(i)
-            element = node.toElement()
-            if (
-                element.hasAttribute("name")
-                and element.attribute("name") == "theMapCanvas"
-            ):
-                map_settings.readXml(node)
+            for i in range(nodes.size()):
+                node = nodes.item(i)
+                element = node.toElement()
+                if (
+                    element.hasAttribute("name")
+                    and element.attribute("name") == "theMapCanvas"
+                ):
+                    map_settings.readXml(node)
 
-        map_settings.setRotation(0)
-        map_settings.setOutputSize(QSize(1024, 768))
+            map_settings.setRotation(0)
+            map_settings.setOutputSize(QSize(1024, 768))
 
-        details["extent"] = map_settings.extent().asWktPolygon()
+            details["extent"] = map_settings.extent().asWktPolygon()
 
-    project.readProject.connect(on_project_read)
-    project.read(project.fileName())
+        return on_project_read
+
+    # NOTE use a temporary project to get the project extent and background color
+    # as we can disable resolving layers, which results in great speed gains
+    tmp_project = QgsProject()
+    tmp_project_read_flags = (
+        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
+        QgsProject.ReadFlags()
+        | QgsProject.FlagDontResolveLayers
+        | QgsProject.FlagDontLoadLayouts
+        | QgsProject.FlagDontLoad3DViews
+        | QgsProject.DontLoadProjectStyles
+    )
+    tmp_project.readProject.connect(on_project_read_wrapper(tmp_project))
+    tmp_project.read(project.fileName(), tmp_project_read_flags)
+
+    # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
+    del tmp_project
 
     details["crs"] = project.crs().authid()
     details["project_name"] = project.title()
