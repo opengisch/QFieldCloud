@@ -354,7 +354,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 id="generate_thumbnail_image",
                 name="Generate Thumbnail Image",
                 arguments={
-                    "project": StepOutput("opening_check", "project"),
+                    "project_filename": WorkDirPathAsStr("files", args.project_file),
                     "thumbnail_filename": Path("/io/thumbnail.png"),
                 },
                 method=qfc_worker.process_projectfile.generate_thumbnail,
