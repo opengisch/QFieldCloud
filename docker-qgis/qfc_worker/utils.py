@@ -1,4 +1,5 @@
 import atexit
+import gc
 import hashlib
 import inspect
 import io
@@ -198,12 +199,19 @@ def stop_app():
     if "QGISAPP" not in globals():
         return
 
-    QgsProject.instance().read("")
+    QgsProject.instance().clear()
 
     if QGISAPP is not None:
         logging.info("Stopping QGIS app…")
+
+        # NOTE we force run the GB just to make sure there are no dangling QGIS objects when we delete the QGIS application
+        gc.collect()
+
         QGISAPP.exitQgis()
+
         del QGISAPP
+
+        logging.info("Deleted QGIS app!")
 
 
 def open_qgis_project(
