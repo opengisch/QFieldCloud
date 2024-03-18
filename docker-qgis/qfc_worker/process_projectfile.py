@@ -5,12 +5,12 @@ from xml.etree import ElementTree
 
 from qgis.core import (
     QgsLayerTree,
-    QgsMapRendererParallelJob,
+    QgsMapRendererCustomPainterJob,
     QgsMapSettings,
     QgsProject,
 )
-from qgis.PyQt.QtCore import QEventLoop, QSize
-from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtCore import QSize
+from qgis.PyQt.QtGui import QColor, QImage, QPainter
 from qgis.PyQt.QtXml import QDomDocument
 
 from .utils import (
@@ -186,19 +186,22 @@ def generate_thumbnail(project_filename: str, thumbnail_filename: Path) -> None:
         tmp_project_read_flags,
     )
 
-    renderer = QgsMapRendererParallelJob(map_settings)
-
-    event_loop = QEventLoop()
-    renderer.finished.connect(event_loop.quit)
-    renderer.start()
-
-    event_loop.exec_()
-
-    img = renderer.renderedImage()
+    img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
+    painter = QPainter(img)
+    job = QgsMapRendererCustomPainterJob(map_settings, painter)
+    # NOTE we use `renderSynchronously` as it does not crash and produces the thumbnail.
+    # `waitForFinishedWithEventLoop` hangs forever and `waitForFinished` produces blank thumbnail, so don't use them!
+    job.renderSynchronously()
 
     if not img.save(str(thumbnail_filename)):
         raise FailedThumbnailGenerationException(reason="Failed to save.")
 
+    painter.end()
+
+    # NOTE force delete the `QgsMapRendererCustomPainterJob`, `QPainter` and `QImage` because we are paranoid with Cpp objects around
+    del job
+    del painter
+    del img
     # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
     del tmp_project
 
