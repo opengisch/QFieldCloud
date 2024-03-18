@@ -218,6 +218,7 @@ def open_qgis_project(
     project_filename: str,
     force_reload: bool = False,
     disable_feature_count: bool = False,
+    flags: Qgis.ProjectReadFlags = Qgis.ProjectReadFlags(),
 ) -> QgsProject:
     logging.info(f'Loading QGIS project "{project_filename}"…')
 
@@ -236,7 +237,7 @@ def open_qgis_project(
         strip_feature_count_from_project_xml(project_filename)
 
     with set_bad_layer_handler(project):
-        if not project.read(str(project_filename)):
+        if not project.read(str(project_filename), flags):
             logging.error(f'Failed to load QGIS project "{project_filename}"!')
 
             project.setFileName("")
