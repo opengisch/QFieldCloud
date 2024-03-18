@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.core.cache import cache
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import geodb_utils, utils
@@ -25,8 +24,7 @@ class APIStatusView(views.APIView):
             results["storage"] = "ok"
             # Check if bucket exists (i.e. the connection works)
             try:
-                s3_client = utils.get_s3_client()
-                s3_client.head_bucket(Bucket=settings.STORAGE_BUCKET_NAME)
+                utils.get_s3_bucket()
             except Exception:
                 results["storage"] = "error"
 

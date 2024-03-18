@@ -88,14 +88,11 @@ services:
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
   nginx:
-    image: nginx:stable
+    build:
+      context: ./docker-nginx
     restart: unless-stopped
     volumes:
-      - ./conf/nginx/pages/:/var/www/html/pages/
-      - ./conf/nginx/templates/:/etc/nginx/templates/
-      - ./conf/nginx/certs/:/etc/nginx/certs/:ro
-      - ./conf/nginx/options-ssl-nginx.conf:/etc/nginx/options-ssl-nginx.conf
-      - ./conf/nginx/ssl-dhparams.pem:/etc/nginx/ssl-dhparams.pem
+      - ./docker-nginx/certs/:/etc/nginx/certs/:ro
       - certbot_www:/var/www/certbot
     ports:
       - ${WEB_HTTP_PORT}:80
@@ -119,7 +116,7 @@ services:
     environment:
       domain: ${QFIELDCLOUD_HOST}
     volumes:
-      - ./conf/nginx/certs/:/root/.local/share/mkcert/
+      - ./docker-nginx/certs/:/root/.local/share/mkcert/
     command: /bin/sh -c 'mkcert -install && for i in $$(echo $$domain | sed "s/,/ /g"); do [ ! -f /root/.local/share/mkcert/$$i.pem ] && mkcert $$i; done && tail -f -n0 /etc/hosts'
 
   certbot:
@@ -134,6 +131,8 @@ services:
     build:
       context: ./docker-qgis
       network: host
+      args:
+        DEBUG_BUILD: ${DEBUG}
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging

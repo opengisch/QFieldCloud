@@ -1,13 +1,54 @@
-FROM qgis/qgis:final-3_34_2
+# NOTE if the ubuntu version is changed, also change it in `Suites:` in apt sources, and in `QGIS_VERSION`
+FROM ubuntu:jammy
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+# Install dependencies needed to add QGIS repository
+RUN apt update \
+    && apt upgrade -y \
+    && apt install -y gnupg software-properties-common wget
+
+# Add QGIS GPG key
+RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
+
+# Add QGIS repository
+COPY <<EOF /etc/apt/sources.list.d/qgis.sources
+Types: deb deb-src
+URIs: https://qgis.org/debian
+Suites: jammy
+Architectures: amd64
+Components: main
+Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
+EOF
+
+# Install non-QGIS dependencies
+RUN apt update \
+    && apt upgrade -y \
+    && apt install -y \
     python3-pip \
     xvfb \
     iputils-ping \
     glibc-tools \
-    && apt-get clean
+    git
+
+# Set QGIS version as in the debian repos
+ARG QGIS_VERSION=1:3.34.2+36jammy
+
+# Install QGIS dependencies
+RUN apt update \
+    && apt upgrade -y \
+    # NOTE `DEBIAN_FRONTEND=noninteractive` is required to be able to install tzinfo
+    && DEBIAN_FRONTEND=noninteractive apt install -yf \
+        qgis=${QGIS_VERSION} \
+        qgis-dbg=${QGIS_VERSION} \
+        qgis-common=${QGIS_VERSION} \
+        python3-qgis=${QGIS_VERSION} \
+        python3-qgis-common=${QGIS_VERSION} \
+        qgis-providers=${QGIS_VERSION} \
+        qgis-providers-common=${QGIS_VERSION} \
+    && apt clean
+
+# If debug build, install `gdbserver`
+ARG DEBUG_BUILD
+RUN if [ "$DEBUG_BUILD" = "1" ]; then apt install -y gdbserver valgrind; fi
 
 WORKDIR /usr/src/app
 

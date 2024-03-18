@@ -386,21 +386,6 @@ def get_project_package_files_count(project_id: str) -> int:
     return len(files)
 
 
-def get_s3_object_url(
-    key: str, bucket: mypy_boto3_s3.service_resource.Bucket = get_s3_bucket()
-) -> str:
-    """Returns the block storage URL for a given key. The key may not exist in the bucket.
-
-    Args:
-        key (str): the object key
-        bucket (boto3.Bucket, optional): Bucket for that object. Defaults to `get_s3_bucket()`.
-
-    Returns:
-        str: URL
-    """
-    return f"{settings.STORAGE_ENDPOINT_URL}/{bucket.name}/{key}"
-
-
 def list_files(
     bucket: mypy_boto3_s3.service_resource.Bucket,
     prefix: str,
