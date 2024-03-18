@@ -1,4 +1,5 @@
 import atexit
+import gc
 import hashlib
 import inspect
 import io
@@ -198,18 +199,26 @@ def stop_app():
     if "QGISAPP" not in globals():
         return
 
-    QgsProject.instance().read("")
+    QgsProject.instance().clear()
 
     if QGISAPP is not None:
         logging.info("Stopping QGIS app…")
+
+        # NOTE we force run the GB just to make sure there are no dangling QGIS objects when we delete the QGIS application
+        gc.collect()
+
         QGISAPP.exitQgis()
+
         del QGISAPP
+
+        logging.info("Deleted QGIS app!")
 
 
 def open_qgis_project(
     project_filename: str,
     force_reload: bool = False,
     disable_feature_count: bool = False,
+    flags: Qgis.ProjectReadFlags = Qgis.ProjectReadFlags(),
 ) -> QgsProject:
     logging.info(f'Loading QGIS project "{project_filename}"…')
 
@@ -228,7 +237,7 @@ def open_qgis_project(
         strip_feature_count_from_project_xml(project_filename)
 
     with set_bad_layer_handler(project):
-        if not project.read(str(project_filename)):
+        if not project.read(str(project_filename), flags):
             logging.error(f'Failed to load QGIS project "{project_filename}"!')
 
             project.setFileName("")
@@ -486,18 +495,28 @@ class StepOutput:
         self.return_name = return_name
 
 
-class WorkDirPath:
+class WorkDirPathBase:
     def __init__(self, *parts: str, mkdir: bool = False) -> None:
         self.parts = parts
         self.mkdir = mkdir
 
-    def eval(self, root: Path) -> Path:
+    def eval(self, root: Path) -> Path | str:
         path = root.joinpath(*self.parts)
 
         if self.mkdir:
             path.mkdir(parents=True, exist_ok=True)
 
         return path
+
+
+class WorkDirPath(WorkDirPathBase):
+    def eval(self, root: Path) -> Path:
+        return Path(super().eval(root))
+
+
+class WorkDirPathAsStr(WorkDirPathBase):
+    def eval(self, root: Path) -> str:
+        return str(super().eval(root))
 
 
 @contextmanager
@@ -642,7 +661,7 @@ def run_workflow(
                 for name, value in arguments.items():
                     if isinstance(value, StepOutput):
                         arguments[name] = step_returns[value.step_id][value.return_name]
-                    elif isinstance(value, WorkDirPath):
+                    elif isinstance(value, WorkDirPathBase):
                         arguments[name] = value.eval(root_workdir)
 
                 return_values = step.method(**arguments)

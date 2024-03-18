@@ -48,7 +48,7 @@ RUN apt update \
 
 # If debug build, install `gdbserver`
 ARG DEBUG_BUILD
-RUN if [ "$DEBUG_BUILD" = "1" ]; then apt install -y gdbserver; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then apt install -y gdbserver valgrind; fi
 
 WORKDIR /usr/src/app
 

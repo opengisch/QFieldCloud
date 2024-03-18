@@ -16,12 +16,13 @@ from qfc_worker.utils import (
     Step,
     StepOutput,
     WorkDirPath,
+    WorkDirPathAsStr,
     Workflow,
     get_layers_data,
     layers_data_to_string,
     open_qgis_project,
 )
-from qgis.core import QgsCoordinateTransform, QgsRectangle, QgsVectorLayer
+from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle, QgsVectorLayer
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -146,9 +147,20 @@ def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
     return layers_by_id
 
 
-def _open_project(project_filename: Union[str, Path]):
+def _open_read_only_project(project_filename: str) -> QgsProject:
+    flags = (
+        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
+        QgsProject.ReadFlags()
+        | QgsProject.ForceReadOnlyLayers
+        | QgsProject.FlagDontLoadLayouts
+        | QgsProject.FlagDontLoad3DViews
+        | QgsProject.DontLoadProjectStyles
+    )
     return open_qgis_project(
-        str(project_filename), force_reload=True, disable_feature_count=True
+        project_filename,
+        force_reload=True,
+        disable_feature_count=True,
+        flags=flags,
     )
 
 
@@ -323,9 +335,9 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 id="opening_check",
                 name="Opening Check",
                 arguments={
-                    "project_filename": WorkDirPath("files", args.project_file),
+                    "project_filename": WorkDirPathAsStr("files", args.project_file),
                 },
-                method=_open_project,
+                method=_open_read_only_project,
                 return_names=["project"],
             ),
             Step(
@@ -342,7 +354,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 id="generate_thumbnail_image",
                 name="Generate Thumbnail Image",
                 arguments={
-                    "project": StepOutput("opening_check", "project"),
+                    "project_filename": WorkDirPathAsStr("files", args.project_file),
                     "thumbnail_filename": Path("/io/thumbnail.png"),
                 },
                 method=qfc_worker.process_projectfile.generate_thumbnail,
