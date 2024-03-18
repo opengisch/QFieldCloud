@@ -494,18 +494,28 @@ class StepOutput:
         self.return_name = return_name
 
 
-class WorkDirPath:
+class WorkDirPathBase:
     def __init__(self, *parts: str, mkdir: bool = False) -> None:
         self.parts = parts
         self.mkdir = mkdir
 
-    def eval(self, root: Path) -> Path:
+    def eval(self, root: Path) -> Path | str:
         path = root.joinpath(*self.parts)
 
         if self.mkdir:
             path.mkdir(parents=True, exist_ok=True)
 
         return path
+
+
+class WorkDirPath(WorkDirPathBase):
+    def eval(self, root: Path) -> Path:
+        return Path(super().eval(root))
+
+
+class WorkDirPathAsStr(WorkDirPathBase):
+    def eval(self, root: Path) -> str:
+        return str(super().eval(root))
 
 
 @contextmanager
@@ -650,7 +660,7 @@ def run_workflow(
                 for name, value in arguments.items():
                     if isinstance(value, StepOutput):
                         arguments[name] = step_returns[value.step_id][value.return_name]
-                    elif isinstance(value, WorkDirPath):
+                    elif isinstance(value, WorkDirPathBase):
                         arguments[name] = value.eval(root_workdir)
 
                 return_values = step.method(**arguments)
