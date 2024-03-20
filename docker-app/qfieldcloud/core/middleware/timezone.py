@@ -9,7 +9,7 @@ class TimezoneMiddleware:
 
     def __call__(self, request):
         if request.user.is_authenticated and hasattr(
-            request.user.useraccount, "timezone"
+            request.user.useraccount, "useraccount"
         ):
             user_tz = request.user.useraccount.timezone
         elif settings.TIME_ZONE:

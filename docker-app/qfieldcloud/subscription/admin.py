@@ -119,6 +119,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     fields = (
         "plan",
         "account",
+        "status",
         "active_since",
         "active_until",
         "billing_cycle_anchor_at",
