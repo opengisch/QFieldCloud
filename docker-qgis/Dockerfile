@@ -30,7 +30,8 @@ RUN apt update \
     git
 
 # Set QGIS version as in the debian repos
-ARG QGIS_VERSION=1:3.34.2+36jammy
+# Choose your version from here: https://debian.qgis.org/debian/dists/jammy/main/binary-amd64/Packages
+ARG QGIS_VERSION=1:3.36.1+36jammy
 
 # Install QGIS dependencies
 RUN apt update \

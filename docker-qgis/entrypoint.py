@@ -22,7 +22,7 @@ from qfc_worker.utils import (
     layers_data_to_string,
     open_qgis_project,
 )
-from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle, QgsVectorLayer
+from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -51,9 +51,6 @@ def _call_libqfieldsync_packager(
     else:
         vl_extent = QgsRectangle()
         for layer in layers.values():
-            if isinstance(layer, QgsVectorLayer):
-                continue
-
             layer_extent = layer.extent()
 
             if layer_extent.isNull() or not layer_extent.isFinite():

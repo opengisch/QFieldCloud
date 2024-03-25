@@ -179,6 +179,8 @@ sql_items = [
             $$
                 DECLARE
                     delta_srid int;
+                    old_geom_wkt text;
+                    new_geom_wkt text;
                 BEGIN
                     SELECT CASE
                         WHEN jsonb_extract_path_text(NEW.content, 'localLayerCrs') ~ '^EPSG:\d{1,10}$'
@@ -188,6 +190,9 @@ sql_items = [
                             NULL
                         END INTO delta_srid;
 
+                    old_geom_wkt := NULLIF( TRIM( jsonb_extract_path_text(NEW.content, 'old', 'geometry') ), '');
+                    new_geom_wkt := NULLIF( TRIM( jsonb_extract_path_text(NEW.content, 'new', 'geometry') ), '');
+
                     IF delta_srid IS NOT NULL
                         AND EXISTS(
                             SELECT *
@@ -196,8 +201,8 @@ sql_items = [
                                 AND auth_srid = delta_srid
                         )
                     THEN
-                        NEW.old_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( jsonb_extract_path_text(NEW.content, 'old', 'geometry'), 'nan', '0' ) ) ), delta_srid ), 4326 );
-                        NEW.new_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( jsonb_extract_path_text(NEW.content, 'new', 'geometry'), 'nan', '0' ) ) ), delta_srid ), 4326 );
+                        NEW.old_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( old_geom_wkt, 'nan', '0' ) ) ), delta_srid ), 4326 );
+                        NEW.new_geom := ST_Transform( ST_SetSRID( ST_Force2D( ST_GeomFromText( REPLACE( new_geom_wkt, 'nan', '0' ) ) ), delta_srid ), 4326 );
                     ELSE
                         NEW.old_geom := NULL;
                         NEW.new_geom := NULL;
