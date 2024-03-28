@@ -4,10 +4,10 @@
     <dialog class="qfc-admin-project-files-dialog">
         <pre></pre>
 
-        <button type="button">OK</button>
+        <button class="btn btn-primary" type="button">OK</button>
     </dialog>
 
-    <button class="qfc-admin-projects-files-actions-reload-btn" type="button">
+    <button class="qfc-admin-projects-files-actions-reload-btn btn btn-sm btn-info" type="button">
         {% trans 'Refresh Files List' %}
     </button>
     <span class="qfc-admin-project-files-count"></span>
@@ -44,7 +44,7 @@
                         <td></td>
                         <td class="qfc-admin-project-files-text-right"></td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-info-btn">{% trans 'Details' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-info-btn btn btn-sm btn-outline-info">{% trans 'Details' %}</button>
                         </td>
                         <td>
                             <select>
@@ -52,8 +52,8 @@
                             </select>
                         </td>
                         <td>
-                            <button type="button" class="qfc-admin-projects-files-actions-download-btn" title="{% trans 'Download the selected version or, by default the latest' %}">{% trans 'Download' %}</button>
-                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn" data-csrf-token="">{% trans 'Delete' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-download-btn btn btn-sm btn-outline-info" title="{% trans 'Download the selected version or, by default the latest' %}">{% trans 'Download' %}</button>
+                            <button type="button" class="qfc-admin-projects-files-actions-delete-btn btn btn-sm btn-outline-danger" data-csrf-token="">{% trans 'Delete' %}</button>
                         </td>
                     </tr>
                 </template>
@@ -68,7 +68,7 @@
         overflow-y: auto;
     }
 
-    .qfc-admin-projects-files-actions-reload-btn,
+    /*.qfc-admin-projects-files-actions-reload-btn,
     .qfc-admin-projects-files-actions-info-btn,
     .qfc-admin-projects-files-actions-delete-btn,
     .qfc-admin-projects-files-actions-download-btn {
@@ -83,11 +83,11 @@
         border: none;
         background: var(--button-bg);
         color: var(--button-fg);
-    }
+    }*/
 
-    .qfc-admin-projects-files-actions-delete-btn {
+    /*.qfc-admin-projects-files-actions-delete-btn {
         background: var(--delete-button-bg);
-    }
+    }*/
 
     .qfc-admin-project-files-modal {
         display: none; /* Hidden by default */
