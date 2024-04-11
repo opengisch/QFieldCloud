@@ -7,7 +7,7 @@ set -o allexport
 source .env
 set +o allexport
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
 
 if [ ! -e "${SCRIPT_DIR}/../docker-nginx/options-ssl-nginx.conf" ] || [ ! -e "${SCRIPT_DIR}/../docker-nginx/ssl-dhparams.pem" ]; then
   echo "### Downloading recommended TLS parameters ..."
