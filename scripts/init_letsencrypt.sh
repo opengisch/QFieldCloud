@@ -7,12 +7,12 @@ set -o allexport
 source .env
 set +o allexport
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+QFIELDCLOUD_DIR="$(dirname "$(realpath "$0")")/.."
 
-if [ ! -e "${SCRIPT_DIR}/../docker-nginx/options-ssl-nginx.conf" ] || [ ! -e "${SCRIPT_DIR}/../docker-nginx/ssl-dhparams.pem" ]; then
+if [ ! -e "${QFIELDCLOUD_DIR}/docker-nginx/options-ssl-nginx.conf" ] || [ ! -e "${QFIELDCLOUD_DIR}/docker-nginx/ssl-dhparams.pem" ]; then
   echo "### Downloading recommended TLS parameters ..."
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "${SCRIPT_DIR}/../docker-nginx/options-ssl-nginx.conf"
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "${SCRIPT_DIR}/../docker-nginx/ssl-dhparams.pem"
+  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "${QFIELDCLOUD_DIR}/docker-nginx/options-ssl-nginx.conf"
+  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "${QFIELDCLOUD_DIR}/docker-nginx/ssl-dhparams.pem"
   echo
 fi
 
@@ -34,8 +34,8 @@ docker compose run --rm --entrypoint "\
 echo
 
 echo "### Copy the certificate and key to their final destination ..."
-cp ${SCRIPT_DIR}/../conf/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem ${SCRIPT_DIR}/../docker-nginx/certs/${QFIELDCLOUD_HOST}.pem
-cp ${SCRIPT_DIR}/../conf/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem ${SCRIPT_DIR}/../docker-nginx/certs/${QFIELDCLOUD_HOST}-key.pem
+cp ${QFIELDCLOUD_DIR}/conf/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem ${QFIELDCLOUD_DIR}/docker-nginx/certs/${QFIELDCLOUD_HOST}.pem
+cp ${QFIELDCLOUD_DIR}/conf/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem ${QFIELDCLOUD_DIR}/docker-nginx/certs/${QFIELDCLOUD_HOST}-key.pem
 echo
 
 echo "### Reloading nginx ..."
