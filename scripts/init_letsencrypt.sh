@@ -9,13 +9,6 @@ set +o allexport
 
 QFIELDCLOUD_DIR="$(dirname "$(realpath "$0")")/.."
 
-if [ ! -e "${QFIELDCLOUD_DIR}/docker-nginx/options-ssl-nginx.conf" ] || [ ! -e "${QFIELDCLOUD_DIR}/docker-nginx/ssl-dhparams.pem" ]; then
-  echo "### Downloading recommended TLS parameters ..."
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "${QFIELDCLOUD_DIR}/docker-nginx/options-ssl-nginx.conf"
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "${QFIELDCLOUD_DIR}/docker-nginx/ssl-dhparams.pem"
-  echo
-fi
-
 echo "### Requesting Let's Encrypt certificate for $QFIELDCLOUD_HOST ..."
 domain_args="-d ${QFIELDCLOUD_HOST}"
 
