@@ -12,13 +12,13 @@
             "new": {
                 "geometry": "",
                 "attributes": {
-                    "col1": "foo"
+                    "col1": "new_value"
                 }
             },
             "old": {
                 "geometry": null,
                 "attributes": {
-                    "col1": "bar"
+                    "col1": "foo"
                 }
             }
         }
