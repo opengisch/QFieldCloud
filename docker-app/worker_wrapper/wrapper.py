@@ -309,7 +309,6 @@ class JobRun:
             volumes=volumes,
             # TODO stream the logs to something like redis, so they can be streamed back in project jobs page to the user live
             # auto_remove=True,
-            network=settings.QFIELDCLOUD_DEFAULT_NETWORK,
             detach=True,
             mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
             cpu_shares=config.WORKER_QGIS_CPU_SHARES,

@@ -521,9 +521,6 @@ QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
     "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME"
 )
 
-# Name of the docker compose network to be used by the worker containers
-QFIELDCLOUD_DEFAULT_NETWORK = os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK")
-
 # `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
 AUDITLOG_INCLUDE_TRACKING_MODELS = [
     # NOTE `Delta` and `Job` models are not being automatically audited, because their data changes very often and timestamps are available in their models.
