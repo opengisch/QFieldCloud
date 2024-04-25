@@ -19,7 +19,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
@@ -48,6 +48,7 @@ from qfieldcloud.core.models import (
     Person,
     Project,
     ProjectCollaborator,
+    Secret,
     Team,
     TeamMember,
     User,
@@ -582,6 +583,62 @@ class OwnerTypeFilter(admin.SimpleListFilter):
             return queryset
 
         return queryset.filter(owner__type=value)
+
+
+class ProjectSecretForm(ModelForm):
+    class Meta:
+        model = Secret
+        fields = ("name", "type", "value", "created_by", "project")
+
+    name = fields.CharField(widget=widgets.TextInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.type == Secret.Type.ENVVAR:
+            self.fields["value"].widget = widgets.TextInput()
+        else:
+            self.fields["value"].widget = widgets.Textarea()
+
+    def get_initial_for_field(self, field, field_name):
+        if self.instance.pk and field_name == "value":
+            return ""
+        return super().get_initial_for_field(field, field_name)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        value = cleaned_data.get("value")
+        type = type = (
+            self.instance.type if self.instance.pk else cleaned_data.get("type")
+        )
+        if value and type == Secret.Type.ENVVAR:
+            if "\n" in value:
+                raise ValidationError(
+                    {"value": "Environment Variable cannot contain newlines."}
+                )
+            if "=" in value:
+                raise ValidationError(
+                    {"value": "Environment Variable cannot contain equal signs."}
+                )
+        return cleaned_data
+
+
+class SecretAdmin(QFieldCloudModelAdmin):
+    model = Secret
+    form = ProjectSecretForm
+    fields = ("name", "type", "value", "created_by", "project")
+    list_display = ("name", "type", "created_by", "project")
+    extra = 0
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = ["created_by"]
+        if obj:
+            readonly_fields += ["name", "type", "project"]
+        return readonly_fields
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # only set created_by during the first save
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 class ProjectForm(ModelForm):
@@ -1365,6 +1422,7 @@ admin.site.register(Person, PersonAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(Project, ProjectAdmin)
+admin.site.register(Secret, SecretAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(Geodb, GeodbAdmin)
