@@ -522,7 +522,7 @@ QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
 )
 
 # Name of the docker compose network to be used by the worker containers
-QFIELDCLOUD_DEFAULT_NETWORK = f"{os.environ.get('COMPOSE_PROJECT_NAME')}_default"
+QFIELDCLOUD_DEFAULT_NETWORK = os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK")
 
 # `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
 AUDITLOG_INCLUDE_TRACKING_MODELS = [

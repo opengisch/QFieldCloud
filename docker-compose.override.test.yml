@@ -22,6 +22,11 @@ services:
     environment:
       POSTGRES_DB: test_${POSTGRES_DB}
 
+networks:
+  default:
+    # Use a custom driver
+    name: ${QFIELDCLOUD_DEFAULT_NETWORK}
+
 volumes:
   # We use a different volume, just so that the test_ database
   # gets created in the entrypoint.

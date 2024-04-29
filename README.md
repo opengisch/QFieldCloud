@@ -102,6 +102,7 @@ Create an <code>.env.test</code> file with the following variables that override
     HOST_POSTGRES_PORT=8103
     HOST_GEODB_PORT=8107
     MEMCACHED_PORT=11212
+    QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
     QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
     DJANGO_DEV_PORT=8111
     SMTP4DEV_WEB_PORT=8112
