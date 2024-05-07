@@ -7,7 +7,7 @@ from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
 from sentry_sdk import capture_message
 
-from ..core.models import Job, Project
+from ..core.models import ApplyJob, ApplyJobDelta, Delta, Job, Project
 from ..core.utils2 import storage
 from .invitations_utils import send_invitation
 
@@ -56,20 +56,33 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
             - timedelta(seconds=config.WORKER_TIMEOUT_S + 10),
         )
 
+        feedback = {
+            "error_stack": "",
+            "error": "Job unexpectedly terminated.",
+            "error_origin": "worker_wrapper",
+            "container_exit_code": -2,
+        }
+
         for job in jobs:
             capture_message(
                 f'Job "{job.id}" was with status "{job.status}", but worker container no longer exists. Job unexpectedly terminated.'
             )
+            if job.type == Job.Type.DELTA_APPLY:
+                ApplyJob.objects.get(id=job.id).deltas_to_apply.update(
+                    last_status=Delta.Status.ERROR,
+                    last_feedback=feedback,
+                    last_apply_attempt_at=job.started_at,
+                    last_apply_attempt_by=job.created_by,
+                )
+
+                ApplyJobDelta.objects.filter(
+                    apply_job_id=job.id,
+                ).update(status=Delta.Status.ERROR, feedback=feedback)
 
         jobs.update(
             status=Job.Status.FAILED,
             finished_at=timezone.now(),
-            feedback={
-                "error_stack": "",
-                "error": "Job unexpectedly terminated.",
-                "error_origin": "worker_wrapper",
-                "container_exit_code": -2,
-            },
+            feedback=feedback,
             output="Job unexpectedly terminated.",
         )
 

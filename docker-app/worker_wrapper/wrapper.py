@@ -156,21 +156,9 @@ class JobRun:
                 feedback["error_origin"] = "container"
                 feedback["error_stack"] = ""
 
-                try:
-                    self.job.output = output.decode("utf-8")
-                    self.job.feedback = feedback
-                    self.job.status = Job.Status.FAILED
-                    self.job.save(update_fields=["output", "feedback", "status"])
-                    logger.info(
-                        "Set job status to `failed` due to being killed by the docker engine.",
-                    )
-                except Exception as err:
-                    logger.error(
-                        "Failed to update job status, probably does not exist in the database.",
-                        exc_info=err,
-                    )
-                # No further action required, probably received by wrapper's autoclean mechanism when the `Project` is deleted
-                return
+                logger.info(
+                    "Set job status to `failed` due to being killed by the docker engine.",
+                )
             elif exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
                 feedback["error_type"] = "TIMEOUT"
@@ -543,13 +531,19 @@ class DeltaApplyJobRun(JobRun):
     def after_docker_exception(self) -> None:
         Delta.objects.filter(
             id__in=self.delta_ids,
-        ).update(last_status=Delta.Status.ERROR)
+        ).update(
+            last_status=Delta.Status.ERROR,
+            last_feedback=self.job.feedback,
+            last_apply_attempt_at=self.job.started_at,
+            last_apply_attempt_by=self.job.created_by,
+        )
 
         ApplyJobDelta.objects.filter(
             apply_job_id=self.job_id,
             delta_id__in=self.delta_ids,
         ).update(
             status=Delta.Status.ERROR,
+            feedback=self.job.feedback,
         )
 
 
