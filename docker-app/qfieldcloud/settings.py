@@ -516,6 +516,11 @@ QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH = os.environ.get(
     "QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH"
 )
 
+# Absolute path on the docker host where `qfieldcloud-sdk-python` is mounted from for development
+QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH = os.environ.get(
+    "QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH"
+)
+
 # Volume name where transformation grids required by `PROJ` are downloaded to
 QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
     "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME"

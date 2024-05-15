@@ -63,6 +63,7 @@ ENV LANG=C.UTF-8
 ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
 ENV PYTHONPATH=/libqfieldsync:${PYTHONPATH}
+ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
 # upgrade `pip`. If not upgraded, installing from GitHub repo (needed for `libqfieldsync`) will result in UNKNOWN package.
 RUN pip3 install --upgrade pip
