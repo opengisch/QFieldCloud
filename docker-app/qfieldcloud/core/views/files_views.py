@@ -84,7 +84,7 @@ class ListFilesView(views.APIView):
             filename = str(path.relative_to(*path.parts[:3]))
             last_modified = version.last_modified.strftime("%d.%m.%Y %H:%M:%S %Z")
             # NOTE ETag is a MD5. But for the multipart uploaded files, the MD5 is computed from the concatenation of the MD5s of each uploaded part.
-            # TODO make sure when file metadata is in the DB, this is a real md5sum of the current file.
+            # TODO make sure when file metadata is in the DB (QF-2760), this is a real md5sum of the current file.
             md5sum = version.e_tag.replace('"', "")
 
             version_data = {
