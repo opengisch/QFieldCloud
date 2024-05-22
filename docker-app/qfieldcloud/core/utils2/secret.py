@@ -8,7 +8,7 @@ PGSERVICE_SECRET_NAME_PREFIX = "PG_SERVICE_"
 
 
 def validate_pg_service_conf(value: str) -> None:
-    """Checks if a string is a valid `pg_service.conf` file context, otherwise throws a `ValueError`"""
+    """Checks if a string is a valid `pg_service.conf` file contents, otherwise throws a `ValueError`"""
     try:
         buffer = io.StringIO(value)
         config = configparser.ConfigParser()
