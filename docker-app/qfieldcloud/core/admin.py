@@ -607,7 +607,7 @@ class ProjectSecretForm(ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         value = cleaned_data.get("value")
-        if self.instance.pk
+        if self.instance.pk:
             type = self.instance.type
         else:
             type = cleaned_data.get("type")
@@ -627,7 +627,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
     fields = ("name", "type", "value", "created_by", "project")
-    readonly_fields = ("created_by")
+    readonly_fields = ("created_by",)
     list_display = ("name", "type", "created_by", "project")
     extra = 0
 
@@ -635,7 +635,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
         readonly_fields = super().get_readonly_fields(request, obj)
 
         if obj:
-            return (**readonly_fields, "name", "type", "project")
+            return (*readonly_fields, "name", "type", "project")
 
         return readonly_fields
 
