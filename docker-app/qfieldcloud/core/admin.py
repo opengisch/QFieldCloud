@@ -1,3 +1,4 @@
+import re
 import csv
 import json
 import time
@@ -612,14 +613,13 @@ class ProjectSecretForm(ModelForm):
         else:
             type = cleaned_data.get("type")
         if value and type == Secret.Type.ENVVAR:
-            if "\n" in value:
+            if not re.match(r"^[a-zA-Z_]+[a-zA-Z0-9_]*$", value):
                 raise ValidationError(
-                    {"value": "Environment Variable cannot contain newlines."}
+                    {
+                        "value": "Environment Variable name must start with a letter or an underscore, followed by letters, numbers or underscores."
+                    }
                 )
-            if "=" in value:
-                raise ValidationError(
-                    {"value": "Environment Variable cannot contain equal signs."}
-                )
+
         return cleaned_data
 
 
