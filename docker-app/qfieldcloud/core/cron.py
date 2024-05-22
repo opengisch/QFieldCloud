@@ -56,13 +56,6 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
             - timedelta(seconds=config.WORKER_TIMEOUT_S + 10),
         )
 
-        feedback = {
-            "error_stack": "",
-            "error": "Job unexpectedly terminated.",
-            "error_origin": "worker_wrapper",
-            "container_exit_code": -2,
-        }
-
         for job in jobs:
             capture_message(
                 f'Job "{job.id}" was with status "{job.status}", but worker container no longer exists. Job unexpectedly terminated.'
@@ -70,19 +63,29 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
             if job.type == Job.Type.DELTA_APPLY:
                 ApplyJob.objects.get(id=job.id).deltas_to_apply.update(
                     last_status=Delta.Status.ERROR,
-                    last_feedback=feedback,
+                    last_feedback=None,
+                    last_modified_pk=None,
                     last_apply_attempt_at=job.started_at,
                     last_apply_attempt_by=job.created_by,
                 )
 
                 ApplyJobDelta.objects.filter(
                     apply_job_id=job.id,
-                ).update(status=Delta.Status.ERROR, feedback=feedback)
+                ).update(
+                    status=Delta.Status.ERROR,
+                    feedback=None,
+                    modified_pk=None,
+                )
 
         jobs.update(
             status=Job.Status.FAILED,
             finished_at=timezone.now(),
-            feedback=feedback,
+            feedback={
+                "error_stack": "",
+                "error": "Job unexpectedly terminated.",
+                "error_origin": "worker_wrapper",
+                "container_exit_code": -2,
+            },
             output="Job unexpectedly terminated.",
         )
 
