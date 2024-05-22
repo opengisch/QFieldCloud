@@ -1,6 +1,5 @@
 import csv
 import json
-import re
 import time
 import uuid
 from collections import namedtuple
@@ -20,7 +19,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
@@ -604,23 +603,6 @@ class ProjectSecretForm(ModelForm):
         if self.instance.pk and field_name == "value":
             return ""
         return super().get_initial_for_field(field, field_name)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        value = cleaned_data.get("value")
-        if self.instance.pk:
-            type = self.instance.type
-        else:
-            type = cleaned_data.get("type")
-        if value and type == Secret.Type.ENVVAR:
-            if not re.match(r"^[a-zA-Z_]+[a-zA-Z0-9_]*$", value):
-                raise ValidationError(
-                    {
-                        "value": "Environment Variable name must start with a letter or an underscore, followed by letters, numbers or underscores."
-                    }
-                )
-
-        return cleaned_data
 
 
 class SecretAdmin(QFieldCloudModelAdmin):
