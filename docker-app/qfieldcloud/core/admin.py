@@ -629,6 +629,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
     fields = ("name", "type", "value", "created_by", "project")
     readonly_fields = ("created_by",)
     list_display = ("name", "type", "created_by", "project")
+    autocomplete_fields = ['project']
     extra = 0
 
     def get_readonly_fields(self, request, obj=None):
