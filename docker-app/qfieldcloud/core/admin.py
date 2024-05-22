@@ -19,7 +19,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
@@ -56,7 +56,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
-from qfieldcloud.core.utils2 import delta_utils, jobs
+from qfieldcloud.core.utils2 import delta_utils, jobs, secret
 from rest_framework.authtoken.models import TokenProxy
 
 admin.site.unregister(LogEntry)
@@ -603,6 +603,27 @@ class ProjectSecretForm(ModelForm):
         if self.instance.pk and field_name == "value":
             return ""
         return super().get_initial_for_field(field, field_name)
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if self.instance.pk:
+            type = self.instance.type
+        else:
+            type = cleaned_data.get("type")
+        if type == Secret.Type.PGSERVICE:
+            value = cleaned_data.get("value")
+
+            try:
+                secret.validate_pg_service_conf(value)
+            except ValidationError as err:
+                raise ValidationError({"value": err.message})
+
+            name = cleaned_data.get("name")
+            if name and not name.startswith(secret.PGSERVICE_SECRET_NAME_PREFIX):
+                cleaned_data["name"] = f"{secret.PGSERVICE_SECRET_NAME_PREFIX}{name}"
+
+        return cleaned_data
 
 
 class SecretAdmin(QFieldCloudModelAdmin):
