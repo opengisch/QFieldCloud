@@ -607,9 +607,10 @@ class ProjectSecretForm(ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         value = cleaned_data.get("value")
-        type = type = (
-            self.instance.type if self.instance.pk else cleaned_data.get("type")
-        )
+        if self.instance.pk
+            type = self.instance.type
+        else:
+            type = cleaned_data.get("type")
         if value and type == Secret.Type.ENVVAR:
             if "\n" in value:
                 raise ValidationError(
@@ -626,17 +627,21 @@ class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
     fields = ("name", "type", "value", "created_by", "project")
+    readonly_fields = ("created_by")
     list_display = ("name", "type", "created_by", "project")
     extra = 0
 
     def get_readonly_fields(self, request, obj=None):
-        readonly_fields = ["created_by"]
+        readonly_fields = super().get_readonly_fields(request, obj)
+
         if obj:
-            readonly_fields += ["name", "type", "project"]
+            return (**readonly_fields, "name", "type", "project")
+
         return readonly_fields
 
     def save_model(self, request, obj, form, change):
-        if not change:  # only set created_by during the first save
+        # only set created_by during the first save
+        if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
