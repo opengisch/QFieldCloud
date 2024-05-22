@@ -56,7 +56,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
-from qfieldcloud.core.utils2 import delta_utils, jobs, secret
+from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 from rest_framework.authtoken.models import TokenProxy
 
 admin.site.unregister(LogEntry)
@@ -616,14 +616,14 @@ class ProjectSecretForm(ModelForm):
             value = cleaned_data.get("value")
             if value:
                 try:
-                    secret.validate_pg_service_conf(value)
+                    pg_service_file.validate_pg_service_conf(value)
                 except ValidationError as err:
                     raise ValidationError({"value": err.message})
 
             # ensure name with PGSERVICE_SECRET_NAME_PREFIX
             name = cleaned_data.get("name")
-            if name and not name.startswith(secret.PGSERVICE_SECRET_NAME_PREFIX):
-                cleaned_data["name"] = f"{secret.PGSERVICE_SECRET_NAME_PREFIX}{name}"
+            if name and not name.startswith(pg_service_file.PGSERVICE_SECRET_NAME_PREFIX):
+                cleaned_data["name"] = f"{pg_service_file.PGSERVICE_SECRET_NAME_PREFIX}{name}"
 
         return cleaned_data
 
