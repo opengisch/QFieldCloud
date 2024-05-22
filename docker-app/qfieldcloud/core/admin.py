@@ -588,7 +588,7 @@ class OwnerTypeFilter(admin.SimpleListFilter):
 class ProjectSecretForm(ModelForm):
     class Meta:
         model = Secret
-        fields = ("name", "type", "value", "created_by", "project")
+        fields = ("project", "name", "type", "value", "created_by")
 
     name = fields.CharField(widget=widgets.TextInput)
 
@@ -612,13 +612,15 @@ class ProjectSecretForm(ModelForm):
         else:
             type = cleaned_data.get("type")
         if type == Secret.Type.PGSERVICE:
+            # validate the pg_service.conf
             value = cleaned_data.get("value")
+            if value:
+                try:
+                    secret.validate_pg_service_conf(value)
+                except ValidationError as err:
+                    raise ValidationError({"value": err.message})
 
-            try:
-                secret.validate_pg_service_conf(value)
-            except ValidationError as err:
-                raise ValidationError({"value": err.message})
-
+            # ensure name with PGSERVICE_SECRET_NAME_PREFIX
             name = cleaned_data.get("name")
             if name and not name.startswith(secret.PGSERVICE_SECRET_NAME_PREFIX):
                 cleaned_data["name"] = f"{secret.PGSERVICE_SECRET_NAME_PREFIX}{name}"
@@ -629,7 +631,7 @@ class ProjectSecretForm(ModelForm):
 class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
-    fields = ("name", "type", "value", "created_by", "project")
+    fields = ("project", "name", "type", "value", "created_by")
     readonly_fields = ("created_by",)
     list_display = ("name", "type", "created_by", "project")
     autocomplete_fields = ("project",)
