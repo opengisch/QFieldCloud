@@ -1,5 +1,5 @@
 # NOTE if the ubuntu version is changed, also change it in `Suites:` in apt sources, and in `QGIS_VERSION`
-FROM ubuntu:jammy
+FROM ubuntu:noble
 
 # Install dependencies needed to add QGIS repository
 RUN apt update \
@@ -13,7 +13,7 @@ RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org
 COPY <<EOF /etc/apt/sources.list.d/qgis.sources
 Types: deb deb-src
 URIs: https://qgis.org/debian
-Suites: jammy
+Suites: noble
 Architectures: amd64
 Components: main
 Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
@@ -30,8 +30,8 @@ RUN apt update \
     git
 
 # Set QGIS version as in the debian repos
-# Choose your version from here: https://debian.qgis.org/debian/dists/jammy/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.36.1+36jammy
+# Choose your version from here: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
+ARG QGIS_VERSION=1:3.36.2+40noble
 
 # Install QGIS dependencies
 RUN apt update \
@@ -63,17 +63,18 @@ ENV LANG=C.UTF-8
 ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
 ENV PYTHONPATH=/libqfieldsync:${PYTHONPATH}
+ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
 # upgrade `pip`. If not upgraded, installing from GitHub repo (needed for `libqfieldsync`) will result in UNKNOWN package.
-RUN pip3 install --upgrade pip
+RUN pip3 install --break-system-packages --upgrade pip
 
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/
-RUN pip3 install -r /tmp/requirements.txt
+RUN pip3 install --break-system-packages -r /tmp/requirements.txt
 
 # Install `libqfieldsync` dependecy since it changes more frequently compared to regular dependencies
 COPY requirements_libqfieldsync.txt /tmp/
-RUN pip3 install --use-deprecated=legacy-resolver -r /tmp/requirements_libqfieldsync.txt
+RUN pip3 install --break-system-packages --use-deprecated=legacy-resolver -r /tmp/requirements_libqfieldsync.txt
 
 COPY schemas schemas
 COPY qfc_worker qfc_worker

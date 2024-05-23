@@ -7,14 +7,7 @@ set -o allexport
 source .env
 set +o allexport
 
-CONFIG_PATH="${CONFIG_PATH:-'./conf'}"
-
-if [ ! -e "docker-nginx/options-ssl-nginx.conf" ] || [ ! -e "docker-nginx/ssl-dhparams.pem" ]; then
-  echo "### Downloading recommended TLS parameters ..."
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > "docker-nginx/options-ssl-nginx.conf"
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "docker-nginx/ssl-dhparams.pem"
-  echo
-fi
+QFIELDCLOUD_DIR="$(dirname "$(realpath "$0")")/.."
 
 echo "### Requesting Let's Encrypt certificate for $QFIELDCLOUD_HOST ..."
 domain_args="-d ${QFIELDCLOUD_HOST}"
@@ -34,8 +27,8 @@ docker compose run --rm --entrypoint "\
 echo
 
 echo "### Copy the certificate and key to their final destination ..."
-cp ${CONFIG_PATH}/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem docker-nginx/certs/${QFIELDCLOUD_HOST}.pem
-cp ${CONFIG_PATH}/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem docker-nginx/certs/${QFIELDCLOUD_HOST}-key.pem
+cp ${QFIELDCLOUD_DIR}/conf/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem ${QFIELDCLOUD_DIR}/docker-nginx/certs/${QFIELDCLOUD_HOST}.pem
+cp ${QFIELDCLOUD_DIR}/conf/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem ${QFIELDCLOUD_DIR}/docker-nginx/certs/${QFIELDCLOUD_HOST}-key.pem
 echo
 
 echo "### Reloading nginx ..."
