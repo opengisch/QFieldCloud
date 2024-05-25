@@ -591,13 +591,7 @@ class ProjectSecretForm(ModelForm):
         fields = ("project", "name", "type", "value", "created_by")
 
     name = fields.CharField(widget=widgets.TextInput)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance.pk and self.instance.type == Secret.Type.ENVVAR:
-            self.fields["value"].widget = widgets.TextInput()
-        else:
-            self.fields["value"].widget = widgets.Textarea()
+    value = fields.CharField(widget=widgets.Textarea)
 
     def get_initial_for_field(self, field, field_name):
         if self.instance.pk and field_name == "value":
@@ -622,8 +616,12 @@ class ProjectSecretForm(ModelForm):
 
             # ensure name with PGSERVICE_SECRET_NAME_PREFIX
             name = cleaned_data.get("name")
-            if name and not name.startswith(pg_service_file.PGSERVICE_SECRET_NAME_PREFIX):
-                cleaned_data["name"] = f"{pg_service_file.PGSERVICE_SECRET_NAME_PREFIX}{name}"
+            if name and not name.startswith(
+                pg_service_file.PGSERVICE_SECRET_NAME_PREFIX
+            ):
+                cleaned_data[
+                    "name"
+                ] = f"{pg_service_file.PGSERVICE_SECRET_NAME_PREFIX}{name}"
 
         return cleaned_data
 
@@ -633,9 +631,23 @@ class SecretAdmin(QFieldCloudModelAdmin):
     form = ProjectSecretForm
     fields = ("project", "name", "type", "value", "created_by")
     readonly_fields = ("created_by",)
-    list_display = ("name", "type", "created_by", "project")
+    list_display = ("name", "type", "created_by__link", "project__name")
     autocomplete_fields = ("project",)
-    extra = 0
+
+    search_fields = (
+        "name__icontains",
+        "project__name__icontains",
+    )
+
+    def created_by__link(self, instance):
+        return model_admin_url(instance.created_by)
+
+    created_by__link.admin_order_field = "created_by"  # type: ignore
+
+    def project__name(self, instance):
+        return model_admin_url(instance.project, instance.project.name)
+
+    project__name.admin_order_field = "project__name"  # type: ignore
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -650,6 +662,29 @@ class SecretAdmin(QFieldCloudModelAdmin):
         if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+
+class ProjectSecretInline(admin.TabularInline):
+    model = Secret
+    fields = ("link_to_secret", "type", "created_by")
+    readonly_fields = ("link_to_secret",)
+    max_num = 0
+    extra = 0
+
+    def link_to_secret(self, obj):
+        url = reverse("admin:core_secret_change", args=[obj.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.name)
+
+    link_to_secret.short_description = "Name"  # type: ignore
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class ProjectForm(ModelForm):
@@ -710,7 +745,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_packaged_at",
         "project_details__pre",
     )
-    inlines = (ProjectCollaboratorInline,)
+    inlines = (ProjectCollaboratorInline, ProjectSecretInline)
     search_fields = (
         "id",
         "name__icontains",
