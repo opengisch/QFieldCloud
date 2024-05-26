@@ -639,15 +639,13 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "project__name__icontains",
     )
 
+    @admin.display(ordering="created_by")
     def created_by__link(self, instance):
         return model_admin_url(instance.created_by)
 
-    created_by__link.admin_order_field = "created_by"  # type: ignore
-
+    @admin.display(ordering="project__name")
     def project__name(self, instance):
         return model_admin_url(instance.project, instance.project.name)
-
-    project__name.admin_order_field = "project__name"  # type: ignore
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -671,11 +669,10 @@ class ProjectSecretInline(admin.TabularInline):
     max_num = 0
     extra = 0
 
+    @admin.display(description=_("Name"))
     def link_to_secret(self, obj):
         url = reverse("admin:core_secret_change", args=[obj.pk])
         return format_html('<a href="{}">{}</a>', url, obj.name)
-
-    link_to_secret.short_description = "Name"  # type: ignore
 
     def has_add_permission(self, request, obj=None):
         return False
