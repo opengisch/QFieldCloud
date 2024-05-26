@@ -1,0 +1,5 @@
+{% if qfc_admin_inline_included != 1 %}
+    {% include "admin/edit_inline/tabular_extended.html" with qfc_admin_inline_included=1 %}
+{% endif %}
+
+{{ fieldset.opts.bottom_html }}

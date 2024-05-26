@@ -31,6 +31,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
 from django.utils.html import escape, format_html
+from django.utils.http import urlencode
 from django.utils.safestring import SafeText
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
@@ -114,6 +115,15 @@ class QFieldCloudModelAdmin(  # type: ignore
                     return self.has_direct_delete_permission
 
         return super().has_delete_permission(request, obj)
+
+
+class QFieldCloudInlineAdmin(admin.TabularInline):
+    template = "admin/edit_inline/tabular_customized.html"
+
+    def get_formset(self, request, obj=None, **kwargs):
+        self.parent_obj = obj
+
+        return super().get_formset(request, obj, **kwargs)
 
 
 def admin_urlname_by_obj(value, arg):
@@ -661,8 +671,18 @@ class SecretAdmin(QFieldCloudModelAdmin):
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
+    def get_changeform_initial_data(self, request):
+        project_id = request.GET.get("project_id")
 
-class ProjectSecretInline(admin.TabularInline):
+        if project_id:
+            project = Project.objects.get(id=project_id)
+        else:
+            project = None
+
+        return {"project": project}
+
+
+class ProjectSecretInline(QFieldCloudInlineAdmin):
     model = Secret
     fields = ("link_to_secret", "type", "created_by")
     readonly_fields = ("link_to_secret",)
@@ -682,6 +702,23 @@ class ProjectSecretInline(admin.TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    @property
+    def bottom_html(self):
+        if self.parent_obj:
+            return format_html(
+                """
+                    <a href="{url}?{query_params}" class="btn btn-default form-control">
+                        <i class="fa fa-plus-circle"></i>
+                        {text}
+                    </a>
+                """,
+                url=reverse("admin:core_secret_add"),
+                query_params=urlencode({"project_id": self.parent_obj.pk}),
+                text="Add Secret",
+            )
+        else:
+            return ""
 
 
 class ProjectForm(ModelForm):
