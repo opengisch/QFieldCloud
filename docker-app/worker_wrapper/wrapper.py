@@ -170,8 +170,6 @@ class JobRun:
                         "Failed to update job status, probably does not exist in the database.",
                         exc_info=err,
                     )
-                # No further action required, probably received by wrapper's autoclean mechanism when the `Project` is deleted
-                return
             elif exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
                 feedback["error_type"] = "TIMEOUT"
