@@ -652,6 +652,8 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     ordering = ("-updated_at",)
 
+    change_form_template = "admin/project_change_form.html"
+
     def get_form(self, *args, **kwargs):
         help_texts = {
             "file_storage_bytes": _(
@@ -778,6 +780,7 @@ class JobAdmin(QFieldCloudModelAdmin):
         "project__name__iexact",
         "project__owner__username__iexact",
         "id",
+        "project__id__iexact",
     )
     readonly_fields = (
         "project",
