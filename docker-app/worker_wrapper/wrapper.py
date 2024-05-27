@@ -157,13 +157,14 @@ class JobRun:
                 feedback["error_stack"] = ""
 
                 try:
+                    logger.info(
+                        "Set job status to `failed` due to being killed by the docker engine.",
+                    )
+
                     self.job.output = output.decode("utf-8")
                     self.job.feedback = feedback
                     self.job.status = Job.Status.FAILED
                     self.job.save(update_fields=["output", "feedback", "status"])
-                    logger.info(
-                        "Set job status to `failed` due to being killed by the docker engine.",
-                    )
                 except Exception as err:
                     logger.error(
                         "Failed to update job status, probably does not exist in the database.",
@@ -549,13 +550,21 @@ class DeltaApplyJobRun(JobRun):
     def after_docker_exception(self) -> None:
         Delta.objects.filter(
             id__in=self.delta_ids,
-        ).update(last_status=Delta.Status.ERROR)
+        ).update(
+            last_status=Delta.Status.ERROR,
+            last_feedback=None,
+            last_modified_pk=None,
+            last_apply_attempt_at=self.job.started_at,
+            last_apply_attempt_by=self.job.created_by,
+        )
 
         ApplyJobDelta.objects.filter(
             apply_job_id=self.job_id,
             delta_id__in=self.delta_ids,
         ).update(
             status=Delta.Status.ERROR,
+            feedback=None,
+            modified_pk=None,
         )
 
 
