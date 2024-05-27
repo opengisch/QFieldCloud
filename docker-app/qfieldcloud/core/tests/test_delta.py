@@ -791,7 +791,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(
             self.get_file_contents(project, "nonspatial.csv"),
-            b'fid,col1\n"1",foo\n"2",newfeature\n',
+            b'fid,col1\n"1",new_value\n',
         )
 
     def test_special_data_types(self):

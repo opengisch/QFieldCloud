@@ -25,7 +25,7 @@ services:
 networks:
   default:
     # Use a custom driver
-    name: ${QFIELDCLOUD_DEFAULT_NETWORK}
+    name: ${QFIELDCLOUD_DEFAULT_NETWORK:-${COMPOSE_PROJECT_NAME}_default}
 
 volumes:
   # We use a different volume, just so that the test_ database
