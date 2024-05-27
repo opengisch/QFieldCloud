@@ -157,19 +157,14 @@ class JobRun:
                 feedback["error_stack"] = ""
 
                 try:
-                    logger.info(
-                        "Set job status to `failed` due to being killed by the docker engine.",
-                    )
-
-                    self.job.output = output.decode("utf-8")
-                    self.job.feedback = feedback
-                    self.job.status = Job.Status.FAILED
-                    self.job.save(update_fields=["output", "feedback", "status"])
+                    self.job.refresh_from_db()
                 except Exception as err:
                     logger.error(
                         "Failed to update job status, probably does not exist in the database.",
                         exc_info=err,
                     )
+                    # No further action required, probably received by wrapper's autoclean mechanism when the `Project` is deleted
+                    return
             elif exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
                 feedback["error_type"] = "TIMEOUT"
