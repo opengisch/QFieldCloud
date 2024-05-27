@@ -652,8 +652,8 @@ class SecretAdmin(QFieldCloudModelAdmin):
     @admin.display(ordering="created_by")
     def created_by__link(self, instance):
         return model_admin_url(instance.created_by)
-    
-    created_by__link.short_description = 'Created by'
+
+    created_by__link.short_description = "Created by"  # type: ignore
 
     @admin.display(ordering="project__name")
     def project__name(self, instance):
