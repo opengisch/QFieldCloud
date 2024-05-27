@@ -629,7 +629,7 @@ def get_project_file_storage_in_bytes(project_id: str) -> int:
     total_bytes = 0
     prefix = f"projects/{project_id}/files/"
 
-    logger.info(f"Project file storage size requrested for {project_id=}")
+    logger.info(f"Project file storage size requested for {project_id=}")
 
     if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/files/$", prefix):
         raise RuntimeError(
