@@ -31,7 +31,7 @@ RUN apt update \
 
 # Set QGIS version as in the debian repos
 # Choose your version from here: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.36.2+40noble
+ARG QGIS_VERSION=1:3.36.3+40noble
 
 # Install QGIS dependencies
 RUN apt update \
