@@ -261,6 +261,14 @@ class DownloadPushDeleteFileView(views.APIView):
             project = Project.objects.get(id=projectid)
         is_qgis_project_file = utils.is_qgis_project_file(filename)
 
+        # check if the project restricts qgs/qgz file modification to admins
+        if is_qgis_project_file and not permissions_utils.can_modify_qgis_project_file(
+            request.user, project
+        ):
+            raise exceptions.RestrictedProjectModificationError(
+                "The project restricts modification of the QGIS project file to administrators."
+            )
+
         # check only one qgs/qgz file per project
         if (
             is_qgis_project_file

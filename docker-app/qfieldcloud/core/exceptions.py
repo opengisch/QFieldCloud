@@ -133,6 +133,15 @@ class MultipleProjectsError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
+class RestrictedProjectModificationError(QFieldCloudException):
+    """Raised when the user is trying to modify the QGIS project file of a
+    a project that has the restrict_project_modification flag set to True"""
+
+    code = "restricted_project_modification"
+    message = "Restricted project modification"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
 class DeltafileValidationError(QFieldCloudException):
     """Raised when a deltafile validation fails"""
 

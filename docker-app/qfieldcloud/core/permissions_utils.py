@@ -253,6 +253,28 @@ def can_create_files(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_modify_qgis_project_file(user: QfcUser, project: Project) -> bool:
+    if project.restrict_project_modification:
+        return user_has_project_roles(
+            user,
+            project,
+            [
+                ProjectCollaborator.Roles.ADMIN,
+            ],
+        )
+    else:
+        return user_has_project_roles(
+            user,
+            project,
+            [
+                ProjectCollaborator.Roles.ADMIN,
+                ProjectCollaborator.Roles.MANAGER,
+                ProjectCollaborator.Roles.EDITOR,
+                ProjectCollaborator.Roles.REPORTER,
+            ],
+        )
+
+
 def can_read_projects(user: QfcUser, _account: QfcUser) -> bool:
     return user.is_authenticated
 
