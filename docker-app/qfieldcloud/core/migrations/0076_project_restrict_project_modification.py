@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="project",
-            name="restrict_project_modification",
+            name="is_project_modification_restricted",
             field=models.BooleanField(
                 default=False,
                 help_text="Restrict modification of the QGIS project file to administrators.",

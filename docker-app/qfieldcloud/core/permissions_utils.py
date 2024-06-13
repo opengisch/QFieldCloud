@@ -254,7 +254,7 @@ def can_create_files(user: QfcUser, project: Project) -> bool:
 
 
 def can_modify_qgis_project_file(user: QfcUser, project: Project) -> bool:
-    if project.restrict_project_modification:
+    if project.is_project_modification_restricted:
         return user_has_project_roles(
             user,
             project,
