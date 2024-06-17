@@ -134,8 +134,8 @@ class MultipleProjectsError(QFieldCloudException):
 
 
 class RestrictedProjectModificationError(QFieldCloudException):
-    """Raised when the user is trying to modify the QGIS project file of a
-    a project that has the 'is_project_modification_restricted' flag set to True"""
+    """Raised when a user with insufficient role is trying to modify the QGIS project file
+    of a project that has the 'is_projectfile_restricted' flag set"""
 
     code = "restricted_project_modification"
     message = "Restricted project modification"

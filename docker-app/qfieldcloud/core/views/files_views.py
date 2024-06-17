@@ -266,7 +266,7 @@ class DownloadPushDeleteFileView(views.APIView):
             request.user, project
         ):
             raise exceptions.RestrictedProjectModificationError(
-                "The project restricts modification of the QGIS project file to administrators."
+                "The project restricts modification of the QGIS project file to managers and administrators."
             )
 
         # check only one qgs/qgz file per project

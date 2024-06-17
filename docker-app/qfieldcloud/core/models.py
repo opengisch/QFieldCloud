@@ -1017,10 +1017,10 @@ class Project(models.Model):
         ),
     )
 
-    is_project_modification_restricted = models.BooleanField(
+    is_projectfile_restricted = models.BooleanField(
         default=False,
         help_text=_(
-            "Restrict modification of the QGIS project file to administrators."
+            "Restrict modification of the QGIS project file to managers and administrators."
         ),
     )
 
