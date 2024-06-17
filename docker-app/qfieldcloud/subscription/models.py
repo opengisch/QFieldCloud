@@ -789,6 +789,8 @@ class AbstractSubscription(models.Model):
             active_since=active_since,
         )
 
+        regular_subscription.status = Subscription.Status.ACTIVE_PAID
+
         return regular_subscription
 
     @classmethod
