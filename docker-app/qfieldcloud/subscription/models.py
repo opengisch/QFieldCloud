@@ -173,7 +173,7 @@ class Plan(models.Model):
     initial_subscription_status = models.CharField(
         max_length=100,
         choices=SubscriptionStatus.choices,
-        default=SubscriptionStatus.INACTIVE_DRAFT,
+        default=SubscriptionStatus.ACTIVE_PAID,
     )
 
     # comma separated list of plan codes, which given plan can upgrade to.
@@ -788,8 +788,6 @@ class AbstractSubscription(models.Model):
             created_by=created_by,
             active_since=active_since,
         )
-
-        regular_subscription.status = Subscription.Status.ACTIVE_PAID
 
         return regular_subscription
 
