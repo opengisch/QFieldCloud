@@ -70,6 +70,7 @@ class Plan(models.Model):
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.PERSON,
+                    initial_subscription_status=SubscriptionStatus.ACTIVE_PAID,
                 )
                 cls.objects.create(
                     code="default_org",
@@ -77,6 +78,7 @@ class Plan(models.Model):
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.ORGANIZATION,
+                    initial_subscription_status=SubscriptionStatus.ACTIVE_PAID,
                 )
         result = cls.objects.order_by("-is_default").first()
         return cast(Plan, result)
@@ -173,7 +175,7 @@ class Plan(models.Model):
     initial_subscription_status = models.CharField(
         max_length=100,
         choices=SubscriptionStatus.choices,
-        default=SubscriptionStatus.ACTIVE_PAID,
+        default=SubscriptionStatus.INACTIVE_DRAFT,
     )
 
     # comma separated list of plan codes, which given plan can upgrade to.
