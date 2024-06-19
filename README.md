@@ -34,7 +34,7 @@ For self-hosted issues, please use the GitHub issues at https://github.com/openg
 
 Clone the repository and all its submodules:
 
-    git clone --recurse-submodules git@github.com:opengisch/qfieldcloud.git
+    git clone --recurse-submodules git@github.com:opengisch/QFieldCloud.git
 
 To fetch upstream development, don't forget to update the submodules too:
 
