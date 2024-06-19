@@ -77,6 +77,14 @@ def add_packages_to_accounts(apps, schema_editor):
         package.save()
 
 
+def set_existing_plans_to_active_status(apps, schema_editor):
+    Plan = apps.get_model("subscription", "Plan")
+
+    Plan.objects.update(
+        initial_subscription_status="active_paid",
+    )
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("subscription", "0003_auto_20221028_1901"),
@@ -345,6 +353,10 @@ class Migration(migrations.Migration):
                 default="inactive_draft",
                 max_length=100,
             ),
+        ),
+        migrations.RunPython(
+            set_existing_plans_to_active_status,
+            migrations.RunPython.noop,
         ),
         migrations.AddField(
             model_name="plan",
