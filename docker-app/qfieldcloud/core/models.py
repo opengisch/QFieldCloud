@@ -1016,6 +1016,14 @@ class Project(models.Model):
             "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
         ),
     )
+
+    has_restricted_projectfiles = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Restrict modifications of QGIS/QField projectfiles to managers and administrators."
+        ),
+    )
+
     thumbnail_uri = models.CharField(
         _("Thumbnail Picture URI"), max_length=255, blank=True
     )

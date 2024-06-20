@@ -758,6 +758,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "status",
         "status_code",
         "project_filename",
+        "has_restricted_projectfiles",
         "file_storage_bytes",
         "storage_keep_versions",
         "packaging_offliner",
