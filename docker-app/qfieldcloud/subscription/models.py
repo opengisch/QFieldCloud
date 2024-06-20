@@ -70,6 +70,7 @@ class Plan(models.Model):
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.PERSON,
+                    initial_subscription_status=SubscriptionStatus.ACTIVE_PAID,
                 )
                 cls.objects.create(
                     code="default_org",
@@ -77,6 +78,7 @@ class Plan(models.Model):
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.ORGANIZATION,
+                    initial_subscription_status=SubscriptionStatus.ACTIVE_PAID,
                 )
         result = cls.objects.order_by("-is_default").first()
         return cast(Plan, result)
