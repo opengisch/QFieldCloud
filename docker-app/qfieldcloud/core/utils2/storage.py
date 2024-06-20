@@ -439,7 +439,7 @@ def upload_file(file: IO, key: str):
 
 
 def upload_project_file(
-    project: qfieldcloud.core.models.Project, file: IO, filename: str  # noqa: F821
+    project: qfieldcloud.core.models.Project, file: IO, filename: str
 ) -> str:
     key = f"projects/{project.id}/files/{filename}"
     bucket = qfieldcloud.core.utils.get_s3_bucket()
