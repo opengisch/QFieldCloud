@@ -11,10 +11,10 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="project",
-            name="is_projectfiles_restricted",
+            name="has_restricted_projectfiles",
             field=models.BooleanField(
                 default=False,
-                help_text="Restrict modifications of QGIS project files to managers and administrators.",
+                help_text="Restrict modifications of QGIS/QField projectfiles to managers and administrators.",
             ),
         ),
     ]
