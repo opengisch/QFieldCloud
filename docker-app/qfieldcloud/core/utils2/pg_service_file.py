@@ -12,7 +12,7 @@ def validate_pg_service_conf(value: str) -> None:
     try:
         buffer = io.StringIO(value)
         config = configparser.ConfigParser()
-        config.readfp(buffer)
+        config.read_file(buffer)
 
         if len(config.sections()) != 1:
             raise ValidationError(

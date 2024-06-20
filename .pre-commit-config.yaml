@@ -48,9 +48,9 @@ repos:
 
     # Static type-checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.5.1'
+    rev: 'v1.10.0'
     hooks:
       - id: mypy
-        additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs]
+        additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs, django-stubs-ext]
         pass_filenames: false
-        entry: bash -c 'mypy -p docker-qgis -p docker-app "$@"' --
+        entry: bash -c 'mypy -p docker-app -p docker-qgis "$@"' --

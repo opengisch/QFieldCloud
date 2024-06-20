@@ -25,7 +25,7 @@ def get_team_members(team):
     return TeamMember.objects.filter(team=team)
 
 
-def get_organization_members(organization) -> QuerySet[Person]:
+def get_organization_members(organization) -> "QuerySet[Person]":
     org_members = Person.objects.filter(
         organizationmember__organization=organization
     ).annotate(role=F("organizationmember__role"))
