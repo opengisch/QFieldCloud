@@ -65,9 +65,6 @@ ENV XDG_RUNTIME_DIR=/root
 ENV PYTHONPATH=/libqfieldsync:${PYTHONPATH}
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
-# upgrade `pip`. If not upgraded, installing from GitHub repo (needed for `libqfieldsync`) will result in UNKNOWN package.
-RUN pip3 install --break-system-packages --upgrade pip
-
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/
 RUN pip3 install --break-system-packages -r /tmp/requirements.txt
