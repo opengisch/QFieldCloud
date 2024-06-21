@@ -363,8 +363,22 @@ class Person(User):
         verbose_name = "person"
         verbose_name_plural = "people"
 
+    def clean(self):
+        person_qs = self.__class__.objects.filter(email__iexact=self.email)
+
+        if self.pk:
+            person_qs = person_qs.exclude(pk=self.pk)
+
+        if person_qs.exists():
+            raise ValidationError(
+                _("This email is already taken by another user!").format(self.email)
+            )
+
+        return super().clean()
+
     def save(self, *args, **kwargs):
         self.type = User.Type.PERSON
+
         return super().save(*args, **kwargs)
 
 
