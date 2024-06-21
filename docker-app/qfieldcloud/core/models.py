@@ -732,9 +732,7 @@ class OrganizationMember(models.Model):
         if self.organization.organization_owner == self.member:
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
-        max_organization_members = (
-            self.organization.useraccount.current_subscription.plan.max_organization_members
-        )
+        max_organization_members = self.organization.useraccount.current_subscription.plan.max_organization_members
         if (
             max_organization_members > -1
             and self.organization.members.count() >= max_organization_members
@@ -933,8 +931,9 @@ class Project(models.Model):
 
     class StatusCode(models.TextChoices):
         OK = "ok", _("Ok")
-        FAILED_PROCESS_PROJECTFILE = "failed_process_projectfile", _(
-            "Failed process projectfile"
+        FAILED_PROCESS_PROJECTFILE = (
+            "failed_process_projectfile",
+            _("Failed process projectfile"),
         )
         TOO_MANY_COLLABORATORS = "too_many_collaborators", _("Too many collaborators")
 
@@ -1276,9 +1275,7 @@ class Project(models.Model):
         else:
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
-            max_premium_collaborators_per_private_project = (
-                self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
-            )
+            max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
             if not self.project_filename or not self.project_details:

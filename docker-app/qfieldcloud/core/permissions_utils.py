@@ -575,9 +575,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             )
         )
 
-    max_premium_collaborators_per_private_project = (
-        project.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
-    )
+    max_premium_collaborators_per_private_project = project.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
     if max_premium_collaborators_per_private_project >= 0 and not project.is_public:
         project_collaborators_count = project.direct_collaborators.count()
         if project_collaborators_count >= max_premium_collaborators_per_private_project:
