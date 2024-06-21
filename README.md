@@ -207,11 +207,11 @@ Note if you run tests using the `docker-compose.test.yml` configuration, the `ap
 
 ## Add root certificate
 
-QFieldCloud will automatically generate a certificate and it's root certificate in `./config/nginx/certs`. However, you need to trust the root certificate first, so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
+QFieldCloud will automatically generate a certificate and it's root certificate in `./docker-nginx/certs`. However, you need to trust the root certificate first, so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
 
 On Debian/Ubuntu, copy the root certificate to the directory with trusted certificates. Note the extension has been changed to `.crt`:
 
-    sudo cp ./conf/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+    sudo cp ./docker-nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
 
 Trust the newly added certificate:
 
@@ -296,6 +296,10 @@ To use this Let's Encrypt certificate within QFieldCloud you just need to uncomm
 
 You can also use your own certificates by placing them in `conf/nginx/certs/` ànd changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
 Don't forget to create your Diffie-Hellman parameters.
+
+### Additional NGINX config
+
+You can add additional config to nginx placing files in `conf/nginx/config` ending with `.conf`. They will be included in the main `nginx.conf`.
 
 ## Infrastructure
 

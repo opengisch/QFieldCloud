@@ -44,8 +44,9 @@ class SubscriptionStatus(models.TextChoices):
     # the user draft expired (e.g. a new subscription is attempted)
     INACTIVE_DRAFT_EXPIRED = "inactive_draft_expired", _("Inactive Draft Expired")
     # requested creating the subscription on Stripe
-    INACTIVE_REQUESTED_CREATE = "inactive_requested_create", _(
-        "Inactive Requested Create"
+    INACTIVE_REQUESTED_CREATE = (
+        "inactive_requested_create",
+        _("Inactive Requested Create"),
     )
     # requested creating the subscription on Stripe
     INACTIVE_AWAITS_PAYMENT = "inactive_awaits_payment", _("Inactive Awaits Payment")
@@ -70,6 +71,7 @@ class Plan(models.Model):
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.PERSON,
+                    initial_subscription_status=SubscriptionStatus.ACTIVE_PAID,
                 )
                 cls.objects.create(
                     code="default_org",
@@ -77,6 +79,7 @@ class Plan(models.Model):
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.ORGANIZATION,
+                    initial_subscription_status=SubscriptionStatus.ACTIVE_PAID,
                 )
         result = cls.objects.order_by("-is_default").first()
         return cast(Plan, result)

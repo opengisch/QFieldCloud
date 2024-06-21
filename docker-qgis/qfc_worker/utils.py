@@ -1,4 +1,5 @@
 import atexit
+import gc
 import hashlib
 import inspect
 import io
@@ -12,13 +13,17 @@ import sys
 import tempfile
 import traceback
 import uuid
+import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Callable, NamedTuple, Optional
 
 from libqfieldsync.layer import LayerSource
-from libqfieldsync.utils.bad_layer_handler import bad_layer_handler
+from libqfieldsync.utils.bad_layer_handler import (
+    bad_layer_handler,
+    set_bad_layer_handler,
+)
 from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
@@ -26,7 +31,9 @@ from qgis.core import (
     QgsMapLayer,
     QgsMapSettings,
     QgsProject,
+    QgsProjectArchive,
     QgsProviderRegistry,
+    QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
 from tabulate import tabulate
@@ -198,12 +205,112 @@ def stop_app():
     if "QGISAPP" not in globals():
         return
 
-    QgsProject.instance().read("")
+    QgsProject.instance().clear()
 
     if QGISAPP is not None:
         logging.info("Stopping QGIS app…")
+
+        # NOTE we force run the GB just to make sure there are no dangling QGIS objects when we delete the QGIS application
+        gc.collect()
+
         QGISAPP.exitQgis()
+
         del QGISAPP
+
+        logging.info("Deleted QGIS app!")
+
+
+def open_qgis_project(
+    project_filename: str,
+    force_reload: bool = False,
+    disable_feature_count: bool = False,
+    flags: Qgis.ProjectReadFlags = Qgis.ProjectReadFlags(),
+) -> QgsProject:
+    logging.info(f'Loading QGIS project "{project_filename}"…')
+
+    if not Path(project_filename).exists():
+        raise FileNotFoundError(project_filename)
+
+    project = QgsProject.instance()
+
+    if project.fileName() == str(project_filename) and not force_reload:
+        logging.info(
+            f'Skip loading QGIS project "{project_filename}", it is already loaded'
+        )
+        return project
+
+    if disable_feature_count:
+        strip_feature_count_from_project_xml(project_filename)
+
+    with set_bad_layer_handler(project):
+        if not project.read(str(project_filename), flags):
+            logging.error(f'Failed to load QGIS project "{project_filename}"!')
+
+            project.setFileName("")
+
+            raise Exception(f"Unable to open project with QGIS: {project_filename}")
+
+    logging.info("Project loaded.")
+
+    return project
+
+
+def strip_feature_count_from_project_xml(project_filename: str) -> None:
+    """Rewrites project XML file with feature count disabled.
+
+    Args:
+        project_filename (str): filename of the QGIS project file (.qgs or .qgz)
+    """
+    archive = None
+    xml_file = project_filename
+    if QgsZipUtils.isZipFile(project_filename):
+        logging.info("The project file is zipped as .qgz, unzipping…")
+
+        archive = QgsProjectArchive()
+
+        if archive.unzip(project_filename):
+            logging.info("The project file is unzipped successfully!")
+            xml_file = archive.projectFile()
+        else:
+            logging.error("The project file is unzipping failed!")
+
+            raise Exception(f"Failed to unzip {project_filename} file!")
+
+    logging.info("Parsing QGIS project file XML…")
+
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    logging.info("QGIS project parsed!")
+
+    for node in root.findall(".//legendlayer"):
+        node.set("showFeatureCount", "0")
+
+    for node in root.findall(
+        './/layer-tree-layer/customproperties/Option[@type="Map"]/Option[@name="showFeatureCount"]'
+    ):
+        node.set("value", "0")
+
+    logging.info("Writing the QGIS project XML into a file…")
+
+    if archive:
+        tmp_filename = tempfile.NamedTemporaryFile().name
+        tree.write(tmp_filename, short_empty_elements=False)
+
+        if not archive.clearProjectFile():
+            raise Exception("Failed to clear project path from the archive!")
+
+        if not Path(tmp_filename).rename(xml_file):
+            raise Exception("Failed to move the temp xml file into archive dir!")
+
+        archive.addFile(xml_file)
+
+        if not archive.zip(project_filename):
+            raise Exception(f"Failed to zip {project_filename} file!")
+    else:
+        tree.write(xml_file, short_empty_elements=False)
+
+    logging.info("QGIS project file re-written!")
 
 
 def download_project(
@@ -394,18 +501,28 @@ class StepOutput:
         self.return_name = return_name
 
 
-class WorkDirPath:
+class WorkDirPathBase:
     def __init__(self, *parts: str, mkdir: bool = False) -> None:
         self.parts = parts
         self.mkdir = mkdir
 
-    def eval(self, root: Path) -> Path:
+    def eval(self, root: Path) -> Path | str:
         path = root.joinpath(*self.parts)
 
         if self.mkdir:
             path.mkdir(parents=True, exist_ok=True)
 
         return path
+
+
+class WorkDirPath(WorkDirPathBase):
+    def eval(self, root: Path) -> Path:
+        return Path(super().eval(root))
+
+
+class WorkDirPathAsStr(WorkDirPathBase):
+    def eval(self, root: Path) -> str:
+        return str(super().eval(root))
 
 
 @contextmanager
@@ -550,7 +667,7 @@ def run_workflow(
                 for name, value in arguments.items():
                     if isinstance(value, StepOutput):
                         arguments[name] = step_returns[value.step_id][value.return_name]
-                    elif isinstance(value, WorkDirPath):
+                    elif isinstance(value, WorkDirPathBase):
                         arguments[name] = value.eval(root_workdir)
 
                 return_values = step.method(**arguments)

@@ -80,6 +80,9 @@ server {
     return 444;
   }
 
+  # included additional config
+  include config/*.conf;
+
   # deny annoying bot
   deny 34.215.13.216;
 

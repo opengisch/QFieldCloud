@@ -1,0 +1,8 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n %}
+
+{% block form_top %}
+    {% if change %}
+    NOTE: For changing <b>Plan</b> create a new Subscription. First cancel the current subscription by setting "Active until".
+    {% endif %}
+{% endblock %}

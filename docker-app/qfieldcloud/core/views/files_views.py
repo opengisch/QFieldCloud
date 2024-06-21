@@ -83,6 +83,8 @@ class ListFilesView(views.APIView):
             path = PurePath(version.key)
             filename = str(path.relative_to(*path.parts[:3]))
             last_modified = version.last_modified.strftime("%d.%m.%Y %H:%M:%S %Z")
+            # NOTE ETag is a MD5. But for the multipart uploaded files, the MD5 is computed from the concatenation of the MD5s of each uploaded part.
+            # TODO make sure when file metadata is in the DB (QF-2760), this is a real md5sum of the current file.
             md5sum = version.e_tag.replace('"', "")
 
             version_data = {
@@ -207,7 +209,6 @@ class DownloadPushDeleteFileView(views.APIView):
         return utils2.storage.file_response(
             request,
             key,
-            presigned=True,
             expires=600,
             version=version,
             as_attachment=True,
@@ -259,6 +260,14 @@ class DownloadPushDeleteFileView(views.APIView):
         else:
             project = Project.objects.get(id=projectid)
         is_qgis_project_file = utils.is_qgis_project_file(filename)
+
+        # check if the project restricts qgs/qgz file modification to admins
+        if is_qgis_project_file and not permissions_utils.can_modify_qgis_projectfile(
+            request.user, project
+        ):
+            raise exceptions.RestrictedProjectModificationError(
+                "The project restricts modification of the QGIS project file to managers and administrators."
+            )
 
         # check only one qgs/qgz file per project
         if (
@@ -374,7 +383,7 @@ class ProjectMetafilesView(views.APIView):
 
     def get(self, request, projectid, filename):
         key = utils.safe_join(f"projects/{projectid}/meta/", filename)
-        return utils2.storage.file_response(request, key, presigned=True)
+        return utils2.storage.file_response(request, key)
 
 
 @extend_schema_view(

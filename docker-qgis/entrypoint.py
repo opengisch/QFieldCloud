@@ -11,17 +11,18 @@ import qfc_worker.process_projectfile
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
-from libqfieldsync.utils.bad_layer_handler import set_bad_layer_handler
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from qfc_worker.utils import (
     Step,
     StepOutput,
     WorkDirPath,
+    WorkDirPathAsStr,
     Workflow,
     get_layers_data,
     layers_data_to_string,
+    open_qgis_project,
 )
-from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle, QgsVectorLayer
+from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -35,12 +36,7 @@ def _call_libqfieldsync_packager(
     """Call `libqfieldsync` to package a project for QField"""
     logger.info("Preparing QGIS project for packaging…")
 
-    project = QgsProject.instance()
-    if not project_filename.exists():
-        raise FileNotFoundError(project_filename)
-
-    if not project.read(str(project_filename)):
-        raise Exception(f"Unable to open file with QGIS: {project_filename}")
+    project = open_qgis_project(str(project_filename))
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
@@ -55,9 +51,6 @@ def _call_libqfieldsync_packager(
     else:
         vl_extent = QgsRectangle()
         for layer in layers.values():
-            if isinstance(layer, QgsVectorLayer):
-                continue
-
             layer_extent = layer.extent()
 
             if layer_extent.isNull() or not layer_extent.isFinite():
@@ -127,7 +120,7 @@ def _call_libqfieldsync_packager(
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
     offline_converter.project_configuration.create_base_map = False
-    offline_converter.convert()
+    offline_converter.convert(reload_original_project=False)
 
     logger.info("Packaging finished!")
 
@@ -141,18 +134,31 @@ def _call_libqfieldsync_packager(
 def _extract_layer_data(project_filename: Union[str, Path]) -> dict:
     logger.info("Extracting QGIS project layer data…")
 
-    project_filename = str(project_filename)
-    project = QgsProject.instance()
-
-    with set_bad_layer_handler(project):
-        project.read(project_filename)
-        layers_by_id: dict = get_layers_data(project)
+    project = open_qgis_project(str(project_filename))
+    layers_by_id: dict = get_layers_data(project)
 
     logger.info(
         f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
     )
 
     return layers_by_id
+
+
+def _open_read_only_project(project_filename: str) -> QgsProject:
+    flags = (
+        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
+        QgsProject.ReadFlags()
+        | QgsProject.ForceReadOnlyLayers
+        | QgsProject.FlagDontLoadLayouts
+        | QgsProject.FlagDontLoad3DViews
+        | QgsProject.DontLoadProjectStyles
+    )
+    return open_qgis_project(
+        project_filename,
+        force_reload=True,
+        disable_feature_count=True,
+        flags=flags,
+    )
 
 
 def cmd_package_project(args: argparse.Namespace):
@@ -326,9 +332,9 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 id="opening_check",
                 name="Opening Check",
                 arguments={
-                    "project_filename": WorkDirPath("files", args.project_file),
+                    "project_filename": WorkDirPathAsStr("files", args.project_file),
                 },
-                method=qfc_worker.process_projectfile.load_project_file,
+                method=_open_read_only_project,
                 return_names=["project"],
             ),
             Step(
@@ -345,7 +351,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 id="generate_thumbnail_image",
                 name="Generate Thumbnail Image",
                 arguments={
-                    "project": StepOutput("opening_check", "project"),
+                    "project_filename": WorkDirPathAsStr("files", args.project_file),
                     "thumbnail_filename": Path("/io/thumbnail.png"),
                 },
                 method=qfc_worker.process_projectfile.generate_thumbnail,

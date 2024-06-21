@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Iterable
 
 from django import forms
 from django.contrib import admin
@@ -115,6 +116,22 @@ class SubscriptionModelForm(forms.ModelForm):
 class SubscriptionAdmin(QFieldCloudModelAdmin):
     form = SubscriptionModelForm
 
+    fields = (
+        "plan",
+        "account",
+        "status",
+        "active_since",
+        "active_until",
+        "billing_cycle_anchor_at",
+        "current_period_since",
+        "current_period_until",
+        "notes",
+        "created_at",
+        "created_by",
+        "updated_at",
+        "requested_cancel_at",
+    )
+
     list_display = (
         "id",
         "account__link",
@@ -148,7 +165,35 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "account__user__username__iexact",
     )
 
-    @admin.display(description="User")
+    def get_fields(
+        self, request: HttpRequest, obj: Subscription | None = None
+    ) -> Iterable[str]:
+        if obj is not None:
+            return (
+                "plan__link",
+                "account__link",
+                "promotion__link",
+                *self.fields[3:],
+            )
+
+        return self.fields
+
+    def get_readonly_fields(
+        self, request: HttpRequest, obj: Subscription | None = None
+    ) -> Iterable[str]:
+        if obj is not None:
+            return (
+                *self.readonly_fields,
+                "plan",
+                "account",
+                "plan__link",
+                "account__link",
+                "promotion__link",
+            )
+
+        return self.readonly_fields
+
+    @admin.display(description="Account")
     def account__link(self, instance):
         return model_admin_url(
             instance.account.user, instance.account.user.username_with_full_name
