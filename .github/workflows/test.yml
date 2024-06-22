@@ -12,6 +12,10 @@ on:
       - QF-4434-faster-ci
   pull_request:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   lint:
     if: '! github.event.pull_request.draft'
