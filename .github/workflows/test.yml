@@ -9,6 +9,7 @@ on:
     branches:
       - master
       - release
+      - QF-4434-faster-ci
   pull_request:
 
 jobs:
@@ -91,6 +92,8 @@ jobs:
   test:
     name: Run tests
     runs-on: ubuntu-22.04
+    needs:
+      - build
     strategy:
       fail-fast: false
       matrix:
