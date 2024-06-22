@@ -36,14 +36,13 @@ jobs:
 
 
   build:
-    name: Build images
+    name: Build image
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: true
       matrix:
         service_name:
           - app
-          - worker_wrapper
           - nginx
           - qgis
     steps:
@@ -80,15 +79,15 @@ jobs:
           cache-to: type=gha,mode=max
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push `qfieldcloud-worker_wrapper`
-        if: ${{ matrix.service_name == 'worker_wrapper' }}
+      - name: Build and push `qfieldcloud-worker_wrapper` (if needed)
+        if: ${{ matrix.service_name == 'app' }}
         uses: docker/build-push-action@v6
         with:
           context: ./docker-app
           file: ./docker-app/Dockerfile
           target: 'worker_wrapper_runtime'
           push: true
-          tags: ghcr.io/opengisch/qfieldcloud-${{ matrix.service_name }}:${{ github.sha }}
+          tags: ghcr.io/opengisch/qfieldcloud-worker_wrapper:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           github-token: ${{ secrets.GITHUB_TOKEN }}
