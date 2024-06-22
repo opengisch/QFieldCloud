@@ -9,10 +9,7 @@ x-logging: &default-logging
 
 services:
   app: &default-django
-    build:
-      context: ./docker-app
-      target: webserver_runtime
-      network: host
+    image: ${QFIELDCLOUD_IMAGE_NAME_FOR_APP:-opengisch/qfieldcloud-app:latest}
     restart: unless-stopped
     command: >
       gunicorn
@@ -88,8 +85,7 @@ services:
       ofelia.job-exec.runcrons.command: python manage.py runcrons
 
   nginx:
-    build:
-      context: ./docker-nginx
+    image: ${QFIELDCLOUD_IMAGE_NAME_FOR_NGINX:-opengisch/qfieldcloud-nginx:latest}
     restart: unless-stopped
     volumes:
       - ./docker-nginx/certs/:/etc/nginx/certs/:ro
@@ -128,21 +124,14 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   qgis:
-    build:
-      context: ./docker-qgis
-      network: host
-      args:
-        DEBUG_BUILD: ${DEBUG}
+    image: ${QFIELDCLOUD_IMAGE_NAME_FOR_QGIS:-opengisch/qfieldcloud-qgis:latest}
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
 
   worker_wrapper:
     <<: *default-django
-    build:
-      context: ./docker-app
-      network: host
-      target: worker_wrapper_runtime
+    image: ${QFIELDCLOUD_IMAGE_NAME_FOR_WORKER_WRAPPER:-opengisch/qfieldcloud-worker-wrapper:latest}
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:

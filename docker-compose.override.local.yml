@@ -3,7 +3,11 @@ version: '3.9'
 services:
 
   app:
+    image: ""
     build:
+      context: ./docker-app
+      target: webserver_runtime
+      network: host
       args:
         - DEBUG_BUILD=1
     ports:
@@ -18,8 +22,11 @@ services:
       - db
 
   worker_wrapper:
-    scale: ${QFIELDCLOUD_WORKER_REPLICAS}
+    image: ""
     build:
+      context: ./docker-app
+      network: host
+      target: worker_wrapper_runtime
       args:
         - DEBUG_BUILD=1
     ports:
@@ -67,11 +74,23 @@ services:
       - "${MEMCACHED_PORT}:11211"
 
   qgis:
+    image: ""
+    build:
+      context: ./docker-qgis
+      network: host
+      args:
+        DEBUG_BUILD: ${DEBUG}
+
     volumes:
       # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
       - ./docker-qgis/libqfieldsync:/libqfieldsync:ro
       # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`
       - ./docker-qgis/qfieldcloud-sdk-python:/qfieldcloud-sdk-python:ro
+
+  nginx:
+    image: ""
+    build:
+      context: ./docker-nginx
 
   geodb:
     image: postgis/postgis:12-3.0

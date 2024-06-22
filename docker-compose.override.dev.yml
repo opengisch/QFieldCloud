@@ -2,11 +2,6 @@ version: '3.9'
 
 services:
 
-  app:
-    build:
-      args:
-        DEBUG_BUILD: ${DEBUG}
-
   geodb:
     image: postgis/postgis:12-3.0
     restart: unless-stopped
