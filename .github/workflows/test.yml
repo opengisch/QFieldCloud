@@ -9,7 +9,6 @@ on:
     branches:
       - master
       - release
-      - QF-4434-faster-ci
   pull_request:
 
 jobs:
@@ -65,11 +64,24 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build and push `qfieldcloud-${{ matrix.service_name }}`
+        if: ${{ matrix.service_name != 'worker_wrapper' }}
         uses: docker/build-push-action@v6
         with:
           context: ./docker-${{ matrix.service_name }}
           file: ./docker-${{ matrix.service_name }}/Dockerfile
-          target: ${{ matrix.service_name == 'worker_wrapper' && 'worker_wrapper_runtime' || null }}
+          push: true
+          tags: ghcr.io/opengisch/qfieldcloud-${{ matrix.service_name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push `qfieldcloud-worker_wrapper`
+        if: ${{ matrix.service_name == 'worker_wrapper' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker-app
+          file: ./docker-app/Dockerfile
+          target: 'worker_wrapper_runtime'
           push: true
           tags: ghcr.io/opengisch/qfieldcloud-${{ matrix.service_name }}:${{ github.sha }}
           cache-from: type=gha
