@@ -112,6 +112,7 @@ jobs:
       QFIELDCLOUD_IMAGE_NAME_FOR_WORKER_WRAPPER: "ghcr.io/opengisch/qfieldcloud-worker_wrapper:${{ github.sha }}"
       QFIELDCLOUD_IMAGE_NAME_FOR_QGIS: "ghcr.io/opengisch/qfieldcloud-qgis:${{ github.sha }}"
       QFIELDCLOUD_IMAGE_NAME_FOR_NGINX: "ghcr.io/opengisch/qfieldcloud-nginx:${{ github.sha }}"
+      COMPOSE_FILE: docker-compose.yml:docker-compose.override.local.yml:docker-compose.test.yml
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -120,25 +121,13 @@ jobs:
 
       - name: Print config
         run: |
+          cp .env.example .env
           docker compose config
           printenv
 
-
-
-
-      # - name: Prepare docker-compose override file
-      #   run: |
-      #     ln -s docker-compose.override.local.yml docker-compose.override.yml
-
-      # - name: Check env vars configuration
-      #   run: |
-      #     scripts/check_envvars.sh
-
-      # - name: Export the env variables file
-      #   run: |
-      #     cp .env.example .env
-      #     sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
-      #     eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+      - name: Check env vars configuration
+        run: |
+          scripts/check_envvars.sh
 
       # - name: Pull docker containers
       #   run: docker compose pull
