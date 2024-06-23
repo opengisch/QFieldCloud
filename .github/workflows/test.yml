@@ -91,6 +91,19 @@ jobs:
           cache-to: type=gha,mode=max
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build and push `qfieldcloud-app-testing` (if needed)
+        if: ${{ matrix.service_name == 'app' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker-app
+          file: ./docker-app/Dockerfile
+          target: 'webserver_test'
+          push: true
+          tags: ghcr.io/opengisch/qfieldcloud-app-testing:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
   test:
     name: Run tests
     runs-on: ubuntu-24.04
@@ -107,7 +120,7 @@ jobs:
           - __flaky__
     continue-on-error: true
     env:
-      QFIELDCLOUD_IMAGE_NAME_FOR_APP: "ghcr.io/opengisch/qfieldcloud-app:${{ github.sha }}"
+      QFIELDCLOUD_IMAGE_NAME_FOR_APP: "ghcr.io/opengisch/qfieldcloud-app-testing:${{ github.sha }}"
       QFIELDCLOUD_IMAGE_NAME_FOR_WORKER_WRAPPER: "ghcr.io/opengisch/qfieldcloud-worker_wrapper:${{ github.sha }}"
       QFIELDCLOUD_IMAGE_NAME_FOR_QGIS: "ghcr.io/opengisch/qfieldcloud-qgis:${{ github.sha }}"
       # TODO remove me
