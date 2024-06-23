@@ -6,6 +6,7 @@ services:
     build:
       context: ./docker-app
       target: webserver_test
+    command: python3 manage.py runserver 0.0.0.0:8000
     environment:
       # we must use the same db for test and runserver
       POSTGRES_DB: test_${POSTGRES_DB}
