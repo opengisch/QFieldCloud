@@ -101,10 +101,10 @@ jobs:
       fail-fast: false
       matrix:
         django_app:
-          # - authentication
-          # - notifs
-          # - subscription
-          # - core
+          - authentication
+          - notifs
+          - subscription
+          - core
           - __flaky__
     continue-on-error: true
     env:
@@ -118,14 +118,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Print config
-        run: |
-          pwd
-          cp .env.example .env
-          ls -la
-          docker compose config
-          printenv
 
       - name: Check env vars configuration
         run: |
