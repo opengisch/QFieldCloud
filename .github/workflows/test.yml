@@ -164,7 +164,7 @@ jobs:
         run: |
           docker compose run app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
 
-      - name: "failure logs"
+      - name: Print failure logs
         if: failure()
         run: |
           docker compose logs
