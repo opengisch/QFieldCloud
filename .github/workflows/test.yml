@@ -121,6 +121,7 @@ jobs:
 
       - name: Print config
         run: |
+          ls -la
           cp .env.example .env
           docker compose config
           printenv
