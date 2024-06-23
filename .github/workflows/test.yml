@@ -118,6 +118,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Prepare the `.env` file
+        run: |
+          cp .env.example .env
+
       - name: Check env vars configuration
         run: |
           scripts/check_envvars.sh
