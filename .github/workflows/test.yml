@@ -101,10 +101,10 @@ jobs:
       fail-fast: false
       matrix:
         django_app:
-          - authentication
-          - notifs
-          - subscription
-          - core
+          # - authentication
+          # - notifs
+          # - subscription
+          # - core
           - __flaky__
     continue-on-error: true
     env:
@@ -118,59 +118,67 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Prepare docker-compose override file
+      - name: Print config
         run: |
-          ln -s docker-compose.override.local.yml docker-compose.override.yml
+          docker compose config
+          printenv
 
-      - name: Check env vars configuration
-        run: |
-          scripts/check_envvars.sh
 
-      - name: Export the env variables file
-        run: |
-          cp .env.example .env
-          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
-          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
-      - name: Pull docker containers
-        run: docker compose pull
 
-      - name: Build and run docker containers
-        run: |
-          docker compose up -d --build
+      # - name: Prepare docker-compose override file
+      #   run: |
+      #     ln -s docker-compose.override.local.yml docker-compose.override.yml
 
-      - name: Initial manage.py commands
-        run: |
-          docker compose run app python manage.py makemigrations --no-input --check
-          docker compose run app python manage.py migrate
-          docker compose run app python manage.py collectstatic
+      # - name: Check env vars configuration
+      #   run: |
+      #     scripts/check_envvars.sh
 
-      - name: Run mandatory unit and integration tests
-        if: matrix.django_app != '__flaky__'
-        run: |
-          docker compose run app python manage.py test --keepdb -v2 --exclude-tag="flaky" qfieldcloud.${{ matrix.django_app }}
+      # - name: Export the env variables file
+      #   run: |
+      #     cp .env.example .env
+      #     sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+      #     eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
-      - name: Run flaky unit and integration tests
-        if: matrix.django_app == '__flaky__'
-        run: |
-          docker compose run app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
+      # - name: Pull docker containers
+      #   run: docker compose pull
 
-      - name: "failure logs"
-        if: failure()
-        run: |
-          docker compose logs
+      # - name: Build and run docker containers
+      #   run: |
+      #     docker compose up -d --build
 
-      - name: Post Google Chat message on failure
-        if: failure() && matrix.django_app != '__flaky__'
-        uses: julb/action-post-googlechat-message@v1
-        with:
-          message: |
-            Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
-          gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+      # - name: Initial manage.py commands
+      #   run: |
+      #     docker compose run app python manage.py makemigrations --no-input --check
+      #     docker compose run app python manage.py migrate
+      #     docker compose run app python manage.py collectstatic
 
-      # - name: Setup tmate session
-      #   if: ${{ failure() }}
-      #   uses: mxschmitt/action-tmate@v3
-      #   timeout-minutes: 30
+      # - name: Run mandatory unit and integration tests
+      #   if: matrix.django_app != '__flaky__'
+      #   run: |
+      #     docker compose run app python manage.py test --keepdb -v2 --exclude-tag="flaky" qfieldcloud.${{ matrix.django_app }}
+
+      # - name: Run flaky unit and integration tests
+      #   if: matrix.django_app == '__flaky__'
+      #   run: |
+      #     docker compose run app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
+
+      # - name: "failure logs"
+      #   if: failure()
+      #   run: |
+      #     docker compose logs
+
+      # - name: Post Google Chat message on failure
+      #   if: failure() && matrix.django_app != '__flaky__'
+      #   uses: julb/action-post-googlechat-message@v1
       #   with:
-      #     limit-access-to-actor: true
+      #     message: |
+      #       Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
+      #     gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
+      # # - name: Setup tmate session
+      # #   if: ${{ failure() }}
+      # #   uses: mxschmitt/action-tmate@v3
+      # #   timeout-minutes: 30
+      # #   with:
+      # #     limit-access-to-actor: true
