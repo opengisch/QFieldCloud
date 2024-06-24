@@ -30,7 +30,7 @@ services:
     command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
 
   geodb:
-    image: postgis/postgis:12-3.0
+    image: postgis/postgis:13-3.1-alpine
     restart: unless-stopped
     volumes:
       - geodb_data:/var/lib/postgresql
