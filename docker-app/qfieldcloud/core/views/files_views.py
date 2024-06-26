@@ -111,8 +111,14 @@ class ListFilesView(views.APIView):
                 metadata = head["Metadata"]
                 if "sha256sum" in metadata:
                     sha256sum = metadata["sha256sum"]
-                else:
+                elif "Sha256sum" in metadata:
                     sha256sum = metadata["Sha256sum"]
+                else:
+                    # Return "sha256sum" metadata if it does not exist.  Can occur if the data has been migrated from one s3 platform to another.
+                    s3 = utils.get_s3_client()
+                    obj = s3.get_object(Bucket=bucket.name, Key=version.key)
+                    data = io.BytesIO(obj['Body'].read())
+                    sha256sum = utils.get_sha256(data)
 
                 version_data["sha256"] = sha256sum
 
