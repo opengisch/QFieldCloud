@@ -1,3 +1,7 @@
+{# patched styling see line 58 #}
+{# from https://github.com/jazzband/django-constance/blob/master/constance/templates/admin/constance/change_list.html #}
+{# awaiting https://github.com/jazzband/django-constance/pull/559 #}
+
 {% extends "admin/base_site.html" %}
 {% load admin_list static i18n %}
 
@@ -48,6 +52,7 @@
 
             {% if fieldsets %}
               {% for fieldset in fieldsets %}
+							{# Next line edited: added `card card-body` #}
               <fieldset class="module{% if fieldset.collapse %} collapse{% endif %} card card-body">
                   <h2>{{ fieldset.title }}</h2>
                   {% with config_values=fieldset.config_values %}
