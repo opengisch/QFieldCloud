@@ -1,30 +1,8 @@
-{# patched styling see line 58 #}
-{# from https://github.com/jazzband/django-constance/blob/master/constance/templates/admin/constance/change_list.html #}
-{# awaiting https://github.com/jazzband/django-constance/pull/559 #}
+{# patched styling in block content in line 34 #}
+{# extends https://github.com/jazzband/django-constance/blob/master/constance/templates/admin/constance/change_list.html #}
 
-{% extends "admin/base_site.html" %}
+{% extends "admin/constance/change_list.html" %}
 {% load admin_list static i18n %}
-
-{% block extrastyle %}
-  {{ block.super }}
-  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}">
-  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/forms.css' %}">
-  {{ media.css }}
-  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/constance.css' %}">
-{% endblock %}
-
-{% block extrahead %}
-{% url 'admin:jsi18n' as jsi18nurl %}
-<script type="text/javascript" src="{{ jsi18nurl|default:'../../jsi18n/' }}"></script>
-{{ block.super }}
-{{ media.js }}
-<script type="text/javascript" src="{% static 'admin/js/constance.js' %}"></script>
-{% if django_version < "5.1" %}
-<script type="text/javascript" src="{% static 'admin/js/collapse.js' %}"></script>
-{% endif %}
-{% endblock %}
-
-{% block bodyclass %}{{ block.super }} change-list{% endblock %}
 
 {% block content %}
   <div id="content-main" class="constance">
@@ -70,12 +48,4 @@
         </form>
     </div>
   </div>
-{% endblock %}
-
-{% block breadcrumbs %}
-<div class="breadcrumbs">
-  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
-  &rsaquo; {{ opts.verbose_name_plural|capfirst }}
-</div>
 {% endblock %}
