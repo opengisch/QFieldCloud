@@ -68,6 +68,9 @@ services:
 
   qgis:
     volumes:
+      # allow local development for `docker-qgis`
+      - ./docker-qgis/qfc_worker:/usr/src/qfc_worke:ro
+      - ./docker-qgis/entrypoint.py:/usr/src/entrypoint.py:ro
       # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
       - ./docker-qgis/libqfieldsync:/libqfieldsync:ro
       # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`
