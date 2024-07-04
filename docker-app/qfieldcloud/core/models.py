@@ -235,9 +235,7 @@ class User(AbstractUser):
                 "Only letters, numbers, underscores '_' or hyphens '-' are allowed.",
             ),
             RegexValidator(r"^[a-zA-Z].*$", _("Must begin with a letter.")),
-            RegexValidator(
-                r"^.{3,}$", _("Must be at least 3 characters long.")
-            ),
+            RegexValidator(r"^.{3,}$", _("Must be at least 3 characters long.")),
             validators.reserved_words_validator,
         ],
         error_messages={
