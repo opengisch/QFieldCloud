@@ -227,17 +227,15 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         help_text=_(
-            "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
+            "Between 3 and 150 characters. Letters, digits, underscores '_' or hyphens '-' only. Must begin with a letter."
         ),
         validators=[
             RegexValidator(
                 r"^[-a-zA-Z0-9_]+$",
-                "Only letters, numbers, underscores or hyphens are allowed.",
+                "Only letters, numbers, underscores '_' or hyphens '-' are allowed.",
             ),
-            RegexValidator(r"^[a-zA-Z].*$", _("The name must begin with a letter.")),
-            RegexValidator(
-                r"^.{3,}$", _("The name must be at least 3 characters long.")
-            ),
+            RegexValidator(r"^[a-zA-Z].*$", _("Must begin with a letter.")),
+            RegexValidator(r"^.{3,}$", _("Must be at least 3 characters long.")),
             validators.reserved_words_validator,
         ],
         error_messages={
