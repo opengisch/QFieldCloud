@@ -188,20 +188,34 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 class ProjectCollaboratorSerializer(serializers.ModelSerializer):
     collaborator = serializers.StringRelatedField()
-    role = serializers.CharField()
+    created_by = serializers.StringRelatedField()
+    updated_by = serializers.StringRelatedField()
 
     class Meta:
         model = ProjectCollaborator
-        fields = ("collaborator", "role")
+        fields = (
+            "project_id",
+            "collaborator",
+            "role",
+            "created_by",
+            "updated_by",
+            "created_at",
+            "updated_at",
+        )
 
 
 class OrganizationMemberSerializer(serializers.ModelSerializer):
+    organization = serializers.StringRelatedField()
     member = serializers.StringRelatedField()
-    role = serializers.CharField()
 
     class Meta:
         model = OrganizationMember
-        fields = ("member", "role")
+        fields = (
+            "organization",
+            "member",
+            "role",
+            "is_public",
+        )
 
 
 class TokenSerializer(serializers.ModelSerializer):
