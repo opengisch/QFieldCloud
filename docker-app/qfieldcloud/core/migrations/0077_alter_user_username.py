@@ -6,15 +6,33 @@ import qfieldcloud.core.validators
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0076_project_restrict_project_modification'),
+        ("core", "0076_project_restrict_project_modification"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='user',
-            name='username',
-            field=models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text="Between 3 and 150 characters. Letters, digits, underscores '_' or hyphens '-' only. Must begin with a letter.", max_length=150, unique=True, validators=[django.core.validators.RegexValidator('^[-a-zA-Z0-9_]+$', "Only letters, numbers, underscores '_' or hyphens '-' are allowed."), django.core.validators.RegexValidator('^[a-zA-Z].*$', 'Must begin with a letter.'), django.core.validators.RegexValidator('^.{3,}$', 'Must be at least 3 characters long.'), qfieldcloud.core.validators.reserved_words_validator], verbose_name='username'),
+            model_name="user",
+            name="username",
+            field=models.CharField(
+                error_messages={"unique": "A user with that username already exists."},
+                help_text="Between 3 and 150 characters. Letters, digits, underscores '_' or hyphens '-' only. Must begin with a letter.",
+                max_length=150,
+                unique=True,
+                validators=[
+                    django.core.validators.RegexValidator(
+                        "^[-a-zA-Z0-9_]+$",
+                        "Only letters, numbers, underscores '_' or hyphens '-' are allowed.",
+                    ),
+                    django.core.validators.RegexValidator(
+                        "^[a-zA-Z].*$", "Must begin with a letter."
+                    ),
+                    django.core.validators.RegexValidator(
+                        "^.{3,}$", "Must be at least 3 characters long."
+                    ),
+                    qfieldcloud.core.validators.reserved_words_validator,
+                ],
+                verbose_name="username",
+            ),
         ),
     ]
