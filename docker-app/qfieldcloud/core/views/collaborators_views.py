@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
-from qfieldcloud.core.models import Project, ProjectCollaborator
+from qfieldcloud.core.models import Person, Project, ProjectCollaborator
 from qfieldcloud.core.serializers import ProjectCollaboratorSerializer
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -50,9 +50,14 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
     def post(self, request, projectid):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        collaborator = User.objects.get(username=request.data["collaborator"])
+        collaborator = Person.objects.get(username=request.data["collaborator"])
         project = Project.objects.get(id=projectid)
-        serializer.save(collaborator=collaborator, project=project)
+        serializer.save(
+            collaborator=collaborator,
+            project=project,
+            created_by=request.user,
+            updated_by=request.user,
+        )
 
         try:
             headers = {"Location": str(serializer.data[api_settings.URL_FIELD_NAME])}
