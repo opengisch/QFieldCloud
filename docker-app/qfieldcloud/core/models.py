@@ -396,7 +396,7 @@ class UserAccount(models.Model):
     twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
     avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
-    timezone = TimeZoneField(default="Europe/Zurich", choices_display="WITH_GMT_OFFSET")
+    timezone = TimeZoneField(default=settings.TIME_ZONE, choices_display="WITH_GMT_OFFSET")
 
     notifs_frequency = models.DurationField(
         verbose_name=_("Email frequency for notifications"),
