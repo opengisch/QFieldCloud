@@ -525,6 +525,8 @@ class PersonAdmin(QFieldCloudModelAdmin):
                 obj.set_password(obj.password)
         else:
             obj.set_password(obj.password)
+
+        obj.clean()
         obj.save()
 
     def get_urls(self):
