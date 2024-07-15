@@ -1,51 +1,52 @@
-{# patched styling in block content in line 34 #}
 {# extends https://github.com/jazzband/django-constance/blob/master/constance/templates/admin/constance/change_list.html #}
+{# Add some style for table readability. Mainly copied from bootstrap #}
 
 {% extends "admin/constance/change_list.html" %}
-{% load admin_list static i18n %}
+{% load i18n %}
 
-{% block content %}
-  <div id="content-main" class="constance">
-    <div class="module" id="changelist">
-        <form id="changelist-form" action="" method="post" enctype="multipart/form-data">{% csrf_token %}
-            {% if form.non_field_errors %}
-                <ul class="errorlist">
-                    {% for error in form.non_field_errors %}
-                      <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-            {% if form.errors %}
-            <ul class="errorlist">
-            {% endif %}
-            {% for field in form.hidden_fields %}
-                {% for error in field.errors %}
-                  <li>{{ error }}</li>
-                {% endfor %}
-                {{ field }}
-            {% endfor %}
-            {% if form.errors %}
-            </ul>
-            {% endif %}
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  fieldset.module {
+    box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
+    margin-bottom: 1rem;
+    min-height: 1px;
+    padding: 1.25rem;
+    position: relative;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background-color: #fff;
+    background-clip: border-box;
+    border: 0 solid rgba(0, 0, 0, .125);
+    border-radius: .25rem;
+  }
 
-            {% if fieldsets %}
-              {% for fieldset in fieldsets %}
-							{# Next line edited: added `card card-body` #}
-              <fieldset class="module{% if fieldset.collapse %} collapse{% endif %} card card-body">
-                  <h2>{{ fieldset.title }}</h2>
-                  {% with config_values=fieldset.config_values %}
-                    {% include "admin/constance/includes/results_list.html" %}
-                  {% endwith %}
-              </fieldset>
-              {% endfor %}
-            {% else %}
-              {% include "admin/constance/includes/results_list.html" %}
-            {% endif %}
+  table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #212529;
+    background-color: transparent;
+    border-collapse: collapse;
+  }
 
-            <p class="paginator sticky-footer">
-              <input type="submit" name="_save" class="default" value="{% trans 'Save' %}">
-            </p>
-        </form>
-    </div>
-  </div>
+  table tbody tr:nth-of-type(odd) {
+      background-color: rgba(0, 0, 0, .05);
+  }
+
+  table tbody tr th {
+      padding-left: .75rem;
+  }
+
+  table td, table th {
+      padding: .75rem;
+      vertical-align: top;
+      border-top: 1px solid #dee2e6;
+  }
+
+  table thead th {
+      color: #64748b;
+      border-bottom: 0;
+  }
+</style>
 {% endblock %}
