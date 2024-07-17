@@ -18,11 +18,10 @@ QField and QFieldCloud documentation is deployed [here](https://docs.qfield.org)
 
 ## Feature requests and issue reports
 
-If you are interested what are the new upcoming developments, or you want to request a feature, please visit our ideas platform at [ideas.qfield.org](https://ideas.qfield.org).
-There you can either submit a new feature request or upvote an already existing one.
-Alternatively, you can speed up developments by sending us an email at sales@qfield.cloud.
+If you are interested in upcoming developments, or you want to suggest a new a feature, please visit our ideas platform at [ideas.qfield.org](https://ideas.qfield.org). Here, you can submit a new request or upvote existing ones.
+To expedite developments by funding a feature, please email us at sales@qfield.cloud.
 
-In case you have questions using the hosted service at [app.qfield.cloud](https://app.qfield.cloud), please submit a ticket to the dedicated support platform at [tickets.qfield.cloud](https://tickets.qfield.cloud).
+For questions about using the hosted service at [app.qfield.cloud](https://app.qfield.cloud), submit a ticket to our dedicated support platform at [tickets.qfield.cloud](https://tickets.qfield.cloud).
 
 For self-hosted issues, please use the GitHub issues at https://github.com/opengisch/qfieldcloud/issues .
 
