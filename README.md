@@ -4,7 +4,8 @@ QFieldCloud is a Django based service designed to synchronize projects and data 
 
 QFieldCloud allows seamless synchronization of your field data with your spatial infrastructure with change tracking, team management and online-offline work capabilities in QField.
 
-# Hosted solution
+
+## Hosted solution
 
 If you're interested in quickly getting up and running, we suggest subscribing to the version hosted by OPENGIS.ch at https://qfield.cloud. This is also the instance that is integrated by default into QField.
 <a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal_embedded_font.svg" width="100%"/></a>
@@ -15,7 +16,19 @@ If you're interested in quickly getting up and running, we suggest subscribing t
 QField and QFieldCloud documentation is deployed [here](https://docs.qfield.org).
 
 
+## Feature requests and issue reports
+
+If you are interested in upcoming developments, or you want to suggest a new feature, please visit our ideas platform at [ideas.qfield.org](https://ideas.qfield.org).
+Here, you can submit a new request or upvote existing ones.
+To expedite developments by funding a feature, please email us at sales@qfield.cloud.
+
+For questions about using the hosted service at [app.qfield.cloud](https://app.qfield.cloud), submit a ticket to our dedicated support platform at [tickets.qfield.cloud](https://tickets.qfield.cloud).
+
+For self-hosted issues, please use the GitHub issues at https://github.com/opengisch/qfieldcloud/issues .
+
+
 ## Development
+
 
 ### Clone the repository
 

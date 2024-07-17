@@ -10,14 +10,12 @@ RUN apt update \
 RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
 
 # Add QGIS repository
-COPY <<EOF /etc/apt/sources.list.d/qgis.sources
-Types: deb deb-src
-URIs: https://qgis.org/debian
-Suites: noble
-Architectures: amd64
-Components: main
-Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
-EOF
+RUN echo "Types: deb deb-src\n\
+URIs: https://qgis.org/debian\n\
+Suites: noble\n\
+Architectures: amd64\n\
+Components: main\n\
+Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources
 
 # Install non-QGIS dependencies
 RUN apt update \
