@@ -67,7 +67,6 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build and push `qfieldcloud-${{ matrix.service_name }}`
-        if: ${{ matrix.service_name != 'worker_wrapper' }}
         uses: docker/build-push-action@v6
         with:
           context: ./docker-${{ matrix.service_name }}
