@@ -53,7 +53,7 @@ COPY --from=build /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python
 
 # install debug dependencies
 ARG DEBUG_BUILD
-RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install debugpy; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install debugpy ipython; fi
 
 # add app group
 RUN addgroup --system app && adduser --system app --ingroup app
