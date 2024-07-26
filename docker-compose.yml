@@ -110,6 +110,7 @@ services:
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
       LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
       LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
+    command: nginx-debug -g 'daemon off;'
     logging:
       driver: "json-file"
       options:
