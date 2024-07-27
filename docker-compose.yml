@@ -136,6 +136,7 @@ services:
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
+    stop_grace_period: 15m
 
   worker_wrapper:
     <<: *default-django

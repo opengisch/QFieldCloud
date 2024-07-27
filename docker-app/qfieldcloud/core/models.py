@@ -227,17 +227,15 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         help_text=_(
-            "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
+            "Between 3 and 150 characters. Letters, digits, underscores '_' or hyphens '-' only. Must begin with a letter."
         ),
         validators=[
             RegexValidator(
                 r"^[-a-zA-Z0-9_]+$",
-                "Only letters, numbers, underscores or hyphens are allowed.",
+                "Only letters, numbers, underscores '_' or hyphens '-' are allowed.",
             ),
-            RegexValidator(r"^[a-zA-Z].*$", _("The name must begin with a letter.")),
-            RegexValidator(
-                r"^.{3,}$", _("The name must be at least 3 characters long.")
-            ),
+            RegexValidator(r"^[a-zA-Z].*$", _("Must begin with a letter.")),
+            RegexValidator(r"^.{3,}$", _("Must be at least 3 characters long.")),
             validators.reserved_words_validator,
         ],
         error_messages={
@@ -363,8 +361,22 @@ class Person(User):
         verbose_name = "person"
         verbose_name_plural = "people"
 
+    def clean(self):
+        person_qs = self.__class__.objects.filter(email__iexact=self.email)
+
+        if self.pk:
+            person_qs = person_qs.exclude(pk=self.pk)
+
+        if person_qs.exists():
+            raise ValidationError(
+                _("This email is already taken by another user!").format(self.email)
+            )
+
+        return super().clean()
+
     def save(self, *args, **kwargs):
         self.type = User.Type.PERSON
+
         return super().save(*args, **kwargs)
 
 
@@ -398,7 +410,9 @@ class UserAccount(models.Model):
     twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
     avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
-    timezone = TimeZoneField(default="Europe/Zurich", choices_display="WITH_GMT_OFFSET")
+    timezone = TimeZoneField(
+        default=settings.TIME_ZONE, choices_display="WITH_GMT_OFFSET"
+    )
 
     notifs_frequency = models.DurationField(
         verbose_name=_("Email frequency for notifications"),
@@ -732,9 +746,7 @@ class OrganizationMember(models.Model):
         if self.organization.organization_owner == self.member:
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
-        max_organization_members = (
-            self.organization.useraccount.current_subscription.plan.max_organization_members
-        )
+        max_organization_members = self.organization.useraccount.current_subscription.plan.max_organization_members
         if (
             max_organization_members > -1
             and self.organization.members.count() >= max_organization_members
@@ -933,8 +945,9 @@ class Project(models.Model):
 
     class StatusCode(models.TextChoices):
         OK = "ok", _("Ok")
-        FAILED_PROCESS_PROJECTFILE = "failed_process_projectfile", _(
-            "Failed process projectfile"
+        FAILED_PROCESS_PROJECTFILE = (
+            "failed_process_projectfile",
+            _("Failed process projectfile"),
         )
         TOO_MANY_COLLABORATORS = "too_many_collaborators", _("Too many collaborators")
 
@@ -1016,6 +1029,14 @@ class Project(models.Model):
             "If enabled, QFieldCloud will automatically overwrite conflicts in this project. Disabling this will force the project manager to manually resolve all the conflicts."
         ),
     )
+
+    has_restricted_projectfiles = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Restrict modifications of QGIS/QField projectfiles to managers and administrators."
+        ),
+    )
+
     thumbnail_uri = models.CharField(
         _("Thumbnail Picture URI"), max_length=255, blank=True
     )
@@ -1268,9 +1289,7 @@ class Project(models.Model):
         else:
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
-            max_premium_collaborators_per_private_project = (
-                self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
-            )
+            max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
             if not self.project_filename or not self.project_details:

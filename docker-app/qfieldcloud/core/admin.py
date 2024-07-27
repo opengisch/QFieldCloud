@@ -161,6 +161,8 @@ UserEmailDetails = namedtuple(
         "email",
         "date_joined",
         "last_login",
+        "has_newsletter_subscription",
+        "has_accepted_tos",
         "verified",
         "owner_id",
         "owner_username",
@@ -169,6 +171,8 @@ UserEmailDetails = namedtuple(
         "owner_last_name",
         "owner_date_joined",
         "owner_last_login",
+        "owner_has_newsletter_subscription",
+        "owner_has_accepted_tos",
     ],
 )
 
@@ -217,6 +221,8 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 u.date_joined,
                 u.last_login,
                 u.type,
+                p.has_newsletter_subscription,
+                p.has_accepted_tos,
                 ae.verified,
                 oo.id AS "owner_id",
                 oo.username AS "owner_username",
@@ -224,15 +230,20 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 oo.first_name AS "owner_first_name",
                 oo.last_name AS "owner_last_name",
                 oo.date_joined AS "owner_date_joined",
-                oo.last_login AS "owner_last_login"
+                oo.last_login AS "owner_last_login",
+                p.has_newsletter_subscription AS "owner_has_newsletter_subscription",
+                p.has_accepted_tos AS "owner_has_accepted_tos"
             FROM
                 u
                 LEFT JOIN account_emailaddress ae ON ae.user_id = u.id
+                LEFT JOIN core_person p ON p.user_ptr_id = u.id
                 LEFT JOIN core_organization o ON o.user_ptr_id = u.id
                 LEFT JOIN u oo ON oo.id = o.organization_owner_id
+                LEFT JOIN core_person oop ON oop.user_ptr_id = oo.id
             ORDER BY u.id
             """
         )
+
         return (
             UserEmailDetails(
                 row.id,
@@ -243,6 +254,8 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 row.email,
                 row.date_joined,
                 row.last_login,
+                row.has_newsletter_subscription,
+                row.has_accepted_tos,
                 row.verified,
                 row.owner_id,
                 row.owner_username,
@@ -251,6 +264,8 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 row.owner_last_name,
                 row.owner_date_joined,
                 row.owner_last_login,
+                row.owner_has_newsletter_subscription,
+                row.owner_has_accepted_tos,
             )
             for row in raw_queryset
         )
@@ -510,6 +525,8 @@ class PersonAdmin(QFieldCloudModelAdmin):
                 obj.set_password(obj.password)
         else:
             obj.set_password(obj.password)
+
+        obj.clean()
         obj.save()
 
     def get_urls(self):
@@ -758,6 +775,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "status",
         "status_code",
         "project_filename",
+        "has_restricted_projectfiles",
         "file_storage_bytes",
         "storage_keep_versions",
         "packaging_offliner",

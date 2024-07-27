@@ -1,5 +1,0 @@
-[flake8]
-ignore = E501, F401, W503
-max-line-length = 120
-max-complexity = 30
-exclude = **/.git/, **/docker-qgis/libqfieldsync/, public

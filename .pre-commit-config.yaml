@@ -9,48 +9,23 @@ repos:
         args:
           - '--fix=lf'
 
-  # Remove unused imports/variables
-  - repo: https://github.com/myint/autoflake
-    rev: v2.2.1
+  # Lint and format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.1.4
     hooks:
-      - id: autoflake
-        args:
-          - "--in-place"
-          - "--remove-all-unused-imports"
-          - "--remove-unused-variables"
+      # Run the linter.
+      - id: ruff
+        args: [ --fix ]
 
-  # Sort imports
-  - repo: https://github.com/pycqa/isort
-    rev: "5.12.0"
-    hooks:
-      - id: isort
-        args: ["--profile", "black"]
-
-  # Black formatting
-  - repo: https://github.com/psf/black
-    rev: "23.7.0"
-    hooks:
-      - id: black
-
-  # tool to automatically upgrade syntax for newer versions of the language
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.10.1
-    hooks:
-      - id: pyupgrade
-        args: [--py37-plus]
-
-  # Lint files
-  - repo: https://github.com/pycqa/flake8
-    rev: "6.1.0"
-    hooks:
-      - id: flake8
-        additional_dependencies: [flake8-match==1.0.0, flake8-walrus==1.1.0]
+      # Run the formatter.
+      - id: ruff-format
 
     # Static type-checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.5.1'
+    rev: 'v1.10.0'
     hooks:
       - id: mypy
-        additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs]
+        additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs, django-stubs-ext]
         pass_filenames: false
-        entry: bash -c 'mypy -p docker-qgis -p docker-app "$@"' --
+        entry: bash -c 'mypy -p docker-app -p docker-qgis "$@"' --

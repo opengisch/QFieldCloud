@@ -253,6 +253,29 @@ def can_create_files(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_modify_qgis_projectfile(user: QfcUser, project: Project) -> bool:
+    if project.has_restricted_projectfiles:
+        return user_has_project_roles(
+            user,
+            project,
+            [
+                ProjectCollaborator.Roles.ADMIN,
+                ProjectCollaborator.Roles.MANAGER,
+            ],
+        )
+    else:
+        return user_has_project_roles(
+            user,
+            project,
+            [
+                ProjectCollaborator.Roles.ADMIN,
+                ProjectCollaborator.Roles.MANAGER,
+                ProjectCollaborator.Roles.EDITOR,
+                ProjectCollaborator.Roles.REPORTER,
+            ],
+        )
+
+
 def can_read_projects(user: QfcUser, _account: QfcUser) -> bool:
     return user.is_authenticated
 
@@ -552,9 +575,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             )
         )
 
-    max_premium_collaborators_per_private_project = (
-        project.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
-    )
+    max_premium_collaborators_per_private_project = project.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
     if max_premium_collaborators_per_private_project >= 0 and not project.is_public:
         project_collaborators_count = project.direct_collaborators.count()
         if project_collaborators_count >= max_premium_collaborators_per_private_project:

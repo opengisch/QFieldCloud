@@ -10,14 +10,12 @@ RUN apt update \
 RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
 
 # Add QGIS repository
-COPY <<EOF /etc/apt/sources.list.d/qgis.sources
-Types: deb deb-src
-URIs: https://qgis.org/debian
-Suites: noble
-Architectures: amd64
-Components: main
-Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
-EOF
+RUN echo "Types: deb deb-src\n\
+URIs: https://qgis.org/debian\n\
+Suites: noble\n\
+Architectures: amd64\n\
+Components: main\n\
+Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources
 
 # Install non-QGIS dependencies
 RUN apt update \
@@ -31,7 +29,7 @@ RUN apt update \
 
 # Set QGIS version as in the debian repos
 # Choose your version from here: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.36.2+40noble
+ARG QGIS_VERSION=1:3.38.1+40noble
 
 # Install QGIS dependencies
 RUN apt update \
@@ -64,9 +62,6 @@ ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
 ENV PYTHONPATH=/libqfieldsync:${PYTHONPATH}
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
-
-# upgrade `pip`. If not upgraded, installing from GitHub repo (needed for `libqfieldsync`) will result in UNKNOWN package.
-RUN pip3 install --break-system-packages --upgrade pip
 
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/
