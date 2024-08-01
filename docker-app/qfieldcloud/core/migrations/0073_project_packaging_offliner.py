@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                     ("qgiscore", "QGIS Core Offline Editing (deprecated)"),
                     ("pythonmini", "Optimized Packager"),
                 ],
-                default="qgiscore",
+                default="pythonmini",
                 help_text='The Packaging Offliner packages data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for new projects.',
                 max_length=100,
                 verbose_name="Packaging Offliner",
