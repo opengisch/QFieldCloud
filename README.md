@@ -52,6 +52,10 @@ desire with a good editor:
 
 Make sure the host's firewall allows port _8009_, required by the `minio` service. Failing to meet this requirement is likely to result in the service being unable to start.
 
+To create self-signed certificates for host localhost run the following script:
+
+    ./scripts/init_mkcert.sh
+
 To build development images and run the containers:
 
     docker compose up -d --build
@@ -277,17 +281,14 @@ Create the directory for qfieldcloud logs and supervisor socket file
 
     mkdir /var/local/qfieldcloud
 
-Run and build the docker containers
+### Using self-signed certificate from mkcert
 
-    docker compose up -d --build
+You can use your own certificates by creating them by mkcert in `docker-nginx/certs/` ànd changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
+Don't forget to create your Diffie-Hellman parameters.
 
-Run the django database migrations
+On a server with any hostname or localhost, you can get a self-signed certificate created by mkcert running the following script:
 
-    docker compose exec app python manage.py migrate
-
-Collect the static files
-
-    docker compose exec app python manage.py collectstatic
+    ./scripts/init_mkcert.sh
 
 ### Using certificate from Let's Encrypt
 
@@ -307,8 +308,19 @@ To use this Let's Encrypt certificate within QFieldCloud you just need to uncomm
     QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
     QFIELDCLOUD_TLS_DHPARAMS=/etc/nginx/dhparams/ssl-dhparams.pem
 
-You can also use your own certificates by placing them in `docker-nginx/certs/` ànd changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
-Don't forget to create your Diffie-Hellman parameters.
+### Docker-compose builds
+
+Run and build the docker containers
+
+    docker compose up -d --build
+
+Run the django database migrations
+
+    docker compose exec app python manage.py migrate
+
+Collect the static files
+
+    docker compose exec app python manage.py collectstatic
 
 ### Additional NGINX config
 
