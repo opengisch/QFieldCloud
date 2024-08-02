@@ -308,6 +308,10 @@ To use this Let's Encrypt certificate within QFieldCloud you just need to uncomm
     QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
     QFIELDCLOUD_TLS_DHPARAMS=/etc/nginx/dhparams/ssl-dhparams.pem
 
+DH Parameters can be generated for example by running cmd: curl https://ssl-config.mozilla.org/ffdhe4096.txt > ssl-dhparams.pem
+For further refrence check RFC7919 about common finite field DH parameter groups as recommended by Mozilla
+https://datatracker.ietf.org/doc/html/rfc7919#appendix-A.1, taken from https://wiki.mozilla.org/Security/Server_Side_TLS
+
 ### Docker-compose builds
 
 Run and build the docker containers
