@@ -6,4 +6,3 @@ COPY dhparams/ /etc/nginx/dhparams/
 COPY options-ssl-nginx.conf /etc/nginx/options-ssl-nginx.conf
 COPY 99-autoreload.sh /docker-entrypoint.d/99-autoreload.sh
 RUN chmod +x /docker-entrypoint.d/99-autoreload.sh
-

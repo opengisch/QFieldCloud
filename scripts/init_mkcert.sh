@@ -17,7 +17,7 @@ echo "### Creating certificates ${QFIELDCLOUD_HOST}-key.pem and ${QFIELDCLOUD_HO
 
 export COMPOSE_FILE="docker-compose.localhost.yml"
 
-docker compose up -d --build 
+docker compose up -d --build
 
 # QFieldCloud will automatically generate a certificate and it's root certificate in ./docker-nginx/certs.
 # However, you need to trust the root certificate first, so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
@@ -42,4 +42,3 @@ echo "Deleting container qfieldcloud-mkcert-1"
 docker container rm qfieldcloud-mkcert-1
 
 echo "After deploying nginx connecting to localhost with curl should return no errors: curl https://localhost:8002/"
-
