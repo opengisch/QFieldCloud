@@ -369,6 +369,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
         Path("/io/feedback.json"),
     )
 
+
 def main():
     from qfc_worker.utils import setup_basic_logging_config
 
