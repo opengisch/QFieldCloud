@@ -8,10 +8,10 @@ __pycache__/
 .env
 docker-compose.override.yml
 client/projects
-docker-nginx/dhparams/*.pem
 conf/mkcert/certs/*
 conf/certbot/*
 conf/nginx/config.d/*.conf
+conf/nginx/dhparams/*.pem
 Pipfile*
 **/site-packages
 docker-qgis/libqfieldsync
