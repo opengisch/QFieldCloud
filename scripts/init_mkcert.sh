@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ ! -d ./docker-nginx/certs ]]; then
+if [[ ! -d ./docker-nginx ]]; then
    echo "Please start script in dir qfieldcloud by command ./scripts/init_mkcert.sh. Exiting!"
    exit 1
 fi
