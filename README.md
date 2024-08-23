@@ -253,9 +253,9 @@ Now connecting with `curl` should fail with a similar error:
     establish a secure connection to it. To learn more about this situation and
     how to fix it, please visit the web page mentioned above.
 
-### Code style
+## Code style
 
-Code style done with precommit
+Code style done with [`precommit`](https://pre-commit.com):
 
     pip install pre-commit
     # install pre-commit hook
@@ -266,28 +266,22 @@ Code style done with precommit
 
 ### Launch a server instance
 
-Copy the `.env.example` into `.env` file and configure it to your
-desire with a good editor
+Copy the `.env.example` into `.env` file:
 
     cp .env.example .env
-    emacs .env
+    vi .env
 
-Do not forget to set DEBUG=0 and to adapt COMPOSE_FILE to not load local
-development configurations.
+Do not forget to set `DEBUG=0` and to adapt `COMPOSE_FILE` environment variable to not load local development configurations.
 
-Create the directory for qfieldcloud logs and supervisor socket file
-
-    mkdir /var/local/qfieldcloud
-
-Run and build the docker containers
+Run and build the docker containers:
 
     docker compose up -d --build
 
-Run the django database migrations
+Run the django database migrations:
 
     docker compose exec app python manage.py migrate
 
-Collect the static files
+Collect the static files:
 
     docker compose exec app python manage.py collectstatic
 
