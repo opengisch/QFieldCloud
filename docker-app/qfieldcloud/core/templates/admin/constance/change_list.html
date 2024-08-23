@@ -1,0 +1,52 @@
+{# extends https://github.com/jazzband/django-constance/blob/master/constance/templates/admin/constance/change_list.html #}
+{# Add some style for table readability. Mainly copied from bootstrap #}
+
+{% extends "admin/constance/change_list.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  fieldset.module {
+    box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
+    margin-bottom: 1rem;
+    min-height: 1px;
+    padding: 1.25rem;
+    position: relative;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background-color: #fff;
+    background-clip: border-box;
+    border: 0 solid rgba(0, 0, 0, .125);
+    border-radius: .25rem;
+  }
+
+  table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #212529;
+    background-color: transparent;
+    border-collapse: collapse;
+  }
+
+  table tbody tr:nth-of-type(odd) {
+      background-color: rgba(0, 0, 0, .05);
+  }
+
+  table tbody tr th {
+      padding-left: .75rem;
+  }
+
+  table td, table th {
+      padding: .75rem;
+      vertical-align: top;
+      border-top: 1px solid #dee2e6;
+  }
+
+  table thead th {
+      color: #64748b;
+      border-bottom: 0;
+  }
+</style>
+{% endblock %}

@@ -370,7 +370,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
     )
 
 
-if __name__ == "__main__":
+def main():
     from qfc_worker.utils import setup_basic_logging_config
 
     setup_basic_logging_config()
@@ -419,3 +419,7 @@ if __name__ == "__main__":
 
     args: argparse.Namespace = parser.parse_args()
     args.func(args)
+
+
+if __name__ == "__main__":
+    main()
