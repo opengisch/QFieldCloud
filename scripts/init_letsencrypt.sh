@@ -7,8 +7,6 @@ set -o allexport
 source .env
 set +o allexport
 
-QFIELDCLOUD_DIR="$(dirname "$(realpath "$0")")/.."
-
 echo "### Requesting Let's Encrypt certificate for $QFIELDCLOUD_HOST ..."
 domain_args="-d ${QFIELDCLOUD_HOST}"
 
@@ -25,11 +23,5 @@ docker compose run --rm --entrypoint "\
     --force-renewal" certbot
 
 echo
-
-echo "### Copy the certificate and key to their final destination ..."
-cp ${QFIELDCLOUD_DIR}/conf/certbot/conf/live/${QFIELDCLOUD_HOST}/fullchain.pem ${QFIELDCLOUD_DIR}/docker-nginx/certs/${QFIELDCLOUD_HOST}.pem
-cp ${QFIELDCLOUD_DIR}/conf/certbot/conf/live/${QFIELDCLOUD_HOST}/privkey.pem ${QFIELDCLOUD_DIR}/docker-nginx/certs/${QFIELDCLOUD_HOST}-key.pem
-echo
-
 echo "### Reloading nginx ..."
 docker compose exec nginx nginx -s reload

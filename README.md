@@ -285,18 +285,36 @@ Run the django database migrations
 
     docker compose exec app python manage.py migrate
 
+Collect the static files
 
-## Create or renew a certificate using Let's Encrypt
+    docker compose exec app python manage.py collectstatic
 
-If you are running the server on a server with a public domain, you can install Let's Encrypt certificate by running the following command:
+### Using certificate from Let's Encrypt
+
+By default, QFieldCloud is using a self-signed certificate. For production use you should use a valid certificate.
+
+Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables in `.env`.
+
+On a server with a public domain, you can get a certificate issued by Let's Encrypt using certbot running the following command:
 
     ./scripts/init_letsencrypt.sh
 
-The same command can also be used to update an expired certificate.
+The certificates will be renewed automatically.
 
-Note you may want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and `LETSENCRYPT_STAGING` variables.
+To use this Let's Encrypt certificate within QFieldCloud you just need to uncomment the following lines in your `.env`:
 
-### Infrastructure
+    QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
+    QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
+    QFIELDCLOUD_TLS_DHPARAMS=/etc/nginx/dhparams/dhparams4096.pem
+
+You can also use your own certificates by placing them in `conf/nginx/certs/` ànd changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
+Don't forget to create your Diffie-Hellman parameters.
+
+### Additional NGINX config
+
+You can add additional config to nginx placing files in `conf/nginx/config` ending with `.conf`. They will be included in the main `nginx.conf`.
+
+## Infrastructure
 
 Based on this example
 <https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/>
