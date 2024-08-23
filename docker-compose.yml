@@ -95,7 +95,7 @@ services:
       - ./conf/mkcert/certs/:/etc/nginx/certs/:ro
       - ./docker-nginx/dhparams:/etc/nginx/dhparams/:ro
       - ./conf/certbot/conf:/etc/letsencrypt:ro
-      - ./conf/nginx/config:/etc/nginx/config/:ro
+      - ./conf/nginx/config.d:/etc/nginx/config.d/:ro
       - certbot_www:/var/www/certbot
     ports:
       - ${WEB_HTTP_PORT}:80

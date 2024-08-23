@@ -313,7 +313,7 @@ Don't forget to create your Diffie-Hellman parameters.
 
 ### Additional NGINX config
 
-You can add additional config to nginx placing files in `conf/nginx/config` ending with `.conf`. They will be included in the main `nginx.conf`.
+You can add additional config to nginx placing files in `conf/nginx/config.d/` ending with `.conf`. They will be included in the main `nginx.conf`.
 
 ## Infrastructure
 

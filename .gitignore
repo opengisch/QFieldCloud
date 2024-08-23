@@ -11,6 +11,7 @@ client/projects
 docker-nginx/dhparams/*.pem
 conf/mkcert/certs/*
 conf/certbot/*
+conf/nginx/config.d/*.conf
 Pipfile*
 **/site-packages
 docker-qgis/libqfieldsync
