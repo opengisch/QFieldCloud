@@ -308,7 +308,7 @@ To use this Let's Encrypt certificate within QFieldCloud you just need to uncomm
     QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
     QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
 
-You can also use your own certificates by placing them in `conf/nginx/certs/` ànd changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
+You can also use your own certificates by placing them in `conf/nginx/certs/` and changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
 Don't forget to create your Diffie-Hellman parameters.
 
 ### Additional NGINX config
