@@ -220,7 +220,7 @@ Note if you run tests using the `docker-compose.test.yml` configuration, the `ap
 
 ## Add root certificate
 
-QFieldCloud will automatically generate a certificate and it's root certificate in `./conf/nginx/certs`.
+QFieldCloud will automatically generate a certificate and its root certificate in `./conf/nginx/certs`.
 However, you need to trust the root certificate first,
 so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
 
