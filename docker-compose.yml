@@ -117,6 +117,7 @@ services:
         max-file: "10"
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
+  # Automatically create self-signed certificates for local development and test deployments
   mkcert:
     image: vishnunair/docker-mkcert
     environment:
