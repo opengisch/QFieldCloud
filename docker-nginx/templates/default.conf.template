@@ -80,8 +80,8 @@ server {
     return 444;
   }
 
-  # included additional config
-  include config/*.conf;
+  # include additional config from the current QFieldCloud instance. This is different from the default `conf.d` directory.
+  include config.d/*.conf;
 
   # deny annoying bot
   deny 34.215.13.216;
