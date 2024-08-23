@@ -92,7 +92,7 @@ services:
       context: ./docker-nginx
     restart: unless-stopped
     volumes:
-      - ./docker-nginx/certs/:/etc/nginx/certs/:ro
+      - ./conf/mkcert/certs/:/etc/nginx/certs/:ro
       - ./docker-nginx/dhparams:/etc/nginx/dhparams/:ro
       - ./conf/certbot/conf:/etc/letsencrypt:ro
       - ./conf/nginx/config:/etc/nginx/config/:ro
@@ -122,7 +122,7 @@ services:
     environment:
       domain: ${QFIELDCLOUD_HOST}
     volumes:
-      - ./docker-nginx/certs/:/root/.local/share/mkcert/
+      - ./conf/mkcert/certs/:/root/.local/share/mkcert/
     command: /bin/sh -c 'mkcert -install && for i in $$(echo $$domain | sed "s/,/ /g"); do [ ! -f /root/.local/share/mkcert/$$i.pem ] && mkcert $$i; done && tail -f -n0 /etc/hosts'
 
   certbot:
