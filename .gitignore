@@ -3,7 +3,6 @@ __pycache__/
 *.orig
 .htmlcov/
 .coverage
-/conf/supervisord.conf
 .vscode
 .env
 docker-compose.override.yml
