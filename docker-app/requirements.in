@@ -1,9 +1,8 @@
 boto3==1.18.65
 boto3-stubs==1.20.26
 coreapi==2.3.3
-defusedxml==0.7.1
 deprecated==1.2.13
-Django==3.2.25
+django==3.2.25
 django-allauth==0.44.0
 django-auditlog==2.3.0
 django-axes==5.40.1
