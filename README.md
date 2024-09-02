@@ -76,6 +76,18 @@ Now you can get started by adding the first user that would also be a super user
 
     docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
 
+### Dependencies
+
+QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage it's dependencies.
+All dependencies are listed in `requirements*.in` files.
+When a `pip` a dependency is changed, the developer should produce the new `requirements*.txt` files.
+
+    docker compose run --rm pipcompile
+
+Alterantively, one can create only a `requirements.txt` file for a single `requirements.in`:
+
+    docker compose run --rm pipcompile pip-compile -o requirements/requirements_worker_wrapper.txt requirements/requirements_worker_wrapper.in
+
 ### Tests
 
 Rebuild the docker compose stack with the `docker-compose.override.test.yml` file added to the `COMPOSE_FILE` environment variable:
