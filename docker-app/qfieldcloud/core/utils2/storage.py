@@ -214,9 +214,9 @@ def file_response(
     if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
         if as_attachment:
             extra_params["ResponseContentType"] = "application/force-download"
-            extra_params[
-                "ResponseContentDisposition"
-            ] = f'attachment;filename="{filename}"'
+            extra_params["ResponseContentDisposition"] = (
+                f'attachment;filename="{filename}"'
+            )
 
         url = qfieldcloud.core.utils.get_s3_client().generate_presigned_url(
             "get_object",

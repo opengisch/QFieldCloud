@@ -407,8 +407,7 @@ def list_local_files(project_id: str, project_dir: Path):
         )
 
 
-class WorkflowValidationException(Exception):
-    ...
+class WorkflowValidationException(Exception): ...
 
 
 class Workflow:
@@ -810,18 +809,18 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                 if data_provider_error.messageList()
                 else ""
             )
-            layers_by_id[layer_id][
-                "provider_error_message"
-            ] = data_provider_error.message()
+            layers_by_id[layer_id]["provider_error_message"] = (
+                data_provider_error.message()
+            )
 
             layers_by_id[layer_id]["provider_name"] = data_provider.name()
 
             if not layers_by_id[layer_id]["provider_error_summary"]:
                 service = data_provider.uri().service()
                 if service:
-                    layers_by_id[layer_id][
-                        "provider_error_summary"
-                    ] = f'Unable to connect to service "{service}".'
+                    layers_by_id[layer_id]["provider_error_summary"] = (
+                        f'Unable to connect to service "{service}".'
+                    )
 
                 host = data_provider.uri().host()
                 port = (
@@ -830,9 +829,9 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                     else None
                 )
                 if host and (is_localhost(host, port) or has_ping(host)):
-                    layers_by_id[layer_id][
-                        "provider_error_summary"
-                    ] = f'Unable to connect to host "{host}".'
+                    layers_by_id[layer_id]["provider_error_summary"] = (
+                        f'Unable to connect to host "{host}".'
+                    )
 
                 path = layer_source.metadata.get("path")
                 if path and not os.path.exists(path):
@@ -840,9 +839,9 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
 
         else:
             layers_by_id[layer_id]["error_code"] = "missing_dataprovider"
-            layers_by_id[layer_id][
-                "provider_error_summary"
-            ] = "No data provider available"
+            layers_by_id[layer_id]["provider_error_summary"] = (
+                "No data provider available"
+            )
 
     return layers_by_id
 
