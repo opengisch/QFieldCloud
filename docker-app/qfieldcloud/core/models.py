@@ -1062,7 +1062,7 @@ class Project(models.Model):
             'The Packaging Offliner packages data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for new projects.'
         ),
         max_length=100,
-        default=PackagingOffliner.QGISCORE,
+        default=PackagingOffliner.PYTHONMINI,
         choices=PackagingOffliner.choices,
     )
 
