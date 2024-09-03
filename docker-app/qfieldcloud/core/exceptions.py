@@ -8,7 +8,16 @@ class IntegrationError(QfcError): ...
 
 
 class QFieldCloudException(Exception):
-    """Generic QFieldCloud Exception"""
+    """Generic QFieldCloud Exception
+
+    Attributes:
+        code (str): error code
+        message (str): error message.
+        status_code (int): HTTP status code to be returned by the global Django error handler.
+        log_as_error (bool): If set to `False`, the error will be logged as info level, instead of error level.
+            This is useful for error that do not show problems in the system, but are server side client data assertions.
+            Default is True.
+    """
 
     code = "unknown_error"
     message = "QFieldcloud Unknown Error"
