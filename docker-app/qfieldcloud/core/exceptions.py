@@ -1,12 +1,10 @@
 from rest_framework import status
 
 
-class QfcError(Exception):
-    ...
+class QfcError(Exception): ...
 
 
-class IntegrationError(QfcError):
-    ...
+class IntegrationError(QfcError): ...
 
 
 class QFieldCloudException(Exception):

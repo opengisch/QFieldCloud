@@ -2,12 +2,10 @@ from qfieldcloud.core.exceptions import QFieldCloudException
 from rest_framework import status
 
 
-class SubscriptionException(QFieldCloudException):
-    ...
+class SubscriptionException(QFieldCloudException): ...
 
 
-class NotPremiumPlanException(SubscriptionException):
-    ...
+class NotPremiumPlanException(SubscriptionException): ...
 
 
 class ReachedMaxOrganizationMembersError(SubscriptionException):

@@ -646,9 +646,9 @@ class ProjectSecretForm(ModelForm):
             if name and not name.startswith(
                 pg_service_file.PGSERVICE_SECRET_NAME_PREFIX
             ):
-                cleaned_data[
-                    "name"
-                ] = f"{pg_service_file.PGSERVICE_SECRET_NAME_PREFIX}{name}"
+                cleaned_data["name"] = (
+                    f"{pg_service_file.PGSERVICE_SECRET_NAME_PREFIX}{name}"
+                )
 
         return cleaned_data
 
