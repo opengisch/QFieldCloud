@@ -17,6 +17,18 @@ services:
     depends_on:
       - db
 
+  pipcompile: &default-django
+    build:
+      context: ./docker-app
+      target: build
+      network: host
+    profiles:
+      - donotstart
+    volumes:
+      # mount the source for live reload
+      - ./docker-app/requirements:/requirements
+    command: bash -c 'for f in /requirements/*.in; do pip-compile -o "$${f%.in}.txt" "$$f"; done'
+
   worker_wrapper:
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
     build:

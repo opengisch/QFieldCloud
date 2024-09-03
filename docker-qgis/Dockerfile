@@ -65,7 +65,7 @@ ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/
-RUN pip3 install --break-system-packages -r /tmp/requirements.txt
+RUN pip3 install --break-system-packages --ignore-installed -r /tmp/requirements.txt
 
 # Install `libqfieldsync` dependecy since it changes more frequently compared to regular dependencies
 COPY requirements_libqfieldsync.txt /tmp/
