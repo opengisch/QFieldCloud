@@ -4,33 +4,35 @@
 #
 #    pip-compile --output-file=/requirements/requirements.txt /requirements/requirements.in
 #
-asgiref==3.6.0
+asgiref==3.8.1
     # via
     #   django
     #   django-countries
-attrs==21.2.0
-    # via jsonschema
-beautifulsoup4==4.12.2
+attrs==24.2.0
+    # via
+    #   jsonschema
+    #   referencing
+beautifulsoup4==4.12.3
     # via django-bootstrap4
-boto3==1.18.65
+boto3==1.35.14
     # via -r /requirements/requirements.in
-boto3-stubs==1.20.26
+boto3-stubs==1.35.14
     # via -r /requirements/requirements.in
-botocore==1.21.65
+botocore==1.35.14
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.23.26
+botocore-stubs==1.35.10
     # via boto3-stubs
-certifi==2024.7.4
+certifi==2024.8.30
     # via
     #   requests
     #   sentry-sdk
-cffi==1.15.1
+cffi==1.17.0
     # via cryptography
-charset-normalizer==2.0.9
+charset-normalizer==3.3.2
     # via requests
-cryptography==42.0.4
+cryptography==43.0.0
     # via
     #   django-cryptography
     #   pyjwt
@@ -99,7 +101,7 @@ django-filter==23.5
     # via -r /requirements/requirements.in
 django-invitations==2.1.0
     # via -r /requirements/requirements.in
-django-ipware==6.0.4
+django-ipware==7.0.1
     # via django-axes
 django-jazzmin==2.6.0
     # via -r /requirements/requirements.in
@@ -117,7 +119,7 @@ django-notifications-hq==1.8.3
     # via -r /requirements/requirements.in
 django-phonenumber-field==7.3.0
     # via -r /requirements/requirements.in
-django-picklefield==3.1
+django-picklefield==3.2
     # via django-constance
 django-storages==1.14.2
     # via -r /requirements/requirements.in
@@ -131,7 +133,7 @@ djangorestframework==3.15.1
     #   drf-spectacular
 drf-spectacular==0.26.3
     # via -r /requirements/requirements.in
-idna==3.7
+idna==3.8
     # via requests
 inflection==0.5.1
     # via drf-spectacular
@@ -143,9 +145,11 @@ json-log-formatter==0.5.2
     # via -r /requirements/requirements.in
 jsonfield==3.1.0
     # via django-notifications-hq
-jsonschema==3.2.0
+jsonschema==4.23.0
     # via drf-spectacular
-mypy-boto3-s3==1.20.17
+jsonschema-specifications==2023.12.1
+    # via jsonschema
+mypy-boto3-s3==1.35.2
     # via -r /requirements/requirements.in
 oauthlib==3.2.2
     # via requests-oauthlib
@@ -155,15 +159,13 @@ phonenumbers==8.13.11
     # via -r /requirements/requirements.in
 psycopg2==2.8.6
     # via -r /requirements/requirements.in
-pycparser==2.21
+pycparser==2.22
     # via cffi
-pyjwt[crypto]==2.7.0
+pyjwt[crypto]==2.9.0
     # via django-allauth
-pyparsing==3.0.9
+pyparsing==3.1.4
     # via packaging
-pyrsistent==0.19.3
-    # via jsonschema
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   django-auditlog
@@ -173,54 +175,69 @@ python-memcached==1.59
     # via -r /requirements/requirements.in
 python3-openid==3.2.0
     # via django-allauth
-pytz==2023.3
+pytz==2024.1
     # via
     #   django
     #   django-notifications-hq
 pyyaml==6.0.2
     # via drf-spectacular
-requests==2.32.2
+referencing==0.35.1
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
+requests==2.32.3
     # via
     #   django-allauth
     #   requests-oauthlib
     #   stripe
-requests-oauthlib==1.3.1
+requests-oauthlib==2.0.0
     # via django-allauth
+rpds-py==0.20.0
+    # via
+    #   jsonschema
+    #   referencing
 ruamel-yaml==0.17.26
     # via -r /requirements/requirements.in
 ruamel-yaml-clib==0.2.7
     # via
     #   -r /requirements/requirements.in
     #   ruamel-yaml
-s3transfer==0.5.0
+s3transfer==0.10.2
     # via boto3
 sentry-sdk==1.24.0
     # via -r /requirements/requirements.in
 six==1.16.0
     # via
-    #   jsonschema
     #   python-dateutil
     #   python-memcached
-soupsieve==2.4.1
+soupsieve==2.6
     # via beautifulsoup4
-sqlparse==0.5.0
+sqlparse==0.5.1
     # via
     #   django
     #   django-debug-toolbar
 stripe==4.2.0
     # via -r /requirements/requirements.in
-swapper==1.3.0
+swapper==1.4.0
     # via django-notifications-hq
-typing-extensions==4.6.0
-    # via django-countries
+types-awscrt==0.21.2
+    # via botocore-stubs
+types-s3transfer==0.10.2
+    # via boto3-stubs
+typing-extensions==4.12.2
+    # via
+    #   asgiref
+    #   boto3-stubs
+    #   django-countries
+    #   mypy-boto3-s3
 uritemplate==4.1.1
     # via drf-spectacular
-urllib3==1.26.19
+urllib3==1.26.20
     # via
     #   botocore
     #   requests
     #   sentry-sdk
-wrapt==1.15.0
+wrapt==1.16.0
     # via deprecated
 
 # The following packages are considered to be unsafe in a requirements file:
