@@ -38,7 +38,7 @@ cryptography==43.0.0
     #   pyjwt
 defusedxml==0.7.1
     # via python3-openid
-deprecated==1.2.13
+deprecated==1.2.14
     # via -r /requirements/requirements.in
 django==3.2.25
     # via
@@ -52,6 +52,7 @@ django==3.2.25
     #   django-common-helpers
     #   django-cron
     #   django-cryptography
+    #   django-currentuser
     #   django-debug-toolbar
     #   django-extensions
     #   django-filter
@@ -85,13 +86,13 @@ django-common-helpers==0.9.2
     # via -r /requirements/requirements.in
 django-constance[database]==2.9.1
     # via -r /requirements/requirements.in
-django-countries==7.5.1
+django-countries==7.6.1
     # via -r /requirements/requirements.in
 django-cron==0.6.0
     # via -r /requirements/requirements.in
 django-cryptography==1.1
     # via -r /requirements/requirements.in
-django-currentuser==0.6.1
+django-currentuser==0.7.0
     # via -r /requirements/requirements.in
 django-debug-toolbar==4.3.0
     # via -r /requirements/requirements.in
