@@ -52,6 +52,7 @@ django==3.2.25
     #   django-common-helpers
     #   django-cron
     #   django-cryptography
+    #   django-currentuser
     #   django-debug-toolbar
     #   django-extensions
     #   django-filter
@@ -91,7 +92,7 @@ django-cron==0.6.0
     # via -r /requirements/requirements.in
 django-cryptography==1.1
     # via -r /requirements/requirements.in
-django-currentuser==0.6.1
+django-currentuser==0.7.0
     # via -r /requirements/requirements.in
 django-debug-toolbar==4.3.0
     # via -r /requirements/requirements.in
