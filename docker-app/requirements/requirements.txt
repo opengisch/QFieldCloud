@@ -38,7 +38,7 @@ cryptography==43.0.0
     #   pyjwt
 defusedxml==0.7.1
     # via python3-openid
-deprecated==1.2.13
+deprecated==1.2.14
     # via -r /requirements/requirements.in
 django==3.2.25
     # via
