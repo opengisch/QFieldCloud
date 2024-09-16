@@ -29,7 +29,7 @@ django-tables2==2.7.0
 django-timezone-field==6.1.0
 djangorestframework==3.15.1
 drf-spectacular==0.27.2
-json-log-formatter==0.5.2
+json-log-formatter==1.0
 mypy-boto3-s3==1.35.16
 phonenumbers==8.13.45
 psycopg2==2.9.9
