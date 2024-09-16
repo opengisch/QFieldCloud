@@ -122,7 +122,7 @@ django-phonenumber-field==7.3.0
     # via -r /requirements/requirements.in
 django-picklefield==3.2
     # via django-constance
-django-storages==1.14.2
+django-storages==1.14.4
     # via -r /requirements/requirements.in
 django-tables2==2.7.0
     # via -r /requirements/requirements.in
