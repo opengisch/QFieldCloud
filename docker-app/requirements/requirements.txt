@@ -94,7 +94,7 @@ django-cryptography==1.1
     # via -r /requirements/requirements.in
 django-currentuser==0.8.0
     # via -r /requirements/requirements.in
-django-debug-toolbar==4.3.0
+django-debug-toolbar==4.4.6
     # via -r /requirements/requirements.in
 django-extensions==3.2.3
     # via -r /requirements/requirements.in
