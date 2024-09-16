@@ -98,7 +98,7 @@ django-debug-toolbar==4.4.6
     # via -r /requirements/requirements.in
 django-extensions==3.2.3
     # via -r /requirements/requirements.in
-django-filter==23.5
+django-filter==24.3
     # via -r /requirements/requirements.in
 django-invitations==2.1.0
     # via -r /requirements/requirements.in
