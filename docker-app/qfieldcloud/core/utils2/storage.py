@@ -208,7 +208,7 @@ def file_response(
         extra_params["VersionId"] = version
 
     # check if we are in NGINX proxy
-    http_host = request.META.get("HTTP_HOST", "")
+    http_host = request.headers.get("host", "")
     https_port = http_host.split(":")[-1] if ":" in http_host else "443"
 
     if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:

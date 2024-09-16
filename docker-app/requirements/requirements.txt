@@ -40,7 +40,7 @@ defusedxml==0.7.1
     # via python3-openid
 deprecated==1.2.14
     # via -r /requirements/requirements.in
-django==3.2.25
+django==4.2.16
     # via
     #   -r /requirements/requirements.in
     #   django-allauth
@@ -173,9 +173,7 @@ python-memcached==1.59
 python3-openid==3.2.0
     # via django-allauth
 pytz==2024.1
-    # via
-    #   django
-    #   django-notifications-hq
+    # via django-notifications-hq
 pyyaml==6.0.2
     # via drf-spectacular
 referencing==0.35.1

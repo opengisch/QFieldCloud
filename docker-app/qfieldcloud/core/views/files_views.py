@@ -354,7 +354,7 @@ class DownloadPushDeleteFileView(views.APIView):
     @transaction.atomic()
     def delete(self, request, projectid, filename):
         project = Project.objects.select_for_update().get(id=projectid)
-        version_id = request.META.get("HTTP_X_FILE_VERSION")
+        version_id = request.headers.get("x-file-version")
 
         if version_id:
             utils2.storage.delete_project_file_version_permanently(
