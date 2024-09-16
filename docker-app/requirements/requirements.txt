@@ -126,7 +126,7 @@ django-storages==1.14.4
     # via -r /requirements/requirements.in
 django-tables2==2.7.0
     # via -r /requirements/requirements.in
-django-timezone-field==6.1.0
+django-timezone-field==7.0
     # via -r /requirements/requirements.in
 djangorestframework==3.15.2
     # via
