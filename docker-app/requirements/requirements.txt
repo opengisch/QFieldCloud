@@ -110,7 +110,7 @@ django-log-request-id==2.1.0
     # via -r /requirements/requirements.in
 django-migrate-sql-deux==0.5.0
     # via -r /requirements/requirements.in
-django-model-utils==4.3.1
+django-model-utils==5.0.0
     # via
     #   -r /requirements/requirements.in
     #   django-notifications-hq
