@@ -154,8 +154,6 @@ mypy-boto3-s3==1.35.16
     # via -r /requirements/requirements.in
 oauthlib==3.2.2
     # via requests-oauthlib
-packaging==21.3
-    # via -r /requirements/requirements.in
 phonenumbers==8.13.11
     # via -r /requirements/requirements.in
 psycopg2==2.8.6
@@ -164,8 +162,6 @@ pycparser==2.22
     # via cffi
 pyjwt[crypto]==2.9.0
     # via django-allauth
-pyparsing==3.1.4
-    # via packaging
 python-dateutil==2.9.0.post0
     # via
     #   botocore
