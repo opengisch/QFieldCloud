@@ -14,11 +14,11 @@ attrs==24.2.0
     #   referencing
 beautifulsoup4==4.12.3
     # via django-bootstrap4
-boto3==1.35.14
+boto3==1.35.20
     # via -r /requirements/requirements.in
-boto3-stubs==1.35.14
+boto3-stubs==1.35.20
     # via -r /requirements/requirements.in
-botocore==1.35.14
+botocore==1.35.20
     # via
     #   boto3
     #   s3transfer
@@ -122,7 +122,7 @@ django-phonenumber-field==7.3.0
     # via -r /requirements/requirements.in
 django-picklefield==3.2
     # via django-constance
-django-storages==1.14.2
+django-storages==1.14.4
     # via -r /requirements/requirements.in
 django-tables2==2.7.0
     # via -r /requirements/requirements.in
@@ -132,7 +132,7 @@ djangorestframework==3.15.1
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
-drf-spectacular==0.26.3
+drf-spectacular==0.27.2
     # via -r /requirements/requirements.in
 idna==3.8
     # via requests
@@ -142,7 +142,7 @@ jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-json-log-formatter==0.5.2
+json-log-formatter==1.0
     # via -r /requirements/requirements.in
 jsonfield==3.1.0
     # via django-notifications-hq
@@ -150,22 +150,18 @@ jsonschema==4.23.0
     # via drf-spectacular
 jsonschema-specifications==2023.12.1
     # via jsonschema
-mypy-boto3-s3==1.35.2
+mypy-boto3-s3==1.35.16
     # via -r /requirements/requirements.in
 oauthlib==3.2.2
     # via requests-oauthlib
-packaging==21.3
+phonenumbers==8.13.45
     # via -r /requirements/requirements.in
-phonenumbers==8.13.11
-    # via -r /requirements/requirements.in
-psycopg2==2.8.6
+psycopg2==2.9.9
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi
 pyjwt[crypto]==2.9.0
     # via django-allauth
-pyparsing==3.1.4
-    # via packaging
 python-dateutil==2.9.0.post0
     # via
     #   botocore
@@ -197,12 +193,6 @@ rpds-py==0.20.0
     # via
     #   jsonschema
     #   referencing
-ruamel-yaml==0.17.26
-    # via -r /requirements/requirements.in
-ruamel-yaml-clib==0.2.7
-    # via
-    #   -r /requirements/requirements.in
-    #   ruamel-yaml
 s3transfer==0.10.2
     # via boto3
 sentry-sdk==1.24.0
