@@ -78,7 +78,7 @@ django-auditlog==2.3.0
     # via -r /requirements/requirements.in
 django-axes==5.40.1
     # via -r /requirements/requirements.in
-django-bootstrap4==23.1
+django-bootstrap4==24.3
     # via -r /requirements/requirements.in
 django-classy-tags==4.1.0
     # via -r /requirements/requirements.in
@@ -92,13 +92,13 @@ django-cron==0.6.0
     # via -r /requirements/requirements.in
 django-cryptography==1.1
     # via -r /requirements/requirements.in
-django-currentuser==0.7.0
+django-currentuser==0.8.0
     # via -r /requirements/requirements.in
-django-debug-toolbar==4.3.0
+django-debug-toolbar==4.4.6
     # via -r /requirements/requirements.in
 django-extensions==3.2.3
     # via -r /requirements/requirements.in
-django-filter==23.5
+django-filter==24.3
     # via -r /requirements/requirements.in
 django-invitations==2.1.0
     # via -r /requirements/requirements.in
@@ -110,7 +110,7 @@ django-log-request-id==2.1.0
     # via -r /requirements/requirements.in
 django-migrate-sql-deux==0.5.0
     # via -r /requirements/requirements.in
-django-model-utils==4.3.1
+django-model-utils==5.0.0
     # via
     #   -r /requirements/requirements.in
     #   django-notifications-hq
@@ -126,9 +126,9 @@ django-storages==1.14.4
     # via -r /requirements/requirements.in
 django-tables2==2.7.0
     # via -r /requirements/requirements.in
-django-timezone-field==6.1.0
+django-timezone-field==7.0
     # via -r /requirements/requirements.in
-djangorestframework==3.15.1
+djangorestframework==3.15.2
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
