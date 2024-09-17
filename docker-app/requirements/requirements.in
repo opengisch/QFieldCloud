@@ -1,7 +1,7 @@
 boto3==1.35.20
 boto3-stubs==1.35.20
 deprecated==1.2.14
-django==3.2.25
+django==4.2.16
 django-allauth==0.44.0
 django-auditlog==2.3.0
 django-axes==5.40.1
@@ -17,7 +17,7 @@ django-debug-toolbar==4.3.0
 django-extensions==3.2.3
 django-filter==23.5
 django-invitations==2.1.0
-django-jazzmin==2.6.0
+django-jazzmin==3.0.0
 django-migrate-sql-deux==0.5.0
 django-model-utils==4.3.1
 django-nonrelated-inlines==0.2
@@ -33,6 +33,6 @@ json-log-formatter==1.0
 mypy-boto3-s3==1.35.16
 phonenumbers==8.13.45
 psycopg2==2.9.9
-python-memcached==1.59
+pymemcache==4.0.0
 sentry-sdk==1.24.0
 stripe==4.2.0

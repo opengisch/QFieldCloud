@@ -9,6 +9,13 @@ repos:
         args:
           - '--fix=lf'
 
+  - repo: https://github.com/adamchainz/django-upgrade
+    rev: "1.21.0"
+    hooks:
+    -   id: django-upgrade
+        args: [--target-version, "4.2", "--skip", "admin_register"]
+        files: "^docker-app/qfieldcloud/.*.py$"
+
   # Lint and format
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.

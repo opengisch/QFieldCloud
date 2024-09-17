@@ -1004,20 +1004,17 @@ class JobAdmin(QFieldCloudModelAdmin):
 
         return None
 
+    @admin.display(ordering="project__owner")
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
 
-    project__owner.admin_order_field = "project__owner"  # type: ignore
-
+    @admin.display(ordering="project__name")
     def project__name(self, instance):
         return model_admin_url(instance.project, instance.project.name)
 
-    project__name.admin_order_field = "project__name"  # type: ignore
-
+    @admin.display(ordering="created_by")
     def created_by__link(self, instance):
         return model_admin_url(instance.created_by)
-
-    created_by__link.admin_order_field = "created_by"  # type: ignore
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -1192,15 +1189,13 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     def last_feedback__pre(self, instance):
         return format_pre_json(instance.last_feedback)
 
+    @admin.display(ordering="project__owner")
     def project__owner(self, instance):
         return model_admin_url(instance.project.owner)
 
-    project__owner.admin_order_field = "project__owner"  # type: ignore
-
+    @admin.display(ordering="project__name")
     def project__name(self, instance):
         return model_admin_url(instance.project, instance.project.name)
-
-    project__name.admin_order_field = "project__name"  # type: ignore
 
     def set_status_pending(self, request, queryset):
         queryset.update(last_status=Delta.Status.PENDING)

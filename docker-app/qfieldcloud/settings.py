@@ -49,6 +49,11 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT")
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 
+# A tuple representing an HTTP header/value combination that signifies a request is secure, which is important for Django’s CSRF protection.
+# We need to set it in QFieldCloud as we run behind a proxy.
+# Read more: https://docs.djangoproject.com/en/4.2/ref/settings/#secure-proxy-ssl-header
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 WEB_HTTP_PORT = os.environ.get("WEB_HTTP_PORT")
 WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT")
 
@@ -62,7 +67,7 @@ AUTHENTICATION_BACKENDS = [
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
+        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
         "LOCATION": "memcached:11211",
     }
 }
@@ -220,7 +225,6 @@ TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
 
 USE_I18N = False
 
-USE_L10N = True
 
 USE_TZ = True
 
@@ -240,7 +244,14 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "qfieldcloud", "core", "staticfiles"),
 ]
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
 
 
 MEDIA_URL = "/mediafiles/"

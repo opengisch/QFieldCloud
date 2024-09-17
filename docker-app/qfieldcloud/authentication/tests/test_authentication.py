@@ -50,7 +50,7 @@ class QfcTestCase(APITransactionTestCase):
                 "username": username,
                 "password": password,
             },
-            HTTP_USER_AGENT=user_agent,
+            headers={"user-agent": user_agent},
         )
 
         if success:
