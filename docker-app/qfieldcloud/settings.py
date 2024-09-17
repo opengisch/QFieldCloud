@@ -49,6 +49,11 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT")
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 
+# A tuple representing an HTTP header/value combination that signifies a request is secure, which is important for Django’s CSRF protection.
+# We need to set it in QFieldCloud as we run behind a proxy.
+# Read more: https://docs.djangoproject.com/en/4.2/ref/settings/#secure-proxy-ssl-header
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 WEB_HTTP_PORT = os.environ.get("WEB_HTTP_PORT")
 WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT")
 
