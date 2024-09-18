@@ -108,7 +108,7 @@ django-jazzmin==3.0.0
     # via -r /requirements/requirements.in
 django-log-request-id==2.1.0
     # via -r /requirements/requirements.in
-django-migrate-sql-deux==0.5.0
+django-migrate-sql-3==3.0.2
     # via -r /requirements/requirements.in
 django-model-utils==5.0.0
     # via
