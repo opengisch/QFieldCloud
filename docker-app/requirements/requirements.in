@@ -18,7 +18,7 @@ django-extensions==3.2.3
 django-filter==24.3
 django-invitations==2.1.0
 django-jazzmin==3.0.0
-django-migrate-sql-deux==0.5.0
+django-migrate-sql-3==3.0.2
 django-model-utils==5.0.0
 django-nonrelated-inlines==0.2
 django-notifications-hq==1.8.3
