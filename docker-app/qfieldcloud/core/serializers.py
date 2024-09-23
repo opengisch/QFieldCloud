@@ -101,6 +101,18 @@ class ProjectSerializer(serializers.ModelSerializer):
             "user_role",
             "user_role_origin",
         )
+        read_only_fields = (
+            "private",
+            "created_at",
+            "updated_at",
+            "data_last_packaged_at",
+            "data_last_updated_at",
+            "can_repackage",
+            "needs_repackaging",
+            "status",
+            "user_role",
+            "user_role_origin",
+        )
         model = Project
 
 
