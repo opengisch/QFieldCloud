@@ -7,6 +7,7 @@ from traceback import print_stack
 import qfieldcloud.core.utils2 as utils2
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.conf import settings
 from django.utils import timezone
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -82,7 +83,9 @@ class ListFilesView(views.APIView):
 
             path = PurePath(version.key)
             filename = str(path.relative_to(*path.parts[:3]))
-            last_modified = version.last_modified.strftime("%d.%m.%Y %H:%M:%S %Z")
+            last_modified = version.last_modified.strftime(
+                settings.QFIELDCLOUD_STORAGE_DT_LAST_MODIFIED_FORMAT
+            )
             # NOTE ETag is a MD5. But for the multipart uploaded files, the MD5 is computed from the concatenation of the MD5s of each uploaded part.
             # TODO make sure when file metadata is in the DB (QF-2760), this is a real md5sum of the current file.
             md5sum = version.e_tag.replace('"', "")

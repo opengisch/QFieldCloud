@@ -430,6 +430,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 # NOTE automatically set when running tests, don't change manually!
 IN_TEST_SUITE = False
 
+# The format used in the deprecated field `last_modified` in storage related serializers.
+# The settings and `last_modified` field are deprecated and soon to be removed.
+QFIELDCLOUD_STORAGE_DT_LAST_MODIFIED_FORMAT = "%d.%m.%Y %H:%M:%S %Z"
+
 QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
     "QFIELDCLOUD_SUBSCRIPTION_MODEL", "subscription.Subscription"
 )
