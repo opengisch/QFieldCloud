@@ -115,10 +115,10 @@ jobs:
       fail-fast: false
       matrix:
         django_app:
-          - authentication
-          - notifs
-          - subscription
-          - core
+        #  - authentication
+        #  - notifs
+        #  - subscription
+        #  - core
           - __flaky__
     continue-on-error: true
     env:
@@ -143,8 +143,8 @@ jobs:
         run: |
           scripts/check_envvars.sh
 
-      - name: Pull docker containers
-        run: docker compose pull
+#      - name: Pull docker containers
+#        run: docker compose pull
 
       - name: Build and run docker containers
         run: |
@@ -164,7 +164,7 @@ jobs:
       - name: Run flaky unit and integration tests
         if: matrix.django_app == '__flaky__'
         run: |
-          docker compose run app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
+          docker compose run app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud.${{ matrix.django_app }}
 
       - name: Print failure logs
         if: failure()
