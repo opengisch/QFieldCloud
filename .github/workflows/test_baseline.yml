@@ -1,4 +1,4 @@
-name: Test
+name: Test Baseline
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -179,7 +179,7 @@ jobs:
 
       - name: Build and run docker containers
         run: |
-          docker compose up -d
+          docker compose up -d --build
 
       - name: Initial manage.py commands
         run: |
