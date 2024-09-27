@@ -125,8 +125,6 @@ jobs:
       QFIELDCLOUD_IMAGE_NAME_FOR_APP: "ghcr.io/opengisch/qfieldcloud-app-testing:${{ github.sha }}"
       QFIELDCLOUD_IMAGE_NAME_FOR_WORKER_WRAPPER: "ghcr.io/opengisch/qfieldcloud-worker_wrapper:${{ github.sha }}"
       QFIELDCLOUD_IMAGE_NAME_FOR_QGIS: "ghcr.io/opengisch/qfieldcloud-qgis:${{ github.sha }}"
-      # TODO remove me
-      QFIELDCLOUD_QGIS_IMAGE_NAME: "ghcr.io/opengisch/qfieldcloud-qgis:${{ github.sha }}"
       QFIELDCLOUD_IMAGE_NAME_FOR_NGINX: "ghcr.io/opengisch/qfieldcloud-nginx:${{ github.sha }}"
       COMPOSE_FILE: docker-compose.yml:docker-compose.override.services.yml:docker-compose.override.test.yml
     steps:
@@ -135,13 +133,19 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Prepare the `.env` file
+      - name: Prepare docker-compose override file
         run: |
-          cp .env.example .env
+          ln -s docker-compose.override.local.yml docker-compose.override.yml
 
       - name: Check env vars configuration
         run: |
           scripts/check_envvars.sh
+
+      - name: Prepare the `.env` file
+        run: |
+          cp .env.example .env
+          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
 #      - name: Pull docker containers
 #        run: docker compose pull
@@ -179,9 +183,9 @@ jobs:
             Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
           gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
 
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
-        with:
-          limit-access-to-actor: true
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
+      #   timeout-minutes: 30
+      #   with:
+      #     limit-access-to-actor: true
