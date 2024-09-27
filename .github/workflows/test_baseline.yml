@@ -140,7 +140,7 @@ jobs:
             opengisch/qfieldcloud-nginx:${{ steps.prepare.outputs.docker_commit }}
 
   test_baseline:
-    name: Run tests
+    name: Run baseline tests
     runs-on: ubuntu-24.04
     needs:
       - build_and_push
