@@ -1,0 +1,220 @@
+name: Test
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+      - release
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  lint:
+    if: '! github.event.pull_request.draft'
+    name: Lint code base
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pre-commit
+        uses: pre-commit/action@v3.0.0
+
+  build_and_push:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Prepare
+        id: prepare
+        run: |
+          TAG="latest"
+          COMMIT="commit-$(git rev-parse --short ${{ github.sha }})"
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/v}
+          fi
+          echo "docker_tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "docker_commit=${COMMIT}" >> $GITHUB_OUTPUT
+          git submodule update --init --recursive --depth 1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Login to dockerhub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # Application
+      - name: Docker Test Application
+        id: docker_test_application
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-app
+          file: ./docker-app/Dockerfile
+
+      - name: Docker Build and Push Application
+        id: docker_build_and_push_application
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          target: webserver_runtime
+          context: ./docker-app
+          file: ./docker-app/Dockerfile
+#          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            opengisch/qfieldcloud-app:${{ steps.prepare.outputs.docker_tag }}
+            opengisch/qfieldcloud-app:${{ steps.prepare.outputs.docker_commit }}
+
+      - name: Docker Build and Push Worker
+        id: docker_build_and_push_worker
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          target: worker_wrapper_runtime
+          context: ./docker-app
+          file: ./docker-app/Dockerfile
+#          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            opengisch/qfieldcloud-worker-wrapper:${{ steps.prepare.outputs.docker_tag }}
+            opengisch/qfieldcloud-worker-wrapper:${{ steps.prepare.outputs.docker_commit }}
+
+      # QGIS
+      - name: Docker Test QGIS
+        id: docker_test_qgis
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-qgis
+          file: ./docker-qgis/Dockerfile
+
+      - name: Docker Build and Push QGIS
+        id: docker_build_and_push_qgis
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-qgis
+          file: ./docker-qgis/Dockerfile
+#          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.docker_tag }}
+            opengisch/qfieldcloud-qgis:${{ steps.prepare.outputs.docker_commit }}
+
+      # Nginx
+      - name: Docker Build and Push nginx
+        id: docker_build_and_push_nginx
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ./docker-nginx
+          file: ./docker-nginx/Dockerfile
+#          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            opengisch/qfieldcloud-nginx:${{ steps.prepare.outputs.docker_tag }}
+            opengisch/qfieldcloud-nginx:${{ steps.prepare.outputs.docker_commit }}
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-24.04
+    needs:
+      - build_and_push
+    strategy:
+      fail-fast: false
+      matrix:
+        django_app:
+          - authentication
+        #  - notifs
+        #  - subscription
+        #  - core
+        #  - __flaky__
+    continue-on-error: true
+    env:
+      QFIELDCLOUD_IMAGE_NAME_FOR_APP: "ghcr.io/opengisch/qfieldcloud-app-testing:${{ github.sha }}"
+      QFIELDCLOUD_IMAGE_NAME_FOR_WORKER_WRAPPER: "ghcr.io/opengisch/qfieldcloud-worker_wrapper:${{ github.sha }}"
+      QFIELDCLOUD_IMAGE_NAME_FOR_QGIS: "ghcr.io/opengisch/qfieldcloud-qgis:${{ github.sha }}"
+      # TODO remove me
+      QFIELDCLOUD_QGIS_IMAGE_NAME: "ghcr.io/opengisch/qfieldcloud-qgis:${{ github.sha }}"
+      QFIELDCLOUD_IMAGE_NAME_FOR_NGINX: "ghcr.io/opengisch/qfieldcloud-nginx:${{ github.sha }}"
+      COMPOSE_FILE: docker-compose.yml:docker-compose.override.services.yml:docker-compose.override.test.yml
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Prepare the `.env` file
+        run: |
+          cp .env.example .env
+
+      - name: Check env vars configuration
+        run: |
+          scripts/check_envvars.sh
+
+#      - name: Pull docker containers
+#        run: docker compose pull
+
+      - name: Build and run docker containers
+        run: |
+          docker compose up -d
+
+      - name: Initial manage.py commands
+        run: |
+          docker compose run app python manage.py makemigrations --no-input --check
+          docker compose run app python manage.py migrate
+          docker compose run app python manage.py collectstatic
+
+      - name: Run mandatory unit and integration tests
+        if: matrix.django_app != '__flaky__'
+        run: |
+          docker compose run app python manage.py test --keepdb -v2 --exclude-tag="flaky" qfieldcloud.${{ matrix.django_app }}
+
+      - name: Run flaky unit and integration tests
+        if: matrix.django_app == '__flaky__'
+        run: |
+          docker compose run app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
+
+      - name: Print failure logs
+        if: failure()
+        run: |
+          docker compose logs
+
+      - name: Post Google Chat message on failure
+        if: failure() && matrix.django_app != '__flaky__'
+        uses: julb/action-post-googlechat-message@v1
+        with:
+          message: |
+            Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
+          gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true
