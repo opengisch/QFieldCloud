@@ -63,7 +63,7 @@ jobs:
 
           tags: |
             type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
-            type=sha,format=long,prefix=,event=pr
+            type=sha,format=short,prefix=commit-,event=pr
             type=semver,pattern={{version}},event=release
             type=edge,branch=main
 
