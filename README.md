@@ -92,7 +92,7 @@ Alterantively, one can create only a `requirements.txt` file for a single `requi
 
 Rebuild the docker compose stack with the `docker-compose.override.test.yml` file added to the `COMPOSE_FILE` environment variable:
 
-    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
+    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
     # (Re-)build the app service to install necessary test utilities (requirements_test.txt)
     docker compose up -d --build
     docker compose run app python manage.py migrate
@@ -134,7 +134,7 @@ Create an <code>.env.test</code> file with the following variables that override
     SMTP4DEV_SMTP_PORT=8125
     SMTP4DEV_IMAP_PORT=8143
     COMPOSE_PROJECT_NAME=qfieldcloud_test
-    COMPOSE_FILE=docker-compose.yml:docker-compose.override.local.yml:docker-compose.override.test.yml
+    COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
     DEBUG_DEBUGPY_APP_PORT=5781
     DEBUG_DEBUGPY_WORKER_WRAPPER_PORT=5780
     DEMGEN_PORT=8201
@@ -277,6 +277,13 @@ Code style done with [`precommit`](https://pre-commit.com):
 ## Deployment
 
 ### Launch a server instance
+
+> [!CAUTION]
+> QFieldCloud is designed to work with externally managed services for it's database (PostgreSQL), Object Storage (S3) and mailing provider.
+>
+> For small self-hosted environments you may run QFieldCloud on a single server using `docker-compose.override.standalone.yml`, but this is **entirely at your own risk**.
+>
+> The maintainers of this repository do not recommend and do not guarantee that the standalone version will always work between versions, and will close all issues regarding standalone deployment without further explanation.
 
 Copy the `.env.example` into `.env` file:
 
