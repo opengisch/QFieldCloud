@@ -6,13 +6,13 @@
 FROM python:3.10.8-slim-buster AS build
 
 # Disable annoying pip version check, we don't care if pip is slightly older
-ARG PIP_DISABLE_PIP_VERSION_CHECK 1
+ARG PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Do not create and use redundant cache dir in the current user home
-ARG PIP_NO_CACHE_DIR 1
+ARG PIP_NO_CACHE_DIR=1
 
 # install psycopg2 requirements
-RUN apt update && apt install -y libpq-dev python3-dev gcc
+RUN apt-get update && apt-get install -y libpq-dev python3-dev gcc
 
 # install `pip-compile` (as part of `pip-tools`)
 RUN pip install pip-tools
@@ -43,7 +43,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_CACHE_DIR=1
 
 # install dependencies
-RUN apt update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
 # GeoDjango as recommended at https://docs.djangoproject.com/en/4.1/ref/contrib/gis/install/geolibs/#installing-geospatial-libraries
     binutils libproj-dev gdal-bin \
 # needed for Django's `manage.py makemessages`
