@@ -5,9 +5,9 @@ on:
 
 jobs:
   stale:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/stale@v4
+    - uses: actions/stale@v9
       with:
         repo-token: ${{ secrets.NYUKI_TOKEN }}
         stale-issue-message: |
