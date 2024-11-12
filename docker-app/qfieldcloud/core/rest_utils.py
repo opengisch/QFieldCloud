@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 def exception_handler(exc, context):
     # Map exceptions to qfc exceptions
-    is_error = False
     if isinstance(exc, rest_exceptions.AuthenticationFailed):
         qfc_exc = qfieldcloud_exceptions.AuthenticationFailedError()
     elif isinstance(exc, rest_exceptions.NotAuthenticated):
@@ -23,19 +22,17 @@ def exception_handler(exc, context):
     elif isinstance(exc, exceptions.ValidationError):
         qfc_exc = qfieldcloud_exceptions.ValidationError(detail=str(exc))
     elif isinstance(exc, qfieldcloud_exceptions.QFieldCloudException):
-        is_error = True
         qfc_exc = exc
     elif isinstance(exc, rest_exceptions.APIException):
-        is_error = True
         qfc_exc = qfieldcloud_exceptions.APIError(exc.detail, exc.status_code)
     else:
         # Unexpected ! We rethrow original exception to make debugging tests easier
         if settings.IN_TEST_SUITE:
             raise exc
-        is_error = True
         qfc_exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
 
-    if is_error:
+    # Log level is defined by the exception
+    if qfc_exc.log_as_error:
         # log the original exception
         logging.exception(exc)
     else:

@@ -97,7 +97,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return projects
 
     @transaction.atomic
-    def perform_update(self, serializer):
+    def perform_update(self, serializer: ProjectSerializer) -> None:
         # Here we do an additional check if the owner has changed. If so, the reciever
         # of the project must have enough storage quota, otherwise the transfer is
         # not permitted.
@@ -111,7 +111,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         # If owner has not changed, no additional check is made
         if old_owner == new_owner:
-            return
+            return None
 
         # Owner has changed, we must ensure he has enough quota for that
         # (in this transaction, the project is his already, so we just need to

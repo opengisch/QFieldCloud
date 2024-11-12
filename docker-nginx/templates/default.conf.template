@@ -57,10 +57,10 @@ server {
 server {
   listen 443 ssl;
 
-  ssl_certificate     certs/${QFIELDCLOUD_HOST}.pem;
-  ssl_certificate_key certs/${QFIELDCLOUD_HOST}-key.pem;
+  ssl_certificate     ${QFIELDCLOUD_TLS_CERT};
+  ssl_certificate_key ${QFIELDCLOUD_TLS_KEY};
 
-  ssl_dhparam /etc/nginx/ssl-dhparams.pem;
+  ssl_dhparam ${QFIELDCLOUD_TLS_DHPARAMS};
   include /etc/nginx/options-ssl-nginx.conf;
 
   access_log /var/log/nginx/access.log json-logger;
@@ -79,6 +79,9 @@ server {
   if ($http_host !~ "${QFIELDCLOUD_HOST}(:{WEB_HTTPS_PORT})?") {
     return 444;
   }
+
+  # include additional config from the current QFieldCloud instance. This is different from the default `conf.d` directory.
+  include config.d/*.conf;
 
   # deny annoying bot
   deny 34.215.13.216;

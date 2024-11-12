@@ -16,9 +16,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path(
         'blog/', include('blog.urls'))
 """
+
 from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path, re_path
+from django.urls import include, path
 from django.utils.translation import gettext as _
 from django.views.generic import RedirectView
 from drf_spectacular.views import (
@@ -77,6 +78,6 @@ urlpatterns = [
     path("api/v1/", include("qfieldcloud.core.urls")),
     path("auth/", include("rest_framework.urls")),
     path("accounts/", include("allauth.urls")),
-    re_path(r"^invitations/", include("invitations.urls", namespace="invitations")),
+    path("invitations/", include("invitations.urls", namespace="invitations")),
     path("__debug__/", include("debug_toolbar.urls")),
 ]

@@ -1,20 +1,28 @@
 from rest_framework import status
 
 
-class QfcError(Exception):
-    ...
+class QfcError(Exception): ...
 
 
-class IntegrationError(QfcError):
-    ...
+class IntegrationError(QfcError): ...
 
 
 class QFieldCloudException(Exception):
-    """Generic QFieldCloud Exception"""
+    """Generic QFieldCloud Exception
+
+    Attributes:
+        code (str): error code
+        message (str): error message.
+        status_code (int): HTTP status code to be returned by the global Django error handler.
+        log_as_error (bool): If set to `False`, the error will be logged as info level, instead of error level.
+            This is useful for error that do not show problems in the system, but are server side client data assertions.
+            Default is True.
+    """
 
     code = "unknown_error"
     message = "QFieldcloud Unknown Error"
     status_code = None
+    log_as_error = True
 
     def __init__(self, detail="", status_code=None):
         self.detail = detail
@@ -46,6 +54,7 @@ class AuthenticationFailedError(QFieldCloudException):
     code = "authentication_failed"
     message = "Authentication failed"
     status_code = status.HTTP_401_UNAUTHORIZED
+    log_as_error = False
 
 
 class AuthenticationViaTokenFailedError(QFieldCloudException):
@@ -62,6 +71,7 @@ class NotAuthenticatedError(QFieldCloudException):
     code = "not_authenticated"
     message = "Not authenticated"
     status_code = status.HTTP_401_UNAUTHORIZED
+    log_as_error = False
 
 
 class TooManyLoginAttemptsError(QFieldCloudException):
@@ -78,6 +88,7 @@ class PermissionDeniedError(QFieldCloudException):
     code = "permission_denied"
     message = "Permission denied"
     status_code = status.HTTP_403_FORBIDDEN
+    log_as_error = False
 
 
 class EmptyContentError(QFieldCloudException):
@@ -86,7 +97,7 @@ class EmptyContentError(QFieldCloudException):
 
     code = "empty_content"
     message = "Empty content"
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    status_code = status.HTTP_400_BAD_REQUEST
 
 
 class MultipleContentsError(QFieldCloudException):
@@ -105,6 +116,7 @@ class ObjectNotFoundError(QFieldCloudException):
     code = "object_not_found"
     message = "Object not found"
     status_code = status.HTTP_400_BAD_REQUEST
+    log_as_error = False
 
 
 class APIError(QFieldCloudException):
@@ -122,6 +134,7 @@ class ValidationError(QFieldCloudException):
     code = "validation_error"
     message = "Validation error"
     status_code = status.HTTP_400_BAD_REQUEST
+    log_as_error = False
 
 
 class MultipleProjectsError(QFieldCloudException):

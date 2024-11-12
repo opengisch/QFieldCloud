@@ -362,15 +362,16 @@ class Person(User):
         verbose_name_plural = "people"
 
     def clean(self):
-        person_qs = self.__class__.objects.filter(email__iexact=self.email)
+        if self.email:
+            person_qs = self.__class__.objects.filter(email__iexact=self.email)
 
-        if self.pk:
-            person_qs = person_qs.exclude(pk=self.pk)
+            if self.pk:
+                person_qs = person_qs.exclude(pk=self.pk)
 
-        if person_qs.exists():
-            raise ValidationError(
-                _("This email is already taken by another user!").format(self.email)
-            )
+            if person_qs.exists():
+                raise ValidationError(
+                    _("This email is already taken by another user!").format(self.email)
+                )
 
         return super().clean()
 
@@ -1062,7 +1063,7 @@ class Project(models.Model):
             'The Packaging Offliner packages data for offline use with QField. The new "Optimized Packager" should be preferred over the deprecated "QGIS Core Offline Editing" for new projects.'
         ),
         max_length=100,
-        default=PackagingOffliner.QGISCORE,
+        default=PackagingOffliner.PYTHONMINI,
         choices=PackagingOffliner.choices,
     )
 

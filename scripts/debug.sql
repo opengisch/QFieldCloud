@@ -1,4 +1,4 @@
--- \i public/scripts/debug.sql
+-- \i ./scripts/debug.sql
 
 DROP VIEW IF EXISTS debug_users_slim_vw;
 DROP VIEW IF EXISTS debug_users_vw;

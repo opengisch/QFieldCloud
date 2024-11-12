@@ -3,13 +3,15 @@ __pycache__/
 *.orig
 .htmlcov/
 .coverage
-/conf/supervisord.conf
 .vscode
 .env
 docker-compose.override.yml
 client/projects
-docker-nginx/certs/*
+conf/mkcert/*
 conf/certbot/*
+conf/nginx/certs/*.pem
+conf/nginx/config.d/*.conf
+conf/nginx/dhparams/*.pem
 Pipfile*
 **/site-packages
 docker-qgis/libqfieldsync
