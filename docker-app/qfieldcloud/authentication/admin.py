@@ -1,13 +1,13 @@
 from django.contrib import admin
 from django.contrib.admin import register
 from django.db.models import Q, QuerySet
+from django.utils import timezone
 
 from .models import AuthToken
 
 
 class AuthTokenClientTypeFilter(admin.SimpleListFilter):
-    # Human-readable title which will be displayed in the
-    # admin page in the filter options
+    # Human-readable title which will be displayed
     title = "Client type"
 
     # Parameter for the filter that will be used in the URL query.
@@ -62,4 +62,15 @@ class AuthTokenAdmin(admin.ModelAdmin):
         AuthTokenClientTypeFilter,
     )
 
+    actions = ("expire_selected_tokens",)
+
     search_fields = ("user__username__iexact", "client_type", "key__startswith")
+
+    def expire_selected_tokens(self, request, queryset):
+        """
+        Sets a set of tokens to expired
+        by updating the expires_at date to now
+        Expires only valid tokens
+        """
+        now = timezone.now()
+        queryset.filter(Q(expires_at__gt=now)).update(expires_at=now)
