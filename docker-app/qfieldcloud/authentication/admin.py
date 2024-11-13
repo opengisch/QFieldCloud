@@ -71,9 +71,8 @@ class AuthTokenAdmin(admin.ModelAdmin):
 
     def expire_selected_tokens(self, request: HttpRequest, queryset: QuerySet) -> None:
         """
-        Sets a set of tokens to expired
-        by updating the expires_at date to now
-        Expires only valid tokens
+        Sets a set of tokens to expired by updating the `expires_at` date to now.
+        Expires only valid tokens.
         """
         now = timezone.now()
         queryset.filter(Q(expires_at__gt=now)).update(expires_at=now)
