@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import register
 from django.db.models import Q, QuerySet
+from django.http import HttpRequest
 from django.utils import timezone
 
 from .models import AuthToken
@@ -13,7 +14,9 @@ class AuthTokenClientTypeFilter(admin.SimpleListFilter):
     # Parameter for the filter that will be used in the URL query.
     parameter_name = "client_type"
 
-    def lookups(self, request, model_admin):
+    def lookups(
+        self, request: HttpRequest, model_admin: admin.ModelAdmin
+    ) -> list[tuple[str, str]]:
         """
         Returns a list of tuples. The first element in each
         tuple is the coded value for the option that will
@@ -24,7 +27,7 @@ class AuthTokenClientTypeFilter(admin.SimpleListFilter):
         """
         return AuthToken.ClientType.choices
 
-    def queryset(self, request, queryset) -> QuerySet:
+    def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:
         """
         Returns the filtered queryset based on the value
         provided in the query string and retrievable via
@@ -66,7 +69,7 @@ class AuthTokenAdmin(admin.ModelAdmin):
 
     search_fields = ("user__username__iexact", "client_type", "key__startswith")
 
-    def expire_selected_tokens(self, request, queryset):
+    def expire_selected_tokens(self, request: HttpRequest, queryset: QuerySet) -> None:
         """
         Sets a set of tokens to expired
         by updating the expires_at date to now
