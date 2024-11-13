@@ -23,7 +23,7 @@ class AuthTokenClientTypeFilter(admin.SimpleListFilter):
         appear in the URL query. The second element is the
         human-readable name for the option that will appear
         in the right sidebar.
-        Here it is just the several available AuthToken.ClientType
+        Here it is just the several available `AuthToken.ClientType`.
         """
         return AuthToken.ClientType.choices
 
