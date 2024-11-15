@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from os import PathLike
+from pathlib import Path
 import secrets
 import string
 import uuid
@@ -411,6 +413,15 @@ class Person(User):
         return super().save(*args, **kwargs)
 
 
+def get_user_account_avatar_upload_to(
+    instance: "UserAccount",
+    filename: PathLike,
+) -> str:
+    filename = Path(filename)
+
+    return f"account/{instance.user.username}/{filename.name}"
+
+
 class UserAccount(models.Model):
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
@@ -440,7 +451,23 @@ class UserAccount(models.Model):
     location = models.CharField(max_length=255, default="", blank=True)
     twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
-    avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
+
+    legacy_avatar_uri = models.CharField(
+        _("Legacy Profile Picture URI"),
+        max_length=255,
+        blank=True,
+    )
+
+    avatar = DynamicStorageFileField(
+        _("Avatar Picture"),
+        upload_to=get_user_account_avatar_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=True,
+        blank=True,
+    )
+
+    # avatar_uri = models.FileField(_("Profile Picture URI"), max_length=255, blank=True)
     timezone = TimeZoneField(
         default=settings.TIME_ZONE, choices_display="WITH_GMT_OFFSET"
     )

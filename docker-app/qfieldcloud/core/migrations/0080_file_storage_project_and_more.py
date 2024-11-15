@@ -78,4 +78,27 @@ class Migration(migrations.Migration):
                 verbose_name="Thumbnail Picture",
             ),
         ),
+        migrations.RenameField(
+            model_name="useraccount",
+            old_name="avatar_uri",
+            new_name="legacy_avatar_uri",
+        ),
+        migrations.AlterField(
+            model_name="useraccount",
+            name="legacy_avatar_uri",
+            field=models.CharField(
+                blank=True, max_length=255, verbose_name="Legacy Profile Picture URI"
+            ),
+        ),
+        migrations.AddField(
+            model_name="useraccount",
+            name="avatar",
+            field=qfieldcloud.core.fields.DynamicStorageFileField(
+                blank=True,
+                max_length=1024,
+                null=True,
+                upload_to=qfieldcloud.core.models.get_user_account_avatar_upload_to,
+                verbose_name="Avatar Picture",
+            ),
+        ),
     ]
