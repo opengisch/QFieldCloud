@@ -2,7 +2,7 @@ import logging
 from uuid import UUID
 
 from django.db.models import QuerySet
-from django.http.response import HttpResponse
+from django.http.response import HttpResponse, HttpResponseBase
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -19,6 +19,7 @@ from qfieldcloud.core import (
 )
 from qfieldcloud.core.models import (
     Project,
+    UserAccount,
 )
 from qfieldcloud.filestorage.models import (
     File,
@@ -177,6 +178,21 @@ class ProjectMetaFileReadView(views.APIView):
             request,
             project.thumbnail,
             filename,
+        )
+
+
+class AvatarFileReadView(views.APIView):
+    permission_classes = [
+        permissions.IsAuthenticated,
+    ]
+
+    def get(self, request: Request, username: str) -> HttpResponseBase:
+        useraccount = get_object_or_404(UserAccount, user__username=username)
+
+        return download_field_file(
+            request,
+            useraccount.avatar,
+            str(useraccount.avatar),
         )
 
 
