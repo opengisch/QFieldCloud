@@ -150,6 +150,8 @@ mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 phonenumbers==8.13.55
     # via -r /requirements/requirements.in
+pillow==11.1.0
+    # via -r /requirements/requirements.in
 psycopg2==2.9.10
     # via -r /requirements/requirements.in
 pycparser==2.22

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AvatarFileReadView,
     compatibility_file_crud_view,
     compatibility_file_list_view,
     compatibility_project_meta_file_read_view,
@@ -21,5 +22,10 @@ urlpatterns = [
         "files/thumbnails/<uuid:project_id>/",
         compatibility_project_meta_file_read_view,
         name="filestorage_project_thumbnails",
+    ),
+    path(
+        "files/avatars/<str:username>/",
+        AvatarFileReadView.as_view(),
+        name="filestorage_avatars",
     ),
 ]
