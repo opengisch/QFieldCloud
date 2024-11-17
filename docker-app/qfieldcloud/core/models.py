@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 import secrets
 import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import cast
+from typing import Any, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -214,6 +216,12 @@ class User(AbstractUser):
         If you add validators in the constructor, note they will be added multiple times for each class that extends User.
     """
 
+    # All projects that a user owns
+    projects: models.QuerySet[Project]
+
+    # The `UserAccount` stores non-critical user information such as avatar, bio, timezone settings etc.
+    useraccount: UserAccount
+
     objects = UserManager()
 
     class Type(models.IntegerChoices):
@@ -314,7 +322,7 @@ class User(AbstractUser):
         if self.type != User.Type.TEAM:
             storage.delete_user_avatar(self)
 
-        super().delete(*args, **kwargs)
+        return super().delete(*args, **kwargs)
 
     class Meta:
         base_manager_name = "objects"
@@ -357,7 +365,7 @@ class Person(User):
     # Whether the user has accepted the Terms of Service
     has_accepted_tos = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta(User.Meta):
         verbose_name = "person"
         verbose_name_plural = "people"
 
@@ -576,9 +584,11 @@ class Geodb(models.Model):
             geodb_utils.create_role_and_db(self)
 
     def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
+        result = super().delete(*args, **kwargs)
         # Automatically delete role and database when a Geodb object is deleted.
         geodb_utils.delete_db_and_role(self.dbname, self.username)
+
+        return result
 
 
 class OrganizationQueryset(models.QuerySet):
@@ -620,7 +630,9 @@ class OrganizationManager(UserManager):
 
 
 class Organization(User):
-    class Meta:
+    members: models.QuerySet["OrganizationMember"]
+
+    class Meta(User.Meta):
         verbose_name = "organization"
         verbose_name_plural = "organizations"
 
@@ -799,7 +811,7 @@ class Team(User):
         related_name="teams",
     )
 
-    class Meta:
+    class Meta(User.Meta):
         verbose_name = "team"
         verbose_name_plural = "teams"
 
@@ -1159,7 +1171,9 @@ class Project(models.Model):
         if not self.project_details:
             return None
 
-        layers_by_id = self.project_details.get("layers_by_id")
+        layers_by_id: dict[str, dict[str, Any]] = self.project_details.get(
+            "layers_by_id"
+        )
 
         if layers_by_id is None:
             return None
@@ -1343,7 +1357,8 @@ class Project(models.Model):
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
             storage.delete_project_thumbnail(self)
-        super().delete(*args, **kwargs)
+
+        return super().delete(*args, **kwargs)
 
     @property
     def owner_can_create_job(self):
@@ -1772,6 +1787,9 @@ class ApplyJob(Job):
 
 
 class ApplyJobDelta(models.Model):
+    apply_job_id: int
+    delta_id: int
+
     apply_job = models.ForeignKey(ApplyJob, on_delete=models.CASCADE)
     delta = models.ForeignKey(Delta, on_delete=models.CASCADE)
     status = models.CharField(
