@@ -44,7 +44,7 @@ server {
   }
 
   # prevent access by IP
-  if ($http_host !~ "${QFIELDCLOUD_HOST}(:{WEB_HTTP_PORT})?") {
+  if ($http_host !~ "${QFIELDCLOUD_HOST}(:${WEB_HTTP_PORT})?") {
     return 444;
   }
 
@@ -76,7 +76,7 @@ server {
   error_page 497 https://$host:${WEB_HTTPS_PORT}$request_uri;
 
   # prevent access by IP
-  if ($http_host !~ "${QFIELDCLOUD_HOST}(:{WEB_HTTPS_PORT})?") {
+  if ($http_host !~ "${QFIELDCLOUD_HOST}(:${WEB_HTTPS_PORT})?") {
     return 444;
   }
 
