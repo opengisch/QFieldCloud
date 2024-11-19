@@ -64,6 +64,7 @@ server {
   include /etc/nginx/options-ssl-nginx.conf;
 
   access_log /var/log/nginx/access.log json-logger;
+  error_log /var/log/nginx/error.log ${NGINX_ERROR_LOG_LEVEL};
 
   server_name ${QFIELDCLOUD_HOST} nginx;
   client_max_body_size 10G;
