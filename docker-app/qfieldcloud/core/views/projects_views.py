@@ -7,6 +7,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import pagination, permissions_utils
+from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
@@ -77,6 +78,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
+    filter_backends = [QfcOrderingFilter]
+    ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
 
     def get_queryset(self):
         projects = Project.objects.for_user(self.request.user)
@@ -133,6 +136,8 @@ class PublicProjectsListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
+    filter_backends = [QfcOrderingFilter]
+    ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
 
     def get_queryset(self):
         return Project.objects.for_user(self.request.user).filter(is_public=True)
