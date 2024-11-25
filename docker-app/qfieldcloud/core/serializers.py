@@ -15,6 +15,7 @@ from qfieldcloud.core.models import (
     Team,
     User,
 )
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -572,20 +573,22 @@ class AddMemberSerializer(serializers.Serializer):
         return data
 
     def _validate_user_exists(self, username: str | None, email: str | None) -> User:
-        """Validate that a user exists via username or email."""
-        if username:
-            try:
-                return User.objects.get(username=username)
-            except User.DoesNotExist:
+        """
+        Validate that a user exists via username or email.
+        """
+        if not username and not email:
+            raise serializers.ValidationError(
+                "Must provide either a username or an email."
+            )
+
+        try:
+            return User.objects.get(Q(username=username) | Q(email=email))
+        except User.DoesNotExist:
+            if username:
                 raise serializers.ValidationError(
                     "User with the given username does not exist."
                 )
-        elif email:
-            try:
-                return User.objects.get(email=email)
-            except User.DoesNotExist:
+            elif email:
                 raise serializers.ValidationError(
                     "User with the given email does not exist."
                 )
-
-        raise serializers.ValidationError("Invalid user lookup.")
