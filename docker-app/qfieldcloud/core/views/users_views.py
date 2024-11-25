@@ -164,24 +164,48 @@ class ListUserOrganizationsView(generics.ListAPIView):
         return Organization.objects.of_user(self.request.user)
 
 
-class TeamMemberDeleteView(APIView):
-    def delete(self, request, organization_name, team_name, member_username):
-        """
-        DELETE /organizations/<str:organization_name>/team/<str:team_name>/members/<str:member_username>/
-        Remove a specific member from a team within an organization.
-        """
-        organization = get_object_or_404(Organization, username=organization_name)
-        team_full_name = f"@{organization_name}/{team_name}"
-        team = get_object_or_404(
-            Team, team_organization=organization, username=team_full_name
+class TeamMemberDeleteViewPermissions(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        organization_name = permissions_utils.get_param_from_request(
+            request, "organization"
         )
-        member = get_object_or_404(User, username=member_username)
-        team_member = get_object_or_404(TeamMember, team=team, member=member)
 
-        if not permissions_utils.can_delete_members(request.user, organization):
-            raise PermissionDenied(
-                "You do not have permission to remove members from this team."
-            )
+        try:
+            organization = Organization.objects.get(username=organization_name)
+        except ObjectDoesNotExist:
+            return False
+
+        if request.method == "DELETE":
+            return permissions_utils.can_delete_members(user, organization)
+
+        return False
+
+
+@extend_schema_view(
+    delete=extend_schema(description="Remove a member from a team"),
+)
+class TeamMemberDeleteView(generics.DestroyAPIView):
+    permission_classes = [
+        permissions.IsAuthenticated,
+        TeamMemberDeleteViewPermissions,
+    ]
+    serializer_class = TeamMemberSerializer
+
+    def get_object(self):
+        organization_name = self.request.parser_context["kwargs"]["organization_name"]
+        team_name = self.request.parser_context["kwargs"]["team_name"]
+        member_username = self.request.parser_context["kwargs"]["member_username"]
+
+        organization = Organization.objects.get(username=organization_name)
+        team_full_name = Team.format_team_name(organization_name, team_name)
+        team = Team.objects.get(team_organization=organization, username=team_full_name)
+        member = User.objects.get(username=member_username)
+
+        return TeamMember.objects.get(team=team, member=member)
+
+    def destroy(self, request, *args, **kwargs):
+        team_member = self.get_object()
 
         team_member.delete()
 
