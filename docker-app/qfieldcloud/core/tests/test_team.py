@@ -88,20 +88,27 @@ class TeamsTestCase(APITestCase):
         self.assertTrue(team_exists)
 
     def test_retrieve_team_detail(self):
+        """Test retrieving the details of a specific team."""
         team = Team.objects.create(
             username=f"@{self.organization1.username}/teamdetail",
             team_organization=self.organization1,
         )
 
+        # Authenticate with the correct user token
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        response = self.client.get(
-            f"/organizations/{self.organization1.username}/team/teamdetail/"
-        )
 
+        # Make a GET request to retrieve the team details
+        url = f"/organizations/{self.organization1.username}/team/teamdetail/"
+        response = self.client.get(url)
+
+        # Assert the response status is 200 OK
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        # Verify the response data
         json_response = response.json()
         self.assertEqual(json_response["username"], team.username)
+        self.assertEqual(json_response["organization"], self.organization1.username)
+
 
     def test_update_team(self):
         team = Team.objects.create(
