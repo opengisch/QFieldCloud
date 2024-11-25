@@ -106,23 +106,23 @@ urlpatterns = [
     ),
     path("deltas/apply/<uuid:projectid>/", deltas_views.ApplyView.as_view()),
     path(
-        "organizations/<str:organization_name>/team/",
+        "organizations/<str:organization_name>/teams/",
         users_views.TeamListCreateView.as_view(),
-        name="team-list-create",
+        name="team_list_create",
     ),
     path(
-        "organizations/<str:organization_name>/team/<str:team_name>/members/",
+        "organizations/<str:organization_name>/teams/<str:team_name>/members/",
         users_views.TeamMemberView.as_view(),
         name="team_members",
     ),
     path(
-        "organizations/<str:organization_name>/team/<str:team_name>/",
+        "organizations/<str:organization_name>/teams/<str:team_name>/",
         users_views.TeamDetailView.as_view(),
-        name="team-detail",
+        name="team_detail",
     ),
     path(
-        "organizations/<str:organization_name>/team/<str:team_name>/members/<str:member_username>/",
+        "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
         users_views.TeamMemberDeleteView.as_view(),
-        name="team-member-delete",
+        name="team_member_delete",
     ),
 ]
