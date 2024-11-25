@@ -14,6 +14,7 @@ from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
+
 class TeamMembersTestCase(APITestCase):
     def setUp(self):
         setup_subscription_plans()
@@ -41,7 +42,6 @@ class TeamMembersTestCase(APITestCase):
         # Activate subscription
         set_subscription(self.organization1, "default_org")
 
-
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
@@ -61,17 +61,19 @@ class TeamMembersTestCase(APITestCase):
     def test_add_member_to_team(self):
         """Test that an admin can add a member to a team."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
-        
-         # Construct the URL using organization_name and team_name
+
+        # Construct the URL using organization_name and team_name
         url = f"/organizations/{self.organization1.username}/team/{self.team.teamname}/members/"
-        
+
         response = self.client.post(
             url,
-            {"username": self.user3.username}, 
+            {"username": self.user3.username},
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(TeamMember.objects.filter(team=self.team, member=self.user3).exists())
+        self.assertTrue(
+            TeamMember.objects.filter(team=self.team, member=self.user3).exists()
+        )
 
     def test_list_team_members(self):
         """Test that team members can list other members of their team."""
@@ -87,19 +89,21 @@ class TeamMembersTestCase(APITestCase):
         member_usernames = [member["member"] for member in response.json()]
         self.assertIn(self.user2.username, member_usernames)
         self.assertIn(self.user3.username, member_usernames)
- 
+
     def test_remove_member_from_team(self):
         """Test that an admin can remove a member from a team."""
         TeamMember.objects.create(team=self.team, member=self.user3)
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
-        
+
         response = self.client.delete(
             f"/organizations/{self.organization1.username}/team/teamwithmembers/members/{self.user3.username}/"
         )
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(TeamMember.objects.filter(team=self.team, member=self.user3).exists())
+        self.assertFalse(
+            TeamMember.objects.filter(team=self.team, member=self.user3).exists()
+        )
 
     def test_non_member_cannot_access_team_members(self):
         """Test that non-members cannot access the team members list."""
@@ -142,4 +146,6 @@ class TeamMembersTestCase(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(TeamMember.objects.filter(team=self.team, member=self.user3).exists())
+        self.assertFalse(
+            TeamMember.objects.filter(team=self.team, member=self.user3).exists()
+        )

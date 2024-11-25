@@ -29,10 +29,8 @@ from drf_spectacular.views import (
 )
 from qfieldcloud.authentication import views as auth_views
 from qfieldcloud.core.views import files_views
-from qfieldcloud.core.views.users_views import *
 
 from rest_framework import permissions
-
 
 admin.site.site_header = _("QFieldCloud Admin")
 admin.site.site_title = _("QFieldCloud Admin")
@@ -73,15 +71,6 @@ urlpatterns = [
         ),
         name="project_file_download",
     ),
-
-      # New team-related endpoints
-    path("organizations/<str:organization_name>/team/", TeamListCreateView.as_view(), name='team-list-create'),
-    path("organizations/<str:organization_name>/team/<str:team_name>/members/", TeamMemberView.as_view(), name='team_members'),
-    path("organizations/<str:organization_name>/team/<str:team_name>/", TeamDetailView.as_view(), name='team-detail'),
-    path("organizations/<str:organization_name>/team/<str:team_name>/members/<str:member_username>/", TeamMemberDeleteView.as_view(), name='team-member-delete'),
-   
-
-
     path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
     path("api/v1/auth/login/", auth_views.LoginView.as_view()),
     path("api/v1/auth/token/", auth_views.LoginView.as_view()),
@@ -92,7 +81,4 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("invitations/", include("invitations.urls", namespace="invitations")),
     path("__debug__/", include("debug_toolbar.urls")),
-   
-   
-
 ]

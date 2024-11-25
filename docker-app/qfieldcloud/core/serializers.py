@@ -14,11 +14,8 @@ from qfieldcloud.core.models import (
     ProjectCollaborator,
     Team,
     User,
-    Person,
-    TeamMember
+    TeamMember,
 )
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -183,7 +180,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
                 organization=obj, is_public=True
             ).values("member__username")
         ]
-    
+
     def get_teams(self, obj):
         teams = Team.objects.filter(team_organization=obj)
         return TeamSerializer(teams, many=True).data
@@ -546,69 +543,75 @@ class LatestPackageSerializer(serializers.Serializer):
 
 
 class TeamSerializer(serializers.ModelSerializer):
-    organization = serializers.CharField(source='team_organization.username', read_only=True)
-    
+    organization = serializers.CharField(
+        source="team_organization.username", read_only=True
+    )
+
     class Meta:
         model = Team
-        fields = ('username', 'organization')
+        fields = ("username", "organization")
+
 
 class TeamMemberSerializer(serializers.ModelSerializer):
-    member = serializers.StringRelatedField()  
-    
+    member = serializers.StringRelatedField()
+
     class Meta:
         model = TeamMember
-        fields = ('team', 'member')
+        fields = ("team", "member")
+
 
 class AddMemberSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     email = serializers.EmailField(required=False, allow_blank=True)
 
     def validate(self, data):
-        username = data.get('username')
+        username = data.get("username")
         user = self._validate_user_exists(username)
-        organization = self.context.get('organization')
+        organization = self.context.get("organization")
 
         self._validate_user_membership(user, organization)
 
-        data['user'] = user
-        data['organization'] = organization
+        data["user"] = user
+        data["organization"] = organization
 
         return data
 
     def _validate_user_exists(self, username):
         if not username:
             raise serializers.ValidationError("Username is required.")
-        
+
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             raise serializers.ValidationError("User does not exist.")
-        
+
         return user
 
     def _validate_user_membership(self, user, organization):
         is_org_member = OrganizationMember.objects.filter(
-            organization=organization,
-            member=user
+            organization=organization, member=user
         ).exists()
-        
+
         is_org_owner = organization.organization_owner == user
-        
+
         if not (is_org_member or is_org_owner):
-            raise serializers.ValidationError("User is not a member of the organization.")
+            raise serializers.ValidationError(
+                "User is not a member of the organization."
+            )
+
 
 class TeamDetailSerializer(serializers.ModelSerializer):
-    organization = serializers.StringRelatedField(source='team_organization')
+    organization = serializers.StringRelatedField(source="team_organization")
 
     class Meta:
         model = Team
-        fields = ('username', 'organization')
+        fields = ("username", "organization")
 
 
 class TeamListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
-        fields = ('username', 'teamname')
+        fields = ("username", "teamname")
 
 
 class DeleteMemberSerializer(serializers.Serializer):
@@ -620,29 +623,28 @@ class TeamDeleteSerializer(serializers.Serializer):
 
 
 class TeamAccessSerializer(serializers.ModelSerializer):
-    organization = serializers.CharField(source='team_organization.username', read_only=True)
+    organization = serializers.CharField(
+        source="team_organization.username", read_only=True
+    )
 
     class Meta:
         model = Team
-        fields = ('username', 'organization')
+        fields = ("username", "organization")
 
     def validate(self, data):
-        request = self.context.get('request')
+        request = self.context.get("request")
         user = request.user
-        team = self.instance  
+        team = self.instance
 
         is_org_admin = OrganizationMember.objects.filter(
             organization=team.team_organization,
             member=user,
             role=OrganizationMember.Roles.ADMIN,
         ).exists()
-        
-        is_team_member = TeamMember.objects.filter(
-            team=team,
-            member=user
-        ).exists()
+
+        is_team_member = TeamMember.objects.filter(team=team, member=user).exists()
 
         if not (is_org_admin or is_team_member):
             raise PermissionError()
-        
+
         return data

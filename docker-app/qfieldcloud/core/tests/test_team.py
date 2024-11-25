@@ -1,5 +1,4 @@
 import logging
-from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
@@ -109,7 +108,6 @@ class TeamsTestCase(APITestCase):
         self.assertEqual(json_response["username"], team.username)
         self.assertEqual(json_response["organization"], self.organization1.username)
 
-
     def test_update_team(self):
         team = Team.objects.create(
             username=f"@{self.organization1.username}/oldteamname",
@@ -128,7 +126,6 @@ class TeamsTestCase(APITestCase):
         team.refresh_from_db()
         self.assertEqual(team.username, updated_team_username)
 
-    
     def test_delete_team(self):
         team = Team.objects.create(
             username=f"@{self.organization1.username}/teamtodelete",
@@ -147,10 +144,10 @@ class TeamsTestCase(APITestCase):
         ).exists()
         self.assertFalse(team_exists)
 
-    # TODO 
+    # TODO
     def test_non_member_cannot_access_team(self):
-       pass
+        pass
 
-    # TODO 
+    # TODO
     def test_member_can_access_team(self):
         pass

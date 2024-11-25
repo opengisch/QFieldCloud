@@ -40,7 +40,6 @@ organizations/<str:organization_name>/teams/<str:team_name>/members/
 """
 
 urlpatterns = [
-    
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
     path("users/", users_views.ListUsersView.as_view()),
@@ -106,4 +105,24 @@ urlpatterns = [
         deltas_views.ListDeltasByDeltafileView.as_view(),
     ),
     path("deltas/apply/<uuid:projectid>/", deltas_views.ApplyView.as_view()),
+    path(
+        "organizations/<str:organization_name>/team/",
+        users_views.TeamListCreateView.as_view(),
+        name="team-list-create",
+    ),
+    path(
+        "organizations/<str:organization_name>/team/<str:team_name>/members/",
+        users_views.TeamMemberView.as_view(),
+        name="team_members",
+    ),
+    path(
+        "organizations/<str:organization_name>/team/<str:team_name>/",
+        users_views.TeamDetailView.as_view(),
+        name="team-detail",
+    ),
+    path(
+        "organizations/<str:organization_name>/team/<str:team_name>/members/<str:member_username>/",
+        users_views.TeamMemberDeleteView.as_view(),
+        name="team-member-delete",
+    ),
 ]
