@@ -172,6 +172,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
     membership_is_public = serializers.BooleanField(
         read_only=True, source="membership_role_is_public"
     )
+    teams = serializers.SerializerMethodField()
 
     def get_members(self, obj):
         return [
