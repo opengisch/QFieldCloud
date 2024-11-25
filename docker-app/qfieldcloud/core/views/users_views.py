@@ -197,11 +197,11 @@ class TeamMemberDeleteView(generics.DestroyAPIView):
         team_name = self.kwargs.get("team_name")
         member_username = self.kwargs.get("member_username")
 
-        organization = Organization.objects.get(username=organization_name)
-        team_full_name = Team.format_team_name(organization_name, team_name)
-        team = Team.objects.get(team_organization=organization, username=team_full_name)
-
-        return TeamMember.objects.filter(team=team, member__username=member_username)
+        return TeamMember.objects.filter(
+            team__organization__username=organization_name,
+            team__username=Team.format_team_name(organization_name, team_name),
+            member__username=member_username,
+        )
 
 
 class TeamPermission(permissions.BasePermission):
