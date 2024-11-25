@@ -7,6 +7,14 @@ from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     OrganizationSerializer,
     PublicInfoUserSerializer,
+    TeamDeleteSerializer,
+    TeamDetailSerializer,
+    TeamListSerializer,
+    TeamMemberSerializer,
+    TeamSerializer,
+    AddMemberSerializer,
+    DeleteMemberSerializer,
+    OrganizationMemberSerializer
 )
 from qfieldcloud.core.permissions_utils import can_create_teams, can_manage_team, can_add_members_to_team
 from qfieldcloud.core.serializers import TeamSerializer
@@ -180,7 +188,10 @@ class TeamMemberDeleteView(APIView):
         # Remove the member
         team_member.delete()
 
-        return Response({"message": f"Member {member.username} removed from team {team.username}"}, status=status.HTTP_204_NO_CONTENT)
+        serializer = DeleteMemberSerializer(data={'message': f"Member {member.username} removed from team {team.username}"})
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
+
+        # return Response({"message": f"Member {member.username} removed from team {team.username}"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class TeamDetailView(APIView):
@@ -194,14 +205,18 @@ class TeamDetailView(APIView):
         team_name = f'@{organization_name}/{team_name}'
         team = get_object_or_404(Team, team_organization=organization, username=team_name)
 
-        team_details = [
-        {
-            "username": team.username,
-            "organization": organization.username,
-        }
-        ]
+        serializer = TeamDetailSerializer(team)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(team_details, status=200)
+
+        # team_details = [
+        # {
+        #     "username": team.username,
+        #     "organization": organization.username,
+        # }
+        # ]
+
+        # return Response(team_details, status=200)
 
         # return Response(team_details, status=status.HTTP_200_OK)
 
@@ -227,7 +242,10 @@ class TeamDetailView(APIView):
         team.username = new_team_name
         team.save()
 
-        return Response({"username": team.username}, status=status.HTTP_200_OK)
+
+        serializer = TeamSerializer(team)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        # return Response({"username": team.username}, status=status.HTTP_200_OK)
 
     def delete(self, request, organization_name, team_name):
         """
@@ -240,8 +258,10 @@ class TeamDetailView(APIView):
 
         # Delete the team
         team.delete()
+        serializer = TeamDeleteSerializer(data={'message': "Team deleted successfully"})
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
 
-        return Response({"message": "Team deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        # return Response({"message": "Team deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 
 
@@ -256,15 +276,18 @@ class TeamListCreateView(APIView):
 
         teams = querysets_utils.get_organization_teams(organization)
 
-        team_list = [
-            {
-                "Team Name": team.username,
-                "Actual name:": team.teamname
-            }
-            for team in teams
-        ]
+        serializer = TeamListSerializer(teams, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(team_list, status=status.HTTP_200_OK)
+        # team_list = [
+        #     {
+        #         "Team Name": team.username,
+        #         "Actual name:": team.teamname
+        #     }
+        #     for team in teams
+        # ]
+
+        # return Response(team_list, status=status.HTTP_200_OK)
 
     def post(self, request, organization_name):
         """
@@ -285,17 +308,21 @@ class TeamListCreateView(APIView):
         if Team.objects.filter(team_organization=organization, username=team_name).exists():
             return Response({"error": "Team with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
+        
         # Create the new team
         new_team = Team.objects.create(
             username=team_name,
             team_organization=organization,
         )
 
-        # Return the created team details
-        return Response(
-            {"username": new_team.username},
-            status=status.HTTP_201_CREATED
-        )
+
+        serializer = TeamSerializer(new_team)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # # Return the created team details
+        # return Response(
+        #     {"username": new_team.username},
+        #     status=status.HTTP_201_CREATED
+        # )
 
 
 
@@ -312,13 +339,19 @@ class TeamMemberView(APIView):
 
         team = get_object_or_404(Team, username=team_name, team_organization=organization)
 
-        username = request.data.get('username')
-        email = request.data.get('email')
-        
-        if not username and not email:
-            return Response({'error': 'Username or email is required'}, status=400)
+        serializer = AddMemberSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # organization_users = querysets_utils.get_users(organization=organization,username=username)
+        username = serializer.validated_data.get('username')
+
+        # username = request.data.get('username')
+        # email = request.data.get('email')
+        
+        # if not username and not email:
+        #     return Response({'error': 'Username or email is required'}, status=400)
+
+        # # organization_users = querysets_utils.get_users(organization=organization,username=username)
         organization_users = querysets_utils.get_organization_members(organization=organization)
 
         if not Person.objects.filter(username=username).exists() :
@@ -350,16 +383,20 @@ class TeamMemberView(APIView):
         
         members = get_team_members(team) 
 
-        # Prepare member details for response
-        member_list = [
-            {
-                'username': member.member.username,
-                'email': member.member.email,
-                # 'role': member.Roles.  # Assuming there's a role field with choices
-            }
-            for member in members
-        ]
+         # Serialize the members list
+        serializer = TeamMemberSerializer(members, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(member_list, status=200)
+        # # Prepare member details for response
+        # member_list = [
+        #     {
+        #         'username': member.member.username,
+        #         'email': member.member.email,
+        #         # 'role': member.Roles.  # Assuming there's a role field with choices
+        #     }
+        #     for member in members
+        # ]
+
+        # return Response(member_list, status=200)
 
 

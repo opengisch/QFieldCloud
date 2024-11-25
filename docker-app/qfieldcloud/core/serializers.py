@@ -539,39 +539,87 @@ class LatestPackageSerializer(serializers.Serializer):
 
 
 # Add the necessary imports for Team and TeamMember models
-from qfieldcloud.core.models import Team, TeamMember
+from qfieldcloud.core.models import Team, TeamMember, Organization
 
+
+# class TeamSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for creating a Team, accepts only 'username', 'team_organization', and optional 'members'.
+#     """
+    
+#     # members = serializers.PrimaryKeyRelatedField(queryset=OrganizationMember.objects.all(), many=True, required=False)
+#     organizations = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(), many=True, required=False)
+
+#     class Meta:
+#         model = Team
+#         fields = ['id', 'username', 'organizations',]
+#         read_only_fields = ['id']
+
+#     def validate(self, data):
+#         """
+#         Validate that the team name is unique within the same organization.
+#         """
+#         if Team.objects.filter(username=data['username'], team_organization=data['organizations']).exists():
+#             raise serializers.ValidationError("A team with this username already exists in the organization.")
+#         return data
+
+#     def create(self, validated_data):
+#         # members = validated_data.pop('members', [])
+#         team = Team.objects.create(
+#             username=validated_data['username'],
+#             team_organization=validated_data['organizations'],
+#         )
+#         # for member in members:
+#         #     TeamMember.objects.create(team=team, member=member)
+#         # return team
+    
+
+    
 
 class TeamSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating a Team, accepts only 'username', 'team_organization', and optional 'members'.
-    """
+    organization = serializers.CharField(source='team_organization.username', read_only=True)
     
-    # members = serializers.PrimaryKeyRelatedField(queryset=OrganizationMember.objects.all(), many=True, required=False)
-    organizations = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(), many=True, required=False)
+    class Meta:
+        model = Team
+        fields = ('username', 'organization')
+
+class TeamMemberSerializer(serializers.ModelSerializer):
+    member = serializers.StringRelatedField()  
+    
+    class Meta:
+        model = TeamMember
+        fields = ('team', 'member')
+
+class AddMemberSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        if not data.get('username') and not data.get('email'):
+            raise serializers.ValidationError('Either username or email is required.')
+        return data
+    
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        fields = ('username',)
+
+class TeamDetailSerializer(serializers.ModelSerializer):
+    organization = serializers.StringRelatedField(source='team_organization')
 
     class Meta:
         model = Team
-        fields = ['id', 'username', 'organizations',]
-        read_only_fields = ['id']
+        fields = ('username', 'organization')
 
-    def validate(self, data):
-        """
-        Validate that the team name is unique within the same organization.
-        """
-        if Team.objects.filter(username=data['username'], team_organization=data['organizations']).exists():
-            raise serializers.ValidationError("A team with this username already exists in the organization.")
-        return data
 
-    def create(self, validated_data):
-        # members = validated_data.pop('members', [])
-        team = Team.objects.create(
-            username=validated_data['username'],
-            team_organization=validated_data['organizations'],
-        )
-        # for member in members:
-        #     TeamMember.objects.create(team=team, member=member)
-        # return team
-    
+class TeamListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = ('username', 'teamname')
 
-    
+class DeleteMemberSerializer(serializers.Serializer):
+    message = serializers.CharField(read_only=True)
+
+
+class TeamDeleteSerializer(serializers.Serializer):
+    message = serializers.CharField(read_only=True)
