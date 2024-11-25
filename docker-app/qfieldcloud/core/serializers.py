@@ -589,9 +589,3 @@ class AddMemberSerializer(serializers.Serializer):
                 )
 
         raise serializers.ValidationError("Invalid user lookup.")
-
-
-class TeamListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Team
-        fields = ("username", "teamname")
