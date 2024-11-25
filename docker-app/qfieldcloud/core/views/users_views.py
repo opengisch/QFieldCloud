@@ -18,10 +18,7 @@ from qfieldcloud.core.serializers import (
     TeamMemberSerializer,
     TeamSerializer,
     AddMemberSerializer,
-    TeamAccessSerializer,
 )
-
-from qfieldcloud.core.permissions_utils import can_create_teams
 
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -203,9 +200,7 @@ class TeamDetailView(APIView):
             Team, team_organization=organization, username=team_name
         )
 
-        serializer = TeamAccessSerializer(team, data={"request": request})
-
-        serializer.is_valid(raise_exception=True)
+        serializer = TeamSerializer(team)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -220,7 +215,7 @@ class TeamDetailView(APIView):
             Team, team_organization=organization, username=team_name
         )
 
-        if not can_create_teams(request.user, organization):
+        if not permissions_utils.can_create_teams(request.user, organization):
             return Response(
                 {
                     "error": "You do not have permission to edit teams in this organization."
@@ -287,7 +282,7 @@ class TeamListCreateView(APIView):
         """
         organization = get_object_or_404(Organization, username=organization_name)
 
-        if not can_create_teams(request.user, organization):
+        if not permissions_utils.can_create_teams(request.user, organization):
             return Response(
                 {
                     "error": "You do not have permission to create teams in this organization."
