@@ -17,7 +17,8 @@ from qfieldcloud.core.models import (
     Person,
     TeamMember
 )
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -183,8 +184,6 @@ class OrganizationSerializer(serializers.ModelSerializer):
             ).values("member__username")
         ]
     
-
-    # added  
     def get_teams(self, obj):
         teams = Team.objects.filter(team_organization=obj)
         return TeamSerializer(teams, many=True).data
