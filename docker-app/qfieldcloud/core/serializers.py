@@ -14,7 +14,10 @@ from qfieldcloud.core.models import (
     ProjectCollaborator,
     Team,
     User,
+    Person,
+    TeamMember
 )
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -179,6 +182,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
                 organization=obj, is_public=True
             ).values("member__username")
         ]
+    
+
+    # added  
+    def get_teams(self, obj):
+        teams = Team.objects.filter(team_organization=obj)
+        return TeamSerializer(teams, many=True).data
 
     def get_avatar_url(self, obj):
         return get_avatar_url(obj)
@@ -537,45 +546,6 @@ class LatestPackageSerializer(serializers.Serializer):
     data_last_updated_at = serializers.DateTimeField()
 
 
-
-# Add the necessary imports for Team and TeamMember models
-from qfieldcloud.core.models import Team, TeamMember, Organization
-
-
-# class TeamSerializer(serializers.ModelSerializer):
-#     """
-#     Serializer for creating a Team, accepts only 'username', 'team_organization', and optional 'members'.
-#     """
-    
-#     # members = serializers.PrimaryKeyRelatedField(queryset=OrganizationMember.objects.all(), many=True, required=False)
-#     organizations = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(), many=True, required=False)
-
-#     class Meta:
-#         model = Team
-#         fields = ['id', 'username', 'organizations',]
-#         read_only_fields = ['id']
-
-#     def validate(self, data):
-#         """
-#         Validate that the team name is unique within the same organization.
-#         """
-#         if Team.objects.filter(username=data['username'], team_organization=data['organizations']).exists():
-#             raise serializers.ValidationError("A team with this username already exists in the organization.")
-#         return data
-
-#     def create(self, validated_data):
-#         # members = validated_data.pop('members', [])
-#         team = Team.objects.create(
-#             username=validated_data['username'],
-#             team_organization=validated_data['organizations'],
-#         )
-#         # for member in members:
-#         #     TeamMember.objects.create(team=team, member=member)
-#         # return team
-    
-
-    
-
 class TeamSerializer(serializers.ModelSerializer):
     organization = serializers.CharField(source='team_organization.username', read_only=True)
     
@@ -591,18 +561,42 @@ class TeamMemberSerializer(serializers.ModelSerializer):
         fields = ('team', 'member')
 
 class AddMemberSerializer(serializers.Serializer):
-    username = serializers.CharField(required=False, allow_blank=True)
+    username = serializers.CharField(required=True)
     email = serializers.EmailField(required=False, allow_blank=True)
 
     def validate(self, data):
-        if not data.get('username') and not data.get('email'):
-            raise serializers.ValidationError('Either username or email is required.')
+        username = data.get('username')
+        user = self._validate_user_exists(username)
+        organization = self.context.get('organization')
+
+        self._validate_user_membership(user, organization)
+
+        data['user'] = user
+        data['organization'] = organization
+
         return data
-    
-class OrganizationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Organization
-        fields = ('username',)
+
+    def _validate_user_exists(self, username):
+        if not username:
+            raise serializers.ValidationError("Username is required.")
+        
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist.")
+        
+        return user
+
+    def _validate_user_membership(self, user, organization):
+        is_org_member = OrganizationMember.objects.filter(
+            organization=organization,
+            member=user
+        ).exists()
+        
+        is_org_owner = organization.organization_owner == user
+        
+        if not (is_org_member or is_org_owner):
+            raise serializers.ValidationError("User is not a member of the organization.")
 
 class TeamDetailSerializer(serializers.ModelSerializer):
     organization = serializers.StringRelatedField(source='team_organization')
@@ -617,9 +611,39 @@ class TeamListSerializer(serializers.ModelSerializer):
         model = Team
         fields = ('username', 'teamname')
 
+
 class DeleteMemberSerializer(serializers.Serializer):
     message = serializers.CharField(read_only=True)
 
 
 class TeamDeleteSerializer(serializers.Serializer):
-    message = serializers.CharField(read_only=True)
+    message = serializers.CharField(default="Team deleted successfully", read_only=True)
+
+
+class TeamAccessSerializer(serializers.ModelSerializer):
+    organization = serializers.CharField(source='team_organization.username', read_only=True)
+
+    class Meta:
+        model = Team
+        fields = ('username', 'organization')
+
+    def validate(self, data):
+        request = self.context.get('request')
+        user = request.user
+        team = self.instance  
+
+        is_org_admin = OrganizationMember.objects.filter(
+            organization=team.team_organization,
+            member=user,
+            role=OrganizationMember.Roles.ADMIN,
+        ).exists()
+        
+        is_team_member = TeamMember.objects.filter(
+            team=team,
+            member=user
+        ).exists()
+
+        if not (is_org_admin or is_team_member):
+            raise PermissionError()
+        
+        return data
