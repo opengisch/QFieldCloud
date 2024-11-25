@@ -112,17 +112,17 @@ urlpatterns = [
     ),
     path(
         "organizations/<str:organization_name>/teams/<str:team_name>/members/",
-        users_views.TeamMemberView.as_view(),
-        name="team_members",
+        users_views.ListCreateTeamMembersView.as_view(),
+        name="team-member-list-create",
+    ),
+    path(
+        "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
+        users_views.GetUpdateDestroyTeamMemberView.as_view(),
+        name="team-member-retrieve-update-destroy",
     ),
     path(
         "organizations/<str:organization_name>/teams/<str:team_name>/",
         users_views.TeamDetailView.as_view(),
         name="team_detail",
-    ),
-    path(
-        "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
-        users_views.TeamMemberDeleteView.as_view(),
-        name="team_member_delete",
     ),
 ]
