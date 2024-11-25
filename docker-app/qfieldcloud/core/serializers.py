@@ -614,14 +614,6 @@ class TeamListSerializer(serializers.ModelSerializer):
         fields = ("username", "teamname")
 
 
-class DeleteMemberSerializer(serializers.Serializer):
-    message = serializers.CharField(read_only=True)
-
-
-class TeamDeleteSerializer(serializers.Serializer):
-    message = serializers.CharField(default="Team deleted successfully", read_only=True)
-
-
 class TeamAccessSerializer(serializers.ModelSerializer):
     organization = serializers.CharField(
         source="team_organization.username", read_only=True
