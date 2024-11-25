@@ -612,31 +612,3 @@ class TeamListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
         fields = ("username", "teamname")
-
-
-class TeamAccessSerializer(serializers.ModelSerializer):
-    organization = serializers.CharField(
-        source="team_organization.username", read_only=True
-    )
-
-    class Meta:
-        model = Team
-        fields = ("username", "organization")
-
-    def validate(self, data):
-        request = self.context.get("request")
-        user = request.user
-        team = self.instance
-
-        is_org_admin = OrganizationMember.objects.filter(
-            organization=team.team_organization,
-            member=user,
-            role=OrganizationMember.Roles.ADMIN,
-        ).exists()
-
-        is_team_member = TeamMember.objects.filter(team=team, member=user).exists()
-
-        if not (is_org_admin or is_team_member):
-            raise PermissionError()
-
-        return data
