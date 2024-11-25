@@ -9,7 +9,6 @@ from qfieldcloud.core.models import (
     Project,
     TeamMember,
     Team,
-    OrganizationMember,
 )
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
@@ -21,6 +20,8 @@ from qfieldcloud.core.serializers import (
     AddMemberSerializer,
     TeamAccessSerializer,
 )
+
+from qfieldcloud.core.permissions_utils import can_create_teams
 
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -180,13 +181,7 @@ class TeamMemberDeleteView(APIView):
         member = get_object_or_404(User, username=member_username)
         team_member = get_object_or_404(TeamMember, team=team, member=member)
 
-        is_org_owner = organization.organization_owner == request.user
-        is_org_admin = OrganizationMember.objects.filter(
-            organization=organization,
-            member=request.user,
-            role=OrganizationMember.Roles.ADMIN,
-        ).exists()
-        if not (is_org_owner or is_org_admin):
+        if not permissions_utils.can_manage_team(request.user, team):
             raise PermissionDenied(
                 "You do not have permission to remove members from this team."
             )
@@ -225,6 +220,14 @@ class TeamDetailView(APIView):
             Team, team_organization=organization, username=team_name
         )
 
+        if not can_create_teams(request.user, organization):
+            return Response(
+                {
+                    "error": "You do not have permission to edit teams in this organization."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         new_team_name = request.data.get("username")
 
         if not new_team_name:
@@ -255,6 +258,11 @@ class TeamDetailView(APIView):
             Team, team_organization=organization, username=team_name
         )
 
+        if not permissions_utils.can_manage_team(request.user, team):
+            raise PermissionDenied(
+                "You do not have permission to remove team from this organization."
+            )
+
         team.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -278,6 +286,14 @@ class TeamListCreateView(APIView):
         Handle POST request: Create a new team under a specific organization.
         """
         organization = get_object_or_404(Organization, username=organization_name)
+
+        if not can_create_teams(request.user, organization):
+            return Response(
+                {
+                    "error": "You do not have permission to create teams in this organization."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         team_name = request.data.get("username")
 
@@ -318,6 +334,11 @@ class TeamMemberView(APIView):
             Team, username=team_full_name, team_organization=organization
         )
 
+        if not permissions_utils.can_add_members_to_team(request.user, team):
+            raise PermissionDenied(
+                "You do not have permission to remove members from this team."
+            )
+
         serializer = AddMemberSerializer(
             data=request.data, context={"organization": organization}
         )
@@ -347,19 +368,6 @@ class TeamMemberView(APIView):
             Team, username=team_name, team_organization=organization
         )
         members = get_team_members(team)
-
-        is_org_owner = organization.organization_owner == request.user
-        is_org_admin = OrganizationMember.objects.filter(
-            organization=organization,
-            member=request.user,
-            role=OrganizationMember.Roles.ADMIN,
-        ).exists()
-        is_team_member = TeamMember.objects.filter(
-            team=team, member=request.user
-        ).exists()
-
-        if not (is_org_owner or is_org_admin or is_team_member):
-            raise PermissionDenied()
 
         serializer = TeamMemberSerializer(members, many=True)
 
