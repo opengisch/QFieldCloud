@@ -40,6 +40,7 @@ organizations/<str:organization_name>/teams/<str:team_name>/members/
 """
 
 urlpatterns = [
+    
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
     path("users/", users_views.ListUsersView.as_view()),

@@ -535,3 +535,43 @@ class LatestPackageSerializer(serializers.Serializer):
     package_id = serializers.UUIDField()
     packaged_at = serializers.DateTimeField()
     data_last_updated_at = serializers.DateTimeField()
+
+
+
+# Add the necessary imports for Team and TeamMember models
+from qfieldcloud.core.models import Team, TeamMember
+
+
+class TeamSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating a Team, accepts only 'username', 'team_organization', and optional 'members'.
+    """
+    
+    # members = serializers.PrimaryKeyRelatedField(queryset=OrganizationMember.objects.all(), many=True, required=False)
+    organizations = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(), many=True, required=False)
+
+    class Meta:
+        model = Team
+        fields = ['id', 'username', 'organizations',]
+        read_only_fields = ['id']
+
+    def validate(self, data):
+        """
+        Validate that the team name is unique within the same organization.
+        """
+        if Team.objects.filter(username=data['username'], team_organization=data['organizations']).exists():
+            raise serializers.ValidationError("A team with this username already exists in the organization.")
+        return data
+
+    def create(self, validated_data):
+        # members = validated_data.pop('members', [])
+        team = Team.objects.create(
+            username=validated_data['username'],
+            team_organization=validated_data['organizations'],
+        )
+        # for member in members:
+        #     TeamMember.objects.create(team=team, member=member)
+        # return team
+    
+
+    

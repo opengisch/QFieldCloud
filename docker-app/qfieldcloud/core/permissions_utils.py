@@ -844,3 +844,29 @@ def check_can_upload_file(project, client_type, file_size_bytes: int) -> bool:
         )
     else:
         return True
+
+
+def can_create_teams(user: QfcUser, organization: Organization) -> bool:
+    """Check if the user can create a team within the organization."""
+    return user_has_organization_roles(
+        user, organization, [OrganizationMember.Roles.ADMIN]
+    )
+
+def can_manage_team(user: QfcUser, team: Team) -> bool:
+    """Check if the user can manage a team."""
+    return user_has_organization_roles(
+        user, team.team_organization, [OrganizationMember.Roles.ADMIN]
+    )
+
+def can_add_members_to_team(user: QfcUser, team: Team, new_member: QfcUser) -> bool:
+    """Check if the user can add a new member to the team.
+    Ensures that the new member belongs to the same organization as the team."""
+    if user_has_organization_roles(user, team.team_organization, [OrganizationMember.Roles.ADMIN]):
+        # Ensure the new member is part of the same organization
+        if user_has_organization_roles(new_member, team.team_organization, [OrganizationMember.Roles.MEMBER]):
+            return True
+        raise UserOrganizationRoleError(
+            _("User '{}' is not part of the organization '{}' that owns the team.")
+            .format(new_member.username, team.team_organization.name)
+        )
+    return False
