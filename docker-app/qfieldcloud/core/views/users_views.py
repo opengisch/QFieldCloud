@@ -1,7 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.generics import RetrieveUpdateDestroyAPIView
 
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
 from qfieldcloud.core.models import (
@@ -14,20 +14,16 @@ from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     OrganizationSerializer,
     PublicInfoUserSerializer,
-    TeamListSerializer,
     TeamMemberSerializer,
     TeamSerializer,
-    AddMemberSerializer,
 )
 
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
-
-from ..querysets_utils import get_team_members
 
 
 class ListUsersViewPermissions(permissions.BasePermission):
@@ -192,212 +188,162 @@ class TeamMemberDeleteView(generics.DestroyAPIView):
     ]
     serializer_class = TeamMemberSerializer
 
-    def get_object(self):
-        organization_name = self.request.parser_context["kwargs"]["organization_name"]
-        team_name = self.request.parser_context["kwargs"]["team_name"]
-        member_username = self.request.parser_context["kwargs"]["member_username"]
+    def get_queryset(self):
+        """
+        Define the queryset used for the view, ensuring objects are filtered
+        based on URL parameters.
+        """
+        organization_name = self.kwargs.get("organization_name")
+        team_name = self.kwargs.get("team_name")
+        member_username = self.kwargs.get("member_username")
 
         organization = Organization.objects.get(username=organization_name)
         team_full_name = Team.format_team_name(organization_name, team_name)
         team = Team.objects.get(team_organization=organization, username=team_full_name)
-        member = User.objects.get(username=member_username)
 
-        return TeamMember.objects.get(team=team, member=member)
-
-    def destroy(self, request, *args, **kwargs):
-        team_member = self.get_object()
-
-        team_member.delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return TeamMember.objects.filter(team=team, member__username=member_username)
 
 
-class TeamDetailView(APIView):
-    def get(self, request, organization_name, team_name):
-        """
-        GET /organizations/<str:organization_name>/team/<str:team_name>/
-        Retrieve the details of a specific team within the organization.
-        """
+class TeamPermission(permissions.BasePermission):
+    """
+    Permission class to handle CRUD operations for teams.
+    """
+
+    def has_permission(self, request, view):
+        organization_name = view.kwargs.get("organization_name")
+
+        try:
+            organization = Organization.objects.get(username=organization_name)
+        except Organization.DoesNotExist:
+            return False
+
+        if request.method == "GET":
+            return permissions_utils.can_read_members(request.user, organization)
+
+        elif request.method in ["PUT", "POST"]:
+            return permissions_utils.can_update_members(request.user, organization)
+
+        elif request.method == "DELETE":
+            return permissions_utils.can_delete_members(request.user, organization)
+
+        return False
+
+
+@extend_schema_view(
+    get=extend_schema(description="Retrieve details of a team"),
+    put=extend_schema(description="Update a team's name"),
+    delete=extend_schema(description="Delete a team"),
+)
+class TeamDetailView(RetrieveUpdateDestroyAPIView):
+    """
+    Handles GET, PUT, and DELETE for teams under a specific organization.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, TeamPermission]
+    serializer_class = TeamSerializer
+
+    def get_object(self):
+        organization_name = self.kwargs.get("organization_name")
+        team_name = self.kwargs.get("team_name")
+
         organization = get_object_or_404(Organization, username=organization_name)
-        team_name = f"@{organization_name}/{team_name}"
-        team = get_object_or_404(
-            Team, team_organization=organization, username=team_name
+        full_team_name = Team.format_team_name(organization_name, team_name)
+
+        return get_object_or_404(
+            Team, team_organization=organization, username=full_team_name
         )
 
-        if not permissions_utils.can_read_members(request.user, organization):
-            raise PermissionDenied(
-                "You do not have permission to list teams under this organization."
-            )
-
-        serializer = TeamSerializer(team)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, organization_name, team_name):
+    def perform_update(self, serializer):
         """
-        PUT /organizations/<str:organization_name>/team/<str:team_name>/
-        Update a team's name within the organization.
+        Handle team name updates with validation.
         """
-        organization = get_object_or_404(Organization, username=organization_name)
-        team_name = f"@{organization_name}/{team_name}"
-        team = get_object_or_404(
-            Team, team_organization=organization, username=team_name
-        )
-
-        if not permissions_utils.can_update_members(request.user, organization):
-            raise PermissionDenied(
-                "You do not have permission to update teams under this organization."
-            )
-
-        new_team_name = request.data.get("username")
+        organization_name = self.kwargs.get("organization_name")
+        new_team_name = self.request.data.get("username")
 
         if not new_team_name:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            raise permissions.ValidationError({"error": "New team name is required."})
+
+        full_team_name = Team.format_team_name(organization_name, new_team_name)
 
         if Team.objects.filter(
-            team_organization=organization, username=new_team_name
+            team_organization=serializer.instance.team_organization,
+            username=full_team_name,
         ).exists():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-        new_team_name = f"@{organization_name}/{new_team_name}"
-        team.username = new_team_name
-
-        team.save()
-
-        serializer = TeamSerializer(team)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def delete(self, request, organization_name, team_name):
-        """
-        DELETE /organizations/<str:organization_name>/team/<str:team_name>/
-        Delete a team within the organization.
-        """
-        organization = get_object_or_404(Organization, username=organization_name)
-        team_name = f"@{organization_name}/{team_name}"
-        team = get_object_or_404(
-            Team, team_organization=organization, username=team_name
-        )
-
-        if not permissions_utils.can_update_members(request.user, organization):
-            raise PermissionDenied(
-                "You do not have permission to remove team from this organization."
+            raise permissions.ValidationError(
+                {"error": "A team with this name already exists."}
             )
 
-        team.delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer.save(username=full_team_name)
 
 
+@extend_schema_view(
+    get=extend_schema(description="List all teams under an organization"),
+    post=extend_schema(description="Create a new team under an organization"),
+)
 class TeamListCreateView(APIView):
-    def get(self, request, organization_name):
-        """
-        Handle GET request: Retrieve all teams under a specific organization --> organizations/<str:organization_name>/team/
-        """
+    """
+    Handles GET (list all teams) and POST (create a new team) under an organization.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, TeamPermission]
+    serializer_class = TeamSerializer
+
+    def get_queryset(self):
+        organization_name = self.kwargs.get("organization_name")
+        organization = get_object_or_404(Organization, username=organization_name)
+        return Team.objects.filter(team_organization=organization)
+
+    def perform_create(self, serializer):
+        organization_name = self.kwargs.get("organization_name")
         organization = get_object_or_404(Organization, username=organization_name)
 
-        if not permissions_utils.can_read_members(request.user, organization):
-            raise PermissionDenied(
-                "You do not have permission to list teams under this organization."
-            )
-
-        teams = querysets_utils.get_organization_teams(organization)
-
-        serializer = TeamListSerializer(teams, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request, organization_name):
-        """
-        Handle POST request: Create a new team under a specific organization.
-        """
-        organization = get_object_or_404(Organization, username=organization_name)
-
-        if not permissions_utils.can_create_members(request.user, organization):
-            raise PermissionDenied(
-                "You do not have permission to add teams under this organization."
-            )
-
-        team_name = request.data.get("username")
-
+        team_name = self.request.data.get("username")
         if not team_name:
-            return Response(
-                {"error": "Team name is required."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            raise permissions.ValidationError({"error": "Team name is required."})
 
-        team_name = f"@{organization_name}/{team_name}"
-
+        full_team_name = Team.format_team_name(organization_name, team_name)
         if Team.objects.filter(
-            team_organization=organization, username=team_name
+            team_organization=organization, username=full_team_name
         ).exists():
-            return Response(
-                {"error": "Team with this name already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
+            raise permissions.ValidationError(
+                {"error": "A team with this name already exists."}
             )
 
-        new_team = Team.objects.create(
-            username=team_name,
-            team_organization=organization,
-        )
-
-        serializer = TeamSerializer(new_team)
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer.save(team_organization=organization, username=full_team_name)
 
 
+@extend_schema_view(
+    get=extend_schema(description="List all members of a team"),
+    post=extend_schema(description="Add a new member to a team"),
+)
 class TeamMemberView(APIView):
     """
     View to handle adding and listing team members. --> organizations/<str:organization_name>/team/<str:team_name>/members/"
     """
 
-    def post(self, request, organization_name, team_name):
+    permission_classes = [permissions.IsAuthenticated, TeamPermission]
+    serializer_class = TeamMemberSerializer
+
+    def get_queryset(self):
+        organization_name = self.kwargs.get("organization_name")
+        team_name = self.kwargs.get("team_name")
+
         organization = get_object_or_404(Organization, username=organization_name)
-        team_full_name = f"@{organization_name}/{team_name}"
+        full_team_name = Team.format_team_name(organization_name, team_name)
         team = get_object_or_404(
-            Team, username=team_full_name, team_organization=organization
+            Team, team_organization=organization, username=full_team_name
         )
 
-        if not permissions_utils.can_create_members(request.user, team):
-            raise PermissionDenied(
-                "You do not have permission to add members to this team."
-            )
+        return TeamMember.objects.filter(team=team)
 
-        serializer = AddMemberSerializer(
-            data=request.data, context={"organization": organization}
-        )
+    def perform_create(self, serializer):
+        organization_name = self.kwargs.get("organization_name")
+        team_name = self.kwargs.get("team_name")
 
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
-
-        team_member, created = TeamMember.objects.get_or_create(team=team, member=user)
-
-        if created:
-            return Response(
-                {"message": f"{user.username} added to {team_name} team"},
-                status=status.HTTP_201_CREATED,
-            )
-        else:
-            return Response(
-                {"message": f"{user.username} is already a member of {team_name}"},
-                status=status.HTTP_200_OK,
-            )
-
-    def get(self, request, organization_name, team_name):
-        """List all members of a team within an organization."""
-
-        team_name = "@" + organization_name + "/" + team_name
         organization = get_object_or_404(Organization, username=organization_name)
+        full_team_name = Team.format_team_name(organization_name, team_name)
         team = get_object_or_404(
-            Team, username=team_name, team_organization=organization
+            Team, team_organization=organization, username=full_team_name
         )
 
-        if not permissions_utils.can_read_members(request.user, team):
-            raise PermissionDenied(
-                "You do not have permission to list the members of this team."
-            )
-
-        members = get_team_members(team)
-
-        serializer = TeamMemberSerializer(members, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer.save(team=team)
