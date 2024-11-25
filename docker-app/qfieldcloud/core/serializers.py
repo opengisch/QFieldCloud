@@ -572,7 +572,7 @@ class AddMemberSerializer(serializers.Serializer):
 
         return data
 
-    def _validate_user_exists(self, username, email):
+    def _validate_user_exists(self, username: str | None, email: str | None) -> User:
         """Validate that a user exists via username or email."""
         if username:
             try:
