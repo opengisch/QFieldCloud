@@ -178,7 +178,7 @@ class TeamMemberDeleteView(APIView):
         member = get_object_or_404(User, username=member_username)
         team_member = get_object_or_404(TeamMember, team=team, member=member)
 
-        if not permissions_utils.can_manage_team(request.user, team):
+        if not permissions_utils.can_delete_members(request.user, organization):
             raise PermissionDenied(
                 "You do not have permission to remove members from this team."
             )
@@ -200,6 +200,11 @@ class TeamDetailView(APIView):
             Team, team_organization=organization, username=team_name
         )
 
+        if not permissions_utils.can_read_members(request.user, organization):
+            raise PermissionDenied(
+                "You do not have permission to list teams under this organization."
+            )
+
         serializer = TeamSerializer(team)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -215,12 +220,9 @@ class TeamDetailView(APIView):
             Team, team_organization=organization, username=team_name
         )
 
-        if not permissions_utils.can_create_teams(request.user, organization):
-            return Response(
-                {
-                    "error": "You do not have permission to edit teams in this organization."
-                },
-                status=status.HTTP_403_FORBIDDEN,
+        if not permissions_utils.can_update_members(request.user, organization):
+            raise PermissionDenied(
+                "You do not have permission to update teams under this organization."
             )
 
         new_team_name = request.data.get("username")
@@ -253,7 +255,7 @@ class TeamDetailView(APIView):
             Team, team_organization=organization, username=team_name
         )
 
-        if not permissions_utils.can_manage_team(request.user, team):
+        if not permissions_utils.can_update_members(request.user, organization):
             raise PermissionDenied(
                 "You do not have permission to remove team from this organization."
             )
@@ -270,6 +272,11 @@ class TeamListCreateView(APIView):
         """
         organization = get_object_or_404(Organization, username=organization_name)
 
+        if not permissions_utils.can_read_members(request.user, organization):
+            raise PermissionDenied(
+                "You do not have permission to list teams under this organization."
+            )
+
         teams = querysets_utils.get_organization_teams(organization)
 
         serializer = TeamListSerializer(teams, many=True)
@@ -282,12 +289,9 @@ class TeamListCreateView(APIView):
         """
         organization = get_object_or_404(Organization, username=organization_name)
 
-        if not permissions_utils.can_create_teams(request.user, organization):
-            return Response(
-                {
-                    "error": "You do not have permission to create teams in this organization."
-                },
-                status=status.HTTP_403_FORBIDDEN,
+        if not permissions_utils.can_create_members(request.user, organization):
+            raise PermissionDenied(
+                "You do not have permission to add teams under this organization."
             )
 
         team_name = request.data.get("username")
@@ -329,9 +333,9 @@ class TeamMemberView(APIView):
             Team, username=team_full_name, team_organization=organization
         )
 
-        if not permissions_utils.can_add_members_to_team(request.user, team):
+        if not permissions_utils.can_create_members(request.user, team):
             raise PermissionDenied(
-                "You do not have permission to remove members from this team."
+                "You do not have permission to add members to this team."
             )
 
         serializer = AddMemberSerializer(
@@ -362,6 +366,12 @@ class TeamMemberView(APIView):
         team = get_object_or_404(
             Team, username=team_name, team_organization=organization
         )
+
+        if not permissions_utils.can_read_members(request.user, team):
+            raise PermissionDenied(
+                "You do not have permission to list the members of this team."
+            )
+
         members = get_team_members(team)
 
         serializer = TeamMemberSerializer(members, many=True)
