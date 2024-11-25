@@ -752,6 +752,25 @@ class OrganizationMember(models.Model):
 
     is_public = models.BooleanField(default=False)
 
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="created_organization_members",
+        null=True,
+        blank=True,
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="updated_organization_members",
+        null=True,
+        blank=True,
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return self.organization.username + ": " + self.member.username
 
@@ -822,6 +841,13 @@ class Team(User):
     @property
     def teamname(self):
         return self.username.replace(f"@{self.team_organization.username}/", "")
+
+    @staticmethod
+    def format_team_name(organization_name, team_name):
+        if not team_name:
+            raise ValueError("Team name is required.")
+
+        return f"@{organization_name}/{team_name}"
 
 
 class TeamMember(models.Model):

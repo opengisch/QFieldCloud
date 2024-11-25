@@ -360,6 +360,29 @@ class GeodbInline(admin.TabularInline):
         return False
 
 
+@admin.register(OrganizationMember)
+class OrganizationMemberAdmin(admin.ModelAdmin):
+    list_display = (
+        "organization",
+        "member",
+        "role",
+        "is_public",
+        "created_by",
+        "created_at",
+        "updated_by",
+        "updated_at",
+    )
+    search_fields = ("organization__username", "member__username", "role")
+    list_filter = ("is_public", "role", "created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at")
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:  # New object
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+
+
 class MemberOrganizationInline(admin.TabularInline):
     model = OrganizationMember
     extra = 0
@@ -1305,6 +1328,7 @@ class OrganizationMemberInline(admin.TabularInline):
     model = OrganizationMember
     fk_name = "organization"
     extra = 0
+    readonly_fields = ("created_at", "updated_at")
 
     autocomplete_fields = ("member",)
 

@@ -29,6 +29,7 @@ from drf_spectacular.views import (
 )
 from qfieldcloud.authentication import views as auth_views
 from qfieldcloud.core.views import files_views
+
 from rest_framework import permissions
 
 admin.site.site_header = _("QFieldCloud Admin")
