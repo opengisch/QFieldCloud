@@ -827,6 +827,7 @@ class Team(User):
     def format_team_name(organization_name, team_name):
         if not team_name:
             raise ValueError("Team name is required.")
+        
         return f'@{organization_name}/{team_name}'
 
 class TeamMember(models.Model):
