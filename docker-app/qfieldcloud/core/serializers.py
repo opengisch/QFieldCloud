@@ -14,7 +14,6 @@ from qfieldcloud.core.models import (
     ProjectCollaborator,
     Team,
     User,
-    TeamMember,
 )
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -552,23 +551,22 @@ class TeamSerializer(serializers.ModelSerializer):
         fields = ("username", "organization")
 
 
-class TeamMemberSerializer(serializers.ModelSerializer):
-    member = serializers.StringRelatedField()
-
-    class Meta:
-        model = TeamMember
-        fields = ("team", "member")
-
-
 class AddMemberSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
+    username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
 
     def validate(self, data):
         username = data.get("username")
-        user = self._validate_user_exists(username)
-        organization = self.context.get("organization")
+        email = data.get("email")
 
+        if not username and not email:
+            raise serializers.ValidationError(
+                "Either username or email must be provided."
+            )
+
+        user = self._validate_user_exists(username, email)
+
+        organization = self.context.get("organization")
         self._validate_user_membership(user, organization)
 
         data["user"] = user
@@ -576,27 +574,33 @@ class AddMemberSerializer(serializers.Serializer):
 
         return data
 
-    def _validate_user_exists(self, username):
-        if not username:
-            raise serializers.ValidationError("Username is required.")
+    def _validate_user_exists(self, username, email):
+        """Validate that a user exists via username or email."""
+        if username:
+            try:
+                return User.objects.get(username=username)
+            except User.DoesNotExist:
+                raise serializers.ValidationError(
+                    "User with the given username does not exist."
+                )
+        elif email:
+            try:
+                return User.objects.get(email=email)
+            except User.DoesNotExist:
+                raise serializers.ValidationError(
+                    "User with the given email does not exist."
+                )
 
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("User does not exist.")
-
-        return user
+        raise serializers.ValidationError(
+            "Invalid user lookup."
+        )  # Should not reach here
 
     def _validate_user_membership(self, user, organization):
-        is_org_member = OrganizationMember.objects.filter(
-            organization=organization, member=user
-        ).exists()
+        """Validate that the user is a member of the organization."""
 
-        is_org_owner = organization.organization_owner == user
-
-        if not (is_org_member or is_org_owner):
+        if not Organization.objects.of_user(user).filter(id=organization.id).exists():
             raise serializers.ValidationError(
-                "User is not a member of the organization."
+                f"User '{user.username}' is not a member of the organization '{organization.name}'."
             )
 
 
