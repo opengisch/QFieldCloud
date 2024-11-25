@@ -181,12 +181,12 @@ class TeamMemberDeleteView(APIView):
         team_name = f'@{organization_name}/{team_name}'
         team = get_object_or_404(Team, team_organization=organization, username=team_name)
         member = get_object_or_404(User, username=member_username)
-
         team_member = get_object_or_404(TeamMember, team=team, member=member)
 
         team_member.delete()
 
         serializer = DeleteMemberSerializer(data={'message': f"Member {member.username} removed from team {team.username}"})
+        
         return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -202,6 +202,7 @@ class TeamDetailView(APIView):
         team = get_object_or_404(Team, team_organization=organization, username=team_name)
 
         serializer = TeamDetailSerializer(team)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -215,19 +216,20 @@ class TeamDetailView(APIView):
         team = get_object_or_404(Team, team_organization=organization, username=team_name)
 
         new_team_name = request.data.get('username')
+        
         if not new_team_name:
             return Response({"error": "New team name is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if the new name is already taken
         if Team.objects.filter(team_organization=organization, username=new_team_name).exists():
             return Response({"error": "Team with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
         new_team_name = f'@{organization_name}/{new_team_name}'
         team.username = new_team_name
+        
         team.save()
 
-
         serializer = TeamSerializer(team)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, organization_name, team_name):
@@ -240,7 +242,9 @@ class TeamDetailView(APIView):
         team = get_object_or_404(Team, team_organization=organization, username=team_name)
 
         team.delete()
+        
         serializer = TeamDeleteSerializer(data={'message': "Team deleted successfully"})
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -256,6 +260,7 @@ class TeamListCreateView(APIView):
         teams = querysets_utils.get_organization_teams(organization)
 
         serializer = TeamListSerializer(teams, many=True)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, organization_name):
@@ -274,14 +279,13 @@ class TeamListCreateView(APIView):
         if Team.objects.filter(team_organization=organization, username=team_name).exists():
             return Response({"error": "Team with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
-        
         new_team = Team.objects.create(
             username=team_name,
             team_organization=organization,
         )
 
-
         serializer = TeamSerializer(new_team)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -293,18 +297,16 @@ class TeamMemberView(APIView):
     def post(self, request, organization_name, team_name):
         """Add a new member to a team within an organization.""" 
         organization = get_object_or_404(Organization, username=organization_name)
-
         team_name = f'@{organization_name}/{team_name}' 
-
         team = get_object_or_404(Team, username=team_name, team_organization=organization)
 
         data = {
             'username': request.data.get('username'),
             'organization': organization_name
         }
+
         serializer = AddMemberSerializer(data=data)
         serializer.is_valid(raise_exception=True)  
-
         user = serializer.validated_data['user']  
         organization = serializer.validated_data['organization']  
 
@@ -316,16 +318,12 @@ class TeamMemberView(APIView):
             return Response({'message': f'{user.username} is already a member of {team_name}'}, status=status.HTTP_200_OK)
 
 
-
     def get(self, request, organization_name, team_name):
         """List all members of a team within an organization."""
     
-        team_name = '@' + organization_name + "/" + team_name
-        
+        team_name = '@' + organization_name + "/" + team_name        
         organization = get_object_or_404(Organization, username=organization_name)
-
         team = get_object_or_404(Team, username=team_name, team_organization=organization)
-        
         members = get_team_members(team) 
 
         serializer = TeamMemberSerializer(members, many=True)
