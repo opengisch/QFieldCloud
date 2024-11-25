@@ -542,9 +542,7 @@ class LatestPackageSerializer(serializers.Serializer):
 
 
 class TeamSerializer(serializers.ModelSerializer):
-    organization = serializers.CharField(
-        source="team_organization.username", read_only=True
-    )
+    organization = serializers.StringRelatedField(source="team_organization")
 
     class Meta:
         model = Team
