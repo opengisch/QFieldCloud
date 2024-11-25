@@ -182,16 +182,12 @@ class TeamMemberDeleteView(APIView):
         team = get_object_or_404(Team, team_organization=organization, username=team_name)
         member = get_object_or_404(User, username=member_username)
 
-        # Check if the member belongs to the team
         team_member = get_object_or_404(TeamMember, team=team, member=member)
 
-        # Remove the member
         team_member.delete()
 
         serializer = DeleteMemberSerializer(data={'message': f"Member {member.username} removed from team {team.username}"})
         return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
-
-        # return Response({"message": f"Member {member.username} removed from team {team.username}"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class TeamDetailView(APIView):
@@ -208,17 +204,6 @@ class TeamDetailView(APIView):
         serializer = TeamDetailSerializer(team)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-        # team_details = [
-        # {
-        #     "username": team.username,
-        #     "organization": organization.username,
-        # }
-        # ]
-
-        # return Response(team_details, status=200)
-
-        # return Response(team_details, status=status.HTTP_200_OK)
 
     def put(self, request, organization_name, team_name):
         """
@@ -237,7 +222,6 @@ class TeamDetailView(APIView):
         if Team.objects.filter(team_organization=organization, username=new_team_name).exists():
             return Response({"error": "Team with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Update the team name
         new_team_name = f'@{organization_name}/{new_team_name}'
         team.username = new_team_name
         team.save()
@@ -245,7 +229,6 @@ class TeamDetailView(APIView):
 
         serializer = TeamSerializer(team)
         return Response(serializer.data, status=status.HTTP_200_OK)
-        # return Response({"username": team.username}, status=status.HTTP_200_OK)
 
     def delete(self, request, organization_name, team_name):
         """
@@ -256,20 +239,16 @@ class TeamDetailView(APIView):
         team_name = f'@{organization_name}/{team_name}'
         team = get_object_or_404(Team, team_organization=organization, username=team_name)
 
-        # Delete the team
         team.delete()
         serializer = TeamDeleteSerializer(data={'message': "Team deleted successfully"})
-        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
-
-        # return Response({"message": "Team deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TeamListCreateView(APIView):
 
     def get(self, request, organization_name):
         """
-        Handle GET request: Retrieve all teams under a specific organization --> organizations/<str:organizationr_name>/team/
+        Handle GET request: Retrieve all teams under a specific organization --> organizations/<str:organization_name>/team/
         """
         # Get the organization by its name
         organization = get_object_or_404(Organization, username=organization_name)
@@ -279,24 +258,12 @@ class TeamListCreateView(APIView):
         serializer = TeamListSerializer(teams, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # team_list = [
-        #     {
-        #         "Team Name": team.username,
-        #         "Actual name:": team.teamname
-        #     }
-        #     for team in teams
-        # ]
-
-        # return Response(team_list, status=status.HTTP_200_OK)
-
     def post(self, request, organization_name):
         """
         Handle POST request: Create a new team under a specific organization.
         """
-        # Get the organization by its name
         organization = get_object_or_404(Organization, username=organization_name)
 
-        # Extract the 'username' field from the request data
         team_name = request.data.get('username')
 
         if not team_name:
@@ -304,12 +271,10 @@ class TeamListCreateView(APIView):
 
         team_name = f'@{organization_name}/{team_name}'
 
-        # Check if a team with the same name already exists within the organization
         if Team.objects.filter(team_organization=organization, username=team_name).exists():
             return Response({"error": "Team with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
         
-        # Create the new team
         new_team = Team.objects.create(
             username=team_name,
             team_organization=organization,
@@ -318,12 +283,6 @@ class TeamListCreateView(APIView):
 
         serializer = TeamSerializer(new_team)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-        # # Return the created team details
-        # return Response(
-        #     {"username": new_team.username},
-        #     status=status.HTTP_201_CREATED
-        # )
-
 
 
 class TeamMemberView(APIView):
@@ -339,38 +298,24 @@ class TeamMemberView(APIView):
 
         team = get_object_or_404(Team, username=team_name, team_organization=organization)
 
-        serializer = AddMemberSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = {
+            'username': request.data.get('username'),
+            'organization': organization_name
+        }
+        serializer = AddMemberSerializer(data=data)
+        serializer.is_valid(raise_exception=True)  
 
-        username = serializer.validated_data.get('username')
+        user = serializer.validated_data['user']  
+        organization = serializer.validated_data['organization']  
 
-        # username = request.data.get('username')
-        # email = request.data.get('email')
-        
-        # if not username and not email:
-        #     return Response({'error': 'Username or email is required'}, status=400)
-
-        # # organization_users = querysets_utils.get_users(organization=organization,username=username)
-        organization_users = querysets_utils.get_organization_members(organization=organization)
-
-        if not Person.objects.filter(username=username).exists() :
-            return Response({'error': 'Username does not exists'}, status=400)
-        
-        user = Person.objects.get(username=username)
-
-        is_member = user in organization_users
-
-        if not is_member:
-            return Response({'error': f'{username} does not belong to {organization_name}'}, status=403)
-        
-        # Create or get the team member
         team_member, created = TeamMember.objects.get_or_create(team=team, member=user)
 
         if created:
-            return Response({'message': f'{username} added to {team_name} team'}, status=201)
+            return Response({'message': f'{user.username} added to {team_name} team'}, status=status.HTTP_201_CREATED)
         else:
-            return Response({'message': f'{username} is already a member of {team_name}'}, status=200)
+            return Response({'message': f'{user.username} is already a member of {team_name}'}, status=status.HTTP_200_OK)
+
+
 
     def get(self, request, organization_name, team_name):
         """List all members of a team within an organization."""
@@ -383,20 +328,7 @@ class TeamMemberView(APIView):
         
         members = get_team_members(team) 
 
-         # Serialize the members list
         serializer = TeamMemberSerializer(members, many=True)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-        # # Prepare member details for response
-        # member_list = [
-        #     {
-        #         'username': member.member.username,
-        #         'email': member.member.email,
-        #         # 'role': member.Roles.  # Assuming there's a role field with choices
-        #     }
-        #     for member in members
-        # ]
-
-        # return Response(member_list, status=200)
-
 
