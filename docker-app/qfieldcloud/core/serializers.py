@@ -602,14 +602,6 @@ class AddMemberSerializer(serializers.Serializer):
             )
 
 
-class TeamDetailSerializer(serializers.ModelSerializer):
-    organization = serializers.StringRelatedField(source="team_organization")
-
-    class Meta:
-        model = Team
-        fields = ("username", "organization")
-
-
 class TeamListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
