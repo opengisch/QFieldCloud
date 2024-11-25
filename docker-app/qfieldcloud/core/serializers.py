@@ -565,7 +565,6 @@ class AddMemberSerializer(serializers.Serializer):
         user = self._validate_user_exists(username, email)
 
         organization = self.context.get("organization")
-        self._validate_user_membership(user, organization)
 
         data["user"] = user
         data["organization"] = organization
@@ -589,17 +588,7 @@ class AddMemberSerializer(serializers.Serializer):
                     "User with the given email does not exist."
                 )
 
-        raise serializers.ValidationError(
-            "Invalid user lookup."
-        )  # Should not reach here
-
-    def _validate_user_membership(self, user, organization):
-        """Validate that the user is a member of the organization."""
-
-        if not Organization.objects.of_user(user).filter(id=organization.id).exists():
-            raise serializers.ValidationError(
-                f"User '{user.username}' is not a member of the organization '{organization.name}'."
-            )
+        raise serializers.ValidationError("Invalid user lookup.")
 
 
 class TeamListSerializer(serializers.ModelSerializer):
