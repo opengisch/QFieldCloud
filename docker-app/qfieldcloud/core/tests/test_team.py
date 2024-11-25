@@ -1,6 +1,7 @@
 import logging
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
+    TeamMember,
     Organization,
     OrganizationMember,
     Person,
@@ -9,7 +10,7 @@ from qfieldcloud.core.models import (
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import set_subscription, setup_subscription_plans
+from .utils import setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
@@ -34,9 +35,6 @@ class TeamsTestCase(APITestCase):
             organization_owner=self.user1,
         )
 
-        # Activate Subscriptions
-        set_subscription(self.organization1, "default_org")
-
         OrganizationMember.objects.create(
             organization=self.organization1,
             member=self.user2,
@@ -48,75 +46,224 @@ class TeamsTestCase(APITestCase):
             role=OrganizationMember.Roles.MEMBER,
         )
 
-    def test_list_teams(self):
+    def test_authorized_user_can_list_teams(self):
+        """Test that an authorized user can list teams."""
+        team1_username = Team.format_team_name(self.organization1.username, "team1")
+        team2_username = Team.format_team_name(self.organization1.username, "team2")
+
         team1 = Team.objects.create(
-            username=f"@{self.organization1.username}/team1",
+            username=team1_username,
             team_organization=self.organization1,
         )
         team2 = Team.objects.create(
-            username=f"@{self.organization1.username}/team2",
+            username=team2_username,
             team_organization=self.organization1,
         )
 
+        self.assertEqual(Team.objects.filter(username=team1.username).count(), 1)
+        self.assertEqual(Team.objects.filter(username=team2.username).count(), 1)
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
         response = self.client.get(
-            f"/organizations/{self.organization1.username}/team/"
+            f"/api/v1/organizations/{self.organization1.username}/teams/"
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        json_response = response.json()
-        team_usernames = [team["username"] for team in json_response]
+        response_content = response.json()
 
-        self.assertIn(team1.username, team_usernames)
-        self.assertIn(team2.username, team_usernames)
+        team_usernames = sorted([team["username"] for team in response_content])
 
-    def test_create_team(self):
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        self.assertEqual(len(team_usernames), 2)
+        self.assertEqual(team1.username, team_usernames[0])
+        self.assertEqual(team2.username, team_usernames[1])
+
+    def test_authorized_user_can_retrieve_team_detail(self):
+        """Test that an authorized user can get team's details."""
+        team_username = Team.format_team_name(self.organization1.username, "team1")
+
+        team = Team.objects.create(
+            username=team_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+
+        response = self.client.get(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response_content = response.json()
+
+        self.assertEqual(response_content["username"], team.username)
+        self.assertEqual(response_content["organization"], self.organization1.username)
+
+    def test_unauthorized_user_cannot_create_team(self):
+        """Ensure unauthorized users cannot create a team."""
+
+        self.assertEqual(Team.objects.filter(username="unauthorizedteam").count(), 0)
+
         response = self.client.post(
-            f"/organizations/{self.organization1.username}/team/",
+            f"/api/v1/organizations/{self.organization1.username}/teams/",
+            {"username": "unauthorizedteam"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Team.objects.filter(username="unauthorizedteam").count(), 0)
+
+    def test_non_admin_user_cannot_create_team(self):
+        """Ensure non-admin members cannot create a team."""
+
+        self.assertEqual(Team.objects.filter(username="unauthorizedteam").count(), 0)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+
+        response = self.client.post(
+            f"/api/v1/organizations/{self.organization1.username}/teams/",
+            {"username": "unauthorizedteam"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Team.objects.filter(username="unauthorizedteam").count(), 0)
+
+    def test_unauthorized_user_cannot_update_team(self):
+        """Ensure unauthorized users cannot update a team."""
+        team_username = Team.format_team_name(
+            self.organization1.username, "oldteamname"
+        )
+
+        team = Team.objects.create(
+            username=team_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+        response = self.client.put(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/",
+            {"username": "newteamname"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+    def test_non_admin_user_cannot_update_team(self):
+        """Ensure non-admin members cannot update a team."""
+        team_username = f"@{self.organization1.username}/oldteamname"
+
+        team = Team.objects.create(
+            username=team_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+
+        response = self.client.put(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/",
+            {"username": "newteamname"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+    def test_unauthorized_user_cannot_delete_team(self):
+        """Ensure unauthorized users cannot delete a team."""
+        team_username = f"@{self.organization1.username}/teamtodelete"
+
+        team = Team.objects.create(
+            username=team_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+        response = self.client.delete(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+    def test_non_admin_user_cannot_delete_team(self):
+        """Ensure non-admin members cannot delete a team."""
+        team_username = Team.format_team_name(
+            self.organization1.username, "teamtodelete"
+        )
+
+        team = Team.objects.create(
+            username=team_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+
+        response = self.client.delete(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
+    def test_unauthorized_user_cannot_list_teams(self):
+        """Test that an unauthorized user cannot list teams."""
+        team1_username = Team.format_team_name(self.organization1.username, "team1")
+        team2_username = Team.format_team_name(self.organization1.username, "team2")
+
+        _team1 = Team.objects.create(
+            username=team1_username,
+            team_organization=self.organization1,
+        )
+        _team2 = Team.objects.create(
+            username=team2_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team1_username).count(), 1)
+        self.assertEqual(Team.objects.filter(username=team2_username).count(), 1)
+
+        response = self.client.get(
+            f"/api/v1/organizations/{self.organization1.username}/teams/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_admin_user_can_create_team(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        team_username = Team.format_team_name(self.organization1.username, "newteam")
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+
+        response = self.client.post(
+            f"/api/v1/organizations/{self.organization1.username}/teams/",
             {"username": "newteam"},
         )
 
-        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
 
-        team_username = f"@{self.organization1.username}/newteam"
-        team_exists = Team.objects.filter(
-            username=team_username, team_organization=self.organization1
-        ).exists()
-        self.assertTrue(team_exists)
+    def test_admin_user_can_update_team(self):
+        team_username = f"@{self.organization1.username}/oldteamname"
 
-    def test_retrieve_team_detail(self):
-        """Test retrieving the details of a specific team."""
         team = Team.objects.create(
-            username=f"@{self.organization1.username}/teamdetail",
+            username=team_username,
             team_organization=self.organization1,
         )
 
-        # Authenticate with the correct user token
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-
-        # Make a GET request to retrieve the team details
-        url = f"/organizations/{self.organization1.username}/team/teamdetail/"
-        response = self.client.get(url)
-
-        # Assert the response status is 200 OK
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # Verify the response data
-        json_response = response.json()
-        self.assertEqual(json_response["username"], team.username)
-        self.assertEqual(json_response["organization"], self.organization1.username)
-
-    def test_update_team(self):
-        team = Team.objects.create(
-            username=f"@{self.organization1.username}/oldteamname",
-            team_organization=self.organization1,
-        )
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
         response = self.client.put(
-            f"/organizations/{self.organization1.username}/team/oldteamname/",
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/",
             {"username": "newteamname"},
         )
 
@@ -125,29 +272,83 @@ class TeamsTestCase(APITestCase):
         updated_team_username = f"@{self.organization1.username}/newteamname"
         team.refresh_from_db()
         self.assertEqual(team.username, updated_team_username)
+        self.assertEqual(Team.objects.filter(username=updated_team_username).count(), 1)
 
-    def test_delete_team(self):
+    def test_admin_user_can_delete_team(self):
+        team_username = f"@{self.organization1.username}/teamtodelete"
+
         team = Team.objects.create(
-            username=f"@{self.organization1.username}/teamtodelete",
+            username=team_username,
             team_organization=self.organization1,
         )
 
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 1)
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
         response = self.client.delete(
-            f"/organizations/{self.organization1.username}/team/teamtodelete/"
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/"
         )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Team.objects.filter(username=team_username).count(), 0)
+
+    def test_admin_user_can_list_team_members(self):
+        """Test that team members can list other members of their team."""
+        team_username = Team.format_team_name(self.organization1, "team_with_members")
+
+        team = Team.objects.create(
+            username=team_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team.username).count(), 1)
+
+        TeamMember.objects.create(team=team, member=self.user2)
+        TeamMember.objects.create(team=team, member=self.user3)
+
+        self.assertEqual(TeamMember.objects.filter(team=team).count(), 2)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        response = self.client.get(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/members/"
+        )
+
+        print("JSON response:", response.json())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        team_exists = Team.objects.filter(
-            username=team.username, team_organization=self.organization1
-        ).exists()
-        self.assertFalse(team_exists)
+        member_usernames = sorted([member["member"] for member in response.json()])
 
-    # TODO
-    def test_non_member_cannot_access_team(self):
-        pass
+        self.assertEqual(len(member_usernames), 2)
+        self.assertEqual(
+            TeamMember.objects.get(member=self.user2).member.id, member_usernames[0]
+        )
+        self.assertEqual(
+            TeamMember.objects.get(member=self.user3).member.id, member_usernames[1]
+        )
 
-    # TODO
-    def test_member_can_access_team(self):
-        pass
+    def test_admin_user_add_member_to_team(self):
+        """Test that an admin can add a member to a team."""
+
+        team_username = Team.format_team_name(self.organization1, "team_with_members")
+
+        team = Team.objects.create(
+            username=team_username,
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=team.username).count(), 1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+
+        response = self.client.post(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/members/",
+            {"username": self.user3.username},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            TeamMember.objects.filter(team=team, member=self.user3).count(), 1
+        )
