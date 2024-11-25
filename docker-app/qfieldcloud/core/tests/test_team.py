@@ -236,8 +236,6 @@ class TeamsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_admin_user_can_create_team(self):
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-
         team_username = Team.format_team_name(self.organization1.username, "newteam")
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
@@ -352,3 +350,66 @@ class TeamsTestCase(APITestCase):
         self.assertEqual(
             TeamMember.objects.filter(team=team, member=self.user3).count(), 1
         )
+
+    # def test_remove_member_from_team(self):
+    #     """Test that an admin can remove a member from a team."""
+    #     TeamMember.objects.create(team=self.team, member=self.user3)
+
+    #     self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+
+    #     response = self.client.delete(
+    #         f"/api/v1/organizations/{self.organization1.username}/teams/teamwithmembers/members/{self.user3.username}/"
+    #     )
+
+    #     self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+    #     self.assertFalse(
+    #         TeamMember.objects.filter(team=self.team, member=self.user3).exists()
+    #     )
+
+    # def test_non_member_cannot_access_team_members(self):
+    #     """Test that non-members cannot access the team members list."""
+    #     self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token4.key)
+    #     response = self.client.get(
+    #         f"/api/v1/organizations/{self.organization1.username}/teams/teamwithmembers/members/"
+    #     )
+
+    #     self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    # def test_member_can_access_team_members(self):
+    #     """Test that a team member can access the team members list."""
+    #     TeamMember.objects.create(team=self.team, member=self.user3)
+
+    #     self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+    #     response = self.client.get(
+    #         f"/api/v1/organizations/{self.organization1.username}/teams/teamwithmembers/members/"
+    #     )
+
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # def test_delete_team_member_by_non_admin(self):
+    #     """Test that only admins can remove a member from the team."""
+    #     TeamMember.objects.create(team=self.team, member=self.user3)
+
+    #     self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
+    #     response = self.client.delete(
+    #         f"/api/v1/organizations/{self.organization1.username}/teams/teamwithmembers/members/{self.user3.username}/"
+    #     )
+
+    #     self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    #     self.assertTrue(
+    #         TeamMember.objects.filter(team=self.team, member=self.user3).exists()
+    #     )
+
+    # def test_admin_can_delete_team_member(self):
+    #     """Test that an admin can delete a team member."""
+    #     TeamMember.objects.create(team=self.team, member=self.user3)
+
+    #     self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+    #     response = self.client.delete(
+    #         f"/api/v1/organizations/{self.organization1.username}/teams/teamwithmembers/members/{self.user3.username}/"
+    #     )
+
+    #     self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+    #     self.assertFalse(
+    #         TeamMember.objects.filter(team=self.team, member=self.user3).exists()
+    #     )

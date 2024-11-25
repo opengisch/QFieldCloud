@@ -13,6 +13,7 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     Team,
+    TeamMember,
     User,
 )
 from django.db.models import Q
@@ -283,9 +284,7 @@ class StatusChoiceField(serializers.ChoiceField):
             if self._choices[i] == data:
                 return i
         raise serializers.ValidationError(
-            "Invalid status. Acceptable values are {}.".format(
-                list(self._choices.values())
-            )
+            "Invalid status. Acceptable values are {}.".format((self._choices.values()))
         )
 
 
@@ -523,7 +522,7 @@ class FileVersionSerializer(serializers.Serializer):
 class FileSerializer(serializers.Serializer):
     """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
 
-    versions = serializers.ListField(child=FileVersionSerializer())
+    versions = serializers.Field(child=FileVersionSerializer())
     sha256 = serializers.CharField(required=False)
     name = serializers.CharField()
     size = serializers.IntegerField()
@@ -551,9 +550,13 @@ class TeamSerializer(serializers.ModelSerializer):
         fields = ("username", "organization")
 
 
-class AddMemberSerializer(serializers.Serializer):
+class TeamMemberSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
+
+    class Meta:
+        model = TeamMember
+        fields = ("username", "email", "team", "member")
 
     def validate(self, data):
         username = data.get("username")
@@ -566,10 +569,7 @@ class AddMemberSerializer(serializers.Serializer):
 
         user = self._validate_user_exists(username, email)
 
-        organization = self.context.get("organization")
-
-        data["user"] = user
-        data["organization"] = organization
+        data["member"] = user
 
         return data
 
@@ -585,11 +585,6 @@ class AddMemberSerializer(serializers.Serializer):
         try:
             return User.objects.get(Q(username=username) | Q(email=email))
         except User.DoesNotExist:
-            if username:
-                raise serializers.ValidationError(
-                    "User with the given username does not exist."
-                )
-            elif email:
-                raise serializers.ValidationError(
-                    "User with the given email does not exist."
-                )
+            raise serializers.ValidationError(
+                f"User with the given {'username' if username else 'email'} does not exist."
+            )

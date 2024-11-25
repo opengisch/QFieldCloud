@@ -1,7 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
-from rest_framework.generics import RetrieveUpdateDestroyAPIView
 
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
 from qfieldcloud.core.models import (
@@ -20,7 +19,6 @@ from qfieldcloud.core.serializers import (
 
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
@@ -178,30 +176,64 @@ class TeamMemberDeleteViewPermissions(permissions.BasePermission):
         return False
 
 
-@extend_schema_view(
-    delete=extend_schema(description="Remove a member from a team"),
-)
-class TeamMemberDeleteView(generics.DestroyAPIView):
-    permission_classes = [
-        permissions.IsAuthenticated,
-        TeamMemberDeleteViewPermissions,
-    ]
-    serializer_class = TeamMemberSerializer
+# @extend_schema_view(
+#     delete=extend_schema(description="Remove a member from a team"),
+# )
+# class TeamMemberDeleteView(generics.DestroyAPIView):
+#     permission_classes = [
+#         permissions.IsAuthenticated,
+#         TeamMemberDeleteViewPermissions,
+#     ]
+#     serializer_class = TeamMemberSerializer
 
-    def get_queryset(self):
-        """
-        Define the queryset used for the view, ensuring objects are filtered
-        based on URL parameters.
-        """
-        organization_name = self.kwargs.get("organization_name")
-        team_name = self.kwargs.get("team_name")
-        member_username = self.kwargs.get("member_username")
+#     def get_queryset(self):
+#         """
+#         Define the queryset used for the view, ensuring objects are filtered
+#         based on URL parameters.
+#         """
+#         organization_name = self.kwargs.get("organization_name")
+#         team_name = self.kwargs.get("team_name")
+#         member_username = self.kwargs.get("member_username")
 
-        return TeamMember.objects.filter(
-            team__organization__username=organization_name,
-            team__username=Team.format_team_name(organization_name, team_name),
-            member__username=member_username,
-        )
+#         return TeamMember.objects.filter(
+#             team__organization__username=organization_name,
+#             team__username=Team.format_team_name(organization_name, team_name),
+#             member__username=member_username,
+#         )
+
+
+class TeamMemberPermission(permissions.BasePermission):
+    """
+    Permission class to handle CRUD operations for team members.
+    """
+
+    def has_permission(self, request, view):
+        organization_name = view.kwargs.get("organization_name")
+        team_name = view.kwargs.get("team_name")
+        team_username = Team.format_team_name(organization_name, team_name)
+
+        try:
+            organization = Organization.objects.get(username=organization_name)
+            _team = Team.objects.get(
+                username=team_username, team_organization=organization
+            )
+
+        except (Team.DoesNotExist, Organization.DoesNotExist):
+            return False
+
+        if request.method == "GET":
+            return permissions_utils.can_read_members(request.user, organization)
+
+        elif request.method == "POST":
+            return permissions_utils.can_create_members(request.user, organization)
+
+        elif request.method in ["PUT", "PATCH"]:
+            return permissions_utils.can_update_members(request.user, organization)
+
+        elif request.method == "DELETE":
+            return permissions_utils.can_delete_members(request.user, organization)
+
+        return False
 
 
 class TeamPermission(permissions.BasePermission):
@@ -234,7 +266,7 @@ class TeamPermission(permissions.BasePermission):
     put=extend_schema(description="Update a team's name"),
     delete=extend_schema(description="Delete a team"),
 )
-class TeamDetailView(RetrieveUpdateDestroyAPIView):
+class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Handles GET, PUT, and DELETE for teams under a specific organization.
     """
@@ -280,7 +312,7 @@ class TeamDetailView(RetrieveUpdateDestroyAPIView):
     get=extend_schema(description="List all teams under an organization"),
     post=extend_schema(description="Create a new team under an organization"),
 )
-class TeamListCreateView(APIView):
+class TeamListCreateView(generics.ListCreateAPIView):
     """
     Handles GET (list all teams) and POST (create a new team) under an organization.
     """
@@ -298,16 +330,11 @@ class TeamListCreateView(APIView):
         organization = get_object_or_404(Organization, username=organization_name)
 
         team_name = self.request.data.get("username")
+
         if not team_name:
-            raise permissions.ValidationError({"error": "Team name is required."})
+            raise ValueError({"Empty Value Error": "Team name is required."})
 
         full_team_name = Team.format_team_name(organization_name, team_name)
-        if Team.objects.filter(
-            team_organization=organization, username=full_team_name
-        ).exists():
-            raise permissions.ValidationError(
-                {"error": "A team with this name already exists."}
-            )
 
         serializer.save(team_organization=organization, username=full_team_name)
 
@@ -316,34 +343,57 @@ class TeamListCreateView(APIView):
     get=extend_schema(description="List all members of a team"),
     post=extend_schema(description="Add a new member to a team"),
 )
-class TeamMemberView(APIView):
+class GetUpdateDestroyTeamMemberView(generics.RetrieveUpdateDestroyAPIView):
     """
     View to handle adding and listing team members. --> organizations/<str:organization_name>/team/<str:team_name>/members/"
     """
 
-    permission_classes = [permissions.IsAuthenticated, TeamPermission]
+    permission_classes = [permissions.IsAuthenticated, TeamMemberPermission]
     serializer_class = TeamMemberSerializer
 
     def get_queryset(self):
         organization_name = self.kwargs.get("organization_name")
         team_name = self.kwargs.get("team_name")
 
-        organization = get_object_or_404(Organization, username=organization_name)
         full_team_name = Team.format_team_name(organization_name, team_name)
-        team = get_object_or_404(
-            Team, team_organization=organization, username=full_team_name
+
+        return TeamMember.objects.filter(
+            team__team_organization__username=organization_name,
+            team__username=full_team_name,
+        ).select_related("member")
+
+
+class ListCreateTeamMembersView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, TeamMemberPermission]
+    serializer_class = TeamMemberSerializer
+
+    def get_queryset(self):
+        organization_name = self.request.parser_context["kwargs"]["organization_name"]
+        team_name = self.request.parser_context["kwargs"]["team_name"]
+        full_team_name = Team.format_team_name(organization_name, team_name)
+
+        return TeamMember.objects.filter(
+            team__team_organization__username=organization_name,
+            team__username=full_team_name,
         )
 
-        return TeamMember.objects.filter(team=team)
+    def post(self, request, organization_name, team_name):
+        print(101, request.data, organization_name, team_name)
+        data = {**request.data, "team": team_name}
 
-    def perform_create(self, serializer):
-        organization_name = self.kwargs.get("organization_name")
-        team_name = self.kwargs.get("team_name")
-
-        organization = get_object_or_404(Organization, username=organization_name)
-        full_team_name = Team.format_team_name(organization_name, team_name)
-        team = get_object_or_404(
-            Team, team_organization=organization, username=full_team_name
-        )
-
-        serializer.save(team=team)
+        print(102, data, organization_name, team_name)
+        serializer = self.get_serializer(data=data)
+        print(111)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                print(112)
+                team = serializer.validated_data["team"]
+                print(113)
+                member_obj = serializer.validated_data["member"]
+                print(114)
+                serializer.save(team=team, member=member_obj)
+                print(115)
+            print(116)
+        except Exception as e:
+            print(117)
+            print(e)
