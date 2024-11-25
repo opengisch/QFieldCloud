@@ -15,7 +15,6 @@ from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     OrganizationSerializer,
     PublicInfoUserSerializer,
-    TeamDeleteSerializer,
     TeamListSerializer,
     TeamMemberSerializer,
     TeamSerializer,
@@ -258,10 +257,7 @@ class TeamDetailView(APIView):
 
         team.delete()
 
-        serializer = TeamDeleteSerializer(data={"message": "Team deleted successfully"})
-        serializer.is_valid(raise_exception=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TeamListCreateView(APIView):
