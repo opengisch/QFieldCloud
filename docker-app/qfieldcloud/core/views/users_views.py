@@ -368,32 +368,25 @@ class ListCreateTeamMembersView(generics.ListCreateAPIView):
     serializer_class = TeamMemberSerializer
 
     def get_queryset(self):
-        organization_name = self.request.parser_context["kwargs"]["organization_name"]
-        team_name = self.request.parser_context["kwargs"]["team_name"]
-        full_team_name = Team.format_team_name(organization_name, team_name)
+        organization_name = self.kwargs.get("organization_name")
 
         return TeamMember.objects.filter(
             team__team_organization__username=organization_name,
-            team__username=full_team_name,
+            team__username=self.get_full_team_name(),
         )
 
-    def post(self, request, organization_name, team_name):
-        print(101, request.data, organization_name, team_name)
-        data = {**request.data, "team": team_name}
+    def get_full_team_name(self) -> str:
+        organization_name = self.kwargs.get("organization_name")
+        team_name = self.kwargs.get("team_name")
 
-        print(102, data, organization_name, team_name)
-        serializer = self.get_serializer(data=data)
-        print(111)
-        try:
-            if serializer.is_valid(raise_exception=True):
-                print(112)
-                team = serializer.validated_data["team"]
-                print(113)
-                member_obj = serializer.validated_data["member"]
-                print(114)
-                serializer.save(team=team, member=member_obj)
-                print(115)
-            print(116)
-        except Exception as e:
-            print(117)
-            print(e)
+        return Team.format_team_name(organization_name, team_name)
+
+    def perform_create(self, serializer):
+        team = Team.objects.get(
+            team_organization__username=self.kwargs.get("organization_name"),
+            username=self.get_full_team_name(),
+        )
+
+        serializer.save(
+            team=team,
+        )

@@ -185,6 +185,17 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
     def get_queryset(self):
         return super().get_queryset().select_subclasses()
 
+    def fast_search(self, username_or_email: str) -> "User":
+        """Searches a user by `username` or `email` field
+
+        Args:
+            username_or_email (str): username or email to search for
+
+        Returns:
+            User: The user with that username or email.
+        """
+        return self.get(Q(username=username_or_email) | Q(email=username_or_email))
+
 
 class PersonManager(UserManager):
     def get_queryset(self):

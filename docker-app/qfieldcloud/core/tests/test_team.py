@@ -25,7 +25,9 @@ class TeamsTestCase(APITestCase):
         self.user2 = Person.objects.create_user(username="user2", password="abc123")
         self.token2 = AuthToken.objects.get_or_create(user=self.user2)[0]
 
-        self.user3 = Person.objects.create_user(username="user3", password="abc123")
+        self.user3 = Person.objects.create_user(
+            username="user3", email="user3@email.com", password="abc123"
+        )
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
 
         self.organization1 = Organization.objects.create(
@@ -313,42 +315,63 @@ class TeamsTestCase(APITestCase):
             f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/members/"
         )
 
-        print("JSON response:", response.json())
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        member_usernames = sorted([member["member"] for member in response.json()])
-
-        self.assertEqual(len(member_usernames), 2)
-        self.assertEqual(
-            TeamMember.objects.get(member=self.user2).member.id, member_usernames[0]
+        self.assertJSONEqual(
+            response.content.decode(),
+            [
+                {
+                    "member": "user2",
+                },
+                {
+                    "member": "user3",
+                },
+            ],
         )
-        self.assertEqual(
-            TeamMember.objects.get(member=self.user3).member.id, member_usernames[1]
-        )
 
-    def test_admin_user_add_member_to_team(self):
+    def test_admin_user_add_member_to_team_by_username(self):
         """Test that an admin can add a member to a team."""
-
-        team_username = Team.format_team_name(self.organization1, "team_with_members")
-
-        team = Team.objects.create(
-            username=team_username,
+        t1 = Team.objects.create(
+            username=Team.format_team_name(self.organization1, "t1"),
             team_organization=self.organization1,
         )
 
-        self.assertEqual(Team.objects.filter(username=team.username).count(), 1)
+        self.assertEqual(Team.objects.filter(username=t1.username).count(), 1)
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
 
         response = self.client.post(
-            f"/api/v1/organizations/{self.organization1.username}/teams/{team.teamname}/members/",
-            {"username": self.user3.username},
+            f"/api/v1/organizations/{self.organization1.username}/teams/{t1.teamname}/members/",
+            {
+                "member": self.user3.username,
+            },
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(
-            TeamMember.objects.filter(team=team, member=self.user3).count(), 1
+            TeamMember.objects.filter(team=t1, member=self.user3).count(), 1
+        )
+
+    def test_admin_user_add_member_to_team_by_email(self):
+        """Test that an admin can add a member to a team."""
+        t1 = Team.objects.create(
+            username=Team.format_team_name(self.organization1, "t1"),
+            team_organization=self.organization1,
+        )
+
+        self.assertEqual(Team.objects.filter(username=t1.username).count(), 1)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+
+        response = self.client.post(
+            f"/api/v1/organizations/{self.organization1.username}/teams/{t1.teamname}/members/",
+            {
+                "member": self.user3.email,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            TeamMember.objects.filter(team=t1, member=self.user3).count(), 1
         )
 
     # def test_remove_member_from_team(self):

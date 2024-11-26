@@ -16,7 +16,6 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -551,40 +550,16 @@ class TeamSerializer(serializers.ModelSerializer):
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=False, allow_blank=True)
-    email = serializers.EmailField(required=False, allow_blank=True)
+    member = serializers.CharField()
+
+    def to_internal_value(self, data):
+        validated_data = super().to_internal_value(data)
+        email_or_username = data.get("member")
+
+        validated_data["member"] = User.objects.fast_search(email_or_username)
+
+        return validated_data
 
     class Meta:
         model = TeamMember
-        fields = ("username", "email", "team", "member")
-
-    def validate(self, data):
-        username = data.get("username")
-        email = data.get("email")
-
-        if not username and not email:
-            raise serializers.ValidationError(
-                "Either username or email must be provided."
-            )
-
-        user = self._validate_user_exists(username, email)
-
-        data["member"] = user
-
-        return data
-
-    def _validate_user_exists(self, username: str | None, email: str | None) -> User:
-        """
-        Validate that a user exists via username or email.
-        """
-        if not username and not email:
-            raise serializers.ValidationError(
-                "Must provide either a username or an email."
-            )
-
-        try:
-            return User.objects.get(Q(username=username) | Q(email=email))
-        except User.DoesNotExist:
-            raise serializers.ValidationError(
-                f"User with the given {'username' if username else 'email'} does not exist."
-            )
+        fields = ("member",)
