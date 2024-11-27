@@ -521,7 +521,7 @@ class FileVersionSerializer(serializers.Serializer):
 class FileSerializer(serializers.Serializer):
     """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
 
-    versions = serializers.Field(child=FileVersionSerializer())
+    versions = serializers.ListField(child=FileVersionSerializer())
     sha256 = serializers.CharField(required=False)
     name = serializers.CharField()
     size = serializers.IntegerField()
@@ -555,6 +555,23 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         validated_data = super().to_internal_value(data)
         email_or_username = data.get("member")
+
+        request_method = self.context["request"].method
+
+        if request_method in ["PUT", "PATCH"]:
+            if not email_or_username:
+                raise serializers.ValidationError(
+                    {"member": "Username must be provided"}
+                )
+
+            if User.objects.fast_count(email_or_username) > 0:
+                raise serializers.ValidationError(
+                    {
+                        "member": f"A user with username '{email_or_username}' already exists."
+                    }
+                )
+
+            email_or_username = self.context["view"].kwargs.get("member_username")
 
         validated_data["member"] = User.objects.fast_search(email_or_username)
 
