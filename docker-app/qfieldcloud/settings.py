@@ -616,6 +616,17 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
     },
 ]
 
+
+# Django auditlog version 3.0.0 migrates the `changes` from `text` to `jsonb` datatype.
+# Since QFieldCloud has millions of audits, the migration will lock the database for hours.
+# This problem was recognized by the developers and they added two step migration: there are two fields to store the `changes`, the old text based one and the new json based new one.
+# TODO remove the `AUDITLOG_TWO_STEP_MIGRATION` and `AUDITLOG_USE_TEXT_CHANGES_IF_JSON_IS_NOT_PRESENT` settings in the future, after `manage.py auditlogmigratejson` has been called.
+# TODO THe `auditlog_logentry.changes_text` shall be removed manually after that.
+# Read more: https://django-auditlog.readthedocs.io/en/latest/upgrade.html
+AUDITLOG_TWO_STEP_MIGRATION = True
+AUDITLOG_USE_TEXT_CHANGES_IF_JSON_IS_NOT_PRESENT = True
+
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "QFieldCloud JSON API",
     "DESCRIPTION": "QFieldCloud JSON API",
