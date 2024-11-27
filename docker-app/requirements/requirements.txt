@@ -74,7 +74,7 @@ django-allauth==0.44.0
     # via -r /requirements/requirements.in
 django-appconf==1.0.6
     # via django-cryptography
-django-auditlog==2.3.0
+django-auditlog==3.0.0
     # via -r /requirements/requirements.in
 django-axes==5.40.1
     # via -r /requirements/requirements.in
