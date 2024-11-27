@@ -1,22 +1,17 @@
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
-
-
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
-from qfieldcloud.core.models import (
-    Organization,
-    Project,
-)
+from qfieldcloud.core.models import Organization, Project
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     OrganizationSerializer,
     PublicInfoUserSerializer,
 )
-
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 
-from django.contrib.auth.models import User
+User = get_user_model()
 
 
 class ListUsersViewPermissions(permissions.BasePermission):
