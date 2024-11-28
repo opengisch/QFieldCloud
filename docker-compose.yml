@@ -108,6 +108,7 @@ services:
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
       LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
       LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
+      NGINX_ERROR_LOG_LEVEL: ${NGINX_ERROR_LOG_LEVEL:-error}
     logging:
       driver: "json-file"
       options:
