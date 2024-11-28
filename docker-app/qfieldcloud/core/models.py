@@ -760,7 +760,9 @@ class OrganizationMember(models.Model):
         blank=True,
         limit_choices_to=models.Q(type=User.Type.PERSON),
     )
+
     created_at = models.DateTimeField(auto_now_add=True)
+
     updated_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -769,6 +771,7 @@ class OrganizationMember(models.Model):
         blank=True,
         limit_choices_to=models.Q(type=User.Type.PERSON),
     )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
