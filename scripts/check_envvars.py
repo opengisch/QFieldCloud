@@ -30,7 +30,7 @@ def get_env_varnames_from_envfile(filename: str) -> Set[str]:
 
 
 def get_env_varnames_from_docker_compose(filename: Path) -> Set[str]:
-    regex = r"\$\{(\w+)\}"
+    regex = r"\$\{(\w+)(:-?\w+?)?\}"
     result = set()
 
     with open(filename) as f:
