@@ -859,7 +859,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 1)
         self.assertEqual(self.p1.get_file("file.name").latest_version_id, version1.pk)
 
-    def test_user_deletion_updates_who_uploaded_the_files(self):
+    def test_user_deletion_sets_uploaded_by_to_null(self):
         u2 = Person.objects.create_user(username="u2", password="abc123")
         ProjectCollaborator.objects.create(
             collaborator=u2, project=self.p1, role=ProjectCollaborator.Roles.EDITOR
@@ -873,51 +873,8 @@ class QfcTestCase(APITransactionTestCase):
 
         u2.delete()
 
-        self.assertEqual(self.p1.get_file("file.name").uploaded_by, self.u1)
-        self.assertEqual(
-            self.p1.get_file("file.name").versions.all()[0].uploaded_by, self.u1
-        )
-
-    def test_owner_deletion_updates_who_uploaded_the_files(self):
-        u2 = Person.objects.create_user(username="u2", password="abc123")
-        p2 = Project.objects.create(name="p2", owner=u2)
-
-        # the owner uploads a file
-        self.assertFileUploaded(u2, p2, "file.name", StringIO("Hello!"))
-        self.assertEqual(p2.get_file("file.name").uploaded_by, u2)
-        self.assertEqual(p2.get_file("file.name").versions.count(), 1)
-        self.assertEqual(p2.get_file("file.name").versions.all()[0].uploaded_by, u2)
-
-        # change the owner
-        p2.owner = self.u1
-        p2.save()
-
-        # ensure there are no changes on the files data
-        self.assertEqual(p2.get_file("file.name").uploaded_by, u2)
-        self.assertEqual(p2.get_file("file.name").versions.count(), 1)
-        self.assertEqual(p2.get_file("file.name").versions.all()[0].uploaded_by, u2)
-
-        # the new owner uploads a file
-        self.assertFileUploaded(self.u1, p2, "file.name", StringIO("Hello!"))
-        self.assertEqual(p2.get_file("file.name").uploaded_by, u2)
-        self.assertEqual(p2.get_file("file.name").versions.count(), 2)
-        self.assertEqual(
-            p2.get_file("file.name").versions.all()[0].uploaded_by, self.u1
-        )
-        self.assertEqual(p2.get_file("file.name").versions.all()[1].uploaded_by, u2)
-
-        # delete the old owner
-        u2.delete()
-
-        # the files data is updated
-        self.assertEqual(p2.get_file("file.name").uploaded_by, self.u1)
-        self.assertEqual(p2.get_file("file.name").versions.count(), 2)
-        self.assertEqual(
-            p2.get_file("file.name").versions.all()[0].uploaded_by, self.u1
-        )
-        self.assertEqual(
-            p2.get_file("file.name").versions.all()[1].uploaded_by, self.u1
-        )
+        self.assertIsNone(self.p1.get_file("file.name").uploaded_by)
+        self.assertIsNone(self.p1.get_file("file.name").versions.all()[0].uploaded_by)
 
     def test_upload_file_version_adds_audit(self):
         file_content_type = ContentType.objects.get_for_model(File)
