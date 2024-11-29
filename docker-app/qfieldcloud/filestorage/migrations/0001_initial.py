@@ -77,9 +77,10 @@ class Migration(migrations.Migration):
                 (
                     "uploaded_by",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         to=settings.AUTH_USER_MODEL,
                         editable=False,
+                        null=True,
                     ),
                 ),
                 (
@@ -118,9 +119,10 @@ class Migration(migrations.Migration):
                 (
                     "uploaded_by",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         to=settings.AUTH_USER_MODEL,
                         editable=False,
+                        null=True,
                     ),
                 ),
                 (
