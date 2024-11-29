@@ -36,32 +36,6 @@ class TeamMemberDeleteViewPermissions(permissions.BasePermission):
         return False
 
 
-# @extend_schema_view(
-#     delete=extend_schema(description="Remove a member from a team"),
-# )
-# class TeamMemberDeleteView(generics.DestroyAPIView):
-#     permission_classes = [
-#         permissions.IsAuthenticated,
-#         TeamMemberDeleteViewPermissions,
-#     ]
-#     serializer_class = TeamMemberSerializer
-
-#     def get_queryset(self):
-#         """
-#         Define the queryset used for the view, ensuring objects are filtered
-#         based on URL parameters.
-#         """
-#         organization_name = self.kwargs.get("organization_name")
-#         team_name = self.kwargs.get("team_name")
-#         member_username = self.kwargs.get("member_username")
-
-#         return TeamMember.objects.filter(
-#             team__organization__username=organization_name,
-#             team__username=Team.format_team_name(organization_name, team_name),
-#             member__username=member_username,
-#         )
-
-
 class TeamMemberPermission(permissions.BasePermission):
     """
     Permission class to handle CRUD operations for team members.
@@ -200,8 +174,10 @@ class TeamListCreateView(generics.ListCreateAPIView):
 
 
 @extend_schema_view(
-    get=extend_schema(description="List all members of a team"),
-    post=extend_schema(description="Add a new member to a team"),
+    get=extend_schema(description="Retrieve, update, or delete a team member"),
+    patch=extend_schema(description="Partially update a team member"),
+    put=extend_schema(description="Update a team member"),
+    delete=extend_schema(description="Delete a team member"),
 )
 class GetUpdateDestroyTeamMemberView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -256,6 +232,10 @@ class GetUpdateDestroyTeamMemberView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
 
 
+@extend_schema_view(
+    get=extend_schema(description="List all members of a team"),
+    post=extend_schema(description="Add a new member to a team"),
+)
 class ListCreateTeamMembersView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, TeamMemberPermission]
     serializer_class = TeamMemberSerializer
