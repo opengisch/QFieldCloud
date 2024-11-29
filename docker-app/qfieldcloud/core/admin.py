@@ -1258,49 +1258,6 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         )
 
 
-class GeodbAdmin(QFieldCloudModelAdmin):
-    list_filter = ("created_at", "hostname")
-    list_display = (
-        "user",
-        "username",
-        "dbname",
-        "hostname",
-        "port",
-        "created_at",
-        "size",
-    )
-
-    fields = (
-        "user",
-        "username",
-        "dbname",
-        "hostname",
-        "port",
-        "created_at",
-        "size",
-        "last_geodb_error",
-    )
-
-    readonly_fields = ("size", "created_at", "last_geodb_error")
-
-    search_fields = (
-        "user__username",
-        "username",
-        "dbname",
-        "hostname",
-    )
-
-    def save_model(self, request, obj, form, change):
-        # Only on creation
-        if not change:
-            messages.add_message(
-                request,
-                messages.WARNING,
-                f"The password is (shown only once): {obj.password}",
-            )
-        super().save_model(request, obj, form, change)
-
-
 class OrganizationMemberInline(admin.TabularInline):
     model = OrganizationMember
     fk_name = "organization"
@@ -1522,7 +1479,6 @@ admin.site.register(Project, ProjectAdmin)
 admin.site.register(Secret, SecretAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(Job, JobAdmin)
-admin.site.register(Geodb, GeodbAdmin)
 admin.site.register(LogEntry, LogEntryAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
