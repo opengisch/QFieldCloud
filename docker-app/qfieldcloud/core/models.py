@@ -760,7 +760,6 @@ class OrganizationMember(models.Model):
         null=True,
         blank=True,
         limit_choices_to=models.Q(type=User.Type.PERSON),
-        editable=False,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -772,7 +771,6 @@ class OrganizationMember(models.Model):
         null=True,
         blank=True,
         limit_choices_to=models.Q(type=User.Type.PERSON),
-        editable=False,
     )
 
     updated_at = models.DateTimeField(auto_now=True)

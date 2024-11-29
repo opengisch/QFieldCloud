@@ -383,47 +383,6 @@ class GeodbInline(admin.TabularInline):
 #         super().save_model(request, obj, form, change)
 
 
-class MemberOrganizationInline(admin.TabularInline):
-    model = OrganizationMember
-    extra = 0
-    fields = (
-        "member",
-        "role",
-        "is_public",
-        "created_by",
-        "created_at",
-        "updated_by",
-        "updated_at",
-    )
-
-    def has_add_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
-
-    def has_direct_delete_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
-
-    def has_change_permission(self, request, obj):
-        if obj is None:
-            return True
-        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
-
-    def save_model(self, request, obj, form, change):
-        """
-        Automatically set created_by and updated_by fields.
-        """
-
-        if not change:
-            obj.created_by = request.user
-
-        obj.updated_by = request.user
-
-        super().save_model(request, obj, form, change)
-
-
 class MemberTeamInline(admin.TabularInline):
     model = TeamMember
     extra = 0
@@ -1349,9 +1308,12 @@ class OrganizationMemberInline(admin.TabularInline):
     model = OrganizationMember
     fk_name = "organization"
     extra = 0
-    readonly_fields = ("created_at", "updated_at")
-
-    autocomplete_fields = ("member",)
+    readonly_fields = (
+        "created_by",
+        "created_at",
+        "updated_by",
+        "updated_at",
+    )
 
 
 class TeamInline(admin.TabularInline):
@@ -1461,6 +1423,17 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         )
 
         return queryset, use_distinct
+
+    def save_formset(self, request, form, formset, change):
+        for form_obj in formset:
+            if isinstance(form_obj.instance, OrganizationMember):
+                # add created_by only if it's a newly created OrganizationMember
+                if form_obj.instance.id is None:
+                    form_obj.instance.created_by = request.user
+
+                form_obj.instance.updated_by = request.user
+
+        super().save_formset(request, form, formset, change)
 
 
 class TeamMemberInline(admin.TabularInline):
