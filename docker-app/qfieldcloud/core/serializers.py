@@ -564,14 +564,15 @@ class TeamMemberSerializer(serializers.ModelSerializer):
                     {"member": "Username must be provided"}
                 )
 
-            if User.objects.fast_count(email_or_username) > 0:
-                raise serializers.ValidationError(
-                    {
-                        "member": f"A user with username '{email_or_username}' already exists."
-                    }
-                )
-
-            email_or_username = self.context["view"].kwargs.get("member_username")
+            try:
+                if User.objects.fast_search(email_or_username) > 0:
+                    raise serializers.ValidationError(
+                        {
+                            "member": f"A user with username '{email_or_username}' already exists."
+                        }
+                    )
+            except User.DoesNotExist:
+                email_or_username = self.context["view"].kwargs.get("member_username")
 
         validated_data["member"] = User.objects.fast_search(email_or_username)
 
