@@ -196,20 +196,6 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
         """
         return self.get(Q(username=username_or_email) | Q(email=username_or_email))
 
-    def fast_count(self, username_or_email: str) -> int:
-        """
-        Counts users by `username` or `email` field.
-
-        Args:
-            username_or_email (str): The username or email to search for.
-
-        Returns:
-            int: The count of users with that username or email.
-        """
-        return self.filter(
-            Q(username=username_or_email) | Q(email=username_or_email)
-        ).count()
-
 
 class PersonManager(UserManager):
     def get_queryset(self):
@@ -849,7 +835,7 @@ class Team(User):
         return self.username.replace(f"@{self.team_organization.username}/", "")
 
     @staticmethod
-    def format_team_name(organization_name, team_name):
+    def format_team_name(organization_name: str, team_name: str) -> str:
         if not team_name:
             raise ValueError("Team name is required.")
 
