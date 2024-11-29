@@ -113,7 +113,12 @@ class File(models.Model):
     # TODO enable `deleted_by` to keep the deleted files in the project history
     # deleted_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True)
 
-    uploaded_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, editable=False)
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        editable=False,
+        null=True,
+    )
 
     # Timestamp when the `FileVersion` record was inserted in the database.
     # TODO We do not `auto_now_add=True` to be able to set this when migrating files from legacy to the regular storage. Switch to `auto_now_add=True` when the legacy storage is no longer supported.
@@ -279,7 +284,12 @@ class FileVersion(models.Model):
     uploaded_at = models.DateTimeField(default=timezone.now, editable=False)
 
     # User who uploaded the file. If the user is deleted, the field will automatically be assigned to the project owner.
-    uploaded_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, editable=False)
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        editable=False,
+        null=True,
+    )
 
     # Timestamp when the `FileVersion` record was inserted in the database.
     # TODO We do not `auto_now_add=True` to be able to set this when migrating files from legacy to the regular storage. Switch to `auto_now_add=True` when the legacy storage is no longer supported.

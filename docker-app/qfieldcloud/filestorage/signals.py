@@ -1,40 +1,7 @@
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
-from qfieldcloud.core.models import User
 
 from .models import File, FileVersion
-
-
-@receiver(pre_delete, sender=User)
-def pre_delete_user(sender, instance, **kwargs):
-    user = instance
-
-    files_qs = (
-        File.objects.filter(uploaded_by=user)
-        .values("project_id", "project__owner_id")
-        .distinct()
-    )
-    versions_qs = (
-        FileVersion.objects.filter(uploaded_by=user)
-        .values("file__project_id", "file__project__owner_id")
-        .distinct()
-    )
-
-    for project_dict in files_qs:
-        File.objects.filter(
-            uploaded_by=user,
-            project_id=project_dict["project_id"],
-        ).update(
-            uploaded_by_id=project_dict["project__owner_id"],
-        )
-
-    for project_dict in versions_qs:
-        FileVersion.objects.filter(
-            uploaded_by=user,
-            file__project_id=project_dict["file__project_id"],
-        ).update(
-            uploaded_by_id=project_dict["file__project__owner_id"],
-        )
 
 
 @receiver(pre_delete, sender=FileVersion)
