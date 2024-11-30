@@ -370,7 +370,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
     )
 
 
-def main():
+def main() -> None:
     from qfc_worker.utils import setup_basic_logging_config
 
     setup_basic_logging_config()

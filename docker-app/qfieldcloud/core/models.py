@@ -1372,7 +1372,7 @@ class Project(models.Model):
 
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
-        logger.info(f"Saving project {self}...")
+        logger.debug(f"Saving project {self}...")
 
         if recompute_storage:
             self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
