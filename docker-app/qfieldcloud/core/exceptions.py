@@ -101,6 +101,15 @@ class MultipleContentsError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
+class ExplicitDeletionOfLastFileVersionError(QFieldCloudException):
+    """Raised when a request contains multiple files
+    (i.e. when it should contain at most one)"""
+
+    code = "explicit_deletion_of_last_version"
+    message = "Explicit deletion of last file version is not allowed!"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
 class ObjectNotFoundError(QFieldCloudException):
     """Raised when a requested object doesn't exist
     (e.g. wrong project id into the request)"""

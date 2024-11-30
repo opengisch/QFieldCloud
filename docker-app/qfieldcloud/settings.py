@@ -16,6 +16,10 @@ from datetime import timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
+
+from .settings_utils import get_storages_config
+
+
 # QFieldCloud specific configuration
 QFIELDCLOUD_HOST = os.environ["QFIELDCLOUD_HOST"]
 
@@ -110,6 +114,7 @@ INSTALLED_APPS = [
     "qfieldcloud.subscription",
     "qfieldcloud.notifs",
     "qfieldcloud.authentication",
+    "qfieldcloud.filestorage",
     # 3rd party - keep at bottom to allow overrides
     "notifications",
     "axes",
@@ -244,15 +249,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "qfieldcloud", "core", "staticfiles"),
 ]
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
-    },
-}
-
 
 MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
@@ -263,6 +259,34 @@ STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
 STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
 STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
 STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
+
+_storage_config = get_storages_config()
+
+STORAGES = {
+    **_storage_config["STORAGES"],
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
+
+LEGACY_STORAGE_NAME = _storage_config["LEGACY_STORAGE_NAME"]
+
+# Maximum filename length in characters
+# NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+# NOTE the files on Windows cannot be longer than 260 _chars_ by default, see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maximum-path-length-limitation
+# NOTE minio limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
+STORAGE_FILENAME_MAX_CHAR_LENGTH = 255
+
+# Filename validator regex.
+# Should filter out all the names that have reserved characters and words for both Linux and Windows.
+STORAGES_FILENAME_VALIDATION_REGEX = (
+    r'^(?!.*[<>:"/\\|?*])'
+    r"(?!(?:COM[0-9]|CON|LPT[0-9]|NUL|PRN|AUX|com[0-9]|con|lpt[0-9]|nul|prn|aux)$)"
+    # dynamically set the max char length
+    r'[^\\\/:*"?<>|]{1,' + str(STORAGE_FILENAME_MAX_CHAR_LENGTH) + "}"
+    r"(?<![\s\.])$"
+)
+
 
 AUTH_USER_MODEL = "core.User"
 
@@ -617,6 +641,15 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
     },
     {
         "model": "subscription.subscription",
+    },
+    {
+        "model": "filestorage.file",
+        "exclude_fields": ["latest_version_count"],
+    },
+    {
+        "model": "filestorage.fileversion",
+        # exclude the `BinaryField` instances until https://github.com/jazzband/django-auditlog/pull/689 is merged and released
+        "exclude_fields": ["md5sum", "sha256sum"],
     },
 ]
 

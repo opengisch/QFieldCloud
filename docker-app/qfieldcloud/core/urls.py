@@ -11,6 +11,7 @@ from qfieldcloud.core.views import (
     users_views,
     teams_views,
 )
+from qfieldcloud.filestorage.urls import urlpatterns as filestorage_urlpatterns
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -40,6 +41,7 @@ organizations/<str:organization_name>/teams/<str:team_name>/members/
 """
 
 urlpatterns = [
+    *filestorage_urlpatterns,
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
     path("users/", users_views.ListUsersView.as_view()),
@@ -56,33 +58,17 @@ urlpatterns = [
         "collaborators/<uuid:projectid>/<str:username>/",
         collaborators_views.GetUpdateDestroyCollaboratorView.as_view(),
     ),
-    path("files/<uuid:projectid>/", files_views.ListFilesView.as_view()),
-    path(
-        "files/<uuid:projectid>/<path:filename>/",
-        files_views.DownloadPushDeleteFileView.as_view(),
-        name="project_file_download",
-    ),
-    path(
-        "files/meta/<uuid:projectid>/<path:filename>",
-        files_views.ProjectMetafilesView.as_view(),
-        name="project_metafiles",
-    ),
-    path(
-        "files/public/<path:filename>",
-        files_views.PublicFilesView.as_view(),
-        name="public_files",
-    ),
     path(
         "packages/<uuid:project_id>/latest/",
-        package_views.LatestPackageView.as_view(),
+        package_views.compatibility_latest_package_view,
     ),
     path(
         "packages/<uuid:project_id>/latest/files/<path:filename>/",
-        package_views.LatestPackageDownloadFilesView.as_view(),
+        package_views.compatibility_package_download_files_view,
     ),
     path(
         "packages/<uuid:project_id>/<uuid:job_id>/files/<path:filename>/",
-        package_views.PackageUploadFilesView.as_view(),
+        package_views.compatibility_package_upload_files_view,
     ),
     path("members/<str:organization>/", members_views.ListCreateMembersView.as_view()),
     path(
@@ -115,5 +101,15 @@ urlpatterns = [
         "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
         teams_views.DestroyTeamMemberView.as_view(),
         name="team_member_destroy",
+    ),
+    path(
+        "files/meta/<uuid:projectid>/<path:filename>",
+        files_views.ProjectMetafilesView.as_view(),
+        name="project_metafiles",
+    ),
+    path(
+        "files/public/<path:filename>",
+        files_views.PublicFilesView.as_view(),
+        name="public_files",
     ),
 ]

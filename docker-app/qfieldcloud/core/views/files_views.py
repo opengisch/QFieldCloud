@@ -1,3 +1,8 @@
+"""
+Todo:
+    * Delete with QF-4963 Drop support for legacy storage
+"""
+
 import copy
 import io
 import logging
@@ -17,13 +22,13 @@ from drf_spectacular.utils import (
 )
 from qfieldcloud.core import exceptions, permissions_utils, utils
 from qfieldcloud.core.models import Job, ProcessProjectfileJob, Project
-from qfieldcloud.core.serializers import FileSerializer
+from qfieldcloud.core.serializers import FileWithVersionsSerializer
 from qfieldcloud.core.utils import S3ObjectVersion, get_project_file_with_versions
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.core.utils2.sentry import report_serialization_diff_to_sentry
 from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
-    purge_old_file_versions,
+    purge_old_file_versions_legacy,
 )
 from rest_framework import permissions, serializers, status, views
 from rest_framework.exceptions import NotFound
@@ -48,7 +53,7 @@ class ListFilesViewPermissions(permissions.BasePermission):
 @extend_schema_view(
     get=extend_schema(
         description="Get all the project's file versions",
-        responses={200: serializers.ListSerializer(child=FileSerializer())},
+        responses={200: serializers.ListSerializer(child=FileWithVersionsSerializer())},
         parameters=[
             OpenApiParameter(
                 name="skip_metadata",
@@ -350,14 +355,14 @@ class DownloadPushDeleteFileView(views.APIView):
             )
 
         # Delete the old file versions
-        purge_old_file_versions(project)
+        purge_old_file_versions_legacy(project)
 
         return Response(status=status.HTTP_201_CREATED)
 
     @transaction.atomic()
     def delete(self, request, projectid, filename):
         project = Project.objects.select_for_update().get(id=projectid)
-        version_id = request.headers.get("x-file-version")
+        version_id = request.GET.get("version", request.headers.get("x-file-version"))
 
         if version_id:
             utils2.storage.delete_project_file_version_permanently(
