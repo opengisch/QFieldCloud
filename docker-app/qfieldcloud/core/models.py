@@ -6,16 +6,21 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+from deprecated import deprecated
 
 import django_cryptography.fields
-from deprecated import deprecated
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.core.validators import (
+    MaxValueValidator,
+    MinValueValidator,
+    RegexValidator,
+    FileExtensionValidator,
+)
 from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Q
 from django.db.models import Value as V
@@ -31,6 +36,12 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from timezone_field import TimeZoneField
+from qfieldcloud.core.fields import DynamicStorageFileField
+
+
+if TYPE_CHECKING:
+    from qfieldcloud.filestorage.models import File
+
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
@@ -985,6 +996,10 @@ class ProjectQueryset(models.QuerySet):
         return qs
 
 
+def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
+    return f"projects/{instance.id}/meta/thumbnail.png"
+
+
 class Project(models.Model):
     """Represent a QFieldcloud project.
     It corresponds to a directory on the file system.
@@ -1010,6 +1025,10 @@ class Project(models.Model):
         QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
         PYTHONMINI = "pythonmini", _("Optimized Packager")
 
+    def _get_file_storage_name(self) -> str:
+        """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
+        return self.file_storage
+
     objects = ProjectQueryset.as_manager()
 
     _status_code = StatusCode.OK
@@ -1021,6 +1040,8 @@ class Project(models.Model):
                 fields=["owner", "name"], name="project_owner_name_uniq"
             )
         ]
+
+    files: "models.QuerySet[File]"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
@@ -1092,8 +1113,18 @@ class Project(models.Model):
         ),
     )
 
-    thumbnail_uri = models.CharField(
-        _("Thumbnail Picture URI"), max_length=255, blank=True
+    legacy_thumbnail_uri = models.CharField(
+        _("Legacy Thumbnail Picture URI"), max_length=255, blank=True
+    )
+
+    thumbnail = DynamicStorageFileField(
+        _("Thumbnail Picture"),
+        upload_to=get_project_thumbnail_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=True,
+        blank=True,
+        validators=(FileExtensionValidator(allowed_extensions=("png", "jpg")),),
     )
 
     # Duplicating logic from the plan's storage_keep_versions
@@ -1121,6 +1152,24 @@ class Project(models.Model):
         choices=PackagingOffliner.choices,
     )
 
+    file_storage = models.CharField(
+        _("File storage"),
+        help_text=_(
+            "Which file storage provider should be used for the storing the project related files."
+        ),
+        max_length=100,
+        validators=[validators.file_storage_name_validator],
+        default="default",
+    )
+
+    is_locked = models.BooleanField(
+        _("Is locked"),
+        help_text=_(
+            "If set to true, the project is temporarily locked. Locking is internal QFieldCloud mechansism related to file storage migration or other file operations."
+        ),
+        default=False,
+    )
+
     @property
     def owner_aware_storage_keep_versions(self) -> int:
         """Determine the storage versions to keep based on the owner's subscription plan and project settings.
@@ -1143,10 +1192,13 @@ class Project(models.Model):
 
     @property
     def thumbnail_url(self):
-        if self.thumbnail_uri:
+        if self.legacy_thumbnail_uri:
             return reverse_lazy(
                 "project_metafiles",
-                kwargs={"projectid": self.id, "filename": self.thumbnail_uri[51:]},
+                kwargs={
+                    "projectid": self.id,
+                    "filename": self.legacy_thumbnail_uri[51:],
+                },
             )
         else:
             return None
@@ -1193,14 +1245,25 @@ class Project(models.Model):
         return not self.is_public
 
     @cached_property
-    def files(self) -> list[utils.S3ObjectWithVersions]:
-        """Gets all the files from S3 storage. This is potentially slow. Results are cached on the instance."""
-        return list(utils.get_project_files_with_versions(self.id))
+    @deprecated
+    def legacy_files(self) -> list[utils.S3ObjectWithVersions]:
+        """Gets all the files from S3 storage. This is potentially slow. Results are cached on the instance.
+
+        TODO Delete with QF-4963 Drop support for legacy storage
+        """
+        if self.file_storage == settings.LEGACY_STORAGE_NAME:
+            return list(utils.get_project_files_with_versions(str(self.id)))
+        else:
+            raise NotImplementedError(
+                "The `Project.legacy_files` method is not implemented for projects stored in non-legacy storage"
+            )
 
     @property
-    @deprecated("Use `len(project.files)` instead")
     def files_count(self):
-        return len(self.files)
+        if self.file_storage == settings.LEGACY_STORAGE_NAME:
+            return len(self.legacy_files)
+        else:
+            return self.files.count()
 
     @property
     def users(self):
@@ -1397,7 +1460,7 @@ class Project(models.Model):
         )
 
     def delete(self, *args, **kwargs):
-        if self.thumbnail_uri:
+        if self.legacy_thumbnail_uri:
             storage.delete_project_thumbnail(self)
 
         return super().delete(*args, **kwargs)
@@ -1417,7 +1480,15 @@ class Project(models.Model):
         logger.debug(f"Saving project {self}...")
 
         if recompute_storage:
-            self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            if self.file_storage == settings.LEGACY_STORAGE_NAME:
+                self.file_storage_bytes = storage.get_project_file_storage_in_bytes(
+                    self.id
+                )
+            else:
+                self.file_storage_bytes = self.files.all().aggregate(
+                    file_storage_bytes=Sum("versions__size", default=0)
+                )["file_storage_bytes"]
 
         # Ensure that the Project's storage_keep_versions is at least 1, and reflects the plan's default storage_keep_versions value.
         if not self.storage_keep_versions:
@@ -1430,6 +1501,9 @@ class Project(models.Model):
         ), "If 0, storage_keep_versions mean that all file versions are deleted!"
 
         super().save(*args, **kwargs)
+
+    def get_file(self, filename: str) -> File:
+        return self.files.get_by_name(filename)  # type: ignore
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
