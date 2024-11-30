@@ -44,6 +44,9 @@ jobs:
           - subscription
           - core
           - __flaky__
+        storage:
+          - default
+          - legacy_storage
     continue-on-error: true
     steps:
       - name: Checkout repo
