@@ -12,6 +12,9 @@ def get_env_varnames_from_envfile(filename: str) -> Set[str]:
 
     with open(filename) as f:
         for line in f.readlines():
+            if line.startswith(" "):
+                continue
+
             if line.strip().startswith("#"):
                 continue
 

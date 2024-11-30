@@ -128,7 +128,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, projectid):
         # Delete files from storage
-        storage.delete_all_project_files_permanently(projectid)
+        project = Project.objects.get(id=projectid)
+
+        if project.uses_legacy_storage:
+            storage.delete_all_project_files_permanently(projectid)
 
         return super().destroy(request, projectid)
 
