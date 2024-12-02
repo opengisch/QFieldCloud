@@ -555,10 +555,9 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         validated_data = super().to_internal_value(data)
         email_or_username = data.get("member")
+        existing_username = self.context["view"].kwargs.get("member_username")
 
-        request_method = self.context["request"].method
-
-        if request_method in ["PUT", "PATCH"]:
+        if existing_username is not None:
             if not email_or_username:
                 raise serializers.ValidationError(
                     {"member": "Username must be provided"}
