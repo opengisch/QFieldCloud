@@ -1,25 +1,39 @@
 repos:
-  # Fix end of files
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
-      - id: trailing-whitespace
+      - id: check-ast
+        files: '.*\.py$'
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-illegal-windows-names
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: debug-statements
+      - id: destroyed-symlinks
       - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: forbid-new-submodules
       - id: mixed-line-ending
         args:
           - '--fix=lf'
+      - id: no-commit-to-branch
+      - id: trailing-whitespace
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: "1.21.0"
+    rev: '1.22.2'
     hooks:
     -   id: django-upgrade
-        args: [--target-version, "4.2", "--skip", "admin_register"]
-        files: "^docker-app/qfieldcloud/.*.py$"
+        args: [--target-version, '4.2', '--skip', 'admin_register']
+        files: '^docker-app/qfieldcloud/.*.py$'
 
   # Lint and format
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.6.3
+    rev: v0.8.1
     hooks:
       # Run the linter.
       - id: ruff
@@ -30,7 +44,7 @@ repos:
 
   # Static type-checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.11.2'
+    rev: v1.13.0
     hooks:
       - id: mypy
         additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs, django-stubs-ext]
