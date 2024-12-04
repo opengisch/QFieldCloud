@@ -19,6 +19,8 @@ from qfieldcloud.core.models import (
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from typing import Dict, Any
+
 
 def get_avatar_url(user: User) -> str | None:
     if hasattr(user, "useraccount") and user.useraccount.avatar_url:  # type: ignore
@@ -182,9 +184,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
             ).values("member__username")
         ]
 
-    def get_teams(self, obj):
-        teams = Team.objects.filter(team_organization=obj)
-        return TeamSerializer(teams, many=True).data
+    def get_teams(self, obj: Organization) -> list[str]:
+        """Implementation of `SerializerMethodField` for `teams`. Returns list of team names."""
+        return [
+            t.team_name
+            for t in Team.objects.filter(team_organization=obj).values("username")
+        ]
 
     def get_avatar_url(self, obj):
         return get_avatar_url(obj)
@@ -283,7 +288,9 @@ class StatusChoiceField(serializers.ChoiceField):
             if self._choices[i] == data:
                 return i
         raise serializers.ValidationError(
-            "Invalid status. Acceptable values are {}.".format(self._choices.values())
+            "Invalid status. Acceptable values are {}.".format(
+                list(self._choices.values())
+            )
         )
 
 
@@ -552,28 +559,28 @@ class TeamSerializer(serializers.ModelSerializer):
 class TeamMemberSerializer(serializers.ModelSerializer):
     member = serializers.CharField()
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         validated_data = super().to_internal_value(data)
         email_or_username = data.get("member")
-        existing_username = self.context["view"].kwargs.get("member_username")
 
-        if existing_username is not None:
-            if not email_or_username:
+        try:
+            existing_user = User.objects.fast_search(email_or_username)
+
+            if TeamMember.objects.filter(member=existing_user):
                 raise serializers.ValidationError(
-                    {"member": "Username must be provided"}
+                    {
+                        "member": f"A member with username '{email_or_username}' already exists."
+                    }
                 )
 
-            try:
-                if User.objects.fast_search(email_or_username) > 0:
-                    raise serializers.ValidationError(
-                        {
-                            "member": f"A user with username '{email_or_username}' already exists."
-                        }
-                    )
-            except User.DoesNotExist:
-                email_or_username = self.context["view"].kwargs.get("member_username")
+            validated_data["member"] = existing_user
 
-        validated_data["member"] = User.objects.fast_search(email_or_username)
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                {
+                    "member": f"A user with username '{email_or_username}' does not exist."
+                }
+            )
 
         return validated_data
 

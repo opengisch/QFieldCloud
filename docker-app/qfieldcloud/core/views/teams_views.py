@@ -1,5 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from django.db.models import QuerySet
 
 
 from qfieldcloud.core import permissions_utils
@@ -14,12 +15,14 @@ from qfieldcloud.core.serializers import (
 )
 
 from rest_framework import generics, permissions
+from rest_framework.request import Request
+from rest_framework.views import View
 
 from django.shortcuts import get_object_or_404
 
 
 class TeamMemberDeleteViewPermissions(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: View) -> bool:
         user = request.user
         organization_name = permissions_utils.get_param_from_request(
             request, "organization"
@@ -41,7 +44,7 @@ class TeamMemberPermission(permissions.BasePermission):
     Permission class to handle CRUD operations for team members.
     """
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: View) -> bool:
         organization_name = view.kwargs.get("organization_name")
         team_name = view.kwargs.get("team_name")
         team_username = Team.format_team_name(organization_name, team_name)
@@ -75,7 +78,7 @@ class TeamPermission(permissions.BasePermission):
     Permission class to handle CRUD operations for teams.
     """
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: View) -> bool:
         organization_name = view.kwargs.get("organization_name")
 
         try:
@@ -108,7 +111,7 @@ class GetUpdateDestroyTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, TeamPermission]
     serializer_class = TeamSerializer
 
-    def get_object(self):
+    def get_object(self) -> Team:
         organization_name = self.kwargs.get("organization_name")
         team_name = self.kwargs.get("team_name")
 
@@ -119,7 +122,7 @@ class GetUpdateDestroyTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
             Team, team_organization=organization, username=full_team_name
         )
 
-    def perform_update(self, serializer):
+    def perform_update(self, serializer: TeamSerializer) -> None:
         """
         Handle team name updates with validation.
         """
@@ -154,12 +157,12 @@ class TeamListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, TeamPermission]
     serializer_class = TeamSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Team]:
         organization_name = self.kwargs.get("organization_name")
         organization = get_object_or_404(Organization, username=organization_name)
         return Team.objects.filter(team_organization=organization)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: TeamSerializer) -> None:
         organization_name = self.kwargs.get("organization_name")
         organization = get_object_or_404(Organization, username=organization_name)
 
@@ -175,11 +178,9 @@ class TeamListCreateView(generics.ListCreateAPIView):
 
 @extend_schema_view(
     get=extend_schema(description="Retrieve, update, or delete a team member"),
-    patch=extend_schema(description="Partially update a team member"),
-    put=extend_schema(description="Update a team member"),
     delete=extend_schema(description="Delete a team member"),
 )
-class GetUpdateDestroyTeamMemberView(generics.RetrieveUpdateDestroyAPIView):
+class GetUpdateDestroyTeamMemberView(generics.RetrieveDestroyAPIView):
     """
     View to handle adding and listing team members. --> organizations/<str:organization_name>/team/<str:team_name>/members/"
     """
@@ -187,7 +188,7 @@ class GetUpdateDestroyTeamMemberView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, TeamMemberPermission]
     serializer_class = TeamMemberSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[TeamMember]:
         organization_name = self.kwargs.get("organization_name")
         team_name = self.kwargs.get("team_name")
 
@@ -198,7 +199,7 @@ class GetUpdateDestroyTeamMemberView(generics.RetrieveUpdateDestroyAPIView):
             team__username=full_team_name,
         ).select_related("member")
 
-    def get_object(self):
+    def get_object(self) -> TeamMember:
         organization_name = self.kwargs.get("organization_name")
         team_name = self.kwargs.get("team_name")
         member_username = self.kwargs.get("member_username")
@@ -218,7 +219,7 @@ class GetUpdateDestroyTeamMemberView(generics.RetrieveUpdateDestroyAPIView):
 
         return Team.format_team_name(organization_name, team_name)
 
-    def perform_update(self, serializer):
+    def perform_update(self, serializer: TeamMemberSerializer) -> None:
         """
         Update logic for the team member.
         """
@@ -240,7 +241,7 @@ class ListCreateTeamMembersView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, TeamMemberPermission]
     serializer_class = TeamMemberSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[TeamMember]:
         organization_name = self.kwargs.get("organization_name")
 
         return TeamMember.objects.filter(
@@ -254,7 +255,7 @@ class ListCreateTeamMembersView(generics.ListCreateAPIView):
 
         return Team.format_team_name(organization_name, team_name)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: TeamMemberSerializer) -> None:
         team = Team.objects.get(
             team_organization__username=self.kwargs.get("organization_name"),
             username=self.get_full_team_name(),

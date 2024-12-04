@@ -836,6 +836,7 @@ class Team(User):
 
     @staticmethod
     def format_team_name(organization_name: str, team_name: str) -> str:
+        """Returns the actual team username formatted as `@<organization_name>/<team_name>`."""
         if not team_name:
             raise ValueError("Team name is required.")
 
