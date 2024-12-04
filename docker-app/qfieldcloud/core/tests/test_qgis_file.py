@@ -5,6 +5,7 @@ import time
 from pathlib import PurePath
 
 from django.http import FileResponse
+from django.conf import settings
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob, Project
 from rest_framework import status
@@ -663,13 +664,27 @@ class QfcTestCase(APITransactionTestCase):
 
         def count_versions():
             """counts the versions in first file of project1"""
-            file = Project.objects.get(pk=self.project1.pk).files[0]
-            return len(file.versions)
+            project = Project.objects.get(pk=self.project1.pk)
+
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            if project.file_storage == settings.LEGACY_STORAGE_NAME:
+                file = project.legacy_files[0]
+                return len(file.versions)
+
+            return project.get_file("file.txt").versions.count()
 
         def read_version(n):
             """returns the content of version in first file of project1"""
-            file = Project.objects.get(pk=self.project1.pk).files[0]
-            return file.versions[n]._data.get()["Body"].read().decode()
+            project = Project.objects.get(pk=self.project1.pk)
+
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            if project.file_storage == settings.LEGACY_STORAGE_NAME:
+                file = project.legacy_files[0]
+                return file.versions[n]._data.get()["Body"].read().decode()
+
+            return (
+                project.get_file("file.txt").versions.all()[n].content.read().decode()
+            )
 
         # As PRO account, 10 version should be kept out of 20
         set_subscription(self.user1, "keep_10", storage_keep_versions=10)

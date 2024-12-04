@@ -16,6 +16,7 @@ from constance import config
 from django.conf import settings
 from django.db import transaction
 from django.forms.models import model_to_dict
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from docker.client import DockerClient
 from docker.errors import APIError
@@ -587,14 +588,21 @@ class ProcessProjectfileJobRun(JobRun):
 
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
         with open(thumbnail_filename, "rb") as f:
-            thumbnail_uri = storage.upload_project_thumbail(
-                project, f, "image/png", "thumbnail"
-            )
-        project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
+            if project.file_storage == settings.LEGACY_STORAGE_NAME:
+                legacy_thumbnail_uri = storage.upload_project_thumbail(
+                    project, f, "image/png", "thumbnail"
+                )
+                project.legacy_thumbnail_uri = (
+                    project.legacy_thumbnail_uri or legacy_thumbnail_uri
+                )
+            else:
+                project.thumbnail = ContentFile(f.read())
+
         project.save(
             update_fields=(
                 "project_details",
-                "thumbnail_uri",
+                "legacy_thumbnail_uri",
+                "thumbnail",
             )
         )
 
