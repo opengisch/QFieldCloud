@@ -559,7 +559,7 @@ class TeamSerializer(serializers.ModelSerializer):
         model = Team
         fields = ("teamname", "organization")
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Team) -> dict[str, Any]:
         representation = super().to_representation(instance)
         representation["teamname"] = instance.teamname
 
