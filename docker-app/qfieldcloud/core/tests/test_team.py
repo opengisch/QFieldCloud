@@ -68,12 +68,21 @@ class TeamsTestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        payload = response.json()
-        team_usernames = sorted([team["username"] for team in payload])
+        teams = sorted(response.json(), key=lambda t: t["teamname"])
 
-        self.assertEqual(len(team_usernames), 2)
-        self.assertEqual(self.t1.username, team_usernames[0])
-        self.assertEqual(self.t2.username, team_usernames[1])
+        self.assertListEqual(
+            teams,
+            [
+                {
+                    "teamname": self.t1.teamname,
+                    "organization": self.o1.username,
+                },
+                {
+                    "teamname": self.t2.teamname,
+                    "organization": self.o1.username,
+                },
+            ],
+        )
 
     def test_authorized_user_can_retrieve_team_detail(self):
         """Test that an authorized user can get team's details."""
@@ -85,10 +94,13 @@ class TeamsTestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        payload = response.json()
-
-        self.assertEqual(payload["username"], self.t1.username)
-        self.assertEqual(payload["organization"], self.o1.username)
+        self.assertJSONEqual(
+            response.content.decode(),
+            {
+                "teamname": self.t1.teamname,
+                "organization": self.o1.username,
+            },
+        )
 
     def test_unauthorized_user_cannot_create_team(self):
         """Ensure unauthorized users cannot create a team."""
@@ -122,7 +134,7 @@ class TeamsTestCase(APITestCase):
 
         response = self.client.post(
             f"/api/v1/organizations/{self.o1.username}/teams/",
-            {"username": "newteam"},
+            {"teamname": "newteam"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -172,7 +184,7 @@ class TeamsTestCase(APITestCase):
 
         response = self.client.put(
             f"/api/v1/organizations/{self.o1.username}/teams/{self.t1.teamname}/",
-            {"username": "newteamname"},
+            {"teamname": "newteamname"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -225,12 +237,6 @@ class TeamsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Team.objects.filter(username=self.t1).count(), 1)
 
-    def test_unauthorized_user_cannot_list_teams(self):
-        """Test that an unauthorized user cannot list teams."""
-        response = self.client.get(f"/api/v1/organizations/{self.o1.username}/teams/")
-
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
     def test_admin_user_can_delete_team(self):
         self.assertEqual(Team.objects.filter(username=self.t1.username).count(), 1)
 
@@ -242,6 +248,12 @@ class TeamsTestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Team.objects.filter(username=self.t1.username).count(), 0)
+
+    def test_unauthorized_user_cannot_list_teams(self):
+        """Test that an unauthorized user cannot list teams."""
+        response = self.client.get(f"/api/v1/organizations/{self.o1.username}/teams/")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_admin_user_can_list_team_members(self):
         """Test that team members can list other members of their team."""

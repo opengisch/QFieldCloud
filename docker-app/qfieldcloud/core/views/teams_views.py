@@ -127,10 +127,10 @@ class GetUpdateDestroyTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
         Handle team name updates with validation.
         """
         organization_name = self.kwargs.get("organization_name")
-        new_team_name = self.request.data.get("username")
 
-        if not new_team_name:
-            raise permissions.ValidationError({"error": "New team name is required."})
+        serializer.is_valid(raise_exception=True)
+
+        new_team_name = serializer.validated_data["username"]
 
         full_team_name = Team.format_team_name(organization_name, new_team_name)
 
@@ -166,10 +166,8 @@ class TeamListCreateView(generics.ListCreateAPIView):
         organization_name = self.kwargs.get("organization_name")
         organization = get_object_or_404(Organization, username=organization_name)
 
-        team_name = self.request.data.get("username")
-
-        if not team_name:
-            raise ValueError({"Empty Value Error": "Team name is required."})
+        serializer.is_valid(raise_exception=True)
+        team_name = serializer.validated_data["username"]
 
         full_team_name = Team.format_team_name(organization_name, team_name)
 

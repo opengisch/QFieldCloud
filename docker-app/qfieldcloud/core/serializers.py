@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
@@ -19,7 +20,7 @@ from qfieldcloud.core.models import (
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from typing import Dict, Any
+from typing import Any
 
 
 def get_avatar_url(user: User) -> str | None:
@@ -187,7 +188,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
     def get_teams(self, obj: Organization) -> list[str]:
         """Implementation of `SerializerMethodField` for `teams`. Returns list of team names."""
         return [
-            t.team_name
+            t.teamname
             for t in Team.objects.filter(team_organization=obj).values("username")
         ]
 
@@ -550,18 +551,27 @@ class LatestPackageSerializer(serializers.Serializer):
 
 class TeamSerializer(serializers.ModelSerializer):
     organization = serializers.StringRelatedField(source="team_organization")
+    teamname = serializers.CharField(
+        required=True, allow_blank=False, source="username"
+    )
 
     class Meta:
         model = Team
-        fields = ("username", "organization")
+        fields = ("teamname", "organization")
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["teamname"] = instance.teamname
+
+        return representation
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):
     member = serializers.CharField()
 
-    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
         validated_data = super().to_internal_value(data)
-        email_or_username = data.get("member")
+        email_or_username: str = data["member"]
 
         try:
             existing_user = User.objects.fast_search(email_or_username)
@@ -569,7 +579,9 @@ class TeamMemberSerializer(serializers.ModelSerializer):
             if TeamMember.objects.filter(member=existing_user):
                 raise serializers.ValidationError(
                     {
-                        "member": f"A member with username '{email_or_username}' already exists."
+                        "member": _('Team member "{}" already exists.').format(
+                            email_or_username
+                        )
                     }
                 )
 
@@ -577,9 +589,7 @@ class TeamMemberSerializer(serializers.ModelSerializer):
 
         except User.DoesNotExist:
             raise serializers.ValidationError(
-                {
-                    "member": f"A user with username '{email_or_username}' does not exist."
-                }
+                {"member": _('User "{}" does not exists.').format(email_or_username)}
             )
 
         return validated_data
