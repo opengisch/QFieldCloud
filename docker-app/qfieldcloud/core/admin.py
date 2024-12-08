@@ -360,6 +360,26 @@ class GeodbInline(admin.TabularInline):
         return False
 
 
+class MemberOrganizationInline(admin.TabularInline):
+    model = OrganizationMember
+    extra = 0
+
+    def has_add_permission(self, request, obj):
+        if obj is None:
+            return True
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
+
+    def has_direct_delete_permission(self, request, obj):
+        if obj is None:
+            return True
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
+
+    def has_change_permission(self, request, obj):
+        if obj is None:
+            return True
+        return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
+
+
 class MemberTeamInline(admin.TabularInline):
     model = TeamMember
     extra = 0
