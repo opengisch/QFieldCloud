@@ -51,7 +51,12 @@ class ListCreateMembersView(generics.ListCreateAPIView):
 
         organization_obj = Organization.objects.get(username=organization)
         member_obj = User.objects.get(username=request.data["member"])
-        serializer.save(member=member_obj, organization=organization_obj)
+        serializer.save(
+            member=member_obj,
+            organization=organization_obj,
+            created_by=request.user,
+            updated_by=request.user,
+        )
 
         try:
             headers = {"Location": str(serializer.data[api_settings.URL_FIELD_NAME])}
@@ -106,3 +111,6 @@ class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
         return OrganizationMember.objects.get(
             organization=organization_obj, member=member_obj
         )
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
