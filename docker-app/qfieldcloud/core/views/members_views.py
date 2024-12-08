@@ -7,7 +7,6 @@ from qfieldcloud.core.serializers import OrganizationMemberSerializer
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
-from rest_framework.serializers import Serializer
 
 
 User = get_user_model()
@@ -114,5 +113,5 @@ class GetUpdateDestroyMemberView(generics.RetrieveUpdateDestroyAPIView):
             organization=organization_obj, member=member_obj
         )
 
-    def perform_update(self, serializer: Serializer) -> None:
+    def perform_update(self, serializer: OrganizationMemberSerializer) -> None:
         serializer.save(updated_by=self.request.user)

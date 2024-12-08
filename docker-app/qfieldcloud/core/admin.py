@@ -1305,6 +1305,8 @@ class OrganizationMemberInline(admin.TabularInline):
     model = OrganizationMember
     fk_name = "organization"
     extra = 0
+
+    # These fields must be autocomplete due to performance issue in the default Django admin theme, as the foreign key dropdown renders all the options.
     autocomplete_fields = (
         "member",
         "created_by",
