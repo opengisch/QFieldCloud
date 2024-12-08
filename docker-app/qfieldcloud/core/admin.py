@@ -1305,6 +1305,11 @@ class OrganizationMemberInline(admin.TabularInline):
     model = OrganizationMember
     fk_name = "organization"
     extra = 0
+    autocomplete_fields = (
+        "member",
+        "created_by",
+        "updated_by",
+    )
     readonly_fields = (
         "created_by",
         "created_at",
