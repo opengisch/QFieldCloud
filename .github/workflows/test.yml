@@ -43,6 +43,7 @@ jobs:
           - notifs
           - subscription
           - core
+          - filestorage
           - __flaky__
         storage:
           - default
