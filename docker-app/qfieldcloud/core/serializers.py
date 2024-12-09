@@ -207,6 +207,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "membership_role",
             "membership_role_origin",
             "membership_is_public",
+            "teams",
         )
 
 
