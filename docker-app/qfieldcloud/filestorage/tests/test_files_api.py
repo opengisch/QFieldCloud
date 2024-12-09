@@ -43,6 +43,7 @@ class QfcTestCase(APITransactionTestCase):
         self.p1 = Project.objects.create(
             owner=self.u1,
             name="p1",
+            file_storage="default",
         )
 
     def _upload_file(
