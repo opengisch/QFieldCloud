@@ -15,13 +15,16 @@ class QfcTestCase(TestCase):
     def setUpTestData(cls):
         from qfieldcloud import settings
 
+        storage_name = os.environ["TEST_SUITE_PROJECT_DEFAULT_STORAGE"]
+        storage_config = settings.STORAGES[storage_name]["OPTIONS"]
+
         # Credentials
         cls.credentials = {
-            "storage_access_key_id": settings.STORAGE_ACCESS_KEY_ID,
-            "storage_endpoint_url": settings.STORAGE_ENDPOINT_URL,
-            "storage_bucket_name": settings.STORAGE_BUCKET_NAME,
-            "storage_region_name": settings.STORAGE_REGION_NAME,
-            "storage_secret_access_key": settings.STORAGE_SECRET_ACCESS_KEY,
+            "storage_access_key_id": storage_config["access_key"],
+            "storage_endpoint_url": storage_config["endpoint_url"],
+            "storage_bucket_name": storage_config["bucket_name"],
+            "storage_region_name": storage_config["region_name"],
+            "storage_secret_access_key": storage_config["secret_key"],
         }
         cls.output_file = "extracted.csv"
 
@@ -36,7 +39,7 @@ class QfcTestCase(TestCase):
         get_s3_bucket().objects.filter(Prefix="projects/").delete()
         storage.upload_project_file(p, file, "project.qgs")
 
-    def test_output_to_file(self):
+    def test_extracts3data_output_to_file(self):
         call_command(
             "extracts3data",
             "-o",
@@ -60,7 +63,7 @@ class QfcTestCase(TestCase):
 
         os.remove(self.output_file)
 
-    def test_output_to_sdout(self):
+    def test_extracts3data_output_to_sdout(self):
         call_command(
             "extracts3data",
             "--storage_access_key_id",
