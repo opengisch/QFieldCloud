@@ -130,7 +130,9 @@ class QfcTestCase(APITransactionTestCase):
         wait_for_project_ok_status(self.project)
 
         # Cannot not sync or download data because we prevent creating a Package Job
-        self.export_file_forbidden()
+        response = self.trigger_package_job()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json()["code"], "inactive_subscription")
         self.cross_check_prevent_package_and_apply_job()
 
     def test_always_accept_file_from_worker(self):
@@ -153,7 +155,9 @@ class QfcTestCase(APITransactionTestCase):
         wait_for_project_ok_status(self.project)
 
         # Cannot not sync or download data because we prevent creating a Package Job
-        self.export_file_forbidden()
+        response = self.trigger_package_job()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json()["code"], "inactive_subscription")
 
     def test_upload_file_unpermitted_from_qfieldsync(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token_qfieldsync.key)
@@ -167,7 +171,9 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(self.project.jobs.count(), 0)
 
         # Cannot not sync or download data because we prevent creating a Package Job
-        self.export_file_forbidden()
+        response = self.trigger_package_job()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["code"], "no_qgis_project")
 
     def add_qgis_project_file(self):
         file = testdata_path("delta/project2.qgs")
@@ -193,9 +199,14 @@ class QfcTestCase(APITransactionTestCase):
             format="multipart",
         )
 
-    def export_file_forbidden(self):
-        response = self.client.post(f"/api/v1/qfield-files/export/{self.project.id}/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def trigger_package_job(self):
+        return self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.project.id,
+                "type": Job.Type.PACKAGE.value,
+            },
+        )
 
     def cross_check_prevent_package_and_apply_job(self):
         # A cross check that no delta apply or package jobs can be created on the project

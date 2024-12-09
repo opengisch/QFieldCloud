@@ -7,7 +7,6 @@ from qfieldcloud.core.views import (
     members_views,
     package_views,
     projects_views,
-    qfield_files_views,
     status_views,
     users_views,
 )
@@ -83,15 +82,6 @@ urlpatterns = [
     path(
         "packages/<uuid:project_id>/<uuid:job_id>/files/<path:filename>/",
         package_views.PackageUploadFilesView.as_view(),
-    ),
-    path("qfield-files/<uuid:projectid>/", qfield_files_views.ListFilesView.as_view()),
-    path(
-        "qfield-files/<uuid:projectid>/<path:filename>/",
-        qfield_files_views.DownloadFileView.as_view(),
-    ),
-    path(
-        "qfield-files/export/<uuid:projectid>/",
-        qfield_files_views.PackageView.as_view(),
     ),
     path("members/<str:organization>/", members_views.ListCreateMembersView.as_view()),
     path(
