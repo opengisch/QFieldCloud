@@ -1,5 +1,12 @@
+"""A module with legacy file storage management.
+
+Todo:
+    * Delete with QF-4963 Drop support for legacy storage
+"""
+
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from enum import Enum
@@ -366,7 +373,7 @@ def delete_project_thumbnail(
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     """
-    key = project.thumbnail_uri
+    key = project.legacy_thumbnail_uri
 
     # it well could be the project has no thumbnail yet
     if not key:
@@ -382,7 +389,7 @@ def delete_project_thumbnail(
     _delete_by_key_permanently(key)
 
 
-def purge_old_file_versions(
+def purge_old_file_versions_legacy(
     project: qfieldcloud.core.models.Project,
 ) -> None:  # noqa: F821
     """
@@ -640,3 +647,24 @@ def get_project_file_storage_in_bytes(project_id: str) -> int:
         total_bytes += version.size or 0
 
     return total_bytes
+
+
+def calculate_checksums(
+    content: ContentFile, alrgorithms: tuple[str, ...], blocksize: int = 65536
+) -> tuple[bytes, ...]:
+    """Calculates checksums on given file for given algorithms."""
+    hashers = []
+    for alrgorithm in alrgorithms:
+        hashers.append(getattr(hashlib, alrgorithm)())
+
+    for chunk in content.chunks(blocksize):
+        for hasher in hashers:
+            hasher.update(chunk)
+
+    content.seek(0)
+
+    checksums = []
+    for hasher in hashers:
+        checksums.append(hasher.digest())
+
+    return tuple(checksums)
