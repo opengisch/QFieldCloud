@@ -9,6 +9,7 @@ from qfieldcloud.core.views import (
     projects_views,
     status_views,
     users_views,
+    teams_views,
 )
 from rest_framework.routers import DefaultRouter
 
@@ -95,4 +96,24 @@ urlpatterns = [
         deltas_views.ListDeltasByDeltafileView.as_view(),
     ),
     path("deltas/apply/<uuid:projectid>/", deltas_views.ApplyView.as_view()),
+    path(
+        "organizations/<str:organization_name>/teams/",
+        teams_views.TeamListCreateView.as_view(),
+        name="team_list_create",
+    ),
+    path(
+        "organizations/<str:organization_name>/teams/<str:team_name>/",
+        teams_views.GetUpdateDestroyTeamDetailView.as_view(),
+        name="team_detail",
+    ),
+    path(
+        "organizations/<str:organization_name>/teams/<str:team_name>/members/",
+        teams_views.ListCreateTeamMembersView.as_view(),
+        name="team_member_list_create",
+    ),
+    path(
+        "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
+        teams_views.GetUpdateDestroyTeamMemberView.as_view(),
+        name="team_member_retrieve_update_destroy",
+    ),
 ]

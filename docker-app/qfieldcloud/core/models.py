@@ -185,6 +185,17 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
     def get_queryset(self):
         return super().get_queryset().select_subclasses()
 
+    def fast_search(self, username_or_email: str) -> "User":
+        """Searches a user by `username` or `email` field
+
+        Args:
+            username_or_email (str): username or email to search for
+
+        Returns:
+            User: The user with that username or email.
+        """
+        return self.get(Q(username=username_or_email) | Q(email=username_or_email))
+
 
 class PersonManager(UserManager):
     def get_queryset(self):
@@ -845,6 +856,14 @@ class Team(User):
     @property
     def teamname(self):
         return self.username.replace(f"@{self.team_organization.username}/", "")
+
+    @staticmethod
+    def format_team_name(organization_name: str, team_name: str) -> str:
+        """Returns the actual team username formatted as `@<organization_name>/<team_name>`."""
+        if not team_name:
+            raise ValueError("Team name is required.")
+
+        return f"@{organization_name}/{team_name}"
 
 
 class TeamMember(models.Model):
