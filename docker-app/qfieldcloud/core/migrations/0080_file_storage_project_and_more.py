@@ -14,7 +14,7 @@ def get_file_storage_name():
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0078_alter_project_packaging_offliner"),
+        ("core", "0079_organizationmember_created_at_and_more"),
     ]
 
     operations = [
