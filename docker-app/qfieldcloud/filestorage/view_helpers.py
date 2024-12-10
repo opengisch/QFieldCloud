@@ -149,7 +149,7 @@ def download_project_file_version(
     filename: str,
     as_attachment: bool = False,
 ) -> HttpResponseBase:
-    version_id = request.headers.get("x-file-version")
+    version_id = request.GET.get("version")
 
     if version_id:
         file_version = FileVersion.objects.get(
@@ -225,7 +225,7 @@ def delete_project_file_version(
         NotFound: Raised when the requested file is not found.
         NotFound: Raised when the requested file version is not found.
     """
-    version_id = request.headers.get("x-file-version")
+    version_id = request.GET.get("version", request.headers.get("x-file-version"))
     bytes_to_delete = 0
 
     try:

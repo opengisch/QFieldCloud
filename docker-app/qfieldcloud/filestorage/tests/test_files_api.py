@@ -104,6 +104,7 @@ class QfcTestCase(APITransactionTestCase):
         user: User,
         project: Project,
         filename: str,
+        params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> HttpResponse | Response | FileResponse:
         token = AuthToken.objects.get_or_create(user=user)[0]
@@ -118,6 +119,7 @@ class QfcTestCase(APITransactionTestCase):
                     "filename": filename,
                 },
             ),
+            query_params=params,
             headers=headers,
         )
 
@@ -130,6 +132,7 @@ class QfcTestCase(APITransactionTestCase):
         user: User,
         project: Project,
         filename: str,
+        params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> HttpResponse | Response:
         token = AuthToken.objects.get_or_create(user=user)[0]
@@ -144,6 +147,7 @@ class QfcTestCase(APITransactionTestCase):
                     "filename": filename,
                 },
             ),
+            query_params=params,
             headers=headers,
         )
 
@@ -496,8 +500,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            {
-                "x-file-version": self.p1.get_file("file.name").latest_version.id,
+            params={
+                "version": self.p1.get_file("file.name").latest_version.id,
             },
         )
 
@@ -564,8 +568,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            headers={
-                "x-file-version": str(versions_qs[0].id),
+            params={
+                "version": str(versions_qs[0].id),
             },
         )
 
@@ -578,8 +582,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            headers={
-                "x-file-version": str(versions_qs[1].id),
+            params={
+                "version": str(versions_qs[1].id),
             },
         )
 
@@ -598,8 +602,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            headers={
-                "x-file-version": str(uuid4()),
+            params={
+                "version": str(uuid4()),
             },
         )
 
@@ -630,7 +634,34 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            {
+            params={
+                "version": str(old_older_version.id),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.p1.files.count(), 1)
+
+        new_versions_qs = self.p1.get_file("file.name").versions.all()
+        new_newer_version = new_versions_qs[0]
+
+        self.assertEqual(new_versions_qs.count(), 1)
+        self.assertEqual(new_newer_version.id, old_newer_version.id)
+        self.assertEqual(new_newer_version.content.read(), b"Hello2!")
+
+    def test_delete_existing_file_version_using_header_succeeds(self):
+        self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Hello1!"))
+        self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Hello2!"))
+
+        old_versions_qs = self.p1.get_file("file.name").versions.all()
+        old_newer_version = old_versions_qs[0]
+        old_older_version = old_versions_qs[1]
+
+        response = self._delete_file(
+            self.u1,
+            self.p1,
+            "file.name",
+            headers={
                 "x-file-version": str(old_older_version.id),
             },
         )
@@ -653,8 +684,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            {
-                "x-file-version": str(uuid4()),
+            params={
+                "version": str(uuid4()),
             },
         )
 
@@ -708,8 +739,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "project1.qgs",
-            {
-                "x-file-version": str(versions_qs[0].id),
+            params={
+                "version": str(versions_qs[0].id),
             },
         )
 
@@ -724,7 +755,7 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "project1.qgs",
-            {"x-file-version": str(versions_qs[0].id)},
+            params={"version": str(versions_qs[0].id)},
         )
 
         self.p1.refresh_from_db()
@@ -835,8 +866,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            {
-                "x-file-version": str(version2.id),
+            params={
+                "version": str(version2.id),
             },
         )
 
@@ -850,8 +881,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            {
-                "x-file-version": str(version3.id),
+            params={
+                "version": str(version3.id),
             },
         )
 
@@ -940,8 +971,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            {
-                "x-file-version": str(v1.id),
+            params={
+                "version": str(v1.id),
             },
         )
 
@@ -955,8 +986,8 @@ class QfcTestCase(APITransactionTestCase):
             self.u1,
             self.p1,
             "file.name",
-            {
-                "x-file-version": str(v4.id),
+            params={
+                "version": str(v4.id),
             },
         )
 

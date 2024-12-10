@@ -646,7 +646,9 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.client.delete(
             f"/api/v1/files/{p1.id}/file.name/",
-            headers={"x-file-version": str(version.id)},
+            query_params={
+                "version": str(version.id),
+            },
         )
 
         if p1.file_storage == settings.LEGACY_STORAGE_NAME:
