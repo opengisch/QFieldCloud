@@ -13,12 +13,12 @@ from rest_framework import serializers
 @drf_spectacular.utils.extend_schema_serializer(
     deprecate_fields=(
         "last_modified",
-        "sha256sum",
+        "sha256",
     )
 )
 class FileVersionSerializer(serializers.ModelSerializer):
     md5sum = serializers.SerializerMethodField()
-    sha256sum = serializers.SerializerMethodField()
+    sha256 = serializers.SerializerMethodField()
     version_id = serializers.CharField(source="id")
     last_modified = serializers.DateTimeField(
         source="uploaded_at",
@@ -30,7 +30,7 @@ class FileVersionSerializer(serializers.ModelSerializer):
     def get_md5sum(self, obj: FileVersion) -> str:
         return obj.md5sum.hex()
 
-    def get_sha256sum(self, obj: FileVersion) -> str:
+    def get_sha256(self, obj: FileVersion) -> str:
         return obj.sha256sum.hex()
 
     def get_is_latest(self, obj: FileVersion) -> bool:
@@ -47,7 +47,7 @@ class FileVersionSerializer(serializers.ModelSerializer):
             "is_latest",
             # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
-            "sha256sum",
+            "sha256",
         )
 
         read_only_fields = (
@@ -59,20 +59,20 @@ class FileVersionSerializer(serializers.ModelSerializer):
             "is_latest",
             # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
-            "sha256sum",
+            "sha256",
         )
 
 
 @drf_spectacular.utils.extend_schema_serializer(
     deprecate_fields=(
         "last_modified",
-        "sha256sum",
+        "sha256",
     )
 )
 class FileSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField()
     md5sum = serializers.SerializerMethodField()
-    sha256sum = serializers.SerializerMethodField()
+    sha256 = serializers.SerializerMethodField()
     last_modified = serializers.DateTimeField(
         source="latest_version.uploaded_at",
         format=settings.QFIELDCLOUD_STORAGE_DT_LAST_MODIFIED_FORMAT,
@@ -82,7 +82,7 @@ class FileSerializer(serializers.ModelSerializer):
     def get_md5sum(self, obj: File) -> str:
         return cast(FileVersion, obj.latest_version).md5sum.hex()
 
-    def get_sha256sum(self, obj: File) -> str:
+    def get_sha256(self, obj: File) -> str:
         return cast(FileVersion, obj.latest_version).sha256sum.hex()
 
     def get_size(self, obj: File) -> int:
@@ -98,7 +98,7 @@ class FileSerializer(serializers.ModelSerializer):
             "md5sum",
             # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
-            "sha256sum",
+            "sha256",
         ]
         read_only_fields = [
             "name",
@@ -108,7 +108,7 @@ class FileSerializer(serializers.ModelSerializer):
             "md5sum",
             # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
-            "sha256sum",
+            "sha256",
         ]
         order_by = "name"
 
