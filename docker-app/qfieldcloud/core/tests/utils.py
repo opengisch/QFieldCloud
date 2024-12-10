@@ -79,7 +79,7 @@ def set_subscription(
     return subscription
 
 
-def get_random_file(mb: int) -> IO:
+def get_random_file(mb: float) -> IO:
     """Helper that returns a file of given size in megabytes"""
     bytes_size = 1000 * int(mb * 1000)
     return io.BytesIO(os.urandom(bytes_size))
