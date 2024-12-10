@@ -1263,7 +1263,18 @@ class OrganizationMemberInline(admin.TabularInline):
     fk_name = "organization"
     extra = 0
 
-    autocomplete_fields = ("member",)
+    # These fields must be autocomplete due to performance issue in the default Django admin theme, as the foreign key dropdown renders all the options.
+    autocomplete_fields = (
+        "member",
+        "created_by",
+        "updated_by",
+    )
+    readonly_fields = (
+        "created_by",
+        "created_at",
+        "updated_by",
+        "updated_at",
+    )
 
 
 class TeamInline(admin.TabularInline):
@@ -1373,6 +1384,17 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         )
 
         return queryset, use_distinct
+
+    def save_formset(self, request, form, formset, change):
+        for form_obj in formset:
+            if isinstance(form_obj.instance, OrganizationMember):
+                # add created_by only if it's a newly created OrganizationMember
+                if form_obj.instance.id is None:
+                    form_obj.instance.created_by = request.user
+
+                form_obj.instance.updated_by = request.user
+
+        super().save_formset(request, form, formset, change)
 
 
 class TeamMemberInline(admin.TabularInline):
