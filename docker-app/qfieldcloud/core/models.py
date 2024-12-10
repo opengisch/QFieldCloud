@@ -748,9 +748,32 @@ class OrganizationMember(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(type=User.Type.PERSON),
     )
+
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.MEMBER)
 
     is_public = models.BooleanField(default=False)
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="created_organization_members",
+        null=True,
+        blank=True,
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="updated_organization_members",
+        null=True,
+        blank=True,
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.organization.username + ": " + self.member.username
