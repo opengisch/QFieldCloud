@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.test import TestCase
 
 # from unittest import TestCase
@@ -17,8 +18,17 @@ class QfcTestCase(TestCase):
     def test_is_valid_filename_rejects_0_char_filename(self):
         self.assertFalse(is_valid_filename(""))
 
-    def test_is_valid_filename_accepts_whitespace_char_filename(self):
-        self.assertTrue(is_valid_filename(" "))
+    def test_is_valid_filename_rejects_whitespace_char_at_start_filename(self):
+        self.assertFalse(is_valid_filename(" "))
+
+    def test_is_valid_filename_rejects_whitespace_char_at_end_filename(self):
+        self.assertFalse(is_valid_filename(" "))
+
+    def test_is_valid_filename_accepts_whitespace_char_at_middle_filename(self):
+        self.assertTrue(is_valid_filename("f f"))
+
+    def test_is_valid_filename_rejects_dot_char_at_end_filename(self):
+        self.assertFalse(is_valid_filename("f."))
 
     def test_is_valid_filename_accepts_1_char_filename(self):
         self.assertTrue(is_valid_filename("f"))
@@ -35,16 +45,16 @@ class QfcTestCase(TestCase):
     def test_is_valid_filename_fails_with_too_long_name(self):
         base_filename = "this/is/a/very/long/filename/that/is/actually/261/characters/long/and/cannot/be/handled/by/windowsos/so-far/chars/are/122/"
         base_filename_length = len(base_filename)
-        max_filename_length = 261
+        max_filename_length = settings.STORAGE_FILENAME_MAX_CHAR_LENGTH
 
         self.assertTrue(
             is_valid_filename(
-                base_filename + ("x" * (max_filename_length - base_filename_length - 1))
+                base_filename + ("x" * (max_filename_length - base_filename_length + 0))
             )
         )
         self.assertFalse(
             is_valid_filename(
-                base_filename + ("x" * (max_filename_length - base_filename_length - 0))
+                base_filename + ("x" * (max_filename_length - base_filename_length + 1))
             )
         )
 
