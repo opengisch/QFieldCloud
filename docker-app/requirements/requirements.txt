@@ -64,6 +64,7 @@ django==4.2.16
     #   django-notifications-hq
     #   django-phonenumber-field
     #   django-picklefield
+    #   django-sri
     #   django-storages
     #   django-tables2
     #   django-timezone-field
@@ -122,6 +123,8 @@ django-phonenumber-field==7.3.0
     # via -r /requirements/requirements.in
 django-picklefield==3.2
     # via django-constance
+django-sri==0.7.0
+    # via -r /requirements/requirements.in
 django-storages==1.14.4
     # via -r /requirements/requirements.in
 django-tables2==2.7.0
