@@ -2,7 +2,10 @@ from io import StringIO
 import logging
 from typing import IO
 from unittest import skip
+import urllib.parse
 from uuid import uuid4
+
+import urllib
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -139,15 +142,20 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
+        url = reverse(
+            "filestorage_crud_file",
+            kwargs={
+                "project_id": project.id,
+                "filename": filename,
+            },
+        )
+
+        if params is not None:
+            url += "?"
+            url += urllib.parse.urlencode(params)
+
         response = self.client.delete(
-            reverse(
-                "filestorage_crud_file",
-                kwargs={
-                    "project_id": project.id,
-                    "filename": filename,
-                },
-            ),
-            query_params=params,
+            url,
             headers=headers,
         )
 
