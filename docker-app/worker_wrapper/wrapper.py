@@ -408,8 +408,7 @@ class PackageJobRun(JobRun):
         )
 
         try:
-            project_id = str(self.job.project.id)
-            package_ids = storage.get_stored_package_ids(project_id)
+            package_ids = storage.get_stored_package_ids(self.job.project)
             job_ids = [
                 str(job["id"])
                 for job in Job.objects.filter(
@@ -431,7 +430,7 @@ class PackageJobRun(JobRun):
                 if package_id in job_ids:
                     continue
 
-                storage.delete_stored_package(project_id, package_id)
+                storage.delete_stored_package(self.job.project, package_id)
         except Exception as err:
             logger.error(
                 "Failed to delete dangling packages, will be deleted via CRON later.",
