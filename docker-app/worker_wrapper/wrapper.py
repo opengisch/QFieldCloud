@@ -31,6 +31,7 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Secret,
 )
+from qfieldcloud.filestorage.models import File
 from qfieldcloud.core.utils import get_qgis_project_file
 from qfieldcloud.core.utils2 import storage
 from tenacity import (
@@ -408,34 +409,50 @@ class PackageJobRun(JobRun):
             )
         )
 
-        try:
-            package_ids = storage.get_stored_package_ids(self.job.project)
-            job_ids = [
-                str(job["id"])
-                for job in Job.objects.filter(
-                    type=Job.Type.PACKAGE,
+        if self.job.project.file_storage == settings.LEGACY_STORAGE_NAME:
+            try:
+                package_ids = storage.get_stored_package_ids(self.job.project)
+                job_ids = [
+                    str(job["id"])
+                    for job in Job.objects.filter(
+                        type=Job.Type.PACKAGE,
+                    )
+                    .exclude(id=self.job.id)
+                    .exclude(
+                        status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+                    )
+                    .values("id")
+                ]
+
+                for package_id in package_ids:
+                    # keep the last package
+                    if package_id == str(self.job.project.last_package_job_id):
+                        continue
+
+                    # the job is still active, so it might be one of the new packages
+                    if package_id in job_ids:
+                        continue
+
+                    storage.delete_stored_package(self.job.project, package_id)
+            except Exception as err:
+                logger.error(
+                    "Failed to delete dangling packages, will be deleted via CRON later.",
+                    exc_info=err,
                 )
-                .exclude(id=self.job.id)
+        else:
+            delete_count = (
+                File.objects.filter(
+                    project=self.job.project,
+                    file_type=File.FileType.PACKAGE_FILE,
+                )
                 .exclude(
-                    status__in=(Job.Status.FAILED, Job.Status.FINISHED),
+                    package_job=self.job,
                 )
-                .values("id")
-            ]
+                .delete()
+            )
 
-            for package_id in package_ids:
-                # keep the last package
-                if package_id == str(self.job.project.last_package_job_id):
-                    continue
-
-                # the job is still active, so it might be one of the new packages
-                if package_id in job_ids:
-                    continue
-
-                storage.delete_stored_package(self.job.project, package_id)
-        except Exception as err:
-            logger.error(
-                "Failed to delete dangling packages, will be deleted via CRON later.",
-                exc_info=err,
+            logger.info(
+                f"Deleting {delete_count} package files from previous packages."
             )
 
 
