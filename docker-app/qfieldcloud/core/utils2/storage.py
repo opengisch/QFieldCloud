@@ -657,7 +657,7 @@ def get_stored_package_ids(project: qfieldcloud.core.models.Project) -> set[str]
 def delete_stored_package(
     project: qfieldcloud.core.models.Project, package_id: str
 ) -> None:
-    project_id = str(project)
+    project_id = str(project.id)
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
     if not re.match(
