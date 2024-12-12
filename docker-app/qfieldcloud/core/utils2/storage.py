@@ -39,7 +39,7 @@ def legacy_only(func):
     def wrapper(project, *args, **kwargs):
         if project.file_storage != settings.LEGACY_STORAGE_NAME:
             raise NotImplementedError(
-                f"This function is not implemented for '{project.file_storage}' file storage!"
+                f'This function is not implemented for "{project.file_storage}" file storage!'
             )
 
         return func(project, *args, **kwargs)
