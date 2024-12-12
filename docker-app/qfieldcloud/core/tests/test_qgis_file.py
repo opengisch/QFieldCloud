@@ -286,7 +286,9 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]["name"], "file.txt")
         self.assertEqual(json[0]["size"], 13)
-        self.assertNotIn("sha256", json[0])
+        # The `sha256` key is optional only for the legacy storage, there is no performance penalty for the non-legacy storage if we send it back, therefore `skip_metadata` is ignored in non-legacy storage
+        if self.project1.file_storage == settings.LEGACY_STORAGE_NAME:
+            self.assertNotIn("sha256", json[0])
         self.assertIn("md5sum", json[0])
         self.assertEqual(
             json[0]["md5sum"],
