@@ -665,7 +665,7 @@ class QfcTestCase(APITransactionTestCase):
         old_package = PackageJob.objects.filter(project=self.project1).latest(
             "created_at"
         )
-        stored_package_ids = get_stored_package_ids(self.project1.id)
+        stored_package_ids = get_stored_package_ids(self.project1)
         self.assertIn(str(old_package.id), stored_package_ids)
         self.assertEqual(len(stored_package_ids), 1)
 
@@ -683,7 +683,7 @@ class QfcTestCase(APITransactionTestCase):
             "created_at"
         )
 
-        stored_package_ids = get_stored_package_ids(self.project1.id)
+        stored_package_ids = get_stored_package_ids(self.project1)
 
         self.assertNotEqual(old_package.id, new_package.id)
         self.assertNotIn(str(old_package.id), stored_package_ids)

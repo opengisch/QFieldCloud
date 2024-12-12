@@ -1417,7 +1417,7 @@ class Project(models.Model):
         logger.debug(f"Saving project {self}...")
 
         if recompute_storage:
-            self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
+            self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self)
 
         # Ensure that the Project's storage_keep_versions is at least 1, and reflects the plan's default storage_keep_versions value.
         if not self.storage_keep_versions:
