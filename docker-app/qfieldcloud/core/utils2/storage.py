@@ -26,6 +26,27 @@ from qfieldcloud.core.utils2.audit import LogEntry, audit
 logger = logging.getLogger(__name__)
 
 
+def legacy_only(func):
+    """
+    Decorator to verify that given project is stored on the legacy storage.
+    Otherwise, it calls the decorated function.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+        * Delete all decorated functions with QF-4963 Drop support for legacy storage
+    """
+
+    def wrapper(project, *args, **kwargs):
+        if getattr(project, "file_storage", None) == settings.LEGACY_STORAGE_NAME:
+            raise NotImplementedError(
+                "This function is not implemented for 'whatever' file storage."
+            )
+
+        return func(project, *args, **kwargs)
+
+    return wrapper
+
+
 def _delete_by_prefix_versioned(prefix: str):
     """
     Delete all objects and their versions starting with a given prefix.
@@ -323,6 +344,7 @@ def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F82
     _delete_by_key_permanently(key)
 
 
+@legacy_only
 def upload_project_thumbail(
     project: qfieldcloud.core.models.Project,
     file: IO,
@@ -365,6 +387,7 @@ def upload_project_thumbail(
     return key
 
 
+@legacy_only
 def delete_project_thumbnail(
     project: qfieldcloud.core.models.Project,
 ) -> None:  # noqa: F821
@@ -389,6 +412,7 @@ def delete_project_thumbnail(
     _delete_by_key_permanently(key)
 
 
+@legacy_only
 def purge_old_file_versions_legacy(
     project: qfieldcloud.core.models.Project,
 ) -> None:  # noqa: F821
@@ -445,6 +469,7 @@ def upload_file(file: IO, key: str):
     return key
 
 
+@legacy_only
 def upload_project_file(
     project: qfieldcloud.core.models.Project, file: IO, filename: str
 ) -> str:
@@ -457,6 +482,7 @@ def upload_project_file(
     return key
 
 
+@legacy_only
 def delete_all_project_files_permanently(
     project: qfieldcloud.core.models.Project,
 ) -> None:
@@ -471,6 +497,7 @@ def delete_all_project_files_permanently(
     _delete_by_prefix_permanently(prefix)
 
 
+@legacy_only
 def delete_project_file_permanently(
     project: qfieldcloud.core.models.Project, filename: str
 ):  # noqa: F821
@@ -519,6 +546,7 @@ def delete_project_file_permanently(
         )
 
 
+@legacy_only
 def delete_project_file_version_permanently(
     project: qfieldcloud.core.models.Project,
     filename: str,
@@ -602,6 +630,7 @@ def delete_project_file_version_permanently(
     return versions_to_delete
 
 
+@legacy_only
 def get_stored_package_ids(project: qfieldcloud.core.models.Project) -> set[str]:
     project_id = project.id
     bucket = qfieldcloud.core.utils.get_s3_bucket()
@@ -617,6 +646,7 @@ def get_stored_package_ids(project: qfieldcloud.core.models.Project) -> set[str]
     return package_ids
 
 
+@legacy_only
 def delete_stored_package(
     project: qfieldcloud.core.models.Project, package_id: str
 ) -> None:
@@ -635,6 +665,7 @@ def delete_stored_package(
     _delete_by_prefix_permanently(prefix)
 
 
+@legacy_only
 def get_project_file_storage_in_bytes(project: qfieldcloud.core.models.Project) -> int:
     """Calculates the project files storage in bytes, including their versions.
 
