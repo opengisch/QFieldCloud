@@ -1,5 +1,12 @@
+"""A module with legacy file storage management.
+
+Todo:
+    * Delete with QF-4963 Drop support for legacy storage
+"""
+
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from enum import Enum
@@ -17,6 +24,27 @@ from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 
 logger = logging.getLogger(__name__)
+
+
+def legacy_only(func):
+    """
+    Decorator to verify that given project is stored on the legacy storage.
+    Otherwise, it calls the decorated function.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+        * Delete all decorated functions with QF-4963 Drop support for legacy storage
+    """
+
+    def wrapper(project, *args, **kwargs):
+        if project.file_storage != settings.LEGACY_STORAGE_NAME:
+            raise NotImplementedError(
+                f'This function is not implemented for "{project.file_storage}" file storage!'
+            )
+
+        return func(project, *args, **kwargs)
+
+    return wrapper
 
 
 def _delete_by_prefix_versioned(prefix: str):
@@ -316,6 +344,7 @@ def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F82
     _delete_by_key_permanently(key)
 
 
+@legacy_only
 def upload_project_thumbail(
     project: qfieldcloud.core.models.Project,
     file: IO,
@@ -358,6 +387,7 @@ def upload_project_thumbail(
     return key
 
 
+@legacy_only
 def delete_project_thumbnail(
     project: qfieldcloud.core.models.Project,
 ) -> None:  # noqa: F821
@@ -366,7 +396,7 @@ def delete_project_thumbnail(
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     """
-    key = project.thumbnail_uri
+    key = project.legacy_thumbnail_uri
 
     # it well could be the project has no thumbnail yet
     if not key:
@@ -382,7 +412,8 @@ def delete_project_thumbnail(
     _delete_by_key_permanently(key)
 
 
-def purge_old_file_versions(
+@legacy_only
+def purge_old_file_versions_legacy(
     project: qfieldcloud.core.models.Project,
 ) -> None:  # noqa: F821
     """
@@ -438,6 +469,7 @@ def upload_file(file: IO, key: str):
     return key
 
 
+@legacy_only
 def upload_project_file(
     project: qfieldcloud.core.models.Project, file: IO, filename: str
 ) -> str:
@@ -450,7 +482,11 @@ def upload_project_file(
     return key
 
 
-def delete_all_project_files_permanently(project_id: str) -> None:
+@legacy_only
+def delete_all_project_files_permanently(
+    project: qfieldcloud.core.models.Project,
+) -> None:
+    project_id = str(project.id)
     prefix = f"projects/{project_id}/"
 
     if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/$", prefix):
@@ -461,6 +497,7 @@ def delete_all_project_files_permanently(project_id: str) -> None:
     _delete_by_prefix_permanently(prefix)
 
 
+@legacy_only
 def delete_project_file_permanently(
     project: qfieldcloud.core.models.Project, filename: str
 ):  # noqa: F821
@@ -509,8 +546,9 @@ def delete_project_file_permanently(
         )
 
 
+@legacy_only
 def delete_project_file_version_permanently(
-    project: qfieldcloud.core.models.Project,  # noqa: F821
+    project: qfieldcloud.core.models.Project,
     filename: str,
     version_id: str,
     include_older: bool = False,
@@ -526,7 +564,8 @@ def delete_project_file_version_permanently(
     Returns:
         int: the number of versions deleted
     """
-    file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
+    project_id = str(project.id)
+    file = qfieldcloud.core.utils.get_project_file_with_versions(project_id, filename)
 
     if not file:
         raise Exception(
@@ -591,7 +630,9 @@ def delete_project_file_version_permanently(
     return versions_to_delete
 
 
-def get_stored_package_ids(project_id: str) -> set[str]:
+@legacy_only
+def get_stored_package_ids(project: qfieldcloud.core.models.Project) -> set[str]:
+    project_id = project.id
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/"
     root_path = PurePath(prefix)
@@ -605,7 +646,11 @@ def get_stored_package_ids(project_id: str) -> set[str]:
     return package_ids
 
 
-def delete_stored_package(project_id: str, package_id: str) -> None:
+@legacy_only
+def delete_stored_package(
+    project: qfieldcloud.core.models.Project, package_id: str
+) -> None:
+    project_id = str(project)
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
     if not re.match(
@@ -620,11 +665,13 @@ def delete_stored_package(project_id: str, package_id: str) -> None:
     _delete_by_prefix_permanently(prefix)
 
 
-def get_project_file_storage_in_bytes(project_id: str) -> int:
+@legacy_only
+def get_project_file_storage_in_bytes(project: qfieldcloud.core.models.Project) -> int:
     """Calculates the project files storage in bytes, including their versions.
 
     WARNING This function can be quite slow on projects with thousands of files.
     """
+    project_id = str(project.id)
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     total_bytes = 0
     prefix = f"projects/{project_id}/files/"
@@ -640,3 +687,24 @@ def get_project_file_storage_in_bytes(project_id: str) -> int:
         total_bytes += version.size or 0
 
     return total_bytes
+
+
+def calculate_checksums(
+    content: ContentFile, alrgorithms: tuple[str, ...], blocksize: int = 65536
+) -> tuple[bytes, ...]:
+    """Calculates checksums on given file for given algorithms."""
+    hashers = []
+    for alrgorithm in alrgorithms:
+        hashers.append(getattr(hashlib, alrgorithm)())
+
+    for chunk in content.chunks(blocksize):
+        for hasher in hashers:
+            hasher.update(chunk)
+
+    content.seek(0)
+
+    checksums = []
+    for hasher in hashers:
+        checksums.append(hasher.digest())
+
+    return tuple(checksums)

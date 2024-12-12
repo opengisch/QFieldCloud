@@ -1,6 +1,7 @@
 import io
 import os
 from datetime import timedelta
+import tempfile
 from time import sleep
 from typing import IO, Iterable
 
@@ -78,9 +79,28 @@ def set_subscription(
     return subscription
 
 
-def get_random_file(mb: int) -> IO:
+def get_random_file(mb: float) -> IO:
     """Helper that returns a file of given size in megabytes"""
-    return io.BytesIO(os.urandom(1000 * int(mb * 1000)))
+    bytes_size = 1000 * int(mb * 1000)
+    return io.BytesIO(os.urandom(bytes_size))
+
+
+class get_named_file_with_size:
+    def __init__(self, mb: int) -> None:
+        self.bytes_size = 1000 * int(mb * 1000)
+
+    def __enter__(self):
+        self.file = tempfile.NamedTemporaryFile("w+b", prefix="qfc_test_tmp_")
+        self.file.seek(self.bytes_size - 1)
+        self.file.write(b"0")
+        self.file.flush()
+        self.file.seek(0)
+
+        return self.file
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if self.file:
+            self.file.close()
 
 
 def wait_for_project_ok_status(project: Project, wait_s: int = 30):
