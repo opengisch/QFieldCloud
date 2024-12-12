@@ -25,7 +25,6 @@ from rest_framework.response import Response
 
 
 import logging
-from typing import cast
 from uuid import UUID
 
 from django.urls import reverse_lazy
@@ -34,7 +33,6 @@ from django.shortcuts import get_object_or_404
 
 from qfieldcloud.filestorage.models import (
     File,
-    FileVersion,
 )
 from qfieldcloud.filestorage.serializers import FileSerializer
 from qfieldcloud.filestorage.view_helpers import (
@@ -340,16 +338,11 @@ class LatestPackageDownloadFilesView(views.APIView):
         else:
             file_type = File.FileType.PACKAGE_FILE
 
-        file = File.objects.get(
-            project_id=project_id,
-            name=filename,
-            file_type=file_type,
-        )
-        file_version = cast(FileVersion, file.latest_version)
-
         return download_project_file_version(
             request,
-            file_version,
+            project_id,
+            filename,
+            file_type=file_type,
         )
 
 
@@ -380,7 +373,7 @@ class PackageUploadFilesView(views.APIView):
 
         # project = get_object_or_404(Project, id=project_id)
 
-        _uploaded_files = upload_project_file_version(
+        uploaded_file_version = upload_project_file_version(
             request,
             project_id,
             filename,
@@ -388,10 +381,6 @@ class PackageUploadFilesView(views.APIView):
             file_type=File.FileType.PACKAGE_FILE,
             package_job_id=job_id,
         )
-
-        uploaded_file_version = _uploaded_files[filename]
-
-        assert uploaded_file_version
 
         headers = {
             "Location": reverse_lazy(

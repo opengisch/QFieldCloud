@@ -49,7 +49,7 @@ def upload_project_file_version(
     file: DjangoFile,
     file_type: File.FileType,
     package_job_id: UUID | None = None,
-) -> FileVersion | None:
+) -> FileVersion:
     project = get_object_or_404(Project, id=project_id)
 
     if not filename or not filename.strip():
@@ -147,6 +147,7 @@ def download_project_file_version(
     request: Request,
     project_id: UUID,
     filename: str,
+    file_type: File.FileType,
     as_attachment: bool = False,
 ) -> HttpResponseBase:
     version_id = request.GET.get("version")
@@ -156,13 +157,13 @@ def download_project_file_version(
             id=version_id,
             file__project_id=project_id,
             file__name=filename,
-            file__file_type=File.FileType.PROJECT_FILE,
+            file__file_type=file_type,
         )
     else:
         file = File.objects.get(
             project_id=project_id,
             name=filename,
-            file_type=File.FileType.PROJECT_FILE,
+            file_type=file_type,
         )
 
         assert file.latest_version

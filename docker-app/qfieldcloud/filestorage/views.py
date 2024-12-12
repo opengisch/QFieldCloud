@@ -104,6 +104,7 @@ class FileCrudView(views.APIView):
             request,
             project_id,
             filename,
+            file_type=File.FileType.PROJECT_FILE,
         )
 
     def post(
