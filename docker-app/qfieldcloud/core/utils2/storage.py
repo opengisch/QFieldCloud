@@ -457,7 +457,10 @@ def upload_project_file(
     return key
 
 
-def delete_all_project_files_permanently(project_id: str) -> None:
+def delete_all_project_files_permanently(
+    project: qfieldcloud.core.models.Project,
+) -> None:
+    project_id = str(project.id)
     prefix = f"projects/{project_id}/"
 
     if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/$", prefix):
@@ -517,7 +520,7 @@ def delete_project_file_permanently(
 
 
 def delete_project_file_version_permanently(
-    project: qfieldcloud.core.models.Project,  # noqa: F821
+    project: qfieldcloud.core.models.Project,
     filename: str,
     version_id: str,
     include_older: bool = False,
@@ -533,7 +536,8 @@ def delete_project_file_version_permanently(
     Returns:
         int: the number of versions deleted
     """
-    file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
+    project_id = str(project.id)
+    file = qfieldcloud.core.utils.get_project_file_with_versions(project_id, filename)
 
     if not file:
         raise Exception(
@@ -598,7 +602,8 @@ def delete_project_file_version_permanently(
     return versions_to_delete
 
 
-def get_stored_package_ids(project_id: str) -> set[str]:
+def get_stored_package_ids(project: qfieldcloud.core.models.Project) -> set[str]:
+    project_id = project.id
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/"
     root_path = PurePath(prefix)
@@ -612,7 +617,10 @@ def get_stored_package_ids(project_id: str) -> set[str]:
     return package_ids
 
 
-def delete_stored_package(project_id: str, package_id: str) -> None:
+def delete_stored_package(
+    project: qfieldcloud.core.models.Project, package_id: str
+) -> None:
+    project_id = str(project)
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
     if not re.match(
@@ -627,11 +635,12 @@ def delete_stored_package(project_id: str, package_id: str) -> None:
     _delete_by_prefix_permanently(prefix)
 
 
-def get_project_file_storage_in_bytes(project_id: str) -> int:
+def get_project_file_storage_in_bytes(project: qfieldcloud.core.models.Project) -> int:
     """Calculates the project files storage in bytes, including their versions.
 
     WARNING This function can be quite slow on projects with thousands of files.
     """
+    project_id = str(project.id)
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     total_bytes = 0
     prefix = f"projects/{project_id}/files/"

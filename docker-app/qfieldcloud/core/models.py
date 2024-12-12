@@ -1511,7 +1511,7 @@ class Project(models.Model):
             # TODO Delete with QF-4963 Drop support for legacy storage
             if self.file_storage == settings.LEGACY_STORAGE_NAME:
                 self.file_storage_bytes = storage.get_project_file_storage_in_bytes(
-                    self.id
+                    self
                 )
             else:
                 self.file_storage_bytes = self.files.all().aggregate(
