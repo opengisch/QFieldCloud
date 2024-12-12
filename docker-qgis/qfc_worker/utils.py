@@ -229,7 +229,7 @@ def open_qgis_project(
     logging.info(f'Loading QGIS project "{project_filename}"…')
 
     if not Path(project_filename).exists():
-        raise FileNotFoundError(project_filename)
+        raise FileNotFoundError(f"File not found: {project_filename}")
 
     project = QgsProject.instance()
 
