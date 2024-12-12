@@ -698,9 +698,9 @@ class QfcTestCase(APITransactionTestCase):
             "created_at"
         )
 
-        stored_package_ids = get_stored_package_ids(self.project1)
-
         if self.project1.file_storage == settings.LEGACY_STORAGE_NAME:
+            stored_package_ids = get_stored_package_ids(self.project1)
+
             self.assertNotEqual(old_package.id, new_package.id)
             self.assertNotIn(str(old_package.id), stored_package_ids)
             self.assertIn(str(new_package.id), stored_package_ids)
