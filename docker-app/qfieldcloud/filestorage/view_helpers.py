@@ -26,6 +26,7 @@ from django.core.files import File as DjangoFile
 from django.utils.translation import gettext as _
 from django.http import FileResponse, HttpResponse
 from django.http.response import HttpResponseBase
+from django.utils import timezone
 
 from rest_framework.exceptions import NotFound
 from rest_framework.request import Request
@@ -138,6 +139,7 @@ def upload_project_file_version(
                         project=project, created_by=request.user
                     )
 
+            project.data_last_updated_at = timezone.now()
             project.file_storage_bytes += file_version.size
             project.save(update_fields=update_fields)
         elif file_type == File.FileType.PACKAGE_FILE:
