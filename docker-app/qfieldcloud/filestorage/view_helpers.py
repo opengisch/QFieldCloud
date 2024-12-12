@@ -66,8 +66,11 @@ def upload_project_file_version(
 
     # check if the project restricts file modification to admins only
     if (
-        is_admin_restricted_file(filename, project.project_filename)
-        or is_qgis_project_file(filename)
+        file_type == File.FileType.PROJECT_FILE
+        and (
+            is_admin_restricted_file(filename, project.project_filename)
+            or is_qgis_project_file(filename)
+        )
     ) and not permissions_utils.can_modify_qgis_projectfile(request.user, project):
         logger.error(
             f"The project restricts modification of the QGIS project file to managers and administrators for {filename=}!"
@@ -81,10 +84,10 @@ def upload_project_file_version(
 
     # check only one qgs/qgz file per project for project files
     if (
-        is_qgis_file
+        file_type == File.FileType.PROJECT_FILE
+        and is_qgis_file
         and project.project_filename is not None
         and PurePath(filename) != PurePath(project.project_filename)
-        and file_type == File.FileType.PROJECT_FILE
     ):
         logger.error(f"Only one QGIS project per project allowed for {filename=}!")
 
@@ -106,39 +109,48 @@ def upload_project_file_version(
             uploaded_by=request.user,
             package_job_id=package_job_id,
         )
-        # we only enter a transaction after the file is uploaded above because we do not
-        # want to lock the project row for way too long. If we reselect for update the
-        # project and update it now, it guarantees there will be no other file upload editing
-        # the same project row.
-        project = Project.objects.select_for_update().get(id=project.id)
-        update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
-        if get_attachment_dir_prefix(project, filename) == "" and (
-            is_qgis_file or project.project_filename is not None
-        ):
-            if is_qgis_file:
-                project.project_filename = filename
-                update_fields.append("project_filename")
+        if file_type == File.FileType.PROJECT_FILE:
+            # Select for update the project so we can update it, especially the `file_storage_bytes` bit.
+            # It guarantees there will be no other file upload editing the same project row.
+            project = Project.objects.select_for_update().get(id=project.id)
+            update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
-            running_jobs = ProcessProjectfileJob.objects.filter(
-                project=project,
-                created_by=request.user,
-                status__in=[
-                    Job.Status.PENDING,
-                    Job.Status.QUEUED,
-                    Job.Status.STARTED,
-                ],
-            )
+            if get_attachment_dir_prefix(project, filename) == "" and (
+                is_qgis_file or project.project_filename is not None
+            ):
+                if is_qgis_file:
+                    project.project_filename = filename
+                    update_fields.append("project_filename")
 
-            if not running_jobs.exists():
-                ProcessProjectfileJob.objects.create(
-                    project=project, created_by=request.user
+                running_jobs = ProcessProjectfileJob.objects.filter(
+                    project=project,
+                    created_by=request.user,
+                    status__in=[
+                        Job.Status.PENDING,
+                        Job.Status.QUEUED,
+                        Job.Status.STARTED,
+                    ],
                 )
 
-        project.file_storage_bytes += file_version.size
-        project.save(update_fields=update_fields)
+                if not running_jobs.exists():
+                    ProcessProjectfileJob.objects.create(
+                        project=project, created_by=request.user
+                    )
 
-    purge_old_file_versions(project)
+            project.file_storage_bytes += file_version.size
+            project.save(update_fields=update_fields)
+        elif file_type == File.FileType.PACKAGE_FILE:
+            # nothing to do when we upload a package file
+            pass
+        else:
+            raise NotImplementedError(f"Unknown FileType: {file_type=}")
+
+    if file_type == File.FileType.PROJECT_FILE:
+        purge_old_file_versions(project)
+    else:
+        # do nothing, only `file_type=PROJECT_FILE` files are versioned, the rest are not versioned
+        pass
 
     return file_version
 
