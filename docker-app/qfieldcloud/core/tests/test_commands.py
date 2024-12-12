@@ -24,16 +24,16 @@ class QfcTestCase(TestCase):
         cls.p1 = Project.objects.create(name="test_project", owner=user)
 
         if cls.p1.file_storage == settings.LEGACY_STORAGE_NAME:
+            storage.upload_project_file(
+                cls.p1, io.BytesIO(b"Hello world!"), "project.qgs"
+            )
+        else:
             FileVersion.objects.add_version(
                 project=cls.p1,
                 filename="file.name",
                 content=ContentFile(b"Hello world!"),
                 file_type=File.FileType.PROJECT_FILE,
                 uploaded_by=user,
-            )
-        else:
-            storage.upload_project_file(
-                cls.p, io.BytesIO(b"Hello world!"), "project.qgs"
             )
 
     def test_extracts3data_output_to_file(self):
