@@ -106,7 +106,16 @@ class MultipleContentsError(QFieldCloudException):
 
     code = "multiple_contents"
     message = "Multiple contents"
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
+class ExplicitDeletionOfLastFileVersionError(QFieldCloudException):
+    """Raised when a request contains multiple files
+    (i.e. when it should contain at most one)"""
+
+    code = "explicit_deletion_of_last_version"
+    message = "Explicit deletion of last file version is not allowed!"
+    status_code = status.HTTP_400_BAD_REQUEST
 
 
 class ObjectNotFoundError(QFieldCloudException):
@@ -115,7 +124,7 @@ class ObjectNotFoundError(QFieldCloudException):
 
     code = "object_not_found"
     message = "Object not found"
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = status.HTTP_404_NOT_FOUND
     log_as_error = False
 
 
@@ -152,7 +161,7 @@ class RestrictedProjectModificationError(QFieldCloudException):
 
     code = "restricted_project_modification"
     message = "Restricted project modification"
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = status.HTTP_403_FORBIDDEN
 
 
 class DeltafileValidationError(QFieldCloudException):

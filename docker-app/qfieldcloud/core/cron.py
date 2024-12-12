@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from constance import config
 from django.utils import timezone
+from django.conf import settings
 from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
 from sentry_sdk import capture_message
@@ -10,6 +11,8 @@ from sentry_sdk import capture_message
 from ..core.models import ApplyJob, ApplyJobDelta, Delta, Job, Project
 from ..core.utils2 import storage
 from .invitations_utils import send_invitation
+from qfieldcloud.filestorage.models import File
+
 
 logger = logging.getLogger(__name__)
 
@@ -115,17 +118,27 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
             .values("id")
         ]
 
-        for project in projects:
-            project_id = str(project.id)
-            package_ids = storage.get_stored_package_ids(project_id)
+        if self.job.project.file_storage == settings.LEGACY_STORAGE_NAME:
+            for project in projects:
+                project_id = str(project.id)
+                package_ids = storage.get_stored_package_ids(project_id)
 
-            for package_id in package_ids:
-                # keep the last package
-                if package_id == str(project.last_package_job_id):
-                    continue
+                for package_id in package_ids:
+                    # keep the last package
+                    if package_id == str(project.last_package_job_id):
+                        continue
 
-                # the job is still active, so it might be one of the new packages
-                if package_id in job_ids:
-                    continue
+                    # the job is still active, so it might be one of the new packages
+                    if package_id in job_ids:
+                        continue
 
-                storage.delete_stored_package(project_id, package_id)
+                    storage.delete_stored_package(project, package_id)
+        else:
+            delete_count = File.objects.filter(
+                project=self.job.project,
+                package_job_id__in=job_ids,
+            ).delete()
+
+            logger.warning(
+                f"Cron have identified and deleted {delete_count} package files from previous packages!"
+            )

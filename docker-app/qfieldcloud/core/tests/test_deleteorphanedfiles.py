@@ -1,6 +1,7 @@
 import io
 
 from django.core.management import call_command
+from django.conf import settings
 from django.test import TestCase
 from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.utils import get_project_files_count, get_s3_bucket
@@ -24,7 +25,11 @@ class QfcTestCase(TestCase):
     def generate_projects(self, count: int):
         offset = len(self.projects)
         for i in range(1, count + 1):
-            p = Project.objects.create(name=f"p{offset + i}", owner=self.u1)
+            p = Project.objects.create(
+                name=f"p{offset + i}",
+                owner=self.u1,
+                file_storage=settings.LEGACY_STORAGE_NAME,
+            )
             self.projects.append(p)
             file = io.BytesIO(b"Hello world!")
             storage.upload_project_file(p, file, "project.qgs")
