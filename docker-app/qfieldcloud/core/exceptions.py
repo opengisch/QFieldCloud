@@ -40,14 +40,6 @@ class QFieldCloudException(Exception):
         return self.message
 
 
-class StatusNotOkError(QFieldCloudException):
-    """Raised when some parts of QFieldCloud are not working as expected"""
-
-    code = "status_not_ok"
-    message = "Status not ok"
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-
-
 class AuthenticationFailedError(QFieldCloudException):
     """Raised when QFieldCloud incoming request includes incorrect authentication."""
 
