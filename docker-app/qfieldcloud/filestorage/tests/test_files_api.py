@@ -122,7 +122,7 @@ class QfcTestCase(APITransactionTestCase):
                     "filename": filename,
                 },
             ),
-            query_params=params,
+            data=params,
             headers=headers,
         )
 
