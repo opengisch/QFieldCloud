@@ -97,23 +97,26 @@ class QfcTestCase(APITransactionTestCase):
         file3 = io.FileIO(testdata_path("file.txt"), "rb")
         data = {"file": [file1, file2, file3]}
 
-        should_fail_on_multiple = self.client.post(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            data=data,
-            format="multipart",
-        )
-        should_fail_on_empty = self.client.post(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            data={"file": []},
-            format="multipart",
-        )
-
         # Assert that it didn't work
         with self.subTest():
-            self.assertEqual(
-                should_fail_on_multiple.json()["code"], "multiple_contents"
+            response = self.client.post(
+                f"/api/v1/files/{self.project1.id}/file.txt/",
+                data=data,
+                format="multipart",
             )
-            self.assertEqual(should_fail_on_empty.json()["code"], "empty_content")
+            self.assertEqual(response.json()["code"], "multiple_contents")
+            self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+            self.assertEqual(
+                Project.objects.get(pk=self.project1.pk).project_filename, None
+            )
+
+        with self.subTest():
+            response = self.client.post(
+                f"/api/v1/files/{self.project1.id}/file.txt/",
+                data={"file": []},
+                format="multipart",
+            )
+            self.assertEqual(response.json()["code"], "empty_content")
             self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
             self.assertEqual(
                 Project.objects.get(pk=self.project1.pk).project_filename, None
@@ -685,7 +688,11 @@ class QfcTestCase(APITransactionTestCase):
                 return file.versions[n]._data.get()["Body"].read().decode()
 
             return (
-                project.get_file("file.txt").versions.all()[n].content.read().decode()
+                project.get_file("file.txt")
+                .versions.all()
+                .order_by("uploaded_at")[n]
+                .content.read()
+                .decode()
             )
 
         # As PRO account, 10 version should be kept out of 20

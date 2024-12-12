@@ -34,7 +34,6 @@ from rest_framework.response import Response
 
 from .serializers import FileWithVersionsSerializer
 from .view_helpers import (
-    ValidationError,
     delete_project_file_version,
     download_project_file_version,
     upload_project_file_version,
@@ -119,7 +118,7 @@ class FileCrudView(views.APIView):
         if not uploaded_file:
             logger.error(f"Unable to get file contents for {filename=}!")
 
-            raise ValidationError(
+            raise exceptions.EmptyContentError(
                 f'Missing file contents for "{filename}" from the request!'
             )
 
