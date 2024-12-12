@@ -160,7 +160,7 @@ class QfcTestCase(APITransactionTestCase):
                 if tempdir:
                     for filename in expected_files:
                         response = self.client.get(
-                            f"/api/v1/packages/{self.project1.id}/latest/files/project_qfield.qgs/"
+                            f"/api/v1/packages/{self.project1.id}/latest/files/{filename}/"
                         )
                         local_file = os.path.join(tempdir, filename)
 
