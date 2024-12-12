@@ -188,17 +188,6 @@ class InvalidJobError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class QGISPackageError(QFieldCloudException):
-    """Raised when the QGIS package of a project fails"""
-
-    code = "qgis_package_error"
-    message = "QGIS package failed"
-    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-    if "Unable to open file with QGIS" in message:
-        message = "QGIS is unable to open the QGIS project"
-
-
 class ProjectAlreadyExistsError(QFieldCloudException):
     """Raised when a quota limitation is hit"""
 
