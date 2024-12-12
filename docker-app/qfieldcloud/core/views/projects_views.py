@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
@@ -127,9 +126,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, projectid):
         # Delete files from storage
-        project = get_object_or_404(Project, id=projectid)
-
-        storage.delete_all_project_files_permanently(project)
+        storage.delete_all_project_files_permanently(projectid)
 
         return super().destroy(request, projectid)
 

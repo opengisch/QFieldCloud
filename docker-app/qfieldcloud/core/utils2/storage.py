@@ -482,11 +482,16 @@ def upload_project_file(
     return key
 
 
-@legacy_only
-def delete_all_project_files_permanently(
-    project: qfieldcloud.core.models.Project,
-) -> None:
-    project_id = str(project.id)
+def delete_all_project_files_permanently(project_id: str) -> None:
+    """Deletes all project files permanently.
+
+    Args:
+        project_id (str): the project which files shall be deleted. Note that the `project_id` might be a of a already deleted project which files are still dangling around.
+
+    Raises:
+        RuntimeError: if the produced Object Storage key to delete is not in the right format
+    """
+
     prefix = f"projects/{project_id}/"
 
     if not re.match(r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/$", prefix):
@@ -503,7 +508,9 @@ def delete_project_file_permanently(
 ):  # noqa: F821
     logger.info(f"Requested delete (permanent) of project file {filename=}")
 
-    file = qfieldcloud.core.utils.get_project_file_with_versions(project.id, filename)
+    file = qfieldcloud.core.utils.get_project_file_with_versions(
+        str(project.id), filename
+    )
 
     if not file:
         raise Exception(
