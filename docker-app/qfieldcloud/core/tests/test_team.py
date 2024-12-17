@@ -15,7 +15,7 @@ from .utils import setup_subscription_plans
 logging.disable(logging.CRITICAL)
 
 
-class TeamsTestCase(APITestCase):
+class QfcTestCase(APITestCase):
     def setUp(self):
         setup_subscription_plans()
 
