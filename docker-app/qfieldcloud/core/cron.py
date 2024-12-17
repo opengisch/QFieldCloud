@@ -128,4 +128,4 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
                 if package_id in job_ids:
                     continue
 
-                storage.delete_stored_package(project_id, package_id)
+                storage.delete_stored_package(project, package_id)
