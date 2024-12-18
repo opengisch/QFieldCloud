@@ -136,7 +136,7 @@ MIDDLEWARE = [
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
     "qfieldcloud.core.middleware.test.TestMiddleware",
     "axes.middleware.AxesMiddleware",
-    "allauth.account.middleware.AccountMiddleware"
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 CRON_CLASSES = [
