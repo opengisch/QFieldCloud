@@ -1,7 +1,8 @@
 boto3-stubs==1.35.90
 boto3==1.35.90
 deprecated==1.2.15
-django-allauth==0.44.0
+django==4.2.16
+django-allauth==65.3.1
 django-auditlog==3.0.0
 django-axes==7.0.1
 django-bootstrap4==24.4
