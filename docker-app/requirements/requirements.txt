@@ -71,7 +71,7 @@ django==4.2.16
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth==0.44.0
+django-allauth==65.3.1
     # via -r /requirements/requirements.in
 django-appconf==1.0.6
     # via django-cryptography

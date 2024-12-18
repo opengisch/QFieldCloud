@@ -136,6 +136,7 @@ MIDDLEWARE = [
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
     "qfieldcloud.core.middleware.test.TestMiddleware",
     "axes.middleware.AxesMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 CRON_CLASSES = [
@@ -358,6 +359,10 @@ ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
+
+# Django allauth's RateLimiter configuration
+# https://docs.allauth.org/en/latest/account/rate_limits.html
+ACCOUNT_RATE_LIMITS = False
 
 # Choose one of "mandatory", "optional", or "none".
 # For local development and test use "optional" or "none"
