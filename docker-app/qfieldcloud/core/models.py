@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 import secrets
 import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import cast
+from typing import Any, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -183,6 +185,17 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
     def get_queryset(self):
         return super().get_queryset().select_subclasses()
 
+    def fast_search(self, username_or_email: str) -> "User":
+        """Searches a user by `username` or `email` field
+
+        Args:
+            username_or_email (str): username or email to search for
+
+        Returns:
+            User: The user with that username or email.
+        """
+        return self.get(Q(username=username_or_email) | Q(email=username_or_email))
+
 
 class PersonManager(UserManager):
     def get_queryset(self):
@@ -213,6 +226,12 @@ class User(AbstractUser):
     Note:
         If you add validators in the constructor, note they will be added multiple times for each class that extends User.
     """
+
+    # All projects that a user owns
+    projects: models.QuerySet[Project]
+
+    # The `UserAccount` stores non-critical user information such as avatar, bio, timezone settings etc.
+    useraccount: UserAccount
 
     objects = UserManager()
 
@@ -314,7 +333,7 @@ class User(AbstractUser):
         if self.type != User.Type.TEAM:
             storage.delete_user_avatar(self)
 
-        super().delete(*args, **kwargs)
+        return super().delete(*args, **kwargs)
 
     class Meta:
         base_manager_name = "objects"
@@ -357,7 +376,7 @@ class Person(User):
     # Whether the user has accepted the Terms of Service
     has_accepted_tos = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta(User.Meta):
         verbose_name = "person"
         verbose_name_plural = "people"
 
@@ -576,9 +595,11 @@ class Geodb(models.Model):
             geodb_utils.create_role_and_db(self)
 
     def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
+        result = super().delete(*args, **kwargs)
         # Automatically delete role and database when a Geodb object is deleted.
         geodb_utils.delete_db_and_role(self.dbname, self.username)
+
+        return result
 
 
 class OrganizationQueryset(models.QuerySet):
@@ -620,7 +641,9 @@ class OrganizationManager(UserManager):
 
 
 class Organization(User):
-    class Meta:
+    members: models.QuerySet["OrganizationMember"]
+
+    class Meta(User.Meta):
         verbose_name = "organization"
         verbose_name_plural = "organizations"
 
@@ -736,9 +759,32 @@ class OrganizationMember(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(type=User.Type.PERSON),
     )
+
     role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.MEMBER)
 
     is_public = models.BooleanField(default=False)
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="created_organization_members",
+        null=True,
+        blank=True,
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="updated_organization_members",
+        null=True,
+        blank=True,
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.organization.username + ": " + self.member.username
@@ -799,7 +845,7 @@ class Team(User):
         related_name="teams",
     )
 
-    class Meta:
+    class Meta(User.Meta):
         verbose_name = "team"
         verbose_name_plural = "teams"
 
@@ -810,6 +856,14 @@ class Team(User):
     @property
     def teamname(self):
         return self.username.replace(f"@{self.team_organization.username}/", "")
+
+    @staticmethod
+    def format_team_name(organization_name: str, team_name: str) -> str:
+        """Returns the actual team username formatted as `@<organization_name>/<team_name>`."""
+        if not team_name:
+            raise ValueError("Team name is required.")
+
+        return f"@{organization_name}/{team_name}"
 
 
 class TeamMember(models.Model):
@@ -1159,7 +1213,9 @@ class Project(models.Model):
         if not self.project_details:
             return None
 
-        layers_by_id = self.project_details.get("layers_by_id")
+        layers_by_id: dict[str, dict[str, Any]] = self.project_details.get(
+            "layers_by_id"
+        )
 
         if layers_by_id is None:
             return None
@@ -1343,7 +1399,8 @@ class Project(models.Model):
     def delete(self, *args, **kwargs):
         if self.thumbnail_uri:
             storage.delete_project_thumbnail(self)
-        super().delete(*args, **kwargs)
+
+        return super().delete(*args, **kwargs)
 
     @property
     def owner_can_create_job(self):
@@ -1357,10 +1414,10 @@ class Project(models.Model):
 
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
-        logger.info(f"Saving project {self}...")
+        logger.debug(f"Saving project {self}...")
 
         if recompute_storage:
-            self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self.id)
+            self.file_storage_bytes = storage.get_project_file_storage_in_bytes(self)
 
         # Ensure that the Project's storage_keep_versions is at least 1, and reflects the plan's default storage_keep_versions value.
         if not self.storage_keep_versions:
@@ -1772,6 +1829,9 @@ class ApplyJob(Job):
 
 
 class ApplyJobDelta(models.Model):
+    apply_job_id: int
+    delta_id: int
+
     apply_job = models.ForeignKey(ApplyJob, on_delete=models.CASCADE)
     delta = models.ForeignKey(Delta, on_delete=models.CASCADE)
     status = models.CharField(

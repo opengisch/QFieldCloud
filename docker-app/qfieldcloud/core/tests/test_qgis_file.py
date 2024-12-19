@@ -4,10 +4,8 @@ import tempfile
 import time
 from pathlib import PurePath
 
-from django.core.management import call_command
 from django.http import FileResponse
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core import utils
 from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob, Project
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -655,52 +653,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual("bigfile.big", response.json()[0]["name"])
         self.assertEqual(response.json()[0]["size"], 10000000)
-
-    def test_purge_old_versions_command(self):
-        """This tests manual purging of old versions with the management command"""
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-
-        set_subscription(self.user1, storage_keep_versions=3)
-
-        def count_versions():
-            """counts the versions in first file of project1"""
-            file = Project.objects.get(pk=self.project1.pk).files[0]
-            return len(file.versions)
-
-        def read_version(n):
-            """returns the content of version in first file of project1"""
-            file = Project.objects.get(pk=self.project1.pk).files[0]
-            return file.versions[n]._data.get()["Body"].read().decode()
-
-        # Create 20 versions (direct upload to s3)
-        bucket = utils.get_s3_bucket()
-        key = f"projects/{self.project1.id}/files/file.txt/"
-        for i in range(20):
-            test_file = io.BytesIO(f"v{i}".encode())
-            bucket.upload_fileobj(test_file, key)
-
-        # Ensure it worked
-        self.assertEqual(count_versions(), 20)
-        self.assertEqual(read_version(0), "v0")
-        self.assertEqual(read_version(19), "v19")
-
-        # Run management command on other project should have no effect
-        other = Project.objects.create(name="other", owner=self.user1)
-        call_command("purge_old_file_versions", "--force", "--projects", other.pk)
-        self.assertEqual(count_versions(), 20)
-
-        # Run management command should leave 3
-        call_command("purge_old_file_versions", "--force")
-        self.assertEqual(count_versions(), 3)
-        self.assertEqual(read_version(0), "v17")
-        self.assertEqual(read_version(2), "v19")
-
-        # Run management command is idempotent
-        call_command("purge_old_file_versions", "--force")
-        self.assertEqual(count_versions(), 3)
-        self.assertEqual(read_version(0), "v17")
-        self.assertEqual(read_version(2), "v19")
 
     def test_purge_old_versions(self):
         """This tests automated purging of old versions when uploading files"""

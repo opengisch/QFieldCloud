@@ -1258,55 +1258,23 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         )
 
 
-class GeodbAdmin(QFieldCloudModelAdmin):
-    list_filter = ("created_at", "hostname")
-    list_display = (
-        "user",
-        "username",
-        "dbname",
-        "hostname",
-        "port",
-        "created_at",
-        "size",
-    )
-
-    fields = (
-        "user",
-        "username",
-        "dbname",
-        "hostname",
-        "port",
-        "created_at",
-        "size",
-        "last_geodb_error",
-    )
-
-    readonly_fields = ("size", "created_at", "last_geodb_error")
-
-    search_fields = (
-        "user__username",
-        "username",
-        "dbname",
-        "hostname",
-    )
-
-    def save_model(self, request, obj, form, change):
-        # Only on creation
-        if not change:
-            messages.add_message(
-                request,
-                messages.WARNING,
-                f"The password is (shown only once): {obj.password}",
-            )
-        super().save_model(request, obj, form, change)
-
-
 class OrganizationMemberInline(admin.TabularInline):
     model = OrganizationMember
     fk_name = "organization"
     extra = 0
 
-    autocomplete_fields = ("member",)
+    # These fields must be autocomplete due to performance issue in the default Django admin theme, as the foreign key dropdown renders all the options.
+    autocomplete_fields = (
+        "member",
+        "created_by",
+        "updated_by",
+    )
+    readonly_fields = (
+        "created_by",
+        "created_at",
+        "updated_by",
+        "updated_at",
+    )
 
 
 class TeamInline(admin.TabularInline):
@@ -1417,6 +1385,17 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
         return queryset, use_distinct
 
+    def save_formset(self, request, form, formset, change):
+        for form_obj in formset:
+            if isinstance(form_obj.instance, OrganizationMember):
+                # add created_by only if it's a newly created OrganizationMember
+                if form_obj.instance.id is None:
+                    form_obj.instance.created_by = request.user
+
+                form_obj.instance.updated_by = request.user
+
+        super().save_formset(request, form, formset, change)
+
 
 class TeamMemberInline(admin.TabularInline):
     model = TeamMember
@@ -1522,7 +1501,6 @@ admin.site.register(Project, ProjectAdmin)
 admin.site.register(Secret, SecretAdmin)
 admin.site.register(Delta, DeltaAdmin)
 admin.site.register(Job, JobAdmin)
-admin.site.register(Geodb, GeodbAdmin)
 admin.site.register(LogEntry, LogEntryAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin

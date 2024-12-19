@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
@@ -13,10 +14,13 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     Team,
+    TeamMember,
     User,
 )
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+
+from typing import Any
 
 
 def get_avatar_url(user: User) -> str | None:
@@ -171,6 +175,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
     membership_is_public = serializers.BooleanField(
         read_only=True, source="membership_role_is_public"
     )
+    teams = serializers.SerializerMethodField()
 
     def get_members(self, obj):
         return [
@@ -178,6 +183,13 @@ class OrganizationSerializer(serializers.ModelSerializer):
             for m in OrganizationMember.objects.filter(
                 organization=obj, is_public=True
             ).values("member__username")
+        ]
+
+    def get_teams(self, obj: Organization) -> list[str]:
+        """Implementation of `SerializerMethodField` for `teams`. Returns list of team names."""
+        return [
+            t.teamname
+            for t in Team.objects.filter(team_organization=obj).values("username")
         ]
 
     def get_avatar_url(self, obj):
@@ -195,6 +207,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "membership_role",
             "membership_role_origin",
             "membership_is_public",
+            "teams",
         )
 
 
@@ -535,3 +548,51 @@ class LatestPackageSerializer(serializers.Serializer):
     package_id = serializers.UUIDField()
     packaged_at = serializers.DateTimeField()
     data_last_updated_at = serializers.DateTimeField()
+
+
+class TeamSerializer(serializers.ModelSerializer):
+    organization = serializers.StringRelatedField(source="team_organization")
+    team = serializers.CharField(required=True, allow_blank=False, source="username")
+
+    class Meta:
+        model = Team
+        fields = ("team", "organization")
+
+    def to_representation(self, instance: Team) -> dict[str, Any]:
+        representation = super().to_representation(instance)
+        representation["team"] = instance.teamname
+
+        return representation
+
+
+class TeamMemberSerializer(serializers.ModelSerializer):
+    member = serializers.CharField()
+
+    def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
+        validated_data = super().to_internal_value(data)
+        email_or_username: str = data["member"]
+
+        try:
+            existing_user = User.objects.fast_search(email_or_username)
+
+            if TeamMember.objects.filter(member=existing_user):
+                raise serializers.ValidationError(
+                    {
+                        "member": _('Team member "{}" already exists.').format(
+                            email_or_username
+                        )
+                    }
+                )
+
+            validated_data["member"] = existing_user
+
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                {"member": _('User "{}" does not exists.').format(email_or_username)}
+            )
+
+        return validated_data
+
+    class Meta:
+        model = TeamMember
+        fields = ("member",)

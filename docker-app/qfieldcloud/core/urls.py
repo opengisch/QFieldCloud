@@ -7,9 +7,9 @@ from qfieldcloud.core.views import (
     members_views,
     package_views,
     projects_views,
-    qfield_files_views,
     status_views,
     users_views,
+    teams_views,
 )
 from rest_framework.routers import DefaultRouter
 
@@ -84,15 +84,6 @@ urlpatterns = [
         "packages/<uuid:project_id>/<uuid:job_id>/files/<path:filename>/",
         package_views.PackageUploadFilesView.as_view(),
     ),
-    path("qfield-files/<uuid:projectid>/", qfield_files_views.ListFilesView.as_view()),
-    path(
-        "qfield-files/<uuid:projectid>/<path:filename>/",
-        qfield_files_views.DownloadFileView.as_view(),
-    ),
-    path(
-        "qfield-files/export/<uuid:projectid>/",
-        qfield_files_views.PackageView.as_view(),
-    ),
     path("members/<str:organization>/", members_views.ListCreateMembersView.as_view()),
     path(
         "members/<str:organization>/<str:username>/",
@@ -105,4 +96,24 @@ urlpatterns = [
         deltas_views.ListDeltasByDeltafileView.as_view(),
     ),
     path("deltas/apply/<uuid:projectid>/", deltas_views.ApplyView.as_view()),
+    path(
+        "organizations/<str:organization_name>/teams/",
+        teams_views.TeamListCreateView.as_view(),
+        name="team_list_create",
+    ),
+    path(
+        "organizations/<str:organization_name>/teams/<str:team_name>/",
+        teams_views.GetUpdateDestroyTeamDetailView.as_view(),
+        name="team_detail",
+    ),
+    path(
+        "organizations/<str:organization_name>/teams/<str:team_name>/members/",
+        teams_views.ListCreateTeamMembersView.as_view(),
+        name="team_member_list_create",
+    ),
+    path(
+        "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
+        teams_views.GetUpdateDestroyTeamMemberView.as_view(),
+        name="team_member_retrieve_update_destroy",
+    ),
 ]

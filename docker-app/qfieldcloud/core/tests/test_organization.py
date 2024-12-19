@@ -100,6 +100,8 @@ class QfcTestCase(APITestCase):
         self.assertEqual(members[0].organization, self.organization1)
         self.assertEqual(members[0].member, self.user2)
         self.assertEqual(members[0].role, OrganizationMember.Roles.ADMIN)
+        self.assertEqual(members[0].created_by, self.user1)
+        self.assertEqual(members[0].updated_by, self.user1)
 
     def test_update_member(self):
         # Set user2 as member of organization1
@@ -107,6 +109,8 @@ class QfcTestCase(APITestCase):
             organization=self.organization1,
             member=self.user2,
             role=OrganizationMember.Roles.MEMBER,
+            created_by=self.user1,
+            updated_by=self.user1,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -124,6 +128,8 @@ class QfcTestCase(APITestCase):
         self.assertEqual(members[0].organization, self.organization1)
         self.assertEqual(members[0].member, self.user2)
         self.assertEqual(members[0].role, OrganizationMember.Roles.MEMBER)
+        self.assertEqual(members[0].created_by, self.user1)
+        self.assertEqual(members[0].updated_by, self.user1)
 
     def test_delete_member(self):
         # Set user2 as member of organization1
@@ -140,6 +146,23 @@ class QfcTestCase(APITestCase):
 
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 0)
+
+    def test_created_by_set_to_none_on_user_deletion(self):
+        creator = Person.objects.create(username="creator")
+        member = Person.objects.create(username="member")
+
+        org_member = OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=member,
+            role="admin",
+            created_by=creator,
+        )
+
+        creator.delete()
+
+        org_member.refresh_from_db()
+
+        self.assertIsNone(org_member.created_by)
 
     def test_admin_can_add_member(self):
         # Set user2 as member of organization1
