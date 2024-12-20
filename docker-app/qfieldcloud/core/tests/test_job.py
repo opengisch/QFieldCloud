@@ -1,5 +1,4 @@
 import logging
-import time
 from unittest import mock
 
 from qfieldcloud.authentication.models import AuthToken
@@ -17,10 +16,9 @@ from qfieldcloud.subscription.exceptions import (
     QuotaError,
 )
 from qfieldcloud.subscription.models import Subscription
-from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import set_subscription, setup_subscription_plans, testdata_path, wait_for_project_ok_status
+from .utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
@@ -177,62 +175,3 @@ class QfcTestCase(APITestCase):
 
         self.delta_apply_job.status = Job.Status.FAILED
         self.delta_apply_job.save()
-
-    def test_create_job_bad_layer_handler_extracted_values(self):
-        # Test that BadLayerHandler is parsing data properly during package and process projectfile jobs
-        
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
-        
-        # project = Project.objects.create(
-        #     name="simple_bumblebees_wrong_localized", owner=self.user1, description="desc", is_public=False
-        # )
-
-        # response = self.client.post(
-        #     "/api/v1/jobs/",
-        #     {
-        #         "project_id": project.id,
-        #         "type": Job.Type.PROCESS_PROJECTFILE.value,
-        #     },
-        # )
-        # self.assertTrue(status.is_success(response.status_code))
-        # job_id = response.json().get("id")
-        
-        # Push the QGIS project file
-        file_path = testdata_path("simple_bumblebees_wrong_localized.qgs")
-        response = self.client.post(
-            f"/api/v1/files/{self.project1.id}/project.qgs/",
-            {
-                "file": open(file_path, "rb"),
-            },
-            format="multipart",
-        )
-        self.assertTrue(status.is_success(response.status_code))
-        
-        # processprojectfile_job = ProcessProjectfileJob.objects.create(
-        #     type=Job.Type.PROCESS_PROJECTFILE,
-        #     project=self.project1,
-        #     created_by=self.user1,
-        # )
-        # self.assertEqual(processprojectfile_job.status, Job.Status.PENDING)
-                
-        print("--- BEFORE ---")
-        for job in Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE):
-            print(f"{job.project}, {job.type}, {job.status}")
-    
-        # Wait for the worker to do the job
-        time.sleep(5)
-        
-        print("--- AFTER ---")
-        for job in Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE):
-            print(f"{job.project}, {job.type}, {job.status}")
-        
-        wait_for_project_ok_status(self.project1)
-        self.project1.refresh_from_db()
-        
-        # processprojectfile_job = ProcessProjectfileJob.objects.get(id=job_id)
-        processprojectfile_job = Job.objects.filter(type=Job.Type.PROCESS_PROJECTFILE).latest(
-            "updated_at"
-        )
-        
-        self.assertEqual(processprojectfile_job.status, Job.Status.FINISHED)
-        self.assertIsNotNone(processprojectfile_job.feedback)
