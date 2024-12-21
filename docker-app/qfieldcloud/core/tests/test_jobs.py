@@ -3,16 +3,20 @@ import logging
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Job,
+    PackageJob,
     Person,
-    Project,
-)
-from qfieldcloud.core.models import (
     ProcessProjectfileJob,
+    Project,
 )
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
-from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
+from .utils import (
+    set_subscription,
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_project_ok_status,
+)
 
 logging.disable(logging.CRITICAL)
 
@@ -67,27 +71,59 @@ class QfcTestCase(APITransactionTestCase):
         self.p1.refresh_from_db()
         self.assertIsNotNone(self.p1.project_details)
 
-        # Project details extraction is usually step n°5
+        # Create Package job and wait for it to finish
+        set_subscription(
+            self.u1,
+            "keep_10",
+            storage_mb=10,
+            is_premium=True,
+            is_external_db_supported=True,
+        )
+        package_job = PackageJob.objects.create(
+            type=Job.Type.PROCESS_PROJECTFILE,
+            project=self.p1,
+            created_by=self.u1,
+        )
+        self.assertEqual(package_job.status, Job.Status.PENDING)
+        wait_for_project_ok_status(self.p1)
+
+        package_job.refresh_from_db()
+        self.assertEqual(package_job.status, Job.Status.FINISHED)
+        self.assertIsNotNone(package_job.feedback)
+
+        # extract layer data from both jobs
         for step in processprojectfile_job.feedback["steps"]:
             if step["id"] == "project_details":
-                details = step["returns"]["project_details"]
-        layers = details["layers_by_id"]
+                processfile_layers = step["returns"]["project_details"]["layers_by_id"]
+        for step in package_job.feedback["steps"]:
+            if step["id"] == "qgis_layers_data":
+                qgis_layers = step["returns"]["layers_by_id"]
+            if step["id"] == "qfield_layer_data":
+                qfield_layers = step["returns"]["layers_by_id"]
 
-        # "valid" localized layer -> QFC considers it as invalid
-        valid_localized_layer = layers[VALID_LOCALIZED_LAYER_KEY]
-        self.assertFalse(valid_localized_layer["is_valid"])
-        self.assertTrue(valid_localized_layer["is_localized"])
+        for layers in [processfile_layers, qgis_layers, qfield_layers]:
+            # "valid" localized layer -> QFC considers it as invalid
+            valid_localized_layer = layers[VALID_LOCALIZED_LAYER_KEY]
+            self.assertFalse(valid_localized_layer["is_valid"])
+            self.assertTrue(valid_localized_layer["is_localized"])
 
-        # invalid layer (datasource does not exist)
-        invalid_layer = layers[INVALID_LAYER_KEY]
-        self.assertFalse(invalid_layer["is_valid"])
-        self.assertFalse(invalid_layer["is_localized"])
-        self.assertEquals(invalid_layer["error_code"], "invalid_dataprovider")
+            # invalid localized layer
+            invalid_localized_layer = layers[INVALID_LOCALIZED_LAYER_KEY]
+            self.assertFalse(invalid_localized_layer["is_valid"])
+            self.assertTrue(invalid_localized_layer["is_localized"])
+            self.assertEquals(
+                invalid_localized_layer["error_code"], "localized_dataprovider"
+            )
 
-        # invalid localized layer
-        invalid_localized_layer = layers[INVALID_LOCALIZED_LAYER_KEY]
-        self.assertFalse(invalid_localized_layer["is_valid"])
-        self.assertTrue(invalid_localized_layer["is_localized"])
-        self.assertEquals(
-            invalid_localized_layer["error_code"], "localized_dataprovider"
-        )
+        # invalid layer is not present in qfield layers
+        assert INVALID_LAYER_KEY not in qfield_layers
+
+        for layers in [
+            processfile_layers,
+            qgis_layers,
+        ]:
+            # invalid layer (datasource does not exist)
+            invalid_layer = layers[INVALID_LAYER_KEY]
+            self.assertFalse(invalid_layer["is_valid"])
+            self.assertFalse(invalid_layer["is_localized"])
+            self.assertEquals(invalid_layer["error_code"], "invalid_dataprovider")
