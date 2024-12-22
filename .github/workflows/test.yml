@@ -60,6 +60,7 @@ jobs:
           cp .env.example .env
           sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+          cat .env
 
       - name: Login to GitHub Container Repository (ghcr.io)
         uses: docker/login-action@v3
@@ -83,6 +84,7 @@ jobs:
           push: false
           load: true
           target: webserver_test
+          tags: qfieldcloud-app:latest
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache
           # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache,mode=max
 
@@ -94,6 +96,7 @@ jobs:
           push: false
           load: true
           target: worker_wrapper_runtime
+          tags: qfieldcloud-worker_wrapper:latest
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache
           # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache,mode=max
 
@@ -104,6 +107,7 @@ jobs:
           context: docker-qgis
           push: false
           load: true
+          tags: qfieldcloud-qgis:latest
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache
           # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache,mode=max
 
@@ -114,10 +118,11 @@ jobs:
           context: docker-nginx
           push: false
           load: true
+          tags: qfieldcloud-nginx:latest
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache
           # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache,mode=max
 
-      - name: Build and run docker containers
+      - name: Run docker containers
         run: docker compose up -d
 
       - name: Initial manage.py commands
