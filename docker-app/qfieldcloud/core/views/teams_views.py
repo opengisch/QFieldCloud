@@ -14,15 +14,15 @@ from qfieldcloud.core.serializers import (
     TeamSerializer,
 )
 
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, exceptions
 from rest_framework.request import Request
-from rest_framework.views import View
+from rest_framework.views import APIView
 
 from django.shortcuts import get_object_or_404
 
 
 class TeamMemberDeleteViewPermissions(permissions.BasePermission):
-    def has_permission(self, request: Request, view: View) -> bool:
+    def has_permission(self, request: Request, view: APIView) -> bool:
         user = request.user
         organization_name = permissions_utils.get_param_from_request(
             request, "organization"
@@ -44,7 +44,7 @@ class TeamMemberPermission(permissions.BasePermission):
     Permission class to handle CRUD operations for team members.
     """
 
-    def has_permission(self, request: Request, view: View) -> bool:
+    def has_permission(self, request: Request, view: APIView) -> bool:
         organization_name = view.kwargs.get("organization_name")
         team_name = view.kwargs.get("team_name")
         team_username = Team.format_team_name(organization_name, team_name)
@@ -78,7 +78,7 @@ class TeamPermission(permissions.BasePermission):
     Permission class to handle CRUD operations for teams.
     """
 
-    def has_permission(self, request: Request, view: View) -> bool:
+    def has_permission(self, request: Request, view: APIView) -> bool:
         organization_name = view.kwargs.get("organization_name")
 
         try:
@@ -138,7 +138,7 @@ class GetUpdateDestroyTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
             team_organization=serializer.instance.team_organization,
             username=full_team_name,
         ).exists():
-            raise permissions.ValidationError(
+            raise exceptions.ValidationError(
                 {"error": "A team with this name already exists."}
             )
 

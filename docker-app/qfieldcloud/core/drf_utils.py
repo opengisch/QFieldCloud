@@ -1,6 +1,7 @@
 from django.db.models import QuerySet
-from django.http import HttpRequest
-from rest_framework import filters, viewsets
+from rest_framework import filters, views
+from rest_framework.request import Request
+from typing import Iterable
 
 
 class QfcOrderingFilter(filters.OrderingFilter):
@@ -15,7 +16,7 @@ class QfcOrderingFilter(filters.OrderingFilter):
     TOKENS_LIST_SEPARATOR = ","
     TOKENS_VALUE_SEPARATOR = "="
 
-    def _get_query_field(self, fields: list[str], term: str) -> str | None:
+    def _get_query_field(self, fields: Iterable[str], term: str) -> str | None:
         """Searches a term in a query field list.
 
         The field list elements may start with "-".
@@ -74,9 +75,9 @@ class QfcOrderingFilter(filters.OrderingFilter):
     def remove_invalid_fields(
         self,
         queryset: QuerySet,
-        fields: list[str],
-        view: viewsets.ModelViewSet,
-        request: HttpRequest,
+        fields: Iterable[str],
+        view: views.APIView,
+        request: Request,
     ) -> list[str]:
         """Process ordering fields by parsing custom field expression.
 
@@ -86,8 +87,8 @@ class QfcOrderingFilter(filters.OrderingFilter):
 
         Args:
             queryset (QuerySet): Django's ORM queryset of the same model as the one used in view of the `ModelViewSet`
-            fields (list[str]): ordering fields passed to the HTTP querystring
-            view (ModelViewSet): DRF view instance
+            fields (Iterable[str]): ordering fields passed to the HTTP querystring
+            view (APIView): DRF view instance
             request (HttpRequest): DRF request instance
         Returns :
             list[str]: parsed ordering fields where aliases have been replaced
