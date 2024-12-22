@@ -61,12 +61,64 @@ jobs:
           sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
+      - name: Login to GitHub Container Repository (ghcr.io)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Pull docker containers
         run: docker compose pull
 
+      - name: Docker Build app
+        uses: docker/build-push-action@v6
+        with:
+          file: docker-app/Dockerfile
+          context: docker-app
+          push: false
+          load: true
+          target: webserver_test
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache,mode=max
+
+      - name: Docker Build worker-wrapper
+        uses: docker/build-push-action@v6
+        with:
+          file: docker-app/Dockerfile
+          context: docker-app
+          push: false
+          load: true
+          target: worker_wrapper_runtime
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache,mode=max
+
+      - name: Docker Build qgis
+        uses: docker/build-push-action@v6
+        with:
+          file: docker-qgis/Dockerfile
+          context: docker-qgis
+          push: false
+          load: true
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache,mode=max
+
+      - name: Docker Build nginx
+        uses: docker/build-push-action@v6
+        with:
+          file: docker-nginx/Dockerfile
+          context: docker-nginx
+          push: false
+          load: true
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache,mode=max
+
       - name: Build and run docker containers
-        run: |
-          docker compose up -d --build
+        run: docker compose up -d
 
       - name: Initial manage.py commands
         run: |
