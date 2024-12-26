@@ -60,7 +60,6 @@ jobs:
           cp .env.example .env
           sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
-          cat .env
 
       - name: Login to GitHub Container Repository (ghcr.io)
         uses: docker/login-action@v3
@@ -85,8 +84,8 @@ jobs:
           load: true
           target: webserver_test
           tags: qfieldcloud-app:latest
-          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache
-          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache,mode=max
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app-test:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app-test:buildcache,mode=max
 
       - name: Docker Build worker-wrapper
         uses: docker/build-push-action@v6
