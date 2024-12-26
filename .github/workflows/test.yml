@@ -122,7 +122,7 @@ jobs:
           # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache,mode=max
 
       - name: Run docker containers
-        run: docker compose up -d
+        run: docker compose up -d --build
 
       - name: Initial manage.py commands
         run: |
