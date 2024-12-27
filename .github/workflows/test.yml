@@ -16,6 +16,9 @@ on:
     types:
       - completed
 
+env:
+  SHORT_SHA: ${GITHUB_SHA:0:7}
+
 jobs:
   lint:
     if: '! github.event.pull_request.draft'
@@ -99,11 +102,6 @@ jobs:
       #     check-name: 'Build and Push'
       #     repo-token: ${{ secrets.GITHUB_TOKEN }}
       #     wait-interval: 5
-
-      - name: Debug
-        run: |
-          echo ${GITHUB_SHA}
-          echo ${GITHUB_SHA:0:7}
 
       - name: Pull docker containers
         run: docker compose pull
