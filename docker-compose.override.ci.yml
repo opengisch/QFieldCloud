@@ -1,13 +1,13 @@
 services:
 
   worker_wrapper:
-    image: ghcr.io/opengisch/qfieldcloud-worker-wrapper:commit-${GITHUB_SHA}
+    image: ghcr.io/opengisch/qfieldcloud-worker-wrapper:commit-${GITHUB_SHA:0:7}
     build: !reset null
 
   qgis:
-    image: ghcr.io/opengisch/qfieldcloud-qgis:commit-${GITHUB_SHA}
+    image: ghcr.io/opengisch/qfieldcloud-qgis:commit-${GITHUB_SHA:0:7}
     build: !reset null
 
   nginx:
-    image: ghcr.io/opengisch/qfieldcloud-qgis:commit-${GITHUB_SHA}
+    image: ghcr.io/opengisch/qfieldcloud-qgis:commit-${GITHUB_SHA:0:7}
     build: !reset null
