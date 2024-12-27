@@ -78,6 +78,12 @@ jobs:
       - name: Pull docker containers
         run: docker compose pull
 
+      - name: Expose GitHub Runtime
+        uses: crazy-max/ghaction-github-runtime@v3
+
+      - name: Print bake config
+        run: docker buildx bake --print
+
       - name: Build docker images locally
         uses: docker/bake-action@v5
         with:
