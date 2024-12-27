@@ -92,9 +92,16 @@ jobs:
           allow: network.host
           set: |
               app.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-app-test:buildcache
+              app.tags=qfielcloud-app:latest
               worker_wrapper.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache
+              worker_wrapper.tags=qfielcloud-worker_wrapper:latest
               qgis.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache
+              qgis.tags=qfielcloud-qgis:latest
               nginx.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache
+              nginx.tags=qfielcloud-nginx:latest
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+
 
       - name: Run docker containers
         run: docker compose up -d
