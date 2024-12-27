@@ -1,0 +1,10 @@
+services:
+
+  worker_wrapper:
+    image: ghcr.io/opengisch/qfieldcloud-worker-wrapper:commit-${GITHUB_SHA}
+
+  qgis:
+    image: ghcr.io/opengisch/qfieldcloud-qgis:commit-${GITHUB_SHA}
+
+  nginx:
+    image: ghcr.io/opengisch/qfieldcloud-qgis:commit-${GITHUB_SHA}

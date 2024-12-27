@@ -10,6 +10,11 @@ on:
       - master
       - release
   pull_request:
+  workflow_run:
+    workflows:
+      - Build and Push
+    types:
+      - completed
 
 jobs:
   lint:
@@ -35,6 +40,7 @@ jobs:
   test:
     name: Run tests
     runs-on: ubuntu-24.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     strategy:
       fail-fast: false
       matrix:
@@ -58,8 +64,9 @@ jobs:
       - name: Export the env variables file
         run: |
           cp .env.example .env
-          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml:docker-compose.override.ci.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+          cat .env
 
       - name: Login to GitHub Container Repository (ghcr.io)
         uses: docker/login-action@v3
@@ -78,29 +85,16 @@ jobs:
       - name: Pull docker containers
         run: docker compose pull
 
-      - name: Expose GitHub Runtime
-        uses: crazy-max/ghaction-github-runtime@v3
-
-      - name: Print bake config
-        run: docker buildx bake --print
-
-      - name: Build docker images locally
-        uses: docker/bake-action@v5
+      - name: Build docker app-test image
+        uses: docker/build-push-action@v6
         with:
+          file: docker-app/Dockerfile
+          context: docker-app
           push: false
           load: true
-          allow: network.host
-          set: |
-              app.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-app-test:buildcache
-              app.tags=qfielcloud-app:latest
-              worker_wrapper.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache
-              worker_wrapper.tags=qfielcloud-worker_wrapper:latest
-              qgis.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache
-              qgis.tags=qfielcloud-qgis:latest
-              nginx.cache-from=type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache
-              nginx.tags=qfielcloud-nginx:latest
-        env:
-          DOCKER_BUILD_RECORD_UPLOAD: false
+          target: webserver_test
+          tags: qfieldcloud-app:latest
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache
 
 
       - name: Run docker containers
