@@ -81,9 +81,6 @@ jobs:
           buildkitd-flags: '--allow-insecure-entitlement network.host'
           driver-opts: network=host
 
-      - name: Pull docker containers
-        run: docker compose pull
-
       - name: Build docker app-test image
         uses: docker/build-push-action@v6
         with:
@@ -95,6 +92,16 @@ jobs:
           tags: qfieldcloud-app:latest
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache
 
+      - name: Wait for parallel build to finish
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Build and Push'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 5
+
+      - name: Pull docker containers
+        run: docker compose pull
 
       - name: Run docker containers
         run: docker compose up -d
