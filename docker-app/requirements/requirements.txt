@@ -159,7 +159,7 @@ oauthlib==3.2.2
     # via requests-oauthlib
 phonenumbers==8.13.52
     # via -r /requirements/requirements.in
-psycopg2==2.9.9
+psycopg2==2.9.10
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi
