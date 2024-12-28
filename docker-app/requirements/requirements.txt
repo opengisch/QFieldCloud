@@ -157,7 +157,7 @@ mypy-boto3-s3==1.35.16
     # via -r /requirements/requirements.in
 oauthlib==3.2.2
     # via requests-oauthlib
-phonenumbers==8.13.45
+phonenumbers==8.13.52
     # via -r /requirements/requirements.in
 psycopg2==2.9.9
     # via -r /requirements/requirements.in
