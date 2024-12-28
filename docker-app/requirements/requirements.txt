@@ -105,7 +105,7 @@ django-invitations==2.1.0
     # via -r /requirements/requirements.in
 django-ipware==7.0.1
     # via django-axes
-django-jazzmin==3.0.0
+django-jazzmin==3.0.1
     # via -r /requirements/requirements.in
 django-log-request-id==2.1.0
     # via -r /requirements/requirements.in
