@@ -1337,7 +1337,7 @@ class Project(models.Model):
         return problems
 
     @property
-    def status(self) -> Status:
+    def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
             self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])  # type: ignore
