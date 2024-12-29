@@ -10,11 +10,6 @@ on:
       - master
       - release
   pull_request:
-  workflow_run:
-    workflows:
-      - Build and Push
-    types:
-      - completed
 
 env:
   SHORT_SHA: ${GITHUB_SHA:0:7}
@@ -66,9 +61,8 @@ jobs:
       - name: Export the env variables file
         run: |
           cp .env.example .env
-          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml:docker-compose.override.ci.yml/g' .env
+          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
-          cat .env
 
       - name: Login to GitHub Container Repository (ghcr.io)
         uses: docker/login-action@v3
@@ -84,24 +78,58 @@ jobs:
           buildkitd-flags: '--allow-insecure-entitlement network.host'
           driver-opts: network=host
 
-      - name: Build docker app-test image
+      - name: Docker Build app
         uses: docker/build-push-action@v6
         with:
           file: docker-app/Dockerfile
           context: docker-app
           push: false
           load: true
+          allow: network.host
+          network: host
           target: webserver_test
           tags: qfieldcloud-app:latest
-          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app:buildcache
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app-test:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-app-test:buildcache,mode=max
 
-      # - name: Wait for parallel build to finish
-      #   uses: lewagon/wait-on-check-action@v1.3.4
-      #   with:
-      #     ref: ${{ github.ref }}
-      #     check-name: 'Build and Push'
-      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
-      #     wait-interval: 5
+      - name: Docker Build worker-wrapper
+        uses: docker/build-push-action@v6
+        with:
+          file: docker-app/Dockerfile
+          context: docker-app
+          push: false
+          load: true
+          allow: network.host
+          network: host
+          target: worker_wrapper_runtime
+          tags: qfieldcloud-worker_wrapper:latest
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-worker-wrapper:buildcache,mode=max
+
+      - name: Docker Build qgis
+        uses: docker/build-push-action@v6
+        with:
+          file: docker-qgis/Dockerfile
+          context: docker-qgis
+          push: false
+          load: true
+          allow: network.host
+          network: host
+          tags: qfieldcloud-qgis:latest
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-qgis:buildcache,mode=max
+
+      - name: Docker Build nginx
+        uses: docker/build-push-action@v6
+        with:
+          file: docker-nginx/Dockerfile
+          context: docker-nginx
+          push: false
+          load: true
+          allow: network.host
+          tags: qfieldcloud-nginx:latest
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache
+          # cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-nginx:buildcache,mode=max
 
       - name: Pull docker containers
         run: docker compose pull
