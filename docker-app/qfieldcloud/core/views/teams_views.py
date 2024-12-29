@@ -178,7 +178,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
     get=extend_schema(description="Retrieve, update, or delete a team member"),
     delete=extend_schema(description="Delete a team member"),
 )
-class GetUpdateDestroyTeamMemberView(generics.RetrieveDestroyAPIView):
+class DestroyTeamMemberView(generics.DestroyAPIView):
     """
     View to handle adding and listing team members. --> organizations/<str:organization_name>/team/<str:team_name>/members/"
     """
@@ -216,19 +216,6 @@ class GetUpdateDestroyTeamMemberView(generics.RetrieveDestroyAPIView):
         team_name = self.kwargs.get("team_name")
 
         return Team.format_team_name(organization_name, team_name)
-
-    def perform_update(self, serializer: TeamMemberSerializer) -> None:
-        """
-        Update logic for the team member.
-        """
-        team_member = self.get_object()
-        new_username = self.request.data.get("member")
-
-        user_member = team_member.member
-        user_member.username = new_username
-        user_member.save()
-
-        serializer.save()
 
 
 @extend_schema_view(
