@@ -90,6 +90,7 @@ class AuthToken(models.Model):
         verbose_name = _("Token")
         verbose_name_plural = _("Tokens")
         ordering = ("-created_at",)
+        indexes = (models.Index(fields=["created_at"]),)
 
     def __str__(self):
         return self.key
