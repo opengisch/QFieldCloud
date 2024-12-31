@@ -553,16 +553,25 @@ class LatestPackageSerializer(serializers.Serializer):
 class TeamSerializer(serializers.ModelSerializer):
     organization = serializers.StringRelatedField(source="team_organization")
     team = serializers.CharField(required=True, allow_blank=False, source="username")
+    members = serializers.SerializerMethodField()
 
     class Meta:
         model = Team
-        fields = ("team", "organization")
+        fields = ("team", "organization", "members")
 
     def to_representation(self, instance: Team) -> dict[str, Any]:
         representation = super().to_representation(instance)
         representation["team"] = instance.teamname
 
         return representation
+
+    def get_members(self, obj: Team) -> list[str]:
+        return [
+            m["member__username"]
+            for m in TeamMember.objects.filter(
+                team=obj,
+            ).values("member__username")
+        ]
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):

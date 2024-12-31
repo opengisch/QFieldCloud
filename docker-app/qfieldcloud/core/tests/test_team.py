@@ -306,10 +306,12 @@ class QfcTestCase(APITestCase):
                 {
                     "team": self.t1.teamname,
                     "organization": self.o1.username,
+                    "members": [],
                 },
                 {
                     "team": self.t2.teamname,
                     "organization": self.o1.username,
+                    "members": [],
                 },
             ],
         )
@@ -329,6 +331,7 @@ class QfcTestCase(APITestCase):
             {
                 "team": self.t1.teamname,
                 "organization": self.o1.username,
+                "members": [],
             },
         )
 
