@@ -187,10 +187,13 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     def get_teams(self, obj: Organization) -> list[str]:
         """Implementation of `SerializerMethodField` for `teams`. Returns list of team names."""
-        return [
-            t.teamname
-            for t in Team.objects.filter(team_organization=obj).values("username")
-        ]
+        team_qs = (
+            Team.objects.filter(team_organization=obj)
+            .select_related("team_organization")
+            .only("username", "team_organization__username")
+        )
+
+        return [t.teamname for t in team_qs]
 
     def get_avatar_url(self, obj):
         return get_avatar_url(obj)
