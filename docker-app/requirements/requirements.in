@@ -3,7 +3,7 @@ boto3==1.35.90
 deprecated==1.2.15
 django-allauth==0.44.0
 django-auditlog==3.0.0
-django-axes==5.40.1
+django-axes==7.0.1
 django-bootstrap4==24.4
 django-classy-tags==4.1.0
 django-common-helpers==0.9.2
