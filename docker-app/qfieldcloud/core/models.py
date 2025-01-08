@@ -1337,7 +1337,7 @@ class Project(models.Model):
         return problems
 
     @property
-    def status(self) -> Status:
+    def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
             self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])  # type: ignore
@@ -1780,6 +1780,20 @@ class Job(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         return super().save(*args, **kwargs)
+
+    def get_feedback_step_data(self, step_name: str) -> dict[str, Any] | None:
+        """Extract a step data of a job's feedback.
+
+        Args:
+            step_name (str): name of the step to extract data from.
+
+        Returns:
+            dict[str, Any] | None: data as dict if the step has been found, else None.
+        """
+        for step in self.feedback["steps"]:
+            if step["id"] == step_name:
+                return step
+        return None
 
 
 class PackageJob(Job):

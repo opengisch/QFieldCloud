@@ -18,7 +18,7 @@ from qfieldcloud.subscription.exceptions import (
 from qfieldcloud.subscription.models import Subscription
 from rest_framework.test import APITestCase
 
-from .utils import set_subscription, setup_subscription_plans
+from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 

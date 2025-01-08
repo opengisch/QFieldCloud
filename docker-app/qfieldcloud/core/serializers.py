@@ -187,10 +187,13 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     def get_teams(self, obj: Organization) -> list[str]:
         """Implementation of `SerializerMethodField` for `teams`. Returns list of team names."""
-        return [
-            t.teamname
-            for t in Team.objects.filter(team_organization=obj).values("username")
-        ]
+        team_qs = (
+            Team.objects.filter(team_organization=obj)
+            .select_related("team_organization")
+            .only("username", "team_organization__username")
+        )
+
+        return [t.teamname for t in team_qs]
 
     def get_avatar_url(self, obj):
         return get_avatar_url(obj)
@@ -553,16 +556,25 @@ class LatestPackageSerializer(serializers.Serializer):
 class TeamSerializer(serializers.ModelSerializer):
     organization = serializers.StringRelatedField(source="team_organization")
     team = serializers.CharField(required=True, allow_blank=False, source="username")
+    members = serializers.SerializerMethodField()
 
     class Meta:
         model = Team
-        fields = ("team", "organization")
+        fields = ("team", "organization", "members")
 
     def to_representation(self, instance: Team) -> dict[str, Any]:
         representation = super().to_representation(instance)
         representation["team"] = instance.teamname
 
         return representation
+
+    def get_members(self, obj: Team) -> list[str]:
+        return [
+            m["member__username"]
+            for m in TeamMember.objects.filter(
+                team=obj,
+            ).values("member__username")
+        ]
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):

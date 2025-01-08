@@ -1,4 +1,4 @@
-import pytz
+import zoneinfo
 from django.conf import settings
 from django.utils import timezone
 
@@ -13,7 +13,7 @@ class TimezoneMiddleware:
         ):
             user_tz = request.user.useraccount.timezone
         elif settings.TIME_ZONE:
-            user_tz = pytz.timezone(settings.TIME_ZONE)
+            user_tz = zoneinfo.ZoneInfo(settings.TIME_ZONE)
         else:
             user_tz = None
 

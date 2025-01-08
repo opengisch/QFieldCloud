@@ -21,7 +21,7 @@ class QFieldCloudException(Exception):
 
     code = "unknown_error"
     message = "QFieldcloud Unknown Error"
-    status_code = None
+    status_code: int | None = None
     log_as_error = True
 
     def __init__(self, detail="", status_code=None):
