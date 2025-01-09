@@ -113,7 +113,7 @@ urlpatterns = [
     ),
     path(
         "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
-        teams_views.GetUpdateDestroyTeamMemberView.as_view(),
-        name="team_member_retrieve_update_destroy",
+        teams_views.DestroyTeamMemberView.as_view(),
+        name="team_member_destroy",
     ),
 ]

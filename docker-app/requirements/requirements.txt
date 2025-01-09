@@ -14,11 +14,11 @@ attrs==24.2.0
     #   referencing
 beautifulsoup4==4.12.3
     # via django-bootstrap4
-boto3==1.35.20
+boto3==1.35.90
     # via -r /requirements/requirements.in
-boto3-stubs==1.35.20
+boto3-stubs==1.35.90
     # via -r /requirements/requirements.in
-botocore==1.35.20
+botocore==1.35.90
     # via
     #   boto3
     #   s3transfer
@@ -32,15 +32,15 @@ cffi==1.17.0
     # via cryptography
 charset-normalizer==3.3.2
     # via requests
-cryptography==43.0.0
+cryptography==44.0.0
     # via
     #   django-cryptography
     #   pyjwt
 defusedxml==0.7.1
     # via python3-openid
-deprecated==1.2.14
+deprecated==1.2.15
     # via -r /requirements/requirements.in
-django==4.2.16
+django==4.2.17
     # via
     #   -r /requirements/requirements.in
     #   django-allauth
@@ -79,7 +79,7 @@ django-auditlog==3.0.0
     # via -r /requirements/requirements.in
 django-axes==5.40.1
     # via -r /requirements/requirements.in
-django-bootstrap4==24.3
+django-bootstrap4==24.4
     # via -r /requirements/requirements.in
 django-classy-tags==4.1.0
     # via -r /requirements/requirements.in
@@ -105,7 +105,7 @@ django-invitations==2.1.0
     # via -r /requirements/requirements.in
 django-ipware==7.0.1
     # via django-axes
-django-jazzmin==3.0.0
+django-jazzmin==3.0.1
     # via -r /requirements/requirements.in
 django-log-request-id==2.1.0
     # via -r /requirements/requirements.in
@@ -127,7 +127,7 @@ django-sri==0.7.0
     # via -r /requirements/requirements.in
 django-storages==1.14.4
     # via -r /requirements/requirements.in
-django-tables2==2.7.0
+django-tables2==2.7.4
     # via -r /requirements/requirements.in
 django-timezone-field==7.0
     # via -r /requirements/requirements.in
@@ -135,7 +135,7 @@ djangorestframework==3.15.2
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
-drf-spectacular==0.27.2
+drf-spectacular==0.28.0
     # via -r /requirements/requirements.in
 idna==3.8
     # via requests
@@ -145,7 +145,7 @@ jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-json-log-formatter==1.0
+json-log-formatter==1.1
     # via -r /requirements/requirements.in
 jsonfield==3.1.0
     # via django-notifications-hq
@@ -153,13 +153,13 @@ jsonschema==4.23.0
     # via drf-spectacular
 jsonschema-specifications==2023.12.1
     # via jsonschema
-mypy-boto3-s3==1.35.16
+mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.2.2
     # via requests-oauthlib
-phonenumbers==8.13.45
+phonenumbers==8.13.52
     # via -r /requirements/requirements.in
-psycopg2==2.9.9
+psycopg2==2.9.10
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi

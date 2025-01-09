@@ -49,7 +49,9 @@ RUN apt-get update && apt-get install -y \
 # needed for Django's `manage.py makemessages`
     gettext \
 # for development purposes only (optional dependency for `django-extensions`)
-    graphviz
+    graphviz \
+# timezone data used by python to determine the user's timezone
+    tzdata
 
 # copy the dependencies
 COPY --from=build /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/

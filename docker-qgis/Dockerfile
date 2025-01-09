@@ -60,7 +60,7 @@ ENV LIBC_FATAL_STDERR_=1
 ENV LANG=C.UTF-8
 ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
-ENV PYTHONPATH=/libqfieldsync:${PYTHONPATH}
+ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
 # Install regular dependencies that rarely change
