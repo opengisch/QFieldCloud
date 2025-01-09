@@ -7,6 +7,7 @@
 asgiref==3.8.1
     # via
     #   django
+    #   django-axes
     #   django-countries
 attrs==24.2.0
     # via
@@ -103,8 +104,6 @@ django-filter==24.3
     # via -r /requirements/requirements.in
 django-invitations==2.1.0
     # via -r /requirements/requirements.in
-django-ipware==7.0.1
-    # via django-axes
 django-jazzmin==3.0.1
     # via -r /requirements/requirements.in
 django-log-request-id==2.1.0
@@ -171,8 +170,6 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   django-auditlog
-python-ipware==3.0.0
-    # via django-ipware
 python3-openid==3.2.0
     # via django-allauth
 pytz==2024.1
@@ -229,6 +226,3 @@ urllib3==1.26.20
     #   sentry-sdk
 wrapt==1.16.0
     # via deprecated
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
