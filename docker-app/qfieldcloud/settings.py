@@ -372,7 +372,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 ###########################
 # The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
 AXES_FAILURE_LIMIT = 5
-# Configures the limiter to handle username only (see https://github.com/jazzband/django-axes/blob/4e89d72b92db044ff3f6b23ea2ab2e681211c98e/docs/2_installation.rst#version-6-breaking-changes-and-upgrading-from-django-axes-version-5)
+# Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)
 AXES_LOCKOUT_PARAMETERS = ["username"]
 # If set, defines a period of inactivity after which old failed login attempts will be cleared. If an integer, will be interpreted as a number of hours. Default: None
 AXES_COOLOFF_TIME = lambda request: timedelta(minutes=30)  # noqa: E731
