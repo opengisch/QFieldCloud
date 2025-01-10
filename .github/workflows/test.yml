@@ -39,13 +39,12 @@ jobs:
       fail-fast: false
       matrix:
         django_app:
-          # - authentication
-          # - notifs
-          # - subscription
-          # - core
-          - core.tests.test_commands.QfcTestCase
-          # - filestorage
-          # - __flaky__
+          - authentication
+          - notifs
+          - subscription
+          - core
+          - filestorage
+          - __flaky__
         storage:
           - default
           - legacy_storage
