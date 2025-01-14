@@ -375,7 +375,7 @@ AXES_FAILURE_LIMIT = 5
 # Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)
 AXES_LOCKOUT_PARAMETERS = ["username"]
 # If set, defines a period of inactivity after which old failed login attempts will be cleared. If an integer, will be interpreted as a number of hours. Default: None
-AXES_COOLOFF_TIME = lambda request: timedelta(minutes=30)  # noqa: E731
+AXES_COOLOFF_TIME = lambda _request: timedelta(minutes=30)  # noqa: E731
 # If True, a successful login will reset the number of failed logins. Default: False
 AXES_RESET_ON_SUCCESS = True
 
