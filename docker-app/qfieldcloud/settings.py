@@ -136,6 +136,7 @@ MIDDLEWARE = [
     "qfieldcloud.core.middleware.timezone.TimezoneMiddleware",
     "qfieldcloud.core.middleware.test.TestMiddleware",
     "axes.middleware.AxesMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 CRON_CLASSES = [
@@ -359,6 +360,10 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 
+# Django allauth's RateLimiter configuration
+# https://docs.allauth.org/en/latest/account/rate_limits.html
+ACCOUNT_RATE_LIMITS = False
+
 # Choose one of "mandatory", "optional", or "none".
 # For local development and test use "optional" or "none"
 ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
@@ -372,10 +377,10 @@ ACCOUNT_LOGOUT_ON_GET = True
 ###########################
 # The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
 AXES_FAILURE_LIMIT = 5
-# If True, only lock based on username, and never lock based on IP if attempts exceed the limit. Otherwise utilize the existing IP and user locking logic. Default: False
-AXES_ONLY_USER_FAILURES = True
+# Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)
+AXES_LOCKOUT_PARAMETERS = ["username"]
 # If set, defines a period of inactivity after which old failed login attempts will be cleared. If an integer, will be interpreted as a number of hours. Default: None
-AXES_COOLOFF_TIME = timedelta(minutes=30)
+AXES_COOLOFF_TIME = lambda _request: timedelta(minutes=30)  # noqa: E731
 # If True, a successful login will reset the number of failed logins. Default: False
 AXES_RESET_ON_SUCCESS = True
 
