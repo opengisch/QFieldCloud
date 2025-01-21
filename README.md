@@ -84,7 +84,7 @@ When a `pip` a dependency is changed, the developer should produce the new `requ
 
     docker compose run --rm pipcompile
 
-Alterantively, one can create only a `requirements.txt` file for a single `requirements.in`:
+Alternatively, one can create only a `requirements.txt` file for a single `requirements.in`:
 
     docker compose run --rm pipcompile pip-compile --no-strip-extras -o requirements/requirements_worker_wrapper.txt requirements/requirements_worker_wrapper.in
 
