@@ -58,7 +58,6 @@ class File(models.Model):
         editable=False,
         related_name="files",
     )
-    # organization_id = models.ForeignKey(Organization, on_delete=models.CASCADE, editable=False)
 
     package_job_id: int
     package_job = models.ForeignKey(
