@@ -262,7 +262,7 @@ class LatestPackageView(views.APIView):
 
     def get(self, request, project_id):
         """Get last project package status and file list."""
-        project = Project.objects.get(id=project_id)
+        project = get_object_or_404(Project, id=project_id)
 
         # Check if the project was packaged at least once
         if not project.last_package_job:
