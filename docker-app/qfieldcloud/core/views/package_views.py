@@ -370,7 +370,7 @@ class PackageUploadFilesView(views.APIView):
         if len(request.FILES.getlist("file")) > 1:
             raise exceptions.MultipleContentsError()
 
-        # project = get_object_or_404(Project, id=project_id)
+        _project = get_object_or_404(Project, id=project_id)
 
         uploaded_file_version = upload_project_file_version(
             request,
