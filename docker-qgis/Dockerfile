@@ -25,7 +25,21 @@ RUN apt-get update \
     xvfb \
     iputils-ping \
     glibc-tools \
-    git
+    git \
+    curl
+
+
+# Add MSSQL driver dependencies prerequisites
+RUN curl -sSL -O https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
+RUN dpkg -i packages-microsoft-prod.deb
+RUN rm packages-microsoft-prod.deb
+
+# Add MSSQL driver dependencies
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && ACCEPT_EULA=Y apt-get install -y \
+    msodbcsql18 \
+    mssql-tools18
 
 # Set QGIS version as in the debian repos
 # Choose your version from here: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
