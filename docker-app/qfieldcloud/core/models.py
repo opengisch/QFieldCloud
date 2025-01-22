@@ -36,10 +36,7 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from timezone_field import TimeZoneField
-from qfieldcloud.core.fields import (
-    DynamicStorageFileField,
-    FileStorageNameModelProtocol,
-)
+from qfieldcloud.core.fields import DynamicStorageFileField
 
 
 if TYPE_CHECKING:
@@ -1031,7 +1028,7 @@ def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
     return f"projects/{instance.id}/meta/thumbnail.png"
 
 
-class Project(models.Model, FileStorageNameModelProtocol):
+class Project(models.Model):
     """Represent a QFieldcloud project.
     It corresponds to a directory on the file system.
 
