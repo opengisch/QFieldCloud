@@ -76,6 +76,10 @@ Now you can get started by adding the first user that would also be a super user
 
     docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
 
+If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
+
+    docker compose run --user root app python manage.py compilemessages
+
 ### Dependencies
 
 QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage it's dependencies.

@@ -1,0 +1,8 @@
+[main]
+host = https://www.transifex.com
+
+[o:opengisch:p:qfieldcloud:r:qfieldcloud]
+file_filter   = docker-app/qfieldcloud/locale/<lang>/LC_MESSAGES/django.po
+source_file   = docker-app/qfieldcloud/locale/en/LC_MESSAGES/django.po
+type          = PO
+resource_name = QFieldCloud
