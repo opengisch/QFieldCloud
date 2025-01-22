@@ -17,7 +17,10 @@ from django.core.validators import (
 
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.core.utils2 import storage
-from qfieldcloud.core.fields import DynamicStorageFileField
+from qfieldcloud.core.fields import (
+    DynamicStorageFileField,
+    FileStorageNameModelProtocol,
+)
 from qfieldcloud.core.validators import MaxBytesLengthValidator
 from .utils import calc_etag, filename_validator
 
@@ -239,7 +242,7 @@ def get_file_version_upload_to(instance: "FileVersion", _filename: str) -> str:
         raise NotImplementedError()
 
 
-class FileVersion(models.Model):
+class FileVersion(models.Model, FileStorageNameModelProtocol):
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
         return self.file.project.file_storage
