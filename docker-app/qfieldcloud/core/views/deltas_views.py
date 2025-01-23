@@ -62,7 +62,6 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
     def post(self, request, projectid):
         project_obj = Project.objects.get(id=projectid)
-        project_file = project_obj.project_filename
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
@@ -86,7 +85,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                 .values_list("id", flat=True)
             ]
 
-            if project_file is None:
+            if not project_obj.has_the_qgis_file:
                 raise exceptions.NoQGISProjectError()
 
             if deltafile_projectid != str(projectid):
@@ -151,7 +150,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         if created_deltas and not jobs.apply_deltas(
             project_obj,
             self.request.user,
-            project_file,
+            project_obj.project_filename,
             project_obj.overwrite_conflicts,
         ):
             logger.warning("Failed to start delta apply job.")

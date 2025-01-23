@@ -275,7 +275,7 @@ class DownloadPushDeleteFileView(views.APIView):
         # check only one qgs/qgz file per project
         if (
             is_qgis_project_file
-            and project.project_filename is not None
+            and project.has_the_qgis_file
             and PurePath(filename) != PurePath(project.project_filename)
         ):
             raise exceptions.MultipleProjectsError(
@@ -310,7 +310,7 @@ class DownloadPushDeleteFileView(views.APIView):
             update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
-                is_qgis_project_file or project.project_filename is not None
+                is_qgis_project_file or project.has_the_qgis_file
             ):
                 if is_qgis_project_file:
                     project.project_filename = filename
