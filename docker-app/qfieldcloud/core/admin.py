@@ -745,7 +745,7 @@ class ProjectForm(ModelForm):
 
     class Meta:
         model = Project
-        widgets = {"project_filename": widgets.TextInput()}
+        widgets = {"the_qgis_file_name": widgets.TextInput()}
         fields = "__all__"  # required for Django 3.x
 
 
@@ -774,7 +774,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "owner",
         "status",
         "status_code",
-        "project_filename",
+        "the_qgis_file_name",
         "overwrite_conflicts",
         "has_restricted_projectfiles",
         "file_storage_bytes",
@@ -1221,7 +1221,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         if not jobs.apply_deltas(
             delta.project,
             request.user,
-            delta.project.project_filename,
+            delta.project.the_qgis_file_name,
             delta.project.overwrite_conflicts,
             delta_ids=[str(delta.id)],
         ):

@@ -1037,7 +1037,7 @@ class Project(models.Model):
     )
 
     description = models.TextField(blank=True)
-    project_filename = models.TextField(blank=True, null=True)
+    the_qgis_file_name = models.TextField(blank=True, null=True)
     project_details = models.JSONField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
@@ -1123,7 +1123,7 @@ class Project(models.Model):
 
     @property
     def has_the_qgis_file(self) -> bool:
-        return bool(self.project_filename)
+        return bool(self.the_qgis_file_name)
 
     @property
     def owner_aware_storage_keep_versions(self) -> int:

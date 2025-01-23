@@ -295,7 +295,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, project_file
+            Project.objects.get(pk=self.project1.pk).the_qgis_file_name, project_file
         )
 
         # List files
@@ -512,7 +512,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename,
+            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
             qgis_project_file,
         )
 
@@ -527,7 +527,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename,
+            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
             qgis_project_file,
         )
 
@@ -543,7 +543,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename,
+            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
             qgis_project_file,
         )
 
@@ -558,7 +558,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 1)
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename,
+            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
             qgis_project_file,
         )
 
