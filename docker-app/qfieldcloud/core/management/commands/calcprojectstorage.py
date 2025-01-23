@@ -25,7 +25,7 @@ class Command(BaseCommand):
             extra_filters["file_storage_bytes"] = 0
 
         projects_qs = Project.objects.filter(
-            project_filename__isnull=False,
+            the_qgis_filename__isnull=False,
             **extra_filters,
         ).order_by("-updated_at")
         total_count = projects_qs.count()

@@ -276,7 +276,7 @@ class DownloadPushDeleteFileView(views.APIView):
         if (
             is_qgis_project_file
             and project.has_the_qgis_file
-            and PurePath(filename) != PurePath(project.project_filename)
+            and PurePath(filename) != PurePath(project.the_qgis_file_name)
         ):
             raise exceptions.MultipleProjectsError(
                 "Only one QGIS project per project allowed"
@@ -313,8 +313,8 @@ class DownloadPushDeleteFileView(views.APIView):
                 is_qgis_project_file or project.has_the_qgis_file
             ):
                 if is_qgis_project_file:
-                    project.project_filename = filename
-                    update_fields.append("project_filename")
+                    project.the_qgis_file_name = filename
+                    update_fields.append("the_qgis_file_name")
 
                 running_jobs = ProcessProjectfileJob.objects.filter(
                     project=project,
