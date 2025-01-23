@@ -1214,7 +1214,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         return super().response_change(request, delta)
 
     def apply_delta(self, request, delta):
-        if not delta.project.project_filename:
+        if not delta.project.has_the_qgis_file:
             self.message_user(request, "Missing project file")
             raise exceptions.NoQGISProjectError()
 

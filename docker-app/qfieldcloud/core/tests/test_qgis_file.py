@@ -68,9 +68,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -86,9 +84,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         # Upload multiple files
         file1 = io.FileIO(testdata_path("DCIM/1.jpg"), "rb")
@@ -114,17 +110,13 @@ class QfcTestCase(APITransactionTestCase):
             )
             self.assertEqual(should_fail_on_empty.json()["code"], "empty_content")
             self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-            self.assertEqual(
-                Project.objects.get(pk=self.project1.pk).project_filename, None
-            )
+            self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
     def test_push_download_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -145,9 +137,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -177,9 +167,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -229,9 +217,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -296,9 +282,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -329,7 +313,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(project.files_count, 0)
         self.assertEqual(project.file_storage_bytes, 0)
-        self.assertIsNone(project.project_filename)
+        self.assertFalse(project.has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -343,7 +327,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(project.files_count, 1)
         self.assertEqual(project.file_storage_bytes, 13)
-        self.assertIsNone(project.project_filename)
+        self.assertFalse(project.has_the_qgis_file)
 
         # Wait 2 seconds to be sure the file timestamps are different
         time.sleep(2)
@@ -361,7 +345,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(project.files_count, 1)
         self.assertEqual(project.file_storage_bytes, 26)
-        self.assertIsNone(project.project_filename)
+        self.assertFalse(project.has_the_qgis_file)
 
         # List files
         response = self.client.get(f"/api/v1/files/{self.project1.id}/")
@@ -393,9 +377,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -462,7 +444,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(project.files_count, 0)
         self.assertEqual(project.file_storage_bytes, 0)
-        self.assertIsNone(project.project_filename)
+        self.assertFalse(project.has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         # Push a file
@@ -476,7 +458,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(project.files_count, 1)
         self.assertEqual(project.file_storage_bytes, 13)
-        self.assertIsNone(project.project_filename)
+        self.assertFalse(project.has_the_qgis_file)
 
         file_path = testdata_path("file2.txt")
         # Push a second file
@@ -490,7 +472,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(project.files_count, 2)
         self.assertEqual(project.file_storage_bytes, 26)
-        self.assertIsNone(project.project_filename)
+        self.assertFalse(project.has_the_qgis_file)
 
         # List files
         response = self.client.get(f"/api/v1/files/{self.project1.id}/")
@@ -504,7 +486,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(project.files_count, 1)
         self.assertEqual(project.file_storage_bytes, 13)
-        self.assertIsNone(project.project_filename)
+        self.assertFalse(project.has_the_qgis_file)
 
         # List files
         response = self.client.get(f"/api/v1/files/{self.project1.id}/")
@@ -515,9 +497,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         qgis_project_file = "foo/bar/file.qgs"
@@ -587,17 +567,13 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
     def test_upload_1mb_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         big_file = tempfile.NamedTemporaryFile()
         with open(big_file.name, "wb") as bf:
@@ -627,9 +603,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         big_file = tempfile.NamedTemporaryFile()
         with open(big_file.name, "wb") as bf:
@@ -704,9 +678,7 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
-        self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).project_filename, None
-        )
+        self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
         file_path = testdata_path("file.txt")
         qgis_project_file = "foo/bar/file.qgs"
