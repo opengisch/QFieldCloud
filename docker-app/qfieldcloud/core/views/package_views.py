@@ -370,13 +370,22 @@ class PackageUploadFilesView(views.APIView):
         if len(request.FILES.getlist("file")) > 1:
             raise exceptions.MultipleContentsError()
 
+        uploaded_file = request.FILES.get("file")
+
+        if not uploaded_file:
+            logger.error(f"Unable to get file contents for {filename=}!")
+
+            raise exceptions.EmptyContentError(
+                f'Missing file contents for "{filename}" from the request!'
+            )
+
         _project = get_object_or_404(Project, id=project_id)
 
         uploaded_file_version = upload_project_file_version(
             request,
             project_id,
             filename,
-            request.FILES.get("file"),
+            uploaded_file,
             file_type=File.FileType.PACKAGE_FILE,
             package_job_id=job_id,
         )
