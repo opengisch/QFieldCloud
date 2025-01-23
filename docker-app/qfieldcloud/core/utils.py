@@ -231,7 +231,7 @@ def safe_join(base: str, *paths: str) -> str:
     return final_path.lstrip("/")
 
 
-def is_qgis_project_file(filename: str) -> bool:
+def is_the_qgis_file(filename: str) -> bool:
     """Returns whether the filename seems to be a QGIS project file by checking the file extension."""
     path = PurePath(filename)
 
@@ -250,7 +250,7 @@ def get_qgis_project_file(project_id: str) -> str | None:
     prefix = f"projects/{project_id}/files/"
 
     for obj in bucket.objects.filter(Prefix=prefix):
-        if is_qgis_project_file(obj.key):
+        if is_the_qgis_file(obj.key):
             path = PurePath(obj.key)
             return str(path.relative_to(*path.parts[:3]))
 
