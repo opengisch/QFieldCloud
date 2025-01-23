@@ -379,8 +379,6 @@ class PackageUploadFilesView(views.APIView):
                 f'Missing file contents for "{filename}" from the request!'
             )
 
-        _project = get_object_or_404(Project, id=project_id)
-
         uploaded_file_version = upload_project_file_version(
             request,
             project_id,
