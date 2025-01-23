@@ -12,7 +12,6 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import (
-    exceptions,
     pagination,
     permissions_utils,
 )
@@ -109,24 +108,10 @@ class FileCrudView(views.APIView):
     def post(
         self, request: Request, project_id: UUID, filename: str, format=None
     ) -> Response:
-        # Only one file allowed to be uploaded at once
-        if len(request.FILES.getlist("file")) > 1:
-            raise exceptions.MultipleContentsError()
-
-        uploaded_file = request.FILES.get("file")
-
-        if not uploaded_file:
-            logger.error(f"Unable to get file contents for {filename=}!")
-
-            raise exceptions.EmptyContentError(
-                f'Missing file contents for "{filename}" from the request!'
-            )
-
         upload_project_file_version(
             request,
             project_id,
             filename,
-            uploaded_file,
             File.FileType.PROJECT_FILE,
         )
 

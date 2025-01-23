@@ -22,7 +22,6 @@ from qfieldcloud.core import permissions_utils
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.files import File as DjangoFile
 from django.utils.translation import gettext as _
 from django.http import FileResponse, HttpResponse
 from django.http.response import HttpResponseBase
@@ -47,10 +46,22 @@ def upload_project_file_version(
     request: Request,
     project_id: UUID,
     filename: str,
-    file: DjangoFile,
     file_type: File.FileType,
     package_job_id: UUID | None = None,
 ) -> FileVersion:
+    # Only one file allowed to be uploaded at once
+    if len(request.FILES.getlist("file")) > 1:
+        raise exceptions.MultipleContentsError()
+
+    uploaded_file = request.FILES.get("file")
+
+    if not uploaded_file:
+        logger.error(f"Unable to get file contents for {filename=}!")
+
+        raise exceptions.EmptyContentError(
+            f'Missing file contents for "{filename}" from the request!'
+        )
+
     project = get_object_or_404(Project, id=project_id)
 
     if not filename or not filename.strip():
@@ -98,14 +109,14 @@ def upload_project_file_version(
     permissions_utils.check_can_upload_file(
         project,
         request.auth.client_type,  # type: ignore
-        file.size,
+        uploaded_file.size,
     )
 
     with transaction.atomic():
         file_version = FileVersion.objects.add_version(
             project=project,
             filename=filename,
-            content=file,
+            content=uploaded_file,
             file_type=file_type,
             uploaded_by=request.user,
             package_job_id=package_job_id,

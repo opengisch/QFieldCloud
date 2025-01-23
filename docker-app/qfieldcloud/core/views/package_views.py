@@ -366,24 +366,10 @@ class PackageUploadFilesView(views.APIView):
         self, request: Request, project_id: UUID, job_id: UUID, filename: str
     ) -> Response:
         """Upload the package files."""
-        # Only one file allowed to be uploaded at once
-        if len(request.FILES.getlist("file")) > 1:
-            raise exceptions.MultipleContentsError()
-
-        uploaded_file = request.FILES.get("file")
-
-        if not uploaded_file:
-            logger.error(f"Unable to get file contents for {filename=}!")
-
-            raise exceptions.EmptyContentError(
-                f'Missing file contents for "{filename}" from the request!'
-            )
-
         uploaded_file_version = upload_project_file_version(
             request,
             project_id,
             filename,
-            uploaded_file,
             file_type=File.FileType.PACKAGE_FILE,
             package_job_id=job_id,
         )
