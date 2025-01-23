@@ -172,7 +172,7 @@ def project_decorator(f):
     def wrapper(opts: DeltaOptions, *args, **kw):
         project = QgsProject.instance()
         project.setAutoTransaction(opts["transaction"])
-        project.read(opts.get("project_filename", opts["project"]))
+        project.read(opts.get("the_qgis_file_name", opts["project"]))
 
         return f(project, opts, *args, **kw)  # type: ignore
 
@@ -248,7 +248,7 @@ def get_geometry_from_delta(
 
 
 def delta_apply(
-    project_filename: Path,
+    the_qgis_file_name: Path,
     delta_filename: Path,
     inverse: bool,
     overwrite_conflicts: bool,
@@ -256,8 +256,8 @@ def delta_apply(
     del delta_log[:]
 
     project = QgsProject.instance()
-    logging.info(f'Loading project file "{project_filename}"...')
-    project.read(str(project_filename))
+    logging.info(f'Loading project file "{the_qgis_file_name}"...')
+    project.read(str(the_qgis_file_name))
 
     logging.info(f'Loading delta file "{delta_filename}"...')
     delta_file = delta_file_file_loader({"delta_file": delta_filename})  # type: ignore

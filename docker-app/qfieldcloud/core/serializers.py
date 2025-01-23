@@ -452,7 +452,7 @@ class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
 
         internal_value = self.to_internal_value(self.initial_data)
 
-        if not internal_value["project"].project_filename:
+        if not internal_value["project"].has_the_qgis_file:
             raise exceptions.NoQGISProjectError()
         return None
 

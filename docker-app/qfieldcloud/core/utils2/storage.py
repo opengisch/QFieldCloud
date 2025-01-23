@@ -501,8 +501,8 @@ def delete_project_file_permanently(
         update_fields = ["file_storage_bytes"]
 
         if qfieldcloud.core.utils.is_qgis_project_file(filename):
-            update_fields.append("project_filename")
-            project.project_filename = None
+            update_fields.append("the_qgis_file_name")
+            project.the_qgis_file_name = None
 
         file_storage_bytes = project.file_storage_bytes - sum(
             [v.size for v in file.versions]
