@@ -73,14 +73,6 @@ class InvalidXmlFileException(QfcWorkerException):
     message = "Project file is an invalid XML document:\n%(xml_error)s"
 
 
-class InvalidQgisFileException(QfcWorkerException):
-    message = 'Project file "%(project_filename)s" is invalid QGIS file:\n%(error)s'
-
-
-class InvalidLayersException(QfcWorkerException):
-    message = 'Project file "%(project_filename)s" contains invalid layers'
-
-
 class FailedThumbnailGenerationException(QfcWorkerException):
     message = "Failed to generate project thumbnail:\n%(reason)s"
 
