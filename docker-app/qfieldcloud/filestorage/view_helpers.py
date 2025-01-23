@@ -16,13 +16,11 @@ from qfieldcloud.filestorage.models import (
 from qfieldcloud.core.exceptions import (
     RestrictedProjectModificationError,
     MultipleProjectsError,
-    ValidationError,
 )
 from qfieldcloud.core import permissions_utils
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.utils.translation import gettext as _
 from django.http import FileResponse, HttpResponse
 from django.http.response import HttpResponseBase
 from django.utils import timezone
@@ -63,11 +61,6 @@ def upload_project_file_version(
         )
 
     project = get_object_or_404(Project, id=project_id)
-
-    if not filename or not filename.strip():
-        logger.error(f"Filename should not be empty: {filename=}!")
-
-        raise ValidationError(_("Filename should not be empty!"))
 
     try:
         validate_filename(filename)
