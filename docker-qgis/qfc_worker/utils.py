@@ -314,7 +314,7 @@ def strip_feature_count_from_project_xml(project_filename: str) -> None:
 
 
 def download_project(
-    project_id: str, destination: Path = None, skip_attachments: bool = True
+    project_id: str, destination: Path | None = None, skip_attachments: bool = True
 ) -> Path:
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""
