@@ -1114,6 +1114,7 @@ class Project(models.Model):
     data_last_updated_at = models.DateTimeField(blank=True, null=True)
     data_last_packaged_at = models.DateTimeField(blank=True, null=True)
 
+    last_package_job_id: uuid.UUID
     last_package_job = models.ForeignKey(
         "PackageJob",
         on_delete=models.SET_NULL,
