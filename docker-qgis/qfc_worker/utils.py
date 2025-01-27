@@ -146,7 +146,7 @@ def _write_log_message(message, tag, level):
 QGISAPP: QgsApplication = None
 
 
-def start_app():
+def start_app() -> str:
     """
     Will start a QgsApplication and call all initialization code like
     registering the providers and other infrastructure. It will not load
@@ -158,9 +158,7 @@ def start_app():
 
         Returns
         -------
-        QgsApplication
-
-        A QgsApplication singleton
+        str: QGIS app version that was started.
     """
     global QGISAPP
 
@@ -192,7 +190,7 @@ def start_app():
     # we set the `bad_layer_handler` and assume we always have only one single `QgsProject` instance within the job's life
     QgsProject.instance().setBadLayerHandler(bad_layer_handler)
 
-    return QGISAPP
+    return Qgis.version()
 
 
 def stop_app():

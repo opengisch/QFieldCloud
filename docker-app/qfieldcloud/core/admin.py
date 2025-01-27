@@ -943,6 +943,7 @@ class JobAdmin(QFieldCloudModelAdmin):
         "status",
         "error_type",
         "type",
+        "qgis_version",
         "created_at",
         "updated_at",
         "started_at",
