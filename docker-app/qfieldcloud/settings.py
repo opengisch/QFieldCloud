@@ -137,6 +137,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "qfieldcloud.core.middleware.requests.attach_keys",  # QF-2540: Inspecting request after Django middlewares
     "log_request_id.middleware.RequestIDMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
