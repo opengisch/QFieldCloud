@@ -74,6 +74,9 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+LOGIN_REDIRECT_URL = "/"
+
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
