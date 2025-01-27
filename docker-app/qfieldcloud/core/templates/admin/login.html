@@ -1,0 +1,8 @@
+{% extends "admin/login.html" %}
+
+{% block content %}
+    {{ block.super }}
+    {% if request.GET.sso %}
+        {% include "socialaccount/snippets/login.html" %}
+    {% endif %}
+{% endblock %}
