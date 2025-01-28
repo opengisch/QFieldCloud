@@ -924,6 +924,7 @@ class JobAdmin(QFieldCloudModelAdmin):
         "type",
         "status",
         "error_type",
+        "qgis_app_version",
         "created_by__link",
         "created_at",
         "updated_at",
@@ -1004,6 +1005,9 @@ class JobAdmin(QFieldCloudModelAdmin):
             return f"{instance.feedback['error_type']}".strip()
 
         return None
+
+    def qgis_app_version(self, instance: Job) -> str | None:
+        return instance.qgis_app_version
 
     @admin.display(ordering="project__owner")
     def project__owner(self, instance):

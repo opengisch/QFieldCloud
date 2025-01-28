@@ -1764,6 +1764,27 @@ class Job(models.Model):
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
 
+    @property
+    def qgis_app_version(self) -> str | None:
+        """Returns QGIS app version used for the job.
+
+        Returns:
+            str | None: QGIS version if found else None.
+        """
+        if not self.feedback:
+            return None
+
+        feedback_step_data = self.get_feedback_step_data("start_qgis_app")
+
+        if not feedback_step_data:
+            return None
+
+        if "qgis_app_version" in feedback_step_data["returns"]:
+            qgis_app_version = feedback_step_data["returns"]["qgis_app_version"]
+            return qgis_app_version
+
+        return None
+
     def check_can_be_created(self):
         from qfieldcloud.core.permissions_utils import (
             check_supported_regarding_owner_account,
