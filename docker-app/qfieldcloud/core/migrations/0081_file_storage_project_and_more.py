@@ -14,7 +14,7 @@ def get_file_storage_name():
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0079_organizationmember_created_at_and_more"),
+        ("core", "0080_rename_project_filename_project_the_qgis_file_name"),
     ]
 
     operations = [
