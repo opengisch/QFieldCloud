@@ -1037,7 +1037,7 @@ class Project(models.Model):
     )
 
     description = models.TextField(blank=True)
-    project_filename = models.TextField(blank=True, null=True)
+    the_qgis_file_name = models.TextField(blank=True, null=True)
     project_details = models.JSONField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
@@ -1120,6 +1120,10 @@ class Project(models.Model):
         default=PackagingOffliner.PYTHONMINI,
         choices=PackagingOffliner.choices,
     )
+
+    @property
+    def has_the_qgis_file(self) -> bool:
+        return bool(self.the_qgis_file_name)
 
     @property
     def owner_aware_storage_keep_versions(self) -> int:
@@ -1257,7 +1261,7 @@ class Project(models.Model):
     def problems(self) -> list[dict]:
         problems = []
 
-        if not self.project_filename:
+        if not self.has_the_qgis_file:
             problems.append(
                 {
                     "layer": None,
@@ -1349,7 +1353,7 @@ class Project(models.Model):
             max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
-            if not self.project_filename or not self.project_details:
+            if not self.has_the_qgis_file or not self.project_details:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
             elif (

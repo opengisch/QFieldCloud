@@ -165,7 +165,7 @@ class QfcTestCase(APITransactionTestCase):
         # wait until the project file check are ready
         for i in range(30):
             updated_project = Project.objects.get(id=project.id)
-            if updated_project.project_filename:
+            if updated_project.has_the_qgis_file:
                 return updated_project
 
             time.sleep(1)

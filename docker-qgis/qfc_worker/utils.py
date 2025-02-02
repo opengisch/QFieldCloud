@@ -60,25 +60,15 @@ class QfcWorkerException(Exception):
 
 
 class ProjectFileNotFoundException(QfcWorkerException):
-    message = 'Project file "%(project_filename)s" does not exist'
+    message = 'Project file "%(the_qgis_file_name)s" does not exist'
 
 
 class InvalidFileExtensionException(QfcWorkerException):
-    message = (
-        'Project file "%(project_filename)s" has unknown file extension "%(extension)s"'
-    )
+    message = 'Project file "%(the_qgis_file_name)s" has unknown file extension "%(extension)s"'
 
 
 class InvalidXmlFileException(QfcWorkerException):
     message = "Project file is an invalid XML document:\n%(xml_error)s"
-
-
-class InvalidQgisFileException(QfcWorkerException):
-    message = 'Project file "%(project_filename)s" is invalid QGIS file:\n%(error)s'
-
-
-class InvalidLayersException(QfcWorkerException):
-    message = 'Project file "%(project_filename)s" contains invalid layers'
 
 
 class FailedThumbnailGenerationException(QfcWorkerException):
@@ -221,62 +211,64 @@ def stop_app():
 
 
 def open_qgis_project(
-    project_filename: str,
+    the_qgis_file_name: str,
     force_reload: bool = False,
     disable_feature_count: bool = False,
     flags: Qgis.ProjectReadFlags = Qgis.ProjectReadFlags(),
 ) -> QgsProject:
-    logging.info(f'Loading QGIS project "{project_filename}"…')
+    logging.info(f'Loading the QGIS file "{the_qgis_file_name}"…')
 
-    if not Path(project_filename).exists():
-        raise FileNotFoundError(f"File not found: {project_filename}")
+    if not Path(the_qgis_file_name).exists():
+        raise FileNotFoundError(f"File not found: {the_qgis_file_name}")
 
     project = QgsProject.instance()
 
-    if project.fileName() == str(project_filename) and not force_reload:
+    if project.fileName() == str(the_qgis_file_name) and not force_reload:
         logging.info(
-            f'Skip loading QGIS project "{project_filename}", it is already loaded'
+            f'Skip loading the QGIS file "{the_qgis_file_name}", it is already loaded'
         )
         return project
 
     if disable_feature_count:
-        strip_feature_count_from_project_xml(project_filename)
+        strip_feature_count_from_project_xml(the_qgis_file_name)
 
     with set_bad_layer_handler(project):
-        if not project.read(str(project_filename), flags):
-            logging.error(f'Failed to load QGIS project "{project_filename}"!')
+        if not project.read(str(the_qgis_file_name), flags):
+            logging.error(f'Failed to load the QGIS file "{the_qgis_file_name}"!')
 
             project.setFileName("")
 
-            raise Exception(f"Unable to open project with QGIS: {project_filename}")
+            raise Exception(
+                f"Unable to open project with QGIS file: {the_qgis_file_name}"
+            )
 
     logging.info("Project loaded.")
 
     return project
 
 
-def strip_feature_count_from_project_xml(project_filename: str) -> None:
+def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
     """Rewrites project XML file with feature count disabled.
 
     Args:
-        project_filename (str): filename of the QGIS project file (.qgs or .qgz)
+        the_qgis_file_name (str): filename of the QGIS filename (.qgs or .qgz)
     """
     archive = None
-    xml_file = project_filename
-    if QgsZipUtils.isZipFile(project_filename):
-        logging.info("The project file is zipped as .qgz, unzipping…")
+    xml_file = the_qgis_file_name
+    if QgsZipUtils.isZipFile(the_qgis_file_name):
+        logging.info("The QGIS file is zipped as .qgz, unzipping…")
 
         archive = QgsProjectArchive()
 
-        if archive.unzip(project_filename):
-            logging.info("The project file is unzipped successfully!")
+        if archive.unzip(the_qgis_file_name):
+            logging.info("The QGIS file is unzipped successfully!")
             xml_file = archive.projectFile()
         else:
-            logging.error("The project file is unzipping failed!")
+            logging.error("The QGIS file is unzipping failed!")
 
-            raise Exception(f"Failed to unzip {project_filename} file!")
+            raise Exception(f"Failed to unzip {the_qgis_file_name} file!")
 
-    logging.info("Parsing QGIS project file XML…")
+    logging.info("Parsing QGIS file XML…")
 
     tree = ET.parse(xml_file)
     root = tree.getroot()
@@ -305,16 +297,16 @@ def strip_feature_count_from_project_xml(project_filename: str) -> None:
 
         archive.addFile(xml_file)
 
-        if not archive.zip(project_filename):
-            raise Exception(f"Failed to zip {project_filename} file!")
+        if not archive.zip(the_qgis_file_name):
+            raise Exception(f"Failed to zip QGIS file {the_qgis_file_name}!")
     else:
         tree.write(xml_file, short_empty_elements=False)
 
-    logging.info("QGIS project file re-written!")
+    logging.info("The QGIS file re-written!")
 
 
 def download_project(
-    project_id: str, destination: Path = None, skip_attachments: bool = True
+    project_id: str, destination: Path | None = None, skip_attachments: bool = True
 ) -> Path:
     """Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path"""

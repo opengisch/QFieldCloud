@@ -26,14 +26,14 @@ from .utils import (
 logger = logging.getLogger("PROCPRJ")
 
 
-def check_valid_project_file(project_filename: Path) -> None:
+def check_valid_project_file(the_qgis_file_name: Path) -> None:
     logger.info("Check QGIS project file validity…")
 
-    if not project_filename.exists():
-        raise ProjectFileNotFoundException(project_filename=project_filename)
+    if not the_qgis_file_name.exists():
+        raise ProjectFileNotFoundException(the_qgis_file_name=the_qgis_file_name)
 
-    if project_filename.suffix == ".qgs":
-        with open(project_filename, "rb") as fh:
+    if the_qgis_file_name.suffix == ".qgs":
+        with open(the_qgis_file_name, "rb") as fh:
             try:
                 for event, elem in ElementTree.iterparse(fh):
                     continue
@@ -41,11 +41,12 @@ def check_valid_project_file(project_filename: Path) -> None:
                 error_msg = str(error)
                 raise InvalidXmlFileException(
                     xml_error=get_qgis_xml_error_context(error_msg, fh) or error_msg,
-                    project_filename=project_filename,
+                    the_qgis_file_name=the_qgis_file_name,
                 )
-    elif project_filename.suffix != ".qgz":
+    elif the_qgis_file_name.suffix != ".qgz":
         raise InvalidFileExtensionException(
-            project_filename=project_filename, extension=project_filename.suffix
+            the_qgis_file_name=the_qgis_file_name,
+            extension=the_qgis_file_name.suffix,
         )
 
     logger.info("QGIS project file is valid!")
@@ -125,13 +126,13 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
     return details
 
 
-def generate_thumbnail(project_filename: str, thumbnail_filename: Path) -> None:
+def generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> None:
     """Create a thumbnail for the project
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
 
     Args:
-        project_filename (str)
+        the_qgis_file_name (str)
         thumbnail_filename (Path)
     """
     logger.info("Generate project thumbnail image…")
@@ -182,7 +183,7 @@ def generate_thumbnail(project_filename: str, thumbnail_filename: Path) -> None:
         on_project_read_wrapper(tmp_project, tmp_layer_tree)
     )
     tmp_project.read(
-        project_filename,
+        the_qgis_file_name,
         tmp_project_read_flags,
     )
 
