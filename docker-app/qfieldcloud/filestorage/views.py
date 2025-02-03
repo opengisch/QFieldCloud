@@ -155,6 +155,7 @@ def compatibility_file_list_view(request: Request, *args, **kwargs) -> Response:
     # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
     project_id: UUID = kwargs["project_id"]
     project = get_object_or_404(Project, id=project_id)
+    view_kwargs = kwargs.pop("view_kwargs", {})
 
     if project.uses_legacy_storage:
         # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
@@ -162,13 +163,13 @@ def compatibility_file_list_view(request: Request, *args, **kwargs) -> Response:
 
         logger.debug(f"Project {project_id=} will be using the legacy file management.")
 
-        return LegacyFileListView.as_view()(request, *args, **kwargs)
+        return LegacyFileListView.as_view(**view_kwargs)(request, *args, **kwargs)
     else:
         logger.debug(
             f"Project {project_id=} will be using the regular file management."
         )
 
-        return FileListView.as_view()(request, *args, **kwargs)
+        return FileListView.as_view(**view_kwargs)(request, *args, **kwargs)
 
 
 @csrf_exempt
@@ -180,6 +181,7 @@ def compatibility_file_crud_view(request: Request, *args, **kwargs) -> Response:
     # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
     project_id: UUID = kwargs["project_id"]
     project = get_object_or_404(Project, id=project_id)
+    view_kwargs = kwargs.pop("view_kwargs", {})
 
     if project.uses_legacy_storage:
         # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
@@ -187,10 +189,10 @@ def compatibility_file_crud_view(request: Request, *args, **kwargs) -> Response:
 
         logger.debug(f"Project {project_id=} will be using the legacy file management.")
 
-        return LegacyFileCrudView.as_view()(request, *args, **kwargs)
+        return LegacyFileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
     else:
         logger.debug(
             f"Project {project_id=} will be using the regular file management."
         )
 
-        return FileCrudView.as_view()(request, *args, **kwargs)
+        return FileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
