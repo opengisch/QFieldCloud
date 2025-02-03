@@ -111,6 +111,8 @@ def get_legacy_s3_credentials() -> DjangoStorages:
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
     """
+    assert settings.LEGACY_STORAGE_NAME
+
     return settings.STORAGES[settings.LEGACY_STORAGE_NAME]
 
 
