@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("core", "0080_file_storage_project_and_more"),
+        ("core", "0081_file_storage_project_and_more"),
     ]
 
     operations = [

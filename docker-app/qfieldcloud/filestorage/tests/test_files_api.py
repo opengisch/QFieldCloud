@@ -336,19 +336,19 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.p1.files.count(), 0)
 
-    def test_upload_project_files_sets_project_filename(self):
-        self.assertIsNone(self.p1.project_filename)
+    def test_upload_project_files_sets_the_qgis_file_name(self):
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
         self.assertFileUploaded(self.u1, self.p1, "project1.qgs", StringIO("Hello!"))
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
     def test_upload_multiple_project_files_fails(self):
-        self.assertIsNone(self.p1.project_filename)
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
         self.assertFileUploaded(self.u1, self.p1, "project1.qgs", StringIO("Hello!"))
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
         response = self._upload_file(
             self.u1, self.p1, "project2.qgs", StringIO("Hello!")
@@ -356,20 +356,20 @@ class QfcTestCase(APITransactionTestCase):
         self.p1.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.p1.files.count(), 1)
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
     def test_upload_admin_restricted_files_by_owner_succeeds(self):
         # make sure the project has the flag `has_restricted_projectfiles=True`
         self.p1.has_restricted_projectfiles = True
         self.p1.save(update_fields=["has_restricted_projectfiles"])
 
-        self.assertIsNone(self.p1.project_filename)
+        self.assertIsNone(self.p1.the_qgis_file_name)
         self.assertFileUploaded(self.u1, self.p1, "project1.qgs", StringIO("Hello1!"))
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
         self.assertFileUploaded(self.u1, self.p1, "project1.qgs", StringIO("Hello2!"))
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
     def test_upload_admin_restricted_files_by_admin_or_manager_succeeds(self):
         # make sure the project has the flag `has_restricted_projectfiles=True`
@@ -384,7 +384,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertFileUploaded(u2, self.p1, "project1.qgs", StringIO("Hello1!"))
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
         # create a new user that is has collaborator role MANAGER
         u3 = Person.objects.create_user(username="u3", password="abc123")
@@ -394,7 +394,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertFileUploaded(u3, self.p1, "project1.qgs", StringIO("Hello2!"))
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
     def test_upload_admin_restricted_files_set_to_false_by_editor_succeeds(self):
         # create a new user that is has collaborator role EDITOR
@@ -405,7 +405,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertFileUploaded(u2, self.p1, "project1.qgs", StringIO("Hello1!"))
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
     def test_upload_admin_restricted_files_by_non_admin_or_manager_fails(self):
         # make sure the project has the flag `has_restricted_projectfiles=True`
@@ -424,7 +424,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.p1.files.count(), 0)
-        self.assertIsNone(self.p1.project_filename)
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
     def test_upload_file_by_non_collaborator_fails(self):
         # create a new independent user that is not a collaborator
@@ -436,7 +436,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.p1.files.count(), 0)
-        self.assertIsNone(self.p1.project_filename)
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
     def test_upload_file_by_organization_admin_succeeds(self):
         # create a new organization and a user that has role ADMIN in the organization
@@ -468,7 +468,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.p1.files.count(), 0)
-        self.assertIsNone(self.p1.project_filename)
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
     def test_upload_by_non_organization_member_fails(self):
         # create a new organization and a user that is not a member
@@ -484,7 +484,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.p1.files.count(), 0)
-        self.assertIsNone(self.p1.project_filename)
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
     def test_upload_file_updates_file_storage_bytes_attribute(self):
         self.assertEqual(self.p1.file_storage_bytes, 0)
@@ -705,13 +705,13 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(versions_qs[0].content.read(), b"Hello2!")
         self.assertEqual(versions_qs[1].content.read(), b"Hello1!")
 
-    def test_delete_qgs_project_file_sets_project_filename_to_none(self):
-        self.assertIsNone(self.p1.project_filename)
+    def test_delete_qgs_project_file_sets_the_qgis_file_name_to_none(self):
+        self.assertIsNone(self.p1.the_qgis_file_name)
         self.assertFileUploaded(self.u1, self.p1, "project1.qgs", StringIO("Hello1!"))
 
         self.p1.refresh_from_db()
 
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
         response = self._delete_file(self.u1, self.p1, "project1.qgs")
 
@@ -719,11 +719,11 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.files.count(), 0)
-        self.assertIsNone(self.p1.project_filename)
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
     def test_delete_all_file_versions_fails(self):
-        # new empty project, no `project_filename`
-        self.assertIsNone(self.p1.project_filename)
+        # new empty project, no `the_qgis_file_name`
+        self.assertIsNone(self.p1.the_qgis_file_name)
 
         # upload the a new `.qgs` file
         self.assertFileUploaded(self.u1, self.p1, "project1.qgs", StringIO("Hello1!"))
@@ -731,7 +731,7 @@ class QfcTestCase(APITransactionTestCase):
         self.p1.refresh_from_db()
 
         # project file set to the recently uploaded file
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
         # upload the another version of the `.qgs` file
         self.assertFileUploaded(self.u1, self.p1, "project1.qgs", StringIO("Hello2!"))
@@ -739,7 +739,7 @@ class QfcTestCase(APITransactionTestCase):
         self.p1.refresh_from_db()
 
         # project file still set to the recently uploaded file
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
         versions_qs = self.p1.get_file("project1.qgs").versions.all()
 
@@ -757,7 +757,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.files.count(), 1)
         # project file still set to the recently uploaded file as there is one more version
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
         response = self._delete_file(
             self.u1,
@@ -771,7 +771,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.p1.files.count(), 1)
         # project file still set to the recently uploaded file as there is one more version
-        self.assertEqual(self.p1.project_filename, "project1.qgs")
+        self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
     def test_delete_file_by_unauthorized_user_fails(self):
         self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Hello!"))

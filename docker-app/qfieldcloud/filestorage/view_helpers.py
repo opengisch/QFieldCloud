@@ -73,7 +73,7 @@ def upload_project_file_version(
     if (
         file_type == File.FileType.PROJECT_FILE
         and (
-            is_admin_restricted_file(filename, project.project_filename)
+            is_admin_restricted_file(filename, project.the_qgis_file_name)
             or is_qgis_project_file(filename)
         )
     ) and not permissions_utils.can_modify_qgis_projectfile(request.user, project):
@@ -91,8 +91,8 @@ def upload_project_file_version(
     if (
         file_type == File.FileType.PROJECT_FILE
         and is_qgis_file
-        and project.project_filename is not None
-        and PurePath(filename) != PurePath(project.project_filename)
+        and project.the_qgis_file_name is not None
+        and PurePath(filename) != PurePath(project.the_qgis_file_name)
     ):
         logger.error(f"Only one QGIS project per project allowed for {filename=}!")
 
@@ -122,11 +122,11 @@ def upload_project_file_version(
             update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
-                is_qgis_file or project.project_filename is not None
+                is_qgis_file or project.the_qgis_file_name is not None
             ):
                 if is_qgis_file:
-                    project.project_filename = filename
-                    update_fields.append("project_filename")
+                    project.the_qgis_file_name = filename
+                    update_fields.append("the_qgis_file_name")
 
                 running_jobs = ProcessProjectfileJob.objects.filter(
                     project=project,
@@ -291,8 +291,8 @@ def delete_project_file_version(
                 project_id=project_id,
             ).exists()
         ):
-            project.project_filename = None
-            update_fields.append("project_filename")
+            project.the_qgis_file_name = None
+            update_fields.append("the_qgis_file_name")
 
         project.file_storage_bytes -= bytes_to_delete
 

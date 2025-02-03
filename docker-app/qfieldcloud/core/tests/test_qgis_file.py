@@ -102,7 +102,7 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(response.json()["code"], "multiple_contents")
             self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
             self.assertEqual(
-                Project.objects.get(pk=self.project1.pk).project_filename, None
+                Project.objects.get(pk=self.project1.pk).the_qgis_file_name, None
             )
 
         with self.subTest():
