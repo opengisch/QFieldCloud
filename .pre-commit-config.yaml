@@ -50,3 +50,5 @@ repos:
         additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs, django-stubs-ext, djangorestframework-stubs]
         pass_filenames: false
         entry: bash -c 'mypy -p docker-app -p docker-qgis "$@"' --
+
+exclude: 'docker-app/qfieldcloud/locale/.*'
