@@ -5,7 +5,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import OuterRef, F, Sum, QuerySet
+from django.db.models import F, Sum, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.core.files.base import ContentFile
@@ -23,17 +23,6 @@ from .utils import calc_etag, filename_validator
 
 
 class FileQueryset(models.QuerySet):
-    def whatever(self):
-        qs = self.annotate(
-            last_version_pk=(
-                FileVersion.objects.filter(file=OuterRef("pk"))
-                .order_by("-uploaded_at")
-                .values("pk")[:1]
-            )
-        )
-        qs = qs.prefetch_related("versions")
-        return qs
-
     def get_by_name(self, filename: str):
         return self.get(name=filename)
 
