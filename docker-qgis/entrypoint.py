@@ -172,6 +172,7 @@ def cmd_package_project(args: argparse.Namespace):
                 id="start_qgis_app",
                 name="Start QGIS Application",
                 method=qfc_worker.utils.start_app,
+                return_names=["qgis_version"],
             ),
             Step(
                 id="download_project_directory",
@@ -250,6 +251,7 @@ def cmd_apply_deltas(args: argparse.Namespace):
                 id="start_qgis_app",
                 name="Start QGIS Application",
                 method=qfc_worker.utils.start_app,
+                return_names=["qgis_version"],
             ),
             Step(
                 id="download_project_directory",
@@ -308,6 +310,7 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 id="start_qgis_app",
                 name="Start QGIS Application",
                 method=qfc_worker.utils.start_app,
+                return_names=["qgis_version"],
             ),
             Step(
                 id="download_project_directory",
