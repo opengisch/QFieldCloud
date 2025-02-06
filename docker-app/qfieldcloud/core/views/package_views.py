@@ -96,7 +96,7 @@ class LegacyLatestPackageView(views.APIView):
         project = Project.objects.get(id=project_id)
 
         # Check if the project was packaged at least once
-        if not project.last_package_job_id:
+        if not project.last_package_job:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
@@ -152,15 +152,21 @@ class LegacyLatestPackageView(views.APIView):
             raise exceptions.InvalidJobError("Empty project package.")
 
         last_job = project.last_package_job
-        if last_job.feedback.get("feedback_version") == "2.0":
+        feedback_version = last_job.feedback.get("feedback_version")
+        # version 2 and 3 have the same format
+        if feedback_version in ["2.0", "3.0"]:
             layers = last_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
-        else:
+        # support some ancient QFieldCloud job data
+        elif feedback_version is None:
             steps = last_job.feedback.get("steps", [])
             layers = (
                 steps[1]["outputs"]["layer_checks"]
                 if len(steps) > 2 and steps[1].get("stage", 1) == 2
                 else None
             )
+        # be paranoid and raise for newer versions
+        else:
+            raise NotImplementedError()
 
         return Response(
             {
@@ -282,15 +288,21 @@ class LatestPackageView(views.APIView):
             raise exceptions.InvalidJobError("Empty project package.")
 
         last_job = project.last_package_job
-        if last_job.feedback.get("feedback_version") == "2.0":
+        feedback_version = last_job.feedback.get("feedback_version")
+        # version 2 and 3 have the same format
+        if feedback_version in ["2.0", "3.0"]:
             layers = last_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
-        else:
+        # support some ancient QFieldCloud job data
+        elif feedback_version is None:
             steps = last_job.feedback.get("steps", [])
             layers = (
                 steps[1]["outputs"]["layer_checks"]
                 if len(steps) > 2 and steps[1].get("stage", 1) == 2
                 else None
             )
+        # be paranoid and raise for newer versions
+        else:
+            raise NotImplementedError()
 
         return Response(
             {
