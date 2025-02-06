@@ -300,7 +300,7 @@ class FileVersion(models.Model):
     def next_version(self) -> "FileVersion | None":
         file_version_qs = FileVersion.objects.filter(
             file=self.file,
-            uploaded_at__lt=self.uploaded_at,
+            uploaded_at__gt=self.uploaded_at,
         ).order_by("uploaded_at")
 
         return file_version_qs.first()
