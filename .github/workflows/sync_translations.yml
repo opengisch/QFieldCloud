@@ -27,6 +27,15 @@ jobs:
             curl -OL https://github.com/transifex/cli/releases/download/v1.6.17/tx-linux-amd64.tar.gz
             tar -xvzf tx-linux-amd64.tar.gz
 
+      - name: Copy .env file
+        run: |
+          cp .env.example .env
+
+      - name: Perform docker pre operations
+        run: |
+            docker compose pull
+            docker compose build
+
       - name: Generate Django translation po files
         run: |
             docker compose run --user root app python manage.py makemessages -l es
@@ -35,7 +44,7 @@ jobs:
         run: ./tx push --source
 
       - name: Pull from Transifex
-        run: ./tx pull --all ---minimum-perc 0 --force
+        run: ./tx pull --all --minimum-perc 0 --force
 
       - name: Add and commit new translations
         uses: EndBug/add-and-commit@v9
