@@ -115,7 +115,6 @@ INSTALLED_APPS = [
     "axes",
     "migrate_sql",
     "constance",
-    "constance.backends.database",
     "django_extensions",
 ]
 
