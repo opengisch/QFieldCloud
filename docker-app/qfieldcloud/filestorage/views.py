@@ -25,6 +25,7 @@ from qfieldcloud.filestorage.models import (
 from qfieldcloud.core.views.files_views import (
     ListFilesView as LegacyFileListView,
     DownloadPushDeleteFileView as LegacyFileCrudView,
+    ProjectMetafilesView as LegacyProjectMetaFileReadView,
 )
 
 from rest_framework import generics, permissions, serializers, status, views
@@ -34,6 +35,7 @@ from rest_framework.response import Response
 from .serializers import FileWithVersionsSerializer
 from .view_helpers import (
     delete_project_file_version,
+    download_field_file,
     download_project_file_version,
     upload_project_file_version,
 )
@@ -147,6 +149,30 @@ class FileCrudView(views.APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Download the metadata of a project's file",
+        responses={
+            (200, "*/*"): OpenApiTypes.BINARY,
+        },
+    )
+)
+class ProjectMetaFileReadView(views.APIView):
+    permission_classes = [
+        permissions.IsAuthenticated,
+        FileCrudViewPermissions,
+    ]
+
+    def get(self, request, project_id, filename):
+        project = get_object_or_404(Project, id=project_id)
+
+        return download_field_file(
+            request,
+            project.thumbnail,
+            filename,
+        )
+
+
 @csrf_exempt
 def compatibility_file_list_view(
     request: Request, *args, **kwargs
@@ -201,3 +227,35 @@ def compatibility_file_crud_view(
         )
 
         return FileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
+
+
+@csrf_exempt
+def compatibility_project_meta_file_read_view(
+    request: Request, *args, **kwargs
+) -> Response | HttpResponse:
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
+    project_id: UUID = kwargs["project_id"]
+    project = get_object_or_404(Project, id=project_id)
+    view_kwargs = kwargs.pop("view_kwargs", {})
+
+    if project.uses_legacy_storage:
+        # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
+        kwargs["projectid"] = kwargs.pop("project_id")
+
+        logger.debug(
+            f"Project {project_id=} will be using the legacy file management for meta files."
+        )
+
+        return LegacyProjectMetaFileReadView.as_view(**view_kwargs)(
+            request, *args, **kwargs
+        )
+    else:
+        logger.debug(
+            f"Project {project_id=} will be using the regular file management for meta files."
+        )
+
+        return ProjectMetaFileReadView.as_view(**view_kwargs)(request, *args, **kwargs)

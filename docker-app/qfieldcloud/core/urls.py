@@ -103,11 +103,6 @@ urlpatterns = [
         name="team_member_destroy",
     ),
     path(
-        "files/meta/<uuid:projectid>/<path:filename>",
-        files_views.ProjectMetafilesView.as_view(),
-        name="project_metafiles",
-    ),
-    path(
         "files/public/<path:filename>",
         files_views.PublicFilesView.as_view(),
         name="public_files",

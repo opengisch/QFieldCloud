@@ -19,6 +19,7 @@ from qfieldcloud.core.exceptions import (
 )
 from qfieldcloud.core import permissions_utils
 from django.db import transaction
+from django.db.models.fields.files import FieldFile
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import FileResponse, HttpResponse
@@ -178,7 +179,7 @@ def download_project_file_version(
             file__file_type=file_type,
         )
     else:
-        file = File.objects.get(
+        file = File.objects.select_related("latest_version").get(
             project_id=project_id,
             name=filename,
             file_type=file_type,
@@ -188,6 +189,26 @@ def download_project_file_version(
 
         file_version = file.latest_version
 
+    return download_field_file(
+        request,
+        file_version.content,
+        filename,
+        as_attachment,
+    )
+
+
+def download_field_file(
+    request: Request,
+    field_file: FieldFile,
+    filename: str | None = None,
+    as_attachment: bool = False,
+) -> HttpResponseBase:
+    if not filename:
+        filename = field_file.name
+
+    if not filename:
+        raise Exception("Missing filename in `download_field_file`!")
+
     # check if we are in NGINX proxy
     http_host = request.headers.get("host", "")
     https_port = http_host.split(":")[-1] if ":" in http_host else "443"
@@ -195,17 +216,17 @@ def download_project_file_version(
     if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
-        storage_filename = file_version.content.name
+        storage_filename = field_file.name
 
-        url = file_version.content.storage.url(
+        url = field_file.storage.url(
             storage_filename,
-            parameters={
-                "ResponseContentType": "application/force-download",
+            parameters={  # type: ignore
+                "ResponseContentType": "application.force-download",
                 "ResponseContentDisposition": f'attachment;filename="{filename}"',
             },
             # keep it a low number, in seconds
-            expire=600,
-            http_method="GET",
+            expire=600,  # type: ignore
+            http_method="GET",  # type: ignore
         )
 
         # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
@@ -216,7 +237,7 @@ def download_project_file_version(
         return response
     elif settings.DEBUG or settings.IN_TEST_SUITE:
         return FileResponse(
-            file_version.content.open(),
+            field_file.open(),
             as_attachment=as_attachment,
             filename=filename,
             content_type="text/html",
