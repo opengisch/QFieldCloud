@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID
 
+from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -147,7 +148,9 @@ class FileCrudView(views.APIView):
 
 
 @csrf_exempt
-def compatibility_file_list_view(request: Request, *args, **kwargs) -> Response:
+def compatibility_file_list_view(
+    request: Request, *args, **kwargs
+) -> Response | HttpResponse:
     """
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -173,7 +176,9 @@ def compatibility_file_list_view(request: Request, *args, **kwargs) -> Response:
 
 
 @csrf_exempt
-def compatibility_file_crud_view(request: Request, *args, **kwargs) -> Response:
+def compatibility_file_crud_view(
+    request: Request, *args, **kwargs
+) -> Response | HttpResponse:
     """
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
