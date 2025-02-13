@@ -1,7 +1,8 @@
 import logging
 from uuid import UUID
 
-from django.http import HttpResponse
+from django.db.models import QuerySet
+from django.http.response import HttpResponse
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -93,8 +94,14 @@ class FileListView(generics.ListAPIView):
     serializer_class = FileWithVersionsSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
 
-    def get_queryset(self):
-        return File.objects.filter(file_type=File.FileType.PROJECT_FILE)
+    def get_queryset(self, *args, **kwargs) -> QuerySet[File]:  # type: ignore
+        project = get_object_or_404(Project, id=self.kwargs.get("project_id"))
+        qs = File.objects.prefetch_related("versions").filter(
+            project_id=project.id,
+            file_type=File.FileType.PROJECT_FILE,
+        )
+
+        return qs
 
 
 class FileCrudView(views.APIView):

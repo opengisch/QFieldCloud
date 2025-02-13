@@ -163,6 +163,24 @@ class QfcTestCase(APITransactionTestCase):
 
         return response
 
+    def _list_files(self, user: User, project: Project) -> HttpResponse | Response:
+        token = AuthToken.objects.get_or_create(user=user)[0]
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+
+        response = self.client.post(
+            reverse(
+                "filestorage_list_files",
+                kwargs={
+                    "project_id": project.id,
+                },
+            ),
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="")
+
+        return response
+
     def test_upload_file_succeeds(self):
         # 1) first upload of the file
         response = self._upload_file(self.u1, self.p1, "file.name", StringIO("Hello!"))
@@ -1034,3 +1052,24 @@ class QfcTestCase(APITransactionTestCase):
         self.assertFalse(
             self.p1.files.all()[0].versions.filter(id=oldest_version_id).exists()
         )
+
+    def test_list_project_files(self):
+        # 1) first upload of the file with two versions
+        self.assertFileUploaded(self.u1, self.p1, "file1.name", StringIO("Hello 1!"))
+        self.assertFileUploaded(self.u1, self.p1, "file1.name", StringIO("Hello 2!"))
+
+        # 2) adding a file to another project
+        p2 = Project.objects.create(name="p2", owner=self.u1)
+        self.assertFileUploaded(self.u1, p2, "file1.name", StringIO("Hello!"))
+
+        response = self._list_files(self.u1, self.p1)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payload = response.json()
+
+        self.assertIsInstance(payload, list)
+        self.assertEqual(len(payload), 1)
+        self.assertIsInstance(payload[0], dict)
+        self.assertEqual(payload[0].get("name"), "file1.name")
+        self.assertEqual(len(payload[0].get("versions", [])), 2)
