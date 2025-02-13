@@ -206,6 +206,9 @@ def download_field_file(
     if not filename:
         filename = field_file.name
 
+    # While we should always have a filename, either as a parameter, or obtained from the uploaded file itself,
+    # we can be paranoid and check if there is a one.
+    # This scenario is more to prevent developers from mistakes, rather than real world situation.
     if not filename:
         raise Exception("Missing filename in `download_field_file`!")
 
