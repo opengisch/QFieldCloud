@@ -167,7 +167,7 @@ def download_project_file_version(
     project_id: UUID,
     filename: str,
     file_type: File.FileType,
-    as_attachment: bool = False,
+    as_attachment: bool = True,
 ) -> HttpResponseBase:
     version_id = request.GET.get("version")
 
@@ -217,13 +217,19 @@ def download_field_file(
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
         storage_filename = field_file.name
+        parameters = {}
+
+        if as_attachment:
+            parameters.update(
+                {
+                    "ResponseContentType": "application.force-download",
+                    "ResponseContentDisposition": f'attachment;filename="{filename}"',
+                }
+            )
 
         url = field_file.storage.url(
             storage_filename,
-            parameters={  # type: ignore
-                "ResponseContentType": "application.force-download",
-                "ResponseContentDisposition": f'attachment;filename="{filename}"',
-            },
+            parameters=parameters,  # type: ignore
             # keep it a low number, in seconds
             expire=600,  # type: ignore
             http_method="GET",  # type: ignore
