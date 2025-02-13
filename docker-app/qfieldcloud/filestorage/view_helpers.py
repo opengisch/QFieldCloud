@@ -253,15 +253,16 @@ def delete_project_file_version(
     project_id: UUID,
     filename: str,
 ) -> None:
-    """_summary_
+    """Deletes a given project file, or if the version is passed, only specific version.
+
+    The version can be passed either with `version` query parameter or `x-file-version` header.
 
     Args:
-        request (Request): _description_
-        filename (str): _description_
-
+        request (Request): The Django request
+        filename (str): The filename to be deleted
 
     Raises:
-        Exception: Raised when the passed `version_id` will delete the only `FileVersion` remaining for that file.
+        Exception: Raised when the passed `version` will delete the only `FileVersion` remaining for that file.
         NotFound: Raised when the requested file is not found.
         NotFound: Raised when the requested file version is not found.
     """
