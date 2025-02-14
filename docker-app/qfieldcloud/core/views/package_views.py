@@ -18,7 +18,32 @@ from qfieldcloud.core.utils import (
 )
 from qfieldcloud.core.utils2 import storage
 from rest_framework import permissions, views
+
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.request import Request
 from rest_framework.response import Response
+
+
+import logging
+from uuid import UUID
+
+from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404
+
+from qfieldcloud.filestorage.models import (
+    File,
+)
+from qfieldcloud.filestorage.serializers import FileSerializer
+from qfieldcloud.filestorage.view_helpers import (
+    download_project_file_version,
+    upload_project_file_version,
+)
+
+
+from rest_framework import status
+
+
+logger = logging.getLogger(__name__)
 
 
 class PackageViewPermissions(permissions.BasePermission):
@@ -63,7 +88,7 @@ class PackageUploadViewPermissions(permissions.BasePermission):
         responses={200: LatestPackageSerializer()},
     ),
 )
-class LatestPackageView(views.APIView):
+class LegacyLatestPackageView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, project_id):
@@ -71,7 +96,7 @@ class LatestPackageView(views.APIView):
         project = Project.objects.get(id=project_id)
 
         # Check if the project was packaged at least once
-        if not project.last_package_job_id:
+        if not project.last_package_job:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
@@ -127,15 +152,21 @@ class LatestPackageView(views.APIView):
             raise exceptions.InvalidJobError("Empty project package.")
 
         last_job = project.last_package_job
-        if last_job.feedback.get("feedback_version") == "2.0":
+        feedback_version = last_job.feedback.get("feedback_version")
+        # version 2 and 3 have the same format
+        if feedback_version in ["2.0", "3.0"]:
             layers = last_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
-        else:
+        # support some ancient QFieldCloud job data
+        elif feedback_version is None:
             steps = last_job.feedback.get("steps", [])
             layers = (
                 steps[1]["outputs"]["layer_checks"]
                 if len(steps) > 2 and steps[1].get("stage", 1) == 2
                 else None
             )
+        # be paranoid and raise for newer versions
+        else:
+            raise NotImplementedError()
 
         return Response(
             {
@@ -157,7 +188,7 @@ class LatestPackageView(views.APIView):
         },
     ),
 )
-class LatestPackageDownloadFilesView(views.APIView):
+class LegacyLatestPackageDownloadFilesView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, project_id, filename):
@@ -201,7 +232,7 @@ class LatestPackageDownloadFilesView(views.APIView):
         ],
     )
 )
-class PackageUploadFilesView(views.APIView):
+class LegacyPackageUploadFilesView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, PackageUploadViewPermissions]
 
     def post(self, request, project_id, job_id, filename):
@@ -224,3 +255,227 @@ class PackageUploadFilesView(views.APIView):
                 "md5sum": md5sum,
             }
         )
+
+
+@extend_schema_view(
+    get=extend_schema(
+        description="Get all the files in a project package with files.",
+        responses={200: LatestPackageSerializer()},
+    ),
+)
+class LatestPackageView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
+
+    def get(self, request, project_id):
+        """Get last project package status and file list."""
+        project = get_object_or_404(Project, id=project_id)
+
+        # Check if the project was packaged at least once
+        if not project.last_package_job:
+            raise exceptions.InvalidJobError(
+                "Packaging has never been triggered or successful for this project."
+            )
+
+        files_qs = File.objects.filter(
+            project_id=project_id,
+            package_job=project.last_package_job,
+            file_type=File.FileType.PACKAGE_FILE,
+        )
+
+        file_serializer = FileSerializer(files_qs, many=True)
+
+        if not file_serializer.data:
+            raise exceptions.InvalidJobError("Empty project package.")
+
+        last_job = project.last_package_job
+        feedback_version = last_job.feedback.get("feedback_version")
+        # version 2 and 3 have the same format
+        if feedback_version in ["2.0", "3.0"]:
+            layers = last_job.feedback["outputs"]["qgis_layers_data"]["layers_by_id"]
+        # support some ancient QFieldCloud job data
+        elif feedback_version is None:
+            steps = last_job.feedback.get("steps", [])
+            layers = (
+                steps[1]["outputs"]["layer_checks"]
+                if len(steps) > 2 and steps[1].get("stage", 1) == 2
+                else None
+            )
+        # be paranoid and raise for newer versions
+        else:
+            raise NotImplementedError()
+
+        return Response(
+            {
+                "files": file_serializer.data,
+                "layers": layers,
+                "status": last_job.status,
+                "package_id": last_job.pk,
+                "packaged_at": last_job.project.data_last_packaged_at,
+                "data_last_updated_at": last_job.project.data_last_updated_at,
+            }
+        )
+
+
+@extend_schema_view(
+    get=extend_schema(
+        description="Download a file from a project package.",
+        responses={
+            (200, "*/*"): OpenApiTypes.BINARY,
+        },
+    ),
+)
+class LatestPackageDownloadFilesView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
+
+    def get(self, request, project_id, filename):
+        """Download package file.
+
+        Raises:
+            exceptions.InvalidJobError: raised when packaging has never been triggered or successful for this project
+        """
+        project = get_object_or_404(Project, id=project_id)
+
+        # Check if the project was packaged at least once
+        if not project.last_package_job_id:
+            raise exceptions.InvalidJobError(
+                "Packaging has never been triggered or successful for this project."
+            )
+
+        # When the filename is in an attachment dir, we don't need to download the packaged files,
+        # but the original project files. This optimization saves storage and time when packaging a project
+        # with a lot of attachments, as the package job does not need to upload all these files in the package.
+        if storage.get_attachment_dir_prefix(project, filename):
+            file_type = File.FileType.PROJECT_FILE
+        else:
+            file_type = File.FileType.PACKAGE_FILE
+
+        return download_project_file_version(
+            request,
+            project_id,
+            filename,
+            file_type=file_type,
+        )
+
+
+@extend_schema_view(
+    post=extend_schema(
+        description="Upload a file to the package",
+        parameters=[
+            OpenApiParameter(
+                name="file",
+                type=OpenApiTypes.BINARY,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="File to be uploaded",
+            )
+        ],
+    )
+)
+class PackageUploadFilesView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, PackageUploadViewPermissions]
+
+    def post(
+        self, request: Request, project_id: UUID, job_id: UUID, filename: str
+    ) -> Response:
+        """Upload the package files."""
+        uploaded_file_version = upload_project_file_version(
+            request,
+            project_id,
+            filename,
+            file_type=File.FileType.PACKAGE_FILE,
+            package_job_id=job_id,
+        )
+
+        headers = {
+            "Location": reverse_lazy(
+                "filestorage_crud_file",
+                kwargs={
+                    "project_id": project_id,
+                    "filename": filename,
+                },
+            ),
+        }
+
+        return Response(
+            {
+                "name": filename,
+                "size": uploaded_file_version.size,
+                "sha256": uploaded_file_version.sha256sum.hex(),
+                "md5sum": uploaded_file_version.md5sum.hex(),
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+
+@csrf_exempt
+def compatibility_latest_package_view(request: Request, *args, **kwargs) -> Response:
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    project_id: UUID = kwargs["project_id"]
+    project = get_object_or_404(Project, id=project_id)
+
+    if project.uses_legacy_storage:
+        logger.debug(
+            f"Project {project_id=} will be using the legacy package file management."
+        )
+
+        return LegacyLatestPackageView.as_view()(request, *args, **kwargs)
+    else:
+        logger.debug(
+            f"Project {project_id=} will be using the regular package file management."
+        )
+
+        return LatestPackageView.as_view()(request, *args, **kwargs)
+
+
+@csrf_exempt
+def compatibility_package_download_files_view(
+    request: Request, *args, **kwargs
+) -> Response:
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    project_id: UUID = kwargs["project_id"]
+    project = get_object_or_404(Project, id=project_id)
+
+    if project.uses_legacy_storage:
+        logger.debug(
+            f"Project {project_id=} will be using the legacy package file management."
+        )
+
+        return LegacyLatestPackageDownloadFilesView.as_view()(request, *args, **kwargs)
+    else:
+        logger.debug(
+            f"Project {project_id=} will be using the regular package file management."
+        )
+
+        return LatestPackageDownloadFilesView.as_view()(request, *args, **kwargs)
+
+
+@csrf_exempt
+def compatibility_package_upload_files_view(
+    request: Request, *args, **kwargs
+) -> Response:
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    project_id: UUID = kwargs["project_id"]
+    project = get_object_or_404(Project, id=project_id)
+
+    if project.uses_legacy_storage:
+        logger.debug(
+            f"Project {project_id=} will be using the legacy package file management."
+        )
+
+        return LegacyPackageUploadFilesView.as_view()(request, *args, **kwargs)
+    else:
+        logger.debug(
+            f"Project {project_id=} will be using the regular package file management."
+        )
+
+        return PackageUploadFilesView.as_view()(request, *args, **kwargs)

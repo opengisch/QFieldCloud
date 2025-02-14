@@ -43,7 +43,11 @@ jobs:
           - notifs
           - subscription
           - core
+          - filestorage
           - __flaky__
+        storage:
+          - default
+          - legacy_storage
     continue-on-error: true
     steps:
       - name: Checkout repo
@@ -60,6 +64,35 @@ jobs:
           cp .env.example .env
           sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
+          cat <<EOF >> .env
+          STORAGES='{
+              "legacy_storage": {
+                  "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
+                  "OPTIONS": {
+                      "access_key": "minioadmin",
+                      "secret_key": "minioadmin",
+                      "bucket_name": "qfieldcloud-local-legacy",
+                      "region_name": "",
+                      "endpoint_url": "http://172.17.0.1:8009"
+                  },
+                  "QFC_IS_LEGACY": true
+              },
+              "default": {
+                  "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
+                  "OPTIONS": {
+                      "access_key": "minioadmin",
+                      "secret_key": "minioadmin",
+                      "bucket_name": "qfieldcloud-local",
+                      "region_name": "",
+                      "endpoint_url": "http://172.17.0.1:8009"
+                  },
+                  "QFC_IS_LEGACY": false
+              }
+          }'
+          EOF
+
+          echo "TEST_SUITE_PROJECT_DEFAULT_STORAGE=${{ matrix.storage }}" >> .env
 
       - name: Pull docker containers
         run: docker compose pull
