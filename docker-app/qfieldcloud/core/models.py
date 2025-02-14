@@ -1552,6 +1552,11 @@ class Project(models.Model):
     def get_file(self, filename: str) -> File:
         return self.files.get_by_name(filename)  # type: ignore
 
+    def legacy_get_file(self, filename: str) -> utils.S3ObjectWithVersions:
+        files = filter(lambda f: f.latest.name == filename, self.legacy_files)
+
+        return next(files)
+
 
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):

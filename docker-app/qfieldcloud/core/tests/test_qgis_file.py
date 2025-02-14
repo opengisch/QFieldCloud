@@ -649,10 +649,9 @@ class QfcTestCase(APITransactionTestCase):
 
             # TODO Delete with QF-4963 Drop support for legacy storage
             if project.uses_legacy_storage:
-                file = project.legacy_files[0]
-                return len(file.versions)
-
-            return project.get_file("file.txt").versions.count()
+                return len(project.legacy_get_file("file.txt").versions)
+            else:
+                return project.get_file("file.txt").versions.count()
 
         def read_version(n):
             """returns the content of version in first file of project1"""
@@ -660,16 +659,18 @@ class QfcTestCase(APITransactionTestCase):
 
             # TODO Delete with QF-4963 Drop support for legacy storage
             if project.uses_legacy_storage:
-                file = project.legacy_files[0]
-                return file.versions[n]._data.get()["Body"].read().decode()
+                file = (
+                    project.legacy_get_file("file.txt").versions[n]._data.get()["Body"]
+                )
+            else:
+                file = (
+                    project.get_file("file.txt")
+                    .versions.all()
+                    .order_by("uploaded_at")[n]
+                    .content
+                )
 
-            return (
-                project.get_file("file.txt")
-                .versions.all()
-                .order_by("uploaded_at")[n]
-                .content.read()
-                .decode()
-            )
+            return file.read().decode()
 
         # As PRO account, 10 version should be kept out of 20
         set_subscription(self.user1, "keep_10", storage_keep_versions=10)

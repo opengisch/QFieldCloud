@@ -76,6 +76,48 @@ class QfcTestCase(APITransactionTestCase):
     def assertFileUploaded(
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
+        if project.uses_legacy_storage:
+            return self._assertFileUploadedLegacy(user, project, filename, content)
+        else:
+            return self._assertFileUploaded(user, project, filename, content)
+
+    def _assertFileUploadedLegacy(
+        self, user: User, project: Project, filename: str, content: IO
+    ) -> HttpResponse | Response:
+        files_count = len(
+            list(filter(lambda f: f.latest.name != filename, project.legacy_files))
+        )
+        max_versions = user.useraccount.current_subscription.plan.storage_keep_versions
+
+        try:
+            file = project.legacy_get_file(filename)
+
+            versions_count = len(file.versions)
+            latest_version = file.latest
+        except Exception:
+            versions_count = 0
+            latest_version = None
+
+        response = self._upload_file(user, project, filename, content)
+
+        # clear the cache, as `Project.legacy_files` is `@cached_property`
+        del project.legacy_files
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(project.files_count, files_count + 1)
+
+        file = project.legacy_get_file(filename)
+
+        self.assertEqual(file.latest.name, filename)
+        self.assertEqual(len(file.versions), min((versions_count + 1), max_versions))
+        self.assertEqual(file.latest, file.versions[-1])
+        self.assertNotEqual(file.latest, latest_version)
+
+        return response
+
+    def _assertFileUploaded(
+        self, user: User, project: Project, filename: str, content: IO
+    ) -> HttpResponse | Response:
         files_count = project.files.exclude(name=filename).count()
         max_versions = user.useraccount.current_subscription.plan.storage_keep_versions
 
@@ -168,7 +210,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
-        response = self.client.post(
+        response = self.client.get(
             reverse(
                 "filestorage_list_files",
                 kwargs={
@@ -1055,14 +1097,16 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_list_project_files(self):
         # 1) first upload of the file with two versions
-        self.assertFileUploaded(self.u1, self.p1, "file1.name", StringIO("Hello 1!"))
-        self.assertFileUploaded(self.u1, self.p1, "file1.name", StringIO("Hello 2!"))
+        p2 = Project.objects.create(name="p2", owner=self.u1)
+
+        self.assertFileUploaded(self.u1, p2, "file1.name", StringIO("Hello 1!"))
+        self.assertFileUploaded(self.u1, p2, "file1.name", StringIO("Hello 2!"))
 
         # 2) adding a file to another project
-        p2 = Project.objects.create(name="p2", owner=self.u1)
-        self.assertFileUploaded(self.u1, p2, "file1.name", StringIO("Hello!"))
+        p3 = Project.objects.create(name="p3", owner=self.u1)
+        self.assertFileUploaded(self.u1, p3, "file1.name", StringIO("Hello!"))
 
-        response = self._list_files(self.u1, self.p1)
+        response = self._list_files(self.u1, p2)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
