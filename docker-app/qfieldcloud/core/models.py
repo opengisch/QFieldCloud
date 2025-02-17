@@ -1144,6 +1144,7 @@ class Project(models.Model):
         ),
     )
 
+    # TODO: Delete with QF-4963 Drop support for legacy storage
     legacy_thumbnail_uri = models.CharField(
         _("Legacy Thumbnail Picture URI"), max_length=255, blank=True
     )
@@ -1226,17 +1227,27 @@ class Project(models.Model):
         return keep_count
 
     @property
-    def thumbnail_url(self):
-        if self.legacy_thumbnail_uri:
-            return reverse_lazy(
-                "project_metafiles",
-                kwargs={
-                    "projectid": self.id,
-                    "filename": self.legacy_thumbnail_uri[51:],
-                },
-            )
-        else:
-            return None
+    def thumbnail_url(self) -> str:
+        """Returns the url to the project's thumbnail or empty string if no URL provided.
+
+        Todo:
+            * Delete with QF-4963 Drop support for legacy storage
+        """
+        if (
+            # legacy storage
+            self.uses_legacy_storage
+            and not self.legacy_thumbnail_uri
+            # new storage
+            or not self.thumbnail
+        ):
+            return ""
+
+        return reverse_lazy(
+            "filestorage_project_thumbnails",
+            kwargs={
+                "project_id": self.id,
+            },
+        )
 
     def get_absolute_url(self):
         return reverse_lazy(
@@ -1509,6 +1520,11 @@ class Project(models.Model):
         )
 
     def delete(self, *args, **kwargs):
+        """Deletes the project and the thumbnail for the legacy storage.
+
+        Todo:
+            * Delete with QF-4963 Drop support for legacy storage
+        """
         if self.legacy_thumbnail_uri:
             storage.delete_project_thumbnail(self)
 

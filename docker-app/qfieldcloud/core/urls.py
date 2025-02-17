@@ -2,7 +2,6 @@ from django.urls import include, path
 from qfieldcloud.core.views import (
     collaborators_views,
     deltas_views,
-    files_views,
     jobs_views,
     members_views,
     package_views,
@@ -101,10 +100,5 @@ urlpatterns = [
         "organizations/<str:organization_name>/teams/<str:team_name>/members/<str:member_username>/",
         teams_views.DestroyTeamMemberView.as_view(),
         name="team_member_destroy",
-    ),
-    path(
-        "files/public/<path:filename>",
-        files_views.PublicFilesView.as_view(),
-        name="public_files",
     ),
 ]

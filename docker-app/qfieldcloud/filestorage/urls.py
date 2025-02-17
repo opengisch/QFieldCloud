@@ -18,13 +18,8 @@ urlpatterns = [
         name="filestorage_crud_file",
     ),
     path(
-        "files/meta/<uuid:projectid>/<path:filename>",
+        "files/thumbnails/<uuid:project_id>/",
         compatibility_project_meta_file_read_view,
-        name="project_metafiles",
+        name="filestorage_project_thumbnails",
     ),
-    # path(
-    #     "files/public/<path:filename>",
-    #     files_views.PublicFilesView.as_view(),
-    #     name="public_files",
-    # ),
 ]

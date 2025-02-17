@@ -2,7 +2,7 @@ import logging
 from uuid import UUID
 
 from django.db.models import QuerySet
-from django.http.response import HttpResponse
+from django.http.response import HttpResponse, HttpResponseBase
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -171,13 +171,13 @@ class ProjectMetaFileReadView(views.APIView):
         FileCrudViewPermissions,
     ]
 
-    def get(self, request, project_id, filename):
+    def get(self, request: Request, project_id: UUID) -> HttpResponseBase:
         project = get_object_or_404(Project, id=project_id)
 
         return download_field_file(
             request,
             project.thumbnail,
-            filename,
+            "thumbnail.png",
         )
 
 
@@ -253,6 +253,8 @@ def compatibility_project_meta_file_read_view(
     if project.uses_legacy_storage:
         # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
         kwargs["projectid"] = kwargs.pop("project_id")
+        # hardcode the thumbnail file name
+        kwargs["filename"] = kwargs.pop("thumbnail.png")
 
         logger.debug(
             f"Project {project_id=} will be using the legacy file management for meta files."
