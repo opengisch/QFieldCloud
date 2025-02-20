@@ -28,6 +28,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 from qfieldcloud.authentication import views as auth_views
+from qfieldcloud.subscription import views as subscription_views
 from qfieldcloud.core.views import files_views
 from rest_framework import permissions
 
@@ -75,6 +76,10 @@ urlpatterns = [
     path("api/v1/auth/token/", auth_views.LoginView.as_view()),
     path("api/v1/auth/user/", auth_views.UserView.as_view()),
     path("api/v1/auth/logout/", auth_views.LogoutView.as_view()),
+    path(
+        "api/v1/subscription/current/",
+        subscription_views.CurrentSubscriptionView.as_view(),
+    ),
     path("api/v1/", include("qfieldcloud.core.urls")),
     path("auth/", include("rest_framework.urls")),
     path("accounts/", include("allauth.urls")),
