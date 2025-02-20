@@ -387,7 +387,7 @@ class PackageJobRun(JobRun):
     command = [
         "package",
         "%(project__id)s",
-        "%(project__project_filename)s",
+        "%(project__the_qgis_file_name)s",
         "%(project__packaging_offliner)s",
     ]
     data_last_packaged_at = None
@@ -440,7 +440,7 @@ class PackageJobRun(JobRun):
 
 class DeltaApplyJobRun(JobRun):
     job_class = ApplyJob
-    command = ["delta_apply", "%(project__id)s", "%(project__project_filename)s"]
+    command = ["delta_apply", "%(project__id)s", "%(project__the_qgis_file_name)s"]
 
     def __init__(self, job_id: str) -> None:
         super().__init__(job_id)
@@ -565,14 +565,14 @@ class ProcessProjectfileJobRun(JobRun):
     command = [
         "process_projectfile",
         "%(project__id)s",
-        "%(project__project_filename)s",
+        "%(project__the_qgis_file_name)s",
     ]
 
     def get_context(self, *args) -> dict[str, Any]:
         context = super().get_context(*args)
 
-        if not context.get("project__project_filename"):
-            context["project__project_filename"] = get_qgis_project_file(
+        if not context.get("project__the_qgis_file_name"):
+            context["project__the_qgis_file_name"] = get_qgis_project_file(
                 context["project__id"]
             )
 

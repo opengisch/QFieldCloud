@@ -262,10 +262,10 @@ class DownloadPushDeleteFileView(views.APIView):
             project = request.project
         else:
             project = Project.objects.get(id=projectid)
-        is_qgis_project_file = utils.is_qgis_project_file(filename)
+        is_the_qgis_file = utils.is_the_qgis_file(filename)
 
         # check if the project restricts qgs/qgz file modification to admins
-        if is_qgis_project_file and not permissions_utils.can_modify_qgis_projectfile(
+        if is_the_qgis_file and not permissions_utils.can_modify_qgis_projectfile(
             request.user, project
         ):
             raise exceptions.RestrictedProjectModificationError(
@@ -274,9 +274,9 @@ class DownloadPushDeleteFileView(views.APIView):
 
         # check only one qgs/qgz file per project
         if (
-            is_qgis_project_file
-            and project.project_filename is not None
-            and PurePath(filename) != PurePath(project.project_filename)
+            is_the_qgis_file
+            and project.has_the_qgis_file
+            and PurePath(filename) != PurePath(project.the_qgis_file_name)
         ):
             raise exceptions.MultipleProjectsError(
                 "Only one QGIS project per project allowed"
@@ -310,11 +310,11 @@ class DownloadPushDeleteFileView(views.APIView):
             update_fields = ["data_last_updated_at", "file_storage_bytes"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
-                is_qgis_project_file or project.project_filename is not None
+                is_the_qgis_file or project.has_the_qgis_file
             ):
-                if is_qgis_project_file:
-                    project.project_filename = filename
-                    update_fields.append("project_filename")
+                if is_the_qgis_file:
+                    project.the_qgis_file_name = filename
+                    update_fields.append("the_qgis_file_name")
 
                 running_jobs = ProcessProjectfileJob.objects.filter(
                     project=project,

@@ -1,0 +1,55 @@
+name: 🌎 Synchronize translations with Transifex
+
+on:
+    schedule:
+      - cron: "0 2 * * *"
+    workflow_dispatch:
+
+jobs:
+
+  sync_translations:
+
+    name: Synchronize Transifex translations
+    runs-on: ubuntu-latest
+
+    env:
+      TX_TOKEN: ${{ secrets.TX_TOKEN }}
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.NYUKI_TOKEN }}
+
+      - name: Install Transifex CLI
+        run: |
+            curl -OL https://github.com/transifex/cli/releases/download/v1.6.17/tx-linux-amd64.tar.gz
+            tar -xvzf tx-linux-amd64.tar.gz
+
+      - name: Copy .env file
+        run: |
+          cp .env.example .env
+
+      - name: Perform docker pre operations
+        run: |
+            docker compose pull
+            docker compose build
+
+      - name: Generate Django translation po files
+        run: |
+            docker compose run --user root app python manage.py makemessages -l es
+
+      - name: Push translation files to Transifex
+        run: ./tx push --source
+
+      - name: Pull from Transifex
+        run: ./tx pull --all --minimum-perc 0 --force
+
+      - name: Add and commit new translations
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: Synchronize translations
+          author_name: Translation update 💬
+          author_email: info@opengis.ch
+          add: '["docker-app/qfieldcloud/locale"]'

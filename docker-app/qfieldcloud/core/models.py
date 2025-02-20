@@ -1037,7 +1037,7 @@ class Project(models.Model):
     )
 
     description = models.TextField(blank=True)
-    project_filename = models.TextField(blank=True, null=True)
+    the_qgis_file_name = models.TextField(blank=True, null=True)
     project_details = models.JSONField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
@@ -1120,6 +1120,10 @@ class Project(models.Model):
         default=PackagingOffliner.PYTHONMINI,
         choices=PackagingOffliner.choices,
     )
+
+    @property
+    def has_the_qgis_file(self) -> bool:
+        return bool(self.the_qgis_file_name)
 
     @property
     def owner_aware_storage_keep_versions(self) -> int:
@@ -1257,7 +1261,7 @@ class Project(models.Model):
     def problems(self) -> list[dict]:
         problems = []
 
-        if not self.project_filename:
+        if not self.has_the_qgis_file:
             problems.append(
                 {
                     "layer": None,
@@ -1349,7 +1353,7 @@ class Project(models.Model):
             max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
-            if not self.project_filename or not self.project_details:
+            if not self.has_the_qgis_file or not self.project_details:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
             elif (
@@ -1763,6 +1767,30 @@ class Job(models.Model):
             return _(
                 "The job ended in unknown state. Please verify the project is configured properly, try again and contact QFieldCloud support for more information."
             )
+
+    @property
+    def qgis_version(self) -> str | None:
+        """Returns QGIS app version used for the job.
+
+        The QGIS version is the one coming from the instanciated worker QGIS app.
+        The version number would be in `Major.Minor.Patch-NAME` format, e.g. 3.40.2-Bratislava
+
+        Returns:
+            str | None: QGIS version if found else None.
+        """
+        if not self.feedback:
+            return None
+
+        feedback_step_data = self.get_feedback_step_data("start_qgis_app")
+
+        if not feedback_step_data:
+            return None
+
+        if "qgis_version" in feedback_step_data["returns"]:
+            qgis_version = feedback_step_data["returns"]["qgis_version"]
+            return qgis_version
+
+        return None
 
     def check_can_be_created(self):
         from qfieldcloud.core.permissions_utils import (
