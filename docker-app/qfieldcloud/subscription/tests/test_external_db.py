@@ -141,10 +141,14 @@ class QfcTestCase(APITransactionTestCase):
             },
             format="multipart",
         )
+
         self.assertEqual(Delta.objects.filter(project=p1).count(), 2)
+
         print("-------------------")
+
         for delta in Delta.objects.filter(project=p1):
             print(delta)
+
         self.assertEqual(
             Delta.objects.filter(project=p1).latest("created_at").last_status,
             Delta.Status.PENDING,

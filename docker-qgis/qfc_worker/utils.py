@@ -532,17 +532,22 @@ def is_localhost(hostname: str, port: int = None) -> bool:
     """returns True if the hostname points to the localhost, otherwise False."""
     if port is None:
         port = 22  # no port specified, lets just use the ssh port
+
     try:
         hostname = socket.getfqdn(hostname)
+
         if hostname in ("localhost", "0.0.0.0"):
             return True
+
         localhost = socket.gethostname()
         localaddrs = socket.getaddrinfo(localhost, port)
         targetaddrs = socket.getaddrinfo(hostname, port)
+
         for _family, _socktype, _proto, _canonname, sockaddr in localaddrs:
             for _rfamily, _rsocktype, _rproto, _rcanonname, rsockaddr in targetaddrs:
                 if rsockaddr[0] == sockaddr[0]:
                     return True
+
         return False
     except Exception:
         return False
@@ -614,10 +619,12 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
 
 def json_default(obj):
     obj_str = type(obj).__qualname__
+
     try:
         obj_str += f" {str(obj)}"
     except Exception:
         obj_str += " <non-representable>"
+
     return f"<non-serializable: {obj_str}>"
 
 

@@ -30,6 +30,12 @@ repos:
         args: [--target-version, '4.2', '--skip', 'admin_register']
         files: '^docker-app/qfieldcloud/.*.py$'
 
+  - repo: https://github.com/pycqa/flake8
+    rev: '7.1.2'
+    hooks:
+    -   id: flake8
+        additional_dependencies: [flake8-clean-block]
+
   # Lint and format
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.

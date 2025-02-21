@@ -81,7 +81,9 @@ class Plan(models.Model):
                     user_type=User.Type.ORGANIZATION,
                     initial_subscription_status=SubscriptionStatus.ACTIVE_PAID,
                 )
+
         result = cls.objects.order_by("-is_default").first()
+
         return cast(Plan, result)
 
     # unique identifier of the subscription plan
@@ -214,6 +216,7 @@ class Plan(models.Model):
                 Plan.objects.filter(user_type=self.user_type).exclude(
                     pk=self.pk
                 ).update(is_default=False)
+
             return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -623,8 +626,10 @@ class AbstractSubscription(models.Model):
             return package.quantity
         else:
             package = self.get_active_package(package_type)
+
             if package and not package.active_until:
                 return package.quantity
+
         return 0
 
     def set_package_quantity(

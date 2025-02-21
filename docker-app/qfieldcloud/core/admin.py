@@ -78,6 +78,7 @@ class NoPkOrderChangeList(ChangeList):
         order_fields = super().get_ordering(request, queryset)
         if len(order_fields) > 1 and "-pk" in order_fields:
             order_fields.remove("-pk")
+
         return order_fields
 
 
@@ -108,6 +109,7 @@ class QFieldCloudModelAdmin(  # type: ignore
         """
         if hasattr(self, "has_direct_delete_permission"):
             perm = f"admin:{self.model._meta.app_label}_{self.model._meta.model_name}"
+
             if request.resolver_match.view_name.startswith(perm):
                 if callable(self.has_direct_delete_permission):
                     return self.has_direct_delete_permission(request, obj)
@@ -367,16 +369,19 @@ class MemberOrganizationInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_direct_delete_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
@@ -387,16 +392,19 @@ class MemberTeamInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_direct_delete_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type in (User.Type.PERSON, User.Type.ORGANIZATION)
 
 
@@ -434,16 +442,19 @@ class UserProjectCollaboratorInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type == User.Type.PERSON
 
     def has_direct_delete_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type == User.Type.PERSON
 
     def has_change_permission(self, request, obj):
         if obj is None:
             return True
+
         return obj.type == User.Type.PERSON
 
 
@@ -540,6 +551,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
                 name="password_reset_url",
             ),
         ]
+
         return urls
 
     @method_decorator(never_cache)
@@ -565,6 +577,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
                 "key": token_generator.make_token(user),
             },
         )
+
         return TemplateResponse(
             request,
             "admin/password_reset_url.html",
@@ -623,6 +636,7 @@ class ProjectSecretForm(ModelForm):
     def get_initial_for_field(self, field, field_name):
         if self.instance.pk and field_name == "value":
             return ""
+
         return super().get_initial_for_field(field, field_name)
 
     def clean(self):
@@ -632,9 +646,11 @@ class ProjectSecretForm(ModelForm):
             type = self.instance.type
         else:
             type = cleaned_data.get("type")
+
         if type == Secret.Type.PGSERVICE:
             # validate the pg_service.conf
             value = cleaned_data.get("value")
+
             if value:
                 try:
                     pg_service_file.validate_pg_service_conf(value)
@@ -686,6 +702,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
         # only set created_by during the first save
         if not change:
             obj.created_by = request.user
+
         super().save_model(request, obj, form, change)
 
     def get_changeform_initial_data(self, request):
@@ -962,8 +979,10 @@ class JobAdmin(QFieldCloudModelAdmin):
 
     def get_object(self, request, object_id, from_field=None):
         obj = super().get_object(request, object_id, from_field)
+
         if obj and obj.type == Job.Type.DELTA_APPLY:
             obj = ApplyJob.objects.get(pk=obj.pk)
+
         return obj
 
     def get_inline_instances(self, request, obj=None):
@@ -1339,8 +1358,10 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     def active_users_links(self, instance) -> str:
         persons = instance.useraccount.current_subscription.active_users
         userlinks = "<p> - </p>"
+
         if persons:
             userlinks = "<br>".join(model_admin_url(p, p.username) for p in persons)
+
         help_text = """
         <p style="font-size: 11px; color: var(--body-quiet-color)">
             Active members have triggererd at least one job or uploaded at least one delta in the current billing period.
@@ -1428,6 +1449,7 @@ class TeamAdmin(QFieldCloudModelAdmin):
     def save_model(self, request, obj, form, change):
         if not obj.username.startswith("@"):
             obj.username = f"@{obj.team_organization.username}/{obj.username}"
+
         obj.save()
 
     def get_form(

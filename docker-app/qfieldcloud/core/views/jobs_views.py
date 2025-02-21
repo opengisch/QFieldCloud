@@ -91,10 +91,13 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
             serializer.save()
         else:
             serializer.is_valid(raise_exception=True)
+
             if not serializer.Meta.allow_parallel_jobs:
                 job = serializer.get_lastest_not_finished_job()
+
                 if job:
                     return Response(self.get_serializer(job).data)
+
             serializer.save()
 
         return Response(serializer.data, status=HTTP_201_CREATED)

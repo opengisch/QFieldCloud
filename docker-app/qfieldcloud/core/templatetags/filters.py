@@ -49,4 +49,5 @@ def filesizeformat10(bytes_) -> str:
 
     if negative:
         value = "-%s" % value
+
     return avoid_wrapping(value)

@@ -585,10 +585,12 @@ class ProcessProjectfileJobRun(JobRun):
         ]
 
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
+
         with open(thumbnail_filename, "rb") as f:
             thumbnail_uri = storage.upload_project_thumbail(
                 project, f, "image/png", "thumbnail"
             )
+
         project.thumbnail_uri = project.thumbnail_uri or thumbnail_uri
         project.save(
             update_fields=(

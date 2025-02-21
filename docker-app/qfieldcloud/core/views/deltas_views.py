@@ -31,8 +31,9 @@ class DeltaFilePermissions(permissions.BasePermission):
 
         if request.method == "GET":
             return permissions_utils.can_read_deltas(user, project)
-        if request.method == "POST":
+        elif request.method == "POST":
             return permissions_utils.can_create_deltas(user, project)
+
         return False
 
 

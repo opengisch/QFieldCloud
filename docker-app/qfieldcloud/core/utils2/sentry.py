@@ -49,6 +49,7 @@ def report_serialization_diff_to_sentry(
 
             if capture_message:
                 sentry_sdk.capture_message("Explicit Sentry report!", scope=scope)
+
             return True
 
         except Exception as error:

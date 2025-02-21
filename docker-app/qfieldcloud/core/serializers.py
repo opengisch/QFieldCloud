@@ -28,7 +28,9 @@ def get_avatar_url(user: User) -> str | None:
         site = Site.objects.get_current()  # type: ignore
         port = settings.WEB_HTTPS_PORT
         port = f":{port}" if port != "443" else ""
+
         return f"https://{site.domain}{port}{user.useraccount.avatar_url}"  # type: ignore
+
     return None
 
 
@@ -292,6 +294,7 @@ class StatusChoiceField(serializers.ChoiceField):
         for i in self._choices:
             if self._choices[i] == data:
                 return i
+
         raise serializers.ValidationError(
             "Invalid status. Acceptable values are {}.".format(
                 list(self._choices.values())
@@ -352,6 +355,7 @@ class ExportJobSerializer(serializers.ModelSerializer):
                 "output": "",
                 "status": "STATUS_ERROR",
             }
+
         return super().get_initial()
 
     def get_layers(self, obj):
@@ -447,6 +451,7 @@ class JobMixin:
 class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
     def get_lastest_not_finished_job(self) -> Job | None:
         job = super().get_lastest_not_finished_job()
+
         if job:
             return job
 
@@ -454,6 +459,7 @@ class PackageJobSerializer(JobMixin, serializers.ModelSerializer):
 
         if not internal_value["project"].has_the_qgis_file:
             raise exceptions.NoQGISProjectError()
+
         return None
 
     class Meta(JobMixin.Meta):

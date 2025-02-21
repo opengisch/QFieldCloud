@@ -29,6 +29,7 @@ def exception_handler(exc, context):
         # Unexpected ! We rethrow original exception to make debugging tests easier
         if settings.IN_TEST_SUITE:
             raise exc
+
         qfc_exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
 
     # Log level is defined by the exception

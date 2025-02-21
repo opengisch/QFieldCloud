@@ -108,9 +108,10 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
 
     for _ in range(wait_s):
         project.refresh_from_db()
+
         if project.status == Project.Status.OK:
             return
-        if project.status == Project.Status.FAILED:
+        elif project.status == Project.Status.FAILED:
             fail("Waited for ok status, but got failed")
             return
 
