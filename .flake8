@@ -1,0 +1,5 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__
+select = CLB100
