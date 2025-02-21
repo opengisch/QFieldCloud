@@ -22,8 +22,9 @@ class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
 
         if request.method == "GET":
             return permissions_utils.can_read_collaborators(user, project)
-        if request.method == "POST":
+        elif request.method == "POST":
             return permissions_utils.can_create_collaborators(user, project)
+
         return False
 
 
@@ -81,10 +82,11 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
 
         if request.method == "GET":
             return permissions_utils.can_read_collaborators(user, project)
-        if request.method in ["PUT", "PATCH"]:
+        elif request.method in ["PUT", "PATCH"]:
             return permissions_utils.can_update_collaborators(user, project)
-        if request.method in ["DELETE"]:
+        elif request.method in ["DELETE"]:
             return permissions_utils.can_delete_collaborators(user, project)
+
         return False
 
 

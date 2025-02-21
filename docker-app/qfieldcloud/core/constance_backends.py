@@ -13,13 +13,16 @@ class DatabaseBackend(BaseDatabaseBackend):
 
     def get(self, key):
         key = self.add_prefix(key)
+
         if self._cache:
             value = self._cache.get(key)
+
             if value is None:
                 self.autofill()
                 value = self._cache.get(key)
         else:
             value = None
+
         if value is None:
             try:
                 value = self._model._default_manager.get(key=key).value
@@ -28,4 +31,5 @@ class DatabaseBackend(BaseDatabaseBackend):
                     self._cache.add(key, value)
             except self._model.DoesNotExist:  # Only catch DoesNotExist exceptions here
                 pass
+
         return value

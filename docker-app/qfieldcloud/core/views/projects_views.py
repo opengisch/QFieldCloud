@@ -22,8 +22,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         if view.action == "list":
             # The queryset is already filtered by what the user can see
             return True
+
         user = request.user
         owner = permissions_utils.get_param_from_request(request, "owner")
+
         if owner:
             owner_obj = User.objects.get(username=owner)
         else:

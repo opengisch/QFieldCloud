@@ -651,6 +651,7 @@ class QfcTestCase(APITransactionTestCase):
         for i in range(20):
             test_file = io.StringIO(f"v{i}")
             self.client.post(apipath, {"file": test_file}, format="multipart")
+
         self.assertEqual(count_versions(), 10)
         self.assertEqual(read_version(0), "v10")
         self.assertEqual(read_version(9), "v19")
@@ -670,6 +671,7 @@ class QfcTestCase(APITransactionTestCase):
         for i in range(20, 40):
             test_file = io.StringIO(f"v{i}")
             self.client.post(apipath, {"file": test_file}, format="multipart")
+
         self.assertEqual(count_versions(), 3)
         self.assertEqual(read_version(0), "v37")
         self.assertEqual(read_version(2), "v39")

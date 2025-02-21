@@ -14,6 +14,7 @@ class AuthConfig(AppConfig):
 
         if cls.initialized:
             return
+
         cls.initialized = True
 
         from .conf import settings  # noqa

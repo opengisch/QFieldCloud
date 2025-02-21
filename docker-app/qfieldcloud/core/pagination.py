@@ -13,6 +13,7 @@ def parameterize_pagination(_class: type) -> Callable:
     def configure_class_object(*args, **kwargs) -> type:
         for k, v in kwargs.items():
             setattr(_class, k, v)
+
         return _class
 
     return configure_class_object

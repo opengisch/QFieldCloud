@@ -24,6 +24,7 @@ def list_urls(url_items, prefixes=None):
         yield prefixes + [str(url_item.pattern)]
     elif isinstance(url_item, URLResolver):
         yield from list_urls(url_item.url_patterns, prefixes + [str(url_item.pattern)])
+
     yield from list_urls(url_items[1:], prefixes)
 
 

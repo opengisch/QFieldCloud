@@ -39,6 +39,7 @@ class QfcOrderingFilter(filters.OrderingFilter):
                 continue
 
             return field
+
         return None
 
     def _parse_tokenized_attributes(self, raw: str) -> dict[str, str]:

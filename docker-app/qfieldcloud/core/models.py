@@ -710,10 +710,12 @@ class Organization(User):
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
+
         if getattr(self, "created_by", None) is not None:
             self.created_by = self.created_by
         else:
             self.created_by = self.organization_owner
+
         return super().save(*args, **kwargs)
 
 
@@ -1821,6 +1823,7 @@ class Job(models.Model):
         for step in self.feedback["steps"]:
             if step["id"] == step_name:
                 return step
+
         return None
 
 
