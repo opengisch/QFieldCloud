@@ -815,7 +815,10 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_packaged_at",
         "project_details__pre",
     )
-    inlines = (ProjectCollaboratorInline, ProjectSecretInline)
+    inlines = (
+        ProjectSecretInline,
+        ProjectCollaboratorInline,
+    )
     search_fields = (
         "id",
         "name__icontains",
@@ -1316,8 +1319,8 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
         GeodbInline,
-        OrganizationMemberInline,
         ProjectInline,
+        OrganizationMemberInline,
         TeamInline,
     )
     fields = (
