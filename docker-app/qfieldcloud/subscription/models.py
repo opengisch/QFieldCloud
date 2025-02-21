@@ -438,10 +438,18 @@ class AbstractSubscription(models.Model):
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
 
-    plan = models.ForeignKey(
+    regular_plan = models.ForeignKey(
         Plan,
         on_delete=models.DO_NOTHING,
         related_name="+",
+    )
+
+    trial_plan = models.ForeignKey(
+        Plan,
+        on_delete=models.DO_NOTHING,
+        related_name="+",
+        null=True,
+        blank=True,
     )
 
     account = models.ForeignKey(
@@ -472,6 +480,8 @@ class AbstractSubscription(models.Model):
     active_since = models.DateTimeField(_("Active since"), null=True, blank=True)
 
     active_until = models.DateTimeField(_("Active until"), null=True, blank=True)
+
+    trial_ends_at = models.DateTimeField(_("Trial ends at"), null=True, blank=True)
 
     # the timestamp used for time calculations when the billing period starts and ends
     billing_cycle_anchor_at = models.DateTimeField(null=True, blank=True)
@@ -602,6 +612,15 @@ class AbstractSubscription(models.Model):
             return 0
 
         return self.active_users.count()
+
+    @property
+    def plan(self) -> Plan:
+        """Returns the appropriate plan based on the user's subscription status."""
+        return self.trial_plan if self.is_trialing else self.regular_plan
+
+    @property
+    def is_trialing(self) -> bool:
+        return self.trial_ends_at is not None and self.trial_ends_at > timezone.now()
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
@@ -755,7 +774,7 @@ class AbstractSubscription(models.Model):
     @classmethod
     def create_default_plan_subscription(
         cls, account: UserAccount, active_since: datetime = None
-    ) -> "Subscription":
+    ) -> "AbstractSubscription":
         """Creates the default subscription for a given account.
 
         Args:
@@ -803,7 +822,7 @@ class AbstractSubscription(models.Model):
         trial_plan: Plan | None,
         created_by: Person,
         active_since: datetime | None = None,
-    ) -> "Subscription":
+    ) -> "AbstractSubscription":
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
@@ -825,33 +844,29 @@ class AbstractSubscription(models.Model):
         current_time = timezone.now()
 
         subscription_data = {
-            "plan": regular_plan,
             "account": account,
             "created_by": created_by,
             "status": SubscriptionStatus.ACTIVE_PAID,
             "active_since": current_time,
             "active_until": None,  # Stripe will set this
-            "stripe_status": "ACTIVE",
+            "regular_plan": regular_plan,
+            "trial_plan": trial_plan,
             "trial_ends_at": None,
-            "regular_plan": None,
         }
 
         if trial_plan:
-            trial_end_date = current_time + timedelta(days=config.TRIAL.PERIOD.DAYS)
+            trial_end_date = current_time + timedelta(days=config.TRIAL_PERIOD_DAYS)
 
             subscription_data.update(
                 {
-                    "plan": trial_plan,
-                    "active_until": trial_end_date,
+                    "trial_plan": trial_plan,
                     "trial_ends_at": trial_end_date,
-                    "stripe_status": "TRIALING",
-                    "regular_plan": regular_plan,
                 }
             )
 
             if (
-                account.user.is_person
-                and account.user.remaining_trial_organizations > 0
+                account.user.is_organization
+                and account.user.organization_owner.remaining_trial_organizations > 0
             ):
                 account.user.remaining_trial_organizations -= 1
                 account.user.save(update_fields=["remaining_trial_organizations"])

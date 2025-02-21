@@ -117,11 +117,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     form = SubscriptionModelForm
 
     fields = (
-        "plan",
+        "regular_plan",
+        "trial_plan",
         "account",
         "status",
         "active_since",
         "active_until",
+        "is_trialing_display",
+        "trial_ends_at_display",
         "billing_cycle_anchor_at",
         "current_period_since",
         "current_period_until",
@@ -136,7 +139,8 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "id",
         "account__link",
         "account__user__email",
-        "plan__link",
+        "regular_plan__link",
+        "trial_plan__link",
         "active_since",
         "active_until",
         "is_active",
@@ -146,7 +150,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     list_filter = (
         SubscriptionPeriodFilter,
         "status",
-        "plan",
+        "regular_plan",
         ActiveUntilFilter,
     )
 
@@ -224,6 +228,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
             obj.created_by_id = obj.created_by_id or request.user.id
 
         return super().save_model(request, obj, form, change)
+
+    @admin.display(description="Trial Active")
+    def is_trialing_display(self, instance):
+        return instance.is_trialing
+
+    @admin.display(description="Trial Ends At")
+    def trial_ends_at_display(self, instance):
+        return instance.trial_ends_at if instance.is_trialing else "-"
 
 
 admin.site.register(Plan, PlanAdmin)
