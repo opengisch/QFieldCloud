@@ -1316,8 +1316,8 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
         GeodbInline,
-        OrganizationMemberInline,
         ProjectInline,
+        OrganizationMemberInline,
         TeamInline,
     )
     fields = (
