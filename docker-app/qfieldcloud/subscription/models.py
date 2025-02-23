@@ -19,7 +19,7 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
 
-from .exceptions import NotPremiumPlanException
+from .exceptions import NotPremiumPlanException, NoRemainingTrialOrganizationsError
 
 logger = logging.getLogger(__name__)
 
@@ -438,12 +438,14 @@ class AbstractSubscription(models.Model):
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
 
+    # Regular plan used for paid subscription or trial subscriptions after the trial period ends.
     regular_plan = models.ForeignKey(
         Plan,
         on_delete=models.DO_NOTHING,
         related_name="+",
     )
 
+    # An optional trial plan. If provided, the subscription initially uses this plan until the trial end date expires.
     trial_plan = models.ForeignKey(
         Plan,
         on_delete=models.DO_NOTHING,
@@ -481,6 +483,7 @@ class AbstractSubscription(models.Model):
 
     active_until = models.DateTimeField(_("Active until"), null=True, blank=True)
 
+    # Datetime when the trial period for the subscription ends.
     trial_ends_at = models.DateTimeField(_("Trial ends at"), null=True, blank=True)
 
     # the timestamp used for time calculations when the billing period starts and ends
@@ -620,6 +623,7 @@ class AbstractSubscription(models.Model):
 
     @property
     def is_trialing(self) -> bool:
+        """Determine whether the subscription is currently in a trial period."""
         return self.trial_ends_at is not None and self.trial_ends_at > timezone.now()
 
     def get_active_package(self, package_type: PackageType) -> Package:
@@ -850,7 +854,7 @@ class AbstractSubscription(models.Model):
             "active_since": current_time,
             "active_until": None,  # Stripe will set this
             "regular_plan": regular_plan,
-            "trial_plan": trial_plan,
+            "trial_plan": None,
             "trial_ends_at": None,
         }
 
@@ -871,9 +875,7 @@ class AbstractSubscription(models.Model):
                 account.user.remaining_trial_organizations -= 1
                 account.user.save(update_fields=["remaining_trial_organizations"])
             else:
-                logger.info(
-                    f"User {account.user.username} attempted to trigger a trial but has no remaining trials."
-                )
+                raise NoRemainingTrialOrganizationsError
 
         with transaction.atomic():
             subscription = cls.objects.create(**subscription_data)
