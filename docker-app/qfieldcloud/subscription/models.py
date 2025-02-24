@@ -366,7 +366,7 @@ class SubscriptionQuerySet(models.QuerySet):
         qs = self.filter(
             Q(active_since__lte=now)
             & (Q(active_until__isnull=True) | Q(active_until__gte=now))
-        ).select_related("plan")
+        ).select_related("regular_plan", "trial_plan")
 
         return qs
 
@@ -845,13 +845,13 @@ class AbstractSubscription(models.Model):
             # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
 
-        current_time = timezone.now()
+        now = timezone.now()
 
         subscription_data = {
             "account": account,
             "created_by": created_by,
             "status": SubscriptionStatus.ACTIVE_PAID,
-            "active_since": current_time,
+            "active_since": now,
             "active_until": None,  # Stripe will set this
             "regular_plan": regular_plan,
             "trial_plan": None,
@@ -859,7 +859,7 @@ class AbstractSubscription(models.Model):
         }
 
         if trial_plan:
-            trial_end_date = current_time + timedelta(days=config.TRIAL_PERIOD_DAYS)
+            trial_end_date = now + timedelta(days=config.TRIAL_PERIOD_DAYS)
 
             subscription_data.update(
                 {
@@ -875,7 +875,7 @@ class AbstractSubscription(models.Model):
                 account.user.remaining_trial_organizations -= 1
                 account.user.save(update_fields=["remaining_trial_organizations"])
             else:
-                raise NoRemainingTrialOrganizationsError
+                raise NoRemainingTrialOrganizationsError()
 
         with transaction.atomic():
             subscription = cls.objects.create(**subscription_data)
