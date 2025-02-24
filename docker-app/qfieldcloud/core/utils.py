@@ -11,7 +11,6 @@ from typing import IO, Generator, NamedTuple
 import boto3
 import jsonschema
 import mypy_boto3_s3
-from botocore.config import Config
 from botocore.errorfactory import ClientError
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
@@ -88,30 +87,34 @@ class S3ObjectWithVersions(NamedTuple):
 def get_s3_session() -> boto3.Session:
     """Get a new S3 Session instance using Django settings"""
 
-    # TODO dynamically check if credential already given as is on AWS VMs
-    # session = boto3.Session(
-    #     aws_access_key_id=settings.STORAGE_ACCESS_KEY_ID,
-    #     aws_secret_access_key=settings.STORAGE_SECRET_ACCESS_KEY,
-    #     region_name=settings.STORAGE_REGION_NAME,
-    # )
-    session = boto3.Session()
-    return session
+    session_kwargs = {}
+
+    if settings.STORAGE_ACCESS_KEY_ID:
+        session_kwargs["aws_access_key_id"] = settings.STORAGE_ACCESS_KEY_ID
+    if settings.STORAGE_SECRET_ACCESS_KEY:
+        session_kwargs["aws_secret_access_key"] = settings.STORAGE_SECRET_ACCESS_KEY
+    if settings.STORAGE_REGION_NAME:
+        session_kwargs["region_name"] = settings.STORAGE_REGION_NAME
+
+    return boto3.Session(**session_kwargs)
 
 
 def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
     """
     Get a new S3 Bucket instance using Django settings.
     """
+
     bucket_name = settings.STORAGE_BUCKET_NAME
 
     assert bucket_name, "Expected `bucket_name` to be non-empty string!"
 
     session = get_s3_session()
-    s3 = session.resource(
-        "s3",
-        # endpoint_url=settings.STORAGE_ENDPOINT_URL,
-        config=Config(proxies={"http": None, "https": None}),
-    )
+
+    resource_kwargs = {}
+    if settings.STORAGE_ENDPOINT_URL:
+        resource_kwargs["endpoint_url"] = settings.STORAGE_ENDPOINT_URL
+
+    s3 = session.resource("s3", **resource_kwargs)
 
     # Ensure the bucket exists
     s3.meta.client.head_bucket(Bucket=bucket_name)
@@ -124,11 +127,12 @@ def get_s3_client() -> mypy_boto3_s3.Client:
     """Get a new S3 client instance using Django settings"""
 
     s3_session = get_s3_session()
-    s3_client = s3_session.client(
-        "s3",
-        # endpoint_url=settings.STORAGE_ENDPOINT_URL,
-        config=Config(proxies={"http": None, "https": None}),
-    )
+
+    resource_kwargs = {}
+    if settings.STORAGE_ENDPOINT_URL:
+        resource_kwargs["endpoint_url"] = settings.STORAGE_ENDPOINT_URL
+
+    s3_client = s3_session.client("s3", **resource_kwargs)
     return s3_client
 
 
