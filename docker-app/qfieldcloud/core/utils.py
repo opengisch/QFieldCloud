@@ -87,16 +87,16 @@ class S3ObjectWithVersions(NamedTuple):
 def get_s3_session() -> boto3.Session:
     """Get a new S3 Session instance using Django settings"""
 
-    session_kwargs = {}
+    kwargs = {}
 
     if settings.STORAGE_ACCESS_KEY_ID:
-        session_kwargs["aws_access_key_id"] = settings.STORAGE_ACCESS_KEY_ID
+        kwargs["aws_access_key_id"] = settings.STORAGE_ACCESS_KEY_ID
     if settings.STORAGE_SECRET_ACCESS_KEY:
-        session_kwargs["aws_secret_access_key"] = settings.STORAGE_SECRET_ACCESS_KEY
+        kwargs["aws_secret_access_key"] = settings.STORAGE_SECRET_ACCESS_KEY
     if settings.STORAGE_REGION_NAME:
-        session_kwargs["region_name"] = settings.STORAGE_REGION_NAME
+        kwargs["region_name"] = settings.STORAGE_REGION_NAME
 
-    return boto3.Session(**session_kwargs)
+    return boto3.Session(**kwargs)
 
 
 def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
@@ -110,11 +110,11 @@ def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
 
     session = get_s3_session()
 
-    resource_kwargs = {}
+    kwargs = {}
     if settings.STORAGE_ENDPOINT_URL:
-        resource_kwargs["endpoint_url"] = settings.STORAGE_ENDPOINT_URL
+        kwargs["endpoint_url"] = settings.STORAGE_ENDPOINT_URL
 
-    s3 = session.resource("s3", **resource_kwargs)
+    s3 = session.resource("s3", **kwargs)
 
     # Ensure the bucket exists
     s3.meta.client.head_bucket(Bucket=bucket_name)
@@ -128,11 +128,11 @@ def get_s3_client() -> mypy_boto3_s3.Client:
 
     s3_session = get_s3_session()
 
-    resource_kwargs = {}
+    kwargs = {}
     if settings.STORAGE_ENDPOINT_URL:
-        resource_kwargs["endpoint_url"] = settings.STORAGE_ENDPOINT_URL
+        kwargs["endpoint_url"] = settings.STORAGE_ENDPOINT_URL
 
-    s3_client = s3_session.client("s3", **resource_kwargs)
+    s3_client = s3_session.client("s3", **kwargs)
     return s3_client
 
 
