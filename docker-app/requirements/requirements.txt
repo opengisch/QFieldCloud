@@ -36,7 +36,7 @@ charset-normalizer==3.3.2
     # via requests
 cryptography==44.0.0
     # via django-cryptography
-deprecated==1.2.15
+deprecated==1.2.18
     # via -r /requirements/requirements.in
 django==4.2.17
     # via
