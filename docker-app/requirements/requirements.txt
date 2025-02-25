@@ -118,7 +118,7 @@ django-phonenumber-field==8.0.0
     # via -r /requirements/requirements.in
 django-sri==0.7.0
     # via -r /requirements/requirements.in
-django-storages==1.14.4
+django-storages==1.14.5
     # via -r /requirements/requirements.in
 django-tables2==2.7.4
     # via -r /requirements/requirements.in
