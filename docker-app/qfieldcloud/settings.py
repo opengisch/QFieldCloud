@@ -488,20 +488,28 @@ CONSTANCE_CONFIG = {
     "WORKER_TIMEOUT_S": (
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
+        int,
     ),
     "WORKER_QGIS_MEMORY_LIMIT": (
         "1000m",
         "Maximum memory for each QGIS worker container.",
+        str,
     ),
     "SENTRY_REQUEST_MAX_SIZE_TO_SEND": (
         0,
         "Maximum request size to send the raw request to Sentry. Value 0 disables the raw request copy.",
+        int,
     ),
     "WORKER_QGIS_CPU_SHARES": (
         512,
         "Share of CPUs for each QGIS worker container. By default all containers have value 1024 set by docker.",
+        int,
     ),
-    "TRIAL_PERIOD_DAYS": (28, "Days in which the trial period expires."),
+    "TRIAL_PERIOD_DAYS": (
+        28,
+        "Days in which the trial period expires.",
+        int,
+    ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [

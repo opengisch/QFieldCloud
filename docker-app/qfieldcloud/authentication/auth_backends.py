@@ -38,4 +38,5 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
             user = UserModel.objects.get(pk=user_id)
         except UserModel.DoesNotExist:
             return None
+
         return user if self.user_can_authenticate(user) else None

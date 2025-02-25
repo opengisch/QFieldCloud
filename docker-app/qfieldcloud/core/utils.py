@@ -148,10 +148,13 @@ def _get_sha256_file(file: IO) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.sha256()
     buf = file.read(BLOCKSIZE)
+
     while len(buf) > 0:
         hasher.update(buf)
         buf = file.read(BLOCKSIZE)
+
     file.seek(0)
+
     return hasher.hexdigest()
 
 
@@ -179,9 +182,11 @@ def _get_md5sum_file(file: IO) -> str:
     hasher = hashlib.md5()
 
     buf = file.read(BLOCKSIZE)
+
     while len(buf) > 0:
         hasher.update(buf)
         buf = file.read(BLOCKSIZE)
+
     file.seek(0)
     return hasher.hexdigest()
 
@@ -211,12 +216,16 @@ def safe_join(base: str, *paths: str) -> str:
     paths = tuple(paths)
 
     final_path = base_path + "/"
+
     for path in paths:
         _final_path = posixpath.normpath(posixpath.join(final_path, path))
+
         # posixpath.normpath() strips the trailing /. Add it back.
         if path.endswith("/") or _final_path + "/" == final_path:
             _final_path += "/"
+
         final_path = _final_path
+
     if final_path == base_path:
         final_path += "/"
 

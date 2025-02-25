@@ -148,10 +148,11 @@ class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
 
         if request.method == "GET":
             return permissions_utils.can_read_files(user, project)
-        if request.method == "DELETE":
+        elif request.method == "DELETE":
             return permissions_utils.can_delete_files(user, project)
-        if request.method == "POST":
+        elif request.method == "POST":
             return permissions_utils.can_create_files(user, project)
+
         return False
 
 
@@ -262,6 +263,7 @@ class DownloadPushDeleteFileView(views.APIView):
             project = request.project
         else:
             project = Project.objects.get(id=projectid)
+
         is_the_qgis_file = utils.is_the_qgis_file(filename)
 
         # check if the project restricts qgs/qgz file modification to admins

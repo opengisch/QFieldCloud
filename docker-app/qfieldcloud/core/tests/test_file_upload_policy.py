@@ -214,6 +214,7 @@ class QfcTestCase(APITransactionTestCase):
             PackageJob.objects.create(
                 type=Job.Type.PACKAGE, project=self.project, created_by=self.user
             )
+
         with self.assertRaises(SubscriptionException):
             ApplyJob.objects.create(
                 type=Job.Type.DELTA_APPLY, project=self.project, created_by=self.user

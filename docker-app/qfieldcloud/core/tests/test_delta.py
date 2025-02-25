@@ -1194,6 +1194,7 @@ class QfcTestCase(APITransactionTestCase):
                         "Failed payload:\n",
                         json.dumps(payload[idx], sort_keys=True, indent=2),
                     )
+
                     for job in Job.objects.all():
                         job = Job.objects.latest("updated_at")
                         print("Job:\n", job.type, job.status)
@@ -1202,6 +1203,7 @@ class QfcTestCase(APITransactionTestCase):
                             "Feedback:\n",
                             json.dumps(job.feedback, sort_keys=True, indent=2),
                         )
+
                     raise err
 
             if not still_waiting:

@@ -319,6 +319,7 @@ def cmd_delta_apply(project: QgsProject, opts: DeltaOptions) -> bool:
             f"Some of the {deltas_count} deltas have not been applied. "
             "Check the delta log if they have been processed and what is their status"
         )
+
     print("Delta log file contents:")
     print("========================")
     print(json.dumps(delta_log, indent=2, sort_keys=True, default=str))

@@ -42,6 +42,7 @@ class QfcTestCase(TestCase):
     def assertNotifs(self, expected_count, filter=None):
         if filter is None:
             filter = {}
+
         notifications = Notification.objects.filter(**filter)
         actual_count = notifications.count()
         if actual_count != expected_count:

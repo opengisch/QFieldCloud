@@ -30,8 +30,10 @@ class LargeTablePaginator(Paginator):
                     [self.object_list.query.model._meta.db_table],
                 )
                 estimate = cursor.fetchone()[0]
+
             if estimate < settings.QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT:
                 return c()
             else:
                 return estimate
+
         return len(self.object_list)
