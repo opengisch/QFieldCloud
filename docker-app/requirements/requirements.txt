@@ -36,9 +36,9 @@ charset-normalizer==3.3.2
     # via requests
 cryptography==44.0.0
     # via django-cryptography
-deprecated==1.2.15
+deprecated==1.2.18
     # via -r /requirements/requirements.in
-django==4.2.17
+django==4.2.19
     # via
     #   -r /requirements/requirements.in
     #   django-allauth
@@ -68,13 +68,13 @@ django==4.2.17
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth==65.3.1
+django-allauth==65.4.1
     # via -r /requirements/requirements.in
 django-appconf==1.0.6
     # via django-cryptography
 django-auditlog==3.0.0
     # via -r /requirements/requirements.in
-django-axes==7.0.1
+django-axes==7.0.2
     # via -r /requirements/requirements.in
 django-bootstrap4==24.4
     # via -r /requirements/requirements.in
@@ -82,7 +82,7 @@ django-classy-tags==4.1.0
     # via -r /requirements/requirements.in
 django-common-helpers==0.9.2
     # via -r /requirements/requirements.in
-django-constance[database]==4.3.1
+django-constance[database]==4.3.2
     # via -r /requirements/requirements.in
 django-countries==7.6.1
     # via -r /requirements/requirements.in
@@ -92,11 +92,11 @@ django-cryptography==1.1
     # via -r /requirements/requirements.in
 django-currentuser==0.8.0
     # via -r /requirements/requirements.in
-django-debug-toolbar==4.4.6
+django-debug-toolbar==5.0.1
     # via -r /requirements/requirements.in
 django-extensions==3.2.3
     # via -r /requirements/requirements.in
-django-filter==24.3
+django-filter==25.1
     # via -r /requirements/requirements.in
 django-invitations==2.1.0
     # via -r /requirements/requirements.in
@@ -118,11 +118,11 @@ django-phonenumber-field==8.0.0
     # via -r /requirements/requirements.in
 django-sri==0.7.0
     # via -r /requirements/requirements.in
-django-storages==1.14.4
+django-storages==1.14.5
     # via -r /requirements/requirements.in
-django-tables2==2.7.4
+django-tables2==2.7.5
     # via -r /requirements/requirements.in
-django-timezone-field==7.0
+django-timezone-field==7.1
     # via -r /requirements/requirements.in
 djangorestframework==3.15.2
     # via
@@ -148,7 +148,7 @@ jsonschema-specifications==2023.12.1
     # via jsonschema
 mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
-phonenumbers==8.13.52
+phonenumbers==8.13.55
     # via -r /requirements/requirements.in
 psycopg2==2.9.10
     # via -r /requirements/requirements.in
