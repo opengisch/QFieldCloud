@@ -1,5 +1,4 @@
-from django.conf import settings
-from django.contrib.sites.models import Site
+from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
@@ -25,14 +24,15 @@ from typing import Any
 
 
 def get_avatar_url(user: User) -> str | None:
-    if hasattr(user, "useraccount") and user.useraccount.avatar_url:  # type: ignore
-        site = Site.objects.get_current()  # type: ignore
-        port = settings.WEB_HTTPS_PORT
-        port = f":{port}" if port != "443" else ""
+    if not user.useraccount.avatar:
+        return None
 
-        return f"https://{site.domain}{port}{user.useraccount.avatar_url}"  # type: ignore
-
-    return None
+    return reverse_lazy(
+        "filestorage_avatars",
+        {
+            "username": user.username,
+        },
+    )
 
 
 class UserSerializer:

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from typing import Protocol, cast, Any
+from collections.abc import Callable
 from django.db import models
 from django.db.models.fields.files import FieldFile
 from django.core.files.storage import storages
+from django.db.models.fields.files import ImageFieldFile, ImageField
 
 
 class FileStorageNameModelProtocol(Protocol):
@@ -78,3 +80,32 @@ class DynamicStorageFileField(models.FileField):
         file = super().pre_save(model_instance, add)
 
         return file
+
+
+class QfcImageFile(ImageFieldFile):
+    field: QfcImageField  # type: ignore
+
+    @property
+    def public_url(self) -> str | None:
+        return self.field.download_url(self)
+
+
+class QfcImageField(ImageField):
+    attr_class = QfcImageFile
+
+    def __init__(
+        self,
+        verbose_name: str | None = None,
+        name: str | None = None,
+        download_from: Callable[[models.Model, QfcImageFile | None], str | None]
+        | None = None,
+        **kwargs,
+    ) -> None:
+        self.download_from = download_from
+        super().__init__(verbose_name, name, **kwargs)
+
+    def download_url(self, value: QfcImageFile | None) -> str | None:
+        if value and self.download_from:
+            return self.download_from(value.instance, value)
+        else:
+            return None

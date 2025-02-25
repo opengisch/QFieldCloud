@@ -322,7 +322,7 @@ def upload_user_avatar(
 ) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
-    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
+    NOTE this function does NOT modify the `UserAccount.legacy_avatar_uri` field
 
     Args:
         user (User):
@@ -331,6 +331,9 @@ def upload_user_avatar(
 
     Returns:
         str: URI to the avatar
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = f"users/{user.username}/avatar.{mimetype.name}"
@@ -347,12 +350,15 @@ def upload_user_avatar(
 def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F821
     """Deletes the user's avatar file.
 
-    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
+    NOTE this function does NOT modify the `UserAccount.legacy_avatar_uri` field
 
     Args:
         user (User):
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
-    key = user.useraccount.avatar_uri
+    key = user.useraccount.legacy_avatar_uri
 
     # it well could be the user has no avatar yet
     if not key:

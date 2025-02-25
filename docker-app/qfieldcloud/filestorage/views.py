@@ -19,6 +19,7 @@ from qfieldcloud.core import (
 )
 from qfieldcloud.core.models import (
     Project,
+    UserAccount,
 )
 from qfieldcloud.filestorage.models import (
     File,
@@ -178,6 +179,21 @@ class ProjectMetaFileReadView(views.APIView):
             request,
             project.thumbnail,
             "thumbnail.png",
+        )
+
+
+class AvatarFileReadView(views.APIView):
+    permission_classes = [
+        permissions.IsAuthenticated,
+    ]
+
+    def get(self, request: Request, username: str) -> HttpResponseBase:
+        useraccount = get_object_or_404(UserAccount, user__username=username)
+
+        return download_field_file(
+            request,
+            useraccount.avatar,
+            str(useraccount.avatar),
         )
 
 

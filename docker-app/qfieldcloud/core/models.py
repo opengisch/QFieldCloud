@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 import secrets
 import string
 import uuid
@@ -27,7 +28,7 @@ from django.db.models import Value as V
 from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.utils.functional import cached_property
 from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext as _
@@ -36,7 +37,7 @@ from qfieldcloud.core import geodb_utils, utils, validators
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from timezone_field import TimeZoneField
-from qfieldcloud.core.fields import DynamicStorageFileField
+from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
 
 
 if TYPE_CHECKING:
@@ -340,12 +341,6 @@ class User(AbstractUser):
         else:
             super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        if self.type != User.Type.TEAM:
-            storage.delete_user_avatar(self)
-
-        return super().delete(*args, **kwargs)
-
     class Meta:
         base_manager_name = "objects"
         verbose_name = "user"
@@ -411,6 +406,32 @@ class Person(User):
         return super().save(*args, **kwargs)
 
 
+def get_user_account_avatar_upload_to(
+    instance: models.Model,
+    filename: str,
+) -> str:
+    instance = cast(UserAccount, instance)
+    filename_path = Path(filename)
+
+    return f"account/{instance.user.username}/avatars/{filename_path.name}"
+
+
+def get_user_account_avatar_download_from(
+    instance: models.Model, value: QfcImageFile | None
+) -> str | None:
+    if not value:
+        return None
+
+    useraccount = cast(UserAccount, value.instance)
+
+    return reverse(
+        "filestorage_avatars",
+        kwargs={
+            "username": useraccount.user.username,
+        },
+    )
+
+
 class UserAccount(models.Model):
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
@@ -440,7 +461,24 @@ class UserAccount(models.Model):
     location = models.CharField(max_length=255, default="", blank=True)
     twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
-    avatar_uri = models.CharField(_("Profile Picture URI"), max_length=255, blank=True)
+
+    # TODO Delete with QF-4963 Drop support for legacy storage
+    legacy_avatar_uri = models.CharField(
+        _("Legacy Profile Picture URI"),
+        max_length=255,
+        blank=True,
+    )
+
+    avatar = QfcImageField(
+        _("Avatar Picture"),
+        upload_to=get_user_account_avatar_upload_to,
+        download_from=get_user_account_avatar_download_from,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=True,
+        blank=True,
+    )
+
     timezone = TimeZoneField(
         default=settings.TIME_ZONE, choices_display="WITH_GMT_OFFSET"
     )
@@ -466,16 +504,6 @@ class UserAccount(models.Model):
 
         Subscription = get_subscription_model()
         return Subscription.get_upcoming_subscription(self)
-
-    @property
-    def avatar_url(self):
-        if self.avatar_uri:
-            return reverse_lazy(
-                "public_files",
-                kwargs={"filename": self.avatar_uri},
-            )
-        else:
-            return None
 
     @property
     def storage_used_bytes(self) -> float:
