@@ -24,6 +24,7 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
+from qfieldcloud.filestorage.models import File
 from qfieldcloud.core.utils2.storage import get_stored_package_ids
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -648,6 +649,11 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.conn.commit()
 
+        if not self.project1.uses_legacy_storage:
+            self.assertEqual(
+                File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 0
+            )
+
         self.upload_files_and_check_package(
             token=self.token1.key,
             project=self.project1,
@@ -665,9 +671,19 @@ class QfcTestCase(APITransactionTestCase):
         old_package = PackageJob.objects.filter(project=self.project1).latest(
             "created_at"
         )
-        stored_package_ids = get_stored_package_ids(self.project1)
-        self.assertIn(str(old_package.id), stored_package_ids)
-        self.assertEqual(len(stored_package_ids), 1)
+
+        # TODO Delete with QF-4963 Drop support for legacy storage
+        if self.project1.uses_legacy_storage:
+            stored_package_ids = get_stored_package_ids(self.project1)
+            self.assertIn(str(old_package.id), stored_package_ids)
+            self.assertEqual(len(stored_package_ids), 1)
+        else:
+            self.assertGreaterEqual(
+                File.objects.filter(package_job=old_package).count(), 1
+            )
+            self.assertGreaterEqual(
+                File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 1
+            )
 
         self.check_package(
             self.token1.key,
@@ -683,9 +699,19 @@ class QfcTestCase(APITransactionTestCase):
             "created_at"
         )
 
-        stored_package_ids = get_stored_package_ids(self.project1)
+        # TODO Delete with QF-4963 Drop support for legacy storage
+        if self.project1.uses_legacy_storage:
+            stored_package_ids = get_stored_package_ids(self.project1)
 
-        self.assertNotEqual(old_package.id, new_package.id)
-        self.assertNotIn(str(old_package.id), stored_package_ids)
-        self.assertIn(str(new_package.id), stored_package_ids)
-        self.assertEqual(len(stored_package_ids), 1)
+            self.assertNotEqual(old_package.id, new_package.id)
+            self.assertNotIn(str(old_package.id), stored_package_ids)
+            self.assertIn(str(new_package.id), stored_package_ids)
+            self.assertEqual(len(stored_package_ids), 1)
+        else:
+            self.assertEqual(File.objects.filter(package_job=old_package).count(), 0)
+            self.assertGreaterEqual(
+                File.objects.filter(package_job=new_package).count(), 1
+            )
+            self.assertGreaterEqual(
+                File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 1
+            )

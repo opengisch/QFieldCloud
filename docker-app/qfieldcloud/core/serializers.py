@@ -17,6 +17,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -524,34 +525,10 @@ class JobSerializer(serializers.ModelSerializer):
         allow_parallel_jobs = True
 
 
-class FileVersionSerializer(serializers.Serializer):
-    """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
-
-    size = serializers.IntegerField()
-    md5sum = serializers.CharField()
-    version_id = serializers.CharField()
-    last_modified = serializers.DateTimeField()
-    is_latest = serializers.BooleanField(required=False)
-    display = serializers.CharField()
-    sha256 = serializers.CharField(required=False)
-
-
-class FileSerializer(serializers.Serializer):
-    """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
-
-    versions = serializers.ListField(child=FileVersionSerializer())
-    sha256 = serializers.CharField(required=False)
-    name = serializers.CharField()
-    size = serializers.IntegerField()
-    md5sum = serializers.CharField()
-    last_modified = serializers.DateTimeField()
-    is_attachment = serializers.BooleanField()
-
-
 class LatestPackageSerializer(serializers.Serializer):
     """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
 
-    files = serializers.ListSerializer(child=FileSerializer())
+    files = serializers.ListSerializer(child=FileWithVersionsSerializer())
     layers = serializers.JSONField()
     status = serializers.ChoiceField(Job.Status)
     package_id = serializers.UUIDField()
