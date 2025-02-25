@@ -14,7 +14,7 @@ django-cryptography==1.1
 django-currentuser==0.8.0
 django-debug-toolbar==5.0.1
 django-extensions==3.2.3
-django-filter==24.3
+django-filter==25.1
 django-invitations==2.1.0
 django-jazzmin==3.0.1
 django-log-request-id==2.1.0
