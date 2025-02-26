@@ -117,11 +117,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     form = SubscriptionModelForm
 
     fields = (
-        "plan",
+        "regular_plan",
+        "trial_plan",
         "account",
         "status",
         "active_since",
         "active_until",
+        "is_trialing",
+        "trial_ends_at",
         "billing_cycle_anchor_at",
         "current_period_since",
         "current_period_until",
@@ -141,12 +144,13 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "active_until",
         "is_active",
         "status",
+        "is_trialing",
     )
 
     list_filter = (
         SubscriptionPeriodFilter,
         "status",
-        "plan",
+        "regular_plan",
         ActiveUntilFilter,
     )
 
