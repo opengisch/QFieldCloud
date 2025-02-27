@@ -26,7 +26,7 @@ class QfcTestCase(APITransactionTestCase):
         PackageType.get_storage_package_type.cache_clear()
 
     def test_useraccount_gets_current_subscription(self):
-        u1 = Person.objects.create(username="u1")
+        u1 = Person.objects.get(username="u1")
 
         self.assertEqual(Subscription.objects.count(), 1)
         self.assertEqual(

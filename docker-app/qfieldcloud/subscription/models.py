@@ -301,7 +301,7 @@ class PackageQuerySet(models.QuerySet):
     def active(self):
         now = timezone.now()
         qs = self.filter(
-            active_since__lte=now, subscription__plan__is_premium=True
+            active_since__lte=now, subscription__regular_plan__is_premium=True
         ).filter(Q(active_until__isnull=True) | Q(active_until__gte=now))
 
         return qs
@@ -309,7 +309,7 @@ class PackageQuerySet(models.QuerySet):
     def future(self):
         now = timezone.now()
         qs = self.filter(
-            active_since__gte=now, subscription__plan__is_premium=True
+            active_since__gte=now, subscription__regular_plan__is_premium=True
         ).order_by("active_since")
 
         return qs
