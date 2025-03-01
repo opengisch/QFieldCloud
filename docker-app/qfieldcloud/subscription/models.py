@@ -794,7 +794,6 @@ class AbstractSubscription(models.Model):
             user_type=account.user.type,
             is_default=True,
         )
-
         if account.user.is_organization:
             # NOTE sometimes `account.user` is not an organization, e.g. when setting
             # `active_until` on an organization account
@@ -808,10 +807,12 @@ class AbstractSubscription(models.Model):
         if active_since is None:
             active_since = timezone.now()
 
+        trial_plan = plan if plan.is_trial else None
+
         subscription = cls.create_subscription(
             account=account,
             regular_plan=plan,
-            trial_plan=None,
+            trial_plan=trial_plan,
             created_by=created_by,
             active_since=active_since,
         )
@@ -872,8 +873,10 @@ class AbstractSubscription(models.Model):
                 account.user.is_organization
                 and account.user.organization_owner.remaining_trial_organizations > 0
             ):
-                account.user.remaining_trial_organizations -= 1
-                account.user.save(update_fields=["remaining_trial_organizations"])
+                account.user.organization_owner.remaining_trial_organizations -= 1
+                account.user.organization_owner.save(
+                    update_fields=["remaining_trial_organizations"]
+                )
             else:
                 raise NoRemainingTrialOrganizationsError()
 

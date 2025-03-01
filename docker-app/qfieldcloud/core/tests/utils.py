@@ -71,9 +71,10 @@ def set_subscription(
             user.type == plan.user_type
         ), 'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
         subscription: Subscription = user.useraccount.current_subscription
-        subscription.plan = plan
+        subscription.regular_plan = plan
+        subscription.trial_plan = None
         subscription.active_since = timezone.now() - timedelta(days=1)
-        subscription.save(update_fields=["plan", "active_since"])
+        subscription.save(update_fields=["regular_plan", "active_since"])
 
     return subscription
 
