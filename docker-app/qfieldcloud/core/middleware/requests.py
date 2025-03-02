@@ -17,20 +17,15 @@ def attach_keys(get_response):
     """
 
     def middleware(request):
-        try:
-            sentry_max_size = int(config.SENTRY_REQUEST_MAX_SIZE_TO_SEND)
-        except (ValueError, TypeError):
-            logger.error(
-                "Invalid SENTRY_REQUEST_MAX_SIZE_TO_SEND value. Defaulting to 0."
-            )
-            sentry_max_size = 0
-
         # add a copy of the request body to the request
         if (
             settings.SENTRY_DSN
             and request.method == "POST"
             and "Content-Length" in request.headers
-            and (int(request.headers["Content-Length"]) < sentry_max_size)
+            and (
+                int(request.headers["Content-Length"])
+                < int(config.SENTRY_REQUEST_MAX_SIZE_TO_SEND)
+            )
         ):
             logger.info("Making a temporary copy for request body.")
 
