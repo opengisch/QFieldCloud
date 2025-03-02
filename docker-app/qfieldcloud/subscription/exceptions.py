@@ -52,3 +52,13 @@ class QuotaError(SubscriptionException):
     code = "over_quota"
     message = "Quota error"
     status_code = status.HTTP_402_PAYMENT_REQUIRED
+
+
+class NoRemainingTrialOrganizationsError(SubscriptionException):
+    """
+    Raised when a trial is attempted but the user has no remaining trial organizations.
+    """
+
+    code = "no_remaining_trial_organizations"
+    message = "No remaining trial organizations available for this user."
+    status_code = status.HTTP_403_FORBIDDEN
