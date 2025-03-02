@@ -5,6 +5,7 @@
 # 
 # Translators:
 # Guilhem Allaman, 2025
+# Johnny Sequeira, 2025
 # 
 #, fuzzy
 msgid ""
@@ -13,7 +14,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-01-14 14:26+0100\n"
 "PO-Revision-Date: 2025-01-14 13:45+0000\n"
-"Last-Translator: Guilhem Allaman, 2025\n"
+"Last-Translator: Johnny Sequeira, 2025\n"
 "Language-Team: Spanish (https://app.transifex.com/opengisch/teams/203801/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -27,48 +28,48 @@ msgstr "Token inválido."
 
 #: qfieldcloud/authentication/authentication.py:60
 msgid "Token has expired."
-msgstr ""
+msgstr "El token ha expirado."
 
 #: qfieldcloud/authentication/authentication.py:63
 msgid "User inactive or deleted."
-msgstr ""
+msgstr "Usuario inactivo o eliminado."
 
 #: qfieldcloud/authentication/models.py:22
 msgid "Browser"
-msgstr ""
+msgstr "Navegador"
 
 #: qfieldcloud/authentication/models.py:23
 msgid "Command line interface"
-msgstr ""
+msgstr "Interfaz de línea de comandos"
 
 #: qfieldcloud/authentication/models.py:24
 msgid "SDK"
-msgstr ""
+msgstr "SDK"
 
 #: qfieldcloud/authentication/models.py:25
 msgid "QField"
-msgstr ""
+msgstr "QField"
 
 #: qfieldcloud/authentication/models.py:26
 msgid "QFieldSync"
-msgstr ""
+msgstr "QFieldSync"
 
 #: qfieldcloud/authentication/models.py:27
 msgid "Worker"
-msgstr ""
+msgstr "Proceso de trabajo"
 
 #: qfieldcloud/authentication/models.py:28
 msgid "Unknown"
-msgstr ""
+msgstr "Desconocido"
 
 #: qfieldcloud/authentication/models.py:63
 msgid "User"
-msgstr ""
+msgstr "Usuario"
 
 #: qfieldcloud/authentication/models.py:68
 #: qfieldcloud/authentication/models.py:90
 msgid "Token"
-msgstr ""
+msgstr "Ficha"
 
 #: qfieldcloud/authentication/models.py:74
 #: qfieldcloud/subscription/models.py:463
@@ -82,73 +83,73 @@ msgstr "Expira en"
 #: qfieldcloud/authentication/models.py:78
 #: qfieldcloud/subscription/models.py:465
 msgid "Updated at"
-msgstr ""
+msgstr "Actualizado en"
 
 #: qfieldcloud/authentication/models.py:79
 msgid "Last used at"
-msgstr ""
+msgstr "Último uso en"
 
 #: qfieldcloud/authentication/models.py:80
 msgid "User-Agent"
-msgstr ""
+msgstr "Agente de usuario"
 
 #: qfieldcloud/authentication/models.py:91
 msgid "Tokens"
-msgstr ""
+msgstr "Fichas"
 
 #: qfieldcloud/authentication/serializers.py:28
 msgid "Must include \"email\" and \"password\"."
-msgstr ""
+msgstr "Debe incluir \"correo electrónico\" y \"contraseña\"."
 
 #: qfieldcloud/authentication/serializers.py:39
 msgid "Must include \"username\" and \"password\"."
-msgstr ""
+msgstr "Debe incluir \"nombre de usuario\" y \"contraseña\"."
 
 #: qfieldcloud/authentication/serializers.py:52
 msgid "Must include either \"username\" or \"email\" and \"password\"."
-msgstr ""
+msgstr "Debe incluir \"nombre de usuario\" o \"correo electrónico\" y \"contraseña\"."
 
 #: qfieldcloud/authentication/serializers.py:99
 msgid "User account is disabled."
-msgstr ""
+msgstr "La cuenta de usuario está deshabilitada."
 
 #: qfieldcloud/authentication/serializers.py:102
 msgid "Unable to log in with provided credentials."
-msgstr ""
+msgstr "No se puede iniciar sesión con las credenciales proporcionadas."
 
 #: qfieldcloud/authentication/views.py:96
 msgid "Successfully logged out."
-msgstr ""
+msgstr "Se ha cerrado sesión correctamente."
 
 #: qfieldcloud/core/admin.py:505 qfieldcloud/core/admin.py:1357
 #: qfieldcloud/subscription/models.py:240
 msgid "Storage"
-msgstr ""
+msgstr "Almacenamiento"
 
 #: qfieldcloud/core/admin.py:514
 msgid "total: {}; used: {} ({:.2f}%); free: {}"
-msgstr ""
+msgstr "total: {}; usado: {} ({:.2f}%); disponible: {}"
 
 #: qfieldcloud/core/admin.py:553
 #, python-format
 msgid "%(name)s object with primary key %(key)r does not exist."
-msgstr ""
+msgstr "%(name)s el objeto con clave principal %(key)r no existe."
 
 #: qfieldcloud/core/admin.py:574
 msgid "Password reset"
-msgstr ""
+msgstr "Restablecer contraseña"
 
 #: qfieldcloud/core/admin.py:600
 msgid "owner type"
-msgstr ""
+msgstr "tipo de propietario"
 
 #: qfieldcloud/core/admin.py:669
 msgid "Created by"
-msgstr ""
+msgstr "Creado por"
 
 #: qfieldcloud/core/admin.py:709
 msgid "Name"
-msgstr ""
+msgstr "Nombre"
 
 #: qfieldcloud/core/admin.py:816
 msgid ""
@@ -156,221 +157,234 @@ msgid ""
 "current plan's default will be used. Usually availlable to Premium users "
 "only."
 msgstr ""
+"Utilice este valor para limitar la cantidad máxima de versiones de archivo. "
+"Si está vacío, se utilizarán los planes actuales predeterminados. "
+"Normalmente, solo está disponible para usuarios Premium."
 
 #: qfieldcloud/core/admin.py:889
 msgid "finalized job"
-msgstr ""
+msgstr "trabajo finalizado"
 
 #: qfieldcloud/core/admin.py:894 qfieldcloud/core/admin.py:1089
 msgid "finalized"
-msgstr ""
+msgstr "finalizado"
 
 #: qfieldcloud/core/admin.py:895 qfieldcloud/core/admin.py:1090
 msgid "not finalized"
-msgstr ""
+msgstr "no finalizado"
 
 #: qfieldcloud/core/admin.py:1084
 msgid "finalized delta job"
-msgstr ""
+msgstr "trabajo delta finalizado"
 
 #: qfieldcloud/core/admin.py:1337
 msgid "Active members"
-msgstr ""
+msgstr "Miembros activos"
 
 #: qfieldcloud/core/admin.py:1351
 msgid "Owner"
-msgstr ""
+msgstr "Propietario"
 
 #: qfieldcloud/core/invitations_utils.py:45
 msgid ""
 "The provided email address is not valid. Users can only be invited with a "
 "valid email address."
 msgstr ""
+"La dirección de correo electrónico proporcionada no es válida. Solo se puede"
+" invitar a usuarios con una dirección de correo electrónico válida."
 
 #: qfieldcloud/core/invitations_utils.py:49
 msgid "Your user cannot send invitations."
-msgstr ""
+msgstr "Su usuario no puede enviar invitaciones."
 
 #: qfieldcloud/core/invitations_utils.py:66
 msgid "{} has already been invited to create a QFieldCloud account."
-msgstr ""
+msgstr "{} ya ha sido invitado a crear una cuenta QFieldCloud."
 
 #: qfieldcloud/core/invitations_utils.py:77
 msgid "{} has already been used by a registered QFieldCloud user."
-msgstr ""
+msgstr "{} ya ha sido utilizado por un usuario registrado de QFieldCloud."
 
 #: qfieldcloud/core/invitations_utils.py:92
 msgid "{} has been invited to create a QFieldCloud account."
-msgstr ""
+msgstr "{} ha sido invitado a crear una cuenta QFieldCloud."
 
 #: qfieldcloud/core/invitations_utils.py:95
 msgid "{} has been added to the QFieldCloud waiting list."
-msgstr ""
+msgstr "{} se ha agregado a la lista de espera de QFieldCloud."
 
 #: qfieldcloud/core/models.py:239
 msgid "Person"
-msgstr ""
+msgstr "Persona"
 
 #: qfieldcloud/core/models.py:240
 msgid "Organization"
-msgstr ""
+msgstr "Organización"
 
 #: qfieldcloud/core/models.py:241
 msgid "Team"
-msgstr ""
+msgstr "Equipo"
 
 #: qfieldcloud/core/models.py:245
 msgid "username"
-msgstr ""
+msgstr "nombre de usuario"
 
 #: qfieldcloud/core/models.py:249
 msgid ""
 "Between 3 and 150 characters. Letters, digits, underscores '_' or hyphens "
 "'-' only. Must begin with a letter."
 msgstr ""
+"Entre 3 y 150 caracteres. Solo letras, dígitos, guiones bajos '_' o guiones "
+"'-'. Debe comenzar con una letra."
 
 #: qfieldcloud/core/models.py:256
 msgid "Must begin with a letter."
-msgstr ""
+msgstr "Debe comenzar con una letra."
 
 #: qfieldcloud/core/models.py:257
 msgid "Must be at least 3 characters long."
-msgstr ""
+msgstr "Debe tener al menos 3 caracteres."
 
 #: qfieldcloud/core/models.py:261
 msgid "A user with that username already exists."
-msgstr ""
+msgstr "Ya existe un usuario con ese nombre de usuario."
 
 #: qfieldcloud/core/models.py:364
 msgid "Remaining invitations that can be sent by the user himself."
-msgstr ""
+msgstr "Invitaciones restantes que pueden ser enviadas por el propio usuario."
 
 #: qfieldcloud/core/models.py:370
 msgid "Remaining trial organizations the user can create."
-msgstr ""
+msgstr "El usuario puede crear otras organizaciones de prueba restantes."
 
 #: qfieldcloud/core/models.py:392
 msgid "This email is already taken by another user!"
-msgstr ""
+msgstr "¡Este correo electrónico ya está tomado por otro usuario!"
 
 #: qfieldcloud/core/models.py:410
 msgid "Immediately"
-msgstr ""
+msgstr "Inmediatamente"
 
 #: qfieldcloud/core/models.py:411
 msgid "Hourly"
-msgstr ""
+msgstr "Cada hora"
 
 #: qfieldcloud/core/models.py:412
 msgid "Daily"
-msgstr ""
+msgstr "A diario"
 
 #: qfieldcloud/core/models.py:413
 msgid "Weekly"
-msgstr ""
+msgstr "Semanalmente"
 
 #: qfieldcloud/core/models.py:414
 msgid "Disabled"
-msgstr ""
+msgstr "Desactivado"
 
 #: qfieldcloud/core/models.py:424
 msgid "Whether the account has the option to create a GeoDB."
-msgstr ""
+msgstr "Si la cuenta tiene la opción de crear un GeoDB."
 
 #: qfieldcloud/core/models.py:432
 msgid "Profile Picture URI"
-msgstr ""
+msgstr "URI de la imagen de perfil"
 
 #: qfieldcloud/core/models.py:438
 msgid "Email frequency for notifications"
-msgstr ""
+msgstr "Frecuencia de correo electrónico para notificaciones"
 
 #: qfieldcloud/core/models.py:616 qfieldcloud/core/models.py:933
 msgid "Organization owner"
-msgstr ""
+msgstr "Propietario de la organización"
 
 #: qfieldcloud/core/models.py:617
 msgid "Organization member"
-msgstr ""
+msgstr "Miembro de la organización"
 
 #: qfieldcloud/core/models.py:740 qfieldcloud/core/models.py:871
 #: qfieldcloud/core/models.py:1489
 msgid "Admin"
-msgstr ""
+msgstr "Administrador"
 
 #: qfieldcloud/core/models.py:741 qfieldcloud/core/models.py:872
 msgid "Member"
-msgstr ""
+msgstr "Miembros"
 
 #: qfieldcloud/core/models.py:794
 msgid "Cannot add the organization owner as a member."
-msgstr ""
+msgstr "No se puede agregar al propietario de la organización como miembro."
 
 #: qfieldcloud/core/models.py:900
 msgid "Cannot add team member that is not an organization member."
 msgstr ""
+"No se puede agregar un miembro del equipo que no sea miembro de la "
+"organización."
 
 #: qfieldcloud/core/models.py:932
 msgid "Project owner"
-msgstr ""
+msgstr "Propietario del proyecto"
 
 #: qfieldcloud/core/models.py:934
 msgid "Organization admin"
-msgstr ""
+msgstr "Administrador de la organización"
 
 #: qfieldcloud/core/models.py:935
 msgid "Collaborator"
-msgstr ""
+msgstr "Colaborador"
 
 #: qfieldcloud/core/models.py:936
 msgid "Team member"
-msgstr ""
+msgstr "Miembro del equipo"
 
 #: qfieldcloud/core/models.py:937
 msgid "Public"
-msgstr ""
+msgstr "Público"
 
 #: qfieldcloud/core/models.py:997 qfieldcloud/core/models.py:1002
 msgid "Ok"
-msgstr ""
+msgstr "Ok"
 
 #: qfieldcloud/core/models.py:998
 msgid "Busy"
-msgstr ""
+msgstr "En ejecución"
 
 #: qfieldcloud/core/models.py:999 qfieldcloud/core/models.py:1706
 msgid "Failed"
-msgstr ""
+msgstr "Fallido"
 
 #: qfieldcloud/core/models.py:1005
 msgid "Failed process projectfile"
-msgstr ""
+msgstr "Falló el proceso del archivo de proyecto"
 
 #: qfieldcloud/core/models.py:1007
 msgid "Too many collaborators"
-msgstr ""
+msgstr "Demasiados colaboradores"
 
 #: qfieldcloud/core/models.py:1010
 msgid "QGIS Core Offline Editing (deprecated)"
-msgstr ""
+msgstr "Edición sin conexión de QGIS Core (obsoleta)"
 
 #: qfieldcloud/core/models.py:1011
 msgid "Optimized Packager"
-msgstr ""
+msgstr "Empaquetador Optimizado"
 
 #: qfieldcloud/core/models.py:1031 qfieldcloud/core/models.py:1035
 msgid "Only letters, numbers, underscores, hyphens and dots are allowed."
-msgstr ""
+msgstr "Sólo se permiten letras, números, guiones bajos, guiones y puntos."
 
 #: qfieldcloud/core/models.py:1045
 msgid "Projects marked as public are visible to (but not editable by) anyone."
 msgstr ""
+"Los proyectos marcados como públicos son visibles para cualquier persona "
+"(pero no pueden ser editados por ellos)."
 
 #: qfieldcloud/core/models.py:1054
 msgid ""
 "The project owner can be either you or any of the organization you are "
 "member of."
 msgstr ""
+"El propietario del proyecto puede ser usted o cualquier persona de la "
+"organización a la que pertenece."
 
 #: qfieldcloud/core/models.py:1084
 msgid ""
@@ -378,30 +392,38 @@ msgid ""
 "project. Disabling this will force the project manager to manually resolve "
 "all the conflicts."
 msgstr ""
+"Si está habilitado, QFieldCloud sobrescribirá automáticamente los conflictos"
+" en este proyecto. Si lo deshabilita, el administrador del proyecto se verá "
+"obligado a resolver todos los conflictos manualmente."
 
 #: qfieldcloud/core/models.py:1091
 msgid ""
 "Restrict modifications of QGIS/QField projectfiles to managers and "
 "administrators."
 msgstr ""
+"Restringir las modificaciones de los archivos de proyectos QGIS/QField a "
+"gestores y administradores."
 
 #: qfieldcloud/core/models.py:1096
 msgid "Thumbnail Picture URI"
-msgstr ""
+msgstr "URI de la imagen en miniatura"
 
 #: qfieldcloud/core/models.py:1104
 msgid "File versions to keep"
-msgstr ""
+msgstr "Versiones de archivos a conservar"
 
 #: qfieldcloud/core/models.py:1106
 msgid ""
 "Use this value to limit the maximum number of file versions. If empty, your "
 "current plan's default will be used. Available to Premium users only."
 msgstr ""
+"Utilice este valor para limitar la cantidad máxima de versiones de archivo. "
+"Si está vacío, se utilizará el valor predeterminado de su plan actual. "
+"Disponible solo para usuarios Premium."
 
 #: qfieldcloud/core/models.py:1115
 msgid "Packaging Offliner"
-msgstr ""
+msgstr "Herramienta de empaquetado sin conexión"
 
 #: qfieldcloud/core/models.py:1117
 msgid ""
@@ -409,72 +431,87 @@ msgid ""
 "\"Optimized Packager\" should be preferred over the deprecated \"QGIS Core "
 "Offline Editing\" for new projects."
 msgstr ""
+"Packaging Offliner empaqueta los datos para su uso sin conexión con QField. "
+"El nuevo \"Empaquetador optimizado\" debería preferirse al obsoleto "
+"\"Edición sin conexión de QGIS Core\" para nuevos proyectos."
 
 #: qfieldcloud/core/models.py:1266
 msgid "Missing QGIS project file (.qgs/.qgz)."
-msgstr ""
+msgstr "Falta el archivo de proyecto QGIS (.qgs/.qgz)."
 
 #: qfieldcloud/core/models.py:1268
 msgid ""
 "Make sure a QGIS project file (.qgs/.qgz) is uploaded to QFieldCloud. "
 "Reupload the file if problem persists."
 msgstr ""
+"Asegúrese de que se haya cargado un archivo de proyecto de QGIS (.qgs/.qgz) "
+"en QFieldCloud. Vuelva a cargar el archivo si el problema persiste."
 
 #: qfieldcloud/core/models.py:1279
 msgid "Layer \"{}\" dataprovider is localized"
-msgstr ""
+msgstr "El proveedor de datos de la capa \"{}\" es localizada"
 
 #: qfieldcloud/core/models.py:1284
 msgid ""
 "Make sure your <a href=\"https://docs.qfield.org/fr/how-to/outside-"
 "layers/\">localized layer</a> is available on your QField device."
 msgstr ""
+"Asegúrese de que su <a href=\"https://docs.qfield.org/fr/how-to/outside-"
+"layers/\">capa localizada</a> esté disponible en su dispositivo QField."
 
 #: qfieldcloud/core/models.py:1289
 msgid "Layer \"{}\" has an error with code \"{}\": {}"
-msgstr ""
+msgstr "La capa \"{}\" tiene un error con el código \"{}\": {}"
 
 #: qfieldcloud/core/models.py:1296
 msgid ""
 "Check the latest \"process_projectfile\" job logs for more info and reupload"
 " the project files with the required changes."
 msgstr ""
+"Consulte los últimos registros de trabajo \"process_projectfile\" para "
+"obtener más información y volver a cargar los archivos del proyecto con los "
+"cambios necesarios."
 
 #: qfieldcloud/core/models.py:1317
 msgid ""
 "Layer \"{}\" does not support the `primary key` attribute. The layer will be"
 " read-only on QField."
 msgstr ""
+"La capa \"{}\" no admite el atributo de `ave primaria`. La capa será de solo"
+" lectura en QField."
 
 #: qfieldcloud/core/models.py:1322
 msgid ""
 "To make the layer editable on QField, store the layer data in a GeoPackage "
 "or PostGIS layer, using a single column for the primary key."
 msgstr ""
+"Para que la capa sea editable en QField, almacene los datos de la capa en "
+"una capa de GeoPackage o PostGIS, utilizando una sola columna para la clave "
+"primaria."
 
 #: qfieldcloud/core/models.py:1332
 msgid "Failed to parse metadata from project."
-msgstr ""
+msgstr "Falló el análisis de metadatos del proyecto."
 
 #: qfieldcloud/core/models.py:1333
 msgid "Re-upload the QGIS project file (.qgs/.qgz)."
-msgstr ""
+msgstr "Vuelva a cargar el archivo del proyecto QGIS (.qgs/.qgz)."
 
 #: qfieldcloud/core/models.py:1490
 msgid "Manager"
-msgstr ""
+msgstr "Gestor"
 
 #: qfieldcloud/core/models.py:1491
 msgid "Editor"
-msgstr ""
+msgstr "Editor"
 
 #: qfieldcloud/core/models.py:1492
 msgid "Reporter"
-msgstr ""
+msgstr "Reportador"
 
 #: qfieldcloud/core/models.py:1493
 msgid "Reader"
-msgstr ""
+msgstr "Lector"
 
 #: qfieldcloud/core/models.py:1521
 msgid ""
@@ -482,195 +519,227 @@ msgid ""
 " not be listed in the UI or accounted in the subscription as active users. "
 "Used to add OPENGIS.ch support members to projects."
 msgstr ""
+"Si un colaborador está marcado como de incógnito, trabajará con normalidad, "
+"pero no aparecerá en la interfaz de usuario ni se lo contabilizará en la "
+"suscripción como usuario activo. Se utiliza para agregar miembros de soporte"
+" de OPENGIS.ch a los proyectos."
 
 #: qfieldcloud/core/models.py:1558 qfieldcloud/core/permissions_utils.py:561
 msgid "Cannot add the project owner as a collaborator."
-msgstr ""
+msgstr "No se puede agregar al propietario del proyecto como colaborador."
 
 #: qfieldcloud/core/models.py:1571
 msgid ""
 "Cannot add a user who is not a member of the organization as a project "
 "collaborator."
 msgstr ""
+"No se puede agregar un usuario que no sea miembro de la organización como "
+"colaborador del proyecto."
 
 #: qfieldcloud/core/models.py:1576
 msgid "Team does not exist."
-msgstr ""
+msgstr "El equipo no existe."
 
 #: qfieldcloud/core/models.py:1614 qfieldcloud/core/models.py:1701
 msgid "Pending"
-msgstr ""
+msgstr "Pendiente"
 
 #: qfieldcloud/core/models.py:1615 qfieldcloud/core/models.py:1703
 msgid "Started"
-msgstr ""
+msgstr "Iniciado"
 
 #: qfieldcloud/core/models.py:1616
 msgid "Applied"
-msgstr ""
+msgstr "Aplicado"
 
 #: qfieldcloud/core/models.py:1617
 msgid "Conflict"
-msgstr ""
+msgstr "Conflicto"
 
 #: qfieldcloud/core/models.py:1618
 msgid "Not_applied"
-msgstr ""
+msgstr "No_aplicado"
 
 #: qfieldcloud/core/models.py:1619
 msgid "Error"
-msgstr ""
+msgstr "Error"
 
 #: qfieldcloud/core/models.py:1620
 msgid "Ignored"
-msgstr ""
+msgstr "Ignorado"
 
 #: qfieldcloud/core/models.py:1621
 msgid "Unpermitted"
-msgstr ""
+msgstr "No permitido"
 
 #: qfieldcloud/core/models.py:1696
 msgid "Package"
-msgstr ""
+msgstr "Empaquetado"
 
 #: qfieldcloud/core/models.py:1697
 msgid "Delta Apply"
-msgstr ""
+msgstr "Aplicación de Deltas"
 
 #: qfieldcloud/core/models.py:1698
 msgid "Process QGIS Project File"
-msgstr ""
+msgstr "Procesar archivo de proyecto QGIS"
 
 #: qfieldcloud/core/models.py:1702
 msgid "Queued"
-msgstr ""
+msgstr "En espera"
 
 #: qfieldcloud/core/models.py:1704
 msgid "Finished"
-msgstr ""
+msgstr "Finalizado"
 
 #: qfieldcloud/core/models.py:1705
 msgid "Stopped"
-msgstr ""
+msgstr "Interrumpido"
 
 #: qfieldcloud/core/models.py:1744
 msgid ""
 "The job is in pending status, it will be started as soon as there are "
 "available server resources."
 msgstr ""
+"El trabajo está en estado pendiente, se iniciará tan pronto como haya "
+"recursos disponibles en el servidor."
 
 #: qfieldcloud/core/models.py:1748
 msgid ""
 "The job is in queued status. Server resources are allocated and it will be "
 "started soon."
 msgstr ""
+"El trabajo está en cola. Los recursos del servidor están asignados y se "
+"iniciará pronto."
 
 #: qfieldcloud/core/models.py:1751
 msgid "The job is in started status. Waiting for it to finish..."
-msgstr ""
+msgstr "El trabajo está en estado iniciado. Esperando a que finalice..."
 
 #: qfieldcloud/core/models.py:1754
 msgid ""
 "The job is in finished status. It finished successfully without any output."
 msgstr ""
+"El trabajo se encuentra en estado finalizado. Se completó correctamente sin "
+"ningún mensaje."
 
 #: qfieldcloud/core/models.py:1757
 msgid "The job is in stopped status. Waiting to be continued..."
-msgstr ""
+msgstr "El trabajo está en estado detenido. Esperando a que se continúe..."
 
 #: qfieldcloud/core/models.py:1760
 msgid ""
 "The job is in failed status. The execution failed due to server error. "
 "Please verify the project is configured properly and try again."
 msgstr ""
+"El trabajo tiene un estado de error. La ejecución falló debido a un error "
+"del servidor. Verifique que el proyecto esté configurado correctamente e "
+"intente nuevamente."
 
 #: qfieldcloud/core/models.py:1764
 msgid ""
 "The job ended in unknown state. Please verify the project is configured "
 "properly, try again and contact QFieldCloud support for more information."
 msgstr ""
+"El trabajo finalizó en un estado desconocido. Verifique que el proyecto esté"
+" configurado correctamente, vuelva a intentarlo y comuníquese con el soporte"
+" de QFieldCloud para obtener más información."
 
 #: qfieldcloud/core/models.py:1832
 msgid ""
 "If enabled, QFieldCloud will automatically overwrite conflicts while "
 "applying deltas."
 msgstr ""
+"Si está habilitado, QFieldCloud sobrescribirá automáticamente los conflictos"
+" al aplicar deltas."
 
 #: qfieldcloud/core/models.py:1863
 msgid "pg_service"
-msgstr ""
+msgstr "pg_service"
 
 #: qfieldcloud/core/models.py:1864
 msgid "Environment Variable"
-msgstr ""
+msgstr "Variable de Entorno"
 
 #: qfieldcloud/core/models.py:1872 qfieldcloud/core/models.py:1878
 msgid ""
 "Must start with a capital letter and followed by capital letters, numbers or"
 " underscores."
 msgstr ""
+"Debe comenzar con una letra mayúscula y seguir con letras mayúsculas, "
+"números o guiones bajos."
 
 #: qfieldcloud/core/permissions_utils.py:121
 msgid "User \"{}\" does not have {} roles in organization \"{}\""
-msgstr ""
+msgstr "El usuario \"{}\" no tiene {} roles en la organización \"{}\""
 
 #: qfieldcloud/core/permissions_utils.py:566
 msgid "The user \"{}\" is already a collaborator of project \"{}\"."
-msgstr ""
+msgstr "El usuario \"{}\" ya es colaborador del proyecto \"{}\"."
 
 #: qfieldcloud/core/permissions_utils.py:577
 msgid ""
 "The subscription plan of the project owner does not allow any additional "
 "collaborators. Please remove some collaborators first."
 msgstr ""
+"El plan de suscripción del propietario del proyecto no permite colaboradores"
+" adicionales. Primero elimine algunos colaboradores."
 
 #: qfieldcloud/core/permissions_utils.py:594
 msgid "The team \"{}\" is not owned by the \"{}\" organization that owns the project."
 msgstr ""
+"El equipo \"{}\" no es propiedad de la organización \"{}\" que es "
+"propietaria del proyecto."
 
 #: qfieldcloud/core/permissions_utils.py:611
 msgid ""
 "Teams can be added as collaborators only in projects owned by organizations."
 msgstr ""
+"Los equipos pueden agregarse como colaboradores solo en proyectos propiedad "
+"de organizaciones."
 
 #: qfieldcloud/core/permissions_utils.py:620
 msgid "Only premium users can be added as collaborators on private projects."
 msgstr ""
+"Sólo se pueden agregar usuarios premium como colaboradores en proyectos "
+"privados."
 
 #: qfieldcloud/core/permissions_utils.py:816
 msgid ""
 "Owner's subscription plan does not support online vector layer datasource."
 msgstr ""
+"El plan de suscripción del propietario no admite la fuente de datos de capa "
+"vectorial en línea."
 
 #: qfieldcloud/core/serializers.py:593
 msgid "Team member \"{}\" already exists."
-msgstr ""
+msgstr "El miembro del equipo \"{}\" ya existe."
 
 #: qfieldcloud/core/serializers.py:603
 msgid "User \"{}\" does not exists."
-msgstr ""
+msgstr "El usuario \"{}\" no existe."
 
 #: qfieldcloud/core/templates/admin/account/emailaddress/change_list.html:7
 msgid "CSV export"
-msgstr ""
+msgstr "Exportar a CSV"
 
 #: qfieldcloud/core/templates/admin/base_site.html:3
 #: qfieldcloud/core/templates/admin/base_site.html:6 qfieldcloud/urls.py:34
 #: qfieldcloud/urls.py:35
 msgid "QFieldCloud Admin"
-msgstr ""
+msgstr "Administrador de QFieldCloud"
 
 #: qfieldcloud/core/templates/admin/delta_change_form.html:12
 msgid "Apply delta"
-msgstr ""
+msgstr "Aplicar delta"
 
 #: qfieldcloud/core/templates/admin/job_change_form.html:10
 msgid "Download deltafile"
-msgstr ""
+msgstr "Descargar el archivo delta"
 
 #: qfieldcloud/core/templates/admin/job_change_form.html:15
 msgid "Re-run job"
-msgstr ""
+msgstr "Volver a ejecutar trabajo"
 
 #: qfieldcloud/core/templates/admin/password_reset_url.html:6
 #, python-format
@@ -678,6 +747,8 @@ msgid ""
 "The following link can be used to reset the password of user "
 "<strong>%(username)s</strong>:"
 msgstr ""
+"El siguiente enlace puede ser utilizado para restablecer la contraseña del "
+"usuario <strong>%(username)s</strong>:"
 
 #: qfieldcloud/core/templates/admin/password_reset_url.html:12
 #, python-format
@@ -685,91 +756,96 @@ msgid ""
 "This link can be sent directly to the user (e.g. by email). It's only usable"
 " once, and it expires in <strong>%(timeout_days)s days</strong>."
 msgstr ""
+"Este enlace puede ser enviado directamente al usuario (p. ej., por correo "
+"electrónico). Solo se puede usar una vez y expira en "
+"<strong>%(timeout_days)s días</strong>."
 
 #: qfieldcloud/core/templates/admin/person_change_form.html:8
 msgid "Generate reset password URL"
-msgstr ""
+msgstr "Generar URL para restablecer contraseña"
 
 #: qfieldcloud/core/templates/admin/person_change_form.html:10
 msgid "Owned projects"
-msgstr ""
+msgstr "Proyectos propios"
 
 #: qfieldcloud/core/templates/admin/person_change_form.html:12
 msgid "Projects collaborations"
-msgstr ""
+msgstr "Colaboraciones en proyectos"
 
 #: qfieldcloud/core/templates/admin/person_change_form.html:14
 msgid "Owned organizations"
-msgstr ""
+msgstr "Organizaciones propias"
 
 #: qfieldcloud/core/templates/admin/person_change_form.html:16
 msgid "Organization memberships"
-msgstr ""
+msgstr "Organizationes en las que es miembro"
 
 #: qfieldcloud/core/templates/admin/project_change_form.html:8
 msgid "Project jobs"
-msgstr ""
+msgstr "Trabajos del proyecto"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:11
 msgid "Refresh Files List"
-msgstr ""
+msgstr "Actualizar lista de archivos"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:18
 msgid "Filename"
-msgstr ""
+msgstr "Nombre del archivo"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:19
 msgid "Last modified"
-msgstr ""
+msgstr "Última modificación"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:20
 msgid "Last size"
-msgstr ""
+msgstr "Último tamaño"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:21
 #: qfieldcloud/core/templates/admin/project_files_widget.html:47
 msgid "Details"
-msgstr ""
+msgstr "Detalles"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:22
 msgid "File version"
-msgstr ""
+msgstr "Versión del archivo"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:23
 msgid "Actions"
-msgstr ""
+msgstr "Acciones"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:27
 msgid "Click the \"Refresh Files List\" button to get the files list."
 msgstr ""
+"Haga clic en el botón \"Actualizar lista de archivos\" para obtener la lista"
+" de archivos."
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:30
 msgid "Loading..."
-msgstr ""
+msgstr "Cargando..."
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:34
 msgid "No files uploaded!"
-msgstr ""
+msgstr "¡No hay archivos subidos!"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:38
 msgid "Error!"
-msgstr ""
+msgstr "¡Error!"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:51
 msgid "Select a version..."
-msgstr ""
+msgstr "Seleccione una versión..."
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:55
 msgid "Download the selected version or, by default the latest"
-msgstr ""
+msgstr "Descargar la versión seleccionada o, por defecto, la más reciente"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:55
 msgid "Download"
-msgstr ""
+msgstr "Descargar"
 
 #: qfieldcloud/core/templates/admin/project_files_widget.html:56
 msgid "Delete"
-msgstr ""
+msgstr "Borrar"
 
 #: qfieldcloud/core/templatetags/filters.py:21
 #: qfieldcloud/core/templatetags/filters.py:38
@@ -808,15 +884,16 @@ msgstr ""
 #: qfieldcloud/core/utils2/pg_service_file.py:19
 msgid "The `.pg_service.conf` must have exactly one service definition."
 msgstr ""
+"El `.pg_service.conf` debe tener exactamente una definición de servicio."
 
 #: qfieldcloud/core/utils2/pg_service_file.py:24
 msgid "Failed to parse the `.pg_service.conf` file."
-msgstr ""
+msgstr "No se pudo analizar el archivo `.pg_service.conf`."
 
 #: qfieldcloud/core/utils2/projects.py:37
 #, python-brace-format
 msgid "{user_type_name} \"{user.username}\" has been invited to the project."
-msgstr ""
+msgstr "{user_type_name} \"{user.username}\" ha sido invitado al proyecto."
 
 #: qfieldcloud/core/utils2/projects.py:41
 #, python-brace-format
@@ -824,30 +901,36 @@ msgid ""
 "{user_type_name} '{user.username}' is not a member of the organization that "
 "owns the project. "
 msgstr ""
+"{user_type_name} '{user.username}' no es miembro de la organización "
+"propietaria del proyecto."
 
 #: qfieldcloud/core/utils2/projects.py:77
 msgid "User \"{}\" does not exist."
-msgstr ""
+msgstr "El usuario \"{}\" no existe."
 
 #: qfieldcloud/core/utils2/projects.py:80
 msgid "Adding multiple collaborators at once is not supported."
-msgstr ""
+msgstr "Agregar múltiples colaboradores a la vez no es soportado."
 
 #: qfieldcloud/core/utils2/projects.py:85
 msgid ""
 "Organization \"{}\" cannot be added. Only users and teams can be "
 "collaborators."
 msgstr ""
+"No se puede agregar a la organización \"{}\". Solo los usuarios y equipos "
+"pueden ser colaboradores."
 
 #: qfieldcloud/core/validators.py:32
 msgid "\"{}\" is a reserved word!"
-msgstr ""
+msgstr "¡\"{}\" es una palabra reservada!"
 
 #: qfieldcloud/core/views/deltas_views.py:118
 msgid ""
 "User has no rights to create delta on this project. Try inviting him as a "
 "collaborator with proper permissions and try again."
 msgstr ""
+"El usuario no tiene derechos para crear deltas en este proyecto. Intente "
+"invitarlo como colaborador con los permisos adecuados y vuelva a intentarlo."
 
 #: qfieldcloud/core/views/deltas_views.py:127
 msgid ""
@@ -855,70 +938,74 @@ msgid ""
 "Deltas are created but kept pending. Either upgrade the account or ensure "
 "you're not using features such as remote layers, then try again."
 msgstr ""
+"Algunas funciones de este proyecto no son compatibles con la cuenta del "
+"propietario. Se crean deltas, pero quedan pendientes. Actualice la cuenta o "
+"asegúrese de no estar usando funciones como capas remotas y vuelva a "
+"intentarlo."
 
 #: qfieldcloud/subscription/admin.py:37
 msgid "Period"
-msgstr ""
+msgstr "Period"
 
 #: qfieldcloud/subscription/admin.py:43
 msgid "Current"
-msgstr ""
+msgstr "Actual"
 
 #: qfieldcloud/subscription/admin.py:56
 msgid "expiration date"
-msgstr ""
+msgstr "fecha de expiración"
 
 #: qfieldcloud/subscription/admin.py:61
 msgid "Next week"
-msgstr ""
+msgstr "La próxima semana"
 
 #: qfieldcloud/subscription/admin.py:62
 msgid "Next 2 weeks"
-msgstr ""
+msgstr "Próximas 2 semanas"
 
 #: qfieldcloud/subscription/admin.py:63
 msgid "Next 4 weeks"
-msgstr ""
+msgstr "Próximas 4 semanas"
 
 #: qfieldcloud/subscription/admin.py:79
 msgid "Current additional storage quantity."
-msgstr ""
+msgstr "Cantidad de almacenamiento adicional actual."
 
 #: qfieldcloud/subscription/admin.py:207
 msgid "Plan"
-msgstr ""
+msgstr "Plan"
 
 #: qfieldcloud/subscription/admin.py:211
 msgid "Promotion"
-msgstr ""
+msgstr "Promoción"
 
 #: qfieldcloud/subscription/models.py:43
 msgid "Inactive Draft"
-msgstr ""
+msgstr "Borrador inactivo"
 
 #: qfieldcloud/subscription/models.py:45
 msgid "Inactive Draft Expired"
-msgstr ""
+msgstr "Borrador inactivo expirado"
 
 #: qfieldcloud/subscription/models.py:49
 msgid "Inactive Requested Create"
-msgstr ""
+msgstr "Solicitud de creación inactiva"
 
 #: qfieldcloud/subscription/models.py:52
 msgid "Inactive Awaits Payment"
-msgstr ""
+msgstr "Inactivo Esperando Pago"
 
 #: qfieldcloud/subscription/models.py:54
 msgid "Active Paid"
-msgstr ""
+msgstr "Pago Activo"
 
 #: qfieldcloud/subscription/models.py:56
 msgid "Active Past Due"
-msgstr ""
+msgstr "Vencido activo"
 
 #: qfieldcloud/subscription/models.py:58
 msgid "Inactive Cancelled"
-msgstr ""
+msgstr "Inactivo cancelado"
 
 #: qfieldcloud/subscription/models.py:99
 msgid ""
@@ -927,31 +1014,43 @@ msgid ""
 "name\" and \"Code\". Please set with gaps for different records for easy "
 "reordering (e.g. 5, 10, 15, but not 5, 6, 7)."
 msgstr ""
+"Orden relativo de los registros. Los valores más bajos tienen mayor "
+"prioridad (serán los primeros en la lista). Los registros con el mismo orden"
+" se ordenarán por \"Nombre para mostrar\" y \"Código\". Establezca espacios "
+"entre los distintos registros para facilitar la reordenación (p. ej., 5, 10,"
+" 15, pero no 5, 6, 7)."
 
 #: qfieldcloud/subscription/models.py:152
 msgid ""
 "Maximum organization members allowed. Set -1 to allow unlimited organization"
 " members."
 msgstr ""
+"Número máximo de miembros permitidos en la organización. Establezca -1 para "
+"permitir una cantidad ilimitada de miembros en la organización."
 
 #: qfieldcloud/subscription/models.py:162
 msgid ""
 "Maximum premium collaborators per private project. Set -1 to allow unlimited"
 " project collaborators."
 msgstr ""
+"Máximo de colaboradores premium por proyecto privado. Establezca -1 para "
+"permitir una cantidad ilimitada de colaboradores en el proyecto."
 
 #: qfieldcloud/subscription/models.py:171
 msgid ""
 "Maximum number of trial organizations that the user can create. Set -1 to "
 "allow unlimited trial organizations."
 msgstr ""
+"Número máximo de organizaciones de prueba que el usuario puede crear. "
+"Establezca -1 para permitir una cantidad ilimitada de organizaciones de "
+"prueba."
 
 #: qfieldcloud/subscription/models.py:193
 #: qfieldcloud/subscription/models.py:275
 #: qfieldcloud/subscription/models.py:345
 #: qfieldcloud/subscription/models.py:492
 msgid "Admin notes"
-msgstr ""
+msgstr "Notas de administración"
 
 #: qfieldcloud/subscription/models.py:197
 #: qfieldcloud/subscription/models.py:279
@@ -961,19 +1060,21 @@ msgid ""
 "These notes are for internal purposes only and will never be shown to the "
 "end users."
 msgstr ""
+"Estas notas son sólo para fines internos y nunca se mostrarán a los usuarios"
+" finales."
 
 #: qfieldcloud/subscription/models.py:468
 msgid "Requested cancel at"
-msgstr ""
+msgstr "Se solicitó cancelación en"
 
 #: qfieldcloud/subscription/models.py:472
 msgid "Active since"
-msgstr ""
+msgstr "Activo desde"
 
 #: qfieldcloud/subscription/models.py:474
 msgid "Active until"
-msgstr ""
+msgstr "Activo hasta"
 
 #: qfieldcloud/urls.py:36
 msgid "Welcome to QFieldCloud Admin"
-msgstr ""
+msgstr "Bienvenido a; administrador de QFieldCloud"
