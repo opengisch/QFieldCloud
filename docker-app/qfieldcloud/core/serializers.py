@@ -19,20 +19,26 @@ from qfieldcloud.core.models import (
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.request import Request
 
 from typing import Any
 
 
-def get_avatar_url(user: User) -> str | None:
+def get_avatar_url(user: User, request: Request | None = None) -> str | None:
     if not user.useraccount.avatar:
         return None
 
-    return reverse_lazy(
+    reversed_uri = reverse_lazy(
         "filestorage_avatars",
         kwargs={
             "username": user.username,
         },
     )
+
+    if request:
+        return request.build_absolute_uri(reversed_uri)
+    else:
+        return reversed_uri
 
 
 class UserSerializer:
@@ -127,7 +133,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj)
+        return get_avatar_url(obj, self.context.get("request"))
 
     class Meta:
         model = User
@@ -148,7 +154,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
     username_display = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj)
+        return get_avatar_url(obj, self.context.get("request"))
 
     def get_username_display(self, obj):
         if obj.type == obj.Type.TEAM:
@@ -199,7 +205,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         return [t.teamname for t in team_qs]
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj)
+        return get_avatar_url(obj, self.context.get("request"))
 
     class Meta:
         model = Organization
@@ -264,7 +270,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return obj.user.email
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj.user)
+        return get_avatar_url(obj.user, self.context.get("request"))
 
     class Meta:
         model = AuthToken
