@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 
+from django.core.files.base import ContentFile
 from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, Person, Team
@@ -17,7 +18,7 @@ class QfcTestCase(APITransactionTestCase):
         # Create a user
         self.user1 = Person.objects.create_user(username="user1", password="abc123")
 
-    def assertTokenMatch(self, token, payload):
+    def assertTokenMatch(self, token, payload, force_avatar_check: bool = False):
         expires_at = payload.pop("expires_at")
         avatar_url = payload.pop("avatar_url")
         self.assertDictEqual(
@@ -35,13 +36,14 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertTrue(datetime.fromisoformat(expires_at) == token.expires_at)
         self.assertTrue(datetime.fromisoformat(expires_at) > now())
-        self.assertTrue(avatar_url is None or avatar_url.startswith("http"))
-        self.assertTrue(
-            avatar_url is None
-            or avatar_url.endswith(
-                f"/api/v1/files/public/users/{token.user.username}/avatar.svg"
+
+        if avatar_url is not None or force_avatar_check:
+            self.assertIsNotNone(avatar_url)
+            self.assertTrue(
+                avatar_url.startswith("http"),
+                f"Expected {avatar_url=} to start with http(s)",
             )
-        )
+            self.assertTrue(f"/api/v1/files/avatars/{token.user.username}/", avatar_url)
 
     def login(self, username, password, user_agent="", success=True):
         response = self.client.post(
@@ -77,6 +79,18 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(len(tokens), 1)
         self.assertLess(tokens[0].expires_at, now())
+
+    def test_login_with_avatar(self):
+        u2 = Person.objects.create_user(username="u2", password="u2")
+        u2.useraccount.avatar = ContentFile("<svg />", "avatar.svg")
+        u2.useraccount.save(update_fields=["avatar"])
+
+        response = self.login("u2", "u2")
+        tokens = u2.auth_tokens.order_by("-created_at").all()
+
+        self.assertEqual(len(tokens), 1)
+        self.assertTokenMatch(tokens[0], response.json(), force_avatar_check=True)
+        self.assertGreater(tokens[0].expires_at, now())
 
     def test_multiple_logins(self):
         # first single active token login
