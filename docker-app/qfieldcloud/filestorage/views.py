@@ -183,9 +183,7 @@ class ProjectMetaFileReadView(views.APIView):
 
 
 class AvatarFileReadView(views.APIView):
-    permission_classes = [
-        permissions.IsAuthenticated,
-    ]
+    permission_classes = []
 
     def get(self, request: Request, username: str) -> HttpResponseBase:
         useraccount = get_object_or_404(UserAccount, user__username=username)
