@@ -29,7 +29,7 @@ def get_avatar_url(user: User) -> str | None:
 
     return reverse_lazy(
         "filestorage_avatars",
-        {
+        kwargs={
             "username": user.username,
         },
     )
