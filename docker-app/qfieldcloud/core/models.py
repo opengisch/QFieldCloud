@@ -2043,8 +2043,8 @@ class ApplyJob(Job):
 
 
 class ApplyJobDelta(models.Model):
-    apply_job_id: int
-    delta_id: int
+    apply_job_id: uuid.UUID
+    delta_id: uuid.UUID
 
     apply_job = models.ForeignKey(ApplyJob, on_delete=models.CASCADE)
     delta = models.ForeignKey(Delta, on_delete=models.CASCADE)
