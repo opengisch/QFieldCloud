@@ -117,11 +117,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     form = SubscriptionModelForm
 
     fields = (
-        "plan",
+        "regular_plan",
+        "trial_plan",
         "account",
         "status",
         "active_since",
         "active_until",
+        # "is_trialing",
+        "trial_ends_at",
         "billing_cycle_anchor_at",
         "current_period_since",
         "current_period_until",
@@ -141,12 +144,13 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "active_until",
         "is_active",
         "status",
+        "is_trialing__link",
     )
 
     list_filter = (
         SubscriptionPeriodFilter,
         "status",
-        "plan",
+        "regular_plan",
         ActiveUntilFilter,
     )
 
@@ -155,6 +159,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "created_at",
         "updated_at",
         "requested_cancel_at",
+        "is_trialing__link",
     )
 
     autocomplete_fields = ("account",)
@@ -170,7 +175,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     ) -> Iterable[str]:
         if obj is not None:
             return (
-                "plan__link",
+                "regular_plan__link",
                 "account__link",
                 "promotion__link",
                 *self.fields[3:],
@@ -213,11 +218,19 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         return model_admin_url(instance.promotion, str(instance.promotion))
 
     def get_queryset(self, request: HttpRequest):
-        return super().get_queryset(request).select_related("account__user", "plan")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("account__user", "regular_plan", "trial_plan")
+        )
 
     @admin.display(description="Subscriber email")
     def account__user__email(self, instance):
         return instance.account.user.email
+
+    @admin.display(description="Is Trialing", boolean=True)
+    def is_trialing__link(self, instance):
+        return instance.is_trialing
 
     def save_model(self, request, obj, form, change):
         if not change:
