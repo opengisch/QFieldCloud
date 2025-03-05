@@ -292,6 +292,7 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 SITE_ID = 1
 
 LOGIN_URL = "account_login"
+LOGIN_REDIRECT_URL = "index"
 
 # Sentry configuration
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
