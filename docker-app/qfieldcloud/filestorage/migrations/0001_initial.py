@@ -141,6 +141,10 @@ class Migration(migrations.Migration):
                         editable=False,
                     ),
                 ),
+                (
+                    "legacy_id",
+                    models.TextField(max_length=255, editable=False, null=True),
+                ),
             ],
             options={"ordering": ("file", "-uploaded_at")},
         ),
