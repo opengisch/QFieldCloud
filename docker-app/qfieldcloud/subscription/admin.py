@@ -9,6 +9,8 @@ from django.utils.translation import gettext as _
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, model_admin_url
 
 from .models import PackageType, Plan, Subscription
+from django.db.models import Q
+from django.core.exceptions import ValidationError
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -220,6 +222,23 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         return instance.account.user.email
 
     def save_model(self, request, obj, form, change):
+        conflicting_subscriptions = (
+            Subscription.objects.filter(
+                account=obj.account,
+                status__in=["active_paid", "active_past_due", "trialing"],
+            )
+            .filter(
+                Q(active_since__lte=obj.active_since)
+                & (Q(active_until__isnull=True) | Q(active_until__gte=obj.active_since))
+            )
+            .exclude(id=obj.id)
+        )
+
+        if conflicting_subscriptions.exists():
+            raise ValidationError(
+                "This account already has an active subscription. Please cancel it before adding a new one."
+            )
+
         if not change:
             obj.created_by_id = obj.created_by_id or request.user.id
 
