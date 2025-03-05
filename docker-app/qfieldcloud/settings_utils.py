@@ -46,7 +46,7 @@ def get_storages_config() -> StoragesConfig:
                 "region_name": os.environ["STORAGE_REGION_NAME"],
                 "endpoint_url": os.environ["STORAGE_ENDPOINT_URL"],
             },
-            "QFC_IS_LEGACY": False,
+            "QFC_IS_LEGACY": True,
         }
 
     if not isinstance(raw_storages, dict):
