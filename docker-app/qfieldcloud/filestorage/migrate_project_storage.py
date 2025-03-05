@@ -144,7 +144,7 @@ def migrate_project_storage(
                     uploaded_at=file_version.last_modified,
                     uploaded_by=project.owner,
                     created_at=now,
-                    version_id=file_version.id,
+                    legacy_version_id=file_version.id,
                 )
 
         package_files = get_project_package_files(
