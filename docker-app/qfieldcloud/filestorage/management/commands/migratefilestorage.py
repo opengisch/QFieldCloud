@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     """
-    Recalculate projects storage size
+    Migrate project from one legacy storage to another storage.
     """
 
     def add_arguments(self, parser):
