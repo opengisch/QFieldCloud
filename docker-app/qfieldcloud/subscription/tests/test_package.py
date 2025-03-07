@@ -4,11 +4,12 @@ from datetime import timedelta
 import django.db.utils
 from django.utils import timezone
 from django_currentuser.middleware import _set_current_user
+from rest_framework import status
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import get_random_file, setup_subscription_plans
-from rest_framework import status
-from rest_framework.test import APITransactionTestCase
 
 from ..exceptions import NotPremiumPlanException
 from ..models import Package, PackageType, Plan

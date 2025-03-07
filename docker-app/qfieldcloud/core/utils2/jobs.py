@@ -1,9 +1,10 @@
 import logging
 
-import qfieldcloud.core.models as models
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+
+import qfieldcloud.core.models as models
 from qfieldcloud.core import exceptions
 
 logger = logging.getLogger(__name__)

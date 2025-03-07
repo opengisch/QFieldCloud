@@ -1,14 +1,16 @@
 import logging
+
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
-    TeamMember,
     Organization,
     OrganizationMember,
     Person,
     Team,
+    TeamMember,
 )
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 from .utils import setup_subscription_plans
 

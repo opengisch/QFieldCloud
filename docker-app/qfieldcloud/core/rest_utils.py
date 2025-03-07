@@ -2,9 +2,10 @@ import logging
 
 from django.conf import settings
 from django.core import exceptions
-from qfieldcloud.core import exceptions as qfieldcloud_exceptions
 from rest_framework import exceptions as rest_exceptions
 from rest_framework.response import Response
+
+from qfieldcloud.core import exceptions as qfieldcloud_exceptions
 
 logger = logging.getLogger(__name__)
 

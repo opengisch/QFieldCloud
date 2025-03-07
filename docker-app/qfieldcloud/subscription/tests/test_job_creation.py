@@ -1,6 +1,8 @@
 import logging
 from unittest import mock
 
+from rest_framework.test import APITestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -10,15 +12,13 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Project,
 )
+from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
     PlanInsufficientError,
     QuotaError,
 )
 from qfieldcloud.subscription.models import Subscription
-from rest_framework.test import APITestCase
-
-from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 
