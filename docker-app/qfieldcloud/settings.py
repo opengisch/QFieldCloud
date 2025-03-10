@@ -394,7 +394,7 @@ ACCOUNT_RATE_LIMITS = False
 # Choose one of "mandatory", "optional", or "none".
 # For local development and test use "optional" or "none"
 ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
-ACCOUNT_PRESERVE_USERNAME_CASING = False
+ACCOUNT_PRESERVE_USERNAME_CASING = True
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_ADAPTER = "qfieldcloud.core.adapters.AccountAdapter"
 ACCOUNT_LOGOUT_ON_GET = True
