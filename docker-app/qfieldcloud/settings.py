@@ -394,6 +394,11 @@ ACCOUNT_RATE_LIMITS = False
 # Choose one of "mandatory", "optional", or "none".
 # For local development and test use "optional" or "none"
 ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+
+# This setting determines whether the username is stored in lowercase (False) or whether its casing is to be preserved (True).
+# Note that when casing is preserved, potentially expensive __iexact lookups are performed when filter on username.
+# For now, the default is set to True to maintain backwards compatibility.
+# See https://docs.allauth.org/en/dev/account/configuration.html
 ACCOUNT_PRESERVE_USERNAME_CASING = True
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_ADAPTER = "qfieldcloud.core.adapters.AccountAdapter"
