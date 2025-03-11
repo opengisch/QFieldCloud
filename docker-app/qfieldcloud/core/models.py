@@ -1820,9 +1820,12 @@ class Job(models.Model):
         Returns:
             dict[str, Any] | None: data as dict if the step has been found, else None.
         """
-        for step in self.feedback["steps"]:
-            if step["id"] == step_name:
-                return step
+        if isinstance(self.feedback, dict):
+            steps: list[dict[str, Any]] = self.feedback.get("steps", [])
+
+            for step in steps:
+                if step["id"] == step_name:
+                    return step
 
         return None
 
