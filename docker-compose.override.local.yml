@@ -50,7 +50,7 @@ services:
   qgis:
     volumes:
       # allow local development for `docker-qgis`
-      - ./docker-qgis/qfc_worker:/usr/src/qfc_worke:ro
+      - ./docker-qgis/qfc_worker:/usr/src/qfc_worker:ro
       - ./docker-qgis/entrypoint.py:/usr/src/entrypoint.py:ro
       # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
       - ./docker-qgis/libqfieldsync:/libqfieldsync:ro
