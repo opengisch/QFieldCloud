@@ -512,7 +512,7 @@ DEBUG_TOOLBAR_CONFIG = {
 
 QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
 
-CONSTANCE_BACKEND = "qfieldcloud.core.constance_backends.DatabaseBackend"
+CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
 CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = 60 * 60 * 24
 CONSTANCE_CONFIG = {
