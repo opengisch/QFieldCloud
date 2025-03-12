@@ -889,6 +889,32 @@ class AbstractSubscription(models.Model):
 
         return trial_subscription_obj, regular_subscription_obj
 
+    def check_overlaps(self):
+        """
+        Validates that the subscription's active period does not overlap with
+        any other active subscriptions for the same account.
+        """
+        conflicts = (
+            self.__class__.objects.filter(
+                account=self.account,
+            )
+            .exclude(pk=self.pk)
+            .filter(
+                Q(active_since__lt=self.active_since)
+                & (Q(active_until__isnull=True) | Q(active_until__gt=self.active_since))
+            )
+        )
+
+        if conflicts.exists():
+            raise ValidationError(
+                "This account already has an active subscription that overlaps with "
+                "this period. Please cancel the existing subscription or choose a different date range."
+            )
+
+    def save(self, *args, **kwargs):
+        self.check_overlaps()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         active_storage_total_mb = (
             self.active_storage_package_mb if hasattr(self, "packages") else 0
