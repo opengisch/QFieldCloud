@@ -28,7 +28,7 @@ class FileVersionSerializer(serializers.ModelSerializer):
     is_latest = serializers.SerializerMethodField()
 
     def get_md5sum(self, obj: FileVersion) -> str:
-        return obj.md5sum.hex()
+        return obj.etag
 
     def get_sha256(self, obj: FileVersion) -> str:
         return obj.sha256sum.hex()
@@ -80,7 +80,7 @@ class FileSerializer(serializers.ModelSerializer):
     )
 
     def get_md5sum(self, obj: File) -> str:
-        return cast(FileVersion, obj.latest_version).md5sum.hex()
+        return cast(FileVersion, obj.latest_version).etag
 
     def get_sha256(self, obj: File) -> str:
         return cast(FileVersion, obj.latest_version).sha256sum.hex()

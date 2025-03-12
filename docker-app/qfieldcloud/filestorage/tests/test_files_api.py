@@ -1117,3 +1117,26 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsInstance(payload[0], dict)
         self.assertEqual(payload[0].get("name"), "file1.name")
         self.assertEqual(len(payload[0].get("versions", [])), 2)
+
+    def test_list_project_files_values(self):
+        self.assertFileUploaded(
+            self.u1, self.p1, "10mb.file", StringIO("x" * (10 * 1000 * 1000))
+        )
+
+        response = self._list_files(self.u1, self.p1)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payload = response.json()
+
+        self.assertIsInstance(payload, list)
+        self.assertEqual(len(payload), 1)
+        self.assertIsInstance(payload[0], dict)
+
+        self.assertEqual(payload[0].get("name"), "10mb.file")
+        self.assertEqual(payload[0].get("md5sum"), "1e762c1c6ca960a51ce95942752cf1f6-2")
+        self.assertEqual(
+            payload[0].get("sha256"),
+            "0c9a42b3d065a64063eca67e98c932fa2e9a077bc7973a421a964a11304c998c",
+        )
+        self.assertEqual(len(payload[0].get("versions", [])), 1)
