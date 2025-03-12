@@ -1487,7 +1487,7 @@ class Project(models.Model):
 
         return problems
 
-    @property
+    @cached_property
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
