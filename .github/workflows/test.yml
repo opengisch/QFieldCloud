@@ -92,7 +92,7 @@ jobs:
           }'
           EOF
 
-          echo "TEST_SUITE_PROJECT_DEFAULT_STORAGE=${{ matrix.storage }}" >> .env
+          echo "STORAGES_PROJECT_DEFAULT_STORAGE=${{ matrix.storage }}" >> .env
 
       - name: Pull docker containers
         run: docker compose pull

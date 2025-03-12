@@ -127,6 +127,11 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         fail(f"Still pending jobs after waiting for {wait_s} seconds")
 
     for _ in range(wait_s):
+        try:
+            del project.status  # type: ignore
+        except AttributeError:
+            pass
+
         project.refresh_from_db()
 
         if project.status == Project.Status.OK:
