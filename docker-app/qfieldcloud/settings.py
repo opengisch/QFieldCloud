@@ -413,6 +413,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 # Django allauth's social account configuration
 # https://docs.allauth.org/en/dev/socialaccount/configuration.html
 SOCIALACCOUNT_ADAPTER = "qfieldcloud.core.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_QUERY_EMAIL = True
 
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
