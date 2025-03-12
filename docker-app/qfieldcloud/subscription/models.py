@@ -889,11 +889,15 @@ class AbstractSubscription(models.Model):
 
         return trial_subscription_obj, regular_subscription_obj
 
-    def check_overlaps(self):
+    def clean(self):
         """
         Validates that the subscription's active period does not overlap with
         any other active subscriptions for the same account.
         """
+        # If there is no active_since, nothing to check.
+        if not self.active_since:
+            return
+
         conflicts = (
             self.__class__.objects.filter(
                 account=self.account,
@@ -912,7 +916,7 @@ class AbstractSubscription(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        self.check_overlaps()
+        self.clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
