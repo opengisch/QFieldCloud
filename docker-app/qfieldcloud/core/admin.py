@@ -11,7 +11,6 @@ from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
-from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
@@ -147,9 +146,6 @@ def admin_urlname_by_obj(value, arg):
 # Unregister admins from other Django apps
 admin.site.unregister(Invitation)
 admin.site.unregister(TokenProxy)
-admin.site.unregister(SocialAccount)
-admin.site.unregister(SocialApp)
-admin.site.unregister(SocialToken)
 admin.site.unregister(EmailAddress)
 
 UserEmailDetails = namedtuple(
