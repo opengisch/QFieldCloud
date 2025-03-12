@@ -1,10 +1,18 @@
+import logging
+import traceback
+
 from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
-from django.core.exceptions import ValidationError
-from invitations.adapters import BaseInvitationsAdapter
-from qfieldcloud.core.models import Person
 from allauth.account.models import EmailConfirmationHMAC
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest
+from invitations.adapters import BaseInvitationsAdapter
+
+from qfieldcloud.core.models import Person
+
+logger = logging.getLogger(__name__)
 
 
 class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
@@ -69,3 +77,37 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
             )
 
         super().send_confirmation_mail(request, email_confirmation, signup)
+
+
+class SocialAccountAdapter(DefaultSocialAccountAdapter):
+    """Custom SocialAccountAdapter to aid SSO integration in QFC.
+
+    Logs stack trace and error details on 3rd party authentication errors.
+    """
+
+    def on_authentication_error(
+        self,
+        request: HttpRequest,
+        provider: OAuth2Provider,
+        error: str = None,
+        exception: Exception = None,
+        extra_context: dict = None,
+    ) -> None:
+        logger.error("SSO Authentication error:", exc_info=True)
+        logger.error(f"Provider: {provider!r}")
+        logger.error(f"Error: {error!r}")
+
+        if not extra_context:
+            extra_context = {}
+
+        # Make stack strace available in template context.
+        #
+        # That way, it could be displayed in the frontend (for debugging
+        # purposes), by overriding socialaccount/authentication_error.html and
+        # using {{ formatted_exception }} to display the stack trace.
+        extra_context["formatted_exception"] = "\n".join(
+            traceback.format_exception(exception)
+        )
+        super().on_authentication_error(
+            request, provider, error, exception, extra_context
+        )
