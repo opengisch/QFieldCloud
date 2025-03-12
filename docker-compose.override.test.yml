@@ -8,13 +8,14 @@ services:
       # we must use the same db for test and runserver
       POSTGRES_DB: test_${POSTGRES_DB}
       POSTGRES_DB_TEST: test_${POSTGRES_DB}
-      TEST_SUITE_PROJECT_DEFAULT_STORAGE: ${TEST_SUITE_PROJECT_DEFAULT_STORAGE:-default}
+      STORAGES_PROJECT_DEFAULT_STORAGE: ${STORAGES_PROJECT_DEFAULT_STORAGE:-}
 
   worker_wrapper:
     environment:
       # we must use the same db for test and runserver
       POSTGRES_DB: test_${POSTGRES_DB}
       POSTGRES_DB_TEST: test_${POSTGRES_DB}
+      STORAGES_PROJECT_DEFAULT_STORAGE: ${STORAGES_PROJECT_DEFAULT_STORAGE:-}
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
 
   db:

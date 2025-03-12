@@ -17,7 +17,7 @@ import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
 
-from .settings_utils import get_storages_config
+from .settings_utils import get_storages_config, ConfigValidationError
 
 
 # QFieldCloud specific configuration
@@ -290,6 +290,14 @@ STORAGES_FILENAME_VALIDATION_REGEX = (
     r"(?<![\s\.])$"
 )
 
+STORAGES_PROJECT_DEFAULT_STORAGE = (
+    os.environ.get("STORAGES_PROJECT_DEFAULT_STORAGE") or "default"
+)
+
+if STORAGES_PROJECT_DEFAULT_STORAGE not in STORAGES:
+    raise ConfigValidationError(
+        f"Missing {STORAGES_PROJECT_DEFAULT_STORAGE=} from the `STORAGES` configuration, available storages: {STORAGES.keys()}"
+    )
 
 AUTH_USER_MODEL = "core.User"
 

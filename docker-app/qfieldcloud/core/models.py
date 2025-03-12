@@ -1029,29 +1029,10 @@ class ProjectQueryset(models.QuerySet):
 def get_project_file_storage_default() -> str:
     """Get the default file storage for the newly created project
 
-    Raises:
-        ConfigValidationError: when `TEST_SUITE_PROJECT_DEFAULT_STORAGE` value is not available as a key in the `STORAGES`
-
     Returns:
         str: the name of the storage
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
     """
-    if settings.IN_TEST_SUITE:
-        import os
-        from qfieldcloud.settings_utils import ConfigValidationError
-
-        storage = os.environ["TEST_SUITE_PROJECT_DEFAULT_STORAGE"]
-
-        if storage not in settings.STORAGES:
-            raise ConfigValidationError(
-                f"Missing {storage=} from the `STORAGES` configuration, available storages: {settings.STORAGES.keys()}"
-            )
-
-        return storage
-
-    return "default"
+    return settings.STORAGES_PROJECT_DEFAULT_STORAGE
 
 
 def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
