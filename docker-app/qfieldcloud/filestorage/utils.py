@@ -1,4 +1,6 @@
+from typing import Any
 import hashlib
+import uuid
 
 from pathlib import Path, PurePath
 
@@ -144,3 +146,14 @@ def calc_etag(file: ContentFile, part_size: int = 8 * 1024 * 1024) -> str:
         final_md5sum = hashlib.md5(b"".join(md5sums))
 
         return "{}-{}".format(final_md5sum.hexdigest(), len(md5sums))
+
+
+def to_uuid(value: Any) -> uuid.UUID | None:
+    """Converts a given value to a UUID object, or if not possible, returns None."""
+    if not value:
+        return None
+
+    try:
+        return uuid.UUID(value)
+    except ValueError:
+        return None

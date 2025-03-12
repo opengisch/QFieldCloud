@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     """
-    Recalculate projects storage size
+    Migrate project from one legacy storage to another storage.
     """
 
     def add_arguments(self, parser):
@@ -23,6 +23,7 @@ class Command(BaseCommand):
         group.add_argument("--project-id", type=uuid.UUID, nargs="?")
         group.add_argument("--all", action="store_true", default=None)
         group.add_argument("--owner-username-startswith", type=str)
+        group.add_argument("--owner-username-matches", type=str)
 
     def handle(self, *args, **options):
         projects: Sized = []
@@ -33,10 +34,12 @@ class Command(BaseCommand):
         project_id = options.get("project_id")
         all = options.get("all")
         owner_username_startswith = options.get("owner_username_startswith")
+        owner_username_matches = options.get("owner_username_matches")
 
         if all is not None:
             assert project_id is None
             assert owner_username_startswith is None
+            assert owner_username_matches is None
 
             self.stderr.write(
                 "You are going to migrate all files on this installation."
@@ -55,18 +58,28 @@ class Command(BaseCommand):
         elif project_id is not None:
             assert all is None
             assert owner_username_startswith is None
+            assert owner_username_matches is None
 
             projects = [Project.objects.get(pk=project_id)]
         elif owner_username_startswith is not None:
             assert all is None
             assert project_id is None
+            assert owner_username_matches is None
 
             projects = Project.objects.filter(
-                owner__username__startswith=owner_username_startswith
+                owner__username__startswith=owner_username_startswith,
+            )
+        elif owner_username_matches is not None:
+            assert all is None
+            assert project_id is None
+            assert owner_username_startswith is None
+
+            projects = Project.objects.filter(
+                owner__username=owner_username_matches,
             )
         else:
             self.stderr.write(
-                "You must pass exactly one of filter arguments: --project-id, --all, or --owner-username-startswith!"
+                "You must pass exactly one of filter arguments: --project-id, --all, --owner-username-startswith, or --owner-username-matches!"
             )
 
             exit(1)
