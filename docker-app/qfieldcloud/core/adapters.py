@@ -1,8 +1,14 @@
+import logging
+import traceback
+
 from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.core.exceptions import ValidationError
 from invitations.adapters import BaseInvitationsAdapter
 from qfieldcloud.core.models import Person
+
+logger = logging.getLogger(__name__)
 
 
 class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
@@ -50,3 +56,30 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
                 )
 
         return result
+
+
+class SocialAccountAdapter(DefaultSocialAccountAdapter):
+    """Custom SocialAccountAdapter to aid SSO integration in QFC.
+
+    Logs stack trace and error details on 3rd party authentication errors.
+    """
+
+    def on_authentication_error(
+        self,
+        request,
+        provider,
+        error=None,
+        exception=None,
+        extra_context=None,
+    ):
+        logger.error("SSO Authentication error:", exc_info=True)
+        logger.error(f"Provider: {provider!r}")
+        logger.error(f"Error: {error!r}")
+
+        # Make stack strace available in template context.
+        extra_context["formatted_exception"] = "\n".join(
+            traceback.format_exception(exception)
+        )
+        return super().on_authentication_error(
+            request, provider, error, exception, extra_context
+        )
