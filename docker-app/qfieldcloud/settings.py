@@ -68,6 +68,15 @@ AUTHENTICATION_BACKENDS = [
     "qfieldcloud.authentication.auth_backends.AuthenticationBackend",
 ]
 
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": os.environ.get("QFIELDCLOUD_IDP_GOOGLE_CLIENT_ID"),
+            "secret": os.environ.get("QFIELDCLOUD_IDP_GOOGLE_CLIENT_SECRET"),
+            "key": "",
+        }
+    }
+}
 
 CACHES = {
     "default": {
