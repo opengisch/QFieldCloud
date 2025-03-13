@@ -1,6 +1,10 @@
+from allauth.socialaccount.adapter import get_adapter
+from allauth.socialaccount.providers.base import Provider
+from allauth.socialaccount.providers.oauth2.views import OAuth2Adapter
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
@@ -119,3 +123,95 @@ class UserView(RetrieveAPIView):
         https://github.com/Tivix/django-rest-auth/issues/275
         """
         return get_user_model().objects.none()
+
+
+class ListProvidersView(APIView):
+    """Lists the available authentication providers.
+
+    This will mostly be allauth SocialAccount providers, plus the
+    username/password login.
+    """
+
+    # These values are tied to the `GrantFlow` enum in QGIS:
+    # oauth2/core/qgsauthoauth2config.h: QgsAuthOAuth2Config::GrantFlow
+    FLOW_AUTHORIZATION_CODE = 0
+    FLOW_AUTHORIZATION_CODE_PKCE = 3
+
+    # Address at which QGIS should spawn its temporary webserver to catch
+    # the redirect. These mostly happen to match QGIS defaults, except we use
+    # localost instead of 127.0.0.1 because many OAuth2 apps don't allow IPs.
+    QGIS_REDIRECT_HOST = "localhost"
+    QGIS_REDIRECT_PORT = 7070
+    QGIS_REDIRECT_URL = ""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> Response:
+        auth_providers = []
+
+        # TODO: Add setting to disable username/password login
+        auth_providers.append(
+            {
+                "type": "credentials",
+                "id": "credentials",
+                "name": "Username / Password",
+            }
+        )
+
+        social_account_adapter = get_adapter(request)
+        providers = social_account_adapter.list_providers(request)
+
+        for provider in providers:
+            auth_providers.append(self.get_provider_data(provider, request))
+
+        return Response(auth_providers)
+
+    def get_provider_data(self, provider: Provider, request: HttpRequest) -> dict:
+        oauth2_adapter = provider.get_oauth2_adapter(request)
+
+        # Support subproviders like 'keycloak'
+        # (which is a subprovider of the generic 'openid_connect' provider)
+        provider_id = provider.sub_id
+
+        provider_data = {
+            "type": "oauth2",
+            "id": provider_id,
+            "name": provider.name,
+            "grant_flow": self.get_flow_type(provider),
+            "scope": self.get_scope(provider, oauth2_adapter),
+            "pkce_enabled": self.is_pkce_enabled(provider),
+            "token_url": oauth2_adapter.access_token_url,
+            "refresh_token_url": oauth2_adapter.access_token_url,
+            "request_url": oauth2_adapter.authorize_url,
+            "redirect_host": self.QGIS_REDIRECT_HOST,
+            "redirect_port": self.QGIS_REDIRECT_PORT,
+            "redirect_url": self.QGIS_REDIRECT_URL,
+            "client_id": provider.app.client_id,
+            "extra_tokens": {"id_token": "X-QFC-ID-Token"},
+        }
+        return provider_data
+
+    def get_scope(self, provider: Provider, oauth2_adapter: OAuth2Adapter) -> str:
+        scope = provider.get_scope()
+        if "openid" not in scope:
+            scope.insert(0, "openid")
+
+        scope = oauth2_adapter.scope_delimiter.join(scope)
+        return scope
+
+    def is_pkce_enabled(self, provider: Provider) -> bool:
+        pkce_enabled = False
+        pkce_enabled = provider.app.settings.get("oauth_pkce_enabled")
+        if pkce_enabled is None:
+            pkce_enabled = provider.get_settings().get(
+                "OAUTH_PKCE_ENABLED",
+                provider.pkce_enabled_default,
+            )
+
+        return pkce_enabled
+
+    def get_flow_type(self, provider: Provider) -> int:
+        if self.is_pkce_enabled(provider):
+            return self.FLOW_AUTHORIZATION_CODE_PKCE
+
+        return self.FLOW_AUTHORIZATION_CODE
