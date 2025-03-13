@@ -469,12 +469,16 @@ def purge_old_file_versions_legacy(
         )[keep_count:]
 
         # Debug print
-        logger.debug(
+        logger.info(
             f'Purging {len(old_versions_to_purge)} out of {len(file.versions)} old versions for "{file.latest.name}"...'
         )
 
         # Remove the N oldest
         for old_version in old_versions_to_purge:
+            logger.info(
+                f'Purging {old_version.key=} {old_version.id=} as old version for "{file.latest.name}"...'
+            )
+
             if old_version.is_latest:
                 # This is not supposed to happen, as versions were sorted above,
                 # but leaving it here as a security measure in case version
