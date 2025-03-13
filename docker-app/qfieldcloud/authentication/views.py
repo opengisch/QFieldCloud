@@ -1,3 +1,4 @@
+from allauth.socialaccount.adapter import get_adapter
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
@@ -119,3 +120,89 @@ class UserView(RetrieveAPIView):
         https://github.com/Tivix/django-rest-auth/issues/275
         """
         return get_user_model().objects.none()
+
+
+class ListProvidersView(APIView):
+    """Lists the available authentication providers.
+
+    This will mostly be allauth SocialAccount providers, plus the
+    username/password login.
+    """
+
+    FLOW_AUTHORIZATION_CODE = 0
+    FLOW_AUTHORIZATION_CODE_PKCE = 3
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request, *args, **kwargs):
+        data = []
+
+        # TODO: Introduce setting to disable username/password login
+        data.append(
+            {
+                "type": "credentials",
+                "id": "credentials",
+                "name": "Username / Password",
+            }
+        )
+
+        social_account_adapter = get_adapter(request)
+        providers = social_account_adapter.list_providers(request)
+
+        for provider in providers:
+            oauth2_adapter = provider.get_oauth2_adapter(request)
+
+            scope = provider.get_scope()
+            if "openid" not in scope:
+                scope.insert(0, "openid")
+            scope = oauth2_adapter.scope_delimiter.join(scope)
+
+            provider_id = provider.id
+            if provider.uses_apps and provider.app.provider_id:
+                # Support subproviders like 'keycloak'
+                # (which is a subprovider of 'openid_connect')
+                provider_id = provider.app.provider_id
+
+            provider_data = {
+                "type": "oauth2",
+                "id": provider_id,
+                "name": provider.name,
+                "grant_flow": self.get_flow_type(provider),
+                "scope": scope,
+                "pkce_enabled": self.is_pkce_enabled(provider),
+                "token_url": oauth2_adapter.access_token_url,
+                "refresh_token_url": oauth2_adapter.access_token_url,
+                "request_url": oauth2_adapter.authorize_url,
+                "redirect_host": "localhost",
+                "redirect_port": 7070,
+                "redirect_url": "",
+                "client_id": provider.app.client_id,
+                "extra_tokens": {"id_token": "X-QFC-ID-Token"},
+            }
+
+            pkce_enabled = self.is_pkce_enabled(provider)
+            if not pkce_enabled:
+                # XXX: This must be removed - only for testing
+                provider_data["client_secret"] = provider.app.secret
+
+            data.append(provider_data)
+
+        response = Response(data)
+        return response
+
+    def is_pkce_enabled(self, provider):
+        pkce_enabled = False
+        pkce_enabled = provider.app.settings.get("oauth_pkce_enabled")
+        if pkce_enabled is None:
+            pkce_enabled = provider.get_settings().get(
+                "OAUTH_PKCE_ENABLED",
+                provider.pkce_enabled_default,
+            )
+
+        return pkce_enabled
+
+    def get_flow_type(self, provider):
+        if self.is_pkce_enabled(provider):
+            return self.FLOW_AUTHORIZATION_CODE_PKCE
+
+        return self.FLOW_AUTHORIZATION_CODE
