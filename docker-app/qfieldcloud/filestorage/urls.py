@@ -28,4 +28,10 @@ urlpatterns = [
         AvatarFileReadView.as_view(),
         name="filestorage_avatars",
     ),
+    # NOTE The sole purpose of this URL is to keep backwards compatibility with QField/QFieldSync. They expect the URL path to end with filename with file extension.
+    path(
+        "files/avatars/<str:username>/<str:filename>/",
+        AvatarFileReadView.as_view(),
+        name="filestorage_named_avatars",
+    ),
 ]

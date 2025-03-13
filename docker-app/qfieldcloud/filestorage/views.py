@@ -185,7 +185,20 @@ class ProjectMetaFileReadView(views.APIView):
 class AvatarFileReadView(views.APIView):
     permission_classes = []
 
-    def get(self, request: Request, username: str) -> HttpResponseBase:
+    def get(
+        self, request: Request, username: str, filename: str = ""
+    ) -> HttpResponseBase:
+        """Returns an internal redirect within nginx to serve the `avatar` file directly from the Object Storage.
+
+        NOTE the filename field is completely ignored and redundant, it exists only to satisfy backwards compatible expectations in QField/QFieldSync that avatars will have filename with file extension.
+        Args:
+            request: incoming request
+            username: the username we are serving avatar for
+            filename: the filename in the URL, but ignored in the function execution. Defaults to "".
+
+        Returns:
+            internal redirect to the Object Storage
+        """
         useraccount = get_object_or_404(UserAccount, user__username=username)
 
         return download_field_file(
