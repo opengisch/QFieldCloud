@@ -11,6 +11,7 @@ from qfieldcloud.core.views import (
     teams_views,
 )
 from qfieldcloud.filestorage.urls import urlpatterns as filestorage_urlpatterns
+from qfieldcloud.core.views.accounts_views import resend_confirmation_email
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -101,4 +102,5 @@ urlpatterns = [
         teams_views.DestroyTeamMemberView.as_view(),
         name="team_member_destroy",
     ),
+    path("resend-confirmation/", resend_confirmation_email, name="resend_confirmation"),
 ]

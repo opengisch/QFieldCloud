@@ -3,6 +3,8 @@ from allauth.account.adapter import DefaultAccountAdapter
 from django.core.exceptions import ValidationError
 from invitations.adapters import BaseInvitationsAdapter
 from qfieldcloud.core.models import Person
+from allauth.account.models import EmailConfirmationHMAC
+from django.http import HttpRequest
 
 
 class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
@@ -50,3 +52,20 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
                 )
 
         return result
+
+    def send_confirmation_mail(
+        self,
+        request: HttpRequest,
+        email_confirmation: EmailConfirmationHMAC,
+        signup: bool,
+    ) -> None:
+        """
+        Overrides allauth's default method for sending a confirmation email.
+        Adds the email provided by the future user in the session.
+        """
+        if request and email_confirmation:
+            request.session["account_verified_email"] = (
+                email_confirmation.email_address.email
+            )
+
+        super().send_confirmation_mail(request, email_confirmation, signup)
