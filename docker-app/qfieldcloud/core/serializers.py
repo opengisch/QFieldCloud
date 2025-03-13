@@ -1,3 +1,4 @@
+from pathlib import Path
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
@@ -28,10 +29,14 @@ def get_avatar_url(user: User, request: Request | None = None) -> str | None:
     if not user.useraccount.avatar:
         return None
 
+    filename = user.useraccount.avatar.name
+    file_extension = Path(filename).suffix
+
     reversed_uri = reverse_lazy(
-        "filestorage_avatars",
+        "filestorage_named_avatars",
         kwargs={
             "username": user.username,
+            "filename": f"avatar.{file_extension}",
         },
     )
 
