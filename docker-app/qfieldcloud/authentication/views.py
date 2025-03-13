@@ -1,3 +1,4 @@
+from allauth.socialaccount.adapter import get_adapter
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
@@ -119,3 +120,72 @@ class UserView(RetrieveAPIView):
         https://github.com/Tivix/django-rest-auth/issues/275
         """
         return get_user_model().objects.none()
+
+
+class ListProvidersView(APIView):
+    """Lists the available authentication providers."
+
+    This will mostly be allauth SocialAccount providers, plus the
+    username/password login.
+    """
+
+    permission_classes = (AllowAny,)
+
+    def is_pkce_enabled(self, provider):
+        pkce_enabled = False
+        pkce_enabled = provider.app.settings.get("oauth_pkce_enabled")
+        if pkce_enabled is None:
+            pkce_enabled = provider.get_settings().get(
+                "OAUTH_PKCE_ENABLED",
+                provider.pkce_enabled_default,
+            )
+
+        return pkce_enabled
+
+    def get(self, request, *args, **kwargs):
+        data = []
+
+        # TODO: Introduce setting to disable username/password login
+        data.append(
+            {
+                "type": "credentials",
+                "id": "credentials",
+                "name": "Username / Password",
+            }
+        )
+
+        social_account_adapter = get_adapter(request)
+        providers = social_account_adapter.list_providers(request)
+
+        for provider in providers:
+            oauth2_adapter = provider.get_oauth2_adapter(request)
+
+            scope = provider.get_scope()
+            if "openid" not in scope:
+                scope.insert(0, "openid")
+            scope = oauth2_adapter.scope_delimiter.join(scope)
+
+            provider_data = {
+                "type": "oauth2",
+                "id": provider.id,
+                "name": provider.name,
+                "grant_flow_name": "Authorization Code",
+                "grant_flow": 0,
+                "scope": scope,
+                "pkce_enabled": self.is_pkce_enabled(provider),
+                "token_url": oauth2_adapter.access_token_url,
+                "refresh_token_url": oauth2_adapter.access_token_url,
+                "request_url": oauth2_adapter.authorize_url,
+                "redirect_host": "localhost",
+                "redirect_port": 7070,
+                "redirect_url": "",
+                "client_id": provider.app.client_id,
+                # XXX: This must be removed - only for testing
+                # until we switch to PKCE
+                "client_secret": provider.app.secret,
+                "extra_tokens": {"id_token": "X-QFC-ID-Token"},
+            }
+            data.append(provider_data)
+
+        response = Response(data)
+        return response
