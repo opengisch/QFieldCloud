@@ -2,7 +2,5 @@
 
 {% block content %}
     {{ block.super }}
-    {% if request.GET.sso %}
-        {% include "socialaccount/snippets/login.html" %}
-    {% endif %}
+    {% include "socialaccount/snippets/login.html" %}
 {% endblock %}
