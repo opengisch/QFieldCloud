@@ -416,6 +416,7 @@ SOCIALACCOUNT_ADAPTER = "qfieldcloud.core.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
 
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
