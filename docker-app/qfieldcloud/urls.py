@@ -31,6 +31,7 @@ from drf_spectacular.views import (
 from qfieldcloud.authentication import views as auth_views
 from rest_framework import permissions
 
+from qfieldcloud.core.views import fake_wms
 from qfieldcloud.filestorage.views import (
     compatibility_file_crud_view,
     compatibility_file_list_view,
@@ -89,6 +90,10 @@ urlpatterns = [
             compatibility_file_crud_view, permission_classes=[permissions.IsAdminUser]
         ),
         name="project_file_download",
+    ),
+    path(
+        "fake_wms/",
+        fake_wms.index,
     ),
     path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
     path("api/v1/auth/login/", auth_views.LoginView.as_view()),
