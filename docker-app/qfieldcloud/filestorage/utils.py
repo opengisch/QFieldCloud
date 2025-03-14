@@ -1,15 +1,13 @@
-from typing import Any
 import hashlib
 import uuid
-
 from pathlib import Path, PurePath
+from typing import Any
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-
 
 filename_validator = RegexValidator(
     settings.STORAGES_FILENAME_VALIDATION_REGEX,

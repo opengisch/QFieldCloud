@@ -1,5 +1,7 @@
 import logging
 
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
@@ -12,7 +14,6 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
-from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
 

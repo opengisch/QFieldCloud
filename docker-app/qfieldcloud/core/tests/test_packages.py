@@ -9,6 +9,9 @@ from django.conf import settings
 from django.http import FileResponse
 from django.test import tag
 from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import (
@@ -24,10 +27,8 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
-from qfieldcloud.filestorage.models import File
 from qfieldcloud.core.utils2.storage import get_stored_package_ids
-from rest_framework import status
-from rest_framework.test import APITransactionTestCase
+from qfieldcloud.filestorage.models import File
 
 from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
 

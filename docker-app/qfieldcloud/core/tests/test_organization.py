@@ -4,6 +4,9 @@ import uuid
 from datetime import timedelta
 
 from django.utils.timezone import now
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Delta,
@@ -13,8 +16,6 @@ from qfieldcloud.core.models import (
     Person,
     Project,
 )
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 from .utils import set_subscription, setup_subscription_plans
 

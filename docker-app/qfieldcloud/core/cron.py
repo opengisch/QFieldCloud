@@ -7,11 +7,11 @@ from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
 from sentry_sdk import capture_message
 
+from qfieldcloud.filestorage.models import File
+
 from ..core.models import ApplyJob, ApplyJobDelta, Delta, Job, Project
 from ..core.utils2 import storage
 from .invitations_utils import send_invitation
-from qfieldcloud.filestorage.models import File
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,9 @@
 import logging
 
 from django.core.exceptions import ValidationError
+from rest_framework import status
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
@@ -12,8 +15,6 @@ from qfieldcloud.core.models import (
     TeamMember,
 )
 from qfieldcloud.subscription.models import Subscription
-from rest_framework import status
-from rest_framework.test import APITransactionTestCase
 
 from .utils import set_subscription, setup_subscription_plans
 

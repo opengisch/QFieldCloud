@@ -1,5 +1,8 @@
 import logging
 
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import permissions_utils as perms
 from qfieldcloud.core.models import (
@@ -11,8 +14,6 @@ from qfieldcloud.core.models import (
     Team,
     User,
 )
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 from .utils import set_subscription, setup_subscription_plans, testdata_path
 

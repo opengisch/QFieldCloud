@@ -1,6 +1,6 @@
 #!/bin/env python3
-import os
 import json
+import os
 import subprocess
 from typing import TypedDict
 
