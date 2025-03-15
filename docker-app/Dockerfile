@@ -31,6 +31,10 @@ RUN ls -Q /usr/local/lib/python3.10/site-packages/botocore/data | grep -xv "endp
 # pull official base image
 FROM python:3.10.8-slim-buster AS base
 
+# Install CA root certificates
+COPY ./certs/rootCA.crt /usr/local/share/ca-certificates/ninjas-rootCA.crt
+RUN update-ca-certificates
+
 # set work directory
 WORKDIR /usr/src/app
 

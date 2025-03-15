@@ -75,15 +75,16 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     },
     "openid_connect": {
+        "OAUTH_PKCE_ENABLED": True,
         "APP": {
             "provider_id": "keycloak",
-            "name": "Keycloak",
+            "name": "Keycloak (PKCE)",
             "client_id": os.environ.get("QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID"),
             "secret": os.environ.get("QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET"),
             "settings": {
-                "server_url": "http://keycloak:7080/realms/ninjas/.well-known/openid-configuration",
+                "server_url": "https://keycloak:7443/realms/ninjas/.well-known/openid-configuration",
             },
-        }
+        },
     },
 }
 
