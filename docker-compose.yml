@@ -51,6 +51,8 @@ services:
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK:-${COMPOSE_PROJECT_NAME}_default}
       QFIELDCLOUD_IDP_GOOGLE_CLIENT_ID: ${QFIELDCLOUD_IDP_GOOGLE_CLIENT_ID}
       QFIELDCLOUD_IDP_GOOGLE_CLIENT_SECRET: ${QFIELDCLOUD_IDP_GOOGLE_CLIENT_SECRET}
+      QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID: ${QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID}
+      QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET: ${QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET}
       GEODB_HOST: ${GEODB_HOST}
       GEODB_PORT: ${GEODB_PORT}
       GEODB_USER: ${GEODB_USER}
@@ -192,6 +194,40 @@ services:
     restart: unless-stopped
     expose:
       - "11211:11211"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    environment:
+      KC_HOSTNAME: keycloak
+      KC_HOSTNAME_PORT: 7080
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_LOG_LEVEL: info
+      KC_DB: postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_SCHEMA: public
+      KC_DB_URL: jdbc:postgresql://keycloak-db/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7080/health/ready"]
+      interval: 15s
+      timeout: 2s
+      retries: 15
+    command: ["start-dev", "--http-port", "7080", "--https-port", "7443", "--import-realm"]
+    ports:
+      - "7080:7080"
+      - "7443:7443"
+
+  keycloak-db:
+    image: postgres
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
 
 volumes:
   static_volume:

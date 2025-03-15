@@ -100,3 +100,67 @@ Should give you a JSON response like this:
 - Refreshing the "QFC Fake WMS" connection should trigger the OIDC flow from QGIS, and you should then see a (fake) layer group with two layers in it
 
 -> QGIS Authentication middleware works
+
+## Setting up Keycloak
+
+
+
+- Visit http://localhost:7080/
+- Log in with `admin` / `admin`
+- Create a new realm:
+  - Click on the top left, where it says "Keycloak" and "master", then select "Create realm"
+  - Realm name: `ninjas`
+- Create a user:
+  - Select "Users", then "Create new user"
+  - Email verified: On
+  - Username: lukasgraf
+  - Email: lukas@example.org
+  - First name: Lukas
+  - Last name: Graf
+- Set a password for the user:
+  - Select "Credentials" and set a password
+  - Temporary: Off
+
+- Create a client:
+  - Select "Clients", then "Create client"
+  - Client type: OpenID Connect
+  - Client ID: `qfc`
+  - Always display in UI: On
+  - Next
+  - Client authenticaton: On
+  - Leave "Authorization" disabled
+  - Enable just "[x] Standard Flow" in "Authentication Flows"
+  - Next
+  - Add the following URLs to "Valid Redirect URIs":
+    - `http://localhost:8011/*`
+    - `https://localhost/*`
+  - Add the following URLs to "Web Origins":
+    - `http://localhost:8011`
+    - `https://localhost`
+  - Save
+  - Go to the "Credentials" tab of the client
+  - Display and note the "Client Secret"
+
+  - Add the following to your `.env`:
+    ```bash
+    QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID="qfc"
+    QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET="<secret>"
+    ```
+
+
+
+
+  - Client Protocol: `openid-connect`
+  - Root URL: `http://localhost:8011`
+  - Valid Redirect URIs: `http://localhost:8011/*`
+  - Web Origins: `http://localhost:8011`
+  - Save
+  - Client ID: `qfieldcloud`
+  - Client Secret: `REDACTED`
+  - Access Type: `confidential`
+  - Standard Flow Enabled: On
+  - Implicit Flow Enabled: Off
+  - Direct Access Grants Enabled: Off
+  - Service Accounts Enabled: Off
+  - Authorization Enabled: Off
+  - Save
