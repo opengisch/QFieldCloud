@@ -911,8 +911,9 @@ class AbstractSubscription(models.Model):
 
         if conflicts.exists():
             raise ValidationError(
-                "This account already has an active subscription that overlaps with "
-                "this period. Please cancel the existing subscription or choose a different date range."
+                {
+                    "active_since": "This account already has an active subscription that overlaps with this period. Please cancel the existing subscription or choose a different date range."
+                }
             )
 
     def save(self, *args, **kwargs):

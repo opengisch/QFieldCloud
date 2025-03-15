@@ -9,7 +9,6 @@ from django.utils.translation import gettext as _
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, model_admin_url
 
 from .models import PackageType, Plan, Subscription
-from django.core.exceptions import ValidationError
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -224,14 +223,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         if not change:
             obj.created_by_id = obj.created_by_id or request.user.id
 
-        try:
-            super().save_model(request, obj, form, change)
-        except ValidationError as e:
-            self.message_user(
-                request,
-                e.messages[0],
-                level="error",
-            )
+        super().save_model(request, obj, form, change)
 
 
 admin.site.register(Plan, PlanAdmin)
