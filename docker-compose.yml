@@ -80,6 +80,7 @@ services:
       QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
     logging:
       driver: "json-file"
       options:
@@ -199,8 +200,6 @@ services:
       KC_HOSTNAME: keycloak
       KC_HOSTNAME_PORT: 7080
       KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
       KC_LOG_LEVEL: info
       KC_DB: postgres
@@ -209,26 +208,49 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak-db/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: password
+      KC_HTTPS_CERTIFICATE_FILE: /etc/x509/https/tls.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /etc/x509/https/tls.key
+      KC_HTTPS_CLIENT_AUTH: request
+      KC_HTTPS_KEY_STORE_FILE: /etc/x509/https/server.keystore
+      KC_HTTPS_KEY_STORE_PASSWORD: changeit
+      KC_HTTPS_KEY_STORE_TYPE: PKCS12
+      KC_HTTPS_TRUST_STORE_FILE: /etc/x509/https/server.truststore
+      KC_HTTPS_TRUST_STORE_PASSWORD: changeit
+      KC_HTTPS_TRUST_STORE_TYPE: JKS
+      KC_HTTPS_MANAGEMENT_CLIENT_AUTH: none
+      X509_CA_BUNDLE: /etc/x509/https/rootCA.crt
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7080/health/ready"]
       interval: 15s
       timeout: 2s
       retries: 15
+    restart: unless-stopped
     command: ["start-dev", "--http-port", "7080", "--https-port", "7443", "--import-realm"]
     ports:
       - "7080:7080"
       - "7443:7443"
+    volumes:
+      - ./docker-app/certs/keycloak.crt:/etc/x509/https/tls.crt
+      - ./docker-app/certs/keycloak.key:/etc/x509/https/tls.key
+      - ./docker-app/certs/rootCA.crt:/etc/x509/https/rootCA.crt
+      - ./docker-app/certs/server.truststore:/etc/x509/https/server.truststore
+      - ./keycloak/import:/opt/keycloak/data/import
+      - ./keycloak/export:/tmp/export
+    depends_on:
+      - keycloak-db
 
   keycloak-db:
     image: postgres
-    container_name: keycloak-db
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: password
+    volumes:
+      - keycloakdb-data:/var/lib/postgresql/data
 
 volumes:
   static_volume:
   media_volume:
   transformation_grids:
   certbot_www:
+  keycloakdb-data:

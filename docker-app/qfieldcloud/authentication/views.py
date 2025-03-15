@@ -129,6 +129,9 @@ class ListProvidersView(APIView):
     username/password login.
     """
 
+    FLOW_AUTHORIZATION_CODE = 0
+    FLOW_AUTHORIZATION_CODE_PKCE = 3
+
     permission_classes = (AllowAny,)
 
     def is_pkce_enabled(self, provider):
@@ -141,6 +144,12 @@ class ListProvidersView(APIView):
             )
 
         return pkce_enabled
+
+    def get_flow_type(self, provider):
+        if self.is_pkce_enabled(provider):
+            return self.FLOW_AUTHORIZATION_CODE_PKCE
+
+        return self.FLOW_AUTHORIZATION_CODE
 
     def get(self, request, *args, **kwargs):
         data = []
@@ -169,8 +178,7 @@ class ListProvidersView(APIView):
                 "type": "oauth2",
                 "id": provider.id,
                 "name": provider.name,
-                "grant_flow_name": "Authorization Code",
-                "grant_flow": 0,
+                "grant_flow": self.get_flow_type(provider),
                 "scope": scope,
                 "pkce_enabled": self.is_pkce_enabled(provider),
                 "token_url": oauth2_adapter.access_token_url,
@@ -180,11 +188,13 @@ class ListProvidersView(APIView):
                 "redirect_port": 7070,
                 "redirect_url": "",
                 "client_id": provider.app.client_id,
-                # XXX: This must be removed - only for testing
-                # until we switch to PKCE
-                "client_secret": provider.app.secret,
                 "extra_tokens": {"id_token": "X-QFC-ID-Token"},
             }
+
+            pkce_enabled = self.is_pkce_enabled(provider)
+            if not pkce_enabled:
+                provider_data["client_secret"] = provider.app.secret
+
             data.append(provider_data)
 
         response = Response(data)

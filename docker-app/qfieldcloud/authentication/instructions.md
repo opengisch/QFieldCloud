@@ -4,6 +4,11 @@
 git clone git@github.com:opengisch/QFieldCloud.git
 cd QFieldCloud
 git checkout feat/oidc-qfield-testing
+
+cd docker-app/certs/
+./makecerts.sh
+cd ../..
+
 cp .env.example .env
 vim .env
 ```
@@ -101,58 +106,117 @@ Should give you a JSON response like this:
 
 -> QGIS Authentication middleware works
 
-## Setting up Keycloak
+## Setting up Keycloak as an IDP
+
+- If you haven't already, create the certificates:
+  - Ensure you have the `keytool` command available on your host (if not, install a Java runtime)
+  - Generate the certificates:
+  ```bash
+  cd docker-app/certs/
+  ./makecerts.sh
+  cd ../..
+  ```
+
+- Import the certificates into your system's / browser's trust store
+  - Import the root CA certificate
+
+    - Linux:
+    ```bash
+    sudo apt-get install -y ca-certificates
+    sudo cp docker-app/certs/rootCA.crt /usr/local/share/ca-certificates/ninjas-rootCA.crt
+    sudo update-ca-certificates
+    ```
+    - macOS:
+      - Double click `docker-app/certs/rootCA.crt` and import it into the system keychain.
+      - Set it to "Always Trust" in the trust settings.
+
+  - Import the client certificate:
+
+    - Linux:
+      - Install `docker-app/certs/fredFlintstone.p12` into your browser's certificate store:
+        - Chromium
+          - Settings > Security > Advanced > Manage certificates > Your certificates > Import
+        - Firefox
+          - Go go about:config
+          - Set `security.remember_cert_checkbox_default_setting` to `false` (better for testing)
+          - Settings > Privacy & Security > Security > Certificates > View Certificates > Your Certificates > Import
+      - Pick `fredFlintstone.p12` (no password)
+
+    - macOS:
+      - Double click `fredFlintstone.p12` and import it into the system keychain.
+
+- Add the following to your `.env`:
+  ```bash
+  QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID="qfc-pkce"
+  ```
+
+- Add keycloak to your `/etc/hosts`:
+  ```
+  127.0.0.1   keycloak
+  ```
+  (This is currently needed because both the docker container and the browser
+  on your host need to connect to keycloak using the same hostname. The
+  hostname `localhost` only is correct in the context of the host, but inside
+  the docker container it obviously means the refers to the loopback interface
+  of the container itself. `keycloak` is correct inside the container, but
+  not available on the host, unless manually added to `/etc/hosts`.)
+
+- When you visit QFC at https://localhost now, you should see Keycloak as a provider
+- Clicking on it should send you to the KC "Ninjas" realm login page
+- If your certs are installed correctly, your browser should now prompt you to present a client certificate
+- Selecting to authenticate with Fred Flintstone's cert should log you into KC without password
 
 
+## Notes
+
+(not needed for setup, just so that my silly brain doesn't forget)
+
+### Exporting Keycloak realms
+
+- Export keycloak realms:
+  - Stop keycloak container
+  - `docker compose run --entrypoint "/opt/keycloak/bin/kc.sh export --dir /tmp/export --users realm_file" keycloak`
+  - Find the exported realm(s) in `keycloak/export/` on the host
+
+### Manually setting up OIDC client
 
 - Visit http://localhost:7080/
-- Log in with `admin` / `admin`
-- Create a new realm:
-  - Click on the top left, where it says "Keycloak" and "master", then select "Create realm"
-  - Realm name: `ninjas`
-- Create a user:
-  - Select "Users", then "Create new user"
-  - Email verified: On
-  - Username: lukasgraf
-  - Email: lukas@example.org
-  - First name: Lukas
-  - Last name: Graf
-- Set a password for the user:
-  - Select "Credentials" and set a password
-  - Temporary: Off
+ - Log in with `admin` / `admin`
+ - Create a new realm:
+   - Click on the top left, where it says "Keycloak" and "master", then select "Create realm"
+   - Realm name: `ninjas`
+ - Create a user:
+   - Select "Users", then "Create new user"
+   - Email verified: On
+   - Username: lukasgraf
+   - Email: lukas@example.org
+   - First name: Lukas
+   - Last name: Graf
+ - Set a password for the user:
+   - Select "Credentials" and set a password
+   - Temporary: Off
 
-- Create a client:
-  - Select "Clients", then "Create client"
-  - Client type: OpenID Connect
-  - Client ID: `qfc`
-  - Always display in UI: On
-  - Next
-  - Client authenticaton: On
-  - Leave "Authorization" disabled
-  - Enable just "[x] Standard Flow" in "Authentication Flows"
-  - Next
-  - Add the following URLs to "Valid Redirect URIs":
-    - `http://localhost:8011/*`
-    - `https://localhost/*`
-  - Add the following URLs to "Web Origins":
-    - `http://localhost:8011`
-    - `https://localhost`
-  - Save
-  - Go to the "Credentials" tab of the client
-  - Display and note the "Client Secret"
+ - Create a client:
+   - Select "Clients", then "Create client"
+   - Client type: OpenID Connect
+   - Client ID: `qfc`
+   - Always display in UI: On
+   - Next
+   - Client authenticaton: On
+   - Leave "Authorization" disabled
+   - Enable just "[x] Standard Flow" in "Authentication Flows"
+   - Next
+   - Add the following URLs to "Valid Redirect URIs":
+     - `http://localhost:8011/*`
+     - `https://localhost/*`
+   - Add the following URLs to "Web Origins":
+     - `http://localhost:8011`
+     - `https://localhost`
+   - Save
+   - Go to the "Credentials" tab of the client
+   - Display and note the "Client Secret"
 
-  - Add the following to your `.env`:
-    ```bash
-    QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID="qfc"
-    QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET="<secret>"
-    ```
-  - Add keycloak to your `/etc/hosts`:
-    ```
-    127.0.0.1   keycloak
-    ```
-    (This is currently needed because both the docker container and the browser
-    on your host need to connect to keycloak using the same hostname. The
-    hostname `localhost` only is correct in the context of the host, but inside
-    the docker container it obviously means the refers to the loopback interface
-    of the container itself. `keycloak` is correct inside the container, but
-    not available on the host, unless manually added to `/etc/hosts`.)
+   - Add the following to your `.env`:
+     ```bash
+     QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID="qfc"
+     QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET="<secret>"

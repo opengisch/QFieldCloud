@@ -1,5 +1,6 @@
 import logging
 
+import jwt
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.helpers import complete_social_login
 
@@ -38,66 +39,29 @@ class QGISAuthenticationMiddleware:
             # No tokens found, nothing for us to do
             return self.get_response(request)
 
-        provider = self.get_provider(request)
+        provider = self.get_provider(request, id_token, access_token)
         if not provider:
             # Could not determine the provider, bail
             return self.get_response(request)
 
+        class Token:
+            def __init__(self, token):
+                self.token = token
+
+        token_response = {}
         if id_token:
-            userinfo = self.authenticate_with_id_token(request, provider, id_token)
-        else:
-            # This is a fallback to authenticate using the OAuth2 access token,
-            # instead of the OIDC ID token. This can be removed once a QGIS
-            # version containing https://github.com/qgis/QGIS/pull/60668 is
-            # used on all the relevant devices.
-            userinfo = self.authenticate_with_access_token(
-                request, provider, access_token
-            )
+            token_response["id_token"] = id_token
+        token = Token(access_token)
 
-        if not userinfo:
-            return self.get_response(request)
-
-        # Delegate to django-allauth's social login flow.
-        # This will authenticate the user, and:
-        # - Re-use an existing session, if one exists
-        # - Otherwise log the user in, and create a session, if the user exists
-        # - Sign up a new user, if the user does not exist
-        social_login = provider.sociallogin_from_response(request, userinfo)
+        oauth_adapter = provider.get_oauth2_adapter(request)
+        social_login = oauth_adapter.complete_login(
+            request, provider.app, token, response=token_response
+        )
         complete_social_login(request, social_login)
         response = self.get_response(request)
 
         logger.info("Authenticated user: %s" % request.user)
         return response
-
-    def authenticate_with_id_token(self, request, provider, id_token):
-        """Authenticate using an OpenID Connect ID token.
-
-        This is the preferred way to authenticate, and should be used when
-        possible. An ID token contains all the information needed for us to
-        perform authentication (instead of authorization) of the user, without
-        the need to do a request to the IDP's `userinfo` endpoint.
-        """
-        oauth_adapter = provider.oauth2_adapter_class(request)
-        userinfo = oauth_adapter._decode_id_token(provider.app, id_token)
-
-        logger.info("Authenticating using OIDC ID token")
-        return userinfo
-
-    def authenticate_with_access_token(self, request, provider, access_token):
-        """Authenticate using an OAuth2 access token.
-
-        This is a fallback to authenticate using the OAuth2 access token,
-        and should be removed once we have a recent enough QGIS version to use
-        ID tokens everywhere.
-
-        This will depend on the IDP having a `userinfo` endpoint, and will
-        issue a request to that endpoint every time a user is authenticated.
-        """
-        oauth_adapter = provider.oauth2_adapter_class(request)
-        userinfo = oauth_adapter._fetch_user_info(access_token)
-
-        logger.info("Authenticating using OAuth2 Access Token")
-        return userinfo
 
     def get_id_token(self, request):
         return request.headers.get("X-QFC-ID-Token")
@@ -111,8 +75,14 @@ class QGISAuthenticationMiddleware:
         access_token = auth_header.split(" ")[1]
         return access_token
 
-    def get_provider(self, request):
+    def get_provider(self, request, id_token, access_token):
         idp_id = request.headers.get("X-QFC-IDP-ID")
+
+        if not idp_id and id_token:
+            idp_id = self.infer_idp_from_id_token(request, id_token)
+
+        if not idp_id and access_token:
+            idp_id = self.infer_idp_from_access_token(request, access_token)
 
         # TODO: Currently we default to Google if no IDP is explicitly set
         # in the HTTP headers. We might want a configurable default provider.
@@ -127,3 +97,31 @@ class QGISAuthenticationMiddleware:
 
         provider = social_account_adapter.get_provider(request, idp_id)
         return provider
+
+    def infer_idp_from_id_token(self, request, id_token):
+        try:
+            decoded = jwt.decode(id_token, options={"verify_signature": False})
+        except Exception:
+            return
+
+        aud = decoded.get("aud")
+        social_account_adapter = get_adapter(request)
+
+        apps = social_account_adapter.list_apps(request)
+        for app in apps:
+            if app.client_id == aud:
+                return app.provider_id
+
+    def infer_idp_from_access_token(self, request, access_token):
+        try:
+            decoded = jwt.decode(access_token, options={"verify_signature": False})
+        except Exception:
+            return
+
+        azp = decoded.get("azp")
+        social_account_adapter = get_adapter(request)
+
+        apps = social_account_adapter.list_apps(request)
+        for app in apps:
+            if app.client_id == azp:
+                return app.provider_id
