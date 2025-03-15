@@ -75,7 +75,18 @@ SOCIALACCOUNT_PROVIDERS = {
             "secret": os.environ.get("QFIELDCLOUD_IDP_GOOGLE_CLIENT_SECRET"),
             "key": "",
         }
-    }
+    },
+    "openid_connect": {
+        "APP": {
+            "provider_id": "keycloak",
+            "name": "Keycloak",
+            "client_id": os.environ.get("QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID"),
+            "secret": os.environ.get("QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET"),
+            "settings": {
+                "server_url": "http://keycloak:7080/realms/ninjas/.well-known/openid-configuration",
+            },
+        }
+    },
 }
 
 CACHES = {
@@ -118,6 +129,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.microsoft",
+    "allauth.socialaccount.providers.openid_connect",
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
