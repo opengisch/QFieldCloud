@@ -146,21 +146,13 @@ Should give you a JSON response like this:
     QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_ID="qfc"
     QFIELDCLOUD_IDP_KEYCLOAK_CLIENT_SECRET="<secret>"
     ```
-
-
-
-
-  - Client Protocol: `openid-connect`
-  - Root URL: `http://localhost:8011`
-  - Valid Redirect URIs: `http://localhost:8011/*`
-  - Web Origins: `http://localhost:8011`
-  - Save
-  - Client ID: `qfieldcloud`
-  - Client Secret: `REDACTED`
-  - Access Type: `confidential`
-  - Standard Flow Enabled: On
-  - Implicit Flow Enabled: Off
-  - Direct Access Grants Enabled: Off
-  - Service Accounts Enabled: Off
-  - Authorization Enabled: Off
-  - Save
+  - Add keycloak to your `/etc/hosts`:
+    ```
+    127.0.0.1   keycloak
+    ```
+    (This is currently needed because both the docker container and the browser
+    on your host need to connect to keycloak using the same hostname. The
+    hostname `localhost` only is correct in the context of the host, but inside
+    the docker container it obviously means the refers to the loopback interface
+    of the container itself. `keycloak` is correct inside the container, but
+    not available on the host, unless manually added to `/etc/hosts`.)
