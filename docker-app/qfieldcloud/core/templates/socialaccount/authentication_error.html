@@ -1,0 +1,54 @@
+{% extends "socialaccount/base_entrance.html" %}
+{% load i18n %}
+{% load allauth %}
+
+{% block head_title %}
+    {% trans "Third-Party Login Failure" %}
+{% endblock head_title %}
+
+
+{% block body %}
+    <div class="flex-grow-1 bg-body-secondary d-flex flex-column justify-content-center">
+        <div class="flex-grow-0 flex-shrink-0 container">
+            <div class="row justify-content-md-center">
+                <div class="col col-lg-12">
+                    {% if messages %}
+                        {% for message in messages %}
+                            {% element alert level=message.tags %}
+                                {% slot message %}
+                                    {{ message }}
+                                {% endslot %}
+                            {% endelement %}
+                        {% endfor %}
+                    {% endif %}
+                    <div class="bg-white shadow rounded-4">
+                        <div id="content" class="p-5">
+                            {% block content %}
+
+                            {% element h1 %}
+                                {% trans "Third-Party Login Failure" %}
+                            {% endelement %}
+                            {% element p %}
+                                {% trans "An error occurred while attempting to login via your third-party account." %}
+                                <dl>
+                                <dt><strong>Provider:</strong></dt><dd><tt>{{ auth_error.provider }}</tt></dd>
+                                <dt><strong>Code:</strong></dt><dd><tt>{{ auth_error.code }}</tt></dd>
+                                <dt><strong>Exception:</strong></dt><dd><tt>{{ auth_error.exception }}</tt></dd>
+                                <dt><strong>State:</strong></dt><dd><tt>{{ state }}</tt></dd>
+                                </dl>
+
+<strong>Traceback:</strong>
+<pre>
+{{ formatted_exception }}
+</pre>
+
+                            {% endelement %}
+
+                        {% endblock content %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
