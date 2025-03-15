@@ -785,3 +785,20 @@ class QfcTestCase(APITransactionTestCase):
         count = Project.objects.for_user(u1).count()
 
         self.assertEqual(count, 1)
+
+    def test_validation_error_for_overlapping_subscriptions(self):
+        u1 = Person.objects.create(username="u1")
+
+        existing_subscription = u1.useraccount.current_subscription
+
+        # Attempt to create an overlapping subscription, expecting ValidationError
+        overlapping_subscription = Subscription(
+            plan=Plan.get_or_create_default(),
+            account=u1.useraccount,
+            created_by=u1,
+            status=Subscription.Status.ACTIVE_PAID,
+            active_since=existing_subscription.active_since + timedelta(hours=1),
+        )
+
+        with self.assertRaises(django.core.exceptions.ValidationError):
+            overlapping_subscription.clean()
