@@ -37,7 +37,7 @@ class QfcTestCase(APITransactionTestCase):
         u1 = Person.objects.create(username="u1")
         subscription = u1.useraccount.current_subscription
 
-        with self.assertRaises(django.db.utils.IntegrityError):
+        with self.assertRaises(django.core.exceptions.ValidationError):
             Subscription.objects.create(
                 plan=Plan.get_or_create_default(),
                 account=u1.useraccount,

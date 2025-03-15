@@ -223,7 +223,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         if not change:
             obj.created_by_id = obj.created_by_id or request.user.id
 
-        return super().save_model(request, obj, form, change)
+        super().save_model(request, obj, form, change)
 
 
 admin.site.register(Plan, PlanAdmin)
