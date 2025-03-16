@@ -5,9 +5,10 @@ Todo:
 
 import io
 
-from django.core.management import call_command
 from django.conf import settings
+from django.core.management import call_command
 from django.test import TestCase
+
 from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.utils import get_project_files_count, get_s3_bucket
 from qfieldcloud.core.utils2 import storage

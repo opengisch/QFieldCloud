@@ -9,6 +9,7 @@ from django.utils.translation import gettext as _
 from invitations.adapters import get_invitations_adapter
 from invitations.signals import invite_url_sent
 from invitations.utils import get_invitation_model
+
 from qfieldcloud.core import permissions_utils
 from qfieldcloud.core.models import Person
 

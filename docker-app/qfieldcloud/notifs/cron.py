@@ -8,6 +8,7 @@ from django.db.models.functions import Now
 from django.template.loader import render_to_string
 from django_cron import CronJobBase, Schedule
 from notifications.models import Notification
+
 from qfieldcloud.core.models import User
 
 

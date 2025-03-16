@@ -1,10 +1,11 @@
 from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
-from django.core.exceptions import ValidationError
-from invitations.adapters import BaseInvitationsAdapter
-from qfieldcloud.core.models import Person
 from allauth.account.models import EmailConfirmationHMAC
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest
+from invitations.adapters import BaseInvitationsAdapter
+
+from qfieldcloud.core.models import Person
 
 
 class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
