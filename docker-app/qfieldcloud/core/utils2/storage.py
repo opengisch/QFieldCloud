@@ -13,14 +13,15 @@ from enum import Enum
 from pathlib import PurePath
 from typing import IO
 
-import qfieldcloud.core.models
-import qfieldcloud.core.utils
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
 from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
+
+import qfieldcloud.core.models
+import qfieldcloud.core.utils
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 
 logger = logging.getLogger(__name__)

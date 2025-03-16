@@ -1,15 +1,11 @@
 import logging
-
 from datetime import datetime
 
-from django.db.models import F
+from botocore.exceptions import ClientError
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
-from botocore.exceptions import ClientError
-
-
 from django.core.management.base import BaseCommand
-
+from django.db.models import F
 from qfieldcloud.core.models import UserAccount
 
 logger = logging.getLogger(__name__)

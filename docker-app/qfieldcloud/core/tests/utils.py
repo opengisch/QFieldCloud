@@ -1,11 +1,12 @@
 import io
 import os
-from datetime import timedelta
 import tempfile
+from datetime import timedelta
 from time import sleep
 from typing import IO, Iterable
 
 from django.utils import timezone
+
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.subscription.models import Plan, Subscription
 

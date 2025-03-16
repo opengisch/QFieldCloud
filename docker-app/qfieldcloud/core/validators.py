@@ -1,8 +1,9 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.utils.translation import gettext as _, ngettext_lazy
-from django.utils.deconstruct import deconstructible
 from django.core.validators import BaseValidator
+from django.utils.deconstruct import deconstructible
+from django.utils.translation import gettext as _
+from django.utils.translation import ngettext_lazy
 
 
 def reserved_words_validator(value):

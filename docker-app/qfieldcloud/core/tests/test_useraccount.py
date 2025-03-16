@@ -1,10 +1,12 @@
 import logging
+
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.core.models import Organization, OrganizationMember, Person
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.subscription.models import PackageType, get_subscription_model
-from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
 

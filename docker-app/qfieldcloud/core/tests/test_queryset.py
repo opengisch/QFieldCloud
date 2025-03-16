@@ -1,5 +1,7 @@
 import logging
 
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import querysets_utils
 from qfieldcloud.core.models import (
@@ -13,7 +15,6 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from rest_framework.test import APITransactionTestCase
 
 from .utils import set_subscription, setup_subscription_plans
 

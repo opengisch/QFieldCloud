@@ -1,10 +1,10 @@
 import logging
-from typing import Sized
 import uuid
+from typing import Sized
 
 from django.core.management.base import BaseCommand
-
 from qfieldcloud.core.models import Project
+
 from ...migrate_project_storage import migrate_project_storage
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,12 @@
 from pathlib import Path
+from typing import Any
+
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.request import Request
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
@@ -18,11 +24,6 @@ from qfieldcloud.core.models import (
     User,
 )
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.request import Request
-
-from typing import Any
 
 
 def get_avatar_url(user: User, request: Request | None = None) -> str | None:

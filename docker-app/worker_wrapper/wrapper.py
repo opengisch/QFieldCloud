@@ -14,9 +14,9 @@ import requests
 import sentry_sdk
 from constance import config
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.forms.models import model_to_dict
-from django.core.files.base import ContentFile
 from django.utils import timezone
 from docker.client import DockerClient
 from docker.errors import APIError
@@ -31,9 +31,9 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Secret,
 )
-from qfieldcloud.filestorage.models import File
 from qfieldcloud.core.utils import get_qgis_project_file
 from qfieldcloud.core.utils2 import storage
+from qfieldcloud.filestorage.models import File
 from tenacity import (
     retry,
     retry_if_exception_type,

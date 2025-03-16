@@ -16,9 +16,7 @@ from datetime import timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
-
-from .settings_utils import get_storages_config, ConfigValidationError
-
+from .settings_utils import ConfigValidationError, get_storages_config
 
 # QFieldCloud specific configuration
 QFIELDCLOUD_HOST = os.environ["QFIELDCLOUD_HOST"]
@@ -335,6 +333,9 @@ if SENTRY_DSN:
     SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
 
     def before_send(event, hint):
+        from rest_framework.exceptions import MethodNotAllowed, UnsupportedMediaType
+        from rest_framework.exceptions import ValidationError as RestValidationError
+
         from qfieldcloud.core.exceptions import (
             ProjectAlreadyExistsError,
             ValidationError,
@@ -344,9 +345,6 @@ if SENTRY_DSN:
             PlanInsufficientError,
             QuotaError,
         )
-        from rest_framework.exceptions import UnsupportedMediaType
-        from rest_framework.exceptions import MethodNotAllowed
-        from rest_framework.exceptions import ValidationError as RestValidationError
 
         ignored_exceptions = (
             ValidationError,

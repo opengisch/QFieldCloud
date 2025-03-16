@@ -11,12 +11,12 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Case, Q
+from django.db.models import Case, Q, When
 from django.db.models import Value as V
-from django.db.models import When
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
+
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
 
 from .exceptions import NotPremiumPlanException

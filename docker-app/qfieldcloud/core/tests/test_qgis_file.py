@@ -5,10 +5,11 @@ import time
 from pathlib import PurePath
 
 from django.http import FileResponse
-from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob, Project
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
+
+from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob, Project
 
 from .utils import (
     get_filename,

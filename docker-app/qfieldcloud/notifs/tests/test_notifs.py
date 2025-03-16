@@ -8,6 +8,7 @@ from django_cron.management.commands import runcrons
 from django_currentuser.middleware import _set_current_user
 from notifications.models import Notification
 from notifications.signals import notify
+
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,

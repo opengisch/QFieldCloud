@@ -1,24 +1,20 @@
 from django.core.exceptions import ObjectDoesNotExist
-from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.db.models import QuerySet
-
-
+from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import permissions_utils
 from qfieldcloud.core.models import (
     Organization,
-    TeamMember,
     Team,
+    TeamMember,
 )
 from qfieldcloud.core.serializers import (
     TeamMemberSerializer,
     TeamSerializer,
 )
-
-from rest_framework import generics, permissions, exceptions
+from rest_framework import exceptions, generics, permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
-
-from django.shortcuts import get_object_or_404
 
 
 class TeamMemberDeleteViewPermissions(permissions.BasePermission):
