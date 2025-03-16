@@ -1,10 +1,10 @@
 import logging
-from django.db import transaction
+
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
+from django.db import transaction
 from django.utils import timezone
-
 
 from qfieldcloud.core.models import Job, Project
 from qfieldcloud.core.utils import (
@@ -12,7 +12,6 @@ from qfieldcloud.core.utils import (
     get_project_package_files,
 )
 from qfieldcloud.filestorage.models import File, FileVersion
-
 
 logger = logging.getLogger(__name__)
 

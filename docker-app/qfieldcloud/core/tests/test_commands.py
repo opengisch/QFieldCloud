@@ -5,6 +5,7 @@ import os
 from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.test import TestCase
+
 from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.core.utils2 import storage

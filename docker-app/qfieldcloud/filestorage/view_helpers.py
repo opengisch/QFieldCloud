@@ -1,42 +1,38 @@
 import logging
-
 from pathlib import PurePath
 from uuid import UUID
 
+from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
+from django.db.models.fields.files import FieldFile
+from django.http import FileResponse, HttpResponse
+from django.http.response import HttpResponseBase
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework.exceptions import NotFound
+from rest_framework.request import Request
+
+from qfieldcloud.core import exceptions, permissions_utils
+from qfieldcloud.core.exceptions import (
+    MultipleProjectsError,
+    RestrictedProjectModificationError,
+)
 from qfieldcloud.core.models import (
     Job,
     ProcessProjectfileJob,
     Project,
 )
+from qfieldcloud.core.utils2.storage import (
+    get_attachment_dir_prefix,
+)
 from qfieldcloud.filestorage.models import (
     File,
     FileVersion,
 )
-from qfieldcloud.core.exceptions import (
-    RestrictedProjectModificationError,
-    MultipleProjectsError,
-)
-from qfieldcloud.core import permissions_utils
-from django.db import transaction
-from django.db.models.fields.files import FieldFile
-from django.conf import settings
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.http import FileResponse, HttpResponse
-from django.http.response import HttpResponseBase
-from django.utils import timezone
 
-from rest_framework.exceptions import NotFound
-from rest_framework.request import Request
-
-
-from qfieldcloud.core import exceptions
-from qfieldcloud.core.utils2.storage import (
-    get_attachment_dir_prefix,
-)
-
-from .utils import is_admin_restricted_file, is_qgis_project_file, validate_filename
 from .helpers import purge_old_file_versions
+from .utils import is_admin_restricted_file, is_qgis_project_file, validate_filename
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,9 @@
 import logging
 
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Job,
@@ -7,9 +11,6 @@ from qfieldcloud.core.models import (
     Person,
     Project,
 )
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.test import APITransactionTestCase
 
 from .utils import (
     set_subscription,

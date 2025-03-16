@@ -2,9 +2,10 @@
 
 import django.db.models.deletion
 import migrate_sql.operations
-import qfieldcloud.core.models
 from django.conf import settings
 from django.db import migrations, models
+
+import qfieldcloud.core.models
 
 
 class Migration(migrations.Migration):

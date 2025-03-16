@@ -3,10 +3,11 @@ import time
 
 from django.conf import settings
 from django.core.cache import cache
-from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Person, Project
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
+
+from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.models import Person, Project
 
 from .utils import setup_subscription_plans
 

@@ -4,6 +4,7 @@ from operator import and_, or_
 from django.db.models import F, Q, QuerySet
 from django.db.models import Value as V
 from django.db.models.functions import StrIndex
+
 from qfieldcloud.core.models import (
     Delta,
     Organization,

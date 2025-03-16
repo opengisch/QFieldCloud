@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Protocol, cast, Any
 from collections.abc import Callable
-from django.db import models
-from django.db.models.fields.files import FieldFile
+from typing import Any, Protocol, cast
+
 from django.core.files.storage import storages
-from django.db.models.fields.files import ImageFieldFile, ImageField
+from django.db import models
+from django.db.models.fields.files import FieldFile, ImageField, ImageFieldFile
 
 
 class FileStorageNameModelProtocol(Protocol):

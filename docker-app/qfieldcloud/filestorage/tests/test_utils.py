@@ -1,14 +1,13 @@
-from django.conf import settings
-from django.test import TestCase
-
 # from unittest import TestCase
 import logging
 
+from django.conf import settings
+from django.test import TestCase
 
 from qfieldcloud.filestorage.utils import (
-    is_valid_filename,
-    is_qgis_project_file,
     is_admin_restricted_file,
+    is_qgis_project_file,
+    is_valid_filename,
 )
 
 logging.disable(logging.CRITICAL)

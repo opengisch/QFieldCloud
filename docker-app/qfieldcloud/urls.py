@@ -18,6 +18,7 @@ Including another URLconf
 """
 
 from functools import wraps
+
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
@@ -28,9 +29,9 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from qfieldcloud.authentication import views as auth_views
 from rest_framework import permissions
 
+from qfieldcloud.authentication import views as auth_views
 from qfieldcloud.filestorage.views import (
     compatibility_file_crud_view,
     compatibility_file_list_view,

@@ -10,9 +10,9 @@ from pathlib import PurePath
 from traceback import print_stack
 
 import qfieldcloud.core.utils2 as utils2
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.conf import settings
 from django.utils import timezone
 from drf_spectacular.utils import (
     OpenApiParameter,

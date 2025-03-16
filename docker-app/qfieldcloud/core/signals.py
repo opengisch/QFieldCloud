@@ -1,5 +1,6 @@
 from axes.signals import user_locked_out
 from django.dispatch import receiver
+
 from qfieldcloud.core.exceptions import TooManyLoginAttemptsError
 
 
