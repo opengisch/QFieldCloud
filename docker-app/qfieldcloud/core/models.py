@@ -1201,6 +1201,14 @@ class Project(models.Model):
         max_length=100,
         validators=[validators.file_storage_name_validator],
         default=get_project_file_storage_default,
+        editable=False,
+    )
+
+    file_storage_migrated_at = models.DateTimeField(
+        _("File Storage Migrated At"),
+        blank=True,
+        null=True,
+        editable=False,
     )
 
     is_locked = models.BooleanField(
