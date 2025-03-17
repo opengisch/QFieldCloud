@@ -35,7 +35,9 @@ def resend_confirmation_email(request: HttpRequest) -> HttpResponse:
     if request.method != "POST":
         return redirect_to_referer_or_view(request, "account_login")
 
-    email_address = request.session.get("account_verified_email")
+    assert "account_verified_email" in request.session
+
+    email_address = request.session["account_verified_email"]
 
     if email_address:
         try:
