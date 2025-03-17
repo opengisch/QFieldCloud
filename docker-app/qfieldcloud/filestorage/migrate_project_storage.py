@@ -60,6 +60,7 @@ def migrate_project_storage(
 
     from_storage_bucket = storages[from_storage].bucket  # type: ignore
     to_storage_bucket = storages[to_storage].bucket  # type: ignore
+    now = timezone.now()
 
     try:
         logger.info(f'Locking project "{project.name}" ({str(project.id)})...')
@@ -117,8 +118,6 @@ def migrate_project_storage(
                 raise Exception(
                     f'Cannot migrate project "{project.name}" ({str(project.id)}) to "{to_storage}", the path already exists in the bucket!!'
                 )
-
-        now = timezone.now()
 
         for project_file in project_files:
             for file_version in project_file.versions:
@@ -224,4 +223,12 @@ def migrate_project_storage(
         raise err
     finally:
         project.is_locked = False
-        project.save(update_fields=["is_locked", "file_storage", "thumbnail"])
+        project.file_storage_migrated_at = now
+        project.save(
+            update_fields=[
+                "is_locked",
+                "file_storage",
+                "file_storage_migrated_at",
+                "thumbnail",
+            ]
+        )

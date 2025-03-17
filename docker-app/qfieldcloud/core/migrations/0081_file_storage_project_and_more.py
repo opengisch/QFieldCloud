@@ -31,6 +31,7 @@ class Migration(migrations.Migration):
             model_name="project",
             name="file_storage",
             field=models.CharField(
+                editable=False,
                 help_text="Which file storage provider should be used for the storing the project related files.",
                 max_length=100,
                 validators=[qfieldcloud.core.validators.file_storage_name_validator],
@@ -43,11 +44,22 @@ class Migration(migrations.Migration):
             model_name="project",
             name="file_storage",
             field=models.CharField(
+                editable=False,
                 help_text="Which file storage provider should be used for the storing the project related files.",
                 max_length=100,
                 validators=[qfieldcloud.core.validators.file_storage_name_validator],
                 verbose_name="File storage",
                 default=qfieldcloud.core.models.get_project_file_storage_default,
+            ),
+        ),
+        migrations.AddField(
+            model_name="project",
+            name="file_storage_migrated_at",
+            field=models.DateTimeField(
+                blank=True,
+                editable=False,
+                null=True,
+                verbose_name="File Storage Migrated At",
             ),
         ),
         migrations.RenameField(

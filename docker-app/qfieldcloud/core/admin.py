@@ -776,6 +776,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "description",
         "created_at",
         "updated_at",
+        "is_locked",
     )
     list_filter = (
         "is_public",
@@ -802,6 +803,9 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
+        "is_locked",
+        "file_storage",
+        "file_storage_migrated_at",
         "project_files",
     )
     readonly_fields = (
@@ -814,6 +818,9 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
+        "is_locked",
+        "file_storage",
+        "file_storage_migrated_at",
     )
     inlines = (
         ProjectSecretInline,
