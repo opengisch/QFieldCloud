@@ -63,7 +63,7 @@ class QfcTestCase(APITransactionTestCase):
         return response
 
     def test_login_logout(self):
-        response = self.login("UsEr1", "abc123")
+        response = self.login("user1", "abc123")
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
         self.assertEqual(len(tokens), 1)
@@ -117,31 +117,34 @@ class QfcTestCase(APITransactionTestCase):
         # because it renders a template instead of returning an HTTP redirect response.
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("_auth_user_id", self.client.session)
-        self.assertContains(response, "The username and/or password you specified are")
+        # Check if the response content contains the error message displayed in the UI after an unsuccessful login
+        self.assertContains(
+            response, "The username and/or password you specified are not correct."
+        )
 
         response = self.client.post(
             self.login_url,
             {
-                "login": "user1",  # Correct case
+                "login": "user1",
                 "password": "abc123",
             },
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("_auth_user_id", self.client.session)
+        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
 
         response = self.client.post(
             self.login_url,
             {
-                "login": "USER1",  # Correct case
+                "login": "USER1",
                 "password": "abc123",
             },
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("_auth_user_id", self.client.session)
+        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
 
     def test_login_with_avatar(self):
         u2 = Person.objects.create_user(username="u2", password="u2")
