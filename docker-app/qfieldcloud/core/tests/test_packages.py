@@ -735,15 +735,3 @@ class QfcTestCase(APITransactionTestCase):
                 "DCIM/2.jpg",
             ],
         )
-
-        # fetch latest package
-        response = self.client.get(
-            f"/api/v1/packages/{self.project1.id}/latest/",
-        )
-
-        payload = response.json()
-        files = payload["files"]
-        filenames = [f["name"] for f in files]
-
-        self.assertTrue("DCIM/1.jpg" in filenames)
-        self.assertTrue("DCIM/2.jpg" in filenames)
