@@ -47,7 +47,17 @@ class DynamicStorageFieldFile(FieldFile):
 
         super().__init__(instance, field, name)
 
-        storage_name = instance._get_file_storage_name()
+        # NOTE if the model is not saved yet, there is a chance that it was instantiated without values
+        # for the foreign keys. In some models, e.g. `filestorage.FileVersion`, calling `_get_file_storage_name`
+        # requires a foreign key value. Therefore we return the `default` storage for those cases.
+        try:
+            storage_name = instance._get_file_storage_name()
+        except Exception:
+            if instance._state.adding:
+                storage_name = "default"
+            else:
+                raise
+
         if not storage_name:
             raise EmptyStorageNameError(instance=instance)
 
