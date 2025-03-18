@@ -1,7 +1,9 @@
 import logging
 from datetime import datetime
 
+import django.db.utils
 from django.core.files.base import ContentFile
+from django.urls import reverse
 from django.utils.timezone import now
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, Person, Team
@@ -61,7 +63,7 @@ class QfcTestCase(APITransactionTestCase):
         return response
 
     def test_login_logout(self):
-        response = self.login("user1", "abc123")
+        response = self.login("UsEr1", "abc123")
         tokens = self.user1.auth_tokens.order_by("-created_at").all()
 
         self.assertEqual(len(tokens), 1)
@@ -79,6 +81,67 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(len(tokens), 1)
         self.assertLess(tokens[0].expires_at, now())
+
+    def test_login_case_insensitive(self):
+        response = self.login("user1", "abc123")
+        tokens = self.user1.auth_tokens.order_by("-created_at").all()
+
+        self.assertEqual(len(tokens), 1)
+        self.assertTokenMatch(tokens[0], response.json())
+        self.assertGreater(tokens[0].expires_at, now())
+
+        response = self.login("USER1", "abc123")
+        tokens = self.user1.auth_tokens.order_by("-created_at").all()
+
+        self.assertEqual(len(tokens), 2)
+        self.assertTokenMatch(tokens[0], response.json())
+        self.assertGreater(tokens[0].expires_at, now())
+
+    def test_prevent_duplicate_case_insensitive_registration(self):
+        with self.assertRaises(django.db.utils.IntegrityError):
+            Person.objects.create_user(username="USER1", password="abc123")
+
+        with self.assertRaises(django.db.utils.IntegrityError):
+            Person.objects.create_user(username="uSeR1", password="abc123")
+
+        users = Person.objects.filter(username__iexact="user1")
+        self.assertEqual(users.count(), 1)
+
+    def test_case_sensitive_user_login_with_session(self):
+        self.login_url = reverse("account_login")
+
+        response = self.client.post(
+            self.login_url, {"login": "user1", "password": "i_am_wrong"}, follow=True
+        )
+        # As we use a TemplateResponse we cannot check status_code 302 redirect,
+        # because it renders a template instead of returning an HTTP redirect response.
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertContains(response, "The username and/or password you specified are")
+
+        response = self.client.post(
+            self.login_url,
+            {
+                "login": "user1",  # Correct case
+                "password": "abc123",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("_auth_user_id", self.client.session)
+
+        response = self.client.post(
+            self.login_url,
+            {
+                "login": "USER1",  # Correct case
+                "password": "abc123",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("_auth_user_id", self.client.session)
 
     def test_login_with_avatar(self):
         u2 = Person.objects.create_user(username="u2", password="u2")
