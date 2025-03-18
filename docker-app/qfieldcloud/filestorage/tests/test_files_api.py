@@ -24,6 +24,8 @@ from rest_framework.test import APITransactionTestCase
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import storages
 from django.contrib.contenttypes.models import ContentType
 from auditlog.models import LogEntry
 
@@ -141,6 +143,37 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(file.versions.count(), min((versions_count + 1), max_versions))
         self.assertEqual(file.latest_version, file.versions.all()[0])
         self.assertNotEqual(file.latest_version, latest_version)
+
+        return response
+
+    def assertFileDeleted(
+        self,
+        user: User,
+        project: Project,
+        filename: str,
+        params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> HttpResponse | Response:
+        if params and params.get("version"):
+            file_version = FileVersion.objects.get(id=params["version"])
+        elif headers and headers.get("x-file-version"):
+            file_version = FileVersion.objects.get(id=headers["x-file-version"])
+        else:
+            file_version = File.objects.get(name=filename).latest_version
+
+            # make typing happy that `file_version` is not `None`
+            assert file_version
+
+        storage_filename = file_version.content.name
+
+        self.assertTrue(storages[project.file_storage].exists(storage_filename))
+
+        response = self._delete_file(user, project, filename, params, headers)
+
+        project.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(storages[project.file_storage].exists(storage_filename))
 
         return response
 
@@ -564,7 +597,7 @@ class QfcTestCase(APITransactionTestCase):
         self.p1.refresh_from_db()
         self.assertEqual(self.p1.file_storage_bytes, 14)
 
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "file.name",
@@ -572,15 +605,8 @@ class QfcTestCase(APITransactionTestCase):
                 "version": self.p1.get_file("file.name").latest_version.id,
             },
         )
-
-        self.p1.refresh_from_db()
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.file_storage_bytes, 7)
-
-        response = self._delete_file(self.u1, self.p1, "file.name")
-
-        self.p1.refresh_from_db()
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFileDeleted(self.u1, self.p1, "file.name")
         self.assertEqual(self.p1.file_storage_bytes, 0)
 
     # def test_upload_non_attachment_file_starts_a_new_job(self):
@@ -679,10 +705,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_delete_existing_file_succeeds(self):
         self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Hello1!"))
-
-        response = self._delete_file(self.u1, self.p1, "file.name")
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFileDeleted(self.u1, self.p1, "file.name")
         self.assertEqual(self.p1.files.count(), 0)
 
     def test_delete_non_existing_file_fails(self):
@@ -698,7 +721,7 @@ class QfcTestCase(APITransactionTestCase):
         old_newer_version = old_versions_qs[0]
         old_older_version = old_versions_qs[1]
 
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "file.name",
@@ -706,8 +729,6 @@ class QfcTestCase(APITransactionTestCase):
                 "version": str(old_older_version.id),
             },
         )
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.files.count(), 1)
 
         new_versions_qs = self.p1.get_file("file.name").versions.all()
@@ -725,7 +746,7 @@ class QfcTestCase(APITransactionTestCase):
         old_newer_version = old_versions_qs[0]
         old_older_version = old_versions_qs[1]
 
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "file.name",
@@ -733,8 +754,6 @@ class QfcTestCase(APITransactionTestCase):
                 "x-file-version": str(old_older_version.id),
             },
         )
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.files.count(), 1)
 
         new_versions_qs = self.p1.get_file("file.name").versions.all()
@@ -773,11 +792,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
 
-        response = self._delete_file(self.u1, self.p1, "project1.qgs")
-
-        self.p1.refresh_from_db()
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFileDeleted(self.u1, self.p1, "project1.qgs")
         self.assertEqual(self.p1.files.count(), 0)
         self.assertIsNone(self.p1.the_qgis_file_name)
 
@@ -803,7 +818,7 @@ class QfcTestCase(APITransactionTestCase):
 
         versions_qs = self.p1.get_file("project1.qgs").versions.all()
 
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "project1.qgs",
@@ -811,10 +826,6 @@ class QfcTestCase(APITransactionTestCase):
                 "version": str(versions_qs[0].id),
             },
         )
-
-        self.p1.refresh_from_db()
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.files.count(), 1)
         # project file still set to the recently uploaded file as there is one more version
         self.assertEqual(self.p1.the_qgis_file_name, "project1.qgs")
@@ -898,9 +909,7 @@ class QfcTestCase(APITransactionTestCase):
             project=self.p1, collaborator=u2, role=ProjectCollaborator.Roles.EDITOR
         )
 
-        response = self._delete_file(u2, self.p1, "file.name")
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFileDeleted(u2, self.p1, "file.name")
         self.assertEqual(self.p1.files.count(), 0)
 
     def test_latest_version_attribute_is_updated(self):
@@ -930,7 +939,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(self.p1.get_file("file.name").latest_version_id, version3.pk)
 
         # delete the 2nd version
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "file.name",
@@ -938,14 +947,12 @@ class QfcTestCase(APITransactionTestCase):
                 "version": str(version2.id),
             },
         )
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.files.count(), 1)
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 2)
         self.assertEqual(self.p1.get_file("file.name").latest_version_id, version3.pk)
 
         # delete the 3rd (latest) version
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "file.name",
@@ -953,8 +960,6 @@ class QfcTestCase(APITransactionTestCase):
                 "version": str(version3.id),
             },
         )
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.p1.files.count(), 1)
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 1)
         self.assertEqual(self.p1.get_file("file.name").latest_version_id, version1.pk)
@@ -1035,7 +1040,7 @@ class QfcTestCase(APITransactionTestCase):
         (v4, v3, v2, v1) = self.p1.files.all()[0].versions.all()
 
         # deleting the oldest version should create only one new `FileVersion` DELETE audit
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "file.name",
@@ -1043,14 +1048,12 @@ class QfcTestCase(APITransactionTestCase):
                 "version": str(v1.id),
             },
         )
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(file_delete_audit_qs.count(), 0)
         self.assertEqual(file_update_audit_qs.count(), 3)
         self.assertEqual(version_delete_log_qs.count(), 1)
 
         # deleting the latest version should create two new audits: `FileVersion` DELETE audit and `File` UPDATE audit
-        response = self._delete_file(
+        self.assertFileDeleted(
             self.u1,
             self.p1,
             "file.name",
@@ -1058,16 +1061,12 @@ class QfcTestCase(APITransactionTestCase):
                 "version": str(v4.id),
             },
         )
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(file_delete_audit_qs.count(), 0)
         self.assertEqual(file_update_audit_qs.count(), 4)
         self.assertEqual(version_delete_log_qs.count(), 2)
 
         # deleting the file should create three new audits: two `FileVersion` DELETE audits and `File` DELETE audit
-        response = self._delete_file(self.u1, self.p1, "file.name")
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFileDeleted(self.u1, self.p1, "file.name")
         self.assertEqual(file_delete_audit_qs.count(), 1)
         self.assertEqual(file_update_audit_qs.count(), 4)
         self.assertEqual(version_delete_log_qs.count(), 4)
@@ -1140,3 +1139,25 @@ class QfcTestCase(APITransactionTestCase):
             "0c9a42b3d065a64063eca67e98c932fa2e9a077bc7973a421a964a11304c998c",
         )
         self.assertEqual(len(payload[0].get("versions", [])), 1)
+
+    def test_delete_project_deletes_thumbnail_and_all_project_files(self):
+        p2 = Project.objects.create(
+            owner=self.u1,
+            name="p2",
+            file_storage="default",
+        )
+
+        p2.thumbnail = ContentFile("<svg />", "thumbnail.svg")
+        p2.save()
+
+        self.assertFileUploaded(self.u1, p2, "file.name", StringIO("Hello world!"))
+
+        latest_version: FileVersion = p2.files.first().latest_version  # type: ignore
+
+        self.assertTrue(storages[p2.file_storage].exists(p2.thumbnail.name))
+        self.assertTrue(storages[p2.file_storage].exists(latest_version.content.name))
+
+        p2.delete()
+
+        self.assertFalse(storages[p2.file_storage].exists(p2.thumbnail.name))
+        self.assertFalse(storages[p2.file_storage].exists(latest_version.content.name))

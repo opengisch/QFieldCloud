@@ -127,6 +127,7 @@ INSTALLED_APPS = [
     "migrate_sql",
     "constance",
     "django_extensions",
+    "django_cleanup.apps.CleanupConfig",
 ]
 
 MIDDLEWARE = [
