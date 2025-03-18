@@ -97,17 +97,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTokenMatch(tokens[0], response.json())
         self.assertGreater(tokens[0].expires_at, now())
 
-    def test_prevent_duplicate_case_insensitive_registration(self):
-        with self.assertRaises(django.db.utils.IntegrityError):
-            Person.objects.create_user(username="USER1", password="abc123")
-
-        with self.assertRaises(django.db.utils.IntegrityError):
-            Person.objects.create_user(username="uSeR1", password="abc123")
-
-        users = Person.objects.filter(username__iexact="user1")
-        self.assertEqual(users.count(), 1)
-
-    def test_case_sensitive_user_login_with_session(self):
+    def test_login_with_session_case_insensitive(self):
         self.login_url = reverse("account_login")
 
         response = self.client.post(
@@ -192,6 +182,16 @@ class QfcTestCase(APITransactionTestCase):
         self.assertNotEqual(tokens[0], tokens[1])
         self.assertGreater(tokens[0].expires_at, now())
         self.assertGreater(tokens[1].expires_at, now())
+
+    def test_case_insensitive_username_uniqueness(self):
+        with self.assertRaises(django.db.utils.IntegrityError):
+            Person.objects.create_user(username="USER1", password="abc123")
+
+        with self.assertRaises(django.db.utils.IntegrityError):
+            Person.objects.create_user(username="uSeR1", password="abc123")
+
+        users = Person.objects.filter(username__iexact="user1")
+        self.assertEqual(users.count(), 1)
 
     def test_client_type(self):
         # QFIELDSYNC login
