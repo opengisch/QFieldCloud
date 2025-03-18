@@ -282,6 +282,16 @@ class LatestPackageView(views.APIView):
             file_type=File.FileType.PACKAGE_FILE,
         )
 
+        # get attachment files directly from the original project files, not from the package
+        for attachment_dir in project.attachment_dirs:
+            files_qs |= File.objects.filter(
+                project_id=project_id,
+                file_type=File.FileType.PROJECT_FILE,
+                name__startswith=attachment_dir,
+            )
+
+        files_qs = files_qs.distinct()
+
         file_serializer = FileSerializer(files_qs, many=True)
 
         if not file_serializer.data:
