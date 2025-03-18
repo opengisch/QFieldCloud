@@ -894,7 +894,7 @@ class AbstractSubscription(models.Model):
         Validates that the subscription's active period does not overlap with
         any other active subscriptions for the same account.
         """
-        # If there is no active_since, nothing to check.
+        # If there is no `active_since`, nothing to check.
         if not self.active_since:
             return
 
