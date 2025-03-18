@@ -97,45 +97,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTokenMatch(tokens[0], response.json())
         self.assertGreater(tokens[0].expires_at, now())
 
-    def test_login_with_session_case_insensitive(self):
-        self.login_url = reverse("account_login")
-
-        response = self.client.post(
-            self.login_url, {"login": "user1", "password": "i_am_wrong"}, follow=True
-        )
-        # As we use a TemplateResponse we cannot check status_code 302 redirect,
-        # because it renders a template instead of returning an HTTP redirect response.
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn("_auth_user_id", self.client.session)
-        # Check if the response content contains the error message displayed in the UI after an unsuccessful login
-        self.assertContains(
-            response, "The username and/or password you specified are not correct."
-        )
-
-        response = self.client.post(
-            self.login_url,
-            {
-                "login": "user1",
-                "password": "abc123",
-            },
-            follow=True,
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
-
-        response = self.client.post(
-            self.login_url,
-            {
-                "login": "USER1",
-                "password": "abc123",
-            },
-            follow=True,
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
-
     def test_login_with_avatar(self):
         u2 = Person.objects.create_user(username="u2", password="u2")
         u2.useraccount.avatar = ContentFile("<svg />", "avatar.svg")
@@ -182,6 +143,45 @@ class QfcTestCase(APITransactionTestCase):
         self.assertNotEqual(tokens[0], tokens[1])
         self.assertGreater(tokens[0].expires_at, now())
         self.assertGreater(tokens[1].expires_at, now())
+
+    def test_login_with_session_case_insensitive(self):
+        self.login_url = reverse("account_login")
+
+        response = self.client.post(
+            self.login_url, {"login": "user1", "password": "i_am_wrong"}, follow=True
+        )
+        # As we use a TemplateResponse we cannot check status_code 302 redirect,
+        # because it renders a template instead of returning an HTTP redirect response.
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        # Check if the response content contains the error message displayed in the UI after an unsuccessful login
+        self.assertContains(
+            response, "The username and/or password you specified are not correct."
+        )
+
+        response = self.client.post(
+            self.login_url,
+            {
+                "login": "user1",
+                "password": "abc123",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
+
+        response = self.client.post(
+            self.login_url,
+            {
+                "login": "USER1",
+                "password": "abc123",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
 
     def test_case_insensitive_username_uniqueness(self):
         with self.assertRaises(django.db.utils.IntegrityError):
