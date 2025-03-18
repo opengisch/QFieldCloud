@@ -715,3 +715,23 @@ class QfcTestCase(APITransactionTestCase):
             self.assertGreaterEqual(
                 File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 1
             )
+
+    def test_package_and_project_file_attachments(self):
+        # upload attachments to the project
+        self.upload_files_and_check_package(
+            token=self.token1.key,
+            project=self.project1,
+            files=[
+                ("DCIM/1.jpg", "DCIM/1.jpg"),
+                ("DCIM/2.jpg", "DCIM/2.jpg"),
+                ("bumblebees.gpkg", "bumblebees.gpkg"),
+                ("simple_bumblebees.qgs", "simple_bumblebees.qgs"),
+            ],
+            expected_files=[
+                "data.gpkg",
+                "simple_bumblebees_qfield.qgs",
+                "simple_bumblebees_qfield_attachments.zip",
+                "DCIM/1.jpg",
+                "DCIM/2.jpg",
+            ],
+        )
