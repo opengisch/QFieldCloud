@@ -325,7 +325,10 @@ class FileVersion(models.Model):
         super().delete(*args, **kwargs)
 
     def __repr__(self) -> str:
-        return f'FileVersion({self.id}) in "{self.file.project_id}" "{self.file.name}" "{self.display}"'  # type: ignore
+        if hasattr(self, "file"):
+            return f'FileVersion({self.id}) in "{self.file.project_id}" "{self.file.name}" "{self.display}"'  # type: ignore
+        else:
+            return f'FileVersion({self.id}) in "UNKNOWN_PROJECT_ID" "UNKNOWN_FILENAME" "{self.display}"'  # type: ignore
 
     def __str__(self) -> str:
         return self.__repr__()
