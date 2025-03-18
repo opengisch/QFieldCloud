@@ -898,7 +898,7 @@ class AbstractSubscription(models.Model):
         if not self.active_since:
             return
 
-        conflicts = (
+        conflicting_subscriptions_qs = (
             self.__class__.objects.filter(
                 account=self.account,
             )
@@ -909,10 +909,12 @@ class AbstractSubscription(models.Model):
             )
         )
 
-        if conflicts.exists():
+        if conflicting_subscriptions_qs.exists():
             raise ValidationError(
                 {
-                    "active_since": "This account already has an active subscription that overlaps with this period. Please cancel the existing subscription or choose a different date range."
+                    "active_since": _(
+                        "This account already has an active subscription that overlaps with this period. Please cancel the existing subscription or choose a different time range."
+                    )
                 }
             )
 
