@@ -71,34 +71,35 @@ class QfcTestCase(TransactionTestCase):
 
             url = "/" + "".join(url_item)
 
-            # skip if the URL pattern contains placeholders, e.g. /admin/app/model/<object_id>/edit
-            if "<" in url:
-                continue
-
-            if url in settings.QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS:
-                continue
-
-            # get page without any sorting
-            resp = self.client.get(f"{url}?o=")
-            self.assertEqual(
-                resp.status_code,
-                200,
-                f'Failed to open "{url}", got HTTP {resp.status_code}.',
-            )
-
-            # check all different sort columns
-            soup = BeautifulSoup(resp.content, "html.parser")
-
-            for anchor in soup.select("th.sortable a"):
-                sort_url = f"{url}{anchor.get('href')}"
-
-                # TODO make tests pass for these sortable URLs
-                if sort_url in settings.QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS:
+            with self.subTest(f"Test {url} opens..."):
+                # skip if the URL pattern contains placeholders, e.g. /admin/app/model/<object_id>/edit
+                if "<" in url:
                     continue
 
-                resp = self.client.get(sort_url)
+                if url in settings.QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS:
+                    continue
+
+                # get page without any sorting
+                resp = self.client.get(f"{url}?o=")
                 self.assertEqual(
                     resp.status_code,
                     200,
-                    f'Failed to sort "{sort_url}", got HTTP {resp.status_code}.',
+                    f'Failed to open "{url}", got HTTP {resp.status_code}.',
                 )
+
+                # check all different sort columns
+                soup = BeautifulSoup(resp.content, "html.parser")
+
+                for anchor in soup.select("th.sortable a"):
+                    sort_url = f"{url}{anchor.get('href')}"
+
+                    # TODO make tests pass for these sortable URLs
+                    if sort_url in settings.QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS:
+                        continue
+
+                    resp = self.client.get(sort_url)
+                    self.assertEqual(
+                        resp.status_code,
+                        200,
+                        f'Failed to sort "{sort_url}", got HTTP {resp.status_code}.',
+                    )
