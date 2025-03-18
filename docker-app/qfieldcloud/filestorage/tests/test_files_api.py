@@ -156,6 +156,8 @@ class QfcTestCase(APITransactionTestCase):
     ) -> HttpResponse | Response:
         if params and params.get("version"):
             file_version = FileVersion.objects.get(id=params["version"])
+        elif headers and headers.get("x-file-version"):
+            file_version = FileVersion.objects.get(id=headers["x-file-version"])
         else:
             file_version = File.objects.get(name=filename).latest_version
 
