@@ -1,4 +1,6 @@
 import logging
+
+from django.db.models import F
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
 from botocore.exceptions import ClientError
@@ -21,9 +23,16 @@ class Command(BaseCommand):
         parser.add_argument("--from-storage", type=str, default="legacy_storage")
 
     def handle(self, *args, **options):
-        useraccounts = UserAccount.objects.select_related("user").filter(
-            legacy_avatar_uri__isnull=False,
-            avatar__isnull=True,
+        useraccounts = (
+            UserAccount.objects.select_related("user")
+            .filter(
+                legacy_avatar_uri__isnull=False,
+                avatar__isnull=True,
+            )
+            .exclude(
+                legacy_avatar_uri="",
+            )
+            .order_by(F("user__last_login").desc(nulls_last=True))
         )
 
         from_storage: str = options["from_storage"]
