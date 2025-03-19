@@ -80,6 +80,8 @@ django-bootstrap4==24.4
     # via -r /requirements/requirements.in
 django-classy-tags==4.1.0
     # via -r /requirements/requirements.in
+django-cleanup==9.0.0
+    # via -r /requirements/requirements.in
 django-common-helpers==0.9.2
     # via -r /requirements/requirements.in
 django-constance[database]==4.3.2
@@ -149,6 +151,8 @@ jsonschema-specifications==2023.12.1
 mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 phonenumbers==8.13.55
+    # via -r /requirements/requirements.in
+pillow==11.1.0
     # via -r /requirements/requirements.in
 psycopg2==2.9.10
     # via -r /requirements/requirements.in

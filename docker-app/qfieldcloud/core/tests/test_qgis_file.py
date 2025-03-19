@@ -92,23 +92,26 @@ class QfcTestCase(APITransactionTestCase):
         file3 = io.FileIO(testdata_path("file.txt"), "rb")
         data = {"file": [file1, file2, file3]}
 
-        should_fail_on_multiple = self.client.post(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            data=data,
-            format="multipart",
-        )
-        should_fail_on_empty = self.client.post(
-            f"/api/v1/files/{self.project1.id}/file.txt/",
-            data={"file": []},
-            format="multipart",
-        )
-
         # Assert that it didn't work
         with self.subTest():
-            self.assertEqual(
-                should_fail_on_multiple.json()["code"], "multiple_contents"
+            response = self.client.post(
+                f"/api/v1/files/{self.project1.id}/file.txt/",
+                data=data,
+                format="multipart",
             )
-            self.assertEqual(should_fail_on_empty.json()["code"], "empty_content")
+            self.assertEqual(response.json()["code"], "multiple_contents")
+            self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
+            self.assertEqual(
+                Project.objects.get(pk=self.project1.pk).the_qgis_file_name, None
+            )
+
+        with self.subTest():
+            response = self.client.post(
+                f"/api/v1/files/{self.project1.id}/file.txt/",
+                data={"file": []},
+                format="multipart",
+            )
+            self.assertEqual(response.json()["code"], "empty_content")
             self.assertEqual(Project.objects.get(pk=self.project1.pk).files_count, 0)
             self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
@@ -271,7 +274,13 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(json[0]["name"], "file.txt")
         self.assertEqual(json[0]["size"], 13)
-        self.assertNotIn("sha256", json[0])
+
+        # The `sha256` key is optional only for the legacy storage, there is no performance penalty for the non-legacy storage if we send it back,
+        # therefore `skip_metadata` is ignored in non-legacy storage
+        # TODO Delete with QF-4963 Drop support for legacy storage
+        if self.project1.uses_legacy_storage:
+            self.assertNotIn("sha256", json[0])
+
         self.assertIn("md5sum", json[0])
         self.assertEqual(
             json[0]["md5sum"],
@@ -637,13 +646,32 @@ class QfcTestCase(APITransactionTestCase):
 
         def count_versions():
             """counts the versions in first file of project1"""
-            file = Project.objects.get(pk=self.project1.pk).files[0]
-            return len(file.versions)
+            project = Project.objects.get(pk=self.project1.pk)
+
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            if project.uses_legacy_storage:
+                return len(project.legacy_get_file("file.txt").versions)
+            else:
+                return project.get_file("file.txt").versions.count()
 
         def read_version(n):
             """returns the content of version in first file of project1"""
-            file = Project.objects.get(pk=self.project1.pk).files[0]
-            return file.versions[n]._data.get()["Body"].read().decode()
+            project = Project.objects.get(pk=self.project1.pk)
+
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            if project.uses_legacy_storage:
+                file = (
+                    project.legacy_get_file("file.txt").versions[n]._data.get()["Body"]
+                )
+            else:
+                file = (
+                    project.get_file("file.txt")
+                    .versions.all()
+                    .order_by("uploaded_at")[n]
+                    .content
+                )
+
+            return file.read().decode()
 
         # As PRO account, 10 version should be kept out of 20
         set_subscription(self.user1, "keep_10", storage_keep_versions=10)

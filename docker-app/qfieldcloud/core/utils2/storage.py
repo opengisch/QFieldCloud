@@ -1,5 +1,12 @@
+"""A module with legacy file storage management.
+
+Todo:
+    * Delete with QF-4963 Drop support for legacy storage
+"""
+
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from enum import Enum
@@ -19,6 +26,27 @@ from qfieldcloud.core.utils2.audit import LogEntry, audit
 logger = logging.getLogger(__name__)
 
 
+def legacy_only(func):
+    """
+    Decorator to verify that given project is stored on the legacy storage.
+    Otherwise, it calls the decorated function.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+        * Delete all decorated functions with QF-4963 Drop support for legacy storage
+    """
+
+    def wrapper(project, *args, **kwargs):
+        if not project.uses_legacy_storage:
+            raise NotImplementedError(
+                f"This function is not implemented for '{project.file_storage}' file storage!"
+            )
+
+        return func(project, *args, **kwargs)
+
+    return wrapper
+
+
 def _delete_by_prefix_versioned(prefix: str):
     """
     Delete all objects and their versions starting with a given prefix.
@@ -33,6 +61,9 @@ def _delete_by_prefix_versioned(prefix: str):
 
     Raises:
         RuntimeError: When the given prefix is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     logging.info(f"S3 object deletion (versioned) with {prefix=}")
 
@@ -58,6 +89,9 @@ def _delete_by_prefix_permanently(prefix: str):
 
     Raises:
         RuntimeError: When the given prefix is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     logging.info(f"S3 object deletion (permanent) with {prefix=}")
 
@@ -81,6 +115,9 @@ def _delete_by_key_versioned(key: str):
 
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     logging.info(f"Delete (versioned) S3 object with {key=}")
 
@@ -115,6 +152,9 @@ def _delete_by_key_permanently(key: str):
 
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     logging.info(f"Delete (permanently) S3 object with {key=}")
 
@@ -167,6 +207,10 @@ def _delete_by_key_permanently(key: str):
 
 
 def delete_version_permanently(version_obj: qfieldcloud.core.utils.S3ObjectVersion):
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
     logging.info(
         f'S3 object version deletion (permanent) with "{version_obj.key=}" and "{version_obj.id=}"'
     )
@@ -200,6 +244,11 @@ def file_response(
     version: str | None = None,
     as_attachment: bool = False,
 ) -> HttpResponseBase:
+    """Return a Django HTTP response with nginx speedup if reverse proxy detected.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
     url = ""
     filename = PurePath(key).name
     extra_params = {}
@@ -273,7 +322,7 @@ def upload_user_avatar(
 ) -> str:  # noqa: F821
     """Uploads a picture as a user avatar.
 
-    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
+    NOTE this function does NOT modify the `UserAccount.legacy_avatar_uri` field
 
     Args:
         user (User):
@@ -282,6 +331,9 @@ def upload_user_avatar(
 
     Returns:
         str: URI to the avatar
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     key = f"users/{user.username}/avatar.{mimetype.name}"
@@ -298,12 +350,15 @@ def upload_user_avatar(
 def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F821
     """Deletes the user's avatar file.
 
-    NOTE this function does NOT modify the `UserAccount.avatar_uri` field
+    NOTE this function does NOT modify the `UserAccount.legacy_avatar_uri` field
 
     Args:
         user (User):
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
-    key = user.useraccount.avatar_uri
+    key = user.useraccount.legacy_avatar_uri
 
     # it well could be the user has no avatar yet
     if not key:
@@ -316,6 +371,7 @@ def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F82
     _delete_by_key_permanently(key)
 
 
+@legacy_only
 def upload_project_thumbail(
     project: qfieldcloud.core.models.Project,
     file: IO,
@@ -334,6 +390,9 @@ def upload_project_thumbail(
 
     Returns:
         str: URI to the thumbnail
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
 
@@ -358,6 +417,7 @@ def upload_project_thumbail(
     return key
 
 
+@legacy_only
 def delete_project_thumbnail(
     project: qfieldcloud.core.models.Project,
 ) -> None:  # noqa: F821
@@ -365,8 +425,10 @@ def delete_project_thumbnail(
 
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
-    key = project.thumbnail_uri
+    key = project.legacy_thumbnail_uri
 
     # it well could be the project has no thumbnail yet
     if not key:
@@ -382,13 +444,17 @@ def delete_project_thumbnail(
     _delete_by_key_permanently(key)
 
 
-def purge_old_file_versions(
+@legacy_only
+def purge_old_file_versions_legacy(
     project: qfieldcloud.core.models.Project,
 ) -> None:  # noqa: F821
     """
     Deletes old versions of all files in the given project. Will keep __3__
     versions for COMMUNITY user accounts, and __10__ versions for PRO user
     accounts
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
 
     keep_count = project.owner_aware_storage_keep_versions
@@ -403,12 +469,16 @@ def purge_old_file_versions(
         )[keep_count:]
 
         # Debug print
-        logger.debug(
+        logger.info(
             f'Purging {len(old_versions_to_purge)} out of {len(file.versions)} old versions for "{file.latest.name}"...'
         )
 
         # Remove the N oldest
         for old_version in old_versions_to_purge:
+            logger.info(
+                f'Purging {old_version.key=} {old_version.id=} as old version for "{file.latest.name}"...'
+            )
+
             if old_version.is_latest:
                 # This is not supposed to happen, as versions were sorted above,
                 # but leaving it here as a security measure in case version
@@ -430,6 +500,10 @@ def purge_old_file_versions(
 
 
 def upload_file(file: IO, key: str):
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     bucket.upload_fileobj(
         file,
@@ -438,9 +512,14 @@ def upload_file(file: IO, key: str):
     return key
 
 
+@legacy_only
 def upload_project_file(
     project: qfieldcloud.core.models.Project, file: IO, filename: str
 ) -> str:
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
     key = f"projects/{project.id}/files/{filename}"
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     bucket.upload_fileobj(
@@ -458,6 +537,9 @@ def delete_all_project_files_permanently(project_id: str) -> None:
 
     Raises:
         RuntimeError: if the produced Object Storage key to delete is not in the right format
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     prefix = f"projects/{project_id}/"
 
@@ -469,9 +551,14 @@ def delete_all_project_files_permanently(project_id: str) -> None:
     _delete_by_prefix_permanently(prefix)
 
 
+@legacy_only
 def delete_project_file_permanently(
     project: qfieldcloud.core.models.Project, filename: str
 ):  # noqa: F821
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
     logger.info(f"Requested delete (permanent) of project file {filename=}")
 
     file = qfieldcloud.core.utils.get_project_file_with_versions(
@@ -519,6 +606,7 @@ def delete_project_file_permanently(
         )
 
 
+@legacy_only
 def delete_project_file_version_permanently(
     project: qfieldcloud.core.models.Project,
     filename: str,
@@ -535,6 +623,9 @@ def delete_project_file_version_permanently(
 
     Returns:
         int: the number of versions deleted
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     project_id = str(project.id)
     file = qfieldcloud.core.utils.get_project_file_with_versions(project_id, filename)
@@ -602,7 +693,12 @@ def delete_project_file_version_permanently(
     return versions_to_delete
 
 
+@legacy_only
 def get_stored_package_ids(project: qfieldcloud.core.models.Project) -> set[str]:
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
     project_id = project.id
     bucket = qfieldcloud.core.utils.get_s3_bucket()
     prefix = f"projects/{project_id}/packages/"
@@ -617,9 +713,14 @@ def get_stored_package_ids(project: qfieldcloud.core.models.Project) -> set[str]
     return package_ids
 
 
+@legacy_only
 def delete_stored_package(
     project: qfieldcloud.core.models.Project, package_id: str
 ) -> None:
+    """
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
     project_id = str(project.id)
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
@@ -635,10 +736,14 @@ def delete_stored_package(
     _delete_by_prefix_permanently(prefix)
 
 
+@legacy_only
 def get_project_file_storage_in_bytes(project: qfieldcloud.core.models.Project) -> int:
     """Calculates the project files storage in bytes, including their versions.
 
     WARNING This function can be quite slow on projects with thousands of files.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
     """
     project_id = str(project.id)
     bucket = qfieldcloud.core.utils.get_s3_bucket()
@@ -656,3 +761,24 @@ def get_project_file_storage_in_bytes(project: qfieldcloud.core.models.Project) 
         total_bytes += version.size or 0
 
     return total_bytes
+
+
+def calculate_checksums(
+    content: ContentFile, alrgorithms: tuple[str, ...], blocksize: int = 65536
+) -> tuple[bytes, ...]:
+    """Calculates checksums on given file for given algorithms."""
+    hashers = []
+    for alrgorithm in alrgorithms:
+        hashers.append(getattr(hashlib, alrgorithm)())
+
+    for chunk in content.chunks(blocksize):
+        for hasher in hashers:
+            hasher.update(chunk)
+
+    content.seek(0)
+
+    checksums = []
+    for hasher in hashers:
+        checksums.append(hasher.digest())
+
+    return tuple(checksums)

@@ -1,5 +1,5 @@
-from django.conf import settings
-from django.contrib.sites.models import Site
+from pathlib import Path
+from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
@@ -17,21 +17,33 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.request import Request
 
 from typing import Any
 
 
-def get_avatar_url(user: User) -> str | None:
-    if hasattr(user, "useraccount") and user.useraccount.avatar_url:  # type: ignore
-        site = Site.objects.get_current()  # type: ignore
-        port = settings.WEB_HTTPS_PORT
-        port = f":{port}" if port != "443" else ""
+def get_avatar_url(user: User, request: Request | None = None) -> str | None:
+    if not user.useraccount.avatar:
+        return None
 
-        return f"https://{site.domain}{port}{user.useraccount.avatar_url}"  # type: ignore
+    filename = user.useraccount.avatar.name
+    file_extension = Path(filename).suffix
 
-    return None
+    reversed_uri = reverse_lazy(
+        "filestorage_named_avatars",
+        kwargs={
+            "username": user.username,
+            "filename": f"avatar.{file_extension}",
+        },
+    )
+
+    if request:
+        return request.build_absolute_uri(reversed_uri)
+    else:
+        return reversed_uri
 
 
 class UserSerializer:
@@ -126,7 +138,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj)
+        return get_avatar_url(obj, self.context.get("request"))
 
     class Meta:
         model = User
@@ -147,7 +159,7 @@ class PublicInfoUserSerializer(serializers.ModelSerializer):
     username_display = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj)
+        return get_avatar_url(obj, self.context.get("request"))
 
     def get_username_display(self, obj):
         if obj.type == obj.Type.TEAM:
@@ -198,7 +210,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         return [t.teamname for t in team_qs]
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj)
+        return get_avatar_url(obj, self.context.get("request"))
 
     class Meta:
         model = Organization
@@ -263,7 +275,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return obj.user.email
 
     def get_avatar_url(self, obj):
-        return get_avatar_url(obj.user)
+        return get_avatar_url(obj.user, self.context.get("request"))
 
     class Meta:
         model = AuthToken
@@ -524,34 +536,10 @@ class JobSerializer(serializers.ModelSerializer):
         allow_parallel_jobs = True
 
 
-class FileVersionSerializer(serializers.Serializer):
-    """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
-
-    size = serializers.IntegerField()
-    md5sum = serializers.CharField()
-    version_id = serializers.CharField()
-    last_modified = serializers.DateTimeField()
-    is_latest = serializers.BooleanField(required=False)
-    display = serializers.CharField()
-    sha256 = serializers.CharField(required=False)
-
-
-class FileSerializer(serializers.Serializer):
-    """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
-
-    versions = serializers.ListField(child=FileVersionSerializer())
-    sha256 = serializers.CharField(required=False)
-    name = serializers.CharField()
-    size = serializers.IntegerField()
-    md5sum = serializers.CharField()
-    last_modified = serializers.DateTimeField()
-    is_attachment = serializers.BooleanField()
-
-
 class LatestPackageSerializer(serializers.Serializer):
     """NOTE not used for actual serialization, but for documentation suing Django Spectacular."""
 
-    files = serializers.ListSerializer(child=FileSerializer())
+    files = serializers.ListSerializer(child=FileWithVersionsSerializer())
     layers = serializers.JSONField()
     status = serializers.ChoiceField(Job.Status)
     package_id = serializers.UUIDField()

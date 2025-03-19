@@ -70,11 +70,15 @@ class Command(BaseCommand):
                     ]
                 ).values("project_id")
 
-                # select all the pending jobs, that their project has no other active job
+                # select all the pending jobs, that their project has no other active job or `is_locked` flag is `True`
                 jobs_qs = (
                     Job.objects.select_for_update(skip_locked=True)
                     .filter(status=Job.Status.PENDING)
-                    .exclude(project_id__in=busy_projects_ids_qs)
+                    .exclude(
+                        project_id__in=busy_projects_ids_qs,
+                        # skip all projects that are currently locked, most probably because of file transfer
+                        project__is_locked=True,
+                    )
                     .order_by("created_at")
                 )
 

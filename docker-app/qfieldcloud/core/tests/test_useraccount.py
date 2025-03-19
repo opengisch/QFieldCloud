@@ -1,5 +1,6 @@
 import logging
-
+from django.core.files.base import ContentFile
+from django.core.files.storage import storages
 from qfieldcloud.core.models import Organization, OrganizationMember, Person
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.subscription.models import PackageType, get_subscription_model
@@ -67,3 +68,19 @@ class QfcTestCase(APITransactionTestCase):
         membership.save()
 
         self.assertTrue(u1.useraccount.has_premium_support)
+
+    def test_deleting_the_user_deletes_the_avatar(self):
+        u1 = Person.objects.create_user(
+            username="u1", password="u1", email="same@example.com"
+        )
+
+        u1.useraccount.avatar = ContentFile("<svg />", "avatar.svg")
+        u1.useraccount.save()
+
+        storage_filename = "account/u1/avatars/avatar.svg"
+
+        self.assertTrue(storages["default"].exists(storage_filename))
+
+        u1.delete()
+
+        self.assertFalse(storages["default"].exists(storage_filename))

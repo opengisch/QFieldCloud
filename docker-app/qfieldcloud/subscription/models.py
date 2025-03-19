@@ -699,7 +699,7 @@ class AbstractSubscription(models.Model):
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
-        return subscription
+        return cast(Subscription, subscription)
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
