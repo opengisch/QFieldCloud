@@ -10,11 +10,9 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
-from qfieldcloud.filestorage.serializers import FileSerializer
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import QuotaError
-from rest_framework import generics, permissions, viewsets, response
-from rest_framework.views import APIView
+from rest_framework import generics, permissions, viewsets
 
 User = get_user_model()
 
@@ -152,40 +150,3 @@ class PublicProjectsListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Project.objects.for_user(self.request.user).filter(is_public=True)
-
-
-@extend_schema(description="List all files related to a project.")
-class ProjectFilesListView(APIView):
-    """
-    API endpoint to list all files of a specific project.
-    """
-
-    serializer_class = FileSerializer  # Ensure this serializer exists
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request, project_id):
-        """
-        Retrieve all layers stored inside `project_details["layers_by_id"]`.
-        """
-        project = generics.get_object_or_404(Project, id=project_id)
-
-        # if not project.project_details or "layers_by_id" not in project.project_details:
-        #     return response.Response({"error": "No layer data found."}, status=404)
-
-        layers = [
-            {
-                "id": layer_data.get("id"),
-                "name": layer_data.get("name"),
-                "crs": layer_data.get("crs"),
-                "type": layer_data.get("type_name"),
-                "filename": layer_data.get("filename"),
-                "is_valid": layer_data.get("is_valid"),
-                "is_localized": layer_data.get("is_localized"),
-                "datasource": layer_data.get("datasource"),
-                "error_code": layer_data.get("error_code"),
-                "error_message": layer_data.get("error_message"),
-            }
-            for layer_data in project.project_details["layers_by_id"].values()
-        ]
-
-        return response.Response(layers)
