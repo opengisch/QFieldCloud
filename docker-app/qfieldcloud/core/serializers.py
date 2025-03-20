@@ -61,6 +61,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     user_role = serializers.CharField(read_only=True)
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
+    localized_datasets = serializers.SerializerMethodField()
 
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
@@ -104,6 +105,29 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         return data
 
+    def get_localized_datasets(self, obj):
+        """
+        Extracts all localized datasets from `project_details["layers_by_id"]`.
+        A localized dataset is identified by `is_localized: true`.
+        """
+        if not obj.project_details or "layers_by_id" not in obj.project_details:
+            return []
+
+        layers = obj.project_details.get("layers_by_id", {})
+
+        localized_datasets = [
+            {
+                "id": layer.get("id"),
+                "name": layer.get("name"),
+                "datasource": layer.get("datasource"),
+                "filename": layer.get("filename"),
+            }
+            for layer in layers.values()
+            if layer.get("is_localized", False)
+        ]
+
+        return localized_datasets
+
     class Meta:
         fields = (
             "id",
@@ -122,6 +146,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
+            "localized_datasets",
         )
         read_only_fields = (
             "private",
