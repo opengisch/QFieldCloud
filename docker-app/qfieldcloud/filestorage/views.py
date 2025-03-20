@@ -213,7 +213,6 @@ class AvatarFileReadView(views.APIView):
                 return utils2.storage.file_response(
                     request._request,
                     useraccount.legacy_avatar_uri,
-                    as_attachment=True,
                 )
             else:
                 return redirect(staticfiles_storage.url("logo.svg"))
