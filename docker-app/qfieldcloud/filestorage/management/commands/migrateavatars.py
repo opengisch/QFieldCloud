@@ -1,4 +1,8 @@
 import logging
+
+from datetime import datetime
+
+from django.db.models import F
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
 from botocore.exceptions import ClientError
@@ -21,9 +25,16 @@ class Command(BaseCommand):
         parser.add_argument("--from-storage", type=str, default="legacy_storage")
 
     def handle(self, *args, **options):
-        useraccounts = UserAccount.objects.select_related("user").filter(
-            legacy_avatar_uri__isnull=False,
-            avatar__isnull=True,
+        useraccounts = (
+            UserAccount.objects.select_related("user")
+            .filter(
+                legacy_avatar_uri__isnull=False,
+                avatar__isnull=True,
+            )
+            .exclude(
+                legacy_avatar_uri="",
+            )
+            .order_by(F("user__last_login").desc(nulls_last=True))
         )
 
         from_storage: str = options["from_storage"]
@@ -43,6 +54,8 @@ class Command(BaseCommand):
         from_storage_bucket = storages[from_storage].bucket  # type: ignore
 
         for useraccount in useraccounts:
+            now_str = datetime.now().isoformat(timespec="milliseconds")
+
             try:
                 django_avatar_file = ContentFile(b"", useraccount.legacy_avatar_uri)
 
@@ -55,16 +68,16 @@ class Command(BaseCommand):
                 useraccount.save(update_fields=["avatar"])
 
                 self.stdout.write(
-                    f'SUCCESS Migrated avatar for "{useraccount.user.username}" with filename "{useraccount.legacy_avatar_uri}" from "{from_storage}" storage.'
+                    f'[{now_str}] SUCCESS Migrated avatar for "{useraccount.user.username}" with filename "{useraccount.legacy_avatar_uri}" from "{from_storage}" storage.'
                 )
             except ClientError as err:
                 if err.response.get("Error", {}).get("Code"):
                     self.stdout.write(
-                        f'ERROR Could not find avatar for "{useraccount.user.username}" with filename "{useraccount.legacy_avatar_uri}" from "{from_storage}" storage!'
+                        f'[{now_str}] ERROR Could not find avatar for "{useraccount.user.username}" with filename "{useraccount.legacy_avatar_uri}" from "{from_storage}" storage!'
                     )
                 else:
                     raise err
             except Exception as err:
                 self.stdout.write(
-                    f'ERROR Failed migrating avatar for "{useraccount.user.username}" with filename "{useraccount.legacy_avatar_uri}" from "{from_storage}" storage: {err}'
+                    f'[{now_str}] ERROR Failed migrating avatar for "{useraccount.user.username}" with filename "{useraccount.legacy_avatar_uri}" from "{from_storage}" storage: {err}'
                 )
