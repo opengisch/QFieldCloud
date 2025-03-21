@@ -97,6 +97,8 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.microsoft",
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
@@ -371,6 +373,14 @@ ACCOUNT_PRESERVE_USERNAME_CASING = False
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_ADAPTER = "qfieldcloud.core.adapters.AccountAdapter"
 ACCOUNT_LOGOUT_ON_GET = True
+
+# Django allauth's social account configuration
+# https://docs.allauth.org/en/dev/socialaccount/configuration.html
+SOCIALACCOUNT_ADAPTER = "qfieldcloud.core.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
 
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html

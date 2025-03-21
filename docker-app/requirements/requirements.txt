@@ -35,8 +35,10 @@ cffi==1.17.0
 charset-normalizer==3.3.2
     # via requests
 cryptography==44.0.0
-    # via django-cryptography
-deprecated==1.2.15
+    # via
+    #   django-cryptography
+    #   pyjwt
+deprecated==1.2.18
     # via -r /requirements/requirements.in
 django==4.2.17
     # via
@@ -69,7 +71,7 @@ django==4.2.17
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth==65.3.1
+django-allauth[socialaccount]==65.4.1
     # via -r /requirements/requirements.in
 django-appconf==1.0.6
     # via django-cryptography
@@ -151,12 +153,18 @@ jsonschema-specifications==2023.12.1
     # via jsonschema
 mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
-phonenumbers==8.13.52
+oauthlib==3.2.2
+    # via requests-oauthlib
+phonenumbers==8.13.55
+    # via -r /requirements/requirements.in
+pillow==11.1.0
     # via -r /requirements/requirements.in
 psycopg2==2.9.10
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi
+pyjwt[crypto]==2.10.1
+    # via django-allauth
 pymemcache==4.0.0
     # via -r /requirements/requirements.in
 python-dateutil==2.9.0.post0
@@ -172,7 +180,12 @@ referencing==0.35.1
     #   jsonschema
     #   jsonschema-specifications
 requests==2.32.3
-    # via stripe
+    # via
+    #   django-allauth
+    #   requests-oauthlib
+    #   stripe
+requests-oauthlib==2.0.0
+    # via django-allauth
 rpds-py==0.20.0
     # via
     #   jsonschema
