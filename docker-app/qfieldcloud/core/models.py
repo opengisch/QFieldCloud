@@ -1063,6 +1063,17 @@ class Project(models.Model):
         QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
         PYTHONMINI = "pythonmini", _("Optimized Packager")
 
+    def get_localized_layers(self) -> list[dict]:
+        """
+        Returns a list of all localized layers (as dictionaries)
+        from project_details['layers_by_id'].
+        """
+        layers = (
+            self.project_details.get("layers_by_id", {}) if self.project_details else {}
+        )
+
+        return list(filter(lambda ld: ld.get("is_localized", False), layers.values()))
+
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
         return self.file_storage
