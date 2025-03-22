@@ -55,8 +55,6 @@ def upload_project_file_version(
     uploaded_file = request.FILES.get("file")
 
     if not uploaded_file:
-        logger.error(f"Unable to get file contents for {filename=}!")
-
         raise exceptions.EmptyContentError(
             f'Missing file contents for "{filename}" from the request!'
         )
