@@ -47,6 +47,22 @@ services:
     ports:
       - "${MEMCACHED_PORT}:11211"
 
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
+    restart: always
+    ports:
+      # Web interface
+      - ${SMTP4DEV_WEB_PORT}:80
+      # SMTP server
+      - ${SMTP4DEV_SMTP_PORT}:25
+      # IMAP
+      - ${SMTP4DEV_IMAP_PORT}:143
+    volumes:
+        - smtp4dev_data:/smtp4dev
+    environment:
+      # Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
+      - ServerOptions__HostName=smtp4dev
+
   qgis:
     volumes:
       # allow local development for `docker-qgis`
@@ -56,3 +72,6 @@ services:
       - ./docker-qgis/libqfieldsync:/libqfieldsync:ro
       # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`
       - ./docker-qgis/qfieldcloud-sdk-python:/qfieldcloud-sdk-python:ro
+
+volumes:
+  smtp4dev_data:
