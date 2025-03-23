@@ -187,6 +187,7 @@ services:
 
   memcached:
     image: memcached:1
+    restart: unless-stopped
     expose:
       - "11211:11211"
 
