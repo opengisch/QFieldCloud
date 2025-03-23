@@ -6,7 +6,7 @@ RUN apt-get update \
     curl \
     python3
 
-RUN curl https://dl.minio.io/client/mc/release/linux-amd64/archive/mc.RELEASE.2025-02-18T16-25-55Z.fips -o /usr/bin/mc
+RUN curl https://dl.min.io/client/mc/release/linux-amd64/archive/mc.RELEASE.2025-03-12T17-29-24Z -o /usr/bin/mc
 RUN chmod +x /usr/bin/mc
 
 COPY ./createbuckets.py /createbuckets.py
