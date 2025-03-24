@@ -337,10 +337,10 @@ if SENTRY_DSN:
         from rest_framework.exceptions import ValidationError as RestValidationError
 
         from qfieldcloud.core.exceptions import (
+            AuthenticationViaTokenFailedError,
             ProjectAlreadyExistsError,
             ValidationError,
         )
-        from qfieldcloud.core.exceptions import AuthenticationViaTokenFailedError
         from qfieldcloud.subscription.exceptions import (
             InactiveSubscriptionError,
             PlanInsufficientError,
