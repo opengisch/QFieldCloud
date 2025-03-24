@@ -345,6 +345,7 @@ if SENTRY_DSN:
             QuotaError,
         )
         from rest_framework.exceptions import UnsupportedMediaType
+        from rest_framework.exceptions import MethodNotAllowed
         from rest_framework.exceptions import ValidationError as RestValidationError
 
         ignored_exceptions = (
@@ -355,6 +356,8 @@ if SENTRY_DSN:
             InactiveSubscriptionError,
             RestValidationError,
             UnsupportedMediaType,
+            # Purely a client error
+            MethodNotAllowed,
         )
 
         if "exc_info" in hint:
