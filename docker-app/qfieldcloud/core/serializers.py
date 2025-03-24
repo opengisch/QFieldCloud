@@ -26,6 +26,9 @@ from typing import Any
 
 
 def get_avatar_url(user: User, request: Request | None = None) -> str | None:
+    if user.type == user.Type.TEAM:
+        return None
+
     if not user.useraccount.avatar:
         return None
 
