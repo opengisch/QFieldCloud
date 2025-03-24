@@ -36,6 +36,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from invitations.admin import InvitationAdmin as InvitationAdminBase
 from invitations.utils import get_invitation_model
+from rest_framework.authtoken.models import TokenProxy
+
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -57,7 +59,6 @@ from qfieldcloud.core.models import (
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
-from rest_framework.authtoken.models import TokenProxy
 
 admin.site.unregister(LogEntry)
 

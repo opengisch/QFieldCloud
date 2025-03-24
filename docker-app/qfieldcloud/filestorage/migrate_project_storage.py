@@ -1,10 +1,10 @@
 import logging
-from django.db import transaction
+
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import storages
+from django.db import transaction
 from django.utils import timezone
-
 
 from qfieldcloud.core.models import Job, Project
 from qfieldcloud.core.utils import (
@@ -12,7 +12,6 @@ from qfieldcloud.core.utils import (
     get_project_package_files,
 )
 from qfieldcloud.filestorage.models import File, FileVersion
-
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,13 @@ def migrate_project_storage(
 
         # NOTE do not allow migration on projects that have currently active jobs.
         # The worker wrapper is going to skip all PENDING jobs for locked projects.
-        active_jobs_count = Job.objects.filter(status__in=["QUEUED", "STARTED"]).count()
+        active_jobs_count = Job.objects.filter(
+            status__in=[
+                Job.Status.QUEUED,
+                Job.Status.STARTED,
+            ]
+        ).count()
+
         if active_jobs_count:
             raise ActiveJobsError(
                 f'Cannot migrate a project with active jobs, {active_jobs_count} jobs are active for project "{project.name}" ({str(project.id)})!'

@@ -1,11 +1,22 @@
-from io import StringIO
 import logging
+import urllib
+import urllib.parse
+from io import StringIO
 from typing import IO
 from unittest import skip
-import urllib.parse
 from uuid import uuid4
 
-import urllib
+from auditlog.models import LogEntry
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import ContentFile
+from django.core.files.storage import storages
+from django.http import FileResponse, HttpResponse
+from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -16,24 +27,11 @@ from qfieldcloud.core.models import (
     ProjectCollaborator,
     User,
 )
-from qfieldcloud.filestorage.models import File, FileVersion
-from rest_framework import status
-from rest_framework.response import Response
-from django.http import HttpResponse, FileResponse
-from rest_framework.test import APITransactionTestCase
-from django.urls import reverse
-from django.urls.exceptions import NoReverseMatch
-from django.conf import settings
-from django.core.files.base import ContentFile
-from django.core.files.storage import storages
-from django.contrib.contenttypes.models import ContentType
-from auditlog.models import LogEntry
-
-
 from qfieldcloud.core.tests.utils import (
-    setup_subscription_plans,
     get_named_file_with_size,
+    setup_subscription_plans,
 )
+from qfieldcloud.filestorage.models import File, FileVersion
 
 logging.disable(logging.CRITICAL)
 

@@ -1,13 +1,14 @@
-import drf_spectacular
 from datetime import timezone
-
 from typing import cast
+
+import drf_spectacular
+from django.conf import settings
+from rest_framework import serializers
+
 from qfieldcloud.filestorage.models import (
     File,
     FileVersion,
 )
-from django.conf import settings
-from rest_framework import serializers
 
 
 @drf_spectacular.utils.extend_schema_serializer(

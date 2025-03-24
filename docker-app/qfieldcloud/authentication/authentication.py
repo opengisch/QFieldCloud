@@ -3,10 +3,11 @@ from typing import Type
 from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from qfieldcloud.core.models import User
 from rest_framework.authentication import (
     TokenAuthentication as DjangoRestFrameworkTokenAuthentication,
 )
+
+from qfieldcloud.core.models import User
 
 from ..core.exceptions import AuthenticationViaTokenFailedError
 from .models import AuthToken

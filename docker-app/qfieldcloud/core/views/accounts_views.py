@@ -1,9 +1,9 @@
-from django.conf import settings
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.contrib import messages
-from django.utils.translation import gettext as _
 from allauth.account.models import EmailAddress
+from django.conf import settings
+from django.contrib import messages
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext as _
 
 
 def redirect_to_referer_or_view(
