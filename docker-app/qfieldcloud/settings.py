@@ -340,6 +340,7 @@ if SENTRY_DSN:
             ProjectAlreadyExistsError,
             ValidationError,
         )
+        from qfieldcloud.core.exceptions import AuthenticationViaTokenFailedError
         from qfieldcloud.subscription.exceptions import (
             InactiveSubscriptionError,
             PlanInsufficientError,
@@ -356,6 +357,8 @@ if SENTRY_DSN:
             UnsupportedMediaType,
             # Purely a client error
             MethodNotAllowed,
+            # the client sent invalid authentication token, the user should fix his token
+            AuthenticationViaTokenFailedError,
         )
 
         if "exc_info" in hint:
