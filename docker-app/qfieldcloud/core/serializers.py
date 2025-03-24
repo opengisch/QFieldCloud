@@ -29,7 +29,7 @@ def get_avatar_url(user: User, request: Request | None = None) -> str | None:
     if user.type == user.Type.TEAM:
         return None
 
-    if not hasattr(user, "useraccount") or not user.useraccount.avatar:
+    if not user.useraccount.avatar:
         return None
 
     filename = user.useraccount.avatar.name
