@@ -11,12 +11,12 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Case, Q
+from django.db.models import Case, Q, When
 from django.db.models import Value as V
-from django.db.models import When
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
+
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
 
 from .exceptions import NotPremiumPlanException
@@ -888,6 +888,39 @@ class AbstractSubscription(models.Model):
         regular_subscription_obj = cls.objects.get(pk=regular_subscription.pk)
 
         return trial_subscription_obj, regular_subscription_obj
+
+    def clean(self):
+        """
+        Validates that the subscription's active period does not overlap with
+        any other active subscriptions for the same account.
+        """
+        # If there is no `active_since`, nothing to check.
+        if not self.active_since:
+            return
+
+        conflicting_subscriptions_qs = (
+            self.__class__.objects.filter(
+                account=self.account,
+            )
+            .exclude(pk=self.pk)
+            .filter(
+                Q(active_since__lt=self.active_since)
+                & (Q(active_until__isnull=True) | Q(active_until__gt=self.active_since))
+            )
+        )
+
+        if conflicting_subscriptions_qs.exists():
+            raise ValidationError(
+                {
+                    "active_since": _(
+                        "This account already has an active subscription that overlaps with this period. Please cancel the existing subscription or choose a different time range."
+                    )
+                }
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         active_storage_total_mb = (

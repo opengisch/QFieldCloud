@@ -50,8 +50,8 @@ services:
       - minio_data3:/data3
       - minio_data4:/data4
     environment:
-      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY_ID}
-      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_ACCESS_KEY}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BROWSER_REDIRECT_URL: http://${QFIELDCLOUD_HOST}:${MINIO_BROWSER_PORT}
     command: server /data{1...4} --console-address :9001
     healthcheck:

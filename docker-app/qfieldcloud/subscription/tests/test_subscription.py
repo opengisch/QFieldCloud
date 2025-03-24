@@ -3,10 +3,11 @@ from datetime import timedelta
 
 import django.db.utils
 from django.utils import timezone
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, Person, Project
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
-from rest_framework.test import APITransactionTestCase
 
 from ..exceptions import NotPremiumPlanException
 from ..models import Package, PackageType, Plan, get_subscription_model
@@ -37,7 +38,7 @@ class QfcTestCase(APITransactionTestCase):
         u1 = Person.objects.create(username="u1")
         subscription = u1.useraccount.current_subscription
 
-        with self.assertRaises(django.db.utils.IntegrityError):
+        with self.assertRaises(django.core.exceptions.ValidationError):
             Subscription.objects.create(
                 plan=Plan.get_or_create_default(),
                 account=u1.useraccount,

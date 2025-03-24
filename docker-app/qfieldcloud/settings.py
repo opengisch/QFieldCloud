@@ -16,9 +16,7 @@ from datetime import timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
-
-from .settings_utils import get_storages_config, ConfigValidationError
-
+from .settings_utils import ConfigValidationError, get_storages_config
 
 # QFieldCloud specific configuration
 QFIELDCLOUD_HOST = os.environ["QFIELDCLOUD_HOST"]
@@ -107,6 +105,8 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.microsoft",
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
@@ -333,17 +333,19 @@ if SENTRY_DSN:
     SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
 
     def before_send(event, hint):
+        from rest_framework.exceptions import MethodNotAllowed, UnsupportedMediaType
+        from rest_framework.exceptions import ValidationError as RestValidationError
+
         from qfieldcloud.core.exceptions import (
             ProjectAlreadyExistsError,
             ValidationError,
         )
+        from qfieldcloud.core.exceptions import AuthenticationViaTokenFailedError
         from qfieldcloud.subscription.exceptions import (
             InactiveSubscriptionError,
             PlanInsufficientError,
             QuotaError,
         )
-        from rest_framework.exceptions import UnsupportedMediaType
-        from rest_framework.exceptions import ValidationError as RestValidationError
 
         ignored_exceptions = (
             ValidationError,
@@ -353,6 +355,10 @@ if SENTRY_DSN:
             InactiveSubscriptionError,
             RestValidationError,
             UnsupportedMediaType,
+            # Purely a client error
+            MethodNotAllowed,
+            # the client sent invalid authentication token, the user should fix his token
+            AuthenticationViaTokenFailedError,
         )
 
         if "exc_info" in hint:
@@ -407,6 +413,14 @@ ACCOUNT_PRESERVE_USERNAME_CASING = False
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_ADAPTER = "qfieldcloud.core.adapters.AccountAdapter"
 ACCOUNT_LOGOUT_ON_GET = True
+
+# Django allauth's social account configuration
+# https://docs.allauth.org/en/dev/socialaccount/configuration.html
+SOCIALACCOUNT_ADAPTER = "qfieldcloud.core.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
 
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html

@@ -1,0 +1,9 @@
+{% extends "admin/login.html" %}
+
+{% block content %}
+    {{ block.super }}
+    {% comment %}TODO add a configuration based mechanism to render the social login instead of depending on query param {% endcomment %}
+    {% if request.GET.sso %}
+        {% include "socialaccount/snippets/login.html" %}
+    {% endif %}
+{% endblock %}

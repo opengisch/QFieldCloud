@@ -2,13 +2,14 @@ import logging
 
 import psycopg2
 from django.conf import settings
+from rest_framework import status
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import ApplyJob, Geodb, Job, PackageJob, Person, Project
 from qfieldcloud.subscription.exceptions import SubscriptionException
 from qfieldcloud.subscription.models import SubscriptionStatus
-from rest_framework import status
-from rest_framework.test import APITransactionTestCase
 
 from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
 

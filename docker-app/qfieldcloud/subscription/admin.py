@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
+
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, model_admin_url
 
 from .models import PackageType, Plan, Subscription

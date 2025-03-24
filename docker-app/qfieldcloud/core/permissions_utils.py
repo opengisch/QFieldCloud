@@ -1,6 +1,7 @@
 from typing import Literal
 
 from django.utils.translation import gettext as _
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Delta,

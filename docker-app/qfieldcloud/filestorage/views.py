@@ -1,38 +1,43 @@
 import logging
 from uuid import UUID
 
+from django.contrib.staticfiles.storage import staticfiles_storage
 from django.db.models import QuerySet
 from django.http.response import HttpResponse, HttpResponseBase
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
     extend_schema,
     extend_schema_view,
 )
+from rest_framework import generics, permissions, serializers, status, views
+from rest_framework.request import Request
+from rest_framework.response import Response
+
 from qfieldcloud.core import (
     pagination,
     permissions_utils,
+    utils2,
 )
 from qfieldcloud.core.models import (
     Project,
     UserAccount,
 )
-from qfieldcloud.filestorage.models import (
-    File,
+from qfieldcloud.core.views.files_views import (
+    DownloadPushDeleteFileView as LegacyFileCrudView,
 )
 from qfieldcloud.core.views.files_views import (
     ListFilesView as LegacyFileListView,
-    DownloadPushDeleteFileView as LegacyFileCrudView,
+)
+from qfieldcloud.core.views.files_views import (
     ProjectMetafilesView as LegacyProjectMetaFileReadView,
 )
-
-from rest_framework import generics, permissions, serializers, status, views
-from rest_framework.request import Request
-from rest_framework.response import Response
+from qfieldcloud.filestorage.models import (
+    File,
+)
 
 from .serializers import FileWithVersionsSerializer
 from .view_helpers import (
@@ -201,11 +206,20 @@ class AvatarFileReadView(views.APIView):
         """
         useraccount = get_object_or_404(UserAccount, user__username=username)
 
-        return download_field_file(
-            request,
-            useraccount.avatar,
-            str(useraccount.avatar),
-        )
+        if useraccount.avatar:
+            return download_field_file(
+                request,
+                useraccount.avatar,
+                str(useraccount.avatar),
+            )
+        else:
+            if useraccount.legacy_avatar_uri:
+                return utils2.storage.file_response(
+                    request._request,
+                    useraccount.legacy_avatar_uri,
+                )
+            else:
+                return redirect(staticfiles_storage.url("logo.svg"))
 
 
 @csrf_exempt

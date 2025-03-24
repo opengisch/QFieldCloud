@@ -1,23 +1,24 @@
 from __future__ import annotations
+
+import uuid
 from datetime import datetime
 from uuid import UUID, uuid4
-import uuid
 
 from django.conf import settings
-from django.db import models, transaction
-from django.db.models import F, Sum, QuerySet
-from django.utils import timezone
-from django.utils.translation import gettext as _
 from django.core.files.base import ContentFile
 from django.core.validators import (
     MaxLengthValidator,
     MinLengthValidator,
     ProhibitNullCharactersValidator,
 )
+from django.db import models, transaction
+from django.db.models import F, QuerySet, Sum
+from django.utils import timezone
+from django.utils.translation import gettext as _
 
+from qfieldcloud.core.fields import DynamicStorageFileField
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.core.utils2 import storage
-from qfieldcloud.core.fields import DynamicStorageFileField
 from qfieldcloud.core.validators import MaxBytesLengthValidator
 from qfieldcloud.filestorage.utils import calc_etag, filename_validator, to_uuid
 
