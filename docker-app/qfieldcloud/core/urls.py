@@ -1,4 +1,6 @@
 from django.urls import include, path
+from rest_framework.routers import DefaultRouter
+
 from qfieldcloud.core.views import (
     collaborators_views,
     deltas_views,
@@ -7,12 +9,11 @@ from qfieldcloud.core.views import (
     package_views,
     projects_views,
     status_views,
-    users_views,
     teams_views,
+    users_views,
 )
-from qfieldcloud.filestorage.urls import urlpatterns as filestorage_urlpatterns
 from qfieldcloud.core.views.accounts_views import resend_confirmation_email
-from rest_framework.routers import DefaultRouter
+from qfieldcloud.filestorage.urls import urlpatterns as filestorage_urlpatterns
 
 router = DefaultRouter()
 router.register(r"projects", projects_views.ProjectViewSet, basename="project")

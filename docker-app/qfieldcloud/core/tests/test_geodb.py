@@ -3,6 +3,7 @@ import unittest
 
 import psycopg2
 from django.conf import settings
+
 from qfieldcloud.core.models import Geodb, Person
 
 from .utils import setup_subscription_plans

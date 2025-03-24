@@ -2,6 +2,7 @@ from typing import Any, Callable
 
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse, HttpResponseForbidden
+
 from qfieldcloud.core import permissions_utils
 
 

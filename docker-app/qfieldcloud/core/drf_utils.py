@@ -1,7 +1,8 @@
+from typing import Iterable
+
 from django.db.models import QuerySet
 from rest_framework import filters, views
 from rest_framework.request import Request
-from typing import Iterable
 
 
 class QfcOrderingFilter(filters.OrderingFilter):

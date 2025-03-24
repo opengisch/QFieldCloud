@@ -3,10 +3,11 @@ from datetime import datetime
 
 from django.core.files.base import ContentFile
 from django.utils.timezone import now
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, Person, Team
 from qfieldcloud.core.tests.utils import setup_subscription_plans
-from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
 

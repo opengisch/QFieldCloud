@@ -1,44 +1,43 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 import secrets
 import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
-from deprecated import deprecated
 
 import django_cryptography.fields
+from deprecated import deprecated
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import (
+    FileExtensionValidator,
     MaxValueValidator,
     MinValueValidator,
     RegexValidator,
-    FileExtensionValidator,
 )
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Q
+from django.db.models import Case, Exists, F, OuterRef, Q, When
 from django.db.models import Value as V
-from django.db.models import When
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
+from timezone_field import TimeZoneField
+
 from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
-from timezone_field import TimeZoneField
-from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
-
 
 if TYPE_CHECKING:
     from qfieldcloud.filestorage.models import File

@@ -1,4 +1,10 @@
+import logging
+from uuid import UUID
+
 from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import get_object_or_404
+from django.urls import reverse_lazy
+from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
@@ -6,9 +12,8 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core import exceptions
+from qfieldcloud.core import exceptions, utils
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core import utils
 from qfieldcloud.core.models import PackageJob, Project
 from qfieldcloud.core.serializers import LatestPackageSerializer
 from qfieldcloud.core.utils import (
@@ -17,19 +22,6 @@ from qfieldcloud.core.utils import (
     get_project_package_files,
 )
 from qfieldcloud.core.utils2 import storage
-from rest_framework import permissions, views
-
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.request import Request
-from rest_framework.response import Response
-
-
-import logging
-from uuid import UUID
-
-from django.urls import reverse_lazy
-from django.shortcuts import get_object_or_404
-
 from qfieldcloud.filestorage.models import (
     File,
 )
@@ -38,10 +30,9 @@ from qfieldcloud.filestorage.view_helpers import (
     download_project_file_version,
     upload_project_file_version,
 )
-
-
-from rest_framework import status
-
+from rest_framework import permissions, status, views
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 

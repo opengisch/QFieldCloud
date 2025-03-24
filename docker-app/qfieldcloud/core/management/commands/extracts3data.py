@@ -4,9 +4,9 @@ from sys import stdout
 from typing import Generator, Iterable
 
 import mypy_boto3_s3
-from django.core.management.base import BaseCommand, CommandParser
-from django.core.files.storage import get_storage_class
 from django.conf import settings
+from django.core.files.storage import get_storage_class
+from django.core.management.base import BaseCommand, CommandParser
 from storages.backends.s3boto3 import S3Boto3Storage
 
 logger = logging.getLogger(__name__)
