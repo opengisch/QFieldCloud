@@ -72,7 +72,13 @@ def migrate_project_storage(
 
         # NOTE do not allow migration on projects that have currently active jobs.
         # The worker wrapper is going to skip all PENDING jobs for locked projects.
-        active_jobs_count = Job.objects.filter(status__in=["QUEUED", "STARTED"]).count()
+        active_jobs_count = Job.objects.filter(
+            status__in=[
+                Job.Status.QUEUED,
+                Job.Status.STARTED,
+            ]
+        ).count()
+
         if active_jobs_count:
             raise ActiveJobsError(
                 f'Cannot migrate a project with active jobs, {active_jobs_count} jobs are active for project "{project.name}" ({str(project.id)})!'
