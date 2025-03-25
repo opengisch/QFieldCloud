@@ -174,9 +174,15 @@ class ListProvidersView(APIView):
                 scope.insert(0, "openid")
             scope = oauth2_adapter.scope_delimiter.join(scope)
 
+            provider_id = provider.id
+            if provider.uses_apps and provider.app.provider_id:
+                # Support subproviders like 'keycloak'
+                # (which is a subprovider of 'openid_connect')
+                provider_id = provider.app.provider_id
+
             provider_data = {
                 "type": "oauth2",
-                "id": provider.id,
+                "id": provider_id,
                 "name": provider.name,
                 "grant_flow": self.get_flow_type(provider),
                 "scope": scope,
