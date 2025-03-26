@@ -148,6 +148,7 @@ MIDDLEWARE = [
     "qfieldcloud.core.middleware.test.TestMiddleware",
     "axes.middleware.AxesMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "qfieldcloud.core.middleware.qgis_auth.QGISAuthenticationMiddleware",
 ]
 
 CRON_CLASSES = [
