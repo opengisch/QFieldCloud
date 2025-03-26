@@ -49,7 +49,7 @@ class File(models.Model):
         related_name="files",
     )
 
-    package_job_id: int
+    package_job_id: UUID
     package_job = models.ForeignKey(
         Job,
         on_delete=models.DO_NOTHING,
