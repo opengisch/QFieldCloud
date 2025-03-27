@@ -355,7 +355,6 @@ class LatestPackageDownloadFilesView(views.APIView):
             project_id,
             filename,
             file_type=file_type,
-            package_job_id=project.last_package_job_id,
         )
 
 
