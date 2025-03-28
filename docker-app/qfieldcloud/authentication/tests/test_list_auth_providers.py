@@ -96,6 +96,11 @@ class QfcTestCase(APITestCase):
         self.assertEqual(response.status_code, 200)
         return response.json()
 
+    def strip_hash(self, url):
+        """Strips asset hash from static file URL."""
+        parts = url.split(".")
+        return ".".join(parts[:-2] + [parts[-1]])
+
     def test_lists_password_login_by_default(self):
         providers = self.list_providers()
         expected = [
@@ -137,8 +142,10 @@ class QfcTestCase(APITestCase):
                 "redirect_url": "",
                 "client_id": "keycloak-client-id",
                 "extra_tokens": {"id_token": "X-QFC-ID-Token"},
+                "styles": {},
             },
         ]
+        providers[-1]["styles"] = {}
         self.assertEqual(providers, expected)
 
     @override_settings(SOCIALACCOUNT_PROVIDERS=TESTING_PROVIDERS)
@@ -210,3 +217,38 @@ class QfcTestCase(APITestCase):
         provider.pkce_enabled_default = True
         provider_data = ListProvidersView().get_provider_data(provider, request)
         self.assertEqual(provider_data["pkce_enabled"], True)
+
+    @override_settings(SOCIALACCOUNT_PROVIDERS=TESTING_PROVIDERS)
+    def test_includes_provider_styles(self):
+        providers = self.list_providers()
+
+        keycloak = providers[-1]
+        for key in list(keycloak):
+            if key not in ("id", "type", "styles"):
+                keycloak.pop(key)
+
+        for theme in ["light", "dark"]:
+            # Strip asset hash
+            styles = keycloak["styles"][theme]
+            styles["logo"] = self.strip_hash(styles["logo"])
+
+        expected = {
+            "type": "oauth2",
+            "id": "keycloak",
+            # ...
+            "styles": {
+                "light": {
+                    "logo": "http://testserver/staticfiles/sso/keycloak.svg",
+                    "color_fill": "#FFFFFF",
+                    "color_stroke": "#747775",
+                    "color_text": "#1F1F1F",
+                },
+                "dark": {
+                    "logo": "http://testserver/staticfiles/sso/keycloak.svg",
+                    "color_fill": "#131314",
+                    "color_stroke": "#8E918F",
+                    "color_text": "#E3E3E3",
+                },
+            },
+        }
+        self.assertEqual(keycloak, expected)

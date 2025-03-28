@@ -16,6 +16,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from qfieldcloud.authentication.sso.provider_styles import SSOProviderStyles
+
 from .authentication import create_token
 from .models import AuthToken
 from .utils import load_module
@@ -188,6 +190,7 @@ class ListProvidersView(APIView):
             "redirect_url": self.QGIS_REDIRECT_URL,
             "client_id": provider.app.client_id,
             "extra_tokens": {"id_token": "X-QFC-ID-Token"},
+            "styles": SSOProviderStyles(request).get(provider_id),
         }
         return provider_data
 

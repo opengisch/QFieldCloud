@@ -434,6 +434,54 @@ QFIELDCLOUD_PASSWORD_LOGIN_DISABLED = (
     os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_DISABLED", "true").lower() == "true"
 )
 
+QFIELDCLOUD_SSO_PROVIDER_STYLES = {
+    "keycloak": {
+        # https://github.com/keycloak/keycloak-misc/tree/main/logo
+        "light": {
+            "logo": "sso/keycloak.svg",
+            "color_fill": "#FFFFFF",
+            "color_stroke": "#747775",
+            "color_text": "#1F1F1F",
+        },
+        "dark": {
+            "logo": "sso/keycloak.svg",
+            "color_fill": "#131314",
+            "color_stroke": "#8E918F",
+            "color_text": "#E3E3E3",
+        },
+    },
+    "google": {
+        # https://developers.google.com/identity/branding-guidelines
+        "light": {
+            "logo": "sso/google.svg",
+            "color_fill": "#FFFFFF",
+            "color_stroke": "#747775",
+            "color_text": "#1F1F1F",
+        },
+        "dark": {
+            "logo": "sso/google.svg",
+            "color_fill": "#131314",
+            "color_stroke": "#8E918F",
+            "color_text": "#E3E3E3",
+        },
+    },
+    "github": {
+        # https://github.com/logos
+        "light": {
+            "logo": "sso/github-light.svg",
+            "color_fill": "#FFFFFF",
+            "color_stroke": "#747775",
+            "color_text": "#1F1F1F",
+        },
+        "dark": {
+            "logo": "sso/github-dark.svg",
+            "color_fill": "#131314",
+            "color_stroke": "#8E918F",
+            "color_text": "#E3E3E3",
+        },
+    },
+}
+
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
 ###########################
