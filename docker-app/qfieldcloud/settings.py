@@ -430,6 +430,10 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
+QFIELDCLOUD_PASSWORD_LOGIN_DISABLED = (
+    os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_DISABLED", "true").lower() == "true"
+)
+
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
 ###########################

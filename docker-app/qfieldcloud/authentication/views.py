@@ -149,14 +149,14 @@ class ListProvidersView(APIView):
     def get(self, request: HttpRequest, *args, **kwargs) -> Response:
         auth_providers = []
 
-        # TODO: Add setting to disable username/password login
-        auth_providers.append(
-            {
-                "type": "credentials",
-                "id": "credentials",
-                "name": "Username / Password",
-            }
-        )
+        if not settings.QFIELDCLOUD_PASSWORD_LOGIN_DISABLED:
+            auth_providers.append(
+                {
+                    "type": "credentials",
+                    "id": "credentials",
+                    "name": "Username / Password",
+                }
+            )
 
         social_account_adapter = get_adapter(request)
         providers = social_account_adapter.list_providers(request)

@@ -107,6 +107,12 @@ class QfcTestCase(APITestCase):
         ]
         self.assertEqual(providers, expected)
 
+    def test_password_login_can_be_disabled(self):
+        with self.settings(QFIELDCLOUD_PASSWORD_LOGIN_DISABLED=True):
+            providers = self.list_providers()
+
+        self.assertEqual(providers, [])
+
     @override_settings(SOCIALACCOUNT_PROVIDERS=TESTING_PROVIDERS)
     def test_lists_configured_social_providers(self):
         providers = self.list_providers()
