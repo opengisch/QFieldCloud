@@ -105,8 +105,10 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "allauth.socialaccount.providers.github",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.microsoft",
+    "allauth.socialaccount.providers.openid_connect",
     "storages",  # Integration with S3 Storages
     "invitations",
     "django_cron",
