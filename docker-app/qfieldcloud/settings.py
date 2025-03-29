@@ -437,6 +437,7 @@ QFIELDCLOUD_PASSWORD_LOGIN_DISABLED = (
 QFIELDCLOUD_SSO_PROVIDER_STYLES = {
     "keycloak": {
         # https://github.com/keycloak/keycloak-misc/tree/main/logo
+        "required": False,
         "light": {
             "logo": "sso/keycloak.svg",
             "color_fill": "#FFFFFF",
@@ -452,6 +453,7 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
     },
     "google": {
         # https://developers.google.com/identity/branding-guidelines
+        "required": True,
         "light": {
             "logo": "sso/google.svg",
             "color_fill": "#FFFFFF",
@@ -467,6 +469,7 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
     },
     "github": {
         # https://github.com/logos
+        "required": False,
         "light": {
             "logo": "sso/github-light.svg",
             "color_fill": "#FFFFFF",

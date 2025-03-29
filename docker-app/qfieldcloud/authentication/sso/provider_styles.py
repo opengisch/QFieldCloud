@@ -17,6 +17,9 @@ class SSOProviderStyles:
         styles = deepcopy(style_settings)
 
         for theme_id, theme in styles.items():
+            if not isinstance(theme, dict):
+                continue
+
             logo = theme.get("logo")
             if logo and not logo.startswith("http"):
                 # Assume a relative path - create an absolute URL

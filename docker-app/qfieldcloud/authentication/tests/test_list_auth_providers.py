@@ -237,6 +237,7 @@ class QfcTestCase(APITestCase):
             "id": "keycloak",
             # ...
             "styles": {
+                "required": False,
                 "light": {
                     "logo": "http://testserver/staticfiles/sso/keycloak.svg",
                     "color_fill": "#FFFFFF",
