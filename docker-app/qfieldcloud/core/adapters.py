@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.http import HttpRequest
 from invitations.adapters import BaseInvitationsAdapter
 
+from qfieldcloud.authentication.sso.provider_styles import SSOProviderStyles
 from qfieldcloud.core.models import Person
 
 logger = logging.getLogger(__name__)
@@ -150,3 +151,18 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         super().on_authentication_error(
             request, provider, error, exception, extra_context
         )
+
+    def list_providers(self, request: HttpRequest) -> list:
+        """Extend providers with styling information.
+
+        This adds a `styles` dictionary to each provider, which contains
+        the styling information for that provider from the
+        QFIELDCLOUD_SSO_PROVIDER_STYLES settings.
+        """
+
+        providers = super().list_providers(request)
+
+        for provider in providers:
+            provider.styles = SSOProviderStyles(request).get(provider.sub_id)
+
+        return providers

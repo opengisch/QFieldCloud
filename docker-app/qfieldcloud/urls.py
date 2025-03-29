@@ -95,6 +95,7 @@ urlpatterns = [
     path("api/v1/auth/login/", auth_views.LoginView.as_view()),
     path("api/v1/auth/token/", auth_views.LoginView.as_view()),
     path("api/v1/auth/user/", auth_views.UserView.as_view()),
+    path("api/v1/auth/providers/", auth_views.ListProvidersView.as_view()),
     path("api/v1/auth/logout/", auth_views.LogoutView.as_view()),
     path("api/v1/", include("qfieldcloud.core.urls")),
     path("auth/", include("rest_framework.urls")),
