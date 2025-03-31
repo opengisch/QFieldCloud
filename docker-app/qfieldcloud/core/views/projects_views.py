@@ -37,7 +37,11 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_create_project(user, owner_obj)
 
         projectid = permissions_utils.get_param_from_request(request, "projectid")
-        project = Project.objects.get(id=projectid)
+
+        try:
+            project = Project.objects.get(id=projectid)
+        except Project.DoesNotExist:
+            return False
 
         if view.action == "retrieve":
             return permissions_utils.can_retrieve_project(user, project)

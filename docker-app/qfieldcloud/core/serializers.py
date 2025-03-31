@@ -56,11 +56,26 @@ class UserSerializer:
         fields = ("username",)
 
 
+class LayerSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    datasource = serializers.CharField(allow_blank=True, required=False)
+    filename = serializers.CharField(allow_blank=True, required=False)
+    crs = serializers.CharField(required=False)
+    type_name = serializers.CharField(required=False)
+    is_localized = serializers.BooleanField()
+    error_code = serializers.CharField(required=False)
+    error_summary = serializers.CharField(required=False)
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
     user_role = serializers.CharField(read_only=True)
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
+    localized_datasets = serializers.ListSerializer(
+        child=LayerSerializer(), source="get_localized_layers"
+    )
 
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
@@ -122,6 +137,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
+            "localized_datasets",
         )
         read_only_fields = (
             "private",
