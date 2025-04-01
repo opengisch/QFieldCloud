@@ -16,6 +16,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
+from django.core.files.storage import storages
 from django.core.validators import (
     FileExtensionValidator,
     MaxValueValidator,
@@ -1581,6 +1582,16 @@ class Project(models.Model):
             self.storage_keep_versions >= 1
         ), "If 0, storage_keep_versions mean that all file versions are deleted!"
 
+        # check if thumbnail has changed, delete previous versions if so.
+        if not self.uses_legacy_storage and self.pk:
+            try:
+                old_instance = Project.objects.get(pk=self.pk)
+                if old_instance.thumbnail and old_instance.thumbnail != self.thumbnail:
+                    self.delete_previous_thumbnails_versions()
+            except Project.DoesNotExist:
+                # Project does not exist yet
+                pass
+
         super().save(*args, **kwargs)
 
     def get_file(self, filename: str) -> File:
@@ -1590,6 +1601,36 @@ class Project(models.Model):
         files = filter(lambda f: f.latest.name == filename, self.legacy_files)
 
         return next(files)
+
+    def delete_previous_thumbnails_versions(self, keep_last: bool = True) -> None:
+        """
+        Deletes previous thumbnails versions of a project on S3.
+        """
+
+        s3_storage = storages[self.file_storage]
+        s3_bucket = s3_storage.bucket  # type: ignore[attr-defined]
+        s3_client = s3_bucket.meta.client
+        thumbnail_key = get_project_thumbnail_upload_to(self, self.thumbnail.name)
+
+        # get all stored versions of this key
+        versions = s3_client.list_object_versions(
+            Bucket=s3_bucket.name, Prefix=thumbnail_key
+        )
+
+        if "Versions" in versions:
+            version_sorted = sorted(
+                versions["Versions"], key=lambda v: v["LastModified"]
+            )
+
+            if len(version_sorted) > 0 and keep_last:
+                version_sorted = version_sorted[:-1]
+
+            for version in version_sorted:
+                s3_client.delete_object(
+                    Bucket=s3_bucket.name,
+                    Key=thumbnail_key,
+                    VersionId=version["VersionId"],
+                )
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
