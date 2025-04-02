@@ -15,6 +15,7 @@ from typing import IO
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.files.storage import storages
 from django.db import transaction
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
@@ -443,6 +444,59 @@ def delete_project_thumbnail(
         raise RuntimeError(f"Suspicious S3 deletion of project thumbnail image {key=}")
 
     _delete_by_key_permanently(key)
+
+
+def purge_previous_thumbnails_versions(
+    project: qfieldcloud.core.models.Project,
+) -> None:
+    bucket = storages[project.file_storage].bucket  # type: ignore
+    prefix = project.thumbnail.name
+
+    if not prefix:
+        return
+
+    thumbnail_files = list(
+        qfieldcloud.core.utils.list_files_with_versions(bucket, prefix)
+    )
+
+    if len(thumbnail_files) == 0:
+        logger.info(f'No thumbnail found to delete for project "{project.id}"!')
+        return
+
+    assert len(thumbnail_files) == 1
+
+    thumbnail_file = thumbnail_files[0]
+
+    # we only keep 1 version of the thumbnail file.
+    # otherwise we hit the limit of 1000.
+    keep_count = 1
+
+    old_versions_to_purge = sorted(
+        thumbnail_file.versions, key=lambda v: v.last_modified, reverse=True
+    )[keep_count:]
+
+    # Remove the N oldest
+    for old_version in old_versions_to_purge:
+        logger.info(
+            f'Purging {old_version.key=} {old_version.id=} as old version for "{thumbnail_file.latest.name}"...'
+        )
+
+        if old_version.is_latest:
+            # This is not supposed to happen, as versions were sorted above,
+            # but leaving it here as a security measure in case version
+            # ordering changes for some reason.
+            raise Exception("Trying to delete latest version")
+
+        if not old_version.key or not re.match(
+            r"^projects/[\w]{8}(-[\w]{4}){3}-[\w]{12}/meta/thumbnail.png$",
+            old_version.key,
+        ):
+            raise RuntimeError(
+                f"Suspicious S3 file version deletion {old_version.key=} {old_version.id=}"
+            )
+        # TODO: any way to batch those ? will probaby get slow on production
+        delete_version_permanently(old_version)
+        # TODO: audit ? take implementation from files_views.py:211
 
 
 @legacy_only
