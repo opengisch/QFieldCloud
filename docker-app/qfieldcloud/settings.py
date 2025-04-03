@@ -16,7 +16,11 @@ from datetime import timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
-from .settings_utils import ConfigValidationError, get_storages_config
+from .settings_utils import (
+    ConfigValidationError,
+    get_socialaccount_providers_config,
+    get_storages_config,
+)
 
 # QFieldCloud specific configuration
 QFIELDCLOUD_HOST = os.environ["QFIELDCLOUD_HOST"]
@@ -429,6 +433,8 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
+
+SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
 
 QFIELDCLOUD_PASSWORD_LOGIN_DISABLED = (
     os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_DISABLED", "true").lower() == "true"
