@@ -478,7 +478,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
     search_fields = ("username__icontains", "email__iexact")
 
     fields = (
-        "storage_usage__field",
+        # "storage_usage__field",
         "username",
         "password",
         "email",
@@ -499,7 +499,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
     readonly_fields = (
         "date_joined",
         "last_login",
-        "storage_usage__field",
+        # "storage_usage__field",
     )
 
     inlines = (

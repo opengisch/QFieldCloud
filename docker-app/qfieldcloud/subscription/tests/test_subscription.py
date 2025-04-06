@@ -9,7 +9,7 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Organization, Person, Project
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 
-from ..exceptions import NotPremiumPlanException
+from ..exceptions import NotPremiumPlanException, NoRemainingTrialOrganizationsError
 from ..models import Package, PackageType, Plan, get_subscription_model
 
 logging.disable(logging.CRITICAL)
@@ -40,7 +40,8 @@ class QfcTestCase(APITransactionTestCase):
 
         with self.assertRaises(django.core.exceptions.ValidationError):
             Subscription.objects.create(
-                plan=Plan.get_or_create_default(),
+                regular_plan=Plan.get_or_create_default(),
+                trial_plan=None,
                 account=u1.useraccount,
                 created_by=u1,
                 status=Subscription.Status.ACTIVE_PAID,
@@ -631,7 +632,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
         created_subscription = Subscription.objects.create(
-            plan=plan,
+            regular_plan=plan,
+            trial_plan=None,
             account=u1.useraccount,
             created_by=u1,
             status=Subscription.Status.ACTIVE_PAID,
@@ -663,8 +665,9 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
         created_subscription = Subscription.objects.create(
-            plan=plan,
             account=u1.useraccount,
+            regular_plan=plan,
+            trial_plan=None,
             created_by=u1,
             status=Subscription.Status.ACTIVE_PAID,
             active_since=timezone.now() - timedelta(days=60),
@@ -732,21 +735,25 @@ class QfcTestCase(APITransactionTestCase):
         user_plan.max_trial_organizations = 2
         user_plan.save(update_fields=["max_trial_organizations"])
         u1 = Person.objects.create(username="u1")
+        u1.remaining_trial_organizations = 2
+        u1.save()
         u2 = Person.objects.create(username="u2")
+        u2.remaining_trial_organizations = 2
+        u2.save()
 
         # remaining_trial_organizations is set on create_subscription
         self.assertEqual(u1.remaining_trial_organizations, 2)
         self.assertEqual(u2.remaining_trial_organizations, 2)
-
         trial_plan = Plan.objects.get(code="default_org")
         trial_plan.is_trial = True
         trial_plan.save(update_fields=["is_trial"])
-
+        print(u2.remaining_trial_organizations)
         # remaining_trial_organizations is decremented for owner when creating a trial organization
         Organization.objects.create(
             username="org2", organization_owner=u2, created_by=u1
         )
         u2.refresh_from_db()
+        print(u2.remaining_trial_organizations)
         self.assertEqual(u2.remaining_trial_organizations, 1)
         u1.refresh_from_db()
         self.assertEqual(u1.remaining_trial_organizations, 2)
@@ -759,11 +766,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u2.remaining_trial_organizations, 0)
 
         # It doesn't directly prevent creating more trials, is just a counter that stays at 0
-        Organization.objects.create(
-            username="org4", organization_owner=u2, created_by=u1
-        )
-        u2.refresh_from_db()
-        self.assertEqual(u2.remaining_trial_organizations, 0)
+        with self.assertRaises(NoRemainingTrialOrganizationsError):
+            Organization.objects.create(
+                username="org4", organization_owner=u2, created_by=u1
+            )
 
         # NOTE changing ownership does not affect the `remaining_trial_organizations` and is not tested
 

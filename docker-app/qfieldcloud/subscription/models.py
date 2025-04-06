@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Type, TypedDict, cast
+from typing import TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -19,7 +19,7 @@ from model_utils.managers import InheritanceManagerMixin
 
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
 
-from .exceptions import NotPremiumPlanException
+from .exceptions import NotPremiumPlanException, NoRemainingTrialOrganizationsError
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +304,7 @@ class PackageQuerySet(models.QuerySet):
     def active(self):
         now = timezone.now()
         qs = self.filter(
-            active_since__lte=now, subscription__plan__is_premium=True
+            active_since__lte=now, subscription__regular_plan__is_premium=True
         ).filter(Q(active_until__isnull=True) | Q(active_until__gte=now))
 
         return qs
@@ -312,7 +312,7 @@ class PackageQuerySet(models.QuerySet):
     def future(self):
         now = timezone.now()
         qs = self.filter(
-            active_since__gte=now, subscription__plan__is_premium=True
+            active_since__gte=now, subscription__regular_plan__is_premium=True
         ).order_by("active_since")
 
         return qs
@@ -369,7 +369,7 @@ class SubscriptionQuerySet(models.QuerySet):
         qs = self.filter(
             Q(active_since__lte=now)
             & (Q(active_until__isnull=True) | Q(active_until__gte=now))
-        ).select_related("plan")
+        ).select_related("regular_plan", "trial_plan")
 
         return qs
 
@@ -441,10 +441,20 @@ class AbstractSubscription(models.Model):
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
 
-    plan = models.ForeignKey(
+    # Regular plan used for paid subscription or trial subscriptions after the trial period ends.
+    regular_plan = models.ForeignKey(
         Plan,
         on_delete=models.DO_NOTHING,
         related_name="+",
+    )
+
+    # An optional trial plan. If provided, the subscription initially uses this plan until the trial end date expires.
+    trial_plan = models.ForeignKey(
+        Plan,
+        on_delete=models.DO_NOTHING,
+        related_name="+",
+        null=True,
+        blank=True,
     )
 
     account = models.ForeignKey(
@@ -475,6 +485,9 @@ class AbstractSubscription(models.Model):
     active_since = models.DateTimeField(_("Active since"), null=True, blank=True)
 
     active_until = models.DateTimeField(_("Active until"), null=True, blank=True)
+
+    # Datetime when the trial period for the subscription ends.
+    trial_ends_at = models.DateTimeField(_("Trial ends at"), null=True, blank=True)
 
     # the timestamp used for time calculations when the billing period starts and ends
     billing_cycle_anchor_at = models.DateTimeField(null=True, blank=True)
@@ -605,6 +618,16 @@ class AbstractSubscription(models.Model):
             return 0
 
         return self.active_users.count()
+
+    @property
+    def plan(self) -> Plan:
+        """Returns the appropriate plan based on the user's subscription status."""
+        return self.trial_plan if self.is_trialing else self.regular_plan
+
+    @property
+    def is_trialing(self) -> bool:
+        """Determine whether the subscription is currently in a trial period."""
+        return self.trial_ends_at is not None and self.trial_ends_at > timezone.now()
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
@@ -776,7 +799,6 @@ class AbstractSubscription(models.Model):
             user_type=account.user.type,
             is_default=True,
         )
-
         if account.user.is_organization:
             # NOTE sometimes `account.user` is not an organization, e.g. when setting
             # `active_until` on an organization account
@@ -790,28 +812,33 @@ class AbstractSubscription(models.Model):
         if active_since is None:
             active_since = timezone.now()
 
-        _trial_subscription, regular_subscription = cls.create_subscription(
+        trial_plan = plan if plan.is_trial else None
+
+        subscription = cls.create_subscription(
             account=account,
-            plan=plan,
+            regular_plan=plan,
+            trial_plan=trial_plan,
             created_by=created_by,
             active_since=active_since,
         )
 
-        return regular_subscription
+        return subscription
 
     @classmethod
     def create_subscription(
         cls,
         account: UserAccount,
-        plan: Plan,
+        regular_plan: Plan,
+        trial_plan: Plan | None,
         created_by: Person,
         active_since: datetime | None = None,
-    ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
+    ) -> "AbstractSubscription":
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
             account (UserAccount): the account the subscription belongs to.
-            plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
+            regular_plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
+            trial_plan (Plan | None): The temporary trial plan or None for direct paid subscription.
             created_by (Person): created by.
             active_since (datetime | None): active since for the subscription.
 
@@ -824,26 +851,28 @@ class AbstractSubscription(models.Model):
             # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
 
-        regular_active_since: datetime | None = None
-        if plan.is_trial:
-            assert isinstance(
-                active_since, datetime
-            ), "Creating a trial plan requires `active_since` to be a valid datetime object"
+        now = timezone.now()
 
-            active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
-            logger.info(
-                f"Creating trial subscription from {active_since=} to {active_until=}"
+        subscription_data = {
+            "account": account,
+            "created_by": created_by,
+            "status": SubscriptionStatus.ACTIVE_PAID,
+            "active_since": now,
+            "active_until": None,  # Stripe will set this
+            "regular_plan": regular_plan,
+            "trial_plan": None,
+            "trial_ends_at": None,
+        }
+
+        if trial_plan:
+            trial_end_date = now + timedelta(days=config.TRIAL_PERIOD_DAYS)
+
+            subscription_data.update(
+                {
+                    "trial_plan": trial_plan,
+                    "trial_ends_at": trial_end_date,
+                }
             )
-            trial_subscription = cls.objects.create(
-                plan=plan,
-                account=account,
-                created_by=created_by,
-                status=plan.initial_subscription_status,
-                active_since=active_since,
-                active_until=active_until,
-            )
-            # NOTE to get annotations, mostly `is_active`
-            trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
 
             if (
                 account.user.is_organization
@@ -853,41 +882,14 @@ class AbstractSubscription(models.Model):
                 account.user.organization_owner.save(
                     update_fields=["remaining_trial_organizations"]
                 )
+            else:
+                raise NoRemainingTrialOrganizationsError()
 
-            # the trial plan should be the default plan
-            regular_plan = Plan.objects.get(
-                user_type=account.user.type,
-                is_default=True,
-            )
+        with transaction.atomic():
+            subscription = cls.objects.create(**subscription_data)
+            subscription.save()
 
-            # the end date of the trial is the start date of the regular
-            regular_active_since = active_until
-        else:
-            trial_subscription_obj = None
-            regular_plan = plan
-            regular_active_since = active_since
-
-            # NOTE in case the user had a custom amount set (e.g manually set by support) this will
-            # be overwritten by a subscription plan change.
-            # But taking care of this would add quite some complexity.
-            if account.user.is_person:
-                account.user.remaining_trial_organizations = (
-                    regular_plan.max_trial_organizations
-                )
-                account.user.save(update_fields=["remaining_trial_organizations"])
-
-        logger.info(f"Creating regular subscription from {regular_active_since}")
-        regular_subscription = cls.objects.create(
-            plan=regular_plan,
-            account=account,
-            created_by=created_by,
-            status=regular_plan.initial_subscription_status,
-            active_since=regular_active_since,
-        )
-        # NOTE to get annotations, mostly `is_active`
-        regular_subscription_obj = cls.objects.get(pk=regular_subscription.pk)
-
-        return trial_subscription_obj, regular_subscription_obj
+        return subscription
 
     def clean(self):
         """

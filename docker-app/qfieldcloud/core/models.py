@@ -87,11 +87,11 @@ class PersonQueryset(models.QuerySet):
         )
 
         max_premium_collaborators_per_private_project_q = Q(
-            project_roles__project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
+            project_roles__project__owner__useraccount__current_subscription_vw__regular_plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project_roles__project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
+            project_roles__project__owner__useraccount__current_subscription_vw__regular_plan__max_premium_collaborators_per_private_project__gte=count_collaborators
         )
 
         project_role_is_valid_condition_q = is_public_q | (
@@ -990,11 +990,11 @@ class ProjectQueryset(models.QuerySet):
             .filter(id=OuterRef("owner"))
         )
         max_premium_collaborators_per_private_project_q = Q(
-            owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
+            owner__useraccount__current_subscription_vw__regular_plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count
+            owner__useraccount__current_subscription_vw__regular_plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
@@ -1615,11 +1615,11 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         is_team_collaborator = Q(collaborator__type=User.Type.TEAM)
         # max_premium_collaborators_per_private_project_q = current_subscription_q & (
         max_premium_collaborators_per_private_project_q = Q(
-            project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
+            project__owner__useraccount__current_subscription_vw__regular_plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count
+            project__owner__useraccount__current_subscription_vw__regular_plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
