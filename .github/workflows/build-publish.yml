@@ -1,0 +1,21 @@
+name: Build and Publish
+on: 
+  workflow_dispatch:
+
+jobs:
+  # https://github.com/bcgov-nr/action-builder-ghcr
+  builds:
+    name: Builds
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        # package: [backend, frontend, migrations]
+        package: [docker-qgis]
+    timeout-minutes: 10
+    steps:
+      - uses: bcgov-nr/action-builder-ghcr@v2.3.0
+        with:
+          keep_versions: 5
+          package: ${{ matrix.package }}
+          tag: latest
+          tag_fallback: latest
