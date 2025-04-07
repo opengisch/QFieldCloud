@@ -1,0 +1,50 @@
+
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+#-- global variables, can be accessed by sub-charts.
+global:
+  #-- the registry where the images are stored. override during runtime for other registry at global level or individual level.
+  repository: ~ # provide the repo name from where images will be sourced for example bcgo
+  #-- the registry where the images are stored. override during runtime for other registry at global level or individual level. default is ghcr.io
+  registry: ghcr.io # ghcr.io for directly streaming from github container registry or "artifacts.developer.gov.bc.ca/github-docker-remote" for artifactory, or any other registry.
+  #-- the tag of the image, it can be latest, 1.0.0 etc..., or the sha256 hash
+  tag: ~
+  #-- turn off autoscaling for the entire suite by setting this to false. default is true.
+  autoscaling: false
+  #-- global secrets, can be accessed by sub-charts.
+  secrets:
+    enabled: true
+    databasePassword: ~
+    databaseName: ~
+    persist: true
+  config:
+    databaseUser: ~
+  #-- domain of the application, it is required, apps.silver.devops.gov.bc.ca for silver cluster and apps.devops.gov.bc.ca for gold cluster
+  domain: "apps.silver.devops.gov.bc.ca" # it is apps.gold.devops.gov.bc.ca for gold cluster
+  #-- the database Alias gives a nice way to switch to different databases, crunchy, patroni ... etc.
+  databaseAlias: bitnamipg #uncomment when using bitnami pg and comment below.
+  #databaseAlias: postgres-crunchy #uncomment when using crunchy and comment above.
+  security: 
+    allowInsecureImages: true
+
+
+bitnamipg:
+  enabled: False
+  image:
+    registry: ghcr.io
+    repository: bcgov/nr-containers/bitnami/postgresql
+    tag: 16.6.0
+  auth:
+    existingSecret: '{{ .Release.Name }}-database'
+    username: 'postgres' # make sure this is aligned with secret.yaml
+    database: qfielddb # make sure this is aligned with secret.yaml
+  shmVolume:
+    enabled: false
+  backup:
+    enabled: false
+    cronjob:
+      containerSecurityContext: { }
+      podSecurityContext:
+        enabled: false
+      storage:
+        size: 200Mi

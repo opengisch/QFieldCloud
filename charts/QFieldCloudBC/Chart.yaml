@@ -1,0 +1,25 @@
+# Chart.yaml (Minimal)
+
+# The API version of the chart definition. 'v2' is recommended for Helm 3+.
+apiVersion: v2
+name: QFieldCloudBC-openshift
+description: A Helm chart for Kubernetes deployment.
+icon: https://www.nicepng.com/png/detail/521-5211827_bc-icon-british-columbia-government-logo.png
+
+# The name of the chart (must match the directory name).
+name: QFieldCloudBC
+# The version of the chart itself (must follow SemVer 2).
+version: 0.1.0
+
+# dependencies:
+#   - name: postgresql
+#     condition: bitnamipg.enabled
+#     version: 16.4.3
+#     repository: https://charts.bitnami.com/bitnami
+#     alias: bitnamipg
+
+maintainers:
+  - name: Isaac Cave
+    email: Isaac.Cave@gov.bc.ca
+  - name: Will Burt
+    email: william.burt@gov.bc.ca
