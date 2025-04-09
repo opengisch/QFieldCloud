@@ -625,6 +625,10 @@ class ProcessProjectfileJobRun(JobRun):
             )
         )
 
+        # for non-legacy storage, keep only one thumbnail version if so.
+        if not project.uses_legacy_storage and project.thumbnail:
+            storage.purge_previous_thumbnails_versions(project)
+
     def after_docker_exception(self) -> None:
         project = self.job.project
 

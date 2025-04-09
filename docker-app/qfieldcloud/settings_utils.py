@@ -87,3 +87,24 @@ def get_storages_config() -> StoragesConfig:
         "STORAGES": raw_storages,
         "LEGACY_STORAGE_NAME": legacy_storage_name,
     }
+
+
+def get_socialaccount_providers_config() -> dict:
+    providers_json: str = os.environ.get("SOCIALACCOUNT_PROVIDERS", "")
+
+    if not providers_json:
+        return {}
+
+    try:
+        providers = json.loads(providers_json)
+    except Exception:
+        raise ConfigValidationError(
+            "Envvar SOCIALACCOUNT_PROVIDERS should be a parsable JSON string!"
+        )
+
+    if not isinstance(providers, dict):
+        raise ConfigValidationError(
+            "Envvar SOCIALACCOUNT_PROVIDERS should be a JSON string that parses to dictionary!"
+        )
+
+    return providers

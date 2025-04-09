@@ -295,7 +295,7 @@ def compatibility_project_meta_file_read_view(
         # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
         kwargs["projectid"] = kwargs.pop("project_id")
         # hardcode the thumbnail file name
-        kwargs["filename"] = kwargs.pop("thumbnail.png")
+        kwargs["filename"] = "thumbnail.png"
 
         logger.debug(
             f"Project {project_id=} will be using the legacy file management for meta files."
