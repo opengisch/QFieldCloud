@@ -58,9 +58,8 @@ class UserSerializer:
 
 class LayerSerializer(serializers.Serializer):
     id = serializers.CharField()
-    name = serializers.CharField()
+    filepath = serializers.CharField(source="name", allow_blank=True, required=False)
     datasource = serializers.CharField(allow_blank=True, required=False)
-    filename = serializers.CharField(allow_blank=True, required=False)
     crs = serializers.CharField(required=False)
     type_name = serializers.CharField(required=False)
     is_localized = serializers.BooleanField()

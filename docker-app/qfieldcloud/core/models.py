@@ -1068,14 +1068,17 @@ class Project(models.Model):
         Returns a list of all localized layers (as dictionaries)
         from project_details['layers_by_id'].
         """
-        layers = (
-            self.project_details.get("layers_by_id", {}) if self.project_details else {}
+        if self.project_details:
+            layers_by_id = self.project_details.get("layers_by_id", {})
+        else:
+            layers_by_id = {}
+
+        return list(
+            filter(lambda ld: ld.get("is_localized", False), layers_by_id.values())
         )
 
-        return list(filter(lambda ld: ld.get("is_localized", False), layers.values()))
-
     @property
-    def localized_layers(self):
+    def localized_layers(self) -> list[dict[str, Any]]:
         layers_by_id = self.project_details.get("layers_by_id", {})
 
         if self.name == "localized_datasets":
