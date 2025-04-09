@@ -117,9 +117,9 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
             .values("id")
         ]
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if self.job.project.uses_legacy_storage:
-            for project in projects:
+        for project in projects:
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            if project.uses_legacy_storage:
                 project_id = str(project.id)
                 package_ids = storage.get_stored_package_ids(project_id)
 
@@ -133,12 +133,13 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
                         continue
 
                     storage.delete_stored_package(project, package_id)
-        else:
-            delete_count = File.objects.filter(
-                project=self.job.project,
-                package_job_id__in=job_ids,
-            ).delete()
 
-            logger.warning(
-                f"Cron have identified and deleted {delete_count} package files from previous packages!"
-            )
+            else:
+                delete_count = File.objects.filter(
+                    project=project,
+                    package_job_id__in=job_ids,
+                ).delete()
+
+                logger.warning(
+                    f"Cron have identified and deleted {delete_count} package files from previous packages!"
+                )
