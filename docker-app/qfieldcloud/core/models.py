@@ -1249,14 +1249,12 @@ class Project(models.Model):
         Todo:
             * Delete with QF-4963 Drop support for legacy storage
         """
-        if (
-            # legacy storage
-            self.uses_legacy_storage
-            and not self.legacy_thumbnail_uri
-            # new storage
-            or not self.thumbnail
-        ):
-            return ""
+        if self.uses_legacy_storage:
+            if not self.legacy_thumbnail_uri:
+                return ""
+        else:
+            if not self.thumbnail:
+                return ""
 
         return reverse_lazy(
             "filestorage_project_thumbnails",
