@@ -36,6 +36,7 @@ from qgis.core import (
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
+from qgis.PyQt.QtXml import QDomDocument
 from tabulate import tabulate
 
 # Get environment variables
@@ -748,9 +749,22 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         error = layer.error()
         layer_id = layer.id()
         layer_source = LayerSource(layer)
+        filename = layer_source.filename
         datasource = None
 
-        if layer.dataProvider():
+        if layer_source.is_localized_path:
+            dom = QDomDocument()
+            dom.setContent(layer.originalXmlProperties())
+            elements = dom.documentElement().elementsByTagName("datasource")
+
+            if not elements.isEmpty():
+                datasource = elements.at(0).toElement().text()
+                filename = datasource.split("localized:")[-1]
+
+                if "|" in filename:
+                    filename = filename.split("|")[0]
+
+        elif layer.dataProvider():
             datasource = layer.dataProvider().uri().uri()
 
         layers_by_id[layer_id] = {
@@ -778,7 +792,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             "error_code": "no_error",
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
-            "filename": layer_source.filename,
+            "filename": filename,
             "provider_name": None,
             "provider_error_summary": None,
             "provider_error_message": None,
