@@ -1439,8 +1439,8 @@ class Project(models.Model):
             localized_datasets_project_layers = (
                 localized_datasets_project.localized_layers
             )
-            available_names = [
-                localized_layer.get("name")
+            available_localized_layers_filenames = [
+                localized_layer.get("filename")
                 for localized_layer in localized_datasets_project_layers
             ]
 
@@ -1452,17 +1452,20 @@ class Project(models.Model):
 
                     if layer_data.get("error_code") == "localized_dataprovider":
                         try:
-                            name = layer_data.get("name")
+                            filename = layer_data.get("filename")
 
-                            if name and name not in available_names:
+                            if (
+                                filename
+                                and filename not in available_localized_layers_filenames
+                            ):
                                 problems.append(
                                     {
-                                        "layer": name,
+                                        "layer": filename,
                                         "level": "warning",
                                         "code": "missing_localized_file",
                                         "description": _(
                                             'Localized Layer "{}" is missing in the centralized dataset project.'
-                                        ).format(name),
+                                        ).format(filename),
                                         "solution": _(
                                             "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
                                         ),

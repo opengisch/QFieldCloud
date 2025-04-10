@@ -58,7 +58,9 @@ class UserSerializer:
 
 class LayerSerializer(serializers.Serializer):
     id = serializers.CharField()
-    filepath = serializers.CharField(source="name", allow_blank=True, required=False)
+    filepath = serializers.CharField(
+        source="filename", allow_blank=True, required=False
+    )
     datasource = serializers.CharField(allow_blank=True, required=False)
     crs = serializers.CharField(required=False)
     type_name = serializers.CharField(required=False)
