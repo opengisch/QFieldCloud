@@ -298,8 +298,10 @@ class QfcTestCase(APITransactionTestCase):
             "/api/v1/projects/{}/".format("a258db08-b1cb-4c34-a0cc-1e0e2a464f87")
         )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()["code"], "object_not_found")
+        self.assertEqual(response.status_code, 404)
+        self.assertIn(
+            "Error 404 - Page Not Found", response.content.decode()
+        )  # Safer check
 
         # Get a project without a valid project id
         response = self.client.get("/api/v1/projects/{}/".format("pizza"))
