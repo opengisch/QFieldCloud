@@ -73,7 +73,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
     localized_datasets = serializers.ListSerializer(
-        child=LayerSerializer(), source="get_localized_layers"
+        child=LayerSerializer(), source="get_localized_layers", read_only=True
     )
 
     def to_internal_value(self, data):

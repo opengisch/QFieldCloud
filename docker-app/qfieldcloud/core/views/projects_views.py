@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
@@ -38,10 +39,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
         projectid = permissions_utils.get_param_from_request(request, "projectid")
 
-        try:
-            project = Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            return False
+        project = get_object_or_404(Project, id=projectid)
 
         if view.action == "retrieve":
             return permissions_utils.can_retrieve_project(user, project)
