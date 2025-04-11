@@ -45,6 +45,12 @@ jobs:
             docker_context: docker-nginx
             enable_dockerhub: true
 
+          -
+            service_name: createbuckets
+            dockerfile: docker-createbuckets/Dockerfile
+            docker_context: docker-createbuckets
+            enable_dockerhub: true
+
     steps:
       -
         name: Checkout
