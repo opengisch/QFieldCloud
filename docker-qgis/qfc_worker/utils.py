@@ -36,7 +36,6 @@ from qgis.core import (
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
-from qgis.PyQt.QtXml import QDomDocument
 from tabulate import tabulate
 
 # Get environment variables
@@ -753,12 +752,9 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         datasource = None
 
         if layer_source.is_localized_path:
-            dom = QDomDocument()
-            dom.setContent(layer.originalXmlProperties())
-            elements = dom.documentElement().elementsByTagName("datasource")
+            datasource = bad_layer_handler.invalid_layer_sources_by_id.get(layer_id)
 
-            if not elements.isEmpty():
-                datasource = elements.at(0).toElement().text()
+            if datasource and "localized:" in datasource:
                 filename = datasource.split("localized:")[-1]
 
                 if "|" in filename:
