@@ -29,7 +29,6 @@ from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
-from django.utils.safestring import SafeString
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from timezone_field import TimeZoneField
@@ -1243,6 +1242,27 @@ class Project(models.Model):
         default=False,
     )
 
+    def missing_localized_datasets(self) -> list[str]:
+        if not self.project_details:
+            return []
+
+        try:
+            localized_project = Project.objects.get(name="localized_datasets")
+            available_filenames = {
+                layer.get("filename") for layer in localized_project.localized_layers
+            }
+
+            missing = []
+            for layer in self.localized_layers:
+                filename = layer.get("filename")
+                if filename and filename not in available_filenames:
+                    missing.append(filename)
+
+            return missing
+
+        except Project.DoesNotExist:
+            return []
+
     @property
     def has_the_qgis_file(self) -> bool:
         return bool(self.the_qgis_file_name)
@@ -1435,80 +1455,61 @@ class Project(models.Model):
             )
 
         elif self.project_details:
-            localized_datasets_project = Project.objects.get(name="localized_datasets")
-            localized_datasets_project_layers = (
-                localized_datasets_project.localized_layers
-            )
-            available_localized_layers_filenames = [
-                localized_layer.get("filename")
-                for localized_layer in localized_datasets_project_layers
-            ]
+            try:
+                for missing_filename in self.missing_localized_datasets():
+                    problems.append(
+                        {
+                            "layer": missing_filename,
+                            "level": "warning",
+                            "code": "missing_localized_file",
+                            "description": _(
+                                'Localized Layer "{}" is missing in the centralized dataset project.'
+                            ).format(missing_filename),
+                            "solution": _(
+                                "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
+                            ),
+                        }
+                    )
+            except Project.DoesNotExist:
+                problems.append(
+                    {
+                        "layer": None,
+                        "level": "warning",
+                        "code": "missing_localized_project",
+                        "description": _(
+                            "Could not find the 'localized_datasets' project."
+                        ),
+                        "solution": _(
+                            "Ensure the shared dataset project exists and is correctly named."
+                        ),
+                    }
+                )
 
             for layer_data in self.project_details.get("layers_by_id", {}).values():
                 layer_name = layer_data.get("name")
 
                 if layer_data.get("error_code") != "no_error":
-                    solution: str | SafeString
+                    description = _(
+                        'Layer "{}" has an error with code "{}": {}'
+                    ).format(
+                        layer_name,
+                        layer_data.get("error_code"),
+                        layer_data.get("error_summary"),
+                    )
+                    solution = _(
+                        'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
+                    )
 
-                    if layer_data.get("error_code") == "localized_dataprovider":
-                        try:
-                            filename = layer_data.get("filename")
+                    problems.append(
+                        {
+                            "layer": layer_name,
+                            "level": "warning",
+                            "code": "layer_problem",
+                            "description": description,
+                            "solution": solution,
+                        }
+                    )
 
-                            if (
-                                filename
-                                and filename not in available_localized_layers_filenames
-                            ):
-                                problems.append(
-                                    {
-                                        "layer": filename,
-                                        "level": "warning",
-                                        "code": "missing_localized_file",
-                                        "description": _(
-                                            'Localized Layer "{}" is missing in the centralized dataset project.'
-                                        ).format(filename),
-                                        "solution": _(
-                                            "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
-                                        ),
-                                    }
-                                )
-
-                        except Project.DoesNotExist:
-                            problems.append(
-                                {
-                                    "layer": None,
-                                    "level": "warning",
-                                    "code": "missing_localized_project",
-                                    "description": _(
-                                        "Could not find the 'localized_datasets' project."
-                                    ),
-                                    "solution": _(
-                                        "Ensure the shared dataset project exists and is correctly named."
-                                    ),
-                                }
-                            )
-
-                    else:
-                        description = _(
-                            'Layer "{}" has an error with code "{}": {}'
-                        ).format(
-                            layer_name,
-                            layer_data.get("error_code"),
-                            layer_data.get("error_summary"),
-                        )
-                        solution = _(
-                            'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
-                        )
-
-                        problems.append(
-                            {
-                                "layer": layer_name,
-                                "level": "warning",
-                                "code": "layer_problem",
-                                "description": description,
-                                "solution": solution,
-                            }
-                        )
-                # the layer is missing a primary key, warn it is going to be read-only
                 elif layer_data.get("layer_type_name") in ("VectorLayer", "Vector"):
                     if layer_data.get("qfc_source_data_pk_name") == "":
                         problems.append(
@@ -1518,15 +1519,12 @@ class Project(models.Model):
                                 "code": "layer_problem",
                                 "description": _(
                                     'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
-                                ).format(
-                                    layer_name,
-                                ),
+                                ).format(layer_name),
                                 "solution": _(
                                     "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key."
                                 ),
                             }
                         )
-
         else:
             problems.append(
                 {
