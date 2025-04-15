@@ -1,5 +1,9 @@
 {% load allauth socialaccount %}
 {% get_providers as socialaccount_providers %}
+
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/sso.css' %}">
+
 {% if socialaccount_providers %}
     {% element provider_list %}
         {% for provider in socialaccount_providers %}
