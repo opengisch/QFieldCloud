@@ -5,6 +5,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.db.models.fields.files import FieldFile
 from django.http import FileResponse, HttpResponse
 from django.http.response import HttpResponseBase
@@ -162,22 +163,44 @@ def download_project_file_version(
     filename: str,
     file_type: File.FileType,
     as_attachment: bool = True,
+    package_job_id: UUID | None = None,
 ) -> HttpResponseBase:
     version_id = request.GET.get("version")
 
+    if file_type == File.FileType.PACKAGE_FILE and not package_job_id:
+        raise Exception(
+            f"When downloading a package file the `package_job_id` should be non-empty, but got {package_job_id=}."
+        )
+
     if version_id:
-        file_version = FileVersion.objects.get(
+        filters = Q(
             id=version_id,
             file__project_id=project_id,
             file__name=filename,
             file__file_type=file_type,
         )
+
+        if package_job_id:
+            filters &= Q(
+                Q(file__package_job_id=package_job_id)
+                | Q(file__file_type=File.FileType.PROJECT_FILE)
+            )
+
+        file_version = FileVersion.objects.get(filters)
     else:
-        file = File.objects.select_related("latest_version").get(
+        filters = Q(
             project_id=project_id,
             name=filename,
             file_type=file_type,
         )
+
+        if package_job_id:
+            filters &= Q(
+                Q(package_job_id=package_job_id)
+                | Q(file_type=File.FileType.PROJECT_FILE)
+            )
+
+        file = File.objects.select_related("latest_version").get(filters)
 
         assert file.latest_version
 
