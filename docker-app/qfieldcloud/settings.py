@@ -242,7 +242,7 @@ LANGUAGE_CODE = os.environ.get("QFIELDCLOUD_DEFAULT_LANGUAGE") or "en"
 
 TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
 
-USE_I18N = bool(os.environ.get("QFIELDCLOUD_USE_I18N")) or True
+USE_I18N = bool(int(os.environ.get("QFIELDCLOUD_USE_I18N", 1)))
 
 USE_TZ = True
 
