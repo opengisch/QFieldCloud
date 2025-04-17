@@ -3,7 +3,7 @@
 ##########################
 
 # pull a builder image, the same as the base
-FROM python:3.10.8-slim-buster AS build
+FROM python:3.10-slim-bookworm AS build
 
 # Disable annoying pip version check, we don't care if pip is slightly older
 ARG PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -35,7 +35,7 @@ RUN ls -Q /usr/local/lib/python3.10/site-packages/botocore/data | grep -xv "endp
 ##########################
 
 # pull official base image
-FROM python:3.10.8-slim-buster AS base
+FROM python:3.10-slim-bookworm AS base
 
 # set work directory
 WORKDIR /usr/src/app
