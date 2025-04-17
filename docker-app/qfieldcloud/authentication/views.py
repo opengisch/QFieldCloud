@@ -151,7 +151,7 @@ class ListProvidersView(APIView):
     def get(self, request: HttpRequest, *args, **kwargs) -> Response:
         auth_providers = []
 
-        if not settings.QFIELDCLOUD_PASSWORD_LOGIN_DISABLED:
+        if settings.QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED:
             auth_providers.append(
                 {
                     "type": "credentials",
