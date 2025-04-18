@@ -242,6 +242,9 @@ class User(AbstractUser):
     # All projects that a user owns
     projects: models.QuerySet[Project]
 
+    # The secrets that are assigned to a user.
+    assigned_secrets: "models.QuerySet[Secret]"
+
     # The `UserAccount` stores non-critical user information such as avatar, bio, timezone settings etc.
     useraccount: UserAccount
 
@@ -781,6 +784,8 @@ class OrganizationMember(models.Model):
         ADMIN = "admin", _("Admin")
         MEMBER = "member", _("Member")
 
+    ALL_ROLES = list(Roles)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -1101,7 +1106,14 @@ class Project(models.Model):
             )
         ]
 
+    # The files that are part of a specific project.
     files: "models.QuerySet[File]"
+
+    # The secrets that are attached for a specific project.
+    secrets: "models.QuerySet[Secret]"
+
+    # The jobs that are ran for a specific project.
+    jobs: "models.QuerySet[Job]"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
@@ -1126,6 +1138,11 @@ class Project(models.Model):
             "Projects marked as public are visible to (but not editable by) anyone."
         ),
     )
+
+    # the Person or Organization id that owns the project
+    owner_id: int
+
+    # the Person or Organization that owns the project
     owner = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -1804,6 +1821,8 @@ class ProjectCollaborator(models.Model):
         REPORTER = "reporter", _("Reporter")
         READER = "reader", _("Reader")
 
+    ALL_ROLES = list(Roles)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -2198,10 +2217,68 @@ class ApplyJobDelta(models.Model):
         return f"{self.apply_job_id}:{self.delta_id}"
 
 
+class SecretQueryset(models.QuerySet):
+    def for_user_and_project(
+        self, user: User, project: Project
+    ) -> models.QuerySet[Secret]:
+        """Returns a queryset with secrets for a specific user and project.
+
+        NOTE Do not set `order_by` at the queryset.
+
+        Args:
+            user: the user which needs the secrets
+            project: the project which the user needs the secrets for
+
+        Returns:
+            a Secret queryset of all organization, project and assigned secrets for the given user.
+
+        Raises:
+            UserProjectRoleError: if the user is not having any role on the searched project
+            UserOrganizationRoleError: if the user is not having any role on the organization that owns the project
+        """
+        # ensure the user type is a person
+        assert (
+            user.type == User.Type.PERSON
+        ), f"Expected the passed user to be of type PERSON, but got {user.type}!"
+
+        from qfieldcloud.core.permissions_utils import (
+            check_user_has_organization_roles,
+            check_user_has_project_roles,
+        )
+
+        try:
+            organization = Organization.objects.get(id=project.owner_id)
+
+            # ensure the user has access to the organization
+            check_user_has_organization_roles(
+                user, organization, OrganizationMember.ALL_ROLES
+            )
+        except Organization.DoesNotExist:
+            organization = None
+
+        # ensure the user has access to the project
+        check_user_has_project_roles(user, project, ProjectCollaborator.ALL_ROLES)
+
+        secrets_qs = self.filter(project=project)
+        secrets_qs = secrets_qs.filter(
+            Q(assigned_to=user)
+            | Q(assigned_to__isnull=True)
+            | Q(organization=organization)
+        )
+        # remove the duplicates by name and get the given user overrides
+        secrets_qs = secrets_qs.order_by(
+            "name", "assigned_to", "project", "organization"
+        ).distinct("name")
+
+        return secrets_qs
+
+
 class Secret(models.Model):
     class Type(models.TextChoices):
         PGSERVICE = "pgservice", _("pg_service")
         ENVVAR = "envvar", _("Environment Variable")
+
+    objects = SecretQueryset.as_manager()
 
     name = models.TextField(
         max_length=255,
@@ -2223,16 +2300,58 @@ class Secret(models.Model):
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="secrets"
     )
-    created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="project_secrets"
+
+    # The user the secret belongs to. Allows a user to have custom overrides to project envvars and pgservice.
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="assigned_secrets",
+        limit_choices_to=Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
     )
+
+    # The organization the secret belongs to. Allows an organization to have custom default project envvars and pgservice.
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="secrets",
+        limit_choices_to=Q(type=User.Type.ORGANIZATION),
+        null=True,
+        blank=True,
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="created_secrets",
+        limit_choices_to=Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     value = django_cryptography.fields.encrypt(models.TextField())
 
     class Meta:
-        ordering = ["project", "name"]
+        ordering = ["project", "assigned_to", "organization"]
         constraints = [
             models.UniqueConstraint(
-                fields=["project", "name"], name="secret_project_name_uniq"
-            )
+                fields=["project", "type", "name", "assigned_to"],
+                name="secret_project_type_name_assigned_to_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "organization",
+                    "type",
+                    "name",
+                    "assigned_to",
+                ],
+                name="secret_organization_type_name_assigned_to_uniq",
+            ),
+            models.CheckConstraint(
+                # we want either the project to be set or the organization, but never both set or unset, therefore ^ (XOR)
+                check=Q(project__isnull=True) ^ Q(organization__isnull=True),
+                name="secret_assigned_to_organization_or_user",
+            ),
         ]
