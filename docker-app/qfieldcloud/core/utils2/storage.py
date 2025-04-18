@@ -59,7 +59,7 @@ def _delete_by_prefix_versioned(prefix: str):
     In other words, it is a soft delete. Read more here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
 
     Args:
-        prefix (str): Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
+        prefix: Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
 
     Raises:
         RuntimeError: When the given prefix is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
@@ -87,7 +87,7 @@ def _delete_by_prefix_permanently(prefix: str):
     In other words, it is a hard delete. Read more here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html
 
     Args:
-        prefix (str): Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
+        prefix: Object's prefix to search and delete. Check the given prefix if it matches the expected format before using this function!
 
     Raises:
         RuntimeError: When the given prefix is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
@@ -113,7 +113,7 @@ def _delete_by_key_versioned(key: str):
     In other words, it is a soft delete.
 
     Args:
-        key (str): Object's key to search and delete. Check the given key if it matches the expected format before using this function!
+        key: Object's key to search and delete. Check the given key if it matches the expected format before using this function!
 
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
@@ -150,7 +150,7 @@ def _delete_by_key_permanently(key: str):
     In other words, it is a hard delete.
 
     Args:
-        key (str): Object's key to search and delete. Check the given key if it matches the expected format before using this function!
+        key: Object's key to search and delete. Check the given key if it matches the expected format before using this function!
 
     Raises:
         RuntimeError: When the given key is not a string, empty string or leading slash. Check is very basic, do a throrogh checks before calling!
@@ -226,11 +226,11 @@ def get_attachment_dir_prefix(
     """Returns the attachment dir where the file belongs to or empty string if it does not.
 
     Args:
-        project (Project): project to check
-        filename (str): filename to check
+        project: project to check
+        filename: filename to check
 
     Returns:
-        str: the attachment dir or empty string if no match found
+        the attachment dir or empty string if no match found
     """
     for attachment_dir in project.attachment_dirs:
         if filename.startswith(attachment_dir):
@@ -327,12 +327,12 @@ def upload_user_avatar(
     NOTE this function does NOT modify the `UserAccount.legacy_avatar_uri` field
 
     Args:
-        user (User):
-        file (IO): file used as avatar
-        mimetype (ImageMimeTypes): file mimetype
+        user:
+        file: file used as avatar
+        mimetype: file mimetype
 
     Returns:
-        str: URI to the avatar
+        URI to the avatar
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -355,7 +355,7 @@ def delete_user_avatar(user: qfieldcloud.core.models.User) -> None:  # noqa: F82
     NOTE this function does NOT modify the `UserAccount.legacy_avatar_uri` field
 
     Args:
-        user (User):
+        user:
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -385,13 +385,13 @@ def upload_project_thumbail(
     NOTE this function does NOT modify the `Project.thumbnail_uri` field
 
     Args:
-        project (Project):
-        file (IO): file used as thumbail
-        mimetype (str): file mimetype
-        filename (str): filename
+        project:
+        file: file used as thumbail
+        mimetype: file mimetype
+        filename: filename
 
     Returns:
-        str: URI to the thumbnail
+        URI to the thumbnail
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -588,7 +588,7 @@ def delete_all_project_files_permanently(project_id: str) -> None:
     """Deletes all project files permanently.
 
     Args:
-        project_id (str): the project which files shall be deleted. Note that the `project_id` might be a of a already deleted project which files are still dangling around.
+        project_id: the project which files shall be deleted. Note that the `project_id` might be a of a already deleted project which files are still dangling around.
 
     Raises:
         RuntimeError: if the produced Object Storage key to delete is not in the right format
@@ -671,13 +671,13 @@ def delete_project_file_version_permanently(
     """Deletes a specific version of given file.
 
     Args:
-        project (Project): project the file belongs to
-        filename (str): filename the version belongs to
-        version_id (str): version id to delete
-        include_older (bool, optional): when True, versions older than the passed `version` will also be deleted. If the version_id is the latest version of a file, this parameter will treated as False. Defaults to False.
+        project: project the file belongs to
+        filename: filename the version belongs to
+        version_id: version id to delete
+        include_older: when True, versions older than the passed `version` will also be deleted. If the version_id is the latest version of a file, this parameter will treated as False. Defaults to False.
 
     Returns:
-        int: the number of versions deleted
+        the number of versions deleted
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage

@@ -43,10 +43,10 @@ def is_valid_filename(filename: str) -> bool:
     """Whether the provided filename is valid.
 
     Args:
-        filename (str): the filename to be checked
+        filename: the filename to be checked
 
     Returns:
-        bool: the filename is valid
+        the filename is valid
     """
     try:
         validate_filename(filename)
@@ -73,11 +73,11 @@ def is_admin_restricted_file(filename: str, projectfile_filename: str | None) ->
     NOTE If no `projectfile_filename` is passed, then the function always returns `False`.
 
     Args:
-        filename (str): the filename being checked
-        projectfile_filename (str | None): the filename of the QGIS projectfile. If not provided, the function always returns `False`.
+        filename: the filename being checked
+        projectfile_filename: the filename of the QGIS projectfile. If not provided, the function always returns `False`.
 
     Returns:
-        bool: whether the file is restricted file
+        whether the file is restricted file
     """
     if not projectfile_filename:
         return False
@@ -115,11 +115,11 @@ def calc_etag(file: ContentFile, part_size: int = 8 * 1024 * 1024) -> str:
     See the inspiration of this implementation here: https://stackoverflow.com/a/58239738/1226137
 
     Args:
-        file (str): the file to calculate etag for
-        part_size (int): the size of the Object Storage part. Most Object Storages use 8MB. Defaults to 8*1024*1024.
+        file: the file to calculate etag for
+        part_size: the size of the Object Storage part. Most Object Storages use 8MB. Defaults to 8*1024*1024.
 
     Returns:
-        str: the calculated ETag value
+        the calculated ETag value
     """
     if file.size <= part_size:
         BLOCKSIZE = 65536

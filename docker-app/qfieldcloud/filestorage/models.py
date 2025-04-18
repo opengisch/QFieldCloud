@@ -151,19 +151,19 @@ class FileVersionQueryset(models.QuerySet):
         This method runs in a transaction. It creates/updates a `File` object and creates a new `FileVersion` object.
 
         Args:
-            project (Project): the project the file belongs to
-            filename (str): the filename
-            content (ContentFile): the file content
-            file_type (File.FileType): the file type
-            uploaded_by (User): the `User` that uploaded the file
-            uploaded_at (datetime | None, optional): the timestamp when the file has been uploaded. When `None`, the value is set to the current timestamp. Defaults to None.
-            created_at (datetime | None, optional): the timestamp when the file has been created. When `None`, the value is set to the current timestamp. Defaults to None.
-            version_id (UUID | None, optional): The uuid to be used assigned to that version. When `None`, the value is a new random UUID4. This argument is used to move from legacy versioned object storage to the new `django-storages` version. Defaults to None.
-            package_job_id (UUID | None, optional): The package job the file belongs to. Defaults to None.
-            legacy_version_id (str | None, optional): The object storage version ID from the legacy storage. Defaults to None.
+            project: the project the file belongs to
+            filename: the filename
+            content: the file content
+            file_type: the file type
+            uploaded_by: the `User` that uploaded the file
+            uploaded_at: the timestamp when the file has been uploaded. When `None`, the value is set to the current timestamp. Defaults to None.
+            created_at: the timestamp when the file has been created. When `None`, the value is set to the current timestamp. Defaults to None.
+            version_id: The uuid to be used assigned to that version. When `None`, the value is a new random UUID4. This argument is used to move from legacy versioned object storage to the new `django-storages` version. Defaults to None.
+            package_job_id: The package job the file belongs to. Defaults to None.
+            legacy_version_id: The object storage version ID from the legacy storage. Defaults to None.
 
         Returns:
-            FileVersion: the file version that has been created
+            the file version that has been created
         """
         now = timezone.now()
 

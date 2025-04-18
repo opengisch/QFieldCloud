@@ -249,7 +249,7 @@ def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
     """Rewrites project XML file with feature count disabled.
 
     Args:
-        the_qgis_file_name (str): filename of the QGIS filename (.qgs or .qgz)
+        the_qgis_file_name: filename of the QGIS filename (.qgs or .qgz)
     """
     archive = None
     xml_file = the_qgis_file_name
@@ -641,8 +641,8 @@ def run_workflow(
     Some return values can used as arguments for next steps, as defined in `public_returns`.
 
     Args:
-        workflow (Workflow): workflow to be executed
-        feedback_filename (IO | Path): write feedback to an IO device, to Path filename, or don't write it
+        workflow: workflow to be executed
+        feedback_filename: write feedback to an IO device, to Path filename, or don't write it
     """
     feedback: dict[str, Any] = {
         "feedback_version": "2.0",

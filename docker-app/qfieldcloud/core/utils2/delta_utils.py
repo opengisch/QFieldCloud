@@ -11,9 +11,9 @@ def generate_deltafile(
     The given deltas must be an iterable with at least one element.
 
     Args:
-        deltas (Iterable[dict[str, Any]]): deltas in the deltafile
-        project_id (UUID): project ID
-        id (UUID): deltafile UUID
+        deltas: deltas in the deltafile
+        project_id: project ID
+        id: deltafile UUID
     """
     deltas = list(deltas)
     deltafile = {

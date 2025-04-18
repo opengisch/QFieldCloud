@@ -132,8 +132,8 @@ def generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> Non
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
 
     Args:
-        the_qgis_file_name (str)
-        thumbnail_filename (Path)
+        the_qgis_file_name:
+        thumbnail_filename:
     """
     logger.info("Generate project thumbnail image…")
 

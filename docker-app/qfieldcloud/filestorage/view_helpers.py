@@ -284,8 +284,8 @@ def delete_project_file_version(
     The version can be passed either with `version` query parameter or `x-file-version` header.
 
     Args:
-        request (Request): The Django request
-        filename (str): The filename to be deleted
+        request: The Django request
+        filename: The filename to be deleted
 
     Raises:
         Exception: Raised when the passed `version` will delete the only `FileVersion` remaining for that file.
