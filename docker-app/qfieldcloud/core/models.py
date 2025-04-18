@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Dict, List, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -1062,30 +1062,14 @@ class Project(models.Model):
         QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
         PYTHONMINI = "pythonmini", _("Optimized Packager")
 
-    def get_localized_layers(self) -> list[dict]:
-        """
-        Returns a list of all localized layers (as dictionaries)
-        from project_details['layers_by_id'].
-        """
-        if self.project_details:
-            layers_by_id = self.project_details.get("layers_by_id", {})
-        else:
-            layers_by_id = {}
-
-        return list(
-            filter(lambda ld: ld.get("is_localized", False), layers_by_id.values())
-        )
-
     @property
     def localized_layers(self) -> list[dict[str, Any]]:
+        if not self.project_details:
+            return []
+
         layers_by_id = self.project_details.get("layers_by_id", {})
 
-        if self.name == "localized_datasets":
-            return list(layers_by_id.values())
-
-        return list(
-            filter(lambda ld: ld.get("is_localized", False), layers_by_id.values())
-        )
+        return [ld for ld in layers_by_id.values() if ld.get("is_localized", False)]
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
@@ -1242,26 +1226,47 @@ class Project(models.Model):
         default=False,
     )
 
-    def missing_localized_datasets(self) -> list[str]:
+    def get_localized_datasets_project_id(self) -> str | None:
+        """
+        Returns the ID of the 'localized_datasets' project for the same owner.
+        """
+        project = Project.objects.filter(
+            name="localized_datasets", owner=self.owner
+        ).first()
+        return project.id if project else None
+
+    def get_missing_localized_layers(self) -> List[Dict]:
+        """
+        Identifies and returns a list of localized layer metadata dictionaries
+        that are not present in the associated localized_datasets project storage.
+
+        Returns:
+            List[Dict]: A list of layer dictionaries missing from the
+                        localized_datasets project's file storage.
+        """
         if not self.project_details:
             return []
 
-        try:
-            localized_project = Project.objects.get(name="localized_datasets")
-            available_filenames = {
-                layer.get("filename") for layer in localized_project.localized_layers
-            }
+        localized_project_id = self.get_localized_datasets_project_id()
 
-            missing = []
-            for layer in self.localized_layers:
-                filename = layer.get("filename")
-                if filename and filename not in available_filenames:
-                    missing.append(filename)
+        if not localized_project_id:
+            # Return all layers if the project is missing
+            return self.localized_layers
 
-            return missing
+        available_filenames = set(
+            File.objects.filter(project_id=localized_project_id).values_list(
+                "name", flat=True
+            )
+        )
 
-        except Project.DoesNotExist:
-            return []
+        missing_layers = [
+            layer
+            for layer in self.localized_layers
+            if "filename" in layer
+            and layer["filename"].split("localized:")[-1] not in available_filenames
+        ]
+
+        return missing_layers
 
     @property
     def has_the_qgis_file(self) -> bool:
@@ -1438,7 +1443,7 @@ class Project(models.Model):
             return True
 
     @property
-    def problems(self) -> list[dict]:
+    def problems(self) -> list[dict[str, Any]]:
         problems = []
 
         if not self.has_the_qgis_file:
@@ -1456,15 +1461,15 @@ class Project(models.Model):
 
         elif self.project_details:
             try:
-                for missing_filename in self.missing_localized_datasets():
+                for missing_layer in self.get_missing_localized_layers():
                     problems.append(
                         {
-                            "layer": missing_filename,
+                            "layer": missing_layer.get("filename"),
                             "level": "warning",
                             "code": "missing_localized_file",
                             "description": _(
                                 'Localized Layer "{}" is missing in the centralized dataset project.'
-                            ).format(missing_filename),
+                            ).format(missing_layer.get("filename")),
                             "solution": _(
                                 "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
                             ),

@@ -74,9 +74,13 @@ class ProjectSerializer(serializers.ModelSerializer):
     user_role = serializers.CharField(read_only=True)
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
-    localized_datasets = serializers.ListSerializer(
-        child=LayerSerializer(), source="get_localized_layers", read_only=True
-    )
+    localized_datasets_project_id = serializers.SerializerMethodField(read_only=True)
+
+    def get_localized_datasets_project_id(self, obj):
+        project = Project.objects.filter(
+            name="localized_datasets", owner=obj.owner
+        ).first()
+        return str(project.id) if project else None
 
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
@@ -138,7 +142,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
-            "localized_datasets",
+            "localized_datasets_project_id",
         )
         read_only_fields = (
             "private",
