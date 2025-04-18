@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Any, Callable, NamedTuple, Optional
+from typing import IO, Any, Callable, NamedTuple
 
 from libqfieldsync.layer import LayerSource
 from libqfieldsync.utils.bad_layer_handler import (
@@ -565,7 +565,7 @@ def has_ping(hostname: str) -> bool:
     return not bool(error) and "100% packet loss" not in out.decode("utf8")
 
 
-def get_layer_filename(layer: QgsMapLayer) -> Optional[str]:
+def get_layer_filename(layer: QgsMapLayer) -> str | None:
     metadata = QgsProviderRegistry.instance().providerMetadata(
         layer.dataProvider().name()
     )
@@ -630,7 +630,7 @@ def json_default(obj):
 
 def run_workflow(
     workflow: Workflow,
-    feedback_filename: Optional[Path | IO],
+    feedback_filename: Path | IO | None,
 ) -> dict[str, Any]:
     """Executes the steps required to run a task and return structured feedback from the execution
 
@@ -972,7 +972,7 @@ class XmlErrorLocation(NamedTuple):
 
 def get_qgis_xml_error_location(
     invalid_token_error_msg: str,
-) -> Optional[XmlErrorLocation]:
+) -> XmlErrorLocation | None:
     """Get column and line numbers from the provided error message."""
     if "invalid token" not in invalid_token_error_msg.casefold():
         return None
@@ -987,7 +987,7 @@ def get_qgis_xml_error_location(
 
 def get_qgis_xml_error_context(
     invalid_token_error_msg: str, fh: io.BufferedReader
-) -> Optional[str]:
+) -> str | None:
     """Get a slice of the line where the exception occurred, with all faulty occurrences sanitized."""
     location = get_qgis_xml_error_location(invalid_token_error_msg)
     if location:
