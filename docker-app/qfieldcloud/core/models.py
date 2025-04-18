@@ -1244,6 +1244,8 @@ class Project(models.Model):
             List[Dict]: A list of layer dictionaries missing from the
                         localized_datasets project's file storage.
         """
+        from qfieldcloud.filestorage.models import File
+
         if not self.project_details:
             return []
 
@@ -1258,7 +1260,6 @@ class Project(models.Model):
                 "name", flat=True
             )
         )
-
         missing_layers = [
             layer
             for layer in self.localized_layers
