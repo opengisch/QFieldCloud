@@ -2,7 +2,7 @@
 
 import re
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
+from typing import Any, Callable, cast
 
 try:
     # 3.8
@@ -52,9 +52,9 @@ class BaseOptions(TypedDict):
 
 
 class DeltaOptions(BaseOptions):
-    delta_file: Optional[str]
-    delta_contents: Optional[Dict]
-    delta_log: Optional[str]
+    delta_file: str | None
+    delta_contents: dict | None
+    delta_log: str | None
     overwrite_conflicts: bool
     inverse: bool
     transaction: bool
@@ -89,9 +89,9 @@ class DeltaStatus(str, Enum):
 
 
 class DeltaFeature(TypedDict):
-    geometry: Optional[WKT]
-    attributes: Optional[Dict[str, Any]]
-    file_sha256: Optional[Dict[str, str]]
+    geometry: WKT | None
+    attributes: dict[str, Any] | None
+    file_sha256: dict[str, str] | None
 
 
 class Delta(TypedDict):
@@ -112,16 +112,16 @@ class DeltaFile:
         delta_file_id: str,
         project_id: str,
         version: str,
-        deltas: List[Union[Dict, Delta]],
-        files: List[str],
-        client_pks: Dict[str, str],
+        deltas: list[dict | Delta],
+        files: list[str],
+        client_pks: dict[str, str],
     ):
         self.id = delta_file_id
         self.project_id = project_id
         self.version = version
         self.files = files
         self.client_pks = client_pks
-        self.deltas: List[Delta] = []
+        self.deltas: list[Delta] = []
 
         for d in deltas:
             self.deltas.append(cast(Delta, d))
@@ -142,7 +142,7 @@ class DeltaException(Exception):
         delta_id: str = None,
         feature_pk: str = None,
         modified_pk: str = None,
-        conflicts: List[str] = None,
+        conflicts: list[str] = None,
         method: DeltaMethod = None,
         provider_errors: str = None,
         descr: str = None,
@@ -185,10 +185,10 @@ def wkt_nan_to_zero(wkt: WKT) -> WKT:
     Since it is poorly supported on QGIS and other FOSS tools, it's safer to convert the `nan` values to 0s for now. See https://github.com/qgis/QGIS/pull/47034/ .
 
     Args:
-        wkt (WKT): wkt that might contain `nan` values
+        wkt: wkt that might contain `nan` values
 
     Returns:
-        WKT: WKT with `nan` values replaced with `0`s
+        WKT with `nan` values replaced with `0`s
     """
     old_wkt = wkt
     new_wkt = re.sub(r"\bnan\b", "0", wkt, flags=re.IGNORECASE)
@@ -201,18 +201,18 @@ def wkt_nan_to_zero(wkt: WKT) -> WKT:
 
 def get_geometry_from_delta(
     delta_feature: DeltaFeature, layer: QgsVectorLayer
-) -> Optional[QgsGeometry]:
+) -> QgsGeometry | None:
     """Converts the `geometry` WKT from the `DeltaFeature` to a `QgsGeometry` instance.
 
     Args:
-        delta_feature (DeltaFeature): delta feature
-        layer (QgsVectorLayer): layer the feature is part of
+        delta_feature: delta feature
+        layer: layer the feature is part of
 
     Raises:
         DeltaException
 
     Returns:
-        Optional[QgsGeometry]: the parsed `QgsGeometry`. Might be invalid geometry. Returns `None` if no geometry has been modified.
+        the parsed `QgsGeometry`. Might be invalid geometry. Returns `None` if no geometry has been modified.
     """
     geometry = None
 
@@ -383,14 +383,14 @@ def get_json_schema_validator() -> jsonschema.Draft7Validator:
     return jsonschema.Draft7Validator(schema_dict)
 
 
-def delta_file_args_loader(args: DeltaOptions) -> Optional[DeltaFile]:
+def delta_file_args_loader(args: DeltaOptions) -> DeltaFile | None:
     """Get delta file contents as a dictionary passed in the args. Mostly used for testing.
 
-    Arguments:
-        args {DeltaOptions} -- main options
+    Args:
+        args: main options
 
     Returns:
-        Optional[DeltaFile] -- loaded delta file on success, otherwise none
+        loaded delta file on success, otherwise none
     """
     obj = args.get("delta_contents")
     if not obj:
@@ -411,14 +411,14 @@ def delta_file_args_loader(args: DeltaOptions) -> Optional[DeltaFile]:
     return delta_file
 
 
-def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
+def delta_file_file_loader(args: DeltaOptions) -> DeltaFile | None:
     """Get delta file contents from a filesystem file.
 
-    Arguments:
-        args {DeltaOptions} -- main options
+    Args:
+        args: main options
 
     Returns:
-        Optional[DeltaFile] -- loaded delta file on success, otherwise none
+        loaded delta file on success, otherwise none
     """
     if not isinstance(args.get("delta_file"), str):
         return None
@@ -455,13 +455,13 @@ def delta_file_file_loader(args: DeltaOptions) -> Optional[DeltaFile]:
 def load_delta_file(args: DeltaOptions) -> DeltaFile:
     """Loads delta file, using the provided {args}.
 
-    Arguments:
-        args {DeltaOptions} -- main options
+    Args:
+        args: main options
 
     Returns:
-        DeltaFile -- the loaded deltafile
+        the loaded deltafile
     """
-    deltas: Optional[DeltaFile] = None
+    deltas: DeltaFile | None = None
 
     delta_file_loaders = [
         delta_file_args_loader,
@@ -675,17 +675,17 @@ def apply_deltas_without_transaction(
 
 
 def rollback_deltas(
-    layers_by_id: Dict[LayerId, QgsVectorLayer],
-    committed_layer_ids: Set[LayerId] = set(),
+    layers_by_id: dict[LayerId, QgsVectorLayer],
+    committed_layer_ids: set[LayerId] = set(),
 ) -> bool:
     """Rollback applied deltas by restoring the layer data source backup files.
 
-    Arguments:
-        layers_by_id {Dict[LayerId, QgsVectorLayer]} -- layers
-        committed_layer_ids {Set[LayerId]} -- layer ids to be rollbacked.
+    Args:
+        layers_by_id: layers
+        committed_layer_ids: layer ids to be rollbacked.
 
     Returns:
-        bool -- whether there were no rollback errors. If True, the state of
+        whether there were no rollback errors. If True, the state of
         the project might be broken, but the old data is preserved in the
         backup files.
     """
@@ -731,16 +731,15 @@ def rollback_deltas(
     return is_success
 
 
-def cleanup_backups(layer_paths: Set[str]) -> bool:
+def cleanup_backups(layer_paths: set[str]) -> bool:
     """Cleanup the layer backups. Attempts to remove all backup files, whether
     or not there is an error.
 
-    Arguments:
-        layer_paths {Set[str]} -- layer paths, which should have their
-        backups removed
+    Args:
+        layer_paths: layer paths, which should have their backups removed
 
     Returns:
-        bool -- whether all paths are successfully removed.
+        whether all paths are successfully removed.
     """
     is_success = True
 
@@ -808,7 +807,7 @@ def get_pk_attr_name(layer: QgsVectorLayer) -> str:
 
 
 def get_feature(
-    layer: QgsVectorLayer, delta: Delta, client_pks: Dict[str, str] = None
+    layer: QgsVectorLayer, delta: Delta, client_pks: dict[str, str] = None
 ) -> QgsFeature:
     pk_attr_name = get_pk_attr_name(layer)
 
@@ -843,13 +842,16 @@ def create_feature(
 ) -> QgsFeature:
     """Creates new feature in layer
 
-    Arguments:
-        layer {QgsVectorLayer} -- target layer. Must be in editing mode!
-        delta {Delta} -- delta describing the created feature
-        overwrite_conflicts {bool} -- if there are conflicts with an existing feature, ignore them
+    Args:
+        layer: target layer. Must be in editing mode!
+        delta: delta describing the created feature
+        overwrite_conflicts: if there are conflicts with an existing feature, ignore them
 
     Raises:
         DeltaException: whenever the feature cannot be created
+
+    Returns:
+        The created QGIS feature.
     """
     fields = layer.fields()
     new_feat_delta = delta["new"]
@@ -896,17 +898,20 @@ def patch_feature(
     layer: QgsVectorLayer,
     delta: Delta,
     overwrite_conflicts: bool,
-    client_pks: Dict[str, str],
+    client_pks: dict[str, str],
 ) -> QgsFeature:
     """Patches a feature in layer
 
-    Arguments:
-        layer {QgsVectorLayer} -- target layer. Must be in edit mode!
-        delta {Delta} -- delta describing the patch
-        overwrite_conflicts {bool} -- if there are conflicts with an existing feature, ignore them
+    Args:
+        layer: target layer. Must be in edit mode!
+        delta: delta describing the patch
+        overwrite_conflicts: if there are conflicts with an existing feature, ignore them
 
     Raises:
         DeltaException: whenever the feature cannot be patched
+
+    Returns:
+        The patched QGIS feature.
     """
     new_feature_delta = delta["new"]
     old_feature_delta = delta["old"]
@@ -983,17 +988,20 @@ def delete_feature(
     layer: QgsVectorLayer,
     delta: Delta,
     overwrite_conflicts: bool,
-    client_pks: Dict[str, str],
+    client_pks: dict[str, str],
 ) -> QgsFeature:
     """Deletes a feature from layer
 
-    Arguments:
-        layer {QgsVectorLayer} -- target layer. Must be in edit mode!
-        delta {Delta} -- delta describing the deleted feature
-        overwrite_conflicts {bool} -- if there are conflicts with an existing feature, ignore them
+    Args:
+        layer: target layer. Must be in edit mode!
+        delta: delta describing the deleted feature
+        overwrite_conflicts: if there are conflicts with an existing feature, ignore them
 
     Raises:
         DeltaException: whenever the feature cannot be deleted
+
+    Returns:
+        The deleted QGIS feature.
     """
     old_feature_delta = delta["old"]
     old_feature = get_feature(layer, delta, client_pks)
@@ -1026,32 +1034,30 @@ def delete_feature(
 
 def compare_feature(
     feature: QgsFeature, delta_feature: DeltaFeature, is_delta_subset: bool = False
-) -> List[str]:
+) -> list[str]:
     """Compares a feature with delta description of a feature and reports the
     differences. Checks both the geometry and the attributes. If
     {is_delta_subset} is true, allows the delta attributes to be subset of the
     {feature} attributes.
 
-    Arguments:
-        feature {QgsFeature} -- target feature
-        delta_feature {DeltaFeature} -- target delta description of a feature
-
-    Keyword Arguments:
-        is_delta_subset {bool} -- whether to precisely match the delta attributes
+    Args:
+        feature: target feature
+        delta_feature: target delta description of a feature
+        is_delta_subset: whether to precisely match the delta attributes
         on the original feature (default: {False})
 
     Returns:
-        List[str] -- a list of differences found
+        A list of differences found.
     """
     # NOTE this can be something more structured, JSON like object.
     # However, I think we should not record the diff/conflicts, as they may change if the underlying feature is updated.
-    conflicts: List[str] = []
+    conflicts: list[str] = []
 
     # TODO enable once we are done
     # if delta_feature.get('geometry') != feature.geometry().asWkt(17):
     #     conflicts.append('Geometry missmatch')
 
-    delta_feature_attrs: Optional[Dict[str, Any]] = delta_feature.get("attributes")
+    delta_feature_attrs: dict[str, Any] | None = delta_feature.get("attributes")
 
     if delta_feature_attrs:
         delta_feature_attr_names = delta_feature_attrs.keys()
@@ -1095,11 +1101,11 @@ def compare_feature(
 def get_layer_path(layer: QgsMapLayer) -> Path:
     """Returns a `Path` object of the data source filename of the given layer.
 
-    Arguments:
-        layer {QgsMapLayer} -- target layer
+    Args:
+        layer: target layer
 
     Returns:
-        Path -- `Path` object
+        Layer's path
     """
     data_source_uri = layer.dataProvider().dataSourceUri()
     data_source_decoded = QgsProviderRegistry.instance().decodeUri(
@@ -1111,11 +1117,11 @@ def get_layer_path(layer: QgsMapLayer) -> Path:
 def get_backup_path(path: Path) -> Path:
     """Returns a `Path` object of with backup suffix
 
-    Arguments:
-        path {Path} -- target path
+    Args:
+        path: target path
 
     Returns:
-        Path -- suffixed path
+        Layer's backup path
     """
     return Path(str(path) + BACKUP_SUFFIX)
 
@@ -1127,13 +1133,13 @@ def is_layer_file_based(layer: QgsMapLayer) -> bool:
 def inverse_delta(delta: Delta) -> Delta:
     """Returns shallow copy of the delta with reversed `old` and `new` keys
 
-    Arguments:
-        delta {Delta} -- delta
+    Args:
+        delta: delta
 
     Returns:
-        [type] -- reversed delta
+        reversed delta
     """
-    copy: Dict[str, Any] = {**delta}
+    copy: dict[str, Any] = {**delta}
     copy["old"], copy["new"] = delta.get("new"), delta.get("old")
 
     if copy["method"] == DeltaMethod.CREATE.name:
