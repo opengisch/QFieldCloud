@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import os
@@ -27,6 +28,8 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
+from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
+from qfieldcloud.core.utils2.jobs import repackage
 from qfieldcloud.core.utils2.storage import get_stored_package_ids
 from qfieldcloud.filestorage.models import File
 
@@ -35,7 +38,7 @@ from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(APITransactionTestCase):
+class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 
@@ -143,6 +146,7 @@ class QfcTestCase(APITransactionTestCase):
                 response = self.client.get(f"/api/v1/packages/{project.id}/latest/")
                 package_payload = response.json()
 
+                self.assertNotEquals(package_payload.get("code"), "invalid_job")
                 self.assertLess(
                     package_payload["packaged_at"], timezone.now().isoformat()
                 )
@@ -380,7 +384,7 @@ class QfcTestCase(APITransactionTestCase):
     def test_needs_repackaging_without_online_vector(self):
         self.project1.refresh_from_db()
         # newly uploaded project should always need to be packaged at least once
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
         self.upload_files_and_check_package(
             token=self.token1.key,
@@ -401,7 +405,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # no longer needs repackaging since geopackage layers cannot change without deltas/reupload
-        self.assertFalse(self.project1.needs_repackaging)
+        self.assertFalse(self.project1.needs_repackaging(self.user1))
 
         self.upload_files(
             self.token1.key,
@@ -413,7 +417,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # a layer file changed, so we need to repackage
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
     def test_needs_repackaging_with_online_vector(self):
         cur = self.conn.cursor()
@@ -428,7 +432,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # newly uploaded project should always need to be packaged at least once
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
         self.upload_files_and_check_package(
             token=self.token1.key,
@@ -446,7 +450,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # projects with online vector layer should always show as it needs repackaging
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
     @tag("flaky")
     def test_connects_via_pgservice(self):
@@ -736,3 +740,100 @@ class QfcTestCase(APITransactionTestCase):
                 "DCIM/2.jpg",
             ],
         )
+
+    def test_purge_obsolete_package_files_works_fine(self):
+        # create another user to check that its package files are not deleted.
+        other_user = Person.objects.create_user(
+            username="other_user", password="abc123"
+        )
+        collaborators = [
+            ProjectCollaborator(
+                project=self.project1,
+                collaborator=other_user,
+                role=ProjectCollaborator.Roles.ADMIN,
+            ),
+        ]
+        self.project1.direct_collaborators.bulk_create(collaborators)
+
+        # upload data & QGIS project files to the project.
+        self._upload_file(
+            self.user1,
+            self.project1,
+            "bumblebees.gpkg",
+            io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
+        )
+
+        self._upload_file(
+            self.user1,
+            self.project1,
+            "simple_bumblebees.qgs",
+            io.FileIO(testdata_path("simple_bumblebees.qgs"), "rb"),
+        )
+
+        wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
+
+        package_job_1 = repackage(self.project1, self.user1)
+        other_user_package_job = repackage(self.project1, other_user)
+
+        wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
+
+        if self.project1.uses_legacy_storage:
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            stored_package_ids = get_stored_package_ids(self.project1)
+
+            self.assertIn(str(package_job_1.id), stored_package_ids)
+            self.assertIn(str(other_user_package_job.id), stored_package_ids)
+            self.assertEquals(len(stored_package_ids), 2)
+
+        else:
+            package_files_p1_qs = File.objects.filter(
+                project=self.project1,
+                file_type=File.FileType.PACKAGE_FILE,
+                package_job=package_job_1,
+            )
+
+            self.assertEquals(package_files_p1_qs.count(), 3)
+
+        # repackage the project for the same user.
+        package_job_2 = repackage(self.project1, self.user1)
+        wait_for_project_ok_status(self.project1)
+        self.project1.refresh_from_db()
+
+        if self.project1.uses_legacy_storage:
+            # TODO Delete with QF-4963 Drop support for legacy storage
+            stored_package_ids = get_stored_package_ids(self.project1)
+
+            self.assertNotIn(str(package_job_1.id), stored_package_ids)
+            self.assertIn(str(package_job_2.id), stored_package_ids)
+            self.assertIn(str(other_user_package_job.id), stored_package_ids)
+            self.assertEquals(len(stored_package_ids), 2)
+
+        else:
+            # make sure old package files are deleted.
+            package_files_p1_qs = File.objects.filter(
+                project=self.project1,
+                file_type=File.FileType.PACKAGE_FILE,
+                package_job=package_job_1,
+            )
+
+            self.assertEquals(package_files_p1_qs.count(), 0)
+
+            # make sure new package files are there.
+            package_files_p2_qs = File.objects.filter(
+                project=self.project1,
+                file_type=File.FileType.PACKAGE_FILE,
+                package_job=package_job_2,
+            )
+
+            self.assertEquals(package_files_p2_qs.count(), 3)
+
+            # make sure the other user's package files are there.
+            other_user_package_files_qs = File.objects.filter(
+                project=self.project1,
+                file_type=File.FileType.PACKAGE_FILE,
+                package_job=other_user_package_job,
+            )
+
+            self.assertEquals(other_user_package_files_qs.count(), 3)
