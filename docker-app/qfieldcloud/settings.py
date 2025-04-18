@@ -36,7 +36,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = int(os.environ.get("DEBUG", default=0))
+DEBUG = bool(int(os.environ.get("DEBUG", 0)))
 
 # if we are in debug, we need to update the internal IPS to make the
 # debug toolbar work within docker
@@ -242,7 +242,7 @@ LANGUAGE_CODE = os.environ.get("QFIELDCLOUD_DEFAULT_LANGUAGE") or "en"
 
 TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
 
-USE_I18N = bool(os.environ.get("QFIELDCLOUD_USE_I18N")) or True
+USE_I18N = bool(int(os.environ.get("QFIELDCLOUD_USE_I18N", 1)))
 
 USE_TZ = True
 
@@ -436,8 +436,8 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 
 SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
 
-QFIELDCLOUD_PASSWORD_LOGIN_DISABLED = (
-    os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_DISABLED", "true").lower() == "true"
+QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = bool(
+    int(os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED", 0))
 )
 
 QFIELDCLOUD_SSO_PROVIDER_STYLES = {
