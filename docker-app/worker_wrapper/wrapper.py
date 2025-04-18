@@ -268,7 +268,7 @@ class JobRun:
 
         extra_envvars = {}
         pgservice_file_contents = ""
-        for secret in self.job.project.secrets.all():
+        for secret in self.job.project.secrets.for_user(self.job.created_by):
             if secret.type == Secret.Type.ENVVAR:
                 extra_envvars[secret.name] = secret.value
             elif secret.type == Secret.Type.PGSERVICE:
