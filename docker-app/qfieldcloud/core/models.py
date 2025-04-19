@@ -1515,7 +1515,7 @@ class Project(models.Model):
                             "solution": solution,
                         }
                     )
-
+                # the layer is missing a primary key, warn it is going to be read-only
                 elif layer_data.get("layer_type_name") in ("VectorLayer", "Vector"):
                     if layer_data.get("qfc_source_data_pk_name") == "":
                         problems.append(
