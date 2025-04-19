@@ -1383,7 +1383,7 @@ class Project(models.Model):
 
     @property
     def files_count(self):
-        """
+        """*
         Todo:
             * Delete with QF-4963 Drop support for legacy storage
         """
