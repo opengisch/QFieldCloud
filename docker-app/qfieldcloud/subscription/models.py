@@ -377,7 +377,7 @@ class SubscriptionQuerySet(models.QuerySet):
         """Returns all subscriptions that are managed by given `user_id`. It means the owner personal account and all organizations they own.
 
         Args:
-            user_id (int): the user we are searching against
+            user_id: the user we are searching against
         """
         if not user_id:
             # NOTE: for logged out AnonymousUser the user_id is None
@@ -636,7 +636,7 @@ class AbstractSubscription(models.Model):
         self,
         package_type: PackageType,
         quantity: int,
-        active_since: datetime = None,
+        active_since: datetime | None = None,
     ):
         if not self.plan.is_premium:
             raise NotPremiumPlanException(
@@ -687,10 +687,10 @@ class AbstractSubscription(models.Model):
         """Returns the current subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
-            account (UserAccount): the account the subscription belongs to.
+            account: the account the subscription belongs to.
 
         Returns:
-            Self: the current subscription
+            the current subscription
 
         TODO Python 3.11 the actual return type is Self
         """
@@ -720,10 +720,10 @@ class AbstractSubscription(models.Model):
         """Updates the subscription properties.
 
         Args:
-            subscription (Subscription): subscription to be updated
+            subscription: subscription to be updated
 
         Returns:
-            Self: the same as the subscription argument
+            the same as the subscription argument
 
         TODO Python 3.11 the actual return type is Self
         """
@@ -764,11 +764,11 @@ class AbstractSubscription(models.Model):
         """Creates the default subscription for a given account.
 
         Args:
-            account (UserAccount): the account the subscription belongs to.
-            active_since (datetime): active since for the subscription
+            account: the account the subscription belongs to.
+            active_since: active since for the subscription
 
         Returns:
-            Self: the created subscription.
+            the created subscription.
 
         TODO Python 3.11 the actual return type is Self
         """
@@ -810,13 +810,13 @@ class AbstractSubscription(models.Model):
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
-            account (UserAccount): the account the subscription belongs to.
-            plan (Plan): the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
-            created_by (Person): created by.
-            active_since (datetime | None): active since for the subscription.
+            account: the account the subscription belongs to.
+            plan: the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
+            created_by: created by.
+            active_since: active since for the subscription.
 
         Returns:
-            tuple[AbstractSubscription | None, AbstractSubscription]: the created trial subscription if the given plan was a trial and the regular subscription.
+            the created trial subscription if the given plan was a trial and the regular subscription.
 
         TODO Python 3.11 the actual return type is Self
         """

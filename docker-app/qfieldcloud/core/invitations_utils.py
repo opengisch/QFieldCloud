@@ -100,7 +100,7 @@ def send_invitation(invite, **kwargs):
     """Sends invitation.
 
     Args:
-        invite (Invitation): the invitation to be sent
+        invite: the invitation to be sent
 
     The same as the original Invitation.send_invitation, but without passing the request object.
     https://github.com/bee-keeper/django-invitations/blob/invitations/models.py#L42

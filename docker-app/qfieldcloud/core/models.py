@@ -200,10 +200,10 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
         """Searches a user by `username` or `email` field
 
         Args:
-            username_or_email (str): username or email to search for
+            username_or_email: username or email to search for
 
         Returns:
-            User: The user with that username or email.
+            The user with that username or email.
         """
         return self.get(Q(username=username_or_email) | Q(email=username_or_email))
 
@@ -229,10 +229,10 @@ class User(AbstractUser):
     """User model. Used as base for organizations and teams too.
 
     Args:
-        AbstractUser (AbstractUser): the django's abstract user base
+        the django's abstract user base
 
     Returns:
-        User: the user instance
+        the user instance
 
     Note:
         If you add validators in the constructor, note they will be added multiple times for each class that extends User.
@@ -717,8 +717,8 @@ class Organization(User):
         Active users are users triggering a job or pushing a delta on a project owned by the organization.
 
         Args:
-            period_since (datetime): inclusive beginning of the interval
-            period_until (datetime): inclusive end of the interval
+            period_since: inclusive beginning of the interval
+            period_until: inclusive end of the interval
         """
         assert period_since
         assert period_until
@@ -1029,7 +1029,7 @@ def get_project_file_storage_default() -> str:
     """Get the default file storage for the newly created project
 
     Returns:
-        str: the name of the storage
+        the name of the storage
     """
     return settings.STORAGES_PROJECT_DEFAULT_STORAGE
 
@@ -1227,7 +1227,7 @@ class Project(models.Model):
         """Determine the storage versions to keep based on the owner's subscription plan and project settings.
 
         Returns:
-            int: the number of file versions, should be always greater than 1
+            the number of file versions, should be always greater than 1
         """
         subscription = self.owner.useraccount.current_subscription
 
@@ -1287,7 +1287,7 @@ class Project(models.Model):
         neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
 
         Returns:
-            list[str]: A list configured attachment dirs for the project.
+            A list configured attachment dirs for the project.
         """
         attachment_dirs = []
 
@@ -1930,7 +1930,7 @@ class Job(models.Model):
         The version number would be in `Major.Minor.Patch-NAME` format, e.g. 3.40.2-Bratislava
 
         Returns:
-            str | None: QGIS version if found else None.
+            QGIS version if found else None.
         """
         if not self.feedback:
             return None
@@ -1967,10 +1967,10 @@ class Job(models.Model):
         """Extract a step data of a job's feedback.
 
         Args:
-            step_name (str): name of the step to extract data from.
+            step_name: name of the step to extract data from.
 
         Returns:
-            dict[str, Any] | None: data as dict if the step has been found, else None.
+            data as dict if the step has been found, else None.
         """
         if isinstance(self.feedback, dict):
             steps: list[dict[str, Any]] = self.feedback.get("steps", [])

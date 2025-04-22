@@ -15,11 +15,11 @@ def redirect_to_referer_or_view(
     this will create a redirection to a default view.
 
     Args:
-        request (HttpRequest): incoming client request.
-        view_name (str): name of the view to redirect to.
+        request: incoming client request.
+        view_name: name of the view to redirect to.
 
     Returns:
-        HttpResponseRedirect: client redirect http response.
+        client redirect http response.
     """
     referer = request.headers.get("referer", "")
     if url_has_allowed_host_and_scheme(referer, allowed_hosts=settings.ALLOWED_HOSTS):

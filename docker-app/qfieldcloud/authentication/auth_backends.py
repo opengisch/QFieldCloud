@@ -30,7 +30,7 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
         """Almost the same as `contrib.auth.backends.ModelBackend`, but not using the default manager, but the normal `objects` manager
 
         Returns:
-            Person | Organization | Team | None: In theory it can return any of these types, however it will always be a `Person` or `None`
+            In theory it can return any of `Person` | `Organization` | `Team` | `None` types, however it will always be a `Person` or `None`
         """
         UserModel = get_user_model()
 

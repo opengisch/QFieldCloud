@@ -2,12 +2,11 @@
 import argparse
 import re
 from pathlib import Path
-from typing import Dict, List, Set
 
 import yaml
 
 
-def get_env_varnames_from_envfile(filename: str) -> Set[str]:
+def get_env_varnames_from_envfile(filename: str) -> set[str]:
     result = set()
 
     with open(filename) as f:
@@ -32,7 +31,7 @@ def get_env_varnames_from_envfile(filename: str) -> Set[str]:
         return result
 
 
-def get_env_varnames_from_docker_compose(filename: Path) -> Set[str]:
+def get_env_varnames_from_docker_compose(filename: Path) -> set[str]:
     regex = r"\$\{(\w+)(:-?\w+?)?\}"
     result = set()
 
@@ -49,7 +48,7 @@ def get_env_varnames_from_docker_compose(filename: Path) -> Set[str]:
 
 def get_env_varnames_from_docker_compose_files(
     search_path: str,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     env_vars = {}
 
     for path in Path(search_path).glob("**/docker-compose*.yml"):
@@ -63,7 +62,7 @@ def get_env_varnames_from_docker_compose_files(
     return env_vars
 
 
-def get_env_varnames_from_k8s_kustomization(filename: Path) -> Set[str]:
+def get_env_varnames_from_k8s_kustomization(filename: Path) -> set[str]:
     result = set()
 
     with open(filename) as f:
@@ -75,13 +74,13 @@ def get_env_varnames_from_k8s_kustomization(filename: Path) -> Set[str]:
     return result
 
 
-def get_env_varnames_from_k8s_secrets(filename: Path) -> Set[str]:
+def get_env_varnames_from_k8s_secrets(filename: Path) -> set[str]:
     with open(filename) as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
         return set(config["spec"]["encryptedData"].keys())
 
 
-def get_env_varnames_from_k8s_environments(search_path: str) -> Dict[str, List[str]]:
+def get_env_varnames_from_k8s_environments(search_path: str) -> dict[str, list[str]]:
     env_vars = {}
 
     for path in Path(search_path).iterdir():

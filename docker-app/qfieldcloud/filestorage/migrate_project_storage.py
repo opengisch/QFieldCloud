@@ -28,9 +28,9 @@ def migrate_project_storage(
     """Migrates project storage from the old s3 version-enabled storage to platform independent `django-storages`-based file handling.
 
     Args:
-        project (Project): Target project to be migrated
-        to_storage (str): Target storage to migrate to
-        force (bool, optional): Overwrite the target storage if the project files already exist by deleting all objects with the project id prefix. Defaults to False.
+        project: Target project to be migrated
+        to_storage: Target storage to migrate to
+        force: Overwrite the target storage if the project files already exist by deleting all objects with the project id prefix. Defaults to False.
     """
     logger.info(f'Migrating project "{project.name}" ({str(project.id)})...')
 
