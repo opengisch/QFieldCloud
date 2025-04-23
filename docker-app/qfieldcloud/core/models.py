@@ -1483,22 +1483,9 @@ class Project(models.Model):
             )
 
         elif self.project_details:
-            try:
-                for missing_layer in self.get_missing_localized_layers():
-                    problems.append(
-                        {
-                            "layer": missing_layer.get("filename"),
-                            "level": "warning",
-                            "code": "missing_localized_file",
-                            "description": _(
-                                'Localized dataset stored at "{}" is missing in the centralized dataset project.'
-                            ).format(missing_layer.get("filename")),
-                            "solution": _(
-                                "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
-                            ),
-                        }
-                    )
-            except Project.DoesNotExist:
+            localized_project = self.get_localized_datasets_project()
+
+            if not localized_project:
                 problems.append(
                     {
                         "layer": None,
@@ -1507,8 +1494,21 @@ class Project(models.Model):
                         "description": _(
                             "Could not find the 'localized_datasets' project."
                         ),
+                        "solution": _("Ensure the shared dataset project exists."),
+                    }
+                )
+
+            for missing_layer in self.get_missing_localized_layers():
+                problems.append(
+                    {
+                        "layer": missing_layer.get("filename"),
+                        "level": "warning",
+                        "code": "missing_localized_file",
+                        "description": _(
+                            'Localized dataset stored at "{}" is missing in the centralized dataset project.'
+                        ).format(missing_layer.get("filename")),
                         "solution": _(
-                            "Ensure the shared dataset project exists and is correctly named."
+                            "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
                         ),
                     }
                 )
