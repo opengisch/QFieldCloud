@@ -152,7 +152,7 @@ def start_app() -> str:
     """
     global QGISAPP
 
-    extra_envvars = os.environ.get("QFIELDCLOUD_EXTRA_ENVVARS")
+    extra_envvars = os.environ.get("QFIELDCLOUD_EXTRA_ENVVARS", "[]")
 
     logging.info(f"Available user defined environment variables: {extra_envvars}")
 
