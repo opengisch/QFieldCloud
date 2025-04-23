@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -1064,12 +1064,25 @@ class Project(models.Model):
 
     @property
     def localized_layers(self) -> list[dict[str, Any]]:
+        """
+        Retrieve all layers from project_details that are marked as localized.
+
+        Returns:
+            A list of layer detail dictionaries where each dict has 'is_localized' == True.
+            If project_details is missing or empty, returns an empty list.
+        """
         if not self.project_details:
             return []
 
         layers_by_id = self.project_details.get("layers_by_id", {})
 
-        return [ld for ld in layers_by_id.values() if ld.get("is_localized", False)]
+        localized = []
+        for layer_detail in layers_by_id.values():
+            is_local = layer_detail.get("is_localized", False)
+            if is_local:
+                localized.append(layer_detail)
+
+        return localized
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
@@ -1226,46 +1239,55 @@ class Project(models.Model):
         default=False,
     )
 
-    def get_localized_datasets_project_id(self) -> str | None:
+    def get_localized_datasets_project(self) -> Optional[Project]:
         """
-        Returns the ID of the 'localized_datasets' project for the same owner.
+        Returns the 'localized_datasets' Project instance for the same owner,
+        or None if no such project exists.
         """
-        project = Project.objects.filter(
-            name="localized_datasets", owner=self.owner
-        ).first()
-        return project.id if project else None
+        try:
+            project: Project = Project.objects.only("id").get(
+                name="localized_datasets",
+                owner=self.owner,
+            )
+            return project
+        except Project.DoesNotExist:
+            return None
 
-    def get_missing_localized_layers(self) -> List[Dict]:
+    def get_missing_localized_layers(self) -> list[dict[str, Any]]:
         """
-        Identifies and returns a list of localized layer metadata dictionaries
-        that are not present in the associated localized_datasets project storage.
+        Of all localized layers, return those whose filenames aren’t in `available_filenames`,
+        which means they are not present in the associated localized_datasets project storage.
 
         Returns:
-            List[Dict]: A list of layer dictionaries missing from the
-                        localized_datasets project's file storage.
+            A list of layer-detail dicts (same shape as in `localized_layers`)
+            that need to be added/uploaded.
         """
         from qfieldcloud.filestorage.models import File
 
         if not self.project_details:
             return []
 
-        localized_project_id = self.get_localized_datasets_project_id()
+        localized_project = self.get_localized_datasets_project()
 
-        if not localized_project_id:
+        if not localized_project:
             # Return all layers if the project is missing
             return self.localized_layers
 
         available_filenames = set(
-            File.objects.filter(project_id=localized_project_id).values_list(
+            File.objects.filter(project_id=localized_project.id).values_list(
                 "name", flat=True
             )
         )
-        missing_layers = [
-            layer
-            for layer in self.localized_layers
-            if "filename" in layer
-            and layer["filename"].split("localized:")[-1] not in available_filenames
-        ]
+
+        missing_layers = []
+        for layer in self.localized_layers:
+            if "filename" not in layer:
+                continue
+            # TODO: refactor and extract filename splitting logic into a reusable utility.
+            filename = layer["filename"].split("localized:")[-1]
+
+            if filename not in available_filenames:
+                missing_layers.append(layer)
 
         return missing_layers
 
@@ -1383,7 +1405,7 @@ class Project(models.Model):
 
     @property
     def files_count(self):
-        """*
+        """
         Todo:
             * Delete with QF-4963 Drop support for legacy storage
         """
@@ -1469,7 +1491,7 @@ class Project(models.Model):
                             "level": "warning",
                             "code": "missing_localized_file",
                             "description": _(
-                                'Localized Layer "{}" is missing in the centralized dataset project.'
+                                'Localized dataset stored at "{}" is missing in the centralized dataset project.'
                             ).format(missing_layer.get("filename")),
                             "solution": _(
                                 "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."

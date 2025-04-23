@@ -755,6 +755,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             datasource = bad_layer_handler.invalid_layer_sources_by_id.get(layer_id)
 
             if datasource and "localized:" in datasource:
+                # TODO: refactor and extract filename splitting logic into a reusable utility.
                 filename = datasource.split("localized:")[-1]
 
                 if "|" in filename:

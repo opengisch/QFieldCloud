@@ -77,10 +77,12 @@ class ProjectSerializer(serializers.ModelSerializer):
     localized_datasets_project_id = serializers.SerializerMethodField(read_only=True)
 
     def get_localized_datasets_project_id(self, obj):
-        project = Project.objects.filter(
-            name="localized_datasets", owner=obj.owner
-        ).first()
-        return str(project.id) if project else None
+        project = obj.get_localized_datasets_project()
+
+        if project:
+            return str(project.id)
+        else:
+            return None
 
     def to_internal_value(self, data):
         internal_data = super().to_internal_value(data)
