@@ -1516,24 +1516,21 @@ class Project(models.Model):
                 layer_name = layer_data.get("name")
 
                 if layer_data.get("error_code") != "no_error":
-                    description = _(
-                        'Layer "{}" has an error with code "{}": {}'
-                    ).format(
-                        layer_name,
-                        layer_data.get("error_code"),
-                        layer_data.get("error_summary"),
-                    )
-                    solution = _(
-                        'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
-                    )
-
                     problems.append(
                         {
                             "layer": layer_name,
                             "level": "warning",
                             "code": "layer_problem",
-                            "description": description,
-                            "solution": solution,
+                            "description": _(
+                                'Layer "{}" has an error with code "{}": {}'
+                            ).format(
+                                layer_name,
+                                layer_data.get("error_code"),
+                                layer_data.get("error_summary"),
+                            ),
+                            "solution": _(
+                                'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
+                            ),
                         }
                     )
                 # the layer is missing a primary key, warn it is going to be read-only
