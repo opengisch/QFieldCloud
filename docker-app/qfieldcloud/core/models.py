@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -1065,7 +1065,7 @@ class Project(models.Model):
     @property
     def localized_layers(self) -> list[dict[str, Any]]:
         """
-        Retrieve all layers from project_details that are marked as localized.
+        Retrieve all layers from `Project.project_details` that have their `is_localized` flag set to `True`.
 
         Returns:
             A list of layer detail dictionaries where each dict has 'is_localized' == True.
@@ -1076,13 +1076,12 @@ class Project(models.Model):
 
         layers_by_id = self.project_details.get("layers_by_id", {})
 
-        localized = []
+        localized_layers = []
         for layer_detail in layers_by_id.values():
-            is_local = layer_detail.get("is_localized", False)
-            if is_local:
-                localized.append(layer_detail)
+            if layer_detail.get("is_localized", False):
+                localized_layers.append(layer_detail)
 
-        return localized
+        return localized_layers
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
@@ -1239,13 +1238,13 @@ class Project(models.Model):
         default=False,
     )
 
-    def get_localized_datasets_project(self) -> Optional[Project]:
+    def get_localized_datasets_project(self) -> Project | None:
         """
         Returns the 'localized_datasets' Project instance for the same owner,
         or None if no such project exists.
         """
         try:
-            project: Project = Project.objects.only("id").get(
+            project = Project.objects.get(
                 name="localized_datasets",
                 owner=self.owner,
             )
@@ -1279,7 +1278,7 @@ class Project(models.Model):
             )
         )
 
-        missing_layers = []
+        missing_localized_layers = []
         for layer in self.localized_layers:
             if "filename" not in layer:
                 continue
@@ -1287,9 +1286,9 @@ class Project(models.Model):
             filename = layer["filename"].split("localized:")[-1]
 
             if filename not in available_filenames:
-                missing_layers.append(layer)
+                missing_localized_layers.append(layer)
 
-        return missing_layers
+        return missing_localized_layers
 
     @property
     def has_the_qgis_file(self) -> bool:
