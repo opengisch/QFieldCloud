@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
@@ -9,6 +8,7 @@ from drf_spectacular.utils import (
 )
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
+from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
@@ -39,7 +39,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
         projectid = permissions_utils.get_param_from_request(request, "projectid")
 
-        project = get_object_or_404(Project, id=projectid)
+        try:
+            project = Project.objects.get(id=projectid)
+        except Project.DoesNotExist:
+            raise ObjectNotFoundError(detail="Project not found.")
 
         if view.action == "retrieve":
             return permissions_utils.can_retrieve_project(user, project)

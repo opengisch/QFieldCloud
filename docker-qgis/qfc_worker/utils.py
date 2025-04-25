@@ -751,6 +751,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         filename = layer_source.filename
         datasource = None
 
+        # TODO: Move localized layer handling functionality inside libqfieldsync (ClickUp: QF-5875)
         if layer_source.is_localized_path:
             datasource = bad_layer_handler.invalid_layer_sources_by_id.get(layer_id)
 
