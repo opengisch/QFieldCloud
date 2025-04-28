@@ -300,6 +300,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()["code"], "object_not_found")
+        # Get a project without a valid project id
         response = self.client.get("/api/v1/projects/{}/".format("pizza"))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "validation_error")
