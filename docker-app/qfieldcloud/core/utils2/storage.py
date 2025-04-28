@@ -24,6 +24,7 @@ from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
 from qfieldcloud.core.utils2.audit import LogEntry, audit
+from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 
 logger = logging.getLogger(__name__)
 
@@ -449,6 +450,10 @@ def delete_project_thumbnail(
 def purge_previous_thumbnails_versions(
     project: qfieldcloud.core.models.Project,
 ) -> None:
+    # this method applies only to S3 storage
+    if not isinstance(project.file_storage, QfcS3Boto3Storage):
+        return
+
     bucket = storages[project.file_storage].bucket  # type: ignore
     prefix = project.thumbnail.name
 
