@@ -6,7 +6,6 @@ from django.db.models import Value as V
 from django.db.models.functions import StrIndex
 
 from qfieldcloud.core.models import (
-    Delta,
     Organization,
     OrganizationMember,
     Person,
@@ -34,11 +33,6 @@ def get_organization_members(organization) -> QuerySet[Person]:
         role=V("owner")
     )
     return org_members.union(owner)
-
-
-def get_project_deltas(project):
-    """Return a queryset of all available deltas of a specific project."""
-    return Delta.objects.filter(project=project)
 
 
 def get_users(
