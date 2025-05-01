@@ -32,6 +32,7 @@ from drf_spectacular.views import (
 from rest_framework import permissions
 
 from qfieldcloud.authentication import views as auth_views
+from qfieldcloud.core.views.redirect_views import redirect_to_admin_project_view
 from qfieldcloud.filestorage.views import (
     compatibility_file_crud_view,
     compatibility_file_list_view,
@@ -102,4 +103,5 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("invitations/", include("invitations.urls", namespace="invitations")),
     path("__debug__/", include("debug_toolbar.urls")),
+    path("a/<str:username>/<str:project_name>/", redirect_to_admin_project_view),
 ]
