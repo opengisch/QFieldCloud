@@ -260,6 +260,8 @@ def download_field_file(
         response["X-Accel-Redirect"] = "/storage-download/"
         response["redirect_uri"] = url
 
+        field_file.storage.patch_nginx_download_redirect(response)  # type: ignore
+
         return response
     elif settings.DEBUG or settings.IN_TEST_SUITE:
         return FileResponse(

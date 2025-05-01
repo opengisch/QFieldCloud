@@ -14,9 +14,15 @@ class S3StorageOptions(TypedDict):
     endpoint_url: str
 
 
+class WebDavStorageOptions(TypedDict):
+    webdav_url: str
+    public_url: str
+    basic_auth: str
+
+
 class DjangoStorages(TypedDict):
     BACKEND: str
-    OPTIONS: S3StorageOptions
+    OPTIONS: S3StorageOptions | WebDavStorageOptions
     QFC_IS_LEGACY: bool
 
 
@@ -68,9 +74,11 @@ def get_storages_config() -> StoragesConfig:
         if (
             service_config["BACKEND"]
             != "qfieldcloud.filestorage.backend.QfcS3Boto3Storage"
+            and service_config["BACKEND"]
+            != "qfieldcloud.filestorage.backend.QfcWebDavStorage"
         ):
             raise ConfigValidationError(
-                'Envvar `STORAGES[{}][BACKEND]` is expected to be "qfieldcloud.filestorage.backend.QfcS3Boto3Storage", but "{}" given!'.format(
+                'Envvar `STORAGES[{}][BACKEND]` is expected to be "qfieldcloud.filestorage.backend.QfcS3Boto3Storage" or "qfieldcloud.filestorage.backend.QfcWebDavStorage", but "{}" given!'.format(
                     service_name, service_config["BACKEND"]
                 )
             )

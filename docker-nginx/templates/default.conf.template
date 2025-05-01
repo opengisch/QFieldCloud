@@ -126,7 +126,10 @@ server {
     # Only allow internal redirects
     internal;
 
+    # used for redirecting file requests to storage.
     set $redirect_uri "$upstream_http_redirect_uri";
+    # webdav storage requires a HTTP auth (Basic, mostly).
+    set $webdav_auth "$upstream_http_webdav_auth";
 
     # required DNS
     resolver 8.8.8.8;
@@ -143,7 +146,7 @@ server {
 
     # remove the authorization and the cookie headers
     proxy_set_header Connection '';
-    proxy_set_header Authorization '';
+    proxy_set_header Authorization $webdav_auth;
     proxy_set_header Cookie '';
     proxy_set_header Content-Type '';
     proxy_set_header Accept-Encoding '';
