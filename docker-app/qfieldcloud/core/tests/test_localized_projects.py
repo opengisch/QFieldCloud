@@ -9,6 +9,7 @@ from qfieldcloud.core.models import (
     Job,
     Person,
     Project,
+    utils,
 )
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
@@ -126,7 +127,7 @@ class QfcTestCase(APITransactionTestCase):
         - Uploads the second file and confirms only one remains missing
         """
         resp = self.upload_file(
-            self.localized_datasets, "delta/polygons.geojson", "polygons.geojson"
+            self.localized_datasets, "delta/polygons.geojson", "delta/polygons.geojson"
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
@@ -148,9 +149,20 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsNotNone(processprojectfile_job.feedback)
 
         # Localized layers found in the localized_datasets project
-        available_localized_filenames = File.objects.filter(
-            project_id=self.localized_datasets.id
-        ).values_list("name", flat=True)
+        if self.project1.uses_legacy_storage:
+            available_localized_files = utils.get_project_files(
+                self.localized_datasets.id
+            )
+            available_localized_filenames = [
+                file.name for file in available_localized_files
+            ]
+
+        else:
+            available_localized_filenames = set(
+                File.objects.filter(project_id=self.localized_datasets.id).values_list(
+                    "name", flat=True
+                )
+            )
 
         self.assertEqual(len(available_localized_filenames), 1)
 
@@ -163,7 +175,7 @@ class QfcTestCase(APITransactionTestCase):
             self.get_filenames_from_missing_localized_layers()
         )
 
-        self.assertNotIn("polygons.geojson", project_localized_filenames)
+        self.assertNotIn("delta/polygons.geojson", project_localized_filenames)
 
         self.assertEqual(len(missing_localized_layers_filenames), 2)
 

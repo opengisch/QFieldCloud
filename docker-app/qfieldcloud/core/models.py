@@ -1272,11 +1272,14 @@ class Project(models.Model):
             # Return all layers if the project is missing
             return self.localized_layers
 
-        available_filenames = set(
-            File.objects.filter(project_id=localized_project.id).values_list(
-                "name", flat=True
-            )
-        )
+        if self.uses_legacy_storage:
+            available_localized_files = utils.get_project_files(localized_project.id)
+            available_filenames = [file.name for file in available_localized_files]
+
+        else:
+            available_filenames = File.objects.filter(
+                project_id=localized_project.id
+            ).values_list("name", flat=True)
 
         missing_localized_layers = []
         for layer in self.localized_layers:
