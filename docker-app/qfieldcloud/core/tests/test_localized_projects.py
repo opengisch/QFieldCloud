@@ -195,24 +195,28 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
+        project = Project.objects.create(
+            name="projectX", is_public=False, owner=self.user1
+        )
+
         resp = self.upload_file(
-            self.project1,
+            project,
             "simple_bumblebees_correct_localized.qgs",
             "simple_bumblebees_correct_localized.qgs",
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
-        wait_for_project_ok_status(self.project1)
-        self.project1.refresh_from_db()
+        wait_for_project_ok_status(project)
+        project.refresh_from_db()
 
         processprojectfile_job = Job.objects.filter(
-            project=self.project1, type=Job.Type.PROCESS_PROJECTFILE
+            project=project, type=Job.Type.PROCESS_PROJECTFILE
         ).latest("updated_at")
 
         self.assertEqual(processprojectfile_job.status, Job.Status.FINISHED)
         self.assertIsNotNone(processprojectfile_job.feedback)
 
-        self.assertEqual(self.project1.get_missing_localized_layers(), [])
+        self.assertListEqual(project.get_missing_localized_layers(), [])
 
     def test_get_missing_localized_layers_without_localized_project(self):
         """
