@@ -104,6 +104,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
             if include_public_param and include_public_param.lower() == "1":
                 include_public = True
 
+            owner = self.request.query_params.get("owner")
+            if owner:
+                owner_account = User.objects.get(username=owner)
+                projects = projects.filter(owner=owner_account.id)
+                # When filtering projects by owner, include public projects by default
+                if not include_public_param:
+                    include_public = True
+
+            project = self.request.query_params.get("project")
+            if project:
+                projects = projects.filter(name=project)
+                # When filtering projects by project name, include public projects by default
+                if not include_public_param:
+                    include_public = True
+
             if not include_public:
                 projects = projects.exclude(
                     user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
@@ -144,32 +159,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             storage.delete_all_project_files_permanently(projectid)
 
         return super().destroy(request, projectid)
-
-
-@extend_schema_view(
-    get=extend_schema(
-        description="List all acccessible projects filtered by a given user name and project name"
-    )
-)
-class FilteredProjectsListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = ProjectSerializer
-    pagination_class = pagination.QfcLimitOffsetPagination()
-    filter_backends = [QfcOrderingFilter]
-    ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
-
-    def get_queryset(self):
-        projects_qs = Project.objects.for_user(self.request.user)
-
-        username = self.request.parser_context["kwargs"]["username"]
-        account = User.objects.get(username=username)
-        projects_qs = projects_qs.filter(owner=account.id)
-
-        if "project" in self.request.parser_context["kwargs"]:
-            project = self.request.parser_context["kwargs"]["project"]
-            projects_qs = projects_qs.filter(name=project)
-
-        return projects_qs
 
 
 @extend_schema_view(get=extend_schema(description="List all public projects"))

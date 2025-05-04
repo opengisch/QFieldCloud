@@ -44,11 +44,6 @@ organizations/<str:organization_name>/teams/<str:team_name>/members/
 urlpatterns = [
     *filestorage_urlpatterns,
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
-    path("projects/<str:username>/", projects_views.FilteredProjectsListView.as_view()),
-    path(
-        "projects/<str:username>/<str:project>/",
-        projects_views.FilteredProjectsListView.as_view(),
-    ),
     path("", include(router.urls)),
     path("users/", users_views.ListUsersView.as_view()),
     path(
