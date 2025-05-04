@@ -146,6 +146,32 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return super().destroy(request, projectid)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="List all acccessible projects filtered by a given user name and project name"
+    )
+)
+class FilteredProjectsListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ProjectSerializer
+    pagination_class = pagination.QfcLimitOffsetPagination()
+    filter_backends = [QfcOrderingFilter]
+    ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
+
+    def get_queryset(self):
+        projects_qs = Project.objects.for_user(self.request.user)
+
+        username = self.request.parser_context["kwargs"]["username"]
+        account = User.objects.get(username=username)
+        projects_qs = projects_qs.filter(owner=account.id)
+
+        if "project" in self.request.parser_context["kwargs"]:
+            project = self.request.parser_context["kwargs"]["project"]
+            projects_qs = projects_qs.filter(name=project)
+
+        return projects_qs
+
+
 @extend_schema_view(get=extend_schema(description="List all public projects"))
 class PublicProjectsListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
