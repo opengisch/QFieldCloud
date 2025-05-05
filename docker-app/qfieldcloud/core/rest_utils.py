@@ -2,6 +2,7 @@ import logging
 
 from django.conf import settings
 from django.core import exceptions
+from django.http import Http404
 from rest_framework import exceptions as rest_exceptions
 from rest_framework.response import Response
 
@@ -18,7 +19,7 @@ def exception_handler(exc, context):
         qfc_exc = qfieldcloud_exceptions.NotAuthenticatedError()
     elif isinstance(exc, rest_exceptions.PermissionDenied):
         qfc_exc = qfieldcloud_exceptions.PermissionDeniedError()
-    elif isinstance(exc, exceptions.ObjectDoesNotExist):
+    elif isinstance(exc, (exceptions.ObjectDoesNotExist, Http404)):
         qfc_exc = qfieldcloud_exceptions.ObjectNotFoundError(detail=str(exc))
     elif isinstance(exc, exceptions.ValidationError):
         qfc_exc = qfieldcloud_exceptions.ValidationError(detail=str(exc))
