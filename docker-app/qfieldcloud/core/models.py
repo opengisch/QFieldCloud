@@ -29,7 +29,6 @@ from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
-from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManager, InheritanceManagerMixin
 from timezone_field import TimeZoneField
@@ -1063,6 +1062,27 @@ class Project(models.Model):
         QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
         PYTHONMINI = "pythonmini", _("Optimized Packager")
 
+    @property
+    def localized_layers(self) -> list[dict[str, Any]]:
+        """
+        Retrieve all layers from `Project.project_details` that have their `is_localized` flag set to `True`.
+
+        Returns:
+            A list of layer detail dictionaries where each dict has 'is_localized' == True.
+            If project_details is missing or empty, returns an empty list.
+        """
+        if not self.project_details:
+            return []
+
+        layers_by_id = self.project_details.get("layers_by_id", {})
+
+        localized_layers = []
+        for layer_detail in layers_by_id.values():
+            if layer_detail.get("is_localized", False):
+                localized_layers.append(layer_detail)
+
+        return localized_layers
+
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
         return self.file_storage
@@ -1217,6 +1237,61 @@ class Project(models.Model):
         ),
         default=False,
     )
+
+    def get_localized_datasets_project(self) -> Project | None:
+        """
+        Returns the 'localized_datasets' Project instance for the same owner,
+        or None if no such project exists.
+        """
+        try:
+            project = Project.objects.get(
+                name="localized_datasets",
+                owner=self.owner,
+            )
+            return project
+        except Project.DoesNotExist:
+            return None
+
+    def get_missing_localized_layers(self) -> list[dict[str, Any]]:
+        """
+        Of all localized layers, return those whose filenames aren’t in `available_filenames`,
+        which means they are not present in the associated localized_datasets project storage.
+
+        Returns:
+            A list of layer-detail dicts (same shape as in `localized_layers`)
+            that need to be added/uploaded.
+        """
+        from qfieldcloud.filestorage.models import File
+
+        if not self.project_details:
+            return []
+
+        localized_project = self.get_localized_datasets_project()
+
+        if not localized_project:
+            # Return all layers if the project is missing
+            return self.localized_layers
+
+        if self.uses_legacy_storage:
+            available_localized_files = utils.get_project_files(localized_project.id)
+            available_filenames = [file.name for file in available_localized_files]
+
+        else:
+            available_filenames = File.objects.filter(
+                project_id=localized_project.id
+            ).values_list("name", flat=True)
+
+        missing_localized_layers = []
+        for layer in self.localized_layers:
+            if "filename" not in layer:
+                continue
+            # TODO: refactor and extract filename splitting logic into a reusable utility.
+            filename = layer["filename"].split("localized:")[-1]
+
+            if filename not in available_filenames:
+                missing_localized_layers.append(layer)
+
+        return missing_localized_layers
 
     @property
     def has_the_qgis_file(self) -> bool:
@@ -1391,7 +1466,7 @@ class Project(models.Model):
             return True
 
     @property
-    def problems(self) -> list[dict]:
+    def problems(self) -> list[dict[str, Any]]:
         problems = []
 
         if not self.has_the_qgis_file:
@@ -1406,40 +1481,57 @@ class Project(models.Model):
                     ),
                 }
             )
+
         elif self.project_details:
+            localized_project = self.get_localized_datasets_project()
+
+            if not localized_project:
+                problems.append(
+                    {
+                        "layer": None,
+                        "level": "warning",
+                        "code": "missing_localized_project",
+                        "description": _(
+                            "Could not find the 'localized_datasets' project."
+                        ),
+                        "solution": _("Ensure the shared dataset project exists."),
+                    }
+                )
+
+            for missing_layer in self.get_missing_localized_layers():
+                problems.append(
+                    {
+                        "layer": missing_layer.get("filename"),
+                        "level": "warning",
+                        "code": "missing_localized_file",
+                        "description": _(
+                            'Localized dataset stored at "{}" is missing in the centralized dataset project.'
+                        ).format(missing_layer.get("filename")),
+                        "solution": _(
+                            "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
+                        ),
+                    }
+                )
+
             for layer_data in self.project_details.get("layers_by_id", {}).values():
                 layer_name = layer_data.get("name")
 
                 if layer_data.get("error_code") != "no_error":
-                    solution: str | SafeString
-                    if layer_data.get("error_code") == "localized_dataprovider":
-                        description = _('Layer "{}" dataprovider is localized').format(
-                            layer_name
-                        )
-                        solution = mark_safe(
-                            _(
-                                'Make sure your <a href="https://docs.qfield.org/fr/how-to/outside-layers/">localized layer</a> is available on your QField device.'
-                            )
-                        )
-                    else:
-                        description = _(
-                            'Layer "{}" has an error with code "{}": {}'
-                        ).format(
-                            layer_name,
-                            layer_data.get("error_code"),
-                            layer_data.get("error_summary"),
-                        )
-                        solution = _(
-                            'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
-                        )
-
                     problems.append(
                         {
                             "layer": layer_name,
                             "level": "warning",
                             "code": "layer_problem",
-                            "description": description,
-                            "solution": solution,
+                            "description": _(
+                                'Layer "{}" has an error with code "{}": {}'
+                            ).format(
+                                layer_name,
+                                layer_data.get("error_code"),
+                                layer_data.get("error_summary"),
+                            ),
+                            "solution": _(
+                                'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
+                            ),
                         }
                     )
                 # the layer is missing a primary key, warn it is going to be read-only
@@ -1452,9 +1544,7 @@ class Project(models.Model):
                                 "code": "layer_problem",
                                 "description": _(
                                     'Layer "{}" does not support the `primary key` attribute. The layer will be read-only on QField.'
-                                ).format(
-                                    layer_name,
-                                ),
+                                ).format(layer_name),
                                 "solution": _(
                                     "To make the layer editable on QField, store the layer data in a GeoPackage or PostGIS layer, using a single column for the primary key."
                                 ),

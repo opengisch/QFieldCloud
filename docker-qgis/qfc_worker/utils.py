@@ -752,9 +752,21 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         error = layer.error()
         layer_id = layer.id()
         layer_source = LayerSource(layer)
+        filename = layer_source.filename
         datasource = None
 
-        if layer.dataProvider():
+        # TODO: Move localized layer handling functionality inside libqfieldsync (ClickUp: QF-5875)
+        if layer_source.is_localized_path:
+            datasource = bad_layer_handler.invalid_layer_sources_by_id.get(layer_id)
+
+            if datasource and "localized:" in datasource:
+                # TODO: refactor and extract filename splitting logic into a reusable utility.
+                filename = datasource.split("localized:")[-1]
+
+                if "|" in filename:
+                    filename = filename.split("|")[0]
+
+        elif layer.dataProvider():
             datasource = layer.dataProvider().uri().uri()
 
         layers_by_id[layer_id] = {
@@ -782,7 +794,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             "error_code": "no_error",
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
-            "filename": layer_source.filename,
+            "filename": filename,
             "provider_name": None,
             "provider_error_summary": None,
             "provider_error_message": None,
