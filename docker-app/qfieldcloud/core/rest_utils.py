@@ -26,7 +26,9 @@ def exception_handler(exc, context):
     elif isinstance(exc, qfieldcloud_exceptions.QFieldCloudException):
         qfc_exc = exc
     elif isinstance(exc, rest_exceptions.APIException):
-        # Map DRF API exceptions to qfc exceptions. Note the `detail` attribute is always present but not properly typed in `APIException`
+        # Map DRF API exceptions to qfc exceptions.
+        # NOTE the `detail` attribute is always present on `APIException` but it is not properly typed,
+        # so we use the `getattr` trick without a third argument to fix typing, but still raise an exception if the attribute is not present.
         qfc_exc = qfieldcloud_exceptions.APIError(
             detail=getattr(exc, "detail"),
             status_code=exc.status_code,
