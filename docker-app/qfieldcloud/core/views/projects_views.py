@@ -18,7 +18,12 @@ User = get_user_model()
 
 
 class ProjectViewSetPermissions(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, view) -> bool:
+        if view.action is None:
+            # If `view.action` is `None`, means that we are getting a OPTIONS request.
+            # We don't know what it is, so we deny permission.
+            return False
+
         if view.action == "list":
             # The queryset is already filtered by what the user can see
             return True
