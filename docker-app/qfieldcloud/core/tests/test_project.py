@@ -126,24 +126,16 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_list_filtered_projects(self):
         # Create a project of user1 with public access to user2
-        self.project1 = Project.objects.create(
-            name="project1", is_public=True, owner=self.user1
-        )
+        Project.objects.create(name="project1", is_public=True, owner=self.user1)
 
         # Create a project of user1 without access to user2
-        self.project1 = Project.objects.create(
-            name="project2", is_public=False, owner=self.user1
-        )
+        Project.objects.create(name="project2", is_public=False, owner=self.user1)
 
         # Create a private project of user2
-        self.project3 = Project.objects.create(
-            name="project1", is_public=False, owner=self.user2
-        )
+        Project.objects.create(name="project1", is_public=False, owner=self.user2)
 
         # Create a public project of user2
-        self.project4 = Project.objects.create(
-            name="project2", is_public=True, owner=self.user2
-        )
+        Project.objects.create(name="project2", is_public=True, owner=self.user2)
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
 
