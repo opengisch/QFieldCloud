@@ -88,8 +88,8 @@ class QfcTestCase(QfcFilesTestCase):
         self.assertEqual(file1.file_storage, "webdav")
 
         # change project's storage to default
-        self.p1.file_storage = "default"
-        self.p1.save(update_fields=["file_storage"])
+        self.p1.attachments_file_storage = "default"
+        self.p1.save(update_fields=["attachments_file_storage"])
 
         response = self._upload_file(
             self.u1,
@@ -106,8 +106,8 @@ class QfcTestCase(QfcFilesTestCase):
         self.assertEqual(file2.file_storage, "default")
 
         # change project's storage to webdav again
-        self.p1.file_storage = "webdav"
-        self.p1.save(update_fields=["file_storage"])
+        self.p1.attachments_file_storage = "webdav"
+        self.p1.save(update_fields=["attachments_file_storage"])
 
         response = self._upload_file(
             self.u1,
