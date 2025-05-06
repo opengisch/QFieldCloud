@@ -16,8 +16,14 @@ from django.db.models import F, QuerySet, Sum
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField
-from qfieldcloud.core.models import Job, Project, User
+from qfieldcloud.core.models import (
+    Job,
+    Project,
+    User,
+    get_project_file_storage_default,
+)
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.core.validators import MaxBytesLengthValidator
 from qfieldcloud.filestorage.utils import calc_etag, filename_validator, to_uuid
@@ -113,6 +119,15 @@ class File(models.Model):
     # TODO We do not `auto_now_add=True` to be able to set this when migrating files from legacy to the regular storage. Switch to `auto_now_add=True` when the legacy storage is no longer supported.
     created_at = models.DateTimeField(default=timezone.now, editable=False)
 
+    file_storage = models.CharField(
+        _("File storage"),
+        help_text=_("Which file storage provider should be used for storing the file."),
+        max_length=100,
+        validators=[validators.file_storage_name_validator],
+        default=get_project_file_storage_default,
+        editable=False,
+    )
+
     def is_attachment(self):
         return storage.get_attachment_dir_prefix(self.project, self.name) != ""
 
@@ -190,10 +205,18 @@ class FileVersionQueryset(models.QuerySet):
                 package_job_id=package_job_id,
             )
         except File.DoesNotExist:
+            file_storage = project.file_storage
+
+            # if the new file is an attachment (i.e. in an attachment dir),
+            # it should be stored on the project's configured attachments storage.
+            if storage.get_attachment_dir_prefix(project, filename) != "":
+                file_storage = project.attachments_file_storage
+
             file = File.objects.create(
                 project_id=project.id,
                 name=filename,
                 file_type=file_type,
+                file_storage=file_storage,
                 uploaded_by=uploaded_by,
                 uploaded_at=uploaded_at,
                 created_at=created_at,
@@ -241,7 +264,7 @@ def get_file_version_upload_to(instance: "FileVersion", _filename: str) -> str:
 class FileVersion(models.Model):
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
-        return self.file.project.file_storage
+        return self.file.file_storage
 
     class Meta:
         ordering = ("file", "-uploaded_at")
