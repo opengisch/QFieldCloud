@@ -1238,6 +1238,16 @@ class Project(models.Model):
         default=False,
     )
 
+    attachments_file_storage = models.CharField(
+        _("Attachments file storage"),
+        help_text=_(
+            "Which file storage provider should be used for storing the project attachments files."
+        ),
+        max_length=100,
+        validators=[validators.file_storage_name_validator],
+        default=get_project_file_storage_default,
+    )
+
     def get_localized_datasets_project(self) -> Project | None:
         """
         Returns the 'localized_datasets' Project instance for the same owner,

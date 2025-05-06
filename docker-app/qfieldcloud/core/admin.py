@@ -14,6 +14,7 @@ from allauth.account.utils import user_pk_to_url_str
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
+from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
@@ -762,6 +763,17 @@ class ProjectForm(ModelForm):
         widgets = {"the_qgis_file_name": widgets.TextInput()}
         fields = "__all__"  # required for Django 3.x
 
+    def _storages_choices(self) -> list[tuple[str, str]]:
+        storages = list(settings.STORAGES.keys())[:-1]
+        print(storages)
+        return [(storage, storage) for storage in storages]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["attachments_file_storage"] = forms.ChoiceField(
+            choices=self._storages_choices, required=True
+        )
+
 
 class ProjectAdmin(QFieldCloudModelAdmin):
     form = ProjectForm
@@ -803,6 +815,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "is_locked",
         "file_storage",
         "file_storage_migrated_at",
+        "attachments_file_storage",
         "project_files",
     )
     readonly_fields = (
