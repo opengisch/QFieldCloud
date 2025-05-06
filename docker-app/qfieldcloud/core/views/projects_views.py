@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django_filters import rest_framework as filters
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
@@ -90,7 +91,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
-    filter_backends = [QfcOrderingFilter]
+    filter_backends = [filters.DjangoFilterBackend, QfcOrderingFilter]
+    filterset_fields = ("owner__username", "name")
     ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
 
     def get_queryset(self):
@@ -103,21 +105,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             include_public_param = self.request.query_params.get("include-public")
             if include_public_param and include_public_param.lower() == "1":
                 include_public = True
-
-            owner = self.request.query_params.get("owner")
-            if owner:
-                owner_account = User.objects.get(username=owner)
-                projects = projects.filter(owner=owner_account.id)
-                # When filtering projects by owner, include public projects by default
-                if not include_public_param:
-                    include_public = True
-
-            project = self.request.query_params.get("project")
-            if project:
-                projects = projects.filter(name=project)
-                # When filtering projects by project name, include public projects by default
-                if not include_public_param:
-                    include_public = True
 
             if not include_public:
                 projects = projects.exclude(

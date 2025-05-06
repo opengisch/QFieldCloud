@@ -147,15 +147,22 @@ class QfcTestCase(APITransactionTestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
 
-        # 1) list projects for specific user name other than the logged in user
-        response = self.client.get("/api/v1/projects/?owner=user1")
+        # 1) list non-public projects for specific user name other than the logged in user
+        response = self.client.get("/api/v1/projects/?owner__username=user1")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 0)
+
+        # 1) list all projects (including public ones) for specific user name other than the logged in user
+        response = self.client.get(
+            "/api/v1/projects/?owner__username=user1&include-public=1"
+        )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["name"], "project1")
         self.assertEqual(response.data[0]["owner"], "user1")
 
         # 2) list projects for specific user name matching logged in user
-        response = self.client.get("/api/v1/projects/?owner=user2")
+        response = self.client.get("/api/v1/projects/?owner__username=user2")
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 2)
 
@@ -167,7 +174,9 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[1]["owner"], "user2")
 
         # 3) list project for specific user name (matching logged in user) and project name
-        response = self.client.get("/api/v1/projects/?owner=user2&project=project2")
+        response = self.client.get(
+            "/api/v1/projects/?owner__username=user2&name=project2"
+        )
         self.assertTrue(status.is_success(response.status_code))
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["name"], "project2")
