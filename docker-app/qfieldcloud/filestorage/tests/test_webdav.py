@@ -3,21 +3,22 @@ from io import StringIO
 
 from django.http import FileResponse
 from rest_framework import status
+from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Person,
     Project,
 )
+from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
-    QfcFilesTestCase,
     setup_subscription_plans,
 )
 
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(QfcFilesTestCase):
+class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 

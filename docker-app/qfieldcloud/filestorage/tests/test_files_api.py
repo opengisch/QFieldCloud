@@ -1,6 +1,4 @@
 import logging
-import urllib
-import urllib.parse
 from io import StringIO
 from typing import IO
 from unittest import skip
@@ -27,6 +25,7 @@ from qfieldcloud.core.models import (
     ProjectCollaborator,
     User,
 )
+from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     get_named_file_with_size,
     setup_subscription_plans,
@@ -36,7 +35,7 @@ from qfieldcloud.filestorage.models import File, FileVersion
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(APITransactionTestCase):
+class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 
@@ -48,30 +47,6 @@ class QfcTestCase(APITransactionTestCase):
             name="p1",
             file_storage="default",
         )
-
-    def _upload_file(
-        self, user: User, project: Project, filename: str, content: IO
-    ) -> HttpResponse | Response:
-        token = AuthToken.objects.get_or_create(user=user)[0]
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
-
-        response = self.client.post(
-            reverse(
-                "filestorage_crud_file",
-                kwargs={
-                    "project_id": project.id,
-                    "filename": filename,
-                },
-            ),
-            {
-                "file": content,
-            },
-        )
-
-        self.client.credentials(HTTP_AUTHORIZATION="")
-
-        return response
 
     def assertFileUploaded(
         self, user: User, project: Project, filename: str, content: IO
@@ -172,85 +147,6 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(storages[project.file_storage].exists(storage_filename))
-
-        return response
-
-    def _download_file(
-        self,
-        user: User,
-        project: Project,
-        filename: str,
-        params: dict[str, str] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> HttpResponse | Response | FileResponse:
-        token = AuthToken.objects.get_or_create(user=user)[0]
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
-
-        response = self.client.get(
-            reverse(
-                "filestorage_crud_file",
-                kwargs={
-                    "project_id": project.id,
-                    "filename": filename,
-                },
-            ),
-            data=params,
-            headers=headers,
-        )
-
-        self.client.credentials(HTTP_AUTHORIZATION="")
-
-        return response
-
-    def _delete_file(
-        self,
-        user: User,
-        project: Project,
-        filename: str,
-        params: dict[str, str] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> HttpResponse | Response:
-        token = AuthToken.objects.get_or_create(user=user)[0]
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
-
-        url = reverse(
-            "filestorage_crud_file",
-            kwargs={
-                "project_id": project.id,
-                "filename": filename,
-            },
-        )
-
-        if params is not None:
-            url += "?"
-            url += urllib.parse.urlencode(params)
-
-        response = self.client.delete(
-            url,
-            headers=headers,
-        )
-
-        self.client.credentials(HTTP_AUTHORIZATION="")
-
-        return response
-
-    def _list_files(self, user: User, project: Project) -> HttpResponse | Response:
-        token = AuthToken.objects.get_or_create(user=user)[0]
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
-
-        response = self.client.get(
-            reverse(
-                "filestorage_list_files",
-                kwargs={
-                    "project_id": project.id,
-                },
-            ),
-        )
-
-        self.client.credentials(HTTP_AUTHORIZATION="")
 
         return response
 

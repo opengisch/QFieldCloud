@@ -1,18 +1,12 @@
 import io
 import os
 import tempfile
-import urllib
 from datetime import timedelta
 from time import sleep
 from typing import IO, Iterable
 
-from django.http import FileResponse, HttpResponse
-from django.urls import reverse
 from django.utils import timezone
-from rest_framework.response import Response
-from rest_framework.test import APITransactionTestCase
 
-from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Job, Project, User
 from qfieldcloud.subscription.models import Plan, Subscription
 
@@ -154,95 +148,3 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
 
 def fail(msg):
     raise AssertionError(msg or "Test case failed")
-
-
-class QfcFilesTestCase(APITransactionTestCase):
-    """
-    Generic Test case class that is able to perform file operations.
-    E.g. upload, download, delete.
-    """
-
-    def _upload_file(
-        self, user: User, project: Project, filename: str, content: IO
-    ) -> HttpResponse | Response:
-        token = AuthToken.objects.get_or_create(user=user)[0]
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
-
-        response = self.client.post(
-            reverse(
-                "filestorage_crud_file",
-                kwargs={
-                    "project_id": project.id,
-                    "filename": filename,
-                },
-            ),
-            {
-                "file": content,
-            },
-        )
-
-        self.client.credentials(HTTP_AUTHORIZATION="")
-
-        return response
-
-    def _download_file(
-        self,
-        user: User,
-        project: Project,
-        filename: str,
-        params: dict[str, str] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> HttpResponse | Response | FileResponse:
-        token = AuthToken.objects.get_or_create(user=user)[0]
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
-
-        response = self.client.get(
-            reverse(
-                "filestorage_crud_file",
-                kwargs={
-                    "project_id": project.id,
-                    "filename": filename,
-                },
-            ),
-            data=params,
-            headers=headers,
-        )
-
-        self.client.credentials(HTTP_AUTHORIZATION="")
-
-        return response
-
-    def _delete_file(
-        self,
-        user: User,
-        project: Project,
-        filename: str,
-        params: dict[str, str] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> HttpResponse | Response:
-        token = AuthToken.objects.get_or_create(user=user)[0]
-
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
-
-        url = reverse(
-            "filestorage_crud_file",
-            kwargs={
-                "project_id": project.id,
-                "filename": filename,
-            },
-        )
-
-        if params is not None:
-            url += "?"
-            url += urllib.parse.urlencode(params)
-
-        response = self.client.delete(
-            url,
-            headers=headers,
-        )
-
-        self.client.credentials(HTTP_AUTHORIZATION="")
-
-        return response
