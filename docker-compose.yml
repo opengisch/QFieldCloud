@@ -191,7 +191,7 @@ services:
     image: memcached:1
     restart: unless-stopped
     expose:
-      - "11211:11211"
+      - "11211"
 
 volumes:
   static_volume:
