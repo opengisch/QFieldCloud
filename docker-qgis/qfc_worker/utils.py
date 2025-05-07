@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Any, Callable, NamedTuple, Optional
+from typing import IO, Any, Callable, NamedTuple
 
 from libqfieldsync.layer import LayerSource
 from libqfieldsync.utils.bad_layer_handler import (
@@ -152,6 +152,10 @@ def start_app() -> str:
     """
     global QGISAPP
 
+    extra_envvars = os.environ.get("QFIELDCLOUD_EXTRA_ENVVARS", "[]")
+
+    logging.info(f"Available user defined environment variables: {extra_envvars}")
+
     if QGISAPP is None:
         logging.info(
             f"Starting QGIS app version {Qgis.versionInt()} ({Qgis.devVersion()})..."
@@ -249,7 +253,7 @@ def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
     """Rewrites project XML file with feature count disabled.
 
     Args:
-        the_qgis_file_name (str): filename of the QGIS filename (.qgs or .qgz)
+        the_qgis_file_name: filename of the QGIS filename (.qgs or .qgz)
     """
     archive = None
     xml_file = the_qgis_file_name
@@ -565,7 +569,7 @@ def has_ping(hostname: str) -> bool:
     return not bool(error) and "100% packet loss" not in out.decode("utf8")
 
 
-def get_layer_filename(layer: QgsMapLayer) -> Optional[str]:
+def get_layer_filename(layer: QgsMapLayer) -> str | None:
     metadata = QgsProviderRegistry.instance().providerMetadata(
         layer.dataProvider().name()
     )
@@ -630,7 +634,7 @@ def json_default(obj):
 
 def run_workflow(
     workflow: Workflow,
-    feedback_filename: Optional[Path | IO],
+    feedback_filename: Path | IO | None,
 ) -> dict[str, Any]:
     """Executes the steps required to run a task and return structured feedback from the execution
 
@@ -641,8 +645,8 @@ def run_workflow(
     Some return values can used as arguments for next steps, as defined in `public_returns`.
 
     Args:
-        workflow (Workflow): workflow to be executed
-        feedback_filename (IO | Path): write feedback to an IO device, to Path filename, or don't write it
+        workflow: workflow to be executed
+        feedback_filename: write feedback to an IO device, to Path filename, or don't write it
     """
     feedback: dict[str, Any] = {
         "feedback_version": "2.0",
@@ -748,9 +752,21 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         error = layer.error()
         layer_id = layer.id()
         layer_source = LayerSource(layer)
+        filename = layer_source.filename
         datasource = None
 
-        if layer.dataProvider():
+        # TODO: Move localized layer handling functionality inside libqfieldsync (ClickUp: QF-5875)
+        if layer_source.is_localized_path:
+            datasource = bad_layer_handler.invalid_layer_sources_by_id.get(layer_id)
+
+            if datasource and "localized:" in datasource:
+                # TODO: refactor and extract filename splitting logic into a reusable utility.
+                filename = datasource.split("localized:")[-1]
+
+                if "|" in filename:
+                    filename = filename.split("|")[0]
+
+        elif layer.dataProvider():
             datasource = layer.dataProvider().uri().uri()
 
         layers_by_id[layer_id] = {
@@ -778,7 +794,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             "error_code": "no_error",
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
-            "filename": layer_source.filename,
+            "filename": filename,
             "provider_name": None,
             "provider_error_summary": None,
             "provider_error_message": None,
@@ -972,7 +988,7 @@ class XmlErrorLocation(NamedTuple):
 
 def get_qgis_xml_error_location(
     invalid_token_error_msg: str,
-) -> Optional[XmlErrorLocation]:
+) -> XmlErrorLocation | None:
     """Get column and line numbers from the provided error message."""
     if "invalid token" not in invalid_token_error_msg.casefold():
         return None
@@ -987,7 +1003,7 @@ def get_qgis_xml_error_location(
 
 def get_qgis_xml_error_context(
     invalid_token_error_msg: str, fh: io.BufferedReader
-) -> Optional[str]:
+) -> str | None:
     """Get a slice of the line where the exception occurred, with all faulty occurrences sanitized."""
     location = get_qgis_xml_error_location(invalid_token_error_msg)
     if location:

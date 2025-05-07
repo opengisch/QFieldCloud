@@ -78,6 +78,15 @@ jobs:
                   },
                   "QFC_IS_LEGACY": true
               },
+              "webdav": {
+                  "BACKEND": "qfieldcloud.filestorage.backend.QfcWebDavStorage",
+                  "OPTIONS": {
+                      "webdav_url": "http://qfc_webdav_user:qfc_webdav_pwd@webdav",
+                      "public_url": "http://webdav",
+                      "basic_auth": "qfc_webdav_user:qfc_webdav_pwd"
+                  },
+                  "QFC_IS_LEGACY": false
+              },
               "default": {
                   "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
                   "OPTIONS": {

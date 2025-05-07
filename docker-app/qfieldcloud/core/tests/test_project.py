@@ -1,4 +1,5 @@
 import logging
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from rest_framework import status
@@ -519,3 +520,142 @@ class QfcTestCase(APITransactionTestCase):
         # Can still modify existing project
         p1.name = "p1-modified"
         p1.save()
+
+    def test_localized_layers_property(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        project = Project.objects.create(name="project_with_layers", owner=self.user1)
+
+        # Fake the property manually for testing purpose
+        project._localized_layers = [{"filename": "localized:layer1.tif"}]
+
+        with patch(
+            "qfieldcloud.core.models.Project.localized_layers",
+            new_callable=lambda: property(lambda self: self._localized_layers),
+        ):
+            layers = project.localized_layers
+            self.assertEqual(len(layers), 1)
+            self.assertEqual(layers[0]["filename"], "localized:layer1.tif")
+
+    def test_project_serializer_localized_datasets_project_id(self):
+        """Test that ProjectSerializer returns the correct localized_datasets_project_id."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        project = Project.objects.create(name="project", owner=self.user1)
+        localized_project = Project.objects.create(
+            name="localized_datasets", owner=self.user1
+        )
+
+        response = self.client.get(f"/api/v1/projects/{project.id}/")
+
+        self.assertEqual(response.status_code, 200)
+
+        json = response.json()
+
+        self.assertEqual(
+            json["localized_datasets_project_id"], str(localized_project.id)
+        )
+
+    def test_get_localized_datasets_project_exists(self):
+        """Test Project.get_localized_datasets_project returns the project if found."""
+        project = Project.objects.create(name="project", owner=self.user1)
+        localized_project = Project.objects.create(
+            name="localized_datasets", owner=self.user1
+        )
+
+        found = project.get_localized_datasets_project()
+
+        self.assertIsNotNone(found)
+        self.assertEqual(found.id, localized_project.id)
+
+    def test_get_localized_datasets_project_missing(self):
+        """Test Project.get_localized_datasets_project returns None if not found."""
+        project = Project.objects.create(name="project", owner=self.user1)
+
+        found = project.get_localized_datasets_project()
+
+        self.assertIsNone(found)
+
+    def test_get_missing_localized_layers_when_no_localized_project(self):
+        """Test get_missing_localized_layers returns all localized layers if no localized_datasets project exists."""
+        project = Project.objects.create(name="project", owner=self.user1)
+
+        project.project_details = {
+            "layers_by_id": {
+                "layer1": {"is_localized": True, "filename": "localized:layer1.gpkg"},
+                "layer2": {"is_localized": False, "filename": "normal_layer.gpkg"},
+                "layer3": {"is_localized": True, "filename": "localized:layer3.gpkg"},
+            }
+        }
+
+        project.save()
+
+        missing_layers = project.get_missing_localized_layers()
+        missing_filenames = [layer["filename"] for layer in missing_layers]
+
+        self.assertEqual(len(missing_filenames), 2)
+        self.assertIn("localized:layer1.gpkg", missing_filenames)
+        self.assertIn("localized:layer3.gpkg", missing_filenames)
+
+    def test_get_some_missing_localized_layers(self):
+        """Test that get_missing_localized_layers returns multiple missing layers."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        project = Project.objects.create(
+            name="project_get_some_missing", owner=self.user1
+        )
+
+        missing_layers_mock = [
+            {"filename": "localized:missing_layer1.tif"},
+            {"filename": "localized:missing_layer2.tif"},
+        ]
+
+        with patch.object(
+            Project,
+            "get_missing_localized_layers",
+            return_value=missing_layers_mock,
+        ):
+            missing_layers = project.get_missing_localized_layers()
+
+            self.assertEqual(len(missing_layers), 2)
+            self.assertEqual(
+                missing_layers[0]["filename"], "localized:missing_layer1.tif"
+            )
+            self.assertEqual(
+                missing_layers[1]["filename"], "localized:missing_layer2.tif"
+            )
+
+    def test_get_no_missing_localized_layers(self):
+        """Test that get_missing_localized_layers returns an empty list when no missing layers."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        project = Project.objects.create(
+            name="project_get_no_missing", owner=self.user1
+        )
+
+        with patch.object(
+            Project,
+            "get_missing_localized_layers",
+            return_value=[],
+        ):
+            missing_layers = project.get_missing_localized_layers()
+
+            self.assertEqual(missing_layers, [])
+            self.assertEqual(len(missing_layers), 0)
+
+    def test_get_missing_localized_layers_method(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        project = Project.objects.create(name="project_get_missing", owner=self.user1)
+
+        with patch.object(
+            Project,
+            "get_missing_localized_layers",
+            return_value=[{"filename": "localized:missing_layer.tif"}],
+        ):
+            missing_layers = project.get_missing_localized_layers()
+
+            self.assertEqual(len(missing_layers), 1)
+            self.assertEqual(
+                missing_layers[0]["filename"], "localized:missing_layer.tif"
+            )

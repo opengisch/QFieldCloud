@@ -42,12 +42,12 @@ class QfcTestCase(APITransactionTestCase):
         """Upload a file to QFieldCloud using API.
 
         Args:
-            project (Project): project that should contain the file.
-            local_filename (str): name of the local file to upload, should be in `testdata` folder.
-            remote_filename (str): name of the uploaded file.
+            project: project that should contain the file.
+            local_filename: name of the local file to upload, should be in `testdata` folder.
+            remote_filename: name of the uploaded file.
 
         Returns:
-            Response: response to the POST HTTP request.
+            response to the POST HTTP request.
         """
         file_path = testdata_path(local_filename)
         response = self.client.post(

@@ -301,7 +301,9 @@ class JobRun:
             settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
             command,
             environment={
+                **extra_envvars,
                 "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
+                "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
                 "QFIELDCLOUD_TOKEN": token.key,
                 "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
                 "JOB_ID": self.job_id,

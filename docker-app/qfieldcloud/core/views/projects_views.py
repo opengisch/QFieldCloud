@@ -8,6 +8,7 @@ from drf_spectacular.utils import (
 )
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
+from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
@@ -18,7 +19,12 @@ User = get_user_model()
 
 
 class ProjectViewSetPermissions(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, view) -> bool:
+        if view.action is None:
+            # If `view.action` is `None`, means that we are getting a OPTIONS request.
+            # We don't know what it is, so we deny permission.
+            return False
+
         if view.action == "list":
             # The queryset is already filtered by what the user can see
             return True
@@ -37,7 +43,11 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_create_project(user, owner_obj)
 
         projectid = permissions_utils.get_param_from_request(request, "projectid")
-        project = Project.objects.get(id=projectid)
+
+        try:
+            project = Project.objects.get(id=projectid)
+        except Project.DoesNotExist:
+            raise ObjectNotFoundError(detail="Project not found.")
 
         if view.action == "retrieve":
             return permissions_utils.can_retrieve_project(user, project)

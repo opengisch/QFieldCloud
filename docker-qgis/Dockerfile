@@ -3,8 +3,11 @@ FROM ubuntu:noble
 
 # Install dependencies needed to add QGIS repository
 RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y gnupg software-properties-common wget
+    && apt-get install -y \
+    gnupg \
+    software-properties-common \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add QGIS GPG key
 RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
@@ -17,15 +20,22 @@ Architectures: amd64\n\
 Components: main\n\
 Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources
 
+# Disable annoying pip version check, we don't care if pip is slightly older
+ARG PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Do not create and use redundant cache dir in the current user home
+ARG PIP_NO_CACHE_DIR=1
+
 # Install non-QGIS dependencies
 RUN apt-get update \
-    && apt-get upgrade -y \
     && apt-get install -y \
     python3-pip \
     xvfb \
     iputils-ping \
     glibc-tools \
-    git
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # Set QGIS version as in the debian repos
 # Choose your version from here: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
@@ -33,7 +43,6 @@ ARG QGIS_VERSION=1:3.40.3+40noble
 
 # Install QGIS dependencies
 RUN apt-get update \
-    && apt-get upgrade -y \
     # NOTE `DEBIAN_FRONTEND=noninteractive` is required to be able to install tzinfo
     && DEBIAN_FRONTEND=noninteractive apt-get install -yf \
         qgis=${QGIS_VERSION} \
@@ -43,11 +52,17 @@ RUN apt-get update \
         python3-qgis-common=${QGIS_VERSION} \
         qgis-providers=${QGIS_VERSION} \
         qgis-providers-common=${QGIS_VERSION} \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*
 
 # If debug build, install `gdbserver`
 ARG DEBUG_BUILD
-RUN if [ "$DEBUG_BUILD" = "1" ]; then apt install -y gdbserver valgrind; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then \
+    apt-get update \
+    && apt-get install -y \
+    gdbserver \
+    valgrind \
+    && rm -rf /var/lib/apt/lists/* \
+    ; fi
 
 WORKDIR /usr/src/app
 

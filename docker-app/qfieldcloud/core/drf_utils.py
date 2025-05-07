@@ -24,10 +24,10 @@ class QfcOrderingFilter(filters.OrderingFilter):
         This method should be used to search a term from a query's ordering fields.
 
         Args:
-            fields (list[str]): list of fields to search
-            term (str): term to search in the list
+            fields: list of fields to search
+            term: term to search in the list
         Returns:
-            str | None: the matching field, if present in the list
+            the matching field, if present in the list
         """
         for field in fields:
             compare_value = field
@@ -47,9 +47,9 @@ class QfcOrderingFilter(filters.OrderingFilter):
         """Parses an ordering field attributes expression.
 
         Args:
-            raw (str): raw expression to parse, e.g.: "alias=my_field_alias,key=value"
+            raw: raw expression to parse, e.g.: "alias=my_field_alias,key=value"
         Returns:
-            dict[str, str]: dict containing the expression's attributes
+            dict containing the expression's attributes
         """
         definition_attrs = raw.split(self.TOKENS_LIST_SEPARATOR)
 
@@ -64,10 +64,11 @@ class QfcOrderingFilter(filters.OrderingFilter):
         """Parses a custom ordering field with attributes expression.
 
         Args:
-            definition (str): raw definition of the ordering field to parse,
+            definition: raw definition of the ordering field to parse,
                 e.g.: "my_field::alias=my_field_alias,key=value"
-        Returns :
-            tuple[str, dict[str, str]]: tuple containing the field name (1st) and its attributes dict (2nd)
+
+        Returns:
+            tuple containing the field name (1st) and its attributes dict (2nd)
         """
         name, attr_str = definition.split(self.SEPARATOR, 1)
         attrs = self._parse_tokenized_attributes(attr_str)
@@ -88,12 +89,12 @@ class QfcOrderingFilter(filters.OrderingFilter):
         but `my_field` is the real model field.
 
         Args:
-            queryset (QuerySet): Django's ORM queryset of the same model as the one used in view of the `ModelViewSet`
-            fields (Iterable[str]): ordering fields passed to the HTTP querystring
-            view (APIView): DRF view instance
-            request (HttpRequest): DRF request instance
+            queryset: Django's ORM queryset of the same model as the one used in view of the `ModelViewSet`
+            fields: ordering fields passed to the HTTP querystring
+            view: DRF view instance
+            request: DRF request instance
         Returns :
-            list[str]: parsed ordering fields where aliases have been replaced
+            parsed ordering fields where aliases have been replaced
         """
         base_fields = super().remove_invalid_fields(queryset, fields, view, request)
         valid_fields = []

@@ -379,11 +379,11 @@ def get_project_files(project_id: str, path: str = "") -> list[S3Object]:
     """Returns a list of files and their versions.
 
     Args:
-        project_id (str): the project id
-        path (str): additional filter prefix
+        project_id: the project id
+        path: additional filter prefix
 
     Returns:
-        list[S3ObjectWithVersions]: the list of files
+        the list of files
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -401,10 +401,10 @@ def get_project_files_with_versions(
     """Returns a generator of files and their versions.
 
     Args:
-        project_id (str): the project id
+        project_id: the project id
 
     Returns:
-        Generator[S3ObjectWithVersions]: the list of files
+        the list of files
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -421,10 +421,10 @@ def get_project_file_with_versions(
     """Returns a list of files and their versions.
 
     Args:
-        project_id (str): the project id
+        project_id: the project id
 
     Returns:
-        list[S3ObjectWithVersions]: the list of files
+        the list of files
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -445,10 +445,10 @@ def get_project_package_files(project_id: str, package_id: str) -> list[S3Object
     """Returns a list of package files.
 
     Args:
-        project_id (str): the project id
+        project_id: the project id
 
     Returns:
-        list[S3ObjectWithVersions]: the list of package files
+        the list of package files
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage

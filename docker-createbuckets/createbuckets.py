@@ -23,6 +23,12 @@ STORAGES: dict[str, DjangoStorages] = json.loads(os.environ["STORAGES"])
 
 
 for storage_name, storage_config in STORAGES.items():
+    if storage_config["BACKEND"] != "qfieldcloud.filestorage.backend.QfcS3Boto3Storage":
+        print(
+            f'Skipping storage "{storage_name}" with backend `{storage_config["BACKEND"]}`, no need to create S3 bucket.'
+        )
+        continue
+
     print(f"Creating bucket for: {storage_name}", flush=True)
 
     endpoint_url = storage_config["OPTIONS"]["endpoint_url"]

@@ -387,6 +387,19 @@ users. The template db has the following extensions installed:
 
 You can use either the integrated `minio` object storage, or use an external provider (e. g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
 
+### Database
+
+QFieldCloud requires a PostgreSQL/PostGIS database persisting it's own data.
+The recommended and only supported way is to use an external to the docker-compose stack PostgreSQL/PostGIS database.
+Check the corresponding `POSTGRES_*` environment variables for more info.
+
+> [!CAUTION]
+> For local development and testing you can use the `db` service in `docker-compose.standalone.yml`.
+
+If a local PostGIS is running and hosting QFieldCloud's data, check the `POSTGIS_IMAGE_VERSION` for controlling the version of the PostgreSQL/PostGIS backend.
+[These commands](https://gist.github.com/gounux/2c0779fcb22e512cbdc613eb78200571) can help in order to migrate the local PG service from a major version to another one.
+Migration to a newer database version is a risky operation to your data, so prepare and test the backup of the `postgres_data` volume.
+
 ## Collaboration
 
 Contributions welcome!

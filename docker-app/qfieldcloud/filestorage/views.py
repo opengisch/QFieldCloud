@@ -151,12 +151,12 @@ class FileCrudView(views.APIView):
         The check is done anyways when we search for a file.
 
         Args:
-            request (Request): the DRF request
-            project_id (UUID): the project UUID
-            filename (str): the filename to delete
+            request: the DRF request
+            project_id: the project UUID
+            filename: the filename to delete
 
         Returns:
-            Response: empty response with 204
+            empty response with 204
         """
         delete_project_file_version(request, project_id, filename)
 

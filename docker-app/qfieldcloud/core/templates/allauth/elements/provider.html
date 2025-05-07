@@ -1,7 +1,7 @@
 <li class="provider-button-parent">
 
     <a title="{{ attrs.name }}" href="{{ attrs.href }}">
-        <div class="provider-button" style="border: 1px solid {{ attrs.styles.light.color_stroke|default:"grey" }}; background-color: {{ attrs.styles.light.color_fill|default:"white" }}">
+        <div class="provider-button" style="border-color: {{ attrs.styles.light.color_stroke|default:"grey" }}; background-color: {{ attrs.styles.light.color_fill|default:"white" }}">
 
             <img src="{{ attrs.styles.light.logo }}" alt="{{ attrs.name }}">
             <span>
