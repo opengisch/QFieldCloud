@@ -10,6 +10,7 @@ from drf_spectacular.utils import (
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
+from qfieldcloud.core.filters import ProjectFilter
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
@@ -92,7 +93,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
     filter_backends = [filters.DjangoFilterBackend, QfcOrderingFilter]
-    filterset_fields = ("owner__username", "name")
+    filterset_class = ProjectFilter
     ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
 
     def get_queryset(self):
