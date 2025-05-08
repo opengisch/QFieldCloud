@@ -26,9 +26,16 @@ class ProjectFilterSet(django_filters.FilterSet):
         return queryset
 
     def filter_queryset(self, queryset):
+        include_public = "0"
+        if (
+            "include-public" in self.form.data
+            and self.form.data["include-public"] != ""
+        ):
+            include_public = self.form.data["include-public"]
+
         if "include_public" in self.form.cleaned_data:
-            if not self.form.cleaned_data["include_public"]:
-                self.form.cleaned_data["include_public"] = "0"
+            if self.form.cleaned_data["include_public"] == "":
+                self.form.cleaned_data["include_public"] = include_public
 
         return super().filter_queryset(queryset)
 

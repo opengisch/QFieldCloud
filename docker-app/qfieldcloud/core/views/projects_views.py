@@ -2,8 +2,6 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiTypes,
     extend_schema,
     extend_schema_view,
 )
@@ -11,7 +9,7 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Project, ProjectQueryset
+from qfieldcloud.core.models import Project
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import QuotaError
@@ -67,17 +65,6 @@ class ProjectViewSetPermissions(permissions.BasePermission):
     partial_update=extend_schema(description="Partially update a project"),
     destroy=extend_schema(description="Delete a project"),
     list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name="include-public",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                default=0,
-                enum=[1, 0],
-                description="Include public projects",
-            ),
-        ],
         description="""List projects owned by the authenticated
         user or that the authenticated user has explicit permission to access
         (i.e. she is a project collaborator)""",
@@ -98,20 +85,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         projects = Project.objects.for_user(self.request.user)
-
-        # In the list endpoint, by default we filter out public projects. They can be
-        # included with the `include-public` query parameter.
-        if self.action == "list":
-            include_public = False
-            include_public_param = self.request.query_params.get("include-public")
-            if include_public_param and include_public_param.lower() == "1":
-                include_public = True
-
-            if not include_public:
-                projects = projects.exclude(
-                    user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
-                )
-
         return projects
 
     @transaction.atomic
