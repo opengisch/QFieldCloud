@@ -44,6 +44,7 @@ class ProjectFilterSet(django_filters.FilterSet):
         # since Django does not have a good support for hyphens in field names and it was previously used in the API.
         if "include-public" in self.form.data:
             self.form.cleaned_data["include_public"] = self.form.data["include-public"]
+
         return super().filter_queryset(queryset)
 
     class Meta:
