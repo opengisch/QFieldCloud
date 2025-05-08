@@ -10,14 +10,23 @@ class IncludePublicChoices(models.IntegerChoices):
 
 
 class ProjectFilterSet(django_filters.FilterSet):
-    owner = django_filters.CharFilter(field_name="owner__username", lookup_expr="exact")
+    name = django_filters.CharFilter(
+        field_name="name", label="Project name", lookup_expr="iexact"
+    )
+    owner = django_filters.CharFilter(
+        field_name="owner__username",
+        label="Project owner username",
+        lookup_expr="iexact",
+    )
     include_public = django_filters.ChoiceFilter(
-        label="Include public projects",
+        label="Include public projects (can be provided with it's deprecated name `include-public`)",
         choices=IncludePublicChoices.choices,
         method="filter_include_public",
     )
 
-    def filter_include_public(self, queryset, name, value):
+    def filter_include_public(
+        self, queryset: models.QuerySet[Project], name: str, value: str
+    ) -> models.QuerySet[Project]:
         if value != "1":
             queryset = queryset.exclude(
                 user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
@@ -25,18 +34,16 @@ class ProjectFilterSet(django_filters.FilterSet):
 
         return queryset
 
-    def filter_queryset(self, queryset):
-        include_public = "0"
-        if (
-            "include-public" in self.form.data
-            and self.form.data["include-public"] != ""
-        ):
-            include_public = self.form.data["include-public"]
+    def filter_queryset(
+        self, queryset: models.QuerySet[Project]
+    ) -> models.QuerySet[Project]:
+        if self.form.cleaned_data.get("include_public") != "":
+            return super().filter_queryset(queryset)
 
-        if "include_public" in self.form.cleaned_data:
-            if self.form.cleaned_data["include_public"] == "":
-                self.form.cleaned_data["include_public"] = include_public
-
+        # This is a workaround to make the filter work with the `include-public` parameter,
+        # since Django does not have a good support for hyphens in field names and it was previously used in the API.
+        if "include-public" in self.form.data:
+            self.form.cleaned_data["include_public"] = self.form.data["include-public"]
         return super().filter_queryset(queryset)
 
     class Meta:

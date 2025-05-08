@@ -9,7 +9,7 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Project
+from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import QuotaError
@@ -85,6 +85,25 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         projects = Project.objects.for_user(self.request.user)
+
+        if self.action == "list":
+            # In the list endpoint, by default we filter out public projects.
+            # They can be included with the `include_public` query parameter or
+            # the deprecated `include-public` query parameter.
+            force_exclude_public = True
+            include_public_param = self.request.query_params.get("include-public")
+            if include_public_param and include_public_param != "":
+                force_exclude_public = False
+
+            include_public_param = self.request.query_params.get("include_public")
+            if include_public_param and include_public_param != "":
+                force_exclude_public = False
+
+            if force_exclude_public:
+                projects = projects.exclude(
+                    user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
+                )
+
         return projects
 
     @transaction.atomic
