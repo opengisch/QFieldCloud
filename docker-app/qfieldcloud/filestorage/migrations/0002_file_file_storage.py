@@ -39,6 +39,7 @@ def revert_file_storage_for_files(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("filestorage", "0001_initial"),
+        ("core", "0082_project_attachments_file_storage"),
     ]
 
     operations = [
