@@ -7,6 +7,7 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
+    LOCALIZED_DATASETS_PROJECT_NAME,
     Organization,
     OrganizationMember,
     Person,
@@ -543,7 +544,7 @@ class QfcTestCase(APITransactionTestCase):
 
         project = Project.objects.create(name="project", owner=self.user1)
         localized_project = Project.objects.create(
-            name="localized_datasets", owner=self.user1
+            name=LOCALIZED_DATASETS_PROJECT_NAME, owner=self.user1
         )
 
         response = self.client.get(f"/api/v1/projects/{project.id}/")
@@ -560,7 +561,7 @@ class QfcTestCase(APITransactionTestCase):
         """Test Project.localized_datasets_project returns the project if found."""
         project = Project.objects.create(name="project", owner=self.user1)
         localized_project = Project.objects.create(
-            name="localized_datasets", owner=self.user1
+            name=LOCALIZED_DATASETS_PROJECT_NAME, owner=self.user1
         )
 
         self.assertIsNotNone(project.localized_datasets_project)

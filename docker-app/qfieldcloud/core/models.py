@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from qfieldcloud.filestorage.models import File
 
 
+LOCALIZED_DATASETS_PROJECT_NAME = "localized_datasets"
+
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
 logger = logging.getLogger(__name__)
@@ -1241,12 +1243,11 @@ class Project(models.Model):
     @cached_property
     def localized_datasets_project(self) -> Project | None:
         """
-        Returns the 'localized_datasets' Project instance for the same owner,
-        or None if no such project exists.
+        Returns the localized datasets project for the same owner, or `None` if no such project exists.
         """
         try:
             project = Project.objects.get(
-                name="localized_datasets",
+                name=LOCALIZED_DATASETS_PROJECT_NAME,
                 owner=self.owner,
             )
             return project
@@ -1256,7 +1257,7 @@ class Project(models.Model):
     def get_missing_localized_layers(self) -> list[dict[str, Any]]:
         """
         Of all localized layers, return those whose filenames aren’t in `available_filenames`,
-        which means they are not present in the associated localized_datasets project storage.
+        which means they are not present in the associated localized datasets project storage.
 
         Returns:
             A list of layer-detail dicts (same shape as in `localized_layers`)
@@ -1493,23 +1494,23 @@ class Project(models.Model):
                     },
                 )
                 missing_localized_file_solution = _(
-                    'Upload the missing file to the "<a href="{}">localized_datasets</a>" project or update the layer to point to an available file.'
-                ).format(localized_project_url)
+                    'Upload the missing file to the "<a href="{}">{}</a>" project or update the layer to point to an available file.'
+                ).format(localized_project_url, LOCALIZED_DATASETS_PROJECT_NAME)
             else:
                 problems.append(
                     {
                         "layer": None,
                         "level": "warning",
                         "code": "missing_localized_project",
-                        "description": _(
-                            'Could not find the "localized_datasets" project.'
+                        "description": _('Could not find the "{}" project.').format(
+                            LOCALIZED_DATASETS_PROJECT_NAME
                         ),
                         "solution": _("Ensure the shared dataset project exists."),
                     }
                 )
                 missing_localized_file_solution = _(
-                    'Upload the missing file to the "localized_datasets" project or update the layer to point to an available file.'
-                )
+                    'Upload the missing file to the "{}" project or update the layer to point to an available file.'
+                ).format(LOCALIZED_DATASETS_PROJECT_NAME)
 
             for missing_layer in self.get_missing_localized_layers():
                 problems.append(
@@ -1527,7 +1528,7 @@ class Project(models.Model):
             for layer_data in self.project_details.get("layers_by_id", {}).values():
                 layer_name = layer_data.get("name")
 
-                # All the layers stored in the localized_datasets project will be with errors, so we just skip them. We handled them separately before this for loop.
+                # All the layers stored in the localized datasets project will be with errors, so we just skip them. We handled them separately before this for loop.
                 if layer_data.get("error_code") == "localized_dataprovider":
                     continue
 
