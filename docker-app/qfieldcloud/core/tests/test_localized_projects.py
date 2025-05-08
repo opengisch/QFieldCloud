@@ -1,16 +1,18 @@
+import io
 import logging
 
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
+    LOCALIZED_DATASETS_PROJECT_NAME,
     Job,
     Person,
     Project,
     utils,
 )
+from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
     testdata_path,
@@ -21,7 +23,7 @@ from qfieldcloud.filestorage.models import File
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(APITransactionTestCase):
+class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 
@@ -35,35 +37,9 @@ class QfcTestCase(APITransactionTestCase):
             name="project1", is_public=False, owner=self.user1
         )
 
-        self.localized_datasets = Project.objects.create(
-            name="localized_datasets", is_public=False, owner=self.user1
+        self.localized_datasets_project = Project.objects.create(
+            name=LOCALIZED_DATASETS_PROJECT_NAME, is_public=False, owner=self.user1
         )
-
-    def upload_file(
-        self,
-        project: Project,
-        local_filename: str,
-        remote_filename: str,
-    ) -> Response:
-        """Upload a file to QFieldCloud using API.
-
-        Args:
-            project (Project): project that should contain the file.
-            local_filename (str): name of the local file to upload, should be in `testdata` folder.
-            remote_filename (str): name of the uploaded file.
-
-        Returns:
-            Response: response to the POST HTTP request.
-        """
-        file_path = testdata_path(local_filename)
-        response = self.client.post(
-            f"/api/v1/files/{project.id}/{remote_filename}/",
-            {
-                "file": open(file_path, "rb"),
-            },
-            format="multipart",
-        )
-        return response
 
     def get_localized_filenames_by_project_details(self, project: Project) -> list:
         filenames = []
@@ -90,7 +66,8 @@ class QfcTestCase(APITransactionTestCase):
         """
         data = self.client.get(f"/api/v1/projects/{self.project1.id}/").json()
         self.assertEqual(
-            data.get("localized_datasets_project_id"), str(self.localized_datasets.id)
+            data.get("localized_datasets_project_id"),
+            str(self.localized_datasets_project.id),
         )
 
     def test_localized_datasets_property(self):
@@ -98,10 +75,11 @@ class QfcTestCase(APITransactionTestCase):
         Uploads a QGIS project with references to localized layers,
         and checks that two such layers are detected in the project metadata.
         """
-        resp = self.upload_file(
+        resp = self._upload_file(
+            self.user1,
             self.project1,
             "simple_bumblebees_wrong_localized.qgs",
-            "simple_bumblebees_wrong_localized.qgs",
+            io.FileIO(testdata_path("simple_bumblebees_wrong_localized.qgs"), "rb"),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
@@ -126,15 +104,19 @@ class QfcTestCase(APITransactionTestCase):
         - Verifies which layers are marked as missing
         - Uploads the second file and confirms only one remains missing
         """
-        resp = self.upload_file(
-            self.localized_datasets, "delta/polygons.geojson", "delta/polygons.geojson"
+        resp = self._upload_file(
+            self.user1,
+            self.localized_datasets_project,
+            "delta/polygons.geojson",
+            io.FileIO(testdata_path("delta/polygons.geojson"), "rb"),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
-        resp = self.upload_file(
+        resp = self._upload_file(
+            self.user1,
             self.project1,
             "simple_bumblebees_wrong_localized.qgs",
-            "simple_bumblebees_wrong_localized.qgs",
+            io.FileIO(testdata_path("simple_bumblebees_wrong_localized.qgs"), "rb"),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
@@ -148,10 +130,10 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(processprojectfile_job.status, Job.Status.FINISHED)
         self.assertIsNotNone(processprojectfile_job.feedback)
 
-        # Localized layers found in the localized_datasets project
+        # Localized layers found in the localized datasets project
         if self.project1.uses_legacy_storage:
             available_localized_files = utils.get_project_files(
-                self.localized_datasets.id
+                self.localized_datasets_project.id
             )
             available_localized_filenames = [
                 file.name for file in available_localized_files
@@ -159,9 +141,9 @@ class QfcTestCase(APITransactionTestCase):
 
         else:
             available_localized_filenames = set(
-                File.objects.filter(project_id=self.localized_datasets.id).values_list(
-                    "name", flat=True
-                )
+                File.objects.filter(
+                    project_id=self.localized_datasets_project.id
+                ).values_list("name", flat=True)
             )
 
         self.assertEqual(len(available_localized_filenames), 1)
@@ -185,8 +167,11 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         # Upload the missing bumblebees.gpkg file
-        resp = self.upload_file(
-            self.localized_datasets, "bumblebees.gpkg", "bumblebees.gpkg"
+        resp = self._upload_file(
+            self.user1,
+            self.localized_datasets_project,
+            "bumblebees.gpkg",
+            io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
@@ -202,8 +187,11 @@ class QfcTestCase(APITransactionTestCase):
         are available in the localized datasets project, the list of missing
         localized layers is empty.
         """
-        resp = self.upload_file(
-            self.localized_datasets, "bumblebees.gpkg", "bumblebees.gpkg"
+        resp = self._upload_file(
+            self.user1,
+            self.localized_datasets_project,
+            "bumblebees.gpkg",
+            io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
@@ -211,10 +199,11 @@ class QfcTestCase(APITransactionTestCase):
             name="projectX", is_public=False, owner=self.user1
         )
 
-        resp = self.upload_file(
+        resp = self._upload_file(
+            self.user1,
             project,
             "simple_bumblebees_correct_localized.qgs",
-            "simple_bumblebees_correct_localized.qgs",
+            io.FileIO(testdata_path("simple_bumblebees_correct_localized.qgs"), "rb"),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
@@ -242,10 +231,11 @@ class QfcTestCase(APITransactionTestCase):
             name="project2", is_public=False, owner=self.user2
         )
 
-        resp = self.upload_file(
+        resp = self._upload_file(
+            self.user2,
             project2,
             "simple_bumblebees_wrong_localized.qgs",
-            "simple_bumblebees_wrong_localized.qgs",
+            io.FileIO(testdata_path("simple_bumblebees_wrong_localized.qgs"), "rb"),
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 

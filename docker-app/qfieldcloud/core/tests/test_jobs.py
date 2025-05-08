@@ -1,7 +1,7 @@
+import io
 import logging
 
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
@@ -11,6 +11,7 @@ from qfieldcloud.core.models import (
     Person,
     Project,
 )
+from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 
 from .utils import (
     set_subscription,
@@ -22,7 +23,7 @@ from .utils import (
 logging.disable(logging.CRITICAL)
 
 
-class QfcTestCase(APITransactionTestCase):
+class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 
@@ -32,32 +33,6 @@ class QfcTestCase(APITransactionTestCase):
 
         # Create a project
         self.p1 = Project.objects.create(name="p1", is_public=False, owner=self.u1)
-
-    def upload_file(
-        self,
-        project: Project,
-        local_filename: str,
-        remote_filename: str,
-    ) -> Response:
-        """Upload a file to QFieldCloud using API.
-
-        Args:
-            project: project that should contain the file.
-            local_filename: name of the local file to upload, should be in `testdata` folder.
-            remote_filename: name of the uploaded file.
-
-        Returns:
-            response to the POST HTTP request.
-        """
-        file_path = testdata_path(local_filename)
-        response = self.client.post(
-            f"/api/v1/files/{project.id}/{remote_filename}/",
-            {
-                "file": open(file_path, "rb"),
-            },
-            format="multipart",
-        )
-        return response
 
     def assertLayerData(
         self, layer_data: dict, is_valid: bool, is_localized: bool, error_code: str
@@ -71,12 +46,20 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
 
         # Push the QGIS project and datasource GPKG files
-        response = self.upload_file(self.p1, "bumblebees.gpkg", "bumblebees.gpkg")
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "bumblebees.gpkg",
+            io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        response = self.upload_file(
-            self.p1, "simple_bumblebees_wrong_localized.qgs", "project.qgs"
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "project.qgs",
+            io.FileIO(testdata_path("simple_bumblebees_wrong_localized.qgs"), "rb"),
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -127,12 +110,20 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
 
         # Push the QGIS project and datasource GPKG files
-        response = self.upload_file(self.p1, "bumblebees.gpkg", "bumblebees.gpkg")
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "bumblebees.gpkg",
+            io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        response = self.upload_file(
-            self.p1, "simple_bumblebees_wrong_localized.qgs", "project.qgs"
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "project.qgs",
+            io.FileIO(testdata_path("simple_bumblebees_wrong_localized.qgs"), "rb"),
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

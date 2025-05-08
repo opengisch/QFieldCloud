@@ -133,6 +133,7 @@ INSTALLED_APPS = [
     "migrate_sql",
     "constance",
     "django_extensions",
+    "bootstrap4",
     "django_cleanup.apps.CleanupConfig",
 ]
 

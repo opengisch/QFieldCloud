@@ -77,7 +77,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     localized_datasets_project_id = serializers.SerializerMethodField(read_only=True)
 
     def get_localized_datasets_project_id(self, obj):
-        project = obj.get_localized_datasets_project()
+        project = obj.localized_datasets_project
 
         if project:
             return str(project.id)
