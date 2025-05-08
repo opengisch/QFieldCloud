@@ -7,6 +7,7 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
+    LOCALIZED_DATASETS_PROJECT_NAME,
     Organization,
     OrganizationMember,
     Person,
@@ -543,7 +544,7 @@ class QfcTestCase(APITransactionTestCase):
 
         project = Project.objects.create(name="project", owner=self.user1)
         localized_project = Project.objects.create(
-            name="localized_datasets", owner=self.user1
+            name=LOCALIZED_DATASETS_PROJECT_NAME, owner=self.user1
         )
 
         response = self.client.get(f"/api/v1/projects/{project.id}/")
@@ -557,24 +558,20 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_get_localized_datasets_project_exists(self):
-        """Test Project.get_localized_datasets_project returns the project if found."""
+        """Test Project.localized_datasets_project returns the project if found."""
         project = Project.objects.create(name="project", owner=self.user1)
         localized_project = Project.objects.create(
-            name="localized_datasets", owner=self.user1
+            name=LOCALIZED_DATASETS_PROJECT_NAME, owner=self.user1
         )
 
-        found = project.get_localized_datasets_project()
-
-        self.assertIsNotNone(found)
-        self.assertEqual(found.id, localized_project.id)
+        self.assertIsNotNone(project.localized_datasets_project)
+        self.assertEqual(project.localized_datasets_project.id, localized_project.id)
 
     def test_get_localized_datasets_project_missing(self):
-        """Test Project.get_localized_datasets_project returns None if not found."""
+        """Test Project.localized_datasets_project returns None if not found."""
         project = Project.objects.create(name="project", owner=self.user1)
 
-        found = project.get_localized_datasets_project()
-
-        self.assertIsNone(found)
+        self.assertIsNone(project.localized_datasets_project)
 
     def test_get_missing_localized_layers_when_no_localized_project(self):
         """Test get_missing_localized_layers returns all localized layers if no localized_datasets project exists."""
