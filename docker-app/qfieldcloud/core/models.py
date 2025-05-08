@@ -1471,6 +1471,10 @@ class Project(models.Model):
     def problems(self) -> list[dict[str, Any]]:
         problems = []
 
+        # Check if localized datasets project, then skip the rest of the checks as they are not applicable
+        if self.name == LOCALIZED_DATASETS_PROJECT_NAME:
+            return problems
+
         if not self.has_the_qgis_file:
             problems.append(
                 {
