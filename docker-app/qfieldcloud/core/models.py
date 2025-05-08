@@ -1238,7 +1238,8 @@ class Project(models.Model):
         default=False,
     )
 
-    def get_localized_datasets_project(self) -> Project | None:
+    @cached_property
+    def localized_datasets_project(self) -> Project | None:
         """
         Returns the 'localized_datasets' Project instance for the same owner,
         or None if no such project exists.
@@ -1266,19 +1267,19 @@ class Project(models.Model):
         if not self.project_details:
             return []
 
-        localized_project = self.get_localized_datasets_project()
-
-        if not localized_project:
+        if not self.localized_datasets_project:
             # Return all layers if the project is missing
             return self.localized_layers
 
         if self.uses_legacy_storage:
-            available_localized_files = utils.get_project_files(localized_project.id)
+            available_localized_files = utils.get_project_files(
+                str(self.localized_datasets_project.id)
+            )
             available_filenames = [file.name for file in available_localized_files]
 
         else:
             available_filenames = File.objects.filter(
-                project_id=localized_project.id
+                project=self.localized_datasets_project
             ).values_list("name", flat=True)
 
         missing_localized_layers = []
@@ -1483,14 +1484,12 @@ class Project(models.Model):
             )
 
         elif self.project_details:
-            localized_project = self.get_localized_datasets_project()
-
-            if localized_project:
+            if self.localized_datasets_project:
                 localized_project_url = reverse_lazy(
                     "project_overview",
                     kwargs={
-                        "username": localized_project.owner.username,
-                        "project": localized_project.name,
+                        "username": self.localized_datasets_project.owner.username,
+                        "project": self.localized_datasets_project.name,
                     },
                 )
                 missing_localized_file_solution = _(
