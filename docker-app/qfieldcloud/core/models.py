@@ -1385,6 +1385,13 @@ class Project(models.Model):
         return attachment_dirs
 
     @property
+    def has_attachments_files(self) -> bool:
+        """
+        Checks if the project has at least one attachment file.
+        """
+        return any(f.is_attachment() for f in self.files.all())
+
+    @property
     def private(self) -> bool:
         # still used in the project serializer
         return not self.is_public

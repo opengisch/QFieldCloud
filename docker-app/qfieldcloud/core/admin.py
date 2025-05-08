@@ -769,6 +769,8 @@ class ProjectForm(ModelForm):
         self.fields["attachments_file_storage"] = forms.ChoiceField(
             choices=get_file_storage_choices(), required=True
         )
+        if self.instance.has_attachments_files:
+            self.fields["attachments_file_storage"].disabled = True
 
 
 class ProjectAdmin(QFieldCloudModelAdmin):
