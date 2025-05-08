@@ -1516,6 +1516,10 @@ class Project(models.Model):
             for layer_data in self.project_details.get("layers_by_id", {}).values():
                 layer_name = layer_data.get("name")
 
+                # All the layers stored in the localized_datasets project will be with errors, so we just skip them. We handled them separately before this for loop.
+                if layer_data.get("error_code") == "localized_dataprovider":
+                    continue
+
                 if layer_data.get("error_code") != "no_error":
                     problems.append(
                         {
