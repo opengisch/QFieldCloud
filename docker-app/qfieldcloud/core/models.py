@@ -1485,17 +1485,31 @@ class Project(models.Model):
         elif self.project_details:
             localized_project = self.get_localized_datasets_project()
 
-            if not localized_project:
+            if localized_project:
+                localized_project_url = reverse_lazy(
+                    "project_overview",
+                    kwargs={
+                        "username": localized_project.owner.username,
+                        "project": localized_project.name,
+                    },
+                )
+                missing_localized_file_solution = _(
+                    'Upload the missing file to the "<a href="{}">localized_datasets</a>" project or update the layer to point to an available file.'
+                ).format(localized_project_url)
+            else:
                 problems.append(
                     {
                         "layer": None,
                         "level": "warning",
                         "code": "missing_localized_project",
                         "description": _(
-                            "Could not find the 'localized_datasets' project."
+                            'Could not find the "localized_datasets" project.'
                         ),
                         "solution": _("Ensure the shared dataset project exists."),
                     }
+                )
+                missing_localized_file_solution = _(
+                    'Upload the missing file to the "localized_datasets" project or update the layer to point to an available file.'
                 )
 
             for missing_layer in self.get_missing_localized_layers():
@@ -1505,11 +1519,9 @@ class Project(models.Model):
                         "level": "warning",
                         "code": "missing_localized_file",
                         "description": _(
-                            'Localized dataset stored at "{}" is missing in the centralized dataset project.'
+                            'Localized dataset stored at "{}" is missing.'
                         ).format(missing_layer.get("filename")),
-                        "solution": _(
-                            "Upload the missing file to the 'localized_datasets' project or update the layer to point to an available file."
-                        ),
+                        "solution": missing_localized_file_solution,
                     }
                 )
 
