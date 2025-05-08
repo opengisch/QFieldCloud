@@ -579,3 +579,12 @@ def list_files_with_versions(
     if last_key:
         assert latest
         yield S3ObjectWithVersions(latest, versions)
+
+
+def get_file_storage_choices() -> list[tuple[str, str]]:
+    """
+    Returns configured storages keys.
+    Can be used e.g. for ModelForm's field choices.
+    """
+    storages = list(settings.STORAGES.keys())[:-1]
+    return [(storage, storage) for storage in storages]

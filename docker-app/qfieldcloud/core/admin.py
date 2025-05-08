@@ -59,6 +59,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
+from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 
 admin.site.unregister(LogEntry)
@@ -763,15 +764,10 @@ class ProjectForm(ModelForm):
         widgets = {"the_qgis_file_name": widgets.TextInput()}
         fields = "__all__"  # required for Django 3.x
 
-    def _storages_choices(self) -> list[tuple[str, str]]:
-        storages = list(settings.STORAGES.keys())[:-1]
-        print(storages)
-        return [(storage, storage) for storage in storages]
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["attachments_file_storage"] = forms.ChoiceField(
-            choices=self._storages_choices, required=True
+            choices=get_file_storage_choices(), required=True
         )
 
 
