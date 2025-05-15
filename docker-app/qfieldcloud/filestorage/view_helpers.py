@@ -31,9 +31,14 @@ from qfieldcloud.filestorage.models import (
     File,
     FileVersion,
 )
+from qfieldcloud.filestorage.utils import (
+    is_admin_restricted_file,
+    is_qgis_project_file,
+    parse_range,
+    validate_filename,
+)
 
 from .helpers import purge_old_file_versions
-from .utils import is_admin_restricted_file, is_qgis_project_file, validate_filename
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +238,36 @@ def download_field_file(
     http_host = request.headers.get("host", "")
     https_port = http_host.split(":")[-1] if ":" in http_host else "443"
 
+    download_range = request.headers.get("Range", "")
+    if download_range:
+        range_match = parse_range(download_range)
+
+        if not range_match:
+            return HttpResponse(
+                "`Range` HTTP header must be formatted like `bytes=start-(end)`",
+                status=416,
+            )
+
+        file_size = field_file.size
+        range_start = range_match[0]
+
+        if range_match[1]:
+            range_end = range_match[1]
+        else:
+            range_end = file_size - 1
+
+        if (
+            range_start >= file_size
+            or range_end >= file_size
+            or range_end < range_start
+        ):
+            return HttpResponse(
+                "Invalid value for `Range` HTTP header`",
+                status=416,
+            )
+
+        range_length = range_end - range_start + 1
+
     if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
@@ -258,12 +293,29 @@ def download_field_file(
         # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
         response = HttpResponse()
         response["X-Accel-Redirect"] = "/storage-download/"
+        response["file_range"] = download_range
         response["redirect_uri"] = url
 
         field_file.storage.patch_nginx_download_redirect(response)  # type: ignore
 
         return response
     elif settings.DEBUG or settings.IN_TEST_SUITE:
+        if download_range:
+            file = field_file.open()
+
+            file.seek(range_start)
+            content = file.read(range_length)
+
+            response = HttpResponse(
+                content, status=206, content_type="application/octet-stream"
+            )
+
+            response["Content-Range"] = f"bytes {range_start}-{range_end}/{file_size}"
+            response["Content-Length"] = str(range_length)
+            response["Accept-Ranges"] = "bytes"
+
+            return response
+
         return FileResponse(
             field_file.open(),
             as_attachment=as_attachment,
