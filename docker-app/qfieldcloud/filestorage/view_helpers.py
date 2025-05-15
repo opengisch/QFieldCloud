@@ -1,8 +1,10 @@
 import logging
+import re
 from pathlib import PurePath
 from uuid import UUID
 
 from django.conf import settings
+from django.core.exceptions import BadRequest
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Q
@@ -233,6 +235,32 @@ def download_field_file(
     http_host = request.headers.get("host", "")
     https_port = http_host.split(":")[-1] if ":" in http_host else "443"
 
+    download_range = request.headers.get("Range", "")
+    if download_range:
+        range_match = re.match(r"bytes=(\d+)-(\d+)?", download_range)
+
+        if not range_match:
+            raise BadRequest(
+                "`Range` HTTP header must be formatted like `bytes=start-(end)`"
+            )
+
+        file_size = field_file.size
+        range_start = int(range_match.group(1))
+
+        if range_match.group(2):
+            range_end = int(range_match.group(2))
+        else:
+            range_end = file_size - 1
+
+        if (
+            range_start >= file_size
+            or range_end >= file_size
+            or range_end < range_start
+        ):
+            raise BadRequest("Invalid file range")
+
+        range_length = range_end - range_start + 1
+
     if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
@@ -258,12 +286,29 @@ def download_field_file(
         # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
         response = HttpResponse()
         response["X-Accel-Redirect"] = "/storage-download/"
+        response["file_range"] = download_range
         response["redirect_uri"] = url
 
         field_file.storage.patch_nginx_download_redirect(response)  # type: ignore
 
         return response
     elif settings.DEBUG or settings.IN_TEST_SUITE:
+        if download_range:
+            file = field_file.open()
+
+            file.seek(range_start)
+            content = file.read(range_length)
+
+            response = HttpResponse(
+                content, status=206, content_type="application/octet-stream"
+            )
+
+            response["Content-Range"] = f"bytes {range_start}-{range_end}/{file_size}"
+            response["Content-Length"] = str(range_length)
+            response["Accept-Ranges"] = "bytes"
+
+            return response
+
         return FileResponse(
             field_file.open(),
             as_attachment=as_attachment,
