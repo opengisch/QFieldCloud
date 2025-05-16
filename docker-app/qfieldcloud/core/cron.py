@@ -106,6 +106,7 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
             updated_at__gt=timezone.now() - timedelta(minutes=70),
             updated_at__lt=timezone.now() - timedelta(minutes=5),
         )
+        # TODO Include project jobs ids that are for individual users here
         job_ids = [
             str(job["id"])
             for job in Job.objects.filter(
@@ -125,6 +126,7 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
 
                 for package_id in package_ids:
                     # keep the last package
+                    # TODO this will no longer be neeeded as `last_package_job_id` will have all the info
                     if package_id == str(project.last_package_job_id):
                         continue
 

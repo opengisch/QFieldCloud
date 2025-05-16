@@ -1540,6 +1540,7 @@ class Project(models.Model):
             self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
+            # TODO: `last_package_job` is not longer correct, we need to get the user that requested if the project needs repackaging
             and self.last_package_job is not None
         ):
             # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
