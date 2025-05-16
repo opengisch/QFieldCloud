@@ -257,7 +257,7 @@ def download_field_file(
             or range_end >= file_size
             or range_end < range_start
         ):
-            raise BadRequest("Invalid file range")
+            raise BadRequest("Invalid value for `Range` HTTP header`")
 
         range_length = range_end - range_start + 1
 
