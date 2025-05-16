@@ -24,6 +24,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.RunSQL(
-            "UPDATE core_project SET attachments_file_storage = file_storage"
+            "UPDATE core_project SET attachments_file_storage = file_storage",
+            migrations.RunSQL.noop,
         ),
     ]
