@@ -13,6 +13,14 @@ def delete_assigned_secrets(apps, schema_editor):
     ).delete()
 
 
+def set_job_triggered_by(apps, schema_editor):
+    Job = apps.get_model("core", "Job")
+
+    Job.objects.update(
+        triggered_by=models.F("created_by"),
+    )
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("core", "0081_file_storage_project_and_more"),
@@ -98,6 +106,32 @@ class Migration(migrations.Migration):
                     _connector="XOR",
                 ),
                 name="secret_assigned_to_organization_or_user",
+            ),
+        ),
+        migrations.AddField(
+            model_name="job",
+            name="triggered_by",
+            field=models.ForeignKey(
+                limit_choices_to=models.Q(("type", 1)),
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="triggered_jobs",
+                to=settings.AUTH_USER_MODEL,
+                null=True,
+            ),
+        ),
+        migrations.RunPython(
+            set_job_triggered_by,
+            reverse_code=migrations.RunPython.noop,
+        ),
+        migrations.AlterField(
+            model_name="job",
+            name="triggered_by",
+            field=models.ForeignKey(
+                limit_choices_to=models.Q(("type", 1)),
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="triggered_jobs",
+                to=settings.AUTH_USER_MODEL,
+                null=False,
             ),
         ),
     ]
