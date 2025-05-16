@@ -1240,6 +1240,16 @@ class Project(models.Model):
         default=False,
     )
 
+    attachments_file_storage = models.CharField(
+        _("Attachments file storage"),
+        help_text=_(
+            "Which file storage provider should be used for storing the project attachments files."
+        ),
+        max_length=100,
+        validators=[validators.file_storage_name_validator],
+        default=get_project_file_storage_default,
+    )
+
     @cached_property
     def localized_datasets_project(self) -> Project | None:
         """
@@ -1375,6 +1385,13 @@ class Project(models.Model):
             attachment_dirs = ["DCIM"]
 
         return attachment_dirs
+
+    @property
+    def has_attachments_files(self) -> bool:
+        """
+        Checks if the project has at least one attachment file.
+        """
+        return any(f.is_attachment() for f in self.files.all())
 
     @property
     def private(self) -> bool:
