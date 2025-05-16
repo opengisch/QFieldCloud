@@ -11,6 +11,7 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     ProjectQueryset,
+    Secret,
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
@@ -221,6 +222,29 @@ def can_delete_organization_secrets(user: QfcUser, organization: Organization) -
             OrganizationMember.Roles.ADMIN,
         ],
     )
+
+
+def can_delete_secret(user: QfcUser, secret: Secret) -> bool:
+    if secret.organization:
+        return user_has_organization_roles(
+            user,
+            secret.organization,
+            [
+                OrganizationMember.Roles.ADMIN,
+            ],
+        )
+    elif secret.project:
+        return user_has_project_roles(
+            user,
+            secret.project,
+            [
+                ProjectCollaborator.Roles.ADMIN,
+            ],
+        )
+    else:
+        raise NotImplementedError(
+            "Secret must be either project or organization secret."
+        )
 
 
 def can_access_project(user: QfcUser, project: Project) -> bool:
