@@ -30,7 +30,10 @@ from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
-from model_utils.managers import InheritanceManager, InheritanceManagerMixin
+from model_utils.managers import (
+    InheritanceManagerMixin,
+    InheritanceQuerySet,
+)
 from timezone_field import TimeZoneField
 
 from qfieldcloud.core import geodb_utils, utils, validators
@@ -1300,6 +1303,24 @@ class Project(models.Model):
         except Project.DoesNotExist:
             return None
 
+    def last_package_job_for_user(self, user: User) -> PackageJob | None:
+        """Returns the last package job for the user.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            The last package job for the user.
+        """
+        return (
+            self.jobs.for_user(user)  # type: ignore[attr-defined]
+            .filter(
+                type=Job.Type.PACKAGE,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
     @cached_property
     def is_shared_datasets_project(self) -> bool:
         """
@@ -2020,8 +2041,31 @@ class Delta(models.Model):
         return self.content.get("method")
 
 
+class JobQuerySet(InheritanceQuerySet):
+    def for_user(self, user: User) -> models.QuerySet[Job]:
+        """Returns the jobs applicable to the user. If the user has assigned secrets, only jobs triggered by the user are returned.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            The jobs for the user.
+        """
+        has_assigned_to_current_user_project_secrets = (
+            Secret.objects.for_user_and_project(user, self)  # type: ignore[attr-defined]
+            .filter(assigned_to__isnull=False)
+            .exists()
+        )
+
+        jobs_qs = self
+        if has_assigned_to_current_user_project_secrets:
+            jobs_qs = jobs_qs.filter(triggered_by=user)
+
+        return jobs_qs.order_by("-created_at")
+
+
 class Job(models.Model):
-    objects = InheritanceManager()
+    objects = JobQuerySet.as_manager()
 
     class Type(models.TextChoices):
         PACKAGE = "package", _("Package")
@@ -2048,6 +2092,14 @@ class Job(models.Model):
     )
     output = models.TextField(null=True)
     feedback = JSONField(null=True)
+
+    triggered_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="triggered_jobs",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
