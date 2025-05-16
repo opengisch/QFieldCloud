@@ -669,14 +669,30 @@ class ProjectSecretForm(ModelForm):
 class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
-    fields = ("project", "name", "type", "value", "created_by")
+    fields = (
+        "project",
+        "name",
+        "type",
+        "assigned_to",
+        "organization",
+        "created_by",
+        "value",
+    )
     readonly_fields = ("created_by",)
-    list_display = ("name", "type", "created_by__link", "project__name")
+    list_display = (
+        "project__name",
+        "name",
+        "type",
+        "assigned_to",
+        "organization",
+        "created_by__link",
+    )
     autocomplete_fields = ("project",)
 
     search_fields = (
         "name__icontains",
         "project__name__icontains",
+        "assigned_to__username__icontains",
     )
 
     @admin.display(ordering="created_by", description=_("Created by"))

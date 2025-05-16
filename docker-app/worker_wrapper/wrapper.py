@@ -268,7 +268,7 @@ class JobRun:
 
         extra_envvars = {}
         pgservice_file_contents = ""
-        for secret in self.job.project.secrets.all():
+        for secret in self.job.project.secrets.for_user(self.job.created_by):
             if secret.type == Secret.Type.ENVVAR:
                 extra_envvars[secret.name] = secret.value
             elif secret.type == Secret.Type.PGSERVICE:
@@ -403,6 +403,7 @@ class PackageJobRun(JobRun):
     def after_docker_run(self) -> None:
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
+        # TODO: `last_package_job` is not longer correct, we need to get the user that requested if the project needs repackaging
         self.job.project.last_package_job = self.job
         self.job.project.save(
             update_fields=(
@@ -429,6 +430,7 @@ class PackageJobRun(JobRun):
 
                 for package_id in package_ids:
                     # keep the last package
+                    # TODO this will no longer be needed as `job_ids` should have all the info
                     if package_id == str(self.job.project.last_package_job_id):
                         continue
 
@@ -443,6 +445,7 @@ class PackageJobRun(JobRun):
                     exc_info=err,
                 )
         else:
+            # TODO spare the package files for the last package job for a particular user
             delete_count = (
                 File.objects.filter(
                     project=self.job.project,
