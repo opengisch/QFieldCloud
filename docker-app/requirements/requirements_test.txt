@@ -29,8 +29,8 @@ exceptiongroup==1.2.2
     # via
     #   trio
     #   trio-websocket
-fiona==1.9.6
-    # via -r /requirements/requirements_test.in
+fiona==1.10.0
+    # via -r requirements_test.in
 h11==0.14.0
     # via wsproto
 idna==3.8
@@ -38,7 +38,7 @@ idna==3.8
     #   requests
     #   trio
 imageio==2.35.1
-    # via -r /requirements/requirements_test.in
+    # via -r requirements_test.in
 numpy==2.1.0
     # via
     #   imageio
@@ -54,11 +54,9 @@ requests==2.32.3
 requests-mock==1.12.1
     # via -r /requirements/requirements_test.in
 selenium==4.6.1
-    # via -r /requirements/requirements_test.in
+    # via -r requirements_test.in
 shapely==2.0.6
-    # via -r /requirements/requirements_test.in
-six==1.16.0
-    # via fiona
+    # via -r requirements_test.in
 sniffio==1.3.1
     # via trio
 sortedcontainers==2.4.0
