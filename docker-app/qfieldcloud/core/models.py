@@ -2104,7 +2104,7 @@ class PackageJob(Job):
 
 class ProcessProjectfileJob(Job):
     def check_can_be_created(self):
-        # Alsways create jobs because they are cheap
+        # Always create jobs because they are cheap
         # and is always good to have updated metadata
         pass
 
