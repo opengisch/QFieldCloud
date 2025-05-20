@@ -79,6 +79,7 @@ services:
       QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
       WEB_HTTP_PORT: ${WEB_HTTP_PORT}
       WEB_HTTPS_PORT: ${WEB_HTTPS_PORT}
+      FIRSTPROMOTER_COMPANY_ID: ${FIRSTPROMOTER_COMPANY_ID}
     logging:
       driver: "json-file"
       options:
