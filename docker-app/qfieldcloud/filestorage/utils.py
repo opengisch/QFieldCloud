@@ -166,6 +166,7 @@ def parse_range(input_range: str) -> tuple[int, int | None] | None:
 
     Returns:
         If compliant, a tuple with start and end (if any) bytes number.
+        If not, returns None.
     """
     match = re.match(r"bytes=(\d+)-(\d+)?", input_range)
 

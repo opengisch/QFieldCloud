@@ -13,6 +13,7 @@ from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
+from qfieldcloud.filestorage.utils import parse_range
 
 logging.disable(logging.CRITICAL)
 
@@ -34,6 +35,34 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             name="project_webdav_storage",
             file_storage="webdav",
         )
+
+    def test_parsing_range_function_succeeds(self):
+        start_byte, end_byte = parse_range("bytes=4-8")
+
+        self.assertEquals(start_byte, 4)
+        self.assertEquals(end_byte, 8)
+
+        start_byte, end_byte = parse_range("bytes=2-")
+
+        self.assertEquals(start_byte, 2)
+        self.assertIsNone(end_byte)
+
+    def test_parsing_wrong_invalid_range_function_succeeds(self):
+        result = parse_range("byte=4-8")
+
+        self.assertIsNone(result)
+
+        result = parse_range("bytes=-1-15")
+
+        self.assertIsNone(result)
+
+        result = parse_range("bytes=-10--15")
+
+        self.assertIsNone(result)
+
+        result = parse_range("bytes=-5")
+
+        self.assertIsNone(result)
 
     def test_upload_file_then_download_range_succeeds(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:
