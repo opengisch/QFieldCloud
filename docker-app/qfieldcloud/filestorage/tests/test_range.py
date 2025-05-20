@@ -37,12 +37,12 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
     def test_upload_file_then_download_range_succeeds(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:
-            with self.subTest(case=project):
-                # first upload of the file
-                response = self._upload_file(
-                    self.u1, project, "file.name", StringIO("abcdefghijkl")
-                )
+            # first upload of the file
+            response = self._upload_file(
+                self.u1, project, "file.name", StringIO("abcdefghijkl")
+            )
 
+            with self.subTest(case=project):
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
                 self.assertEqual(project.files.count(), 1)
                 self.assertEqual(project.get_file("file.name").versions.count(), 1)
@@ -78,12 +78,10 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
     def test_upload_file_then_download_wrong_range_fails(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:
-            with self.subTest(case=project):
-                # first upload of the file
-                self._upload_file(
-                    self.u1, project, "file.name", StringIO("abcdefghijkl")
-                )
+            # first upload of the file
+            self._upload_file(self.u1, project, "file.name", StringIO("abcdefghijkl"))
 
+            with self.subTest(case=project):
                 r1 = self._download_file(
                     self.u1, project, "file.name", headers={"Range": "bytes=abc-"}
                 )
