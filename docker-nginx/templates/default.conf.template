@@ -36,7 +36,7 @@ upstream django {
   keepalive 32;
 
   # Use Docker DNS resolution to dynamically resolve the app backend hostname
-  # max_fails=1 and fail_timeout=1s ensures Nginx retries on almost every request from loading.html
+  # `max_fails=1` and `fail_timeout=1s` ensures Nginx retries on almost every request from `loading.html`
   server app:8000 max_fails=1 fail_timeout=1s resolve;
 }
 
