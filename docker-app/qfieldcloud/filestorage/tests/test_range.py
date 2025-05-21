@@ -60,9 +60,27 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertIsNone(result)
 
-        result = parse_range("bytes=-5")
-
-        self.assertIsNone(result)
+        # start position cannot be greater than the end position
+        self.assertIsNone(parse_range("bytes=9-1"))
+        # suffix ranges are not supported (yet), see https://www.rfc-editor.org/rfc/rfc9110.html#rule.suffix-range
+        self.assertIsNone(parse_range("bytes=-5"))
+        # bytes should be numbers
+        self.assertIsNone(parse_range("bytes=one-two"))
+        # whitespaces are not accepted
+        self.assertIsNone(parse_range("bytes= 1-9"))
+        self.assertIsNone(parse_range("bytes=1 -9"))
+        self.assertIsNone(parse_range("bytes=1- 9"))
+        self.assertIsNone(parse_range("bytes=1-9 "))
+        self.assertIsNone(parse_range("bytes=1- "))
+        # typos in bytes
+        self.assertIsNone(parse_range("bites=0-9"))
+        self.assertIsNone(parse_range("starting bytes=0-9"))
+        self.assertIsNone(parse_range("bytes=0-9 closing bytes"))
+        # empty range
+        self.assertIsNone(parse_range("bytes=0-0"))
+        self.assertIsNone(parse_range("bytes=1-1"))
+        # multiple ranges are not supported (yet), see ....
+        ...
 
     def test_upload_file_then_download_range_succeeds(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:
