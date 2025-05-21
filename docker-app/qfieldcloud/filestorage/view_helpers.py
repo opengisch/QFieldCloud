@@ -249,12 +249,10 @@ def download_field_file(
             )
 
         file_size = field_file.size
-        range_start = range_match[0]
+        range_start, range_end = range_match[0]
 
-        if range_match[1]:
-            range_end = range_match[1]
-        else:
-            range_end = file_size - 1
+		if range_end is None:
+		    range_end = file_size - 1
 
         if (
             range_start >= file_size
