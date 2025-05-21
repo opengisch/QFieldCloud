@@ -37,10 +37,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
     def test_parsing_range_function_succeeds(self):
-        start_byte, end_byte = parse_range("bytes=4-8")
-
-        self.assertEquals(start_byte, 4)
-        self.assertEquals(end_byte, 8)
+        self.assertEquals(parse_range("bytes=4-8"), (4, 8))
 
         start_byte, end_byte = parse_range("bytes=2-")
 
