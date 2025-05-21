@@ -12,7 +12,7 @@
 <body>
     <div class="container text-center">
         <img src="/pages/logo_notext.svg" alt="Nyuki" class="mt-5 mb-4">
-        
+
         <p class="lead">Starting up QFieldCloud...</p>
         <div class="spinner"></div>
         <p class="text-muted small mt-3">Auto-refreshing in 10 seconds</p>
@@ -219,12 +219,12 @@
     /**
      * This function implements a retry mechanism for loading pages with a maximum retry limit.
      * It uses sessionStorage to store the retry count across page reloads.
-     * 
+     *
      * The retry logic works as follows:
      * 1. First attempt happens immediately when loading page is shown
      * 2. Then retries every 10 seconds, up to 5 more times (60 seconds total)
      * 3. If still failing after all retries, redirects to 500 error page
-     * 
+     *
      * The retry count is stored in sessionStorage to persist across page reloads.
      */
     (function() {
