@@ -4,19 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="10;url=/">
     <link rel="icon" href="/pages/favicon.ico" type="image/x-icon">
-    <title>Error 500 - Internal Server Error</title>
+    <title>Loading - QFieldCloud</title>
 </head>
 
 <body>
     <div class="container text-center">
-        <img src="/pages/sad_nyuki.svg" alt="Sad Nyuki" class="mt-5 mb-4">
-        <h1 class="display-4">500</h1>
-        <p class="lead">Internal Server Error</p>
-        <p>We're sorry, but something went wrong on our end. Our team has been notified and we're working to fix it as
-            soon as possible.</p>
-
-        <a href="/" class="btn btn-primary mt-3">Go back to Home</a>
+        <img src="/pages/logo_notext.svg" alt="Nyuki" class="mt-5 mb-4">
+        
+        <p class="lead">Starting up QFieldCloud...</p>
+        <div class="spinner"></div>
+        <p class="text-muted small mt-3">Auto-refreshing in 10 seconds</p>
+        <a href="/" class="btn btn-sm btn-outline-primary mt-2">Check now</a>
     </div>
     <style>
         /* exported from 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css' */
@@ -197,7 +197,59 @@
             background-color: #3f5e93;
             border-color: #3b588a;
         }
+
+        /* Add spinner animation */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4a6fae;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
+
+<script>
+    /**
+     * This function implements a retry mechanism for loading pages with a maximum retry limit.
+     * It uses sessionStorage to store the retry count across page reloads.
+     * 
+     * The retry logic works as follows:
+     * 1. First attempt happens immediately when loading page is shown
+     * 2. Then retries every 10 seconds, up to 5 more times (60 seconds total)
+     * 3. If still failing after all retries, redirects to 500 error page
+     * 
+     * The retry count is stored in sessionStorage to persist across page reloads.
+     */
+    (function() {
+        var refreshCountKey = 'qfcLoadingRefreshCount';
+        var maxRefreshes = 6; // 6 refreshes * 10 seconds per refresh = 60 seconds
+        var errorPageUrl = '/pages/500.html';
+        var retryUrl = '/'; // The URL to navigate to for a retry (e.g., the root)
+        var retryIntervalMs = 10000; // 10 seconds
+
+        var rawCount = sessionStorage.getItem(refreshCountKey);
+        var currentRefreshCount = parseInt(rawCount || '0', 10);
+        currentRefreshCount++;
+
+        if (currentRefreshCount > maxRefreshes) {
+            sessionStorage.removeItem(refreshCountKey);
+            window.location.href = errorPageUrl;
+        } else {
+            sessionStorage.setItem(refreshCountKey, currentRefreshCount.toString());
+            // JS explicitly schedules the next reload attempt
+            setTimeout(function() {
+                window.location.href = retryUrl;
+            }, retryIntervalMs);
+        }
+    })();
+</script>
 
 </body>
 
