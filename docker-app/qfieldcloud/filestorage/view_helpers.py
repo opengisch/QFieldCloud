@@ -240,7 +240,8 @@ def download_field_file(
 
     download_range = request.headers.get("Range", "")
     if download_range:
-        range_match = parse_range(download_range)
+        file_size = field_file.size
+        range_match = parse_range(download_range, file_size)
 
         if not range_match:
             return HttpResponse(
@@ -248,21 +249,10 @@ def download_field_file(
                 status=416,
             )
 
-        file_size = field_file.size
-        range_start, range_end = range_match[0]
+        range_start, range_end = range_match
 
-		if range_end is None:
-		    range_end = file_size - 1
-
-        if (
-            range_start >= file_size
-            or range_end >= file_size
-            or range_end < range_start
-        ):
-            return HttpResponse(
-                "Invalid value for `Range` HTTP header`",
-                status=416,
-            )
+        if range_end is None:
+            range_end = file_size - 1
 
         range_length = range_end - range_start + 1
 
@@ -291,8 +281,10 @@ def download_field_file(
         # Let's NGINX handle the redirect to the storage and streaming the file contents back to the client
         response = HttpResponse()
         response["X-Accel-Redirect"] = "/storage-download/"
-        response["file_range"] = download_range
         response["redirect_uri"] = url
+
+        if download_range:
+            response["file_range"] = download_range
 
         field_file.storage.patch_nginx_download_redirect(response)  # type: ignore
 

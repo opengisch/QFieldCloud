@@ -37,47 +37,48 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
     def test_parsing_range_function_succeeds(self):
-        self.assertEquals(parse_range("bytes=4-8"), (4, 8))
+        self.assertEquals(parse_range("bytes=4-8", 10), (4, 8))
 
-        start_byte, end_byte = parse_range("bytes=2-")
+        start_byte, end_byte = parse_range("bytes=2-", 10)
 
         self.assertEquals(start_byte, 2)
         self.assertIsNone(end_byte)
 
     def test_parsing_wrong_invalid_range_function_succeeds(self):
-        result = parse_range("byte=4-8")
+        file_size = 1000000
 
-        self.assertIsNone(result)
+        # not starting with 'bytes'
+        self.assertIsNone(parse_range("byte=4-8", file_size))
 
-        result = parse_range("bytes=-1-15")
+        # start byte can not be negative
+        self.assertIsNone(parse_range("bytes=-1-15", file_size))
 
-        self.assertIsNone(result)
-
-        result = parse_range("bytes=-10--15")
-
-        self.assertIsNone(result)
+        # start and end bytes can not be negative
+        self.assertIsNone(parse_range("bytes=-10--15", file_size))
 
         # start position cannot be greater than the end position
-        self.assertIsNone(parse_range("bytes=9-1"))
+        self.assertIsNone(parse_range("bytes=9-1", file_size))
+
         # suffix ranges are not supported (yet), see https://www.rfc-editor.org/rfc/rfc9110.html#rule.suffix-range
-        self.assertIsNone(parse_range("bytes=-5"))
+        self.assertIsNone(parse_range("bytes=-5", file_size))
+
         # bytes should be numbers
-        self.assertIsNone(parse_range("bytes=one-two"))
+        self.assertIsNone(parse_range("bytes=one-two", file_size))
         # whitespaces are not accepted
-        self.assertIsNone(parse_range("bytes= 1-9"))
-        self.assertIsNone(parse_range("bytes=1 -9"))
-        self.assertIsNone(parse_range("bytes=1- 9"))
-        self.assertIsNone(parse_range("bytes=1-9 "))
-        self.assertIsNone(parse_range("bytes=1- "))
+        self.assertIsNone(parse_range("bytes= 1-9", file_size))
+        self.assertIsNone(parse_range("bytes=1 -9", file_size))
+        self.assertIsNone(parse_range("bytes=1- 9", file_size))
+        self.assertIsNone(parse_range("bytes=1-9 ", file_size))
+        self.assertIsNone(parse_range("bytes=1- ", file_size))
         # typos in bytes
-        self.assertIsNone(parse_range("bites=0-9"))
-        self.assertIsNone(parse_range("starting bytes=0-9"))
-        self.assertIsNone(parse_range("bytes=0-9 closing bytes"))
+        self.assertIsNone(parse_range("bites=0-9", file_size))
+        self.assertIsNone(parse_range("starting bytes=0-9", file_size))
+        self.assertIsNone(parse_range("bytes=0-9 closing bytes", file_size))
         # empty range
-        self.assertIsNone(parse_range("bytes=0-0"))
-        self.assertIsNone(parse_range("bytes=1-1"))
-        # multiple ranges are not supported (yet), see ....
-        ...
+        self.assertIsNone(parse_range("bytes=0-0", file_size))
+        self.assertIsNone(parse_range("bytes=1-1", file_size))
+        # multiple ranges are not supported (yet), see https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2-9.4.1
+        self.assertIsNone(parse_range("bytes=1-5, 10-15", file_size))
 
     def test_upload_file_then_download_range_succeeds(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:
