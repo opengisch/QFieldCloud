@@ -169,7 +169,7 @@ def parse_range(input_range: str, file_size: int) -> tuple[int, int | None] | No
         If compliant, a tuple with start and end (if any) bytes number.
         If not, returns None.
     """
-    match = re.match(r"bytes=(\d+)-(\d+)?$", input_range)
+    match = re.match(r"^bytes=(\d+)-(\d+)?$", input_range)
 
     if not match:
         return None
