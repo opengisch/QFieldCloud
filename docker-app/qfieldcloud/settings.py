@@ -653,7 +653,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Subscription": ("TRIAL_PERIOD_DAYS",),
 }
 
-# Maximum number of bytes to ask a range when requesting a file part
+# Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
 QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 1000000
 
 # Name of the qgis docker image used as a worker by worker_wrapper
