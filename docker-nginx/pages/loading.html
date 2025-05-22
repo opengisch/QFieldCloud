@@ -237,11 +237,11 @@
         const rawCount = sessionStorage.getItem(refreshCountKey);
         const incrementedRefreshCount = parseInt(rawCount || '0', 10) + 1;
 
-        if (currentRefreshCount > maxRefreshes) {
+        if (incrementedRefreshCount > maxRefreshes) {
             sessionStorage.removeItem(refreshCountKey);
             window.location.href = errorPageUrl;
         } else {
-            sessionStorage.setItem(refreshCountKey, currentRefreshCount.toString());
+            sessionStorage.setItem(refreshCountKey, incrementedRefreshCount.toString());
             // JS explicitly schedules the next reload attempt
             setTimeout(function() {
                 window.location.href = retryUrl;
