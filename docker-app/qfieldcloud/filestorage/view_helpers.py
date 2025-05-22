@@ -16,6 +16,7 @@ from rest_framework.request import Request
 
 from qfieldcloud.core import exceptions, permissions_utils
 from qfieldcloud.core.exceptions import (
+    InvalidRangeError,
     MultipleProjectsError,
     RestrictedProjectModificationError,
 )
@@ -244,10 +245,7 @@ def download_field_file(
         range_match = parse_range(download_range, file_size)
 
         if not range_match:
-            return HttpResponse(
-                "`Range` HTTP header must be formatted like `bytes=start-(end)`",
-                status=416,
-            )
+            raise InvalidRangeError("The provided HTTP range header is invalid.")
 
         range_start, range_end = range_match
 
@@ -255,6 +253,13 @@ def download_field_file(
             range_end = file_size - 1
 
         range_length = range_end - range_start + 1
+
+        if range_length < settings.QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH:
+            raise InvalidRangeError(
+                "Requested range too small, expected at least {} but got {} bytes".format(
+                    settings.QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH, range_length
+                )
+            )
 
     if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.

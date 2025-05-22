@@ -194,3 +194,9 @@ class ProjectAlreadyExistsError(QFieldCloudException):
     code = "project_already_exists"
     message = "This user already owns a project with the same name."
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class InvalidRangeError(QFieldCloudException):
+    code = "invalid_http_range"
+    message = "The provided HTTP range header is invalid."
+    status_code = status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
