@@ -79,6 +79,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertIsNone(parse_range("bytes=1-1", file_size))
         # multiple ranges are not supported (yet), see https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2-9.4.1
         self.assertIsNone(parse_range("bytes=1-5, 10-15", file_size))
+        self.assertIsNone(parse_range("bytes=1-5,10-15", file_size))
 
     def test_upload_file_then_download_range_succeeds(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:
