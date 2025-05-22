@@ -1,6 +1,7 @@
 import logging
 from io import StringIO
 
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -18,6 +19,7 @@ from qfieldcloud.filestorage.utils import parse_range
 logging.disable(logging.CRITICAL)
 
 
+@override_settings(QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH=0)
 class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
