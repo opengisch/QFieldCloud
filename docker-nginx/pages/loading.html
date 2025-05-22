@@ -235,8 +235,7 @@
         const retryIntervalMs = 10000; // 10 seconds
 
         const rawCount = sessionStorage.getItem(refreshCountKey);
-        let currentRefreshCount = parseInt(rawCount || '0', 10);
-        currentRefreshCount++;
+        const incrementedRefreshCount = parseInt(rawCount || '0', 10) + 1;
 
         if (currentRefreshCount > maxRefreshes) {
             sessionStorage.removeItem(refreshCountKey);
