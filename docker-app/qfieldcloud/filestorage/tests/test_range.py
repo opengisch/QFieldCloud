@@ -70,6 +70,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertIsNone(parse_range("bytes=1- 9", file_size))
         self.assertIsNone(parse_range("bytes=1-9 ", file_size))
         self.assertIsNone(parse_range("bytes=1- ", file_size))
+        self.assertIsNone(parse_range(" bytes=1-9", file_size))
         # typos in bytes
         self.assertIsNone(parse_range("bites=0-9", file_size))
         self.assertIsNone(parse_range("starting bytes=0-9", file_size))
