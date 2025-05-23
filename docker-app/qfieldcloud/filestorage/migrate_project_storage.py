@@ -152,7 +152,9 @@ def migrate_project_storage(
                 )
 
         package_files = get_project_package_files(
-            str(project.id), str(project.last_package_job_id)
+            str(project.id),
+            # TODO do not depend on `last_package_job_id`
+            str(project.last_package_job_id),
         )
 
         if package_files:
@@ -172,6 +174,7 @@ def migrate_project_storage(
                     uploaded_at=package_file.last_modified,
                     uploaded_by=project.owner,
                     created_at=now,
+                    # TODO do not depend on `last_package_job_id`
                     package_job_id=project.last_package_job_id,
                 )
 
