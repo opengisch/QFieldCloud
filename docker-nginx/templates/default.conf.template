@@ -25,13 +25,19 @@ log_format json-logger escape=json
   '"source":"nginx"'
 '}';
 
-
-
 upstream django {
+  # Defines a shared memory zone between worker processes, necessary dynamic dns resolving
+  zone django 64k;
+
+  # Add Docker's DNS resolver with a short TTL and IPv6 turned off
+  resolver 127.0.0.11 valid=1s ipv6=off;
+
   # the number of keepalive connections comes from the number Django workers we have
   keepalive 32;
 
-  server app:8000 fail_timeout=0;
+  # Use Docker DNS resolution to dynamically resolve the app backend hostname
+  # `max_fails=1` and `fail_timeout=1s` ensures Nginx retries on almost every request from `loading.html`
+  server app:8000 max_fails=1 fail_timeout=1s resolve;
 }
 
 server {
@@ -115,10 +121,25 @@ server {
     proxy_set_header X-Request-Id $request_id;
     proxy_set_header Host $http_host;
 
+    # Proxy settings
+    proxy_connect_timeout 5s;
     proxy_read_timeout 300;
     proxy_send_timeout 300;
-
     proxy_redirect off;
+
+    proxy_intercept_errors on;
+
+    # Error handling:
+    error_page 403 =403 /pages/403.html;
+    error_page 404 =404 /pages/404.html;
+
+    # Initial loading page for upstream issues (502, 503, 504 for timeouts)
+    error_page 502 503 504 =503 /pages/loading.html;
+
+    # For 500, 501, 505 - these are actual errors, not the initial "loading" state.
+    error_page 500 501 505 =500 /pages/500.html;
+
+    # Pass to upstream
     proxy_pass http://django;
   }
 
@@ -173,7 +194,6 @@ server {
     proxy_intercept_errors on;
 
     proxy_pass $redirect_uri;
-
     error_page 404 =404 /pages/404.html;
     error_page 403 =403 /pages/403.html;
     error_page 401 402 405 406 407 408 409 410 411 412 413 414 415 416 417 500 501 502 503 504 505 =500 /pages/500.html;
