@@ -35,7 +35,10 @@ class FileQueryset(models.QuerySet):
 
 
 class File(models.Model):
-    versions: QuerySet[FileVersion]
+    class Meta:
+        unique_together = [
+            ("project", "name", "file_type", "package_job"),
+        ]
 
     class FileType(models.IntegerChoices):
         """The type of file, or in other words the context file shall be used."""
@@ -47,6 +50,12 @@ class File(models.Model):
         PACKAGE_FILE = (2, _("Package File"))
 
     objects = FileQueryset.as_manager()
+
+    ###
+    # References by foreign keys
+    ###
+    # The file versions. This is a reverse relation to the `FileVersion` model.
+    versions: QuerySet[FileVersion]
 
     project = models.ForeignKey(
         Project,
