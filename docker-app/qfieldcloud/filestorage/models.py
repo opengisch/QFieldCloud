@@ -35,7 +35,10 @@ class FileQueryset(models.QuerySet):
 
 
 class File(models.Model):
-    versions: QuerySet[FileVersion]
+    class Meta:
+        unique_together = [
+            ("project", "name", "file_type", "package_job"),
+        ]
 
     class FileType(models.IntegerChoices):
         """The type of file, or in other words the context file shall be used."""
@@ -48,6 +51,18 @@ class File(models.Model):
 
     objects = FileQueryset.as_manager()
 
+    ###
+    # References by foreign keys
+    ###
+    # The file versions. This is a reverse relation to the `FileVersion` model.
+    versions: QuerySet[FileVersion]
+
+    ###
+    # ID is implicitly set by Django.
+    ###
+    id: int
+
+    project_id: UUID
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -262,10 +277,6 @@ def get_file_version_upload_to(instance: "FileVersion", _filename: str) -> str:
 
 
 class FileVersion(models.Model):
-    def _get_file_storage_name(self) -> str:
-        """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
-        return self.file.file_storage
-
     class Meta:
         ordering = ("file", "-uploaded_at")
 
@@ -345,8 +356,13 @@ class FileVersion(models.Model):
         return file_version_qs.first()
 
     def delete(self, *args, **kwargs):
+        # explicitly delete the file from the storage
         self.content.delete()
         super().delete(*args, **kwargs)
+
+    def _get_file_storage_name(self) -> str:
+        """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
+        return self.file.project.file_storage
 
     def __repr__(self) -> str:
         if hasattr(self, "file"):
