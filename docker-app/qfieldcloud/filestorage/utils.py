@@ -1,4 +1,5 @@
 import hashlib
+import re
 import uuid
 from pathlib import Path, PurePath
 from typing import Any
@@ -155,3 +156,36 @@ def to_uuid(value: Any) -> uuid.UUID | None:
         return uuid.UUID(value)
     except ValueError:
         return None
+
+
+def parse_range(input_range: str, file_size: int) -> tuple[int, int | None] | None:
+    """Parses a range HTTP Header string.
+
+    Arguments:
+        range: string value of a HTTP range header to parse.
+        file_size: size of the file to get range for, in bytes.
+
+    Returns:
+        If compliant, a tuple with start and end (if any) bytes number.
+        If not, returns `None`.
+    """
+    match = re.match(r"^bytes=(\d+)-(\d+)?$", input_range)
+
+    if not match:
+        return None
+
+    range_start = int(match.group(1))
+
+    if range_start >= file_size:
+        return None
+
+    if match.group(2):
+        range_end = int(match.group(2))
+
+        if range_end >= file_size or range_end <= range_start:
+            return None
+
+    else:
+        range_end = None
+
+    return (range_start, range_end)
