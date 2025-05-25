@@ -74,13 +74,11 @@ class ProjectSerializer(serializers.ModelSerializer):
     user_role = serializers.CharField(read_only=True)
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
-    localized_datasets_project_id = serializers.SerializerMethodField(read_only=True)
+    shared_datasets_project_id = serializers.SerializerMethodField(read_only=True)
 
-    def get_localized_datasets_project_id(self, obj):
-        project = obj.localized_datasets_project
-
-        if project:
-            return str(project.id)
+    def get_shared_datasets_project_id(self, obj: Project) -> str | None:
+        if obj.shared_datasets_project:
+            return str(obj.shared_datasets_project.id)
         else:
             return None
 
@@ -144,7 +142,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
-            "localized_datasets_project_id",
+            "shared_datasets_project_id",
         )
         read_only_fields = (
             "private",
