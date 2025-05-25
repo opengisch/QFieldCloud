@@ -811,6 +811,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_packaged_at",
         "project_details__pre",
         "is_locked",
+        "is_featured",
         "file_storage",
         "file_storage_migrated_at",
         "attachments_file_storage",

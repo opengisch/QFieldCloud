@@ -1094,7 +1094,7 @@ class Project(models.Model):
     _status_code = StatusCode.OK
 
     class Meta:
-        ordering = ["owner__username", "name"]
+        ordering = ["-is_featured", "owner__username", "name"]
         constraints = [
             models.UniqueConstraint(
                 fields=["owner", "name"], name="project_owner_name_uniq"
@@ -1236,6 +1236,14 @@ class Project(models.Model):
         _("Is locked"),
         help_text=_(
             "If set to true, the project is temporarily locked. Locking is internal QFieldCloud mechanism related to file storage migration or other file operations."
+        ),
+        default=False,
+    )
+
+    is_featured = models.BooleanField(
+        _("Is sticky"),
+        help_text=_(
+            "If set to true, the project will always appear on top of the project list, no matter the sorting. If multiple projects are featured, they will be sorted by the user defined sorting."
         ),
         default=False,
     )
