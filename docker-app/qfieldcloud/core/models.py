@@ -1264,6 +1264,13 @@ class Project(models.Model):
         except Project.DoesNotExist:
             return None
 
+    @cached_property
+    def is_shared_datasets_project(self) -> bool:
+        """
+        Returns `True` if the project is the shared datasets project, otherwise `False`.
+        """
+        return self.name == SHARED_DATASETS_PROJECT_NAME
+
     def get_missing_localized_layers(self) -> list[dict[str, Any]]:
         """
         Of all localized layers, return those whose filenames aren’t in `available_filenames`,

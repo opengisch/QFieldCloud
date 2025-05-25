@@ -143,6 +143,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "user_role",
             "user_role_origin",
             "shared_datasets_project_id",
+            "is_shared_datasets_project",
         )
         read_only_fields = (
             "private",
