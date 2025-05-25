@@ -6,7 +6,7 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
-    LOCALIZED_DATASETS_PROJECT_NAME,
+    SHARED_DATASETS_PROJECT_NAME,
     Job,
     Person,
     Project,
@@ -37,8 +37,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             name="project1", is_public=False, owner=self.user1
         )
 
-        self.localized_datasets_project = Project.objects.create(
-            name=LOCALIZED_DATASETS_PROJECT_NAME, is_public=False, owner=self.user1
+        self.shared_datasets_project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME, is_public=False, owner=self.user1
         )
 
     def get_localized_filenames_by_project_details(self, project: Project) -> list:
@@ -59,15 +59,15 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         ]
         return filenames
 
-    def test_localized_datasets_project_id(self):
+    def test_shared_datasets_project_id(self):
         """
         Verifies that the localized dataset project ID is correctly returned
         as part of the main project's API metadata.
         """
         data = self.client.get(f"/api/v1/projects/{self.project1.id}/").json()
         self.assertEqual(
-            data.get("localized_datasets_project_id"),
-            str(self.localized_datasets_project.id),
+            data.get("shared_datasets_project_id"),
+            str(self.shared_datasets_project.id),
         )
 
     def test_localized_datasets_property(self):
@@ -106,7 +106,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         """
         resp = self._upload_file(
             self.user1,
-            self.localized_datasets_project,
+            self.shared_datasets_project,
             "delta/polygons.geojson",
             io.FileIO(testdata_path("delta/polygons.geojson"), "rb"),
         )
@@ -132,17 +132,17 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         # Localized layers found in the localized datasets project
         if self.project1.uses_legacy_storage:
-            available_localized_files = utils.get_project_files(
-                self.localized_datasets_project.id
+            available_shared_files = utils.get_project_files(
+                self.shared_datasets_project.id
             )
             available_localized_filenames = [
-                file.name for file in available_localized_files
+                file.name for file in available_shared_files
             ]
 
         else:
             available_localized_filenames = set(
                 File.objects.filter(
-                    project_id=self.localized_datasets_project.id
+                    project_id=self.shared_datasets_project.id
                 ).values_list("name", flat=True)
             )
 
@@ -169,7 +169,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # Upload the missing bumblebees.gpkg file
         resp = self._upload_file(
             self.user1,
-            self.localized_datasets_project,
+            self.shared_datasets_project,
             "bumblebees.gpkg",
             io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
         )
@@ -189,7 +189,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         """
         resp = self._upload_file(
             self.user1,
-            self.localized_datasets_project,
+            self.shared_datasets_project,
             "bumblebees.gpkg",
             io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
         )

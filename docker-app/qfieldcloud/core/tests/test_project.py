@@ -7,7 +7,7 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
-    LOCALIZED_DATASETS_PROJECT_NAME,
+    SHARED_DATASETS_PROJECT_NAME,
     Organization,
     OrganizationMember,
     Person,
@@ -538,13 +538,13 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(len(layers), 1)
             self.assertEqual(layers[0]["filename"], "localized:layer1.tif")
 
-    def test_project_serializer_localized_datasets_project_id(self):
-        """Test that ProjectSerializer returns the correct localized_datasets_project_id."""
+    def test_project_serializer_shared_datasets_project_id(self):
+        """Test that ProjectSerializer returns the correct shared_datasets_project_id."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         project = Project.objects.create(name="project", owner=self.user1)
         localized_project = Project.objects.create(
-            name=LOCALIZED_DATASETS_PROJECT_NAME, owner=self.user1
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
         )
 
         response = self.client.get(f"/api/v1/projects/{project.id}/")
@@ -553,28 +553,45 @@ class QfcTestCase(APITransactionTestCase):
 
         json = response.json()
 
-        self.assertEqual(
-            json["localized_datasets_project_id"], str(localized_project.id)
-        )
+        self.assertEqual(json["shared_datasets_project_id"], str(localized_project.id))
 
-    def test_get_localized_datasets_project_exists(self):
-        """Test Project.localized_datasets_project returns the project if found."""
+    def test_project_serializer_is_shared_datasets_project(self):
+        """Test that ProjectSerializer returns is_shared_datasets_project correctly."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
         project = Project.objects.create(name="project", owner=self.user1)
         localized_project = Project.objects.create(
-            name=LOCALIZED_DATASETS_PROJECT_NAME, owner=self.user1
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
         )
 
-        self.assertIsNotNone(project.localized_datasets_project)
-        self.assertEqual(project.localized_datasets_project.id, localized_project.id)
+        response = self.client.get(f"/api/v1/projects/{project.id}/")
 
-    def test_get_localized_datasets_project_missing(self):
-        """Test Project.localized_datasets_project returns None if not found."""
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["is_shared_datasets_project"])
+
+        response = self.client.get(f"/api/v1/projects/{localized_project.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["is_shared_datasets_project"])
+
+    def test_get_shared_datasets_project_exists(self):
+        """Test Project.shared_datasets_project returns the project if found."""
+        project = Project.objects.create(name="project", owner=self.user1)
+        localized_project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+        )
+
+        self.assertIsNotNone(project.shared_datasets_project)
+        self.assertEqual(project.shared_datasets_project.id, localized_project.id)
+
+    def test_get_shared_datasets_project_missing(self):
+        """Test Project.shared_datasets_project returns None if not found."""
         project = Project.objects.create(name="project", owner=self.user1)
 
-        self.assertIsNone(project.localized_datasets_project)
+        self.assertIsNone(project.shared_datasets_project)
 
     def test_get_missing_localized_layers_when_no_localized_project(self):
-        """Test get_missing_localized_layers returns all localized layers if no localized_datasets project exists."""
+        """Test get_missing_localized_layers returns all localized layers if no shared datasets project exists."""
         project = Project.objects.create(name="project", owner=self.user1)
 
         project.project_details = {
