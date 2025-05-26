@@ -109,6 +109,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
                 )
 
+        projects = projects.order_by("-is_featured", "owner__username", "name")
+
         return projects
 
     @transaction.atomic
@@ -155,4 +157,8 @@ class PublicProjectsListView(generics.ListAPIView):
     ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
 
     def get_queryset(self):
-        return Project.objects.for_user(self.request.user).filter(is_public=True)
+        return (
+            Project.objects.for_user(self.request.user)
+            .filter(is_public=True)
+            .order_by("-is_featured", "owner__username", "name")
+        )
