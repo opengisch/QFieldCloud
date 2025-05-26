@@ -77,7 +77,7 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc config host add myminio ${STORAGE_ENDPOINT_URL} ${STORAGE_ACCESS_KEY_ID} ${STORAGE_SECRET_ACCESS_KEY};
+      /usr/bin/mc alias set myminio ${STORAGE_ENDPOINT_URL} ${STORAGE_ACCESS_KEY_ID} ${STORAGE_SECRET_ACCESS_KEY};
       /usr/bin/mc mb myminio/${STORAGE_BUCKET_NAME};
       /usr/bin/mc policy set download myminio/${STORAGE_BUCKET_NAME}/users;
       /usr/bin/mc version enable myminio/${STORAGE_BUCKET_NAME};
