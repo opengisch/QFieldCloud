@@ -14,6 +14,7 @@ from allauth.account.utils import user_pk_to_url_str
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
+from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
@@ -58,6 +59,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
+from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 
 admin.site.unregister(LogEntry)
@@ -762,6 +764,14 @@ class ProjectForm(ModelForm):
         widgets = {"the_qgis_file_name": widgets.TextInput()}
         fields = "__all__"  # required for Django 3.x
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["attachments_file_storage"] = forms.ChoiceField(
+            choices=get_file_storage_choices(), required=True
+        )
+        if self.instance.has_attachments_files:
+            self.fields["attachments_file_storage"].disabled = True
+
 
 class ProjectAdmin(QFieldCloudModelAdmin):
     form = ProjectForm
@@ -801,8 +811,11 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_packaged_at",
         "project_details__pre",
         "is_locked",
+        "is_featured",
         "file_storage",
         "file_storage_migrated_at",
+        "attachments_file_storage",
+        "is_attachment_download_on_demand",
         "project_files",
     )
     readonly_fields = (
