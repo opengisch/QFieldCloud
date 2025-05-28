@@ -815,6 +815,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "file_storage",
         "file_storage_migrated_at",
         "attachments_file_storage",
+        "is_attachment_download_on_demand",
         "project_files",
     )
     readonly_fields = (
