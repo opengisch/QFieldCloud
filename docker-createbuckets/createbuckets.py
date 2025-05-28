@@ -37,7 +37,7 @@ for storage_name, storage_config in STORAGES.items():
     bucket_name = storage_config["OPTIONS"]["bucket_name"]
 
     subprocess.run(
-        f"/usr/bin/mc config host add {storage_name} {endpoint_url} {access_key} {secret_key}",
+        f"/usr/bin/mc alias set {storage_name} {endpoint_url} {access_key} {secret_key}",
         shell=True,
         check=True,
     )
