@@ -145,6 +145,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "shared_datasets_project_id",
             "is_shared_datasets_project",
             "is_featured",
+            "is_attachment_download_on_demand",
         )
         read_only_fields = (
             "private",
@@ -157,6 +158,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
+            "is_attachment_download_on_demand",
         )
         model = Project
 

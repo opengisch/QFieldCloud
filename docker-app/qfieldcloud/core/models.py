@@ -1258,6 +1258,17 @@ class Project(models.Model):
         default=get_project_file_storage_default,
     )
 
+    # When enabled, the client (e.g. QField) is informed that attachments
+    # can be fetched on demand at a later stage instead of downloading in bulk with the other package files.
+    # This can reduce the size of packaged data, especially for
+    # projects with large or numerous attachments.
+    is_attachment_download_on_demand = models.BooleanField(
+        default=False,
+        help_text=_(
+            "If enabled, it indicates to the client (e.g. QField) that the attachments may be downloaded on demand."
+        ),
+    )
+
     @cached_property
     def shared_datasets_project(self) -> Project | None:
         """
