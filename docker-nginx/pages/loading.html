@@ -16,7 +16,7 @@
         <p class="lead">Starting up QFieldCloud...</p>
         <div class="spinner"></div>
         <p class="text-muted small mt-3">Auto-refreshing in 10 seconds</p>
-        <a href="/" class="btn btn-sm btn-outline-primary mt-2">Check now</a>
+        <a href="?" class="btn btn-sm btn-outline-primary mt-2">Check now</a>
     </div>
     <style>
         /* exported from 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css' */
@@ -231,7 +231,7 @@
         const refreshCountKey = 'qfcLoadingRefreshCount';
         const maxRefreshes = 6; // 6 refreshes * 10 seconds per refresh = 60 seconds
         const errorPageUrl = '/pages/500.html';
-        const retryUrl = '/'; // The URL to navigate to for a retry (e.g., the root)
+        const retryUrl = '?'; // The URL to navigate to for a retry (e.g., the root)
         const retryIntervalMs = 10000; // 10 seconds
 
         const rawCount = sessionStorage.getItem(refreshCountKey);
