@@ -126,7 +126,7 @@ def repackage_if_needed(
     if not project.has_the_qgis_file:
         raise exceptions.NoQGISProjectError()
 
-    if project.needs_repackaging:
+    if project.needs_repackaging(user):
         package_job = repackage(project, user)
     else:
         package_job = (
