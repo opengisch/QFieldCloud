@@ -1321,6 +1321,35 @@ class Project(models.Model):
             .first()
         )
 
+    def last_package_jobs(self) -> list[PackageJob]:
+        """Returns all the last package jobs for the users of the project.
+
+        Returns:
+            List of all the last package jobs.
+        """
+        jobs = []
+
+        if self.owner.type == User.Type.PERSON:
+            last_package_job = self.last_package_job_for_user(self.owner)
+
+            if last_package_job:
+                jobs.append(last_package_job)
+
+            for collaborator in self.direct_collaborators:
+                last_package_job = self.last_package_job_for_user(collaborator)
+
+                if last_package_job:
+                    jobs.append(last_package_job)
+
+        elif self.owner.type == User.Type.ORGANIZATION:
+            for org_member in self.owner.members:
+                last_package_job = self.last_package_job_for_user(org_member.member)
+
+                if last_package_job:
+                    jobs.append(last_package_job)
+
+        return jobs
+
     @cached_property
     def is_shared_datasets_project(self) -> bool:
         """
