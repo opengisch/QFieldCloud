@@ -514,13 +514,28 @@ class UserAccount(models.Model):
     @property
     def storage_used_bytes(self) -> float:
         """Returns the storage used in bytes"""
-        used_quota = (
-            self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
-                "sum_bytes"
-            ]
+        from qfieldcloud.filestorage.models import File, FileVersion
+
+        project_files_used_quota = (
+            FileVersion.objects.filter(
+                file__file_type=File.FileType.PROJECT_FILE,
+                file__project__in=self.user.projects.exclude(
+                    file_storage=settings.LEGACY_STORAGE_NAME
+                ),
+            ).aggregate(sum_bytes=Sum("size"))["sum_bytes"]
+            or 0
+        )
+
+        # TODO: Delete with QF-4963 Drop support for legacy storage
+        legacy_used_quota = (
+            self.user.projects.filter(
+                file_storage=settings.LEGACY_STORAGE_NAME
+            ).aggregate(sum_bytes=Sum("file_storage_bytes"))["sum_bytes"]
             # if there are no projects, the value will be `None`
             or 0
         )
+
+        used_quota = project_files_used_quota + legacy_used_quota
 
         return used_quota
 
