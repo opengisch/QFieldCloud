@@ -23,7 +23,7 @@ def set_job_triggered_by(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0081_file_storage_project_and_more"),
+        ("core", "0084_project_is_attachment_download_on_demand"),
     ]
 
     operations = [
