@@ -143,3 +143,15 @@ class QfcTestCase(APITestCase):
 
         self.assertEqual(secrets.count(), 1)
         self.assertEqual(secrets[0], s1_assigned)
+
+    def test_add_secrets_to_projet_and_user(self):
+        p = Project.objects.create(name="project", owner=self.u1)
+        project_secret = self._create_secret(name="project_secret", project=p)
+        user_project_secret = self._create_secret(
+            name="user_project_secret", project=p, assigned_to=self.u1
+        )
+
+        secrets = Secret.objects.for_user_and_project(self.u1, p)
+        self.assertEqual(secrets.count(), 2)
+        self.assertEqual(secrets[0], user_project_secret)
+        self.assertEqual(secrets[1], project_secret)
