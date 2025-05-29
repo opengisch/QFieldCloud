@@ -1342,7 +1342,7 @@ class Project(models.Model):
                     jobs.append(last_package_job)
 
         elif self.owner.type == User.Type.ORGANIZATION:
-            for org_member in self.owner.members:
+            for org_member in self.owner.members.all():
                 last_package_job = self.last_package_job_for_user(org_member.member)
 
                 if last_package_job:
@@ -2081,11 +2081,14 @@ class JobQuerySet(InheritanceQuerySet):
         Returns:
             The jobs for the user.
         """
-        has_assigned_to_current_user_project_secrets = (
-            Secret.objects.for_user_and_project(user, self)  # type: ignore[attr-defined]
-            .filter(assigned_to__isnull=False)
-            .exists()
-        )
+        has_assigned_to_current_user_project_secrets = False
+        for project in user.projects.all():
+            if (
+                Secret.objects.for_user_and_project(user, project)  # type: ignore[attr-defined]
+                .filter(assigned_to__isnull=False)
+                .exists()
+            ):
+                has_assigned_to_current_user_project_secrets = True
 
         jobs_qs = self
         if has_assigned_to_current_user_project_secrets:
@@ -2216,6 +2219,10 @@ class Job(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()
+
+        if not self.triggered_by_id and self.created_by_id:
+            self.triggered_by = self.created_by
+
         return super().save(*args, **kwargs)
 
     def get_feedback_step_data(self, step_name: str) -> dict[str, Any] | None:
