@@ -1561,16 +1561,14 @@ class Project(models.Model):
     def can_repackage(self) -> bool:
         return True
 
-    @property
-    def needs_repackaging(self) -> bool:
+    def needs_repackaging(self, user: User) -> bool:
         if (
             # if has_online_vector_data is None (happens when the project details are missing)
             # we assume there might be
             self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
-            # TODO: `last_package_job` is not longer correct, we need to get the user that requested if the project needs repackaging
-            and self.last_package_job is not None
+            and self.last_package_job_for_user(user)
         ):
             # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
             return self.data_last_packaged_at < self.data_last_updated_at

@@ -380,7 +380,7 @@ class QfcTestCase(APITransactionTestCase):
     def test_needs_repackaging_without_online_vector(self):
         self.project1.refresh_from_db()
         # newly uploaded project should always need to be packaged at least once
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
         self.upload_files_and_check_package(
             token=self.token1.key,
@@ -401,7 +401,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # no longer needs repackaging since geopackage layers cannot change without deltas/reupload
-        self.assertFalse(self.project1.needs_repackaging)
+        self.assertFalse(self.project1.needs_repackaging(self.user1))
 
         self.upload_files(
             self.token1.key,
@@ -413,7 +413,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # a layer file changed, so we need to repackage
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
     def test_needs_repackaging_with_online_vector(self):
         cur = self.conn.cursor()
@@ -428,7 +428,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # newly uploaded project should always need to be packaged at least once
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
         self.upload_files_and_check_package(
             token=self.token1.key,
@@ -446,7 +446,7 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project1.refresh_from_db()
         # projects with online vector layer should always show as it needs repackaging
-        self.assertTrue(self.project1.needs_repackaging)
+        self.assertTrue(self.project1.needs_repackaging(self.user1))
 
     @tag("flaky")
     def test_connects_via_pgservice(self):
