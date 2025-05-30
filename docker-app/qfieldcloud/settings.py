@@ -347,6 +347,7 @@ if SENTRY_DSN:
         from qfieldcloud.core.exceptions import (
             AuthenticationViaTokenFailedError,
             InvalidRangeError,
+            MultipleProjectsError,
             ProjectAlreadyExistsError,
             ValidationError,
         )
@@ -370,6 +371,8 @@ if SENTRY_DSN:
             AuthenticationViaTokenFailedError,
             # The client sent the wrong/unsupported HTTP `Range` header that we cannot satisfy
             InvalidRangeError,
+            # the client attempted to upload a new .qgs/.qgz file, but the project already has one. The user must delete the QGIS file first before reuploading it.
+            MultipleProjectsError,
         )
 
         if "exc_info" in hint:
