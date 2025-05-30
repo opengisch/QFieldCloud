@@ -313,7 +313,7 @@ class FileVersion(models.Model):
     sha256sum = models.BinaryField(max_length=32, editable=False)
 
     # Size of the file in bytes.
-    size = models.PositiveIntegerField(editable=False)
+    size = models.PositiveBigIntegerField(editable=False)
 
     # Timestamp when the file has been uploaded.
     uploaded_at = models.DateTimeField(default=timezone.now, editable=False)
