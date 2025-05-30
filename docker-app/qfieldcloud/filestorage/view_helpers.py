@@ -96,7 +96,7 @@ def upload_project_file_version(
         and project.the_qgis_file_name is not None
         and PurePath(filename) != PurePath(project.the_qgis_file_name)
     ):
-        logger.error(f"Only one QGIS project per project allowed for {filename=}!")
+        logger.info(f"Only one QGIS project per project allowed for {filename=}!")
 
         raise MultipleProjectsError("Only one QGIS project per project allowed")
 
