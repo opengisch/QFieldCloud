@@ -346,6 +346,7 @@ if SENTRY_DSN:
 
         from qfieldcloud.core.exceptions import (
             AuthenticationViaTokenFailedError,
+            InvalidRangeError,
             ProjectAlreadyExistsError,
             ValidationError,
         )
@@ -367,6 +368,8 @@ if SENTRY_DSN:
             MethodNotAllowed,
             # the client sent invalid authentication token, the user should fix his token
             AuthenticationViaTokenFailedError,
+            # The client sent the wrong/unsupported HTTP `Range` header that we cannot satisfy
+            InvalidRangeError,
         )
 
         if "exc_info" in hint:
