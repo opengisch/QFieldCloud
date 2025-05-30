@@ -2,7 +2,7 @@ import logging
 from uuid import UUID
 
 from django.contrib.staticfiles.storage import staticfiles_storage
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.http.response import HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -178,7 +178,9 @@ class ProjectMetaFileReadView(views.APIView):
     ]
 
     def get(self, request: Request, project_id: UUID) -> HttpResponseBase:
-        project = get_object_or_404(Project, id=project_id)
+        project = get_object_or_404(
+            Project, Q(id=project_id) & Q(thumbnail__isnull=False) & ~Q(thumbnail="")
+        )
 
         return download_field_file(
             request,
