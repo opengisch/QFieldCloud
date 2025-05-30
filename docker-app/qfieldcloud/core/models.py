@@ -1532,45 +1532,46 @@ class Project(models.Model):
             )
 
         elif self.project_details:
-            if self.shared_datasets_project:
-                localized_project_url = reverse_lazy(
-                    "project_overview",
-                    kwargs={
-                        "username": self.shared_datasets_project.owner.username,
-                        "project": self.shared_datasets_project.name,
-                    },
-                )
-                missing_localized_file_solution = _(
-                    'Upload the missing file to the "<a href="{}">{}</a>" project or update the layer to point to an available file.'
-                ).format(localized_project_url, SHARED_DATASETS_PROJECT_NAME)
-            else:
-                problems.append(
-                    {
-                        "layer": None,
-                        "level": "warning",
-                        "code": "missing_localized_project",
-                        "description": _('Could not find the "{}" project.').format(
-                            SHARED_DATASETS_PROJECT_NAME
-                        ),
-                        "solution": _("Ensure the shared dataset project exists."),
-                    }
-                )
-                missing_localized_file_solution = _(
-                    'Upload the missing file to the "{}" project or update the layer to point to an available file.'
-                ).format(SHARED_DATASETS_PROJECT_NAME)
+            if self.localized_layers:
+                if self.shared_datasets_project:
+                    localized_project_url = reverse_lazy(
+                        "project_overview",
+                        kwargs={
+                            "username": self.shared_datasets_project.owner.username,
+                            "project": self.shared_datasets_project.name,
+                        },
+                    )
+                    missing_localized_file_solution = _(
+                        'Upload the missing file to the "<a href="{}">{}</a>" project or update the layer to point to an available file.'
+                    ).format(localized_project_url, SHARED_DATASETS_PROJECT_NAME)
+                else:
+                    problems.append(
+                        {
+                            "layer": None,
+                            "level": "warning",
+                            "code": "missing_localized_project",
+                            "description": _('Cannot find the "{}" project.').format(
+                                SHARED_DATASETS_PROJECT_NAME
+                            ),
+                            "solution": _("Ensure the shared dataset project exists."),
+                        }
+                    )
+                    missing_localized_file_solution = _(
+                        'Upload the missing file to the "{}" project or update the layer to point to an available file.'
+                    ).format(SHARED_DATASETS_PROJECT_NAME)
 
-            for missing_layer in self.get_missing_localized_layers():
-                problems.append(
-                    {
-                        "layer": missing_layer.get("filename"),
-                        "level": "warning",
-                        "code": "missing_localized_file",
-                        "description": _(
-                            'Localized dataset stored at "{}" is missing.'
-                        ).format(missing_layer.get("filename")),
-                        "solution": missing_localized_file_solution,
-                    }
-                )
+                for missing_layer in self.get_missing_localized_layers():
+                    problems.append(
+                        {
+                            "layer": missing_layer.get("filename"),
+                            "level": "warning",
+                            "code": "missing_localized_file",
+                            "description": _(
+                                'Localized dataset stored at "{}" is missing.'
+                            ).format(missing_layer.get("filename")),
+                            "solution": missing_localized_file_solution,
+                        }
+                    )
 
             for layer_data in self.project_details.get("layers_by_id", {}).values():
                 layer_name = layer_data.get("name")
