@@ -125,10 +125,10 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
                 package_ids = storage.get_stored_package_ids(project_id)
 
                 for package_id in package_ids:
-                    # keep the last package
-                    # TODO this will no longer be neeeded as `last_package_job_id` will have all the info
-                    if package_id == str(project.last_package_job_id):
-                        continue
+                    # keep the last packages
+                    for job in project.last_package_jobs():
+                        if package_id == str(job.id):
+                            continue
 
                     # the job is still active, so it might be one of the new packages
                     if package_id in job_ids:
