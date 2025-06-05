@@ -432,9 +432,9 @@ class PackageJobRun(JobRun):
 
                 for package_id in package_ids:
                     # keep the last package
-                    # TODO this will no longer be needed as `job_ids` should have all the info
-                    if package_id == str(self.job.project.last_package_job_id):
-                        continue
+                    for package_job in self.job.project.last_package_jobs():
+                        if package_id == str(package_job.id):
+                            continue
 
                     # the job is still active, so it might be one of the new packages
                     if package_id in job_ids:
