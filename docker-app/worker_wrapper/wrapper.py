@@ -16,6 +16,7 @@ from constance import config
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.client import DockerClient
@@ -406,11 +407,11 @@ class PackageJobRun(JobRun):
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
         # TODO: `last_package_job` is not longer correct, we need to get the user that requested if the project needs repackaging
-        self.job.project.last_package_job = self.job
+        # self.job.project.last_package_job = self.job
         self.job.project.save(
             update_fields=(
                 "data_last_packaged_at",
-                "last_package_job",
+                # "last_package_job",
             )
         )
 
@@ -448,13 +449,22 @@ class PackageJobRun(JobRun):
                 )
         else:
             # TODO spare the package files for the last package job for a particular user
+            # EDIT: assuming the "particular user" if the one who triggered the Job
             delete_count = (
                 File.objects.filter(
                     project=self.job.project,
                     file_type=File.FileType.PACKAGE_FILE,
                 )
                 .exclude(
-                    package_job=self.job,
+                    Q(package_job=self.job)
+                    | Q(
+                        package_job=Job.objects.for_user(self.job.triggered_by)
+                        .filter(
+                            project=self.job.project,
+                            type=Job.Type.PACKAGE,
+                        )
+                        .first()
+                    )
                 )
                 .delete()
             )
