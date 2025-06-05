@@ -20,4 +20,8 @@ class Migration(migrations.Migration):
                 to="core.project",
             ),
         ),
+        migrations.RemoveField(
+            model_name="project",
+            name="last_package_job",
+        ),
     ]
