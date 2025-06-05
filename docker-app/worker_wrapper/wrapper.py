@@ -16,6 +16,7 @@ from constance import config
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.client import DockerClient
@@ -268,7 +269,9 @@ class JobRun:
 
         extra_envvars = {}
         pgservice_file_contents = ""
-        for secret in self.job.project.secrets.all():
+        for secret in self.job.project.secrets.for_user_and_project(
+            self.job.triggered_by, self.job.project
+        ):
             if secret.type == Secret.Type.ENVVAR:
                 extra_envvars[secret.name] = secret.value
             elif secret.type == Secret.Type.PGSERVICE:
@@ -403,11 +406,12 @@ class PackageJobRun(JobRun):
     def after_docker_run(self) -> None:
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
-        self.job.project.last_package_job = self.job
+        # TODO: `last_package_job` is not longer correct, we need to get the user that requested if the project needs repackaging
+        # self.job.project.last_package_job = self.job
         self.job.project.save(
             update_fields=(
                 "data_last_packaged_at",
-                "last_package_job",
+                # "last_package_job",
             )
         )
 
@@ -429,8 +433,9 @@ class PackageJobRun(JobRun):
 
                 for package_id in package_ids:
                     # keep the last package
-                    if package_id == str(self.job.project.last_package_job_id):
-                        continue
+                    for package_job in self.job.project.last_package_jobs():
+                        if package_id == str(package_job.id):
+                            continue
 
                     # the job is still active, so it might be one of the new packages
                     if package_id in job_ids:
@@ -443,13 +448,23 @@ class PackageJobRun(JobRun):
                     exc_info=err,
                 )
         else:
+            # TODO spare the package files for the last package job for a particular user
+            # EDIT: assuming the "particular user" if the one who triggered the Job
             delete_count = (
                 File.objects.filter(
                     project=self.job.project,
                     file_type=File.FileType.PACKAGE_FILE,
                 )
                 .exclude(
-                    package_job=self.job,
+                    Q(package_job=self.job)
+                    | Q(
+                        package_job=Job.objects.for_user(self.job.triggered_by)
+                        .filter(
+                            project=self.job.project,
+                            type=Job.Type.PACKAGE,
+                        )
+                        .first()
+                    )
                 )
                 .delete()
             )
