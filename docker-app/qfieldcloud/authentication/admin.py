@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from django.contrib import admin
 from django.contrib.admin import register
 from django.db.models import Q, QuerySet
@@ -5,6 +7,11 @@ from django.http import HttpRequest
 from django.utils import timezone
 
 from .models import AuthToken
+
+if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
+else:
+    StrOrPromise = str
 
 
 class AuthTokenClientTypeFilter(admin.SimpleListFilter):
@@ -16,7 +23,7 @@ class AuthTokenClientTypeFilter(admin.SimpleListFilter):
 
     def lookups(
         self, request: HttpRequest, model_admin: admin.ModelAdmin
-    ) -> list[tuple[str, str]]:
+    ) -> list[tuple[str, StrOrPromise]]:
         """
         Returns a list of tuples. The first element in each
         tuple is the coded value for the option that will

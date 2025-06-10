@@ -332,7 +332,7 @@ def search_parser(
     return custom_filter
 
 
-def model_admin_url(obj, name: str = None) -> str:
+def model_admin_url(obj, name: str | None = None) -> str:
     url = resolve_url(admin_urlname_by_obj(obj, SafeText("change")), obj.pk)
     return format_html('<a href="{}">{}</a>', url, name or str(obj))
 

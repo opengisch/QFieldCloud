@@ -52,7 +52,7 @@ class QfcWorkerException(Exception):
 
     message = ""
 
-    def __init__(self, message: str = None, **kwargs):
+    def __init__(self, message: str | None = None, **kwargs):
         self.message = (message or self.message) % kwargs
         self.details = kwargs
 
@@ -532,7 +532,7 @@ def logger_context(step: Step):
         print(f"::>>>::{log_uuid} {step.stage}", file=sys.stderr)
 
 
-def is_localhost(hostname: str, port: int = None) -> bool:
+def is_localhost(hostname: str, port: int | None = None) -> bool:
     """returns True if the hostname points to the localhost, otherwise False."""
     if port is None:
         port = 22  # no port specified, lets just use the ssh port

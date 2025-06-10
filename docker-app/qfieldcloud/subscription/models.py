@@ -759,7 +759,7 @@ class AbstractSubscription(models.Model):
 
     @classmethod
     def create_default_plan_subscription(
-        cls, account: UserAccount, active_since: datetime = None
+        cls, account: UserAccount, active_since: datetime | None = None
     ) -> "AbstractSubscription":
         """Creates the default subscription for a given account.
 
