@@ -44,10 +44,8 @@ def file_storage_name_validator(value):
 @deconstructible
 class MaxBytesLengthValidator(BaseValidator):
     message = ngettext_lazy(
-        "Ensure this value has at most %(limit_value)d byte (it has "
-        "%(show_value)d).",
-        "Ensure this value has at most %(limit_value)d bytes (it has "
-        "%(show_value)d).",
+        "Ensure this value has at most %(limit_value)d byte (it has %(show_value)d).",
+        "Ensure this value has at most %(limit_value)d bytes (it has %(show_value)d).",
         "limit_value",
     )
     code = "max_length"

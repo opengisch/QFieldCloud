@@ -41,7 +41,7 @@ class ResendFailedInvitationsJob(CronJobBase):
                 logger.error(err)
 
         logger.info(
-            f'Resend {len(invitation_emails)} previously failed invitation(s) to: {", ".join(invitation_emails)}'
+            f"Resend {len(invitation_emails)} previously failed invitation(s) to: {', '.join(invitation_emails)}"
         )
 
 

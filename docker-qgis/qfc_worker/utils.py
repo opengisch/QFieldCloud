@@ -896,7 +896,7 @@ def layers_data_to_string(layers_by_id):
     table = [
         [
             d["name"],
-            f'...{d["id"][-6:]}',
+            f"...{d['id'][-6:]}",
             d["is_valid"],
             d["error_code"],
             d["error_summary"],

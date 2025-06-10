@@ -816,7 +816,7 @@ def get_feature(
     source_pk = delta["sourcePk"]
 
     if client_pks:
-        client_pk_key = f'{delta["clientId"]}__{delta["localPk"]}'
+        client_pk_key = f"{delta['clientId']}__{delta['localPk']}"
         if client_pk_key in client_pks:
             source_pk = client_pks[client_pk_key]
 

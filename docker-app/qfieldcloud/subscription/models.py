@@ -826,9 +826,9 @@ class AbstractSubscription(models.Model):
 
         regular_active_since: datetime | None = None
         if plan.is_trial:
-            assert isinstance(
-                active_since, datetime
-            ), "Creating a trial plan requires `active_since` to be a valid datetime object"
+            assert isinstance(active_since, datetime), (
+                "Creating a trial plan requires `active_since` to be a valid datetime object"
+            )
 
             active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
             logger.info(

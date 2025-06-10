@@ -561,7 +561,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         user = self.get_object(request, user_id)
         if user is None:
             raise Http404(
-                _("%(name)s object with primary key %(key)r does " "not exist.")
+                _("%(name)s object with primary key %(key)r does not exist.")
                 % {
                     "name": self.model._meta.verbose_name,
                     "key": escape(user_id),

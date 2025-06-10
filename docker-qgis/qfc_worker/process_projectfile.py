@@ -120,7 +120,7 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
     )
 
     logger.info(
-        f'QGIS project layer checks\n{layers_data_to_string(details["layers_by_id"])}',
+        f"QGIS project layer checks\n{layers_data_to_string(details['layers_by_id'])}",
     )
 
     return details

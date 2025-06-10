@@ -43,9 +43,9 @@ def get_users(
     exclude_teams: bool = False,
     invert: bool = False,
 ) -> QuerySet:
-    assert (
-        project is None or organization is None
-    ), "Cannot have the project and organization filters set simultaneously"
+    assert project is None or organization is None, (
+        "Cannot have the project and organization filters set simultaneously"
+    )
 
     if username:
         users = User.objects.filter(username__icontains=username)
