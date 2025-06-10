@@ -1,4 +1,4 @@
-name: Report a bug for QField
+name: Report a bug for QFieldCloud
 description: |
   Create a bug report to help us improve QFieldCloud.
   Do not report issues related to other QField ecosystem products.
@@ -11,7 +11,7 @@ body:
         Thanks for taking the time to fill out this bug report correctly.
 
         Please report only issues related to the QFieldCloud application.
-        Make sure you have a good understanding of the reported error and configuration options of QFieldCloud.
+        Make sure you have a good understanding of the configuration options of QFieldCloud and `docker compose`, otherwise request professional or community support.
         Do not report issues related to other QField ecosystem products.
         Note that feature requests should not be requested here.
 
@@ -35,7 +35,7 @@ body:
         3. Request '...'
         4. See error
         
-        Please attach the result of `docker compose logs` and the used `.env` file without sensitive information as part of the submitted issue.
+        Please wrap the output in three backticks ( ` ) of `docker compose logs` and `cat .env` as part of the submitted issue.
     validations:
       required: true
 
@@ -82,7 +82,6 @@ body:
         - label: I have a fresh install of the latest QFieldCloud version, but the problem persists.
         - label: I have the latest available Docker engine installed on my machine.
         - label: Problem can be reliably reproduced, doesn't happen randomly.
-        - label: Problem happens with all files and projects, not only some files or projects.
 
   - type: textarea
     id: additional-context
