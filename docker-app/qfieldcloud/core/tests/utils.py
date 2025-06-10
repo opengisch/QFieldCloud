@@ -58,9 +58,9 @@ def set_subscription(
     **kwargs,
 ):
     users: list[User] = [users] if isinstance(users, User) else users
-    assert len(
-        users
-    ), "When iterable, the first argument must contain at least 1 element."
+    assert len(users), (
+        "When iterable, the first argument must contain at least 1 element."
+    )
 
     code = code or f"plan_for_{'_and_'.join([u.username for u in users])}"
     plan = Plan.objects.get_or_create(
@@ -69,9 +69,9 @@ def set_subscription(
         **kwargs,
     )[0]
     for user in users:
-        assert (
-            user.type == plan.user_type
-        ), 'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
+        assert user.type == plan.user_type, (
+            'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
+        )
         subscription: Subscription = user.useraccount.current_subscription
         subscription.plan = plan
         subscription.active_since = timezone.now() - timedelta(days=1)

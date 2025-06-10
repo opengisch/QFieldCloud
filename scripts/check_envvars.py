@@ -93,9 +93,9 @@ def get_env_varnames_from_k8s_environments(search_path: str) -> dict[str, list[s
         secret_varnames = get_env_varnames_from_k8s_secrets(path.joinpath("secret.yml"))
 
         common_varnames = kustomization_varnames.intersection(secret_varnames)
-        assert (
-            len(common_varnames) == 0
-        ), f"Envvar(s) {common_varnames} are present both in the kustomization and the secret file in {path.name} environment. Choose only one!"
+        assert len(common_varnames) == 0, (
+            f"Envvar(s) {common_varnames} are present both in the kustomization and the secret file in {path.name} environment. Choose only one!"
+        )
 
         for varname in kustomization_varnames.union(secret_varnames):
             occurrences = env_vars.get(varname, [])

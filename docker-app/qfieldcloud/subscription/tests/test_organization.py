@@ -35,9 +35,9 @@ class QfcTestCase(APITransactionTestCase):
         is_valid: bool = True,
     ):
         """Asserts that user has give role/origin on project"""
-        assert (role is None) == (
-            origin is None
-        ), "Both role and origin should be either defined or undefined!"
+        assert (role is None) == (origin is None), (
+            "Both role and origin should be either defined or undefined!"
+        )
 
         # Assert user does not have any role
         if role is None:
