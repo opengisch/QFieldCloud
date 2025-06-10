@@ -20,7 +20,7 @@ class Command(BaseCommand):
         parser.add_argument("--force", action="store_true", default=False)
         parser.add_argument("--from-storage", type=str, default="legacy_storage")
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options) -> None:
         useraccounts = (
             UserAccount.objects.select_related("user")
             .filter(
