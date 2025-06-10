@@ -5,7 +5,7 @@ from typing import Generator, Iterable
 
 import mypy_boto3_s3
 from django.conf import settings
-from django.core.files.storage import get_storage_class
+from django.core.files.storage import storages
 from django.core.management.base import BaseCommand, CommandParser
 from storages.backends.s3boto3 import S3Boto3Storage
 
@@ -69,17 +69,12 @@ class Command(BaseCommand):
 
     @staticmethod
     def get_s3_bucket(storage_name: str) -> mypy_boto3_s3.service_resource.Bucket:
-        StorageClass = get_storage_class(settings.STORAGES[storage_name]["BACKEND"])
+        storage = storages[storage_name]
 
-        if not issubclass(StorageClass, S3Boto3Storage):
+        if not isinstance(storage, S3Boto3Storage):
             raise NotImplementedError(
                 "Using the `extracts3data` command only supports S3 storages!"
             )
-
-        # Initialize the storage with the settings defined for "b"
-        storage: S3Boto3Storage = StorageClass(
-            **settings.STORAGES[storage_name].get("OPTIONS", {})
-        )
 
         # Access the bucket name
         bucket_name = storage.bucket_name
@@ -113,10 +108,10 @@ class Command(BaseCommand):
         storage_names = []
 
         for storage_name, storage_config in settings.STORAGES.items():
-            StorageClass = get_storage_class(storage_config["BACKEND"])
+            storage = storages[storage_name]
 
             # currently we only support S3 storage
-            if not issubclass(StorageClass, S3Boto3Storage):
+            if not isinstance(storage, S3Boto3Storage):
                 continue
 
             storage_names.append(storage_name)
