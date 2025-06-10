@@ -24,7 +24,7 @@ def create_token(
     token_model: Type[AuthToken],
     user: User,
     _serializer=None,
-    request: HttpRequest = None,
+    request: HttpRequest | None = None,
 ) -> AuthToken:
     user_agent = ""
     client_type = AuthToken.ClientType.UNKNOWN

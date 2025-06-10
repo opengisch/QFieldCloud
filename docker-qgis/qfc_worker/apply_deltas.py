@@ -136,16 +136,16 @@ class DeltaException(Exception):
         self,
         msg: str,
         e_type: DeltaExceptionType = DeltaExceptionType.Error,
-        delta_file_id: str = None,
-        layer_id: str = None,
-        delta_idx: int = None,
-        delta_id: str = None,
-        feature_pk: str = None,
-        modified_pk: str = None,
-        conflicts: list[str] = None,
-        method: DeltaMethod = None,
-        provider_errors: str = None,
-        descr: str = None,
+        delta_file_id: str | None = None,
+        layer_id: str | None = None,
+        delta_idx: int | None = None,
+        delta_id: str | None = None,
+        feature_pk: str | None = None,
+        modified_pk: str | None = None,
+        conflicts: list[str] | None = None,
+        method: DeltaMethod | None = None,
+        provider_errors: str | None = None,
+        descr: str | None = None,
     ):
         super().__init__(msg)
         self.e_type = e_type
@@ -807,7 +807,7 @@ def get_pk_attr_name(layer: QgsVectorLayer) -> str:
 
 
 def get_feature(
-    layer: QgsVectorLayer, delta: Delta, client_pks: dict[str, str] = None
+    layer: QgsVectorLayer, delta: Delta, client_pks: dict[str, str] | None = None
 ) -> QgsFeature:
     pk_attr_name = get_pk_attr_name(layer)
 

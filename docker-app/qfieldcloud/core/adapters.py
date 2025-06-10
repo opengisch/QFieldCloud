@@ -129,9 +129,9 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         self,
         request: HttpRequest,
         provider: OAuth2Provider,
-        error: str = None,
-        exception: Exception = None,
-        extra_context: dict = None,
+        error: str | None = None,
+        exception: Exception | None = None,
+        extra_context: dict | None = None,
     ) -> None:
         logger.error("SSO Authentication error:", exc_info=True)
         logger.error(f"Provider: {provider!r}")

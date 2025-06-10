@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Sized
+from collections.abc import Collection
 
 from django.core.management.base import BaseCommand
 from qfieldcloud.core.models import Project
@@ -25,8 +25,8 @@ class Command(BaseCommand):
         group.add_argument("--owner-username-startswith", type=str)
         group.add_argument("--owner-username-matches", type=str)
 
-    def handle(self, *args, **options):
-        projects: Sized = []
+    def handle(self, *args, **options) -> None:
+        projects: Collection = []
 
         force: bool = options.get("force", False)
 
