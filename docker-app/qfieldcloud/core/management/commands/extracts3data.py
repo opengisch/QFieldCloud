@@ -65,7 +65,7 @@ class Command(BaseCommand):
         if output_filename:
             handle.close()
 
-        logger.info(f"Successfully exported data to {output_filename}")
+        logger.info(f"Successfully exported data to {output_filename or 'STDOUT'}")
 
     @staticmethod
     def get_s3_bucket(storage_name: str) -> mypy_boto3_s3.service_resource.Bucket:
