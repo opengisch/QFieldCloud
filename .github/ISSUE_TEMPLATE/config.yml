@@ -35,10 +35,3 @@ contact_links:
     url: https://github.com/opengisch/qfield-docs/issues
     about: >
       Suggest improvements or report documentation errors on https://docs.qfield.org.
-
-  - name: Report issue with QField plugins
-    url: https://github.com/topics/qfield-plugin
-    about: >
-      If the issue concerns a third party plugin (downloaded within the QField plugin manager)
-      then it can't be fixed by the QField core team.
-      Please raise your issue in the dedicated bug tracker for that specific plugin.
