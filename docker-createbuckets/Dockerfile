@@ -12,4 +12,4 @@ RUN chmod +x /usr/bin/mc
 COPY ./createbuckets.py /createbuckets.py
 RUN chmod +x /createbuckets.py
 
-ENTRYPOINT /createbuckets.py
+ENTRYPOINT ["/createbuckets.py"]
