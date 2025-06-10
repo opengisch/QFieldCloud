@@ -34,8 +34,9 @@ body:
         2. Run '...'
         3. Request '...'
         4. See error
-        
+
         Please wrap the output in three backticks ( ` ) of `docker compose logs` and `cat .env` as part of the submitted issue.
+
     validations:
       required: true
 
