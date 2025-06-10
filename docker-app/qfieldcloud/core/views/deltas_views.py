@@ -97,7 +97,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             with transaction.atomic():
                 for delta in deltas:
                     if delta["uuid"] in existing_delta_ids:
-                        logger.warning(f'Duplicate delta id: ${delta["uuid"]}')
+                        logger.warning(f"Duplicate delta id: ${delta['uuid']}")
                         continue
 
                     delta_obj = Delta(

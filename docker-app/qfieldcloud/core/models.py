@@ -1729,9 +1729,9 @@ class Project(models.Model):
                 self.owner.useraccount.current_subscription.plan.storage_keep_versions
             )
 
-        assert (
-            self.storage_keep_versions >= 1
-        ), "If 0, storage_keep_versions mean that all file versions are deleted!"
+        assert self.storage_keep_versions >= 1, (
+            "If 0, storage_keep_versions mean that all file versions are deleted!"
+        )
 
         super().save(*args, **kwargs)
 

@@ -716,12 +716,12 @@ def delete_project_file_version_permanently(
                 break
 
         if versions_to_delete:
-            assert (
-                include_older
-            ), "We should continue to loop only if `include_older` is True"
-            assert (
-                versions_to_delete[-1].last_modified > file_version.last_modified
-            ), "Assert the other versions are really older than the requested one"
+            assert include_older, (
+                "We should continue to loop only if `include_older` is True"
+            )
+            assert versions_to_delete[-1].last_modified > file_version.last_modified, (
+                "Assert the other versions are really older than the requested one"
+            )
 
             versions_to_delete.append(file_version)
 
