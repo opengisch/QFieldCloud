@@ -241,6 +241,7 @@ class PackageType(models.Model):
 
     class Type(models.TextChoices):
         STORAGE = "storage", _("Storage")
+        SEATS = "seats", _("Seats")
 
     code = models.CharField(max_length=100, unique=True)
     # TODO: decide how to localize display_name. Possible approaches:
@@ -499,6 +500,16 @@ class AbstractSubscription(models.Model):
             "These notes are for internal purposes only and will never be shown to the end users."
         ),
     )
+
+    @property
+    def active_seat_package_quantity(self) -> int:
+        seats_type = PackageType.objects.get(type=PackageType.Type.SEATS)
+        return self.get_active_package_quantity(seats_type)
+
+    @property
+    def future_seat_package_quantity(self) -> int:
+        seats_type = PackageType.objects.get(type=PackageType.Type.SEATS)
+        return self.get_future_package_quantity(seats_type)
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
