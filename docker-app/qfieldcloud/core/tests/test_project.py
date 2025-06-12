@@ -125,6 +125,52 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[0]["collaborator"], "user2")
         self.assertEqual(json[0]["role"], "manager")
 
+    def test_list_filtered_projects(self):
+        # Create a project of user1 with public access to user2
+        Project.objects.create(name="project1", is_public=True, owner=self.user1)
+
+        # Create a project of user1 without access to user2
+        Project.objects.create(name="project2", is_public=False, owner=self.user1)
+
+        # Create a private project of user2
+        Project.objects.create(name="project1", is_public=False, owner=self.user2)
+
+        # Create a public project of user2
+        Project.objects.create(name="project2", is_public=True, owner=self.user2)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+
+        # 1) list non-public projects for specific user name other than the logged in user
+        response = self.client.get("/api/v1/projects/?owner=user1")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 0)
+
+        # 1) list all projects (including public ones) for specific user name other than the logged in user
+        response = self.client.get("/api/v1/projects/?owner=user1&include-public=1")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "project1")
+        self.assertEqual(response.data[0]["owner"], "user1")
+
+        # 2) list projects for specific user name matching logged in user
+        response = self.client.get("/api/v1/projects/?owner=user2")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 2)
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k["name"])
+        self.assertEqual(json[0]["name"], "project1")
+        self.assertEqual(json[0]["owner"], "user2")
+        self.assertEqual(json[1]["name"], "project2")
+        self.assertEqual(json[1]["owner"], "user2")
+
+        # 3) list project for specific user name (matching logged in user) and project name
+        response = self.client.get("/api/v1/projects/?owner=user2&name=project2")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "project2")
+        self.assertEqual(response.data[0]["owner"], "user2")
+
     def test_list_projects_of_authenticated_user(self):
         # Create a project of user1
         self.project1 = Project.objects.create(
