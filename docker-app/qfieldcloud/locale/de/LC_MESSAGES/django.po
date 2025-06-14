@@ -23,7 +23,7 @@ msgstr ""
 
 #: qfieldcloud/authentication/authentication.py:57
 msgid "Invalid token."
-msgstr "Ungültiges Token."
+msgstr "Ungültiger Token."
 
 #: qfieldcloud/authentication/authentication.py:60
 msgid "Token has expired."
@@ -39,7 +39,7 @@ msgstr "Browser"
 
 #: qfieldcloud/authentication/models.py:23
 msgid "Command line interface"
-msgstr "Befehlszeilenschnittstelle"
+msgstr "Kommandozeileninterface"
 
 #: qfieldcloud/authentication/models.py:24
 msgid "SDK"
@@ -424,7 +424,7 @@ msgstr ""
 
 #: qfieldcloud/core/models.py:1115
 msgid "Packaging Offliner"
-msgstr "Verpackung Offliner"
+msgstr "Packaging Offliner"
 
 #: qfieldcloud/core/models.py:1117
 msgid ""
@@ -432,9 +432,9 @@ msgid ""
 "\"Optimized Packager\" should be preferred over the deprecated \"QGIS Core "
 "Offline Editing\" for new projects."
 msgstr ""
-"Der Verpackung Offliner verpackt Daten zur Offline-Nutzung mit QField. Der "
+"Der Packaging Offliner verpackt Daten zur Offline-Nutzung mit QField. Der "
 "neue \"Optimierte Packager\" sollte dem veralteten \"QGIS Core Offline "
-"Editing\" für neue Projekte vorgezogen werden."
+"Editing\" vorgezogen werden."
 
 #: qfieldcloud/core/models.py:1266
 msgid "Missing QGIS project file (.qgs/.qgz)."
@@ -653,8 +653,8 @@ msgid ""
 "If enabled, QFieldCloud will automatically overwrite conflicts while "
 "applying deltas."
 msgstr ""
-"Wenn aktiviert, überschreibt QFieldCloud automatisch Konflikte beim Anwenden"
-" von Deltas."
+"Wenn aktiviert, werden Konflikte beim Anwenden von Deltas automatisch "
+"überschrieben."
 
 #: qfieldcloud/core/models.py:1863
 msgid "pg_service"
