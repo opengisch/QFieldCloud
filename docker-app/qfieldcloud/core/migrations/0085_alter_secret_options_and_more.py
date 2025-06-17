@@ -134,4 +134,14 @@ class Migration(migrations.Migration):
                 null=False,
             ),
         ),
+        migrations.AlterField(
+            model_name="secret",
+            name="project",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="secrets",
+                to="core.project",
+            ),
+        ),
     ]
