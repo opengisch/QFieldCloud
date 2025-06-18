@@ -682,10 +682,10 @@ class SecretAdmin(QFieldCloudModelAdmin):
     )
     readonly_fields = ("created_by",)
     list_display = (
-        "project__name",
         "name",
         "type",
         "assigned_to",
+        "project__name",
         "organization",
         "created_by__link",
     )
