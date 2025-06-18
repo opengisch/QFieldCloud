@@ -1321,34 +1321,36 @@ class Project(models.Model):
             .first()
         )
 
-    def last_package_jobs(self) -> list[PackageJob]:
+    def last_package_jobs(self) -> JobQuerySet:
         """Returns all the last package jobs for the users of the project.
 
         Returns:
-            List of all the last package jobs.
+            QuerySet of all the last package jobs.
         """
-        jobs = []
+        if self.owner.is_organization:
+            # all the admin users including the organization owner
+            triggered_by_qs = Person.objects.for_organization(self.owner).filter(
+                organization_role=OrganizationMember.Roles.ADMIN,
+            )
+        else:
+            triggered_by_qs = Person.objects.filter(id=self.owner.pk)
 
-        if self.owner.type == User.Type.PERSON:
-            last_package_job = self.last_package_job_for_user(self.owner)
+        triggered_by_qs |= Person.objects.filter(
+            id__in=self.direct_collaborators.values_list("id", flat=True)
+        )
+        triggered_by_ids_qs = triggered_by_qs.distinct().values_list("id", flat=True)
 
-            if last_package_job:
-                jobs.append(last_package_job)
+        jobs_qs = (
+            Job.objects.filter(
+                type=Job.Type.PACKAGE,
+                project_id=self.id,
+                triggered_by__in=triggered_by_ids_qs,
+            )
+            .order_by("triggered_by", "-created_at")
+            .distinct("triggered_by")
+        )
 
-            for collaborator in self.direct_collaborators:
-                last_package_job = self.last_package_job_for_user(collaborator)
-
-                if last_package_job:
-                    jobs.append(last_package_job)
-
-        elif self.owner.type == User.Type.ORGANIZATION:
-            for org_member in self.owner.members.all():
-                last_package_job = self.last_package_job_for_user(org_member.member)
-
-                if last_package_job:
-                    jobs.append(last_package_job)
-
-        return jobs
+        return jobs_qs
 
     @cached_property
     def is_shared_datasets_project(self) -> bool:
