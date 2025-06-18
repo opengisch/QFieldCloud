@@ -106,7 +106,7 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
             updated_at__gt=timezone.now() - timedelta(minutes=70),
             updated_at__lt=timezone.now() - timedelta(minutes=5),
         )
-        # TODO Include project jobs ids that are for individual users here
+
         job_ids = [
             str(job["id"])
             for job in Job.objects.filter(
@@ -137,10 +137,18 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
                     storage.delete_stored_package(project, package_id)
 
             else:
-                delete_count = File.objects.filter(
-                    project=project,
-                    package_job_id__in=job_ids,
-                ).delete()
+                delete_count = (
+                    File.objects.filter(
+                        project=project,
+                        package_job_id__in=job_ids,
+                    )
+                    .exclude(
+                        package_job_id__in=project.last_package_jobs().values_list(
+                            "id", flat=True
+                        )
+                    )
+                    .delete()
+                )
 
                 logger.warning(
                     f"Cron have identified and deleted {delete_count} package files from previous packages!"
