@@ -406,12 +406,7 @@ class PackageJobRun(JobRun):
     def after_docker_run(self) -> None:
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
-        self.job.project.save(
-            update_fields=(
-                "data_last_packaged_at",
-                # "last_package_job",
-            )
-        )
+        self.job.project.save(update_fields=("data_last_packaged_at",))
 
         # TODO Delete with QF-4963 Drop support for legacy storage
         if self.job.project.uses_legacy_storage:
