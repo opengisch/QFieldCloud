@@ -126,7 +126,7 @@ class QfcTestCase(APITestCase):
         self.assertEqual(secrets[1], s2_assigned)
         self.assertEqual(secrets[2], s3_project)
 
-    def test_ind_project_secret_available_for_owner(self):
+    def test_add_project_secret_available_for_owner(self):
         s1 = self._create_secret(name="s1", project=self.p3)
 
         secrets = Secret.objects.for_user_and_project(self.u1, self.p3)
@@ -144,28 +144,26 @@ class QfcTestCase(APITestCase):
         self.assertEqual(secrets.count(), 1)
         self.assertEqual(secrets[0], s1_assigned)
 
-    def test_add_secrets_to_projet_and_user_overrides(self):
+    def test_add_secrets_to_project_and_user_overrides(self):
         p = Project.objects.create(name="project", owner=self.u1)
         self._create_secret(name="s1", project=p)
-        user_project_secret = self._create_secret(
-            name="s1", project=p, assigned_to=self.u1
-        )
+        s1_assigned = self._create_secret(name="s1", project=p, assigned_to=self.u1)
 
         secrets = Secret.objects.for_user_and_project(self.u1, p)
 
         self.assertEqual(secrets.count(), 1)
-        self.assertEqual(secrets[0], user_project_secret)
+        self.assertEqual(secrets[0], s1_assigned)
 
     def test_add_secrets_to_organization_and_project_overrides(self):
         self._create_secret(name="s1", organization=self.o1)
 
         p = Project.objects.create(name="project", owner=self.u1)
-        project_secret = self._create_secret(name="s1", project=p)
+        s1_project = self._create_secret(name="s1", project=p)
 
         secrets = Secret.objects.for_user_and_project(self.u1, p)
 
         self.assertEqual(secrets.count(), 1)
-        self.assertEqual(secrets[0], project_secret)
+        self.assertEqual(secrets[0], s1_project)
 
     def test_check_secrets_type_priority(self):
         p = Project.objects.create(name="project", owner=self.u1)
@@ -173,11 +171,9 @@ class QfcTestCase(APITestCase):
         self._create_secret(name="s1", organization=self.o1)
         self._create_secret(name="s1", organization=self.o1, assigned_to=self.u1)
         self._create_secret(name="s1", project=p)
-        user_project_secret = self._create_secret(
-            name="s1", project=p, assigned_to=self.u1
-        )
+        s1_assigned = self._create_secret(name="s1", project=p, assigned_to=self.u1)
 
         secrets = Secret.objects.for_user_and_project(self.u1, p)
 
         self.assertEqual(secrets.count(), 1)
-        self.assertEqual(secrets[0], user_project_secret)
+        self.assertEqual(secrets[0], s1_assigned)
