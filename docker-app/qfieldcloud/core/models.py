@@ -2082,7 +2082,7 @@ class JobQuerySet(InheritanceQuerySet):
             The jobs for the user.
         """
         has_assigned_to_current_user_project_secrets = (
-            Secret.objects.for_user_and_projects(  # type: ignore[attr-defined]
+            Secret.objects.for_user_and_project(  # type: ignore[attr-defined]
                 user=user, projects=user.projects.all()
             )
             .filter(assigned_to__isnull=False)
