@@ -2081,14 +2081,13 @@ class JobQuerySet(InheritanceQuerySet):
         Returns:
             The jobs for the user.
         """
-        has_assigned_to_current_user_project_secrets = False
-        for project in user.projects.all():
-            if (
-                Secret.objects.for_user_and_project(user, project)  # type: ignore[attr-defined]
-                .filter(assigned_to__isnull=False)
-                .exists()
-            ):
-                has_assigned_to_current_user_project_secrets = True
+        has_assigned_to_current_user_project_secrets = (
+            Secret.objects.for_user_and_projects(  # type: ignore[attr-defined]
+                user=user, projects=user.projects.all()
+            )
+            .filter(assigned_to__isnull=False)
+            .exists()
+        )
 
         jobs_qs = self
         if has_assigned_to_current_user_project_secrets:
@@ -2326,9 +2325,9 @@ class SecretQueryset(models.QuerySet):
             UserOrganizationRoleError: if the user is not having any role on the organization that owns the project
         """
         # ensure the user type is a person
-        assert (
-            user.type == User.Type.PERSON
-        ), f"Expected the passed user to be of type PERSON, but got {user.type}!"
+        assert user.type == User.Type.PERSON, (
+            f"Expected the passed user to be of type PERSON, but got {user.type}!"
+        )
 
         from qfieldcloud.core.permissions_utils import (
             check_user_has_organization_roles,
