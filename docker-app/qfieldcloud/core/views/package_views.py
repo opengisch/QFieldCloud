@@ -85,7 +85,7 @@ class LegacyLatestPackageView(views.APIView):
     def get(self, request, project_id):
         """Get last project package status and file list."""
         project = Project.objects.get(id=project_id)
-        last_package_job = project.last_package_job_for_user(request.user)
+        last_package_job = project.latest_package_job_for_user(request.user)
 
         # Check if the project was packaged at least once
         if not last_package_job:
@@ -196,7 +196,7 @@ class LegacyLatestPackageDownloadFilesView(views.APIView):
             exceptions.InvalidJobError: [description]
         """
         project = Project.objects.get(id=project_id)
-        last_package_job = project.last_package_job_for_user(request.user)
+        last_package_job = project.latest_package_job_for_user(request.user)
 
         # Check if the project was packaged at least once
         if not last_package_job:
@@ -268,7 +268,7 @@ class LatestPackageView(views.APIView):
     def get(self, request, project_id):
         """Get last project package status and file list."""
         project = get_object_or_404(Project, id=project_id)
-        last_package_job = project.last_package_job_for_user(request.user)
+        last_package_job = project.latest_package_job_for_user(request.user)
 
         # Check if the project was packaged at least once
         if not last_package_job:
@@ -347,7 +347,7 @@ class LatestPackageDownloadFilesView(views.APIView):
             exceptions.InvalidJobError: raised when packaging has never been triggered or successful for this project
         """
         project = get_object_or_404(Project, id=project_id)
-        last_package_job = project.last_package_job_for_user(request.user)
+        last_package_job = project.latest_package_job_for_user(request.user)
 
         # Check if the project was packaged at least once
         if not last_package_job:

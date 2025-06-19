@@ -1303,7 +1303,7 @@ class Project(models.Model):
         except Project.DoesNotExist:
             return None
 
-    def last_package_job_for_user(self, user: User) -> PackageJob | None:
+    def latest_package_job_for_user(self, user: User) -> PackageJob | None:
         """Returns the last package job for the user.
 
         Args:
@@ -1321,7 +1321,7 @@ class Project(models.Model):
             .first()
         )
 
-    def last_package_jobs(self) -> JobQuerySet:
+    def latest_package_jobs(self) -> JobQuerySet:
         """Returns all the last package jobs for the users of the project.
 
         Returns:
@@ -1570,7 +1570,7 @@ class Project(models.Model):
             self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
-            and self.last_package_job_for_user(user)
+            and self.latest_package_job_for_user(user)
         ):
             # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
             return self.data_last_packaged_at < self.data_last_updated_at

@@ -153,7 +153,7 @@ def migrate_project_storage(
 
         package_files = []
 
-        for package_job in project.last_package_jobs():
+        for package_job in project.latest_package_jobs():
             package_job_files = get_project_package_files(
                 str(project.id),
                 str(package_job.id),

@@ -107,11 +107,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITestCase):
         wait_for_project_ok_status(self.p1)
         self.p1.refresh_from_db()
 
-        nb_latest_packages = self.p1.last_package_jobs().count()
+        nb_latest_packages = self.p1.latest_package_jobs().count()
 
         self.assertEquals(nb_latest_packages, 2)
 
-        latest_packages_users = self.p1.last_package_jobs().values_list(
+        latest_packages_users = self.p1.latest_package_jobs().values_list(
             "created_by", flat=True
         )
 

@@ -126,7 +126,7 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
 
                 for package_id in package_ids:
                     # keep the last packages
-                    for job in project.last_package_jobs():
+                    for job in project.latest_package_jobs():
                         if package_id == str(job.id):
                             continue
 
@@ -137,16 +137,15 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
                     storage.delete_stored_package(project, package_id)
 
             else:
+                latest_project_package_jobs_id_qs = (
+                    project.latest_package_jobs().values_list("id", flat=True)
+                )
                 delete_count = (
                     File.objects.filter(
                         project=project,
                         package_job_id__in=job_ids,
                     )
-                    .exclude(
-                        package_job_id__in=project.last_package_jobs().values_list(
-                            "id", flat=True
-                        )
-                    )
+                    .exclude(package_job_id__in=latest_project_package_jobs_id_qs)
                     .delete()
                 )
 

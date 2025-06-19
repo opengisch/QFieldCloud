@@ -433,7 +433,7 @@ class PackageJobRun(JobRun):
 
                 for package_id in package_ids:
                     # keep the last package
-                    for package_job in self.job.project.last_package_jobs():
+                    for package_job in self.job.project.latest_package_jobs():
                         if package_id == str(package_job.id):
                             continue
 
