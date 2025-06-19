@@ -2374,7 +2374,7 @@ class SecretQueryset(models.QuerySet):
             f"Expected the passed user to be of type PERSON, but got {user.type}!"
         )
 
-        secret_qs = self
+        secret_qs = self.none()
         for project in user.projects.all():
             secret_qs |= self.for_user_and_project(user, project)
 
