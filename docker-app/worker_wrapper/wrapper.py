@@ -406,8 +406,6 @@ class PackageJobRun(JobRun):
     def after_docker_run(self) -> None:
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
-        # TODO: `last_package_job` is not longer correct, we need to get the user that requested if the project needs repackaging
-        # self.job.project.last_package_job = self.job
         self.job.project.save(
             update_fields=(
                 "data_last_packaged_at",
