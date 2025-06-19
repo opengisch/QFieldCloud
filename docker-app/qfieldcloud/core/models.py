@@ -2082,8 +2082,8 @@ class JobQuerySet(InheritanceQuerySet):
             The jobs for the user.
         """
         has_assigned_to_current_user_project_secrets = (
-            Secret.objects.for_user_and_project(  # type: ignore[attr-defined]
-                user=user, projects=user.projects.all()
+            Secret.objects.assigned_for_user(  # type: ignore[attr-defined]
+                user=user,
             )
             .filter(assigned_to__isnull=False)
             .exists()
@@ -2359,6 +2359,26 @@ class SecretQueryset(models.QuerySet):
         ).distinct("name")
 
         return secrets_qs
+
+    def assigned_for_user(self, user: User) -> models.QuerySet[Secret]:
+        """Returns a queryset with secrets assigned to a specific user.
+
+        Args:
+            user: the user to which secrets are assigned
+
+        Returns:
+            a Secret queryset assigned secrets for the given user.
+        """
+        # ensure the user type is a person
+        assert user.type == User.Type.PERSON, (
+            f"Expected the passed user to be of type PERSON, but got {user.type}!"
+        )
+
+        secret_qs = self
+        for project in user.projects.all():
+            secret_qs |= self.for_user_and_project(user, project)
+
+        return secret_qs
 
 
 class Secret(models.Model):
