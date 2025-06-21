@@ -707,7 +707,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
         if instance.project:
             return model_admin_url(instance.project, instance.project.name)
 
-        return "-"
+        return None
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
