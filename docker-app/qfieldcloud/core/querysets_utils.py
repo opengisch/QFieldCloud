@@ -37,8 +37,8 @@ def get_organization_members(organization) -> QuerySet[Person]:
 
 def get_users(
     username: str,
-    project: Project = None,
-    organization: Organization = None,
+    project: Project | None = None,
+    organization: Organization | None = None,
     exclude_organizations: bool = False,
     exclude_teams: bool = False,
     invert: bool = False,

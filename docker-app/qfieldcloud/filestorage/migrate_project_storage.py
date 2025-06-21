@@ -151,12 +151,19 @@ def migrate_project_storage(
                     legacy_version_id=file_version.id,
                 )
 
-        package_files = get_project_package_files(
-            str(project.id), str(project.last_package_job_id)
-        )
+        package_files = []
 
-        if package_files:
-            for package_file in package_files:
+        for package_job in project.latest_package_jobs():
+            package_job_files = get_project_package_files(
+                str(project.id),
+                str(package_job.id),
+            )
+
+            for package_job_file in package_job_files:
+                package_files.append((package_job, package_job_file))
+
+        if len(package_files) > 0:
+            for package_job, package_file in package_files:
                 django_thumbnail_file = ContentFile(b"", package_file.name)
 
                 from_storage_bucket.download_fileobj(
@@ -172,7 +179,7 @@ def migrate_project_storage(
                     uploaded_at=package_file.last_modified,
                     uploaded_by=project.owner,
                     created_at=now,
-                    package_job_id=project.last_package_job_id,
+                    package_job_id=package_job.id,
                 )
 
         if project.legacy_thumbnail_uri:

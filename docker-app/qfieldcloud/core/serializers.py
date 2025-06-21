@@ -124,6 +124,13 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         return data
 
+    def get_needs_repackaging(self, obj: Project) -> bool:
+        for collaborator in obj.direct_collaborators.all():
+            if obj.needs_repackaging(collaborator):
+                return True
+
+        return False
+
     class Meta:
         fields = (
             "id",
@@ -138,7 +145,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             "data_last_packaged_at",
             "data_last_updated_at",
             "can_repackage",
-            "needs_repackaging",
             "status",
             "user_role",
             "user_role_origin",
