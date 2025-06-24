@@ -36,14 +36,14 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         response = self._upload_file(self.u1, self.p1, "file.name", StringIO("Hello!"))
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.p1.files.count(), 1)
+        self.assertEqual(self.p1.project_files.count(), 1)
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 1)
 
         # 2) adding a second version
         response = self._upload_file(self.u1, self.p1, "file.name", StringIO("Hello2!"))
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.p1.files.count(), 1)
+        self.assertEqual(self.p1.project_files.count(), 1)
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 2)
 
     def test_upload_then_download_file_succeeds(self):

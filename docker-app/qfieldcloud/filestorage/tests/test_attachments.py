@@ -42,7 +42,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.p1.files.count(), 1)
+        self.assertEqual(self.p1.project_files.count(), 1)
 
         file = self.p1.get_file("DCIM/file.name")
 
@@ -82,7 +82,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.p1.files.count(), 1)
+        self.assertEqual(self.p1.project_files.count(), 1)
 
         file1 = self.p1.get_file("DCIM/file1.name")
 
@@ -100,7 +100,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.p1.files.count(), 2)
+        self.assertEqual(self.p1.project_files.count(), 2)
 
         file2 = self.p1.get_file("DCIM/file2.name")
 
@@ -118,7 +118,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.p1.files.count(), 3)
+        self.assertEqual(self.p1.project_files.count(), 3)
 
         file3 = self.p1.get_file("DCIM/file3.name")
 
