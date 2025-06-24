@@ -55,7 +55,7 @@ class QfcTestCase(TestCase):
         project_ids = sorted([str(p.id) for p in self.projects])
 
         self.assertEqual(get_project_files_count(project_ids[0]), 1)
-        self.assertEqual(self.projects[1].files_count, 1)
+        self.assertEqual(self.projects[1].project_files_count, 1)
 
         out = self.call_command()
 
@@ -70,13 +70,13 @@ class QfcTestCase(TestCase):
         )
 
         self.assertEqual(get_project_files_count(project_ids[0]), 1)
-        self.assertEqual(self.projects[1].files_count, 1)
+        self.assertEqual(self.projects[1].project_files_count, 1)
 
     def test_dry_run(self):
         project_ids = sorted([str(p.id) for p in self.projects])
 
         self.assertEqual(get_project_files_count(project_ids[0]), 1)
-        self.assertEqual(self.projects[1].files_count, 1)
+        self.assertEqual(self.projects[1].project_files_count, 1)
 
         out = self.call_command(dry_run=True)
 
@@ -92,7 +92,7 @@ class QfcTestCase(TestCase):
         )
 
         self.assertEqual(get_project_files_count(project_ids[0]), 1)
-        self.assertEqual(self.projects[1].files_count, 1)
+        self.assertEqual(self.projects[1].project_files_count, 1)
 
     def test_delete_files(self):
         project_ids = sorted([str(p.id) for p in self.projects])
@@ -145,7 +145,7 @@ class QfcTestCase(TestCase):
         project_ids = sorted([str(p.id) for p in self.projects])
 
         self.assertEqual(get_project_files_count(project_ids[0]), 1)
-        self.assertEqual(self.projects[1].files_count, 1)
+        self.assertEqual(self.projects[1].project_files_count, 1)
 
         file = io.BytesIO(b"Hello world!")
         storage.upload_file(file, "projects/strangename/project.qgs")
@@ -164,7 +164,7 @@ class QfcTestCase(TestCase):
         )
 
         self.assertEqual(get_project_files_count(project_ids[0]), 1)
-        self.assertEqual(self.projects[1].files_count, 1)
+        self.assertEqual(self.projects[1].project_files_count, 1)
 
     def test_batches(self):
         self.generate_projects(2)

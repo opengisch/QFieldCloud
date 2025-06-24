@@ -79,7 +79,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         del project.legacy_files
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(project.files_count, files_count + 1)
+        self.assertEqual(project.project_files_count, files_count + 1)
 
         file = project.legacy_get_file(filename)
 

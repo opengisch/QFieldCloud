@@ -1455,7 +1455,7 @@ class Project(models.Model):
         return self.all_files.with_type_project()
 
     @property
-    def files_count(self):
+    def project_files_count(self) -> int:
         """
         Todo:
             * Delete with QF-4963 Drop support for legacy storage
