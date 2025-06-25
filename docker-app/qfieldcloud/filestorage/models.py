@@ -30,8 +30,12 @@ from qfieldcloud.filestorage.utils import calc_etag, filename_validator, to_uuid
 
 
 class FileQueryset(models.QuerySet):
-    def get_by_name(self, filename: str):
+    def get_by_name(self, filename: str) -> File:
         return self.get(name=filename)
+
+    def with_type_project(self) -> FileQueryset:
+        """Returns all files of type `PROJECT_FILE`."""
+        return self.filter(file_type=File.FileType.PROJECT_FILE)
 
 
 class File(models.Model):

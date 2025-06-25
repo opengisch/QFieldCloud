@@ -39,7 +39,7 @@ from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
 if TYPE_CHECKING:
-    from qfieldcloud.filestorage.models import File
+    from qfieldcloud.filestorage.models import File, FileQueryset
 
 
 SHARED_DATASETS_PROJECT_NAME = "shared_datasets"
@@ -1101,7 +1101,7 @@ class Project(models.Model):
             )
         ]
 
-    files: "models.QuerySet[File]"
+    files: "FileQueryset"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
@@ -1417,7 +1417,7 @@ class Project(models.Model):
         """
         Checks if the project has at least one attachment file.
         """
-        return any(f.is_attachment() for f in self.files.all())
+        return any(f.is_attachment() for f in self.files.with_type_project())
 
     @property
     def private(self) -> bool:
@@ -1719,7 +1719,7 @@ class Project(models.Model):
                     self
                 )
             else:
-                self.file_storage_bytes = self.files.all().aggregate(
+                self.file_storage_bytes = self.files.with_type_project().aggregate(
                     file_storage_bytes=Sum("versions__size", default=0)
                 )["file_storage_bytes"]
 
@@ -1736,7 +1736,7 @@ class Project(models.Model):
         super().save(*args, **kwargs)
 
     def get_file(self, filename: str) -> File:
-        return self.files.get_by_name(filename)  # type: ignore
+        return self.files.with_type_project().get_by_name(filename)  # type: ignore
 
     def legacy_get_file(self, filename: str) -> utils.S3ObjectWithVersions:
         files = filter(lambda f: f.latest.name == filename, self.legacy_files)
