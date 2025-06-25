@@ -1457,7 +1457,7 @@ class Project(models.Model):
         if self.uses_legacy_storage:
             return len(self.legacy_files)
         else:
-            return self.files.count()
+            return self.files.with_type_project().count()
 
     @property
     def users(self):
