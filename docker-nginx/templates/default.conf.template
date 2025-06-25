@@ -2,6 +2,11 @@ map "$time_iso8601 # $msec" $time_iso8601_ms {
   "~([^+]+)\+([\d:]+?) # \d+?\.(\d+)" "$1.$3+$2";
 }
 
+map "${DEBUG}" $debug_mode {
+    "1" "on";
+    default "off";
+}
+
 log_format json-logger escape=json
 '{'
   '"ts":"$time_iso8601_ms",'
@@ -136,11 +141,28 @@ server {
     # Initial loading page for upstream issues (502, 503, 504 for timeouts)
     error_page 502 503 504 =503 /pages/loading.html;
 
-    # For 500, 501, 505 - these are actual errors, not the initial "loading" state.
-    error_page 500 501 505 =500 /pages/500.html;
+    # Redirect 500-level errors to a dedicated handler location
+    error_page 500 501 505 = @handle_500_error;
 
     # Pass to upstream
     proxy_pass http://django;
+  }
+
+  # Handle 5xx errors conditionally to keep django stackstrace while debugging
+  location @handle_500_error {
+      # Set the host header to be the original one
+      proxy_set_header Host $http_host;
+
+      # Check the debug_mode variable derived from the environment variable
+      if ($debug_mode = "on") {
+          # If debug mode is on, attempt to pass the original 500 response (with stacktrace)
+          proxy_pass http://django;
+      }
+
+      # If debug mode is off, serve the custom error page
+      root /var/www/html/;
+      internal;
+      try_files /pages/500.html =404;
   }
 
   location /storage-download/ {
