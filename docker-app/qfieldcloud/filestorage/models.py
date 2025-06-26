@@ -71,7 +71,7 @@ class File(models.Model):
         Project,
         on_delete=models.CASCADE,
         editable=False,
-        related_name="files",
+        related_name="all_files",
     )
 
     package_job_id: UUID

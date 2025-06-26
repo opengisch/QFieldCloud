@@ -23,7 +23,7 @@ def purge_old_file_versions(project: Project) -> None:
     versions_to_delete_ids = []
     versions_to_delete_size = 0
 
-    for file in project.files.all():
+    for file in project.project_files:
         versions_to_delete = file.versions.order_by("-created_at")[keep_count:]
 
         if not versions_to_delete:

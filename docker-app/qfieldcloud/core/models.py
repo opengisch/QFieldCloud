@@ -1101,7 +1101,8 @@ class Project(models.Model):
             )
         ]
 
-    files: "FileQueryset"
+    # All files related to the project, including both the `PROJECT_FILE` and `PACKAGE_FILE` file types.
+    all_files: "FileQueryset"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
@@ -1417,7 +1418,7 @@ class Project(models.Model):
         """
         Checks if the project has at least one attachment file.
         """
-        return any(f.is_attachment() for f in self.files.with_type_project())
+        return any(f.is_attachment() for f in self.project_files)
 
     @property
     def private(self) -> bool:
@@ -1449,7 +1450,12 @@ class Project(models.Model):
             )
 
     @property
-    def files_count(self):
+    def project_files(self) -> "FileQueryset":
+        """Returns the files of type PROJECT related to the project."""
+        return self.all_files.with_type_project()
+
+    @property
+    def project_files_count(self) -> int:
         """
         Todo:
             * Delete with QF-4963 Drop support for legacy storage
@@ -1457,7 +1463,7 @@ class Project(models.Model):
         if self.uses_legacy_storage:
             return len(self.legacy_files)
         else:
-            return self.files.with_type_project().count()
+            return self.project_files.count()
 
     @property
     def users(self):
@@ -1719,7 +1725,7 @@ class Project(models.Model):
                     self
                 )
             else:
-                self.file_storage_bytes = self.files.with_type_project().aggregate(
+                self.file_storage_bytes = self.project_files.aggregate(
                     file_storage_bytes=Sum("versions__size", default=0)
                 )["file_storage_bytes"]
 
@@ -1736,7 +1742,7 @@ class Project(models.Model):
         super().save(*args, **kwargs)
 
     def get_file(self, filename: str) -> File:
-        return self.files.with_type_project().get_by_name(filename)  # type: ignore
+        return self.project_files.get_by_name(filename)  # type: ignore
 
     def legacy_get_file(self, filename: str) -> utils.S3ObjectWithVersions:
         files = filter(lambda f: f.latest.name == filename, self.legacy_files)
