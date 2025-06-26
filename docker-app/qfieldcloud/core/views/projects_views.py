@@ -13,6 +13,7 @@ from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import ProjectSerializer
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import QuotaError
+from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, viewsets
 
 User = get_user_model()
@@ -79,7 +80,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
-    filter_backends = [filters.DjangoFilterBackend, QfcOrderingFilter]
+    filter_backends = [
+        drf_filters.SearchFilter,
+        filters.DjangoFilterBackend,
+        QfcOrderingFilter,
+    ]
+    search_fields = ["owner__username", "name"]
     filterset_class = ProjectFilterSet
     ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
 
