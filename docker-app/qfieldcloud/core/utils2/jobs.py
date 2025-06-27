@@ -106,10 +106,14 @@ def repackage(project: "models.Project", user: "models.User") -> "models.Package
         raise exceptions.NoQGISProjectError()
 
     # Check if active package job already exists
-    query = Q(project=project) & (
-        Q(status=models.PackageJob.Status.PENDING)
-        | Q(status=models.PackageJob.Status.QUEUED)
-        | Q(status=models.PackageJob.Status.STARTED)
+    query = (
+        Q(project=project)
+        & (
+            Q(status=models.PackageJob.Status.PENDING)
+            | Q(status=models.PackageJob.Status.QUEUED)
+            | Q(status=models.PackageJob.Status.STARTED)
+        )
+        & Q(triggered_by=user)
     )
 
     if models.PackageJob.objects.filter(query).count():
@@ -126,11 +130,14 @@ def repackage_if_needed(
     if not project.has_the_qgis_file:
         raise exceptions.NoQGISProjectError()
 
-    if project.needs_repackaging:
+    if project.needs_repackaging(user):
         package_job = repackage(project, user)
     else:
         package_job = (
-            models.PackageJob.objects.filter(project=project)
+            models.PackageJob.objects.filter(
+                project=project,
+                triggered_by=user,
+            )
             .order_by("started_at")
             .get()
         )

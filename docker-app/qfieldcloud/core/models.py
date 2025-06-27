@@ -30,7 +30,10 @@ from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
-from model_utils.managers import InheritanceManager, InheritanceManagerMixin
+from model_utils.managers import (
+    InheritanceManagerMixin,
+    InheritanceQuerySet,
+)
 from timezone_field import TimeZoneField
 
 from qfieldcloud.core import geodb_utils, utils, validators
@@ -241,6 +244,9 @@ class User(AbstractUser):
 
     # All projects that a user owns
     projects: models.QuerySet[Project]
+
+    # The secrets that are assigned to a user.
+    assigned_secrets: "models.QuerySet[Secret]"
 
     # The `UserAccount` stores non-critical user information such as avatar, bio, timezone settings etc.
     useraccount: UserAccount
@@ -781,6 +787,8 @@ class OrganizationMember(models.Model):
         ADMIN = "admin", _("Admin")
         MEMBER = "member", _("Member")
 
+    ALL_ROLES = list(Roles)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -1104,6 +1112,12 @@ class Project(models.Model):
     # All files related to the project, including both the `PROJECT_FILE` and `PACKAGE_FILE` file types.
     all_files: "FileQueryset"
 
+    # The secrets that are attached for a specific project.
+    secrets: "SecretQueryset"
+
+    # The jobs that are ran for a specific project.
+    jobs: "JobQuerySet"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
         max_length=255,
@@ -1127,6 +1141,11 @@ class Project(models.Model):
             "Projects marked as public are visible to (but not editable by) anyone."
         ),
     )
+
+    # the Person or Organization id that owns the project
+    owner_id: int
+
+    # the Person or Organization that owns the project
     owner = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -1283,6 +1302,54 @@ class Project(models.Model):
             return project
         except Project.DoesNotExist:
             return None
+
+    def latest_package_job_for_user(self, user: User) -> PackageJob | None:
+        """Returns the last package job for the user.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            The last package job for the user.
+        """
+        return (
+            self.jobs.for_user(user)  # type: ignore[attr-defined, return-value]
+            .filter(
+                type=Job.Type.PACKAGE,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+    def latest_package_jobs(self) -> PackageJobQuerySet:
+        """Returns all the last package jobs for the users of the project.
+
+        Returns:
+            QuerySet of all the last package jobs.
+        """
+        if self.owner.is_organization:
+            # all the admin users including the organization owner
+            triggered_by_qs = Person.objects.for_organization(self.owner).filter(
+                organization_role=OrganizationMember.Roles.ADMIN,
+            )
+        else:
+            triggered_by_qs = Person.objects.filter(id=self.owner.pk)
+
+        triggered_by_qs |= Person.objects.filter(
+            id__in=self.direct_collaborators.values_list("collaborator_id", flat=True)
+        )
+        triggered_by_ids_qs = triggered_by_qs.distinct().values_list("id", flat=True)
+
+        jobs_qs = (
+            PackageJob.objects.filter(
+                project_id=self.id,
+                triggered_by__in=triggered_by_ids_qs,
+            )
+            .order_by("triggered_by", "-created_at")
+            .distinct("triggered_by")
+        )
+
+        return jobs_qs
 
     @cached_property
     def is_shared_datasets_project(self) -> bool:
@@ -1500,15 +1567,14 @@ class Project(models.Model):
     def can_repackage(self) -> bool:
         return True
 
-    @property
-    def needs_repackaging(self) -> bool:
+    def needs_repackaging(self, user: User) -> bool:
         if (
             # if has_online_vector_data is None (happens when the project details are missing)
             # we assume there might be
             self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
-            and self.last_package_job is not None
+            and self.latest_package_job_for_user(user)
         ):
             # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
             return self.data_last_packaged_at < self.data_last_updated_at
@@ -1677,14 +1743,14 @@ class Project(models.Model):
             return 100
 
     @property
-    def direct_collaborators(self):
+    def direct_collaborators(self) -> ProjectCollaboratorQueryset:
         if self.owner.is_organization:
             exclude_pks = [self.owner.organization.organization_owner_id]
         else:
             exclude_pks = [self.owner_id]
 
         return (
-            self.collaborators.skip_incognito()
+            self.collaborators.skip_incognito()  # type: ignore[attr-defined]
             .filter(
                 collaborator__type=User.Type.PERSON,
             )
@@ -1809,6 +1875,8 @@ class ProjectCollaborator(models.Model):
         EDITOR = "editor", _("Editor")
         REPORTER = "reporter", _("Reporter")
         READER = "reader", _("Reader")
+
+    ALL_ROLES = list(Roles)
 
     class Meta:
         constraints = [
@@ -2007,8 +2075,33 @@ class Delta(models.Model):
         return self.content.get("method")
 
 
+class JobQuerySet(InheritanceQuerySet):
+    def for_user(self, user: User) -> models.QuerySet[Job]:
+        """Returns the jobs applicable to the user. If the user has assigned secrets, only jobs triggered by the user are returned.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            The jobs for the user.
+        """
+        has_assigned_to_current_user_project_secrets = (
+            Secret.objects.assigned_for_user(  # type: ignore[attr-defined]
+                user=user,
+            )
+            .filter(assigned_to__isnull=False)
+            .exists()
+        )
+
+        jobs_qs = self
+        if has_assigned_to_current_user_project_secrets:
+            jobs_qs = jobs_qs.filter(triggered_by=user)
+
+        return jobs_qs.order_by("-created_at")
+
+
 class Job(models.Model):
-    objects = InheritanceManager()
+    objects = JobQuerySet.as_manager()
 
     class Type(models.TextChoices):
         PACKAGE = "package", _("Package")
@@ -2035,6 +2128,14 @@ class Job(models.Model):
     )
     output = models.TextField(null=True)
     feedback = JSONField(null=True)
+
+    triggered_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="triggered_jobs",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+    )
+
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
@@ -2121,6 +2222,10 @@ class Job(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()
+
+        if not self.triggered_by_id and self.created_by_id:
+            self.triggered_by = self.created_by
+
         return super().save(*args, **kwargs)
 
     def get_feedback_step_data(self, step_name: str) -> dict[str, Any] | None:
@@ -2142,7 +2247,13 @@ class Job(models.Model):
         return None
 
 
+class PackageJobQuerySet(JobQuerySet):
+    pass
+
+
 class PackageJob(Job):
+    objects = PackageJobQuerySet.as_manager()
+
     def save(self, *args, **kwargs):
         self.type = self.Type.PACKAGE
         return super().save(*args, **kwargs)
@@ -2152,7 +2263,13 @@ class PackageJob(Job):
         verbose_name_plural = "Jobs: package"
 
 
+class ProcessProjectfileJobQuerySet(JobQuerySet):
+    pass
+
+
 class ProcessProjectfileJob(Job):
+    objects = ProcessProjectfileJobQuerySet.as_manager()
+
     def check_can_be_created(self):
         # Alsways create jobs because they are cheap
         # and is always good to have updated metadata
@@ -2167,7 +2284,13 @@ class ProcessProjectfileJob(Job):
         verbose_name_plural = "Jobs: process QGIS project file"
 
 
+class ApplyJobQuerySet(JobQuerySet):
+    pass
+
+
 class ApplyJob(Job):
+    objects = ApplyJobQuerySet.as_manager()
+
     deltas_to_apply = models.ManyToManyField(
         to=Delta,
         through="ApplyJobDelta",
@@ -2204,10 +2327,106 @@ class ApplyJobDelta(models.Model):
         return f"{self.apply_job_id}:{self.delta_id}"
 
 
+class SecretQueryset(models.QuerySet):
+    def for_user_and_project(self, user: User, project: Project) -> SecretQueryset:
+        """Returns a queryset with secrets for a specific user and project.
+
+        NOTE Do not set `order_by` at the queryset.
+
+        Args:
+            user: the user which needs the secrets
+            project: the project which the user needs the secrets for
+
+        Returns:
+            a Secret queryset of all organization, project and assigned secrets for the given user.
+
+        Raises:
+            UserProjectRoleError: if the user is not having any role on the searched project
+            UserOrganizationRoleError: if the user is not having any role on the organization that owns the project
+        """
+        # ensure the user type is a person
+        assert user.type == User.Type.PERSON, (
+            f"Expected the passed user to be of type PERSON, but got {user.type}!"
+        )
+
+        from qfieldcloud.core.permissions_utils import (
+            check_user_has_organization_roles,
+            check_user_has_project_roles,
+        )
+
+        if project.owner.is_organization:
+            # ensure the user has access to the organization
+            organization = Organization.objects.get(id=project.owner_id)
+            check_user_has_organization_roles(
+                user, organization, OrganizationMember.ALL_ROLES
+            )
+        else:
+            organization = None
+        # ensure the user has access to the project
+        check_user_has_project_roles(user, project, ProjectCollaborator.ALL_ROLES)
+
+        # filter only the possible secrets combinations.
+        secrets_qs = self.filter(
+            Q(
+                # organization-assigned secrets
+                Q(organization=organization) & Q(assigned_to__isnull=True)
+            )
+            | Q(
+                # user-assigned organization secrets
+                Q(organization=organization) & Q(assigned_to=user)
+            )
+            | Q(
+                # project-assigned secrets
+                Q(project=project) & Q(assigned_to__isnull=True)
+            )
+            | Q(
+                # user assigned project secrets
+                Q(project=project) & Q(assigned_to=user)
+            )
+        )
+
+        # Sort secrets by priority so the first row is the most prioritized one.
+        # Later we call `distinct` which will return only the first row for each name.
+        # Using `null_first` for organization ensures they are the least prioritized.
+        # We must use the FK field for `organization` and `project` and `assigned_to` suffixed with `_id`,
+        # otherwise the ordering from the respective joins models is applied.
+        secrets_qs = secrets_qs.order_by(
+            models.F("name").asc(nulls_last=True),
+            models.F("organization_id").asc(nulls_first=True),
+            models.F("project_id").asc(nulls_last=True),
+            models.F("assigned_to_id").asc(nulls_last=True),
+        )
+        secrets_qs = secrets_qs.distinct("name")
+
+        return secrets_qs
+
+    def assigned_for_user(self, user: User) -> models.QuerySet[Secret]:
+        """Returns a queryset with secrets assigned to a specific user.
+
+        Args:
+            user: the user to which secrets are assigned
+
+        Returns:
+            a Secret queryset assigned secrets for the given user.
+        """
+        # ensure the user type is a person
+        assert user.type == User.Type.PERSON, (
+            f"Expected the passed user to be of type PERSON, but got {user.type}!"
+        )
+
+        secret_qs = self.none()
+        for project in user.projects.all():
+            secret_qs |= self.for_user_and_project(user, project)
+
+        return secret_qs
+
+
 class Secret(models.Model):
     class Type(models.TextChoices):
         PGSERVICE = "pgservice", _("pg_service")
         ENVVAR = "envvar", _("Environment Variable")
+
+    objects = SecretQueryset.as_manager()
 
     name = models.TextField(
         max_length=255,
@@ -2227,18 +2446,60 @@ class Secret(models.Model):
     )
     type = models.CharField(max_length=32, choices=Type.choices)
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name="secrets"
+        Project, on_delete=models.CASCADE, related_name="secrets", null=True
     )
+
+    # The user the secret belongs to. Allows a user to have custom overrides to project envvars and pgservice.
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="assigned_secrets",
+        limit_choices_to=Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
+    )
+
+    # The organization the secret belongs to. Allows an organization to have custom default project envvars and pgservice.
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="secrets",
+        limit_choices_to=Q(type=User.Type.ORGANIZATION),
+        null=True,
+        blank=True,
+    )
+
     created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="project_secrets"
+        User,
+        on_delete=models.SET_NULL,
+        related_name="created_secrets",
+        limit_choices_to=Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
     )
+
     created_at = models.DateTimeField(auto_now_add=True)
     value = django_cryptography.fields.encrypt(models.TextField())
 
     class Meta:
-        ordering = ["project", "name"]
+        ordering = ["project", "assigned_to", "organization"]
         constraints = [
             models.UniqueConstraint(
-                fields=["project", "name"], name="secret_project_name_uniq"
-            )
+                fields=["project", "type", "name", "assigned_to"],
+                name="secret_project_type_name_assigned_to_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "organization",
+                    "type",
+                    "name",
+                    "assigned_to",
+                ],
+                name="secret_organization_type_name_assigned_to_uniq",
+            ),
+            models.CheckConstraint(
+                # we want either the project to be set or the organization, but never both set or unset, therefore ^ (XOR)
+                check=Q(project__isnull=True) ^ Q(organization__isnull=True),
+                name="secret_assigned_to_organization_or_user",
+            ),
         ]

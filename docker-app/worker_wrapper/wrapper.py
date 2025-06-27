@@ -32,8 +32,7 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
-from qfieldcloud.core.utils2 import storage
-from qfieldcloud.filestorage.models import File
+from qfieldcloud.core.utils2 import packages, storage
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -268,7 +267,9 @@ class JobRun:
 
         extra_envvars = {}
         pgservice_file_contents = ""
-        for secret in self.job.project.secrets.all():
+        for secret in self.job.project.secrets.for_user_and_project(
+            self.job.triggered_by, self.job.project
+        ):
             if secret.type == Secret.Type.ENVVAR:
                 extra_envvars[secret.name] = secret.value
             elif secret.type == Secret.Type.PGSERVICE:
@@ -403,60 +404,9 @@ class PackageJobRun(JobRun):
     def after_docker_run(self) -> None:
         # only successfully finished packaging jobs should update the Project.data_last_packaged_at
         self.job.project.data_last_packaged_at = self.data_last_packaged_at
-        self.job.project.last_package_job = self.job
-        self.job.project.save(
-            update_fields=(
-                "data_last_packaged_at",
-                "last_package_job",
-            )
-        )
+        self.job.project.save(update_fields=("data_last_packaged_at",))
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if self.job.project.uses_legacy_storage:
-            try:
-                package_ids = storage.get_stored_package_ids(self.job.project)
-                job_ids = [
-                    str(job["id"])
-                    for job in Job.objects.filter(
-                        type=Job.Type.PACKAGE,
-                    )
-                    .exclude(id=self.job.id)
-                    .exclude(
-                        status__in=(Job.Status.FAILED, Job.Status.FINISHED),
-                    )
-                    .values("id")
-                ]
-
-                for package_id in package_ids:
-                    # keep the last package
-                    if package_id == str(self.job.project.last_package_job_id):
-                        continue
-
-                    # the job is still active, so it might be one of the new packages
-                    if package_id in job_ids:
-                        continue
-
-                    storage.delete_stored_package(self.job.project, package_id)
-            except Exception as err:
-                logger.error(
-                    "Failed to delete dangling packages, will be deleted via CRON later.",
-                    exc_info=err,
-                )
-        else:
-            delete_count = (
-                File.objects.filter(
-                    project=self.job.project,
-                    file_type=File.FileType.PACKAGE_FILE,
-                )
-                .exclude(
-                    package_job=self.job,
-                )
-                .delete()
-            )
-
-            logger.info(
-                f"Deleting {delete_count} package files from previous packages."
-            )
+        packages.delete_obsolete_packages(projects=[self.job.project])
 
 
 class DeltaApplyJobRun(JobRun):

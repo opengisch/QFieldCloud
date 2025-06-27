@@ -264,10 +264,7 @@ class DownloadPushDeleteFileView(views.APIView):
             raise exceptions.EmptyContentError()
 
         # get project from request or db
-        if hasattr(request, "project"):
-            project = request.project
-        else:
-            project = Project.objects.get(id=projectid)
+        project = Project.objects.get(id=projectid)
 
         is_the_qgis_file = utils.is_the_qgis_file(filename)
 
