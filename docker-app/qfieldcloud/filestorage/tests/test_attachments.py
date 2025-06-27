@@ -7,6 +7,7 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
+    PackageJob,
     Person,
     Project,
 )
@@ -14,7 +15,10 @@ from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
     testdata_path,
+    wait_for_project_ok_status,
 )
+from qfieldcloud.core.utils2.jobs import repackage
+from qfieldcloud.filestorage.models import File
 
 logging.disable(logging.CRITICAL)
 
@@ -123,3 +127,52 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         file3 = self.p1.get_file("DCIM/file3.name")
 
         self.assertEqual(file3.file_storage, "webdav")
+
+    def test_attachments_packages_on_default_storage_succeeds(self):
+        # upload data & QGIS project files to the project.
+        self._upload_file(
+            self.u1,
+            self.p1,
+            "bumblebees.gpkg",
+            io.FileIO(testdata_path("bumblebees.gpkg"), "rb"),
+        )
+
+        self._upload_file(
+            self.u1,
+            self.p1,
+            "simple_bumblebees.qgs",
+            io.FileIO(testdata_path("simple_bumblebees.qgs"), "rb"),
+        )
+
+        # upload an attachment
+        self._upload_file(
+            self.u1,
+            self.p1,
+            "DCIM/file.name",
+            io.FileIO(testdata_path("DCIM/1.jpg"), "rb"),
+        )
+
+        self.p1.refresh_from_db()
+        package_job = repackage(self.p1, self.u1)
+
+        wait_for_project_ok_status(self.p1)
+        self.p1.refresh_from_db()
+
+        # ensure the attachment is stored on webdav storage.
+        file_attachment = self.p1.get_file("DCIM/file.name")
+
+        self.assertEqual(file_attachment.file_storage, "webdav")
+
+        # ensure the package files are stored on default storage.
+        package_jobs_qs = PackageJob.objects.filter(project=self.p1)
+
+        for package_job in package_jobs_qs:
+            package_files_qs = File.objects.filter(
+                project=self.p1, package_job=package_job
+            )
+
+            for package_file in package_files_qs:
+                self.assertEquals(
+                    package_file.file_storage,
+                    "default",
+                )
