@@ -1464,9 +1464,6 @@ class Project(models.Model):
         Attachment dir is a special directory in the QField infrastructure that holds attachment files
         such as images, pdf etc. By default "DCIM" is considered a attachment directory.
 
-        TODO this function expects whether `attachment_dirs` key in project_details. However,
-        neither the extraction from the projectfile, nor the configuration in QFieldSync are implemented.
-
         Returns:
             A list configured attachment dirs for the project.
         """
@@ -1479,6 +1476,26 @@ class Project(models.Model):
             attachment_dirs = ["DCIM"]
 
         return attachment_dirs
+
+    @property
+    def data_dirs(self) -> list[str]:
+        """Returns a list of configured data dirs for the project.
+
+        Data dir is a special directory in the QField infrastructure that holds assets
+        used by the project symbology, layouts, or project plugins.
+
+        Unlike `attachmentDirs`, the `dataDirs` should always be served as a undivisible
+        part of project files.
+
+        Returns:
+            A list configured data dirs for the project.
+        """
+        data_dirs = []
+
+        if self.project_details and self.project_details.get("data_dirs"):
+            data_dirs = self.project_details.get("data_dirs", [])
+
+        return data_dirs
 
     @property
     def has_attachments_files(self) -> bool:
