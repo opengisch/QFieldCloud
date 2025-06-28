@@ -118,6 +118,7 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
     details["attachment_dirs"], _ = project.readListEntry(
         "QFieldSync", "attachmentDirs", ["DCIM"]
     )
+    details["data_dirs"], _ = project.readListEntry("QFieldSync", "dataDirs", [])
 
     logger.info(
         f"QGIS project layer checks\n{layers_data_to_string(details['layers_by_id'])}",
