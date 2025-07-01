@@ -71,7 +71,7 @@ class PersonQueryset(models.QuerySet):
     This query is very similar to `ProjectQueryset.for_user`, don't forget to update it too.
     """
 
-    def for_project(self, project: "Project", skip_invalid: bool):
+    def for_project(self, project: "Project", skip_invalid: bool) -> "PersonQueryset":
         count_collaborators = Count(
             "project_roles__project__collaborators",
             filter=Q(
@@ -123,7 +123,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_organization(self, organization: "Organization"):
+    def for_organization(self, organization: "Organization") -> "PersonQueryset":
         qs = (
             self.defer(
                 "organization_roles__user_id",
@@ -142,7 +142,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_team(self, team: "Team"):
+    def for_team(self, team: "Team") -> "PersonQueryset":
         permissions_config = [
             # Direct ownership of the organization
             (
@@ -177,7 +177,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_entity(self, entity: "User"):
+    def for_entity(self, entity: "User") -> "PersonQueryset":
         """Returns all users grouped in given entity (any type)
 
         Internally calls for_team or for_organization depending on the entity."""
@@ -2480,6 +2480,34 @@ class Secret(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     value = django_cryptography.fields.encrypt(models.TextField())
+
+    def clean(self, **kwargs) -> None:
+        # for project secrets assigned to a user,
+        # ensure the user is a collaborator of the project.
+        if self.project and self.assigned_to:
+            if self.assigned_to not in Person.objects.for_project(
+                project=self.project,
+                skip_invalid=True,
+            ):
+                raise ValidationError(
+                    _(
+                        "Cannot assign a secret to a user that is not a collaborator of the project."
+                    )
+                )
+
+        # for organization secrets assigned to a user,
+        # ensure the user is a member of the organization.
+        if self.organization and self.assigned_to:
+            if self.assigned_to not in Person.objects.for_organization(
+                organization=self.organization
+            ):
+                raise ValidationError(
+                    _(
+                        "Cannot assign a secret to a user that is not a member of the organization."
+                    )
+                )
+
+        return super().clean(**kwargs)
 
     class Meta:
         ordering = ["project", "assigned_to", "organization"]
