@@ -720,7 +720,7 @@ class QfcTestCase(APITransactionTestCase):
                 missing_layers[0]["filename"], "localized:missing_layer.tif"
             )
 
-    def test_get_project_details_include_needs_repackaging(self):
+    def test_get_project_details_for_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         _project = Project.objects.create(name="project_to_repackage", owner=self.user1)
@@ -732,4 +732,20 @@ class QfcTestCase(APITransactionTestCase):
         payload = response.json()
 
         self.assertEquals(len(payload), 1)
-        self.assertIn("needs_repackaging", payload[0])
+
+        project_json = payload[0]
+
+        self.assertIn("name", project_json)
+        self.assertIsInstance(project_json["name"], str)
+        self.assertIn("owner", project_json)
+        self.assertIsInstance(project_json["owner"], str)
+        self.assertIn("description", project_json)
+        self.assertIsInstance(project_json["description"], str)
+        self.assertIn("user_role", project_json)
+        self.assertIsInstance(project_json["user_role"], str)
+        self.assertIn("is_public", project_json)
+        self.assertIsInstance(project_json["is_public"], bool)
+        self.assertIn("can_repackage", project_json)
+        self.assertIsInstance(project_json["can_repackage"], bool)
+        self.assertIn("needs_repackaging", project_json)
+        self.assertIsInstance(project_json["needs_repackaging"], bool)
