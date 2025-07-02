@@ -719,3 +719,17 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(
                 missing_layers[0]["filename"], "localized:missing_layer.tif"
             )
+
+    def test_get_project_details_include_needs_repackaging(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        _project = Project.objects.create(name="project_to_repackage", owner=self.user1)
+
+        response = self.client.get("/api/v1/projects/")
+
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+
+        payload = response.json()
+
+        self.assertEquals(len(payload), 1)
+        self.assertIn("needs_repackaging", payload[0])
