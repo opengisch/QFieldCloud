@@ -40,10 +40,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             name=SHARED_DATASETS_PROJECT_NAME,
             is_public=False,
             owner=self.user1,
-        )
-
-        Project.objects.filter(pk=self.shared_datasets_project.pk).update(
-            file_storage="default"
+            file_storage="default",
         )
 
         self.shared_datasets_project.refresh_from_db()
@@ -139,9 +136,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         # Localized layers found in the localized datasets project
         available_localized_filenames = set(
-            File.objects.filter(project_id=self.shared_datasets_project.id).values_list(
-                "name", flat=True
-            )
+            File.objects.filter(
+                project_id=self.shared_datasets_project.id,
+            ).values_list("name", flat=True)
         )
 
         self.assertEqual(len(available_localized_filenames), 1)
