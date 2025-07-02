@@ -75,6 +75,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
     shared_datasets_project_id = serializers.SerializerMethodField(read_only=True)
+    needs_repackaging = serializers.SerializerMethodField()
 
     def get_shared_datasets_project_id(self, obj: Project) -> str | None:
         if obj.shared_datasets_project:
@@ -125,7 +126,12 @@ class ProjectSerializer(serializers.ModelSerializer):
         return data
 
     def get_needs_repackaging(self, obj: Project) -> bool:
-        return obj.needs_repackaging(self.request.user)  # type: ignore[attr-defined]
+        request = self.context.get("request")
+
+        if request:
+            return obj.needs_repackaging(request.user)  # type: ignore[attr-defined]
+
+        return False
 
     class Meta:
         fields = (
@@ -141,6 +147,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "data_last_packaged_at",
             "data_last_updated_at",
             "can_repackage",
+            "needs_repackaging",
             "status",
             "user_role",
             "user_role_origin",
