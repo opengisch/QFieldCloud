@@ -1,6 +1,7 @@
 import logging
 import traceback
 from random import randint
+from typing import Literal
 
 from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
@@ -117,6 +118,26 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
             )
 
         super().send_confirmation_mail(request, email_confirmation, signup)
+
+
+class AccountAdapterSignUpOpen(AccountAdapter):
+    """Account adapter for open signup.
+
+    This adapter is used when the signup is open, i.e. when users can register themselves.
+    """
+
+    def is_open_for_signup(self, request: HttpRequest) -> Literal[True]:
+        return True
+
+
+class AccountAdapterSignUpClosed(AccountAdapter):
+    """Account adapter for closed signup.
+
+    This adapter is used when the signup is closed, i.e. when users cannot register themselves.
+    """
+
+    def is_open_for_signup(self, request: HttpRequest) -> Literal[False]:
+        return False
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
