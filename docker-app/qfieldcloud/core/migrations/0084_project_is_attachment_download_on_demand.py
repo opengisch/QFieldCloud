@@ -14,7 +14,8 @@ class Migration(migrations.Migration):
             name="is_attachment_download_on_demand",
             field=models.BooleanField(
                 default=False,
-                help_text="If enabled, it indicates to the client (e.g. QField) that the attachments may be downloaded on demand.",
+                verbose_name="On demand attachment files download",
+                help_text="If enabled, attachment files should be downloaded on demand with QField.",
             ),
         ),
     ]

@@ -1284,8 +1284,9 @@ class Project(models.Model):
     # projects with large or numerous attachments.
     is_attachment_download_on_demand = models.BooleanField(
         default=False,
+        verbose_name=_("On demand attachment files download"),
         help_text=_(
-            "If enabled, it indicates to the client (e.g. QField) that the attachments may be downloaded on demand."
+            "If enabled, attachment files should be downloaded on demand with QField."
         ),
     )
 
