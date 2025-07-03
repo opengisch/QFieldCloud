@@ -260,7 +260,11 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 
 class ProjectCollaboratorSerializer(serializers.ModelSerializer):
-    collaborator = serializers.StringRelatedField()
+    collaborator = serializers.SlugRelatedField(
+        slug_field="username",
+        queryset=User.objects.all(),
+        help_text="Username of the person or team to add",
+    )
     created_by = serializers.StringRelatedField()
     updated_by = serializers.StringRelatedField()
 
