@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
-from qfieldcloud.core.models import Person, Project, ProjectCollaborator
+from qfieldcloud.core.models import Project, ProjectCollaborator
 from qfieldcloud.core.serializers import ProjectCollaboratorSerializer
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -51,7 +51,7 @@ class ListCreateCollaboratorsView(generics.ListCreateAPIView):
     def post(self, request, projectid):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        collaborator = Person.objects.get(username=request.data["collaborator"])
+        collaborator = serializer.validated_data["collaborator"]
         project = Project.objects.get(id=projectid)
         serializer.save(
             collaborator=collaborator,
