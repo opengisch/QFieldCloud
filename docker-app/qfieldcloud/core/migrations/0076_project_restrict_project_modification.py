@@ -14,7 +14,8 @@ class Migration(migrations.Migration):
             name="has_restricted_projectfiles",
             field=models.BooleanField(
                 default=False,
-                help_text="Restrict modifications of QGIS/QField projectfiles to managers and administrators.",
+                verbose_name="Restrict project files",
+                help_text="If enabled, modifications of QGIS project configuration (.qgs, qgz, qgd) and QField project plugins files will be restricted to managers and administrators.",
             ),
         ),
     ]

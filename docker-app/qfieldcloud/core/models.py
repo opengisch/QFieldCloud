@@ -1189,8 +1189,9 @@ class Project(models.Model):
 
     has_restricted_projectfiles = models.BooleanField(
         default=False,
+        verbose_name=_("Restrict project files"),
         help_text=_(
-            "Restrict modifications of QGIS/QField projectfiles to managers and administrators."
+            "If enabled, modifications of QGIS project configuration (.qgs, qgz, qgd) and QField project plugins files will be restricted to managers and administrators."
         ),
     )
 
