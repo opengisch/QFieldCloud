@@ -671,14 +671,31 @@ class ProjectSecretForm(ModelForm):
 class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
-    fields = ("project", "name", "type", "value", "created_by")
+    fields = (
+        "project",
+        "name",
+        "type",
+        "assigned_to",
+        "organization",
+        "created_by",
+        "value",
+    )
     readonly_fields = ("created_by",)
-    list_display = ("name", "type", "created_by__link", "project__name")
+    list_display = (
+        "name",
+        "type",
+        "assigned_to",
+        "project__name",
+        "organization",
+        "created_by__link",
+    )
     autocomplete_fields = ("project",)
 
     search_fields = (
         "name__icontains",
         "project__name__icontains",
+        "assigned_to__username__icontains",
+        "organization__name__icontains",
     )
 
     @admin.display(ordering="created_by", description=_("Created by"))
@@ -687,7 +704,10 @@ class SecretAdmin(QFieldCloudModelAdmin):
 
     @admin.display(ordering="project__name")
     def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
+        if instance.project:
+            return model_admin_url(instance.project, instance.project.name)
+
+        return None
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -850,7 +870,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     def get_form(self, *args, **kwargs):
         help_texts = {
             "file_storage_bytes": _(
-                "Use this value to limit the maximum number of file versions. When empty current plan's default will be used. Usually availlable to Premium users only."
+                "This value represents the total size of the project in bytes, including the space taken by the stored file versions."
             )
         }
         kwargs.update({"help_texts": help_texts})

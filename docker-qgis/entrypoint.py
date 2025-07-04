@@ -95,6 +95,7 @@ def _call_libqfieldsync_packager(
     )
 
     attachment_dirs, _ = project.readListEntry("QFieldSync", "attachmentDirs", ["DCIM"])
+    data_dirs, _ = project.readListEntry("QFieldSync", "dataDirs", [])
     if offliner_type == OfflinerType.QGISCORE:
         offliner = QgisCoreOffliner()
     elif offliner_type == OfflinerType.PYTHONMINI:
@@ -111,7 +112,7 @@ def _call_libqfieldsync_packager(
         str(package_dir),
         vl_extent_wkt,
         vl_extent_crs,
-        attachment_dirs,
+        attachment_dirs + data_dirs,
         offliner=offliner,
         export_type=ExportType.Cloud,
         create_basemap=False,

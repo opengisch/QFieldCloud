@@ -11,7 +11,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Case, Q, When
+from django.db.models import Case, Q, QuerySet, When
 from django.db.models import Value as V
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -85,6 +85,25 @@ class Plan(models.Model):
         result = cls.objects.order_by("-is_default").first()
 
         return cast(Plan, result)
+
+    @classmethod
+    def get_plans_for_user(cls, user: User, user_type: User.Type) -> QuerySet["Plan"]:
+        """
+        Return all public plans of the given `user_type`, filtering out
+        trial plans for organizations when no trials remain.
+        """
+        filters = {
+            "is_public": True,
+            "user_type": user_type,
+        }
+
+        if (
+            user_type == User.Type.ORGANIZATION
+            and user.remaining_trial_organizations == 0
+        ):
+            filters["is_trial"] = False
+
+        return cls.objects.filter(**filters)
 
     # unique identifier of the subscription plan
     code = models.CharField(max_length=100, unique=True)
@@ -446,6 +465,8 @@ class AbstractSubscription(models.Model):
         on_delete=models.DO_NOTHING,
         related_name="+",
     )
+
+    is_frontend_user_editable = False
 
     account = models.ForeignKey(
         UserAccount,

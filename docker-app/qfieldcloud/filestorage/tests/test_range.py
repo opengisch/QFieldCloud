@@ -93,7 +93,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
             with self.subTest(case=project):
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                self.assertEqual(project.files.count(), 1)
+                self.assertEqual(project.project_files.count(), 1)
                 self.assertEqual(project.get_file("file.name").versions.count(), 1)
 
                 # download parts of the file, with specific ranges

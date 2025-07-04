@@ -10,7 +10,6 @@ from qfieldcloud.core.models import (
     Job,
     Person,
     Project,
-    utils,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
@@ -38,8 +37,13 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         self.shared_datasets_project = Project.objects.create(
-            name=SHARED_DATASETS_PROJECT_NAME, is_public=False, owner=self.user1
+            name=SHARED_DATASETS_PROJECT_NAME,
+            is_public=False,
+            owner=self.user1,
+            file_storage="default",
         )
+
+        self.shared_datasets_project.refresh_from_db()
 
     def get_localized_filenames_by_project_details(self, project: Project) -> list:
         filenames = []
@@ -131,20 +135,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertIsNotNone(processprojectfile_job.feedback)
 
         # Localized layers found in the localized datasets project
-        if self.project1.uses_legacy_storage:
-            available_shared_files = utils.get_project_files(
-                self.shared_datasets_project.id
-            )
-            available_localized_filenames = [
-                file.name for file in available_shared_files
-            ]
-
-        else:
-            available_localized_filenames = set(
-                File.objects.filter(
-                    project_id=self.shared_datasets_project.id
-                ).values_list("name", flat=True)
-            )
+        available_localized_filenames = set(
+            File.objects.filter(
+                project_id=self.shared_datasets_project.id,
+            ).values_list("name", flat=True)
+        )
 
         self.assertEqual(len(available_localized_filenames), 1)
 

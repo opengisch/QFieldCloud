@@ -125,6 +125,52 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[0]["collaborator"], "user2")
         self.assertEqual(json[0]["role"], "manager")
 
+    def test_list_filtered_projects(self):
+        # Create a project of user1 with public access to user2
+        Project.objects.create(name="project1", is_public=True, owner=self.user1)
+
+        # Create a project of user1 without access to user2
+        Project.objects.create(name="project2", is_public=False, owner=self.user1)
+
+        # Create a private project of user2
+        Project.objects.create(name="project1", is_public=False, owner=self.user2)
+
+        # Create a public project of user2
+        Project.objects.create(name="project2", is_public=True, owner=self.user2)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token2.key)
+
+        # 1) list non-public projects for specific user name other than the logged in user
+        response = self.client.get("/api/v1/projects/?owner=user1")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 0)
+
+        # 1) list all projects (including public ones) for specific user name other than the logged in user
+        response = self.client.get("/api/v1/projects/?owner=user1&include-public=1")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "project1")
+        self.assertEqual(response.data[0]["owner"], "user1")
+
+        # 2) list projects for specific user name matching logged in user
+        response = self.client.get("/api/v1/projects/?owner=user2")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 2)
+
+        json = response.json()
+        json = sorted(json, key=lambda k: k["name"])
+        self.assertEqual(json[0]["name"], "project1")
+        self.assertEqual(json[0]["owner"], "user2")
+        self.assertEqual(json[1]["name"], "project2")
+        self.assertEqual(json[1]["owner"], "user2")
+
+        # 3) list project for specific user name (matching logged in user) and project name
+        response = self.client.get("/api/v1/projects/?owner=user2&name=project2")
+        self.assertTrue(status.is_success(response.status_code))
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "project2")
+        self.assertEqual(response.data[0]["owner"], "user2")
+
     def test_list_projects_of_authenticated_user(self):
         # Create a project of user1
         self.project1 = Project.objects.create(
@@ -673,3 +719,33 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(
                 missing_layers[0]["filename"], "localized:missing_layer.tif"
             )
+
+    def test_get_project_details_for_qfield(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        _project = Project.objects.create(name="project_to_repackage", owner=self.user1)
+
+        response = self.client.get("/api/v1/projects/")
+
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+
+        payload = response.json()
+
+        self.assertEquals(len(payload), 1)
+
+        project_json = payload[0]
+
+        self.assertIn("name", project_json)
+        self.assertIsInstance(project_json["name"], str)
+        self.assertIn("owner", project_json)
+        self.assertIsInstance(project_json["owner"], str)
+        self.assertIn("description", project_json)
+        self.assertIsInstance(project_json["description"], str)
+        self.assertIn("user_role", project_json)
+        self.assertIsInstance(project_json["user_role"], str)
+        self.assertIn("is_public", project_json)
+        self.assertIsInstance(project_json["is_public"], bool)
+        self.assertIn("can_repackage", project_json)
+        self.assertIsInstance(project_json["can_repackage"], bool)
+        self.assertIn("needs_repackaging", project_json)
+        self.assertIsInstance(project_json["needs_repackaging"], bool)

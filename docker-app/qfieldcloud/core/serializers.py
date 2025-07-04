@@ -75,6 +75,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
     shared_datasets_project_id = serializers.SerializerMethodField(read_only=True)
+    needs_repackaging = serializers.SerializerMethodField()
 
     def get_shared_datasets_project_id(self, obj: Project) -> str | None:
         if obj.shared_datasets_project:
@@ -123,6 +124,14 @@ class ProjectSerializer(serializers.ModelSerializer):
                 raise exceptions.ProjectAlreadyExistsError()
 
         return data
+
+    def get_needs_repackaging(self, obj: Project) -> bool:
+        request = self.context.get("request")
+
+        if request:
+            return obj.needs_repackaging(request.user)  # type: ignore[attr-defined]
+
+        return False
 
     class Meta:
         fields = (
@@ -258,7 +267,11 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 
 class ProjectCollaboratorSerializer(serializers.ModelSerializer):
-    collaborator = serializers.StringRelatedField()
+    collaborator = serializers.SlugRelatedField(
+        slug_field="username",
+        queryset=User.objects.filter(type__in=(User.Type.PERSON, User.Type.TEAM)),
+        help_text="Username of the person or team to add",
+    )
     created_by = serializers.StringRelatedField()
     updated_by = serializers.StringRelatedField()
 

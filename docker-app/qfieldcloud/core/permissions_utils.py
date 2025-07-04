@@ -11,6 +11,7 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     ProjectQueryset,
+    Secret,
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
@@ -33,6 +34,9 @@ class ReachedCollaboratorLimitError(CheckPermError): ...
 
 
 class UserHasProjectRoleOrigins(CheckPermError): ...
+
+
+class UserProjectRoleError(CheckPermError): ...
 
 
 class UserOrganizationRoleError(CheckPermError): ...
@@ -77,6 +81,21 @@ def user_has_project_roles(
         _project_for_owner(user, project, skip_invalid)
         .filter(user_role__in=roles)
         .exists()
+    )
+
+
+def check_user_has_project_roles(
+    user: QfcUser, project: Project, roles: list[ProjectCollaborator.Roles]
+) -> Literal[True]:
+    if user_has_project_roles(user, project, roles):
+        return True
+
+    raise UserProjectRoleError(
+        'User "{}" has not role "{}" on project {}.'.format(
+            user.username,
+            [role.name for role in roles],
+            project.name,
+        )
     )
 
 
@@ -183,6 +202,49 @@ def can_create_project(
         return True
 
     return False
+
+
+def can_create_organization_secrets(user: QfcUser, organization: Organization) -> bool:
+    return user_has_organization_roles(
+        user,
+        organization,
+        [
+            OrganizationMember.Roles.ADMIN,
+        ],
+    )
+
+
+def can_delete_organization_secrets(user: QfcUser, organization: Organization) -> bool:
+    return user_has_organization_roles(
+        user,
+        organization,
+        [
+            OrganizationMember.Roles.ADMIN,
+        ],
+    )
+
+
+def can_delete_secret(user: QfcUser, secret: Secret) -> bool:
+    if secret.organization:
+        return user_has_organization_roles(
+            user,
+            secret.organization,
+            [
+                OrganizationMember.Roles.ADMIN,
+            ],
+        )
+    elif secret.project:
+        return user_has_project_roles(
+            user,
+            secret.project,
+            [
+                ProjectCollaborator.Roles.ADMIN,
+            ],
+        )
+    else:
+        raise NotImplementedError(
+            "Secret must be either project or organization secret."
+        )
 
 
 def can_access_project(user: QfcUser, project: Project) -> bool:
@@ -418,7 +480,7 @@ def can_read_jobs(user: QfcUser, project: Project) -> bool:
     )
 
 
-def can_create_secrets(user: QfcUser, project: Project) -> bool:
+def can_create_project_secrets(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,
@@ -428,7 +490,7 @@ def can_create_secrets(user: QfcUser, project: Project) -> bool:
     )
 
 
-def can_delete_secrets(user: QfcUser, project: Project) -> bool:
+def can_delete_project_secrets(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,
         project,

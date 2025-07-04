@@ -167,7 +167,7 @@ class Migration(migrations.Migration):
                 editable=False,
                 on_delete=django.db.models.deletion.CASCADE,
                 to="core.project",
-                related_name="files",
+                related_name="all_files",
             ),
         ),
     ]
