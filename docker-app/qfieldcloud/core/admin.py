@@ -870,7 +870,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     def get_form(self, *args, **kwargs):
         help_texts = {
             "file_storage_bytes": _(
-                "Use this value to limit the maximum number of file versions. When empty current plan's default will be used. Usually availlable to Premium users only."
+                "This value represents the total size of the project in bytes, including the space taken by the stored file versions."
             )
         }
         kwargs.update({"help_texts": help_texts})
