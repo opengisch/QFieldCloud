@@ -430,7 +430,9 @@ ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
 # See https://docs.allauth.org/en/dev/account/configuration.html
 ACCOUNT_PRESERVE_USERNAME_CASING = True
 ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_ADAPTER = "qfieldcloud.core.adapters.AccountAdapter"
+ACCOUNT_ADAPTER = os.environ.get(
+    "QFIELDCLOUD_ACCOUNT_ADAPTER", "qfieldcloud.core.adapters.AccountAdapterSignUpOpen"
+)
 ACCOUNT_LOGOUT_ON_GET = True
 
 # Django allauth's social account configuration
