@@ -134,6 +134,7 @@ class AccountAdapterSignUpClosed(AccountAdapter):
     """Account adapter for closed signup.
 
     This adapter is used when the signup is closed, i.e. when users cannot register themselves.
+    A user can still be added via Django admin.
     """
 
     def is_open_for_signup(self, request: HttpRequest) -> Literal[False]:
