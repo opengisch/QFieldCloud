@@ -219,8 +219,8 @@
                             // selected or most recent file version
                             const version = $versionsSelect.value || (
                                 file.versions
-                                    .map(obj => obj.version_id)
-                                    .sort((a, b) => String(b).localeCompare(String(a)))[0]
+                                    .find(obj => obj.is_latest === true)
+                                    .version_id
                             );
                             window.open(buildApiUrl(pathToFile, { version }));
                         });
