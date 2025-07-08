@@ -627,7 +627,15 @@ class OwnerTypeFilter(admin.SimpleListFilter):
 class ProjectSecretForm(ModelForm):
     class Meta:
         model = Secret
-        fields = ("project", "name", "type", "value", "created_by")
+        fields = (
+            "project",
+            "name",
+            "type",
+            "assigned_to",
+            "organization",
+            "value",
+            "created_by",
+        )
 
     name = fields.CharField(widget=widgets.TextInput)
     value = fields.CharField(widget=widgets.Textarea)

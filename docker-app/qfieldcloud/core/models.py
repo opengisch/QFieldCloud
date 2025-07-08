@@ -2458,7 +2458,11 @@ class Secret(models.Model):
     )
     type = models.CharField(max_length=32, choices=Type.choices)
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name="secrets", null=True
+        Project,
+        on_delete=models.CASCADE,
+        related_name="secrets",
+        null=True,
+        blank=True,
     )
 
     # The user the secret belongs to. Allows a user to have custom overrides to project envvars and pgservice.
