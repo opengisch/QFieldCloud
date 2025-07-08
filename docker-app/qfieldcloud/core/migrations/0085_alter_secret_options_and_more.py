@@ -139,6 +139,7 @@ class Migration(migrations.Migration):
             name="project",
             field=models.ForeignKey(
                 null=True,
+                blank=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="secrets",
                 to="core.project",
