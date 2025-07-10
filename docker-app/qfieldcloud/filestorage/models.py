@@ -365,8 +365,9 @@ class FileVersion(models.Model):
         super().delete(*args, **kwargs)
 
     def _get_file_storage_name(self) -> str:
-        """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
-        return self.file.project.file_storage
+        """Returns the file storage name where all the files are stored.
+        Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
+        return self.file.file_storage
 
     def __repr__(self) -> str:
         if hasattr(self, "file"):
