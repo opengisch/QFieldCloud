@@ -49,6 +49,9 @@ class PackageViewPermissions(permissions.BasePermission):
 
 class PackageUploadViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
+        if not hasattr(request, "auth"):
+            return False
+
         if request.auth.client_type != AuthToken.ClientType.WORKER:
             return False
 
