@@ -288,9 +288,12 @@ class DownloadPushDeleteFileView(views.APIView):
 
         request_file = request.FILES.get("file")
 
-        permissions_utils.check_can_upload_file(
-            project, request.auth.client_type, request_file.size
-        )
+        if hasattr(request, "auth") and hasattr(request.auth, "client_type"):
+            client_type = request.auth.client_type
+        else:
+            client_type = request.session.get("client_type")
+
+        permissions_utils.check_can_upload_file(project, client_type, request_file.size)
 
         old_object = get_project_file_with_versions(project.id, filename)
         sha256sum = utils.get_sha256(request_file)

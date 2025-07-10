@@ -101,9 +101,14 @@ def upload_project_file_version(
         raise MultipleProjectsError("Only one QGIS project per project allowed")
 
     # check if the user has enough storage to upload the file
+    if hasattr(request, "auth") and hasattr(request.auth, "client_type"):
+        client_type = request.auth.client_type
+    else:
+        client_type = request.session.get("client_type")
+
     permissions_utils.check_can_upload_file(
         project,
-        request.auth.client_type,  # type: ignore
+        client_type,
         uploaded_file.size,
     )
 
