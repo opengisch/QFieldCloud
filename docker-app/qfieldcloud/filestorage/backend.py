@@ -1,5 +1,6 @@
 import base64
 import os
+from abc import ABC
 
 import requests
 from django.core.exceptions import ImproperlyConfigured
@@ -9,7 +10,42 @@ from django.http import HttpResponse
 from storages.backends.s3boto3 import S3Boto3Storage
 
 
-class QfcS3Boto3Storage(S3Boto3Storage):
+class QfcBackendStorageMixin(ABC):
+    def check_status(self) -> bool:
+        """Checks if the storage is reachable.
+
+        Returns:
+            True if reachable, False if not.
+        """
+        raise NotImplementedError(
+            "Subclassing QFC specific storages must implement this method."
+        )
+
+    def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
+        """Patches a nginx redirect response for usage with the storage backend.
+        At the moment, does nothing.
+
+        Arguments:
+            response: HTTP redirect response to patch.
+        """
+        pass
+
+
+class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Boto3Storage):
+    def check_status(self) -> bool:
+        """Checks if the S3 bucket is reachable.
+
+        Returns:
+            True if reachable, False if not.
+        """
+        try:
+            bucket_name = self.bucket.name
+            self.bucket.meta.client.head_bucket(Bucket=bucket_name)
+        except Exception:
+            return False
+
+        return True
+
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
         """Patches a nginx redirect response for usage with S3.
         At the moment, does nothing.
@@ -20,7 +56,7 @@ class QfcS3Boto3Storage(S3Boto3Storage):
         pass
 
 
-class QfcWebDavStorage(Storage):
+class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     """
     Storage backend using WebDAV.
     Adapted and inspired by this repository: https://github.com/marazmiki/django-webdav-storage
@@ -41,6 +77,19 @@ class QfcWebDavStorage(Storage):
         self.basic_auth = options.get("basic_auth")
         if not self.basic_auth:
             raise ImproperlyConfigured("Please define the `basic_auth` storage option")
+
+    def check_status(self) -> bool:
+        """Checks if the WebDAV storage is reachable.
+
+        Returns:
+            True if reachable, False if not.
+        """
+        try:
+            self.perform_webdav_request("HEAD", "/")
+        except requests.exceptions.RequestException:
+            return False
+
+        return True
 
     def get_requests_session(self, **kwargs) -> requests.Session:
         """
