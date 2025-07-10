@@ -62,6 +62,7 @@ class LoginView(ObtainAuthToken):
         self.token = create_token(
             self.token_model, validated_data["user"], self.serializer, self.request
         )
+        request.session["client_type"] = self.token.client_type
 
         serializer = TokenSerializer(
             instance=self.token, context={"request": self.request}
