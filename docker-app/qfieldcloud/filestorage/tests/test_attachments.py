@@ -1,6 +1,8 @@
 import io
 import logging
 
+from django.conf import settings
+from django.core.files.storage import storages
 from django.http import FileResponse
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -37,6 +39,24 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             attachments_file_storage="webdav",
         )
 
+    def assertFileOnStorage(self, file: File, file_storage_name: str) -> None:
+        """
+        Checks if a file and all its versions exist on the specified storage.
+
+        Args:
+            file: The File instance to check.
+            file_storage_name: The name of the storage to check against.
+        """
+        self.assertEqual(file.file_storage, file_storage_name)
+
+        for version in file.versions.all():
+            self.assertEqual(version._get_file_storage_name(), file_storage_name)
+            self.assertIn(version._get_file_storage_name(), settings.STORAGES.keys())
+            self.assertEqual(
+                storages[version.file.file_storage], version.content.storage
+            )
+            self.assertTrue(version.content.storage.exists(version.content.name))
+
     def test_upload_attachment_succeeds(self):
         response = self._upload_file(
             self.u1,
@@ -50,7 +70,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         file = self.p1.get_file("DCIM/file.name")
 
-        self.assertEqual(file.file_storage, "webdav")
+        self.assertFileOnStorage(file, "webdav")
 
     def test_upload_then_download_attachment_succeeds(self):
         response = self._upload_file(
@@ -90,7 +110,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         file1 = self.p1.get_file("DCIM/file1.name")
 
-        self.assertEqual(file1.file_storage, "webdav")
+        self.assertFileOnStorage(file1, "webdav")
 
         # change project's storage to default
         self.p1.attachments_file_storage = "default"
@@ -108,7 +128,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         file2 = self.p1.get_file("DCIM/file2.name")
 
-        self.assertEqual(file2.file_storage, "default")
+        self.assertFileOnStorage(file2, "default")
 
         # change project's storage to webdav again
         self.p1.attachments_file_storage = "webdav"
@@ -126,7 +146,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         file3 = self.p1.get_file("DCIM/file3.name")
 
-        self.assertEqual(file3.file_storage, "webdav")
+        self.assertFileOnStorage(file3, "webdav")
 
     def test_attachments_packages_on_default_storage_succeeds(self):
         # upload data & QGIS project files to the project.
@@ -161,7 +181,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # ensure the attachment is stored on webdav storage.
         file_attachment = self.p1.get_file("DCIM/file.name")
 
-        self.assertEqual(file_attachment.file_storage, "webdav")
+        self.assertFileOnStorage(file_attachment, "webdav")
 
         # ensure the package files are stored on default storage.
         package_jobs_qs = PackageJob.objects.filter(project=self.p1)
@@ -172,7 +192,4 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             )
 
             for package_file in package_files_qs:
-                self.assertEquals(
-                    package_file.file_storage,
-                    "default",
-                )
+                self.assertFileOnStorage(package_file, "default")
