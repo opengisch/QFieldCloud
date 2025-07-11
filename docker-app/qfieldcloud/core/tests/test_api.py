@@ -41,9 +41,6 @@ class QfcTestCase(APITransactionTestCase):
 
         data = response.json()
 
-        self.assertIn("geodb", data)
-        self.assertEqual(data["geodb"], "ok")
-
         self.assertIn("database", data)
         self.assertEqual(data["database"], "ok")
 

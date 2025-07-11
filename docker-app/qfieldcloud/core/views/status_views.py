@@ -3,7 +3,6 @@ from django.core.files.storage import storages
 from django.db import connections
 from django.db.utils import OperationalError
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from qfieldcloud.core import geodb_utils
 from rest_framework import status, views
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -19,11 +18,6 @@ class APIStatusView(views.APIView):
         # Try to get the status from the cache
         results = cache.get("status_results", {})
         if not results:
-            # check geodb
-            results["geodb"] = "ok"
-            if not geodb_utils.geodb_is_running():
-                results["geodb"] = "error"
-
             # check database
             results["database"] = "ok"
             db_conn = connections["default"]
