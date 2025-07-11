@@ -10,6 +10,20 @@ from storages.backends.s3boto3 import S3Boto3Storage
 
 
 class QfcS3Boto3Storage(S3Boto3Storage):
+    def check_status(self) -> str:
+        """Checks if the S3 bucket is reachable.
+
+        Returns:
+            "ok" if reachable, "error" if not.
+        """
+        try:
+            bucket_name = self.bucket.name
+            self.bucket.meta.client.head_bucket(Bucket=bucket_name)
+        except Exception:
+            return "error"
+
+        return "ok"
+
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
         """Patches a nginx redirect response for usage with S3.
         At the moment, does nothing.
@@ -41,6 +55,19 @@ class QfcWebDavStorage(Storage):
         self.basic_auth = options.get("basic_auth")
         if not self.basic_auth:
             raise ImproperlyConfigured("Please define the `basic_auth` storage option")
+
+    def check_status(self) -> str:
+        """Checks if the WebDAV storage is reachable.
+
+        Returns:
+            "ok" if reachable, "error" if not.
+        """
+        try:
+            self.perform_webdav_request("HEAD", "/")
+        except requests.exceptions.RequestException:
+            return "error"
+
+        return "ok"
 
     def get_requests_session(self, **kwargs) -> requests.Session:
         """
