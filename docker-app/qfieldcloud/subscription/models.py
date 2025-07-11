@@ -167,7 +167,7 @@ class Plan(models.Model):
     # Only makes sense when the user_type == User.Type.ORGANIZATION
     # If the organization subscription is changed from unlimited to limited organization members,
     # the existing members that are over the max_organization_members configuration remain active.
-    max_organization_members = models.IntegerField(
+    default_max_organization_members = models.IntegerField(
         default=-1,
         help_text=_(
             "Maximum organization members allowed. Set -1 to allow unlimited organization members."
@@ -464,6 +464,16 @@ class AbstractSubscription(models.Model):
         Plan,
         on_delete=models.DO_NOTHING,
         related_name="+",
+    )
+
+    # The maximum number of organization members (seats) allowed under this specific subscription.
+    # This value is set at subscription creation time, typically based on the quantity selected during checkout (for per-seat pricing).
+    max_organization_members = models.IntegerField(
+        default=0,
+        help_text=_(
+            "Maximum organization members allowed for this subscription."
+            "Used for enforcing seat limits on a per-subscription basis for specific plans."
+        ),
     )
 
     is_frontend_user_editable = False

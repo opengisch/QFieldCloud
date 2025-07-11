@@ -228,12 +228,12 @@ class QfcTestCase(APITransactionTestCase):
         o = Organization.objects.create(username="o1", organization_owner=u1)
 
         # the unlimited plan, we can add as much members as we want
-        set_subscription(o, "minus1", max_organization_members=-1)
+        set_subscription(o, "minus1", default_max_organization_members=-1)
         OrganizationMember.objects.create(member=u2, organization=o)
         OrganizationMember.objects.create(member=u3, organization=o)
 
         # the limited plan allows maximum of 1 member, but there are 2 already
-        set_subscription(o, "plus1", max_organization_members=1)
+        set_subscription(o, "plus1", default_max_organization_members=1)
 
         # cannot add a new member
         with self.assertRaises(ReachedMaxOrganizationMembersError):
@@ -245,7 +245,7 @@ class QfcTestCase(APITransactionTestCase):
         u3 = Person.objects.create(username="u3")
         o = Organization.objects.create(username="o2", organization_owner=u1)
 
-        set_subscription(o, max_organization_members=1)
+        set_subscription(o, default_max_organization_members=1)
 
         OrganizationMember.objects.create(member=u2, organization=o)
 
