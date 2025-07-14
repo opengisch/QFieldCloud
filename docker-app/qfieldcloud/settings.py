@@ -35,6 +35,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
+# Key used for password hashing and other cryptographic operations.
+# For keys rotation, see https://pypi.org/project/django-fernet-encrypted-fields/
+SALT_KEY = [os.environ.get("SALT_KEY")]
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.environ.get("DEBUG", 0)))
 
