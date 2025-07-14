@@ -4,10 +4,11 @@ from collections.abc import Collection
 
 from django.core.management.base import BaseCommand
 from qfieldcloud.core.models import Project
-
-from ...migrate_project_storage import migrate_project_storage
+from qfieldcloud.filestorage.migrate_project_storage import migrate_project_storage
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_STORAGE = "default"
 
 
 class Command(BaseCommand):
@@ -36,6 +37,11 @@ class Command(BaseCommand):
         owner_username_startswith = options.get("owner_username_startswith")
         owner_username_matches = options.get("owner_username_matches")
 
+        # exclude from migration the projects that already use the default storage.
+        project_qs = Project.objects.exclude(
+            file_storage=DEFAULT_STORAGE,
+        )
+
         if all is not None:
             assert project_id is None
             assert owner_username_startswith is None
@@ -54,19 +60,19 @@ class Command(BaseCommand):
                 )
                 return
 
-            projects = Project.objects.all()
+            projects = project_qs.all()
         elif project_id is not None:
             assert all is None
             assert owner_username_startswith is None
             assert owner_username_matches is None
 
-            projects = [Project.objects.get(pk=project_id)]
+            projects = [project_qs.get(pk=project_id)]
         elif owner_username_startswith is not None:
             assert all is None
             assert project_id is None
             assert owner_username_matches is None
 
-            projects = Project.objects.filter(
+            projects = project_qs.filter(
                 owner__username__startswith=owner_username_startswith,
             )
         elif owner_username_matches is not None:
@@ -74,7 +80,7 @@ class Command(BaseCommand):
             assert project_id is None
             assert owner_username_startswith is None
 
-            projects = Project.objects.filter(
+            projects = project_qs.filter(
                 owner__username=owner_username_matches,
             )
         else:
@@ -84,7 +90,8 @@ class Command(BaseCommand):
 
             exit(1)
 
-        if len(projects) == 0:
+        projects_count = len(projects)
+        if projects_count == 0:
             self.stderr.write("No projects match the passed filters!")
 
             exit(1)
@@ -105,9 +112,9 @@ class Command(BaseCommand):
             )
             return
 
-        for project in projects:
+        for index, project in enumerate(projects, start=1):
             self.stderr.write(
-                f'Migrating storage for project "{project.name}" ({project.id}) from {project.file_storage} to "default".'
+                f'⏳ {index}/{projects_count}: migrating storage for project "{project.name}" ({project.id}) from "{project.file_storage}" to "default".'
             )
 
-            migrate_project_storage(project, "default", force)
+            migrate_project_storage(project, DEFAULT_STORAGE, force)

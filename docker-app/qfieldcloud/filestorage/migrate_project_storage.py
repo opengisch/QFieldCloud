@@ -36,9 +36,11 @@ def migrate_project_storage(
 
     from_storage = project.file_storage
 
+    # project given as parameter should already have been filtered, to exclude the new/default storage.
+    # basically, this should never happen, but we check it just in case.
     if from_storage == to_storage:
         raise Exception(
-            f'Cannot migrate to storage "{to_storage}", project is already stored there!'
+            f'Cannot migrate to storage "{to_storage}", project {project.id} is already stored there!'
         )
 
     if from_storage not in settings.STORAGES:
