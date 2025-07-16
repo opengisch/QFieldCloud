@@ -2497,8 +2497,11 @@ class Secret(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # encrypted value of the secret
+    # TODO Remove with QF-6361 & legacy encrypted fields support drop.
+    # legacy field to store the encrypted value of the secret.
     old_value = django_cryptography.fields.encrypt(models.TextField())
+
+    # encrypted value of the secret.
     value = EncryptedTextField()
 
     def clean(self, **kwargs) -> None:
