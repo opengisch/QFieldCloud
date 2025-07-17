@@ -1,3 +1,7 @@
+from typing import Callable
+
+from django.http import HttpRequest, HttpResponse
+
 from qfieldcloud.authentication.models import AuthToken
 
 
@@ -13,10 +17,10 @@ class ClientTypeMiddleware:
     attached to the session, but future requests still need to know the client type.
     """
 
-    def __init__(self, get_response):
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         self.get_response = get_response
 
-    def __call__(self, request):
+    def __call__(self, request: HttpRequest) -> HttpResponse:
         if hasattr(request, "auth") and hasattr(request.auth, "client_type"):
             request.session["client_type"] = request.auth.client_type
 
