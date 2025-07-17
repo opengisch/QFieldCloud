@@ -837,3 +837,183 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             )
 
             self.assertEquals(other_user_package_files_qs.count(), 3)
+
+    def test_needs_repackaging(self):
+        # 0. Create two users, where one owns the project and the other is a project collaborator.
+        u1 = Person.objects.create(username="u1")
+        u2 = Person.objects.create(username="u2")
+
+        t1 = AuthToken.objects.get_or_create(user=u1)[0]
+        t2 = AuthToken.objects.get_or_create(user=u2)[0]
+
+        p1 = Project.objects.create(
+            name="p1",
+            owner=u1,
+        )
+        ProjectCollaborator.objects.create(
+            collaborator=u2,
+            project=p1,
+            role=ProjectCollaborator.Roles.EDITOR,
+        )
+
+        # 1. Upload files to the project
+        self.upload_files(
+            t1.key,
+            p1,
+            files=[
+                ("bumblebees.gpkg", "bumblebees.gpkg"),
+                ("simple_bumblebees.qgs", "project.qgs"),
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        p1.refresh_from_db()
+
+        self.assertTrue(p1.needs_repackaging(u1))
+        self.assertTrue(p1.needs_repackaging(u2))
+
+        # 2. Package for the first user
+        self.check_package(
+            t1.key,
+            p1,
+            [
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        # -> no secret assigned so no repackaging needed.
+        p1.refresh_from_db()
+
+        self.assertFalse(p1.needs_repackaging(u1))
+        self.assertFalse(p1.needs_repackaging(u2))
+
+        # 3. Package for the second user
+        self.check_package(
+            t2.key,
+            p1,
+            [
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        # -> no secret assigned so no repackaging needed.
+        p1.refresh_from_db()
+
+        self.assertFalse(p1.needs_repackaging(u1))
+        self.assertFalse(p1.needs_repackaging(u2))
+
+        # 4. Upload a new file to the project, so project.data_last_updated_at changes
+        self.upload_files(
+            t1.key,
+            p1,
+            files=[
+                ("simple_bumblebees.qgs", "project.qgs"),
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        # -> new file uploaded so repackaging needed.
+        p1.refresh_from_db()
+
+        self.assertTrue(p1.needs_repackaging(u1))
+        self.assertTrue(p1.needs_repackaging(u2))
+
+        # 5. Create secrets for p1 and u1
+        Secret.objects.create(
+            type=Secret.Type.ENVVAR,
+            value="PROJECT SECRET VALUE",
+            name="s1",
+            project=p1,
+        )
+        Secret.objects.create(
+            type=Secret.Type.ENVVAR,
+            value="USER1 SECRET VALUE",
+            name="s1",
+            project=p1,
+            assigned_to=u1,
+        )
+        Secret.objects.create(
+            type=Secret.Type.ENVVAR,
+            value="USER2 SECRET VALUE",
+            name="s1",
+            project=p1,
+            assigned_to=u2,
+        )
+
+        # 6. Upload a new file to the project, so project.data_last_updated_at changes
+        self.upload_files(
+            t1.key,
+            p1,
+            files=[
+                ("simple_bumblebees.qgs", "project.qgs"),
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        p1.refresh_from_db()
+
+        self.assertTrue(p1.needs_repackaging(u1))
+        self.assertTrue(p1.needs_repackaging(u2))
+
+        # 7. Package for the first user
+        self.check_package(
+            t1.key,
+            p1,
+            [
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        p1.refresh_from_db()
+
+        self.assertFalse(p1.needs_repackaging(u1))
+        self.assertTrue(p1.needs_repackaging(u2))
+
+        # 8. Package for the second user
+        self.check_package(
+            t2.key,
+            p1,
+            [
+                "data.gpkg",
+                "project_qfield.qgs",
+                "project_qfield_attachments.zip",
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        p1.refresh_from_db()
+
+        self.assertFalse(p1.needs_repackaging(u1))
+        self.assertFalse(p1.needs_repackaging(u2))
+
+        # 9. Upload a new file to the project, so project.data_last_updated_at changes
+        self.upload_files(
+            t1.key,
+            p1,
+            files=[
+                ("simple_bumblebees.qgs", "project.qgs"),
+            ],
+        )
+        wait_for_project_ok_status(p1)
+
+        # . check needs repackaging for u1 and u2
+        p1.refresh_from_db()
+
+        self.assertTrue(p1.needs_repackaging(u1))
+        self.assertTrue(p1.needs_repackaging(u2))

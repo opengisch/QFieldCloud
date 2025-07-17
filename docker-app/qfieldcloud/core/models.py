@@ -1580,16 +1580,24 @@ class Project(models.Model):
         return True
 
     def needs_repackaging(self, user: User) -> bool:
+        latest_package_job_for_user = self.latest_package_job_for_user(user)
+
         if (
             # if has_online_vector_data is None (happens when the project details are missing)
             # we assume there might be
             self.has_online_vector_data is False
             and self.data_last_updated_at
             and self.data_last_packaged_at
-            and self.latest_package_job_for_user(user)
+            and latest_package_job_for_user
         ):
-            # if all vector layers are file based and have been packaged after the last update, it is safe to say there are no modifications
-            return self.data_last_packaged_at < self.data_last_updated_at
+            # if all vector layers are file based and have been packaged for the user after the last update,
+            # it is safe to say there are no modifications.
+            if latest_package_job_for_user.finished_at:
+                return (
+                    latest_package_job_for_user.finished_at < self.data_last_updated_at
+                )
+            else:
+                return True
         else:
             # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
             return True
@@ -2427,7 +2435,7 @@ class SecretQueryset(models.QuerySet):
         )
 
         secret_qs = self.none()
-        for project in user.projects.all():
+        for project in Project.objects.for_user(user).all():  # type: ignore[attr-defined]
             secret_qs |= self.for_user_and_project(user, project)
 
         return secret_qs
