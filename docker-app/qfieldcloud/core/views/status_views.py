@@ -1,6 +1,7 @@
 from django.core.cache import cache
+from django.core.files.storage import storages
+from django.db import connections
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from qfieldcloud.core import geodb_utils, utils
 from rest_framework import status, views
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -16,17 +17,32 @@ class APIStatusView(views.APIView):
         # Try to get the status from the cache
         results = cache.get("status_results", {})
         if not results:
-            results["geodb"] = "ok"
-            # Check geodb
-            if not geodb_utils.geodb_is_running():
-                results["geodb"] = "error"
-
-            results["storage"] = "ok"
-            # Check if bucket exists (i.e. the connection works)
+            # check database
+            results["database"] = "ok"
+            db_conn = connections["default"]
             try:
-                utils.get_s3_bucket()
+                with db_conn.cursor() as cursor:
+                    cursor.execute("SELECT 1")
             except Exception:
-                results["storage"] = "error"
+                results["database"] = "error"
+
+            # check storages
+            results["storage"] = "ok"
+            for storage_key in storages.backends.keys():
+                storage = storages[storage_key]
+
+                if not hasattr(storage, "check_status"):
+                    # Some storages may not have the check_status method.
+                    # e.g. ManifestStaticFilesStorage.
+                    continue
+
+                try:
+                    if not storage.check_status():
+                        results["storage"] = "error"
+                        break
+                except Exception:
+                    results["storage"] = "error"
+                    break
 
             # Cache the result for 10 minutes
             cache.set("status_results", results, 600)
