@@ -67,7 +67,7 @@ def is_qgis_project_file(filename: str) -> bool:
 
 
 def is_admin_restricted_file(filename: str, projectfile_filename: str | None) -> bool:
-    """Whether the file is restricted only to admin user modifications.
+    """Whether the file has modifications restricted only to users with elevated permissions.
 
     Such files are the QGIS project file, QField extensions and QGIS sidecar filed (e.g. `_attachments.zip`).
 
