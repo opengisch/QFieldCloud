@@ -36,9 +36,16 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_api_status(self):
         response = self.client.get("/api/v1/status/")
+
         self.assertTrue(status.is_success(response.status_code))
-        self.assertEqual(response.json()["storage"], "ok")
-        self.assertEqual(response.json()["geodb"], "ok")
+
+        data = response.json()
+
+        self.assertIn("database", data)
+        self.assertEqual(data["database"], "ok")
+
+        self.assertIn("storage", data)
+        self.assertEqual(data["storage"], "ok")
 
     def test_api_status_cache(self):
         tic = time.perf_counter()
