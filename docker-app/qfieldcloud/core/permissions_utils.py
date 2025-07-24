@@ -911,3 +911,26 @@ def check_can_upload_file(project, client_type, file_size_bytes: int) -> bool:
         )
     else:
         return True
+
+
+def can_change_seats(user: QfcUser, subscription: Subscription) -> bool:
+    """
+    Return True if `user` may adjust the seat count on this `subscription`.
+    Only organization owners can do so, the plan must have a finite member limit,
+    and the subscription must still be active (no pending cancellation).
+    """
+
+    if (
+        not subscription.account.user.is_organization
+        or subscription.plan.default_max_organization_members == -1
+    ):
+        return False
+
+    if subscription.active_until:
+        return False
+
+    return user_has_organization_role_origins(
+        user,
+        subscription.account,
+        [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
+    )
