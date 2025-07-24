@@ -17,7 +17,13 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 
-from qfieldcloud.core.models import Organization, Person, User, UserAccount
+from qfieldcloud.core.models import (
+    Organization,
+    OrganizationMember,
+    Person,
+    User,
+    UserAccount,
+)
 
 from .exceptions import NotPremiumPlanException
 
@@ -160,6 +166,9 @@ class Plan(models.Model):
 
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_storage_modifiable = models.BooleanField(default=True)
+
+    # has seats flexibility
+    is_seat_flexible = models.BooleanField(default=False)
 
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
@@ -534,10 +543,20 @@ class AbstractSubscription(models.Model):
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
     def active_storage_total_mb(self) -> int:
+        if self.plan.is_seat_flexible:
+            return self.included_storage_mb + self.active_storage_package_mb
+
         return self.plan.storage_mb + self.active_storage_package_mb
 
     @property
     def active_storage_total_bytes(self) -> int:
+        if self.plan.is_seat_flexible:
+            return (
+                (self.included_storage_mb + self.active_storage_package_mb)
+                * 1000
+                * 1000
+            )
+
         return self.plan.storage_bytes + self.active_storage_package_bytes
 
     @property
@@ -636,6 +655,45 @@ class AbstractSubscription(models.Model):
             return 0
 
         return self.active_users.count()
+
+    @property
+    def organization_members_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        return OrganizationMember.objects.filter(
+            organization_id=self.account.user.pk
+        ).count()
+
+    @property
+    def included_storage_mb(self) -> int:
+        """
+        How much storage (in MB) this subscription comes with by default.
+        - For the 'flat' plan (1GB per seat) is calculated as seats x plan.storage_mb
+        - For any other plan, just plan.storage_mb
+        """
+        if self.plan.is_seat_flexible:
+            if self.max_organization_members > 0:
+                return self.max_organization_members * self.plan.storage_mb
+            else:
+                return 0
+
+        # whatever the plan ships by default
+        return self.plan.storage_mb
+
+    @property
+    def included_storage_bytes(self) -> int:
+        """
+        How much storage (in MB) this subscription comes with by default.
+        - For the 'flat' plan (1GB per seat) is calculated as seats x plan.storage_mb
+        - For any other plan, just plan.storage_mb
+        """
+        if self.plan.is_seat_flexible:
+            return self.max_organization_members * self.plan.storage_mb
+
+        # whatever the plan ships by default
+        return self.plan.storage_mb
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
