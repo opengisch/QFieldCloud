@@ -103,6 +103,22 @@ urlpatterns = [
     path("api/v1/auth/providers/", auth_views.ListProvidersView.as_view()),
     path("api/v1/auth/logout/", auth_views.LogoutView.as_view()),
     path("api/v1/", include("qfieldcloud.core.urls")),
+    path(
+        "auth/login/",
+        RedirectView.as_view(
+            url="/accounts/login/",
+            query_string=True,
+            permanent=False,
+        ),
+    ),
+    path(
+        "auth/logout/",
+        RedirectView.as_view(
+            url="/accounts/logout/",
+            query_string=True,
+            permanent=False,
+        ),
+    ),
     path("auth/", include("rest_framework.urls")),
     path("accounts/", include("allauth.urls")),
     path("invitations/", include("invitations.urls", namespace="invitations")),
