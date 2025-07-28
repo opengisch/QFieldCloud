@@ -922,7 +922,7 @@ def can_change_seats(user: QfcUser, subscription: Subscription) -> bool:
 
     if (
         not subscription.account.user.is_organization
-        or subscription.plan.default_max_organization_members == -1
+        or subscription.plan.max_organization_members == -1
     ):
         return False
 
