@@ -176,7 +176,7 @@ class Plan(models.Model):
     # Only makes sense when the user_type == User.Type.ORGANIZATION
     # If the organization subscription is changed from unlimited to limited organization members,
     # the existing members that are over the max_organization_members configuration remain active.
-    default_max_organization_members = models.IntegerField(
+    max_organization_members = models.IntegerField(
         default=-1,
         help_text=_(
             "Maximum organization members allowed. Set -1 to allow unlimited organization members."
@@ -478,7 +478,7 @@ class AbstractSubscription(models.Model):
     # The maximum number of organization members (seats) allowed under this specific subscription.
     # This value is set at subscription creation time, typically based on the quantity selected during checkout (for per-seat pricing).
     max_organization_members = models.IntegerField(
-        default=0,
+        default=-1,
         help_text=_(
             "Maximum organization members allowed for this subscription."
             "Used for enforcing seat limits on a per-subscription basis for specific plans."
@@ -542,20 +542,13 @@ class AbstractSubscription(models.Model):
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
-    def active_storage_total_mb(self) -> int:
-        if self.plan.is_seat_flexible:
-            return self.included_storage_mb + self.active_storage_package_mb
-
-        return self.plan.storage_mb + self.active_storage_package_mb
+    def active_storage_total_mb(self) -> float:
+        return self.active_storage_total_bytes / 1000 / 1000
 
     @property
     def active_storage_total_bytes(self) -> int:
         if self.plan.is_seat_flexible:
-            return (
-                (self.included_storage_mb + self.active_storage_package_mb)
-                * 1000
-                * 1000
-            )
+            return self.included_storage_bytes + self.active_storage_package_bytes
 
         return self.plan.storage_bytes + self.active_storage_package_bytes
 
@@ -667,33 +660,26 @@ class AbstractSubscription(models.Model):
         ).count()
 
     @property
-    def included_storage_mb(self) -> int:
+    def included_storage_mb(self) -> float:
         """
         How much storage (in MB) this subscription comes with by default.
         - For the 'flat' plan (1GB per seat) is calculated as seats x plan.storage_mb
         - For any other plan, just plan.storage_mb
         """
-        if self.plan.is_seat_flexible:
-            if self.max_organization_members > 0:
-                return self.max_organization_members * self.plan.storage_mb
-            else:
-                return 0
-
-        # whatever the plan ships by default
-        return self.plan.storage_mb
+        return self.included_storage_bytes / 1000 / 1000
 
     @property
     def included_storage_bytes(self) -> int:
         """
-        How much storage (in MB) this subscription comes with by default.
-        - For the 'flat' plan (1GB per seat) is calculated as seats x plan.storage_mb
-        - For any other plan, just plan.storage_mb
+        How much storage (in bytes) this subscription comes with by default.
+        - For the 'flat' plan (1GB per seat) is calculated as seats x plan.storage_bytes
+        - For any other plan, just plan.storage_bytes
         """
         if self.plan.is_seat_flexible:
-            return self.max_organization_members * self.plan.storage_mb
+            return self.max_organization_members * self.plan.storage_bytes
 
         # whatever the plan ships by default
-        return self.plan.storage_mb
+        return self.plan.storage_bytes
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
