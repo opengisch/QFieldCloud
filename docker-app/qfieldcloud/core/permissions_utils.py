@@ -931,6 +931,6 @@ def can_change_seats(user: QfcUser, subscription: Subscription) -> bool:
 
     return user_has_organization_role_origins(
         user,
-        subscription.account,
+        subscription.account.organization,
         [OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER],
     )
