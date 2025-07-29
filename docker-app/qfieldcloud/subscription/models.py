@@ -542,15 +542,12 @@ class AbstractSubscription(models.Model):
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
-    def active_storage_total_mb(self) -> float:
-        return self.active_storage_total_bytes / 1000 / 1000
+    def active_storage_total_mb(self) -> int:
+        return int(self.active_storage_total_bytes / 1000 / 1000)
 
     @property
     def active_storage_total_bytes(self) -> int:
-        if self.plan.is_seat_flexible:
-            return self.included_storage_bytes + self.active_storage_package_bytes
-
-        return self.plan.storage_bytes + self.active_storage_package_bytes
+        return self.included_storage_bytes + self.active_storage_package_bytes
 
     @property
     def active_storage_package(self) -> Package:
@@ -655,25 +652,19 @@ class AbstractSubscription(models.Model):
         if not self.account.user.is_organization:
             return 1
 
-        return OrganizationMember.objects.filter(
-            organization_id=self.account.user.pk
-        ).count()
-
-    @property
-    def included_storage_mb(self) -> float:
-        """
-        How much storage (in MB) this subscription comes with by default.
-        - For the 'flat' plan (1GB per seat) is calculated as seats x plan.storage_mb
-        - For any other plan, just plan.storage_mb
-        """
-        return self.included_storage_bytes / 1000 / 1000
+        return (
+            OrganizationMember.objects.filter(organization_id=self.account.user.pk)
+            .exclude(member_id=self.account.user.organization_owner_id)
+            .count()
+            + 1
+        )
 
     @property
     def included_storage_bytes(self) -> int:
         """
         How much storage (in bytes) this subscription comes with by default.
-        - For the 'flat' plan (1GB per seat) is calculated as seats x plan.storage_bytes
-        - For any other plan, just plan.storage_bytes
+        - For the `flat` plan (1GB per seat) is calculated as `Subscription.max_organization_members * Plan.storage_bytes`
+        - For any other plan, just use `Plan.storage_bytes`
         """
         if self.plan.is_seat_flexible:
             return self.max_organization_members * self.plan.storage_bytes
@@ -998,8 +989,10 @@ class AbstractSubscription(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        active_storage_total_mb = (
-            self.active_storage_package_mb if hasattr(self, "packages") else 0
+        active_storage_total_mb = int(
+            (self.active_storage_package_bytes if hasattr(self, "packages") else 0)
+            / 1000
+            / 1000
         )
         return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{active_storage_total_mb}MB"
 
