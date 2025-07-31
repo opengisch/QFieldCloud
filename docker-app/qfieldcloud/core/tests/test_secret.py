@@ -9,7 +9,6 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.permissions_utils import (
-    UserOrganizationRoleError,
     UserProjectRoleError,
 )
 from qfieldcloud.core.tests.utils import setup_subscription_plans
@@ -77,11 +76,13 @@ class QfcTestCase(APITestCase):
         with self.assertRaises(UserProjectRoleError):
             Secret.objects.for_user_and_project(self.u4, self.p1)
 
-    def test_raises_when_user_is_not_organization_member(self):
-        _s1 = self._create_secret(name="s1", project=self.p1)
+    # NOTE: this test case is commented because we don't raise anymore in such case.
+    # See QF-6430.
+    # def test_raises_when_user_is_not_organization_member(self):
+    # _s1 = self._create_secret(name="s1", project=self.p1)
 
-        with self.assertRaises(UserOrganizationRoleError):
-            Secret.objects.for_user_and_project(self.u5, self.p1)
+    # with self.assertRaises(UserOrganizationRoleError):
+    #     Secret.objects.for_user_and_project(self.u5, self.p1)
 
     def test_secret_not_available_for_random_org_project(self):
         _s1 = self._create_secret(name="s1", project=self.p1)

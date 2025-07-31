@@ -749,3 +749,58 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsInstance(project_json["can_repackage"], bool)
         self.assertIn("needs_repackaging", project_json)
         self.assertIsInstance(project_json["needs_repackaging"], bool)
+
+    def test_seamless_projects_fetching_with_public_ones(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # user1's projects
+        Project.objects.create(name="private_project_of_user1", owner=self.user1)
+        Project.objects.create(
+            name="public_project_of_user1", owner=self.user1, is_public=True
+        )
+
+        # user2's projects
+        Project.objects.create(name="private_project_of_user2", owner=self.user2)
+        Project.objects.create(
+            name="public_project_of_user2", owner=self.user2, is_public=True
+        )
+
+        # organization1's project
+        org1 = Organization.objects.create(
+            username="org1", organization_owner=self.user1
+        )
+        Project.objects.create(name="private_project_of_org1", owner=org1)
+        Project.objects.create(
+            name="public_project_of_org1", owner=org1, is_public=True
+        )
+
+        # organization2's project
+        org2 = Organization.objects.create(
+            username="org2", organization_owner=self.user2
+        )
+        Project.objects.create(name="private_project_of_org2", owner=org2)
+        Project.objects.create(
+            name="public_project_of_org2", owner=org2, is_public=True
+        )
+
+        data = self.client.get(
+            "/api/v1/projects/",
+        ).json()
+
+        self.assertEqual(len(data), 4)
+
+        self.assertEqual(data[0]["owner"], "org1")
+        self.assertEqual(data[0]["name"], "private_project_of_org1")
+        self.assertFalse(data[0]["is_public"])
+
+        self.assertEqual(data[1]["owner"], "org1")
+        self.assertEqual(data[1]["name"], "public_project_of_org1")
+        self.assertTrue(data[1]["is_public"])
+
+        self.assertEqual(data[2]["owner"], "user1")
+        self.assertEqual(data[2]["name"], "private_project_of_user1")
+        self.assertFalse(data[2]["is_public"])
+
+        self.assertEqual(data[3]["owner"], "user1")
+        self.assertEqual(data[3]["name"], "public_project_of_user1")
+        self.assertTrue(data[3]["is_public"])

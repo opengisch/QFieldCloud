@@ -2385,20 +2385,31 @@ class SecretQueryset(models.QuerySet):
         )
 
         from qfieldcloud.core.permissions_utils import (
-            check_user_has_organization_roles,
             check_user_has_project_roles,
+            user_has_organization_roles,
         )
 
+        # ensure the user has access to the organization if private project
         if project.owner.is_organization:
-            # ensure the user has access to the organization
             organization = Organization.objects.get(id=project.owner_id)
-            check_user_has_organization_roles(
-                user, organization, OrganizationMember.ALL_ROLES
-            )
+            # NOTE if the project is public, then it is not necessary for the user to be a member of the project's organization
+            if not project.is_public:
+                # NOTE While this assertion is nice to have, it causes huge performance penalty on production, so we explicitly check if we are in non-production mode
+                assert (
+                    settings.ENVIRONMENT != "production"
+                    and user_has_organization_roles(
+                        user,
+                        organization,
+                        OrganizationMember.ALL_ROLES,
+                    )
+                )
         else:
             organization = None
-        # ensure the user has access to the project
-        check_user_has_project_roles(user, project, ProjectCollaborator.ALL_ROLES)
+
+        # NOTE While this assertion is nice to have, it causes huge performance penalty on production, so we explicitly check if we are in non-production mode
+        assert settings.ENVIRONMENT != "production" and check_user_has_project_roles(
+            user, project, ProjectCollaborator.ALL_ROLES
+        )
 
         # filter only the possible secrets combinations.
         secrets_qs = self.filter(
