@@ -1314,9 +1314,24 @@ class Project(models.Model):
         Returns:
             The last package job for the user.
         """
+        if self.owner.is_organization:
+            secret_qs = Secret.objects.filter(
+                Q(organization=self.owner, assigned_to=user)
+                | Q(project=self, assigned_to=user)
+            )
+        else:
+            secret_qs = Secret.objects.filter(project=self, assigned_to=user)
+
+        jobs_qs = (
+            self.jobs.annotate(has_user_secret=Exists(secret_qs))
+            .filter(Q(has_user_secret=False) | Q(triggered_by=user))
+            .order_by("-created_at")
+        )
+
+        jobs_qs = jobs_qs.order_by("-created_at")
+
         return (
-            self.jobs.for_user(user)  # type: ignore[attr-defined, return-value]
-            .filter(
+            jobs_qs.filter(
                 type=Job.Type.PACKAGE,
             )
             .order_by("-created_at")
