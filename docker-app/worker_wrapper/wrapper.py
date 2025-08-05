@@ -267,7 +267,7 @@ class JobRun:
 
         extra_envvars = {}
         pgservice_file_contents = ""
-        for secret in self.job.project.secrets.for_user_and_project(
+        for secret in Secret.objects.for_user_and_project(
             self.job.triggered_by, self.job.project
         ):
             if secret.type == Secret.Type.ENVVAR:
