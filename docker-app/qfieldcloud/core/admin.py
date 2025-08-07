@@ -680,10 +680,10 @@ class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
     fields = (
-        "project",
         "name",
         "type",
         "assigned_to",
+        "project",
         "organization",
         "created_by",
         "value",
