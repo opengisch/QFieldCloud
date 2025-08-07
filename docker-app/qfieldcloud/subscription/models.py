@@ -65,10 +65,6 @@ class SubscriptionStatus(models.TextChoices):
 
 
 class Plan(models.Model):
-    class UsageType(models.TextChoices):
-        LICENSED = "licensed", "Licensed"
-        METERED = "metered", "Metered"
-
     @classmethod
     def get_or_create_default(cls) -> "Plan":
         """Returns the default plan, creating one if none exists.
@@ -161,14 +157,6 @@ class Plan(models.Model):
 
     # the plan is set as trial
     is_trial = models.BooleanField(default=False)
-
-    # the plan is metered or licensed. If it metered, it is automatically post-paid.
-    usage_type = models.CharField(
-        max_length=20,
-        choices=UsageType.choices,
-        default=UsageType.LICENSED,
-        help_text=_("licensed (flat fee per user) or metered (usage-based)"),
-    )
 
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_cancellable = models.BooleanField(default=True)
@@ -665,6 +653,7 @@ class AbstractSubscription(models.Model):
             OrganizationMember.objects.filter(organization_id=self.account.user.pk)
             .exclude(member_id=self.account.user.organization_owner_id)
             .count()
+            # +1 for the organization owner himself/herself
             + 1
         )
 
