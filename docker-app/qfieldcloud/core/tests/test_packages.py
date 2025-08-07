@@ -96,8 +96,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         project: Project,
         files: list[tuple[str, str]],
         expected_files: list[str],
-        job_create_error: tuple[int, str] = None,
-        tempdir: str = None,
+        job_create_error: tuple[int, str] | None = None,
+        tempdir: str | None = None,
         invalid_layers: list[str] = [],
     ):
         self.upload_files(token, project, files)
@@ -110,8 +110,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         token: str,
         project: Project,
         expected_files: list[str],
-        job_create_error: tuple[int, str] = None,
-        tempdir: str = None,
+        job_create_error: tuple[int, str] | None = None,
+        tempdir: str | None = None,
         invalid_layers: list[str] = [],
     ):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
