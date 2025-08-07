@@ -1,8 +1,13 @@
 import io
 
+import psycopg2
+from django.conf import settings
 from rest_framework.test import APITransactionTestCase
 
+from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import (
+    Geodb,
+    Job,
     Organization,
     OrganizationMember,
     Person,
@@ -31,7 +36,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.o1 = Organization.objects.create(username="o1", organization_owner=self.u1)
 
         # Activate Subscriptions
-        set_subscription(self.o1, "default_org")
+        set_subscription(self.o1, is_external_db_supported=True)
 
         self.p1 = Project.objects.create(name="p1", owner=self.o1)
 
@@ -54,6 +59,22 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         ]
 
         self.p1.direct_collaborators.bulk_create(collaborators)
+
+        delete_db_and_role("test", self.u1.username)
+        self.geodb = Geodb.objects.create(
+            user=self.u1,
+            dbname="test",
+            hostname="geodb",
+            port=5432,
+        )
+
+        self.conn = psycopg2.connect(
+            dbname="test",
+            user=settings.GEODB_USER,
+            password=settings.GEODB_PASSWORD,
+            host=settings.GEODB_HOST,
+            port=settings.GEODB_PORT,
+        )
 
     def _create_secret(self, **kwargs) -> Secret:
         return Secret.objects.create(
@@ -206,3 +227,79 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         self.assertEquals(package_job_1_files.count(), 0)
+
+    def test_org_secret_retrieved_by_worker(self):
+        cur = self.conn.cursor()
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS point (id integer primary key, geometry geometry(point, 2056))"
+        )
+        self.conn.commit()
+
+        # create organization pg_service secrets
+        Secret.objects.create(
+            name="PG_SERVICE_GEODB1",
+            type=Secret.Type.PGSERVICE,
+            created_by=self.u1,
+            organization=self.o1,
+            value=(
+                "[geodb1]\n"
+                "dbname=test\n"
+                "host=geodb\n"
+                "port=5432\n"
+                f"user={settings.GEODB_USER}\n"
+                f"password={settings.GEODB_PASSWORD}\n"
+                "sslmode=disable\n"
+            ),
+        )
+
+        Secret.objects.create(
+            name="PG_SERVICE_GEODB2",
+            type=Secret.Type.PGSERVICE,
+            created_by=self.u1,
+            organization=self.o1,
+            value=(
+                "[geodb2]\n"
+                "dbname=test\n"
+                "host=geodb\n"
+                "port=5432\n"
+                f"user={settings.GEODB_USER}\n"
+                f"password={settings.GEODB_PASSWORD}\n"
+                "sslmode=disable\n"
+            ),
+        )
+
+        self._upload_file(
+            self.u1,
+            self.p1,
+            "project.qgs",
+            io.FileIO(testdata_path("delta/project_pgservice.qgs"), "rb"),
+        )
+
+        wait_for_project_ok_status(self.p1)
+        processprojectfile_job = Job.objects.filter(
+            project=self.p1, type=Job.Type.PROCESS_PROJECTFILE
+        ).latest("updated_at")
+
+        self.assertEqual(processprojectfile_job.status, Job.Status.FINISHED)
+        self.assertIsNotNone(processprojectfile_job.feedback)
+
+        self.p1.refresh_from_db()
+
+        repackage(self.p1, self.u1)
+
+        wait_for_project_ok_status(self.p1)
+        self.p1.refresh_from_db()
+
+        latest_pkg_job = self.p1.latest_package_job_for_user(self.u1)
+
+        self.assertIsNotNone(latest_pkg_job)
+        self.assertIsNotNone(latest_pkg_job.feedback)
+
+        qgis_layer_data_step_feedback = latest_pkg_job.feedback["steps"][2]
+
+        # there is 2 pg layers configured with geodb1 and geodb2 pg services
+        for layer_id in qgis_layer_data_step_feedback["returns"]["layers_by_id"]:
+            layer = qgis_layer_data_step_feedback["returns"]["layers_by_id"][layer_id]
+
+            self.assertTrue(layer["is_valid"])
+            self.assertEqual("no_error", layer["error_code"])

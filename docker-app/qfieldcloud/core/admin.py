@@ -680,10 +680,10 @@ class SecretAdmin(QFieldCloudModelAdmin):
     model = Secret
     form = ProjectSecretForm
     fields = (
-        "project",
         "name",
         "type",
         "assigned_to",
+        "project",
         "organization",
         "created_by",
         "value",
@@ -734,18 +734,27 @@ class SecretAdmin(QFieldCloudModelAdmin):
 
     def get_changeform_initial_data(self, request):
         project_id = request.GET.get("project_id")
+        organization_id = request.GET.get("organization_id")
 
-        if project_id:
+        try:
             project = Project.objects.get(id=project_id)
-        else:
+        except Exception:
             project = None
 
-        return {"project": project}
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Exception:
+            organization = None
+
+        return {
+            "project": project,
+            "organization": organization,
+        }
 
 
-class ProjectSecretInline(QFieldCloudInlineAdmin):
+class SecretInlineBase(QFieldCloudInlineAdmin):
     model = Secret
-    fields = ("link_to_secret", "type", "created_by")
+    fields = ("link_to_secret", "type", "assigned_to", "created_by")
     readonly_fields = ("link_to_secret",)
     max_num = 0
     extra = 0
@@ -764,6 +773,10 @@ class ProjectSecretInline(QFieldCloudInlineAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def get_query_params(self) -> dict[str, str]:
+        """Return query parameters for the 'Add Secret' button."""
+        return {}
+
     @property
     def bottom_html(self):
         if self.parent_obj:
@@ -775,11 +788,29 @@ class ProjectSecretInline(QFieldCloudInlineAdmin):
                     </a>
                 """,
                 url=reverse("admin:core_secret_add"),
-                query_params=urlencode({"project_id": self.parent_obj.pk}),
+                query_params=urlencode(self.get_query_params()),
                 text="Add Secret",
             )
         else:
             return ""
+
+
+class ProjectSecretInline(SecretInlineBase):
+    def get_query_params(self) -> dict[str, str]:
+        """Return query parameters for the 'Add Secret' button."""
+        return {
+            "project_id": str(self.parent_obj.pk),
+        }
+
+
+class OrganizationSecretInline(SecretInlineBase):
+    fk_name = "organization"
+
+    def get_query_params(self) -> dict[str, str]:
+        """Return query parameters for the 'Add Secret' button."""
+        return {
+            "organization_id": str(self.parent_obj.pk),
+        }
 
 
 class ProjectForm(ModelForm):
@@ -1367,6 +1398,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         ProjectInline,
         OrganizationMemberInline,
         TeamInline,
+        OrganizationSecretInline,
     )
     fields = (
         "storage_usage__field",
