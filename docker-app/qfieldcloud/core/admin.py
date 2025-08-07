@@ -745,7 +745,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
 
 class ProjectSecretInline(QFieldCloudInlineAdmin):
     model = Secret
-    fields = ("link_to_secret", "type", "created_by")
+    fields = ("link_to_secret", "type", "assigned_to", "created_by")
     readonly_fields = ("link_to_secret",)
     max_num = 0
     extra = 0
