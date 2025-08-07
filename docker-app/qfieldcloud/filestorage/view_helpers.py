@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from datetime import timezone as tz
 from pathlib import PurePath
 from uuid import UUID
 
@@ -11,6 +13,7 @@ from django.http import FileResponse, HttpResponse
 from django.http.response import HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.http import parse_http_date_safe
 from rest_framework.exceptions import NotFound
 from rest_framework.request import Request
 
@@ -270,7 +273,32 @@ def download_field_file(
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
         storage_filename = field_file.name
-        parameters = {}
+        parameters: dict[str, str | datetime] = {}
+
+        if_match_etags = request.headers.get("if-match", "")
+        if_none_match_etags = request.headers.get("if-none-match", "")
+        if_modified_since_int = parse_http_date_safe(
+            request.headers.get("if-modified-since", "")
+        )
+        if_unmodified_since_int = parse_http_date_safe(
+            request.headers.get("if-unmodified-since", "")
+        )
+
+        if if_match_etags:
+            parameters["IfMatch"] = if_match_etags
+
+        if if_none_match_etags:
+            parameters["IfNoneMatch"] = if_none_match_etags
+
+        if if_modified_since_int:
+            parameters["IfModifiedSince"] = datetime.fromtimestamp(
+                if_modified_since_int, tz=tz.utc
+            )
+
+        if if_unmodified_since_int:
+            parameters["IfUnmodifiedSince"] = datetime.fromtimestamp(
+                if_unmodified_since_int, tz=tz.utc
+            )
 
         if as_attachment:
             parameters.update(
