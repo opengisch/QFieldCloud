@@ -364,6 +364,7 @@ class FileVersion(models.Model):
         self.content.delete()
         super().delete(*args, **kwargs)
 
+    # TODO consider cache
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored.
         Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""

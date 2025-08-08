@@ -1093,6 +1093,7 @@ class Project(models.Model):
 
         return localized_layers
 
+    # TODO consider cache
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
         return self.file_storage
