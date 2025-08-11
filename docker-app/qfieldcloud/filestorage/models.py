@@ -359,10 +359,10 @@ class FileVersion(models.Model):
 
         return file_version_qs.first()
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         # explicitly delete the file from the storage
         self.content.delete()
-        super().delete(*args, **kwargs)
+        return super().delete(*args, **kwargs)
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored.
