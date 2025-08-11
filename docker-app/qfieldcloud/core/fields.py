@@ -50,16 +50,15 @@ class DynamicStorageFieldFile(FieldFile):
 
         self._original_storage = self.storage
 
-        # NOTE We remove the default `storage` attribute added by the base class `FieldFile`,
-        # and we later add a cached property that computes the `storage` dynamically.
-        # This is done to avoid the `storage` being calculated at each instantiation of the `DynamicStorageFieldFile`.
-        # Using the cached and on-demand `storage` property calculation greatly optimizes the performance of the field, by saving N*3 database query calls.
-        # The actual value of the `storage` property is not needed until the file is accessed.
-        del self.storage
-
     @cached_property
     def storage(self) -> Storage:  # type: ignore
-        """Get the storage instance based on the storage name returned by the model instance implementation of `_get_file_storage_name`."""
+        """Get the storage backend instance based on the storage name returned by the model instance implementation of `_get_file_storage_name`.
+
+        Instead of using the `storage` attribute from the base class `FieldFile`, we override it to dynamically determine the storage based on the model instance.
+        The other option would be to calculate the `storage` attribute in the constructor, but it would require three database queries to get the storage name for each instance of the class, which is not efficient.
+
+        Having this as a cached property allows us to calculate the storage only once per instance, which is more efficient.
+        """
         # NOTE if the model is not saved yet, there is a chance that it was instantiated without values
         # for the foreign keys. In some models, e.g. `filestorage.FileVersion`, calling `_get_file_storage_name`
         # requires a foreign key value. Therefore we return the `default` storage for those cases.
