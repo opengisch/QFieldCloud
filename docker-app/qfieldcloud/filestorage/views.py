@@ -103,9 +103,22 @@ class FileListView(generics.ListAPIView):
 
     def get_queryset(self, *args, **kwargs) -> QuerySet[File]:  # type: ignore
         project = get_object_or_404(Project, id=self.kwargs.get("project_id"))
-        qs = File.objects.prefetch_related("versions").filter(
-            project_id=project.id,
-            file_type=File.FileType.PROJECT_FILE,
+
+        qs = (
+            File.objects.select_related(
+                # NOTE needed as we check `get_attachment_dir_prefix(project)` for each file
+                "project",
+                # NOTE needed as we add the `latest_version`'s timestamp
+                "latest_version",
+            )
+            .prefetch_related(
+                # NOTE the `versions` default queryset automatically does `select_related("file")`
+                "versions"
+            )
+            .filter(
+                project_id=project.id,
+                file_type=File.FileType.PROJECT_FILE,
+            )
         )
 
         return qs
