@@ -47,14 +47,12 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             file: The File instance to check.
             file_storage_name: The name of the storage to check against.
         """
-        self.assertEqual(file.file_storage, file_storage_name)
+        self.assertEqual(file.latest_version.file_storage, file_storage_name)
 
         for version in file.versions.all():
             self.assertEqual(version._get_file_storage_name(), file_storage_name)
             self.assertIn(version._get_file_storage_name(), settings.STORAGES.keys())
-            self.assertEqual(
-                storages[version.file.file_storage], version.content.storage
-            )
+            self.assertEqual(storages[version.file_storage], version.content.storage)
             self.assertTrue(version.content.storage.exists(version.content.name))
 
     def test_upload_attachment_succeeds(self):

@@ -3,10 +3,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Protocol, cast
 
-from django.core.files.storage import Storage, storages
+from django.core.files.storage import storages
 from django.db import models
 from django.db.models.fields.files import FieldFile, ImageField, ImageFieldFile
-from django.utils.functional import cached_property
 
 
 class FileStorageNameModelProtocol(Protocol):
@@ -48,21 +47,6 @@ class DynamicStorageFieldFile(FieldFile):
 
         super().__init__(instance, field, name)
 
-        self._original_storage = self.storage
-
-        # NOTE We remove the default `storage` attribute added by the base class `FieldFile`,
-        # and we later add a cached property that computes the `storage` dynamically.
-        # This is done to avoid the `storage` being calculated at each instantiation of the `DynamicStorageFieldFile`.
-        # Using the cached and on-demand `storage` property calculation greatly optimizes the performance of the field, by saving N*3 database query calls.
-        # The actual value of the `storage` property is not needed until the file is accessed.
-        del self.storage
-
-    @cached_property
-    def storage(self) -> Storage:  # type: ignore
-        """Get the storage instance based on the storage name returned by the model instance implementation of `_get_file_storage_name`."""
-        # NOTE if the model is not saved yet, there is a chance that it was instantiated without values
-        # for the foreign keys. In some models, e.g. `filestorage.FileVersion`, calling `_get_file_storage_name`
-        # requires a foreign key value. Therefore we return the `default` storage for those cases.
         try:
             storage_name = self.instance._get_file_storage_name()  # type: ignore
         except Exception:
@@ -74,7 +58,7 @@ class DynamicStorageFieldFile(FieldFile):
         if not storage_name:
             raise EmptyStorageNameError(instance=self.instance)
 
-        return storages[storage_name]
+        self.storage = storages[storage_name]
 
 
 class DynamicStorageFileField(models.FileField):
