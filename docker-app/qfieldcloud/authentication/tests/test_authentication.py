@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 import django.db.utils
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.urls import reverse
 from django.utils.timezone import now
@@ -146,10 +147,17 @@ class QfcTestCase(APITransactionTestCase):
         self.assertGreater(tokens[1].expires_at, now())
 
     def test_login_with_session_case_insensitive(self):
-        self.login_url = reverse("account_login")
+        u2 = Person.objects.create_user(username="u2", password="p2", is_staff=True)
+
+        self.login_url = reverse(settings.LOGIN_URL)
 
         response = self.client.post(
-            self.login_url, {"login": "user1", "password": "i_am_wrong"}, follow=True
+            self.login_url,
+            {
+                "login": "U2",
+                "password": "i_am_wrong",
+            },
+            follow=True,
         )
         # As we use a TemplateResponse we cannot check status_code 302 redirect,
         # because it renders a template instead of returning an HTTP redirect response.
@@ -163,26 +171,14 @@ class QfcTestCase(APITransactionTestCase):
         response = self.client.post(
             self.login_url,
             {
-                "login": "user1",
-                "password": "abc123",
+                "login": "U2",
+                "password": "p2",
             },
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
-
-        response = self.client.post(
-            self.login_url,
-            {
-                "login": "USER1",
-                "password": "abc123",
-            },
-            follow=True,
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.client.session["_auth_user_id"], str(self.user1.id))
+        self.assertEqual(self.client.session["_auth_user_id"], str(u2.id))
 
     def test_case_insensitive_username_uniqueness(self):
         with self.assertRaises(django.db.utils.IntegrityError):
