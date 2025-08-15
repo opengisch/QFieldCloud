@@ -2392,24 +2392,23 @@ class SecretQueryset(models.QuerySet):
         # ensure the user has access to the organization if private project
         if project.owner.is_organization:
             organization = Organization.objects.get(id=project.owner_id)
-            # NOTE if the project is public, then it is not necessary for the user to be a member of the project's organization
+            # NOTE While this assertion is nice to have, it causes huge performance penalty on production, so we explicitly check if we are in non-production mode
             if not project.is_public:
-                # NOTE While this assertion is nice to have, it causes huge performance penalty on production, so we explicitly check if we are in non-production mode
-                assert (
-                    settings.ENVIRONMENT != "production"
-                    and user_has_organization_roles(
+                if settings.ENVIRONMENT != "production":
+                    # NOTE if the project is public, then it is not necessary for the user to be a member of the project's organization
+                    assert user_has_organization_roles(
                         user,
                         organization,
                         OrganizationMember.ALL_ROLES,
                     )
-                )
         else:
             organization = None
 
         # NOTE While this assertion is nice to have, it causes huge performance penalty on production, so we explicitly check if we are in non-production mode
-        assert settings.ENVIRONMENT != "production" and check_user_has_project_roles(
-            user, project, ProjectCollaborator.ALL_ROLES
-        )
+        if settings.ENVIRONMENT != "production":
+            assert check_user_has_project_roles(
+                user, project, ProjectCollaborator.ALL_ROLES
+            )
 
         # filter only the possible secrets combinations.
         secrets_qs = self.filter(
