@@ -96,9 +96,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         project: Project,
         files: list[tuple[str, str]],
         expected_files: list[str],
-        job_create_error: tuple[int, str] = None,
-        tempdir: str = None,
-        invalid_layers: list[str] = [],
+        job_create_error: tuple[int, str] | None = None,
+        tempdir: str | None = None,
+        invalid_layers: list[str] | None = None,
     ):
         self.upload_files(token, project, files)
         self.check_package(
@@ -110,9 +110,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         token: str,
         project: Project,
         expected_files: list[str],
-        job_create_error: tuple[int, str] = None,
-        tempdir: str = None,
-        invalid_layers: list[str] = [],
+        job_create_error: tuple[int, str] | None = None,
+        tempdir: str | None = None,
+        invalid_layers: list[str] | None = None,
     ):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
 
@@ -179,7 +179,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 for layer_id in package_payload["layers"]:
                     layer_data = package_payload["layers"][layer_id]
 
-                    if layer_id in invalid_layers:
+                    if invalid_layers and layer_id in invalid_layers:
                         self.assertFalse(layer_data["is_valid"], layer_id)
                     else:
                         self.assertTrue(layer_data["is_valid"], layer_id)
