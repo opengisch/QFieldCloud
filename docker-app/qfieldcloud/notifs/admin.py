@@ -1,8 +1,7 @@
-from django.contrib import admin
 from notifications.admin import NotificationAdmin as NotificationAdminBase
 from notifications.models import Notification
 
-admin.site.unregister(Notification)
+from qfieldcloud.core.admin import qfc_admin_site
 
 
 class NotificationAdmin(NotificationAdminBase):
@@ -23,4 +22,4 @@ class NotificationAdmin(NotificationAdminBase):
     search_fields = ("recipient__username__icontains",)
 
 
-admin.site.register(Notification, NotificationAdmin)
+qfc_admin_site.register(Notification, NotificationAdmin)

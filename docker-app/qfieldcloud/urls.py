@@ -32,6 +32,7 @@ from drf_spectacular.views import (
 from rest_framework import permissions
 
 from qfieldcloud.authentication import views as auth_views
+from qfieldcloud.core.admin import qfc_admin_site
 from qfieldcloud.core.views.redirect_views import redirect_to_admin_project_view
 from qfieldcloud.filestorage.views import (
     compatibility_file_crud_view,
@@ -92,7 +93,7 @@ urlpatterns = [
         ),
         name="project_file_download",
     ),
-    path(settings.QFIELDCLOUD_ADMIN_URI, admin.site.urls),
+    path(settings.QFIELDCLOUD_ADMIN_URI, qfc_admin_site.urls),
     path("api/v1/auth/login/", auth_views.LoginView.as_view()),
     path("api/v1/auth/token/", auth_views.LoginView.as_view()),
     path("api/v1/auth/user/", auth_views.UserView.as_view()),
