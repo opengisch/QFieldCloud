@@ -57,6 +57,7 @@ class QfcTestCase(APITestCase):
     def _create_secret(self, **kwargs) -> Secret:
         return Secret.objects.create(
             type=Secret.Type.ENVVAR,
+            value="ENVVAR_VALUE",
             **kwargs,
         )
 
