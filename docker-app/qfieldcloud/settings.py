@@ -350,6 +350,7 @@ if SENTRY_DSN:
             InvalidRangeError,
             MultipleProjectsError,
             ProjectAlreadyExistsError,
+            TooManyLoginAttemptsError,
             ValidationError,
         )
         from qfieldcloud.subscription.exceptions import (
@@ -374,6 +375,8 @@ if SENTRY_DSN:
             InvalidRangeError,
             # the client attempted to upload a new .qgs/.qgz file, but the project already has one. The user must delete the QGIS file first before reuploading it.
             MultipleProjectsError,
+            # The client sent too many login attempts, the user should wait before trying again
+            TooManyLoginAttemptsError,
         )
 
         if "exc_info" in hint:
