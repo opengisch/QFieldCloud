@@ -198,3 +198,29 @@ class QfcTestCase(APITestCase):
 
         self.assertEqual(secrets.count(), 1)
         self.assertEqual(secrets[0], s1_project_assigned)
+
+    def test_check_secrets_do_not_leak(self):
+        p4 = Project.objects.create(name="p4", owner=self.u2)
+
+        p3_s1 = self._create_secret(name="p3_s1", project=self.p3)
+        p4_s2 = self._create_secret(name="p4_s2", project=p4)
+
+        secrets = Secret.objects.for_user_and_project(self.u1, self.p3)
+
+        self.assertEqual(secrets.count(), 1)
+        self.assertEqual(secrets[0], p3_s1)
+
+        with self.assertRaises(UserProjectRoleError):
+            secrets = Secret.objects.for_user_and_project(self.u1, p4)
+
+            self.assertEqual(secrets.count(), 0)
+
+        with self.assertRaises(UserProjectRoleError):
+            secrets = Secret.objects.for_user_and_project(self.u2, self.p3)
+
+            self.assertEqual(secrets.count(), 0)
+
+        secrets = Secret.objects.for_user_and_project(self.u2, p4)
+
+        self.assertEqual(secrets.count(), 1)
+        self.assertEqual(secrets[0], p4_s2)

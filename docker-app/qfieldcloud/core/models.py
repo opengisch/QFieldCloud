@@ -2414,19 +2414,25 @@ class SecretQueryset(models.QuerySet):
         secrets_qs = self.filter(
             Q(
                 # organization-assigned secrets
-                Q(organization=organization) & Q(assigned_to__isnull=True)
+                Q(organization=organization)
+                & Q(project__isnull=True)
+                & Q(assigned_to__isnull=True)
             )
             | Q(
                 # user-assigned organization secrets
-                Q(organization=organization) & Q(assigned_to=user)
+                Q(organization=organization)
+                & Q(project__isnull=True)
+                & Q(assigned_to=user)
             )
             | Q(
                 # project-assigned secrets
-                Q(project=project) & Q(assigned_to__isnull=True)
+                Q(organization__isnull=True)
+                & Q(project=project)
+                & Q(assigned_to__isnull=True)
             )
             | Q(
                 # user assigned project secrets
-                Q(project=project) & Q(assigned_to=user)
+                Q(organization__isnull=True) & Q(project=project) & Q(assigned_to=user)
             )
         )
 
