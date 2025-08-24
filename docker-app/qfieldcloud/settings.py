@@ -336,6 +336,10 @@ SITE_ID = 1
 LOGIN_URL = "account_login"
 LOGIN_REDIRECT_URL = "index"
 
+#########################
+# Sentry settings
+#########################
+
 # Sentry configuration
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 if SENTRY_DSN:
@@ -410,41 +414,54 @@ if SENTRY_DSN:
 # Only requests with a < 10MB body will be reported
 SENTRY_REPORT_FULL_BODY = True
 
-# Django allauth configurations
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_LOGIN_METHODS = {"username", "email"}
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
-ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
+#########################
+# /Sentry settings
+#########################
 
-# Django allauth's RateLimiter configuration
-# https://docs.allauth.org/en/latest/account/rate_limits.html
-ACCOUNT_RATE_LIMITS = False
 
-# Choose one of "mandatory", "optional", or "none".
-# For local development and test use "optional" or "none"
-ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+#########################
+# Django allauth settings
+#########################
 
-# This setting determines whether the username is stored in lowercase (False) or whether its casing is to be preserved (True).
-# Note that when casing is preserved, potentially expensive __iexact lookups are performed when filter on username.
-# For now, the default is set to True to maintain backwards compatibility.
-# See https://docs.allauth.org/en/dev/account/configuration.html
-ACCOUNT_PRESERVE_USERNAME_CASING = True
-ACCOUNT_USERNAME_REQUIRED = True
+# https://docs.allauth.org/en/latest/account/configuration.html#overall
 ACCOUNT_ADAPTER = os.environ.get(
     "QFIELDCLOUD_ACCOUNT_ADAPTER", "qfieldcloud.core.adapters.AccountAdapterSignUpOpen"
 )
+
+# https://docs.allauth.org/en/latest/account/configuration.html#signup
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
+# https://docs.allauth.org/en/latest/account/configuration.html#login
+ACCOUNT_LOGIN_METHODS = ["username", "email"]
+
+# https://docs.allauth.org/en/latest/account/configuration.html#logout
 ACCOUNT_LOGOUT_ON_GET = True
 
+# https://docs.allauth.org/en/latest/account/configuration.html#email-verification
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
+ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+
+# https://docs.allauth.org/en/latest/account/rate_limits.html
+ACCOUNT_RATE_LIMITS = False
+
+# https://docs.allauth.org/en/latest/account/configuration.html#user-model
+# NOTE when casing is preserved, potentially expensive `__iexact`` lookups are performed when filter on username.
+# For now, the default is set to `True` to maintain backwards compatibility.
+ACCOUNT_PRESERVE_USERNAME_CASING = True
+
 # Django allauth's social account configuration
-# https://docs.allauth.org/en/dev/socialaccount/configuration.html
+# https://docs.allauth.org/en/latest/socialaccount/configuration.html
 SOCIALACCOUNT_ADAPTER = "qfieldcloud.core.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
-
 SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
+
+#########################
+# /Django allauth settings
+#########################
 
 QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = bool(
     int(os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED", 0))
