@@ -142,7 +142,7 @@ jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-json-log-formatter==1.1
+json-log-formatter==1.1.1
     # via -r /requirements/requirements.in
 jsonfield==3.1.0
     # via django-notifications-hq
