@@ -156,7 +156,7 @@ oauthlib==3.2.2
     # via requests-oauthlib
 phonenumbers==8.13.55
     # via -r /requirements/requirements.in
-pillow==11.1.0
+pillow==11.3.0
     # via -r /requirements/requirements.in
 psycopg2==2.9.10
     # via -r /requirements/requirements.in
