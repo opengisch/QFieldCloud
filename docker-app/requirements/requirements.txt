@@ -128,7 +128,7 @@ django-tables2==2.7.5
     # via -r /requirements/requirements.in
 django-timezone-field==7.1
     # via -r /requirements/requirements.in
-djangorestframework==3.15.2
+djangorestframework==3.16.1
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
