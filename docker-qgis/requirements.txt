@@ -12,7 +12,6 @@ certifi==2024.8.30
     # via
     #   qfieldcloud-sdk
     #   requests
-    #   sentry-sdk
 charset-normalizer==3.3.2
     # via
     #   qfieldcloud-sdk
@@ -41,8 +40,6 @@ rpds-py==0.20.0
     # via
     #   jsonschema
     #   referencing
-sentry-sdk==2.13.0
-    # via -r requirements.in
 tabulate==0.9.0
     # via -r requirements.in
 tqdm==4.66.5
@@ -53,4 +50,3 @@ urllib3==2.2.2
     # via
     #   qfieldcloud-sdk
     #   requests
-    #   sentry-sdk
