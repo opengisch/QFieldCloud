@@ -66,22 +66,28 @@ class LoginSerializer(serializers.Serializer):
 
             # Authentication through email
             if (
-                app_settings.AUTHENTICATION_METHOD
-                == app_settings.AuthenticationMethod.EMAIL
+                app_settings.LoginMethod.EMAIL in app_settings.LOGIN_METHODS
+                and app_settings.LoginMethod.USERNAME in app_settings.LOGIN_METHODS
+                and len(app_settings.LOGIN_METHODS) == 2
             ):
-                user = self._validate_email(email, password)
-
-            # Authentication through username
-            elif (
-                app_settings.AUTHENTICATION_METHOD
-                == app_settings.AuthenticationMethod.USERNAME
-            ):
-                user = self._validate_username(username, password)
-
-            # Authentication through either username or email
-            else:
+                # Authentication through either username or email
                 user = self._validate_username_email(username, email, password)
-
+            elif (
+                app_settings.LoginMethod.EMAIL in app_settings.LOGIN_METHODS
+                and len(app_settings.LOGIN_METHODS) == 1
+            ):
+                # Authentication through email
+                user = self._validate_email(email, password)
+            elif (
+                app_settings.LoginMethod.USERNAME in app_settings.LOGIN_METHODS
+                and len(app_settings.LOGIN_METHODS) == 1
+            ):
+                # Authentication through username
+                user = self._validate_username(username, password)
+            else:
+                raise NotImplementedError(
+                    "Only login by username and/or email is supported. Check `LOGIN_METHODS` setting."
+                )
         else:
             # Authentication without using allauth
             if email:
