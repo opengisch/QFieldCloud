@@ -26,7 +26,9 @@ jsonschema==4.25.1
     # via -r requirements.in
 jsonschema-specifications==2023.12.1
     # via jsonschema
-qfieldcloud-sdk==0.8.4
+pathvalidate==3.3.1
+    # via qfieldcloud-sdk
+qfieldcloud-sdk==0.10.0
     # via -r requirements.in
 referencing==0.35.1
     # via
