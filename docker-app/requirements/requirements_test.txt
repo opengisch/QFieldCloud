@@ -30,15 +30,15 @@ exceptiongroup==1.2.2
     #   trio
     #   trio-websocket
 fiona==1.9.6
-    # via -r /requirements/requirements_test.in
-h11==0.14.0
+    # via -r requirements_test.in
+h11==0.16.0
     # via wsproto
 idna==3.8
     # via
     #   requests
     #   trio
 imageio==2.35.1
-    # via -r /requirements/requirements_test.in
+    # via -r requirements_test.in
 numpy==2.1.0
     # via
     #   imageio
@@ -49,14 +49,14 @@ pillow==10.4.0
     # via imageio
 pysocks==1.7.1
     # via urllib3
-requests==2.32.3
+requests==2.32.4
     # via requests-mock
 requests-mock==1.12.1
-    # via -r /requirements/requirements_test.in
+    # via -r requirements_test.in
 selenium==4.6.1
-    # via -r /requirements/requirements_test.in
+    # via -r requirements_test.in
 shapely==2.0.6
-    # via -r /requirements/requirements_test.in
+    # via -r requirements_test.in
 six==1.16.0
     # via fiona
 sniffio==1.3.1
