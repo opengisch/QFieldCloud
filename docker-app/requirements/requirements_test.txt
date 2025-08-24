@@ -31,7 +31,7 @@ exceptiongroup==1.2.2
     #   trio-websocket
 fiona==1.9.6
     # via -r /requirements/requirements_test.in
-h11==0.14.0
+h11==0.16.0
     # via wsproto
 idna==3.8
     # via
@@ -49,7 +49,7 @@ pillow==10.4.0
     # via imageio
 pysocks==1.7.1
     # via urllib3
-requests==2.32.3
+requests==2.32.5
     # via requests-mock
 requests-mock==1.12.1
     # via -r /requirements/requirements_test.in
