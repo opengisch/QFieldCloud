@@ -4,37 +4,37 @@
 #
 #    pip-compile --output-file=/requirements/requirements.txt /requirements/requirements.in
 #
-asgiref==3.8.1
+asgiref==3.9.1
     # via
     #   django
     #   django-allauth
     #   django-axes
     #   django-countries
-attrs==24.2.0
+attrs==25.3.0
     # via
     #   jsonschema
     #   referencing
-beautifulsoup4==4.12.3
+beautifulsoup4==4.13.5
     # via django-bootstrap4
 boto3==1.35.90
     # via -r /requirements/requirements.in
 boto3-stubs==1.35.90
     # via -r /requirements/requirements.in
-botocore==1.35.90
+botocore==1.35.99
     # via
     #   boto3
     #   s3transfer
-botocore-stubs==1.35.10
+botocore-stubs==1.38.46
     # via boto3-stubs
-certifi==2024.8.30
+certifi==2025.8.3
     # via
     #   requests
     #   sentry-sdk
-cffi==1.17.0
+cffi==1.17.1
     # via cryptography
-charset-normalizer==3.3.2
+charset-normalizer==3.4.3
     # via requests
-cryptography==44.0.0
+cryptography==45.0.6
     # via
     #   django-cryptography
     #   pyjwt
@@ -72,7 +72,7 @@ django==4.2.23
     #   jsonfield
 django-allauth[socialaccount]==65.4.1
     # via -r /requirements/requirements.in
-django-appconf==1.0.6
+django-appconf==1.1.0
     # via django-cryptography
 django-auditlog==3.2.1
     # via -r /requirements/requirements.in
@@ -134,25 +134,25 @@ djangorestframework==3.16.1
     #   drf-spectacular
 drf-spectacular==0.28.0
     # via -r /requirements/requirements.in
-idna==3.8
+idna==3.10
     # via requests
 inflection==0.5.1
     # via drf-spectacular
-jmespath==0.10.0
+jmespath==1.0.1
     # via
     #   boto3
     #   botocore
 json-log-formatter==1.1.1
     # via -r /requirements/requirements.in
-jsonfield==3.1.0
+jsonfield==3.2.0
     # via django-notifications-hq
-jsonschema==4.23.0
+jsonschema==4.25.1
     # via drf-spectacular
-jsonschema-specifications==2023.12.1
+jsonschema-specifications==2025.4.1
     # via jsonschema
 mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
-oauthlib==3.2.2
+oauthlib==3.3.1
     # via requests-oauthlib
 phonenumbers==9.0.12
     # via -r /requirements/requirements.in
@@ -170,34 +170,34 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   django-auditlog
-pytz==2024.1
+pytz==2025.2
     # via django-notifications-hq
 pyyaml==6.0.2
     # via drf-spectacular
-referencing==0.35.1
+referencing==0.36.2
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.3
+requests==2.32.5
     # via
     #   django-allauth
     #   requests-oauthlib
     #   stripe
 requests-oauthlib==2.0.0
     # via django-allauth
-rpds-py==0.20.0
+rpds-py==0.27.0
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.10.2
+s3transfer==0.10.4
     # via boto3
 sentry-sdk==1.45.1
     # via -r /requirements/requirements.in
-six==1.16.0
+six==1.17.0
     # via python-dateutil
-soupsieve==2.6
+soupsieve==2.7
     # via beautifulsoup4
-sqlparse==0.5.1
+sqlparse==0.5.3
     # via
     #   django
     #   django-debug-toolbar
@@ -205,22 +205,24 @@ stripe==4.2.0
     # via -r /requirements/requirements.in
 swapper==1.4.0
     # via django-notifications-hq
-types-awscrt==0.21.2
+types-awscrt==0.27.6
     # via botocore-stubs
-types-s3transfer==0.10.2
+types-s3transfer==0.13.0
     # via boto3-stubs
-typing-extensions==4.12.2
+typing-extensions==4.14.1
     # via
     #   asgiref
+    #   beautifulsoup4
     #   boto3-stubs
     #   django-countries
     #   mypy-boto3-s3
-uritemplate==4.1.1
+    #   referencing
+uritemplate==4.2.0
     # via drf-spectacular
-urllib3==1.26.20
+urllib3==2.5.0
     # via
     #   botocore
     #   requests
     #   sentry-sdk
-wrapt==1.16.0
+wrapt==1.17.3
     # via deprecated
