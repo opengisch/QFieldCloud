@@ -70,7 +70,7 @@ django==4.2.23
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.4.1
+django-allauth[socialaccount]==65.11.0
     # via -r /requirements/requirements.in
 django-appconf==1.1.0
     # via django-cryptography
@@ -153,7 +153,7 @@ jsonschema-specifications==2025.4.1
 mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.3.1
-    # via requests-oauthlib
+    # via django-allauth
 phonenumbers==9.0.12
     # via -r /requirements/requirements.in
 pillow==11.3.0
@@ -181,10 +181,7 @@ referencing==0.36.2
 requests==2.32.5
     # via
     #   django-allauth
-    #   requests-oauthlib
     #   stripe
-requests-oauthlib==2.0.0
-    # via django-allauth
 rpds-py==0.27.0
     # via
     #   jsonschema
