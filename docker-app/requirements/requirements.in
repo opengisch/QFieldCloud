@@ -28,7 +28,7 @@ django-sri==0.8.0
 django-storages==1.14.6
 django-tables2==2.7.5
 django-timezone-field==7.1
-django==4.2.19
+django==4.2.23
 djangorestframework==3.16.1
 drf-spectacular==0.28.0
 json-log-formatter==1.1.1
