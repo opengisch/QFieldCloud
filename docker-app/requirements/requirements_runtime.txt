@@ -6,5 +6,5 @@
 #
 gunicorn==23.0.0
     # via -r /requirements/requirements_runtime.in
-packaging==24.1
+packaging==25.0
     # via gunicorn
