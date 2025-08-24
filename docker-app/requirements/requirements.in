@@ -12,7 +12,7 @@ django-constance[database]==4.3.2
 django-countries==7.6.1
 django-cron==0.6.0
 django-cryptography==1.1
-django-currentuser==0.8.0
+django-currentuser==0.9.0
 django-debug-toolbar==5.0.1
 django-extensions==3.2.3
 django-filter==25.1

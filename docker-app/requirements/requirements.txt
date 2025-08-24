@@ -94,7 +94,7 @@ django-cron==0.6.0
     # via -r /requirements/requirements.in
 django-cryptography==1.1
     # via -r /requirements/requirements.in
-django-currentuser==0.8.0
+django-currentuser==0.9.0
     # via -r /requirements/requirements.in
 django-debug-toolbar==5.0.1
     # via -r /requirements/requirements.in
