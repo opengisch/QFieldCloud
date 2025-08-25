@@ -125,6 +125,36 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 self.assertEquals(r4.status_code, status.HTTP_206_PARTIAL_CONTENT)
                 self.assertEquals(r4.content, b"abcdefghijkl")
 
+    @override_settings(QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH=3)
+    def test_minimum_range_header_length(self):
+        for project in [self.project_default_storage, self.project_webdav_storage]:
+            # first upload of the file
+            response = self._upload_file(
+                self.u1, project, "file.name", StringIO("abcdefghijkl")
+            )
+
+            with self.subTest(case=project):
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertEqual(project.project_files.count(), 1)
+                self.assertEqual(project.get_file("file.name").versions.count(), 1)
+
+                # download parts of the file, with specific ranges
+                r1 = self._download_file(
+                    self.u1, project, "file.name", headers={"Range": "bytes=0-2"}
+                )
+
+                self.assertEquals(r1.status_code, status.HTTP_206_PARTIAL_CONTENT)
+                self.assertEquals(r1.content, b"abc")
+
+                # download parts of the file, with specific ranges
+                r1 = self._download_file(
+                    self.u1, project, "file.name", headers={"Range": "bytes=0-1"}
+                )
+
+                self.assertEquals(
+                    r1.status_code, status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
+                )
+
     def test_upload_file_then_download_wrong_range_fails(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:
             # first upload of the file
