@@ -680,7 +680,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
 }
 
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
-QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 1000000
+QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
 
 # Name of the qgis docker image used as a worker by worker_wrapper
 QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
