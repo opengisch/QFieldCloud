@@ -30,8 +30,8 @@ class QfcTestCase(APITransactionTestCase):
         self,
         project,
         user,
-        role: ProjectCollaborator.Roles = None,
-        origin: ProjectQueryset.RoleOrigins = None,
+        role: ProjectCollaborator.Roles | None = None,
+        origin: ProjectQueryset.RoleOrigins | None = None,
         is_valid: bool = True,
     ):
         """Asserts that user has give role/origin on project"""
