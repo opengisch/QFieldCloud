@@ -1314,13 +1314,12 @@ class Project(models.Model):
         Returns:
             The last package job for the user.
         """
+        secret_filters = Q(project=self, organization=None, assigned_to=user)
+
         if self.owner.is_organization:
-            secret_qs = Secret.objects.filter(
-                Q(organization=self.owner, assigned_to=user)
-                | Q(project=self, assigned_to=user)
-            )
-        else:
-            secret_qs = Secret.objects.filter(project=self, assigned_to=user)
+            secret_filters |= Q(project=None, organization=self.owner, assigned_to=user)
+
+        secret_qs = Secret.objects.filter(secret_filters)
 
         jobs_qs = (
             self.jobs.annotate(has_user_secret=Exists(secret_qs))
