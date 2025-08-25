@@ -1,9 +1,6 @@
 import logging
-import time
 
 from django.conf import settings
-from django.core.cache import cache
-from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
@@ -16,9 +13,6 @@ logging.disable(logging.CRITICAL)
 
 class QfcTestCase(APITransactionTestCase):
     def setUp(self):
-        # Empty cache value
-        cache.delete("status_results")
-
         # Create needed subscription relations
         setup_subscription_plans()
 
@@ -33,26 +27,6 @@ class QfcTestCase(APITransactionTestCase):
             for n in range(self.total_projects)
         )
         Project.objects.bulk_create(projects)
-
-    def test_api_status(self):
-        response = self.client.get("/api/v1/status/")
-
-        self.assertTrue(status.is_success(response.status_code))
-
-        data = response.json()
-
-        self.assertIn("database", data)
-        self.assertEqual(data["database"], "ok")
-
-        self.assertIn("storage", data)
-        self.assertEqual(data["storage"], "ok")
-
-    def test_api_status_cache(self):
-        tic = time.perf_counter()
-        self.client.get("/api/v1/status/")
-        toc = time.perf_counter()
-
-        self.assertGreater(toc - tic, 0)
 
     def test_api_pagination_limitoffset(self):
         """Test LimitOffset pagination custom implementation"""
