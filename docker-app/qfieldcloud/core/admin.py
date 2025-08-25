@@ -703,7 +703,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "name__icontains",
         "project__name__icontains",
         "assigned_to__username__icontains",
-        "organization__name__icontains",
+        "organization__username__icontains",
     )
 
     @admin.display(ordering="created_by", description=_("Created by"))
