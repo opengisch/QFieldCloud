@@ -67,11 +67,6 @@ And collect the static files (CSS, JS etc):
 
     docker compose run app python manage.py collectstatic --noinput
 
-You can check if everything seems to work correctly using the
-`status` command:
-
-    docker compose exec app python manage.py status
-
 Now you can get started by adding the first user that would also be a super user:
 
     docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
