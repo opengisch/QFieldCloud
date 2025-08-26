@@ -34,11 +34,11 @@
             "sourceLayerId": "polygons_f18b6046_8e46_4206_a698_641c58e5ac73",
             "method": "patch",
             "new": {
-                "geometry": "POLYGON ((666 666, 5 2, 5 5, 2 5, 666 666 ))",
+                "geometry": "POLYGON ((666 666, 5 2, 5 5, 2 5, 666 666))",
                 "attributes": {
-                    "dbl": 0.666,
-                    "int": 666,
-                    "str": "str666"
+                    "dbl": 0.777,
+                    "int": 777,
+                    "str": "str777"
                 }
             },
             "old": {

@@ -1058,6 +1058,28 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[1]["properties"]["int"], 2)
             self.assertEqual(features[2]["properties"]["int"], 3)
 
+    def test_push_list_multilayer_multidelta(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "5cab83db-e2be-4e1b-8239-b30942bb4810",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "e3ac977e-1cb2-4daf-9acb-f6e28ba016f4",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+
     def test_push_list_multilayer_multidelta_same_pk(self):
         """
         Test that multiple deltas with same PK value in different layers are applied correctly
