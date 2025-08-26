@@ -1286,14 +1286,16 @@ class QfcTestCase(APITransactionTestCase):
                         json.dumps(payload[idx], sort_keys=True, indent=2),
                     )
 
-                    for job in Job.objects.all():
-                        job = Job.objects.latest("updated_at")
-                        print("Job:\n", job.type, job.status)
-                        print("Output:\n", job.output)
-                        print(
-                            "Feedback:\n",
-                            json.dumps(job.feedback, sort_keys=True, indent=2),
-                        )
+                    job = Job.objects.filter(type=Job.Type.DELTA_APPLY).latest(
+                        "updated_at"
+                    )
+
+                    print("Job:\n", job.type, job.status)
+                    print("Output:\n", job.output)
+                    print(
+                        "Feedback:\n",
+                        json.dumps(job.feedback, sort_keys=True, indent=2),
+                    )
 
                     raise err
 
