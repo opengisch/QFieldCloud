@@ -1066,6 +1066,8 @@ class QfcTestCase(APITransactionTestCase):
         2. Push the deltas (NOT sync, we should not know the remote PK on the client).
         3. Modify the same two features and push the deltas.
         4. Check that the deltas have been applied correctly.
+        5. Delete the same two features and push the deltas.
+        6. Check that the deltas have been applied correctly.
 
         See https://github.com/opengisch/QFieldCloud/issues/570#issuecomment-3183791135
         """
@@ -1101,6 +1103,23 @@ class QfcTestCase(APITransactionTestCase):
                 ],
                 [
                     "9311eb96-bff8-4d5b-ab36-c314a007cfc4",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta_delete.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc5",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc6",
                     "STATUS_APPLIED",
                     self.user1.username,
                 ],
