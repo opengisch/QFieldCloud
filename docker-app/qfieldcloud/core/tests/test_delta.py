@@ -1175,7 +1175,13 @@ class QfcTestCase(APITransactionTestCase):
             {"file": self.get_delta_file_with_project_id(project, delta_file)},
             format="multipart",
         )
-        return rest_framework.status.is_success(response.status_code)
+
+        is_sucess = rest_framework.status.is_success(response.status_code)
+
+        if not is_sucess:
+            print("Failed to upload delta file:", response.status_code, response.data)
+
+        return is_sucess
 
     def upload_and_check_deltas(
         self,
