@@ -1058,6 +1058,55 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[1]["properties"]["int"], 2)
             self.assertEqual(features[2]["properties"]["int"], 3)
 
+    def test_push_list_multilayer_multidelta_same_pk(self):
+        """
+        Test that multiple deltas with same PK value in different layers are applied correctly
+
+        1. Create two features with same local PK in different layers (and unknown remote PK).
+        2. Push the deltas (NOT sync, we should not know the remote PK on the client).
+        3. Modify the same two features and push the deltas.
+        4. Check that the deltas have been applied correctly.
+
+        See https://github.com/opengisch/QFieldCloud/issues/570#issuecomment-3183791135
+        """
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta_create.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc1",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc2",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta_modify.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc3",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc4",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+
     def get_file_contents(self, project, filename):
         response = self.client.get(f"/api/v1/files/{project.id}/{filename}/")
 
