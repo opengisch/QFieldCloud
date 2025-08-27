@@ -1058,6 +1058,96 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(features[1]["properties"]["int"], 2)
             self.assertEqual(features[2]["properties"]["int"], 3)
 
+    def test_push_list_multilayer_multidelta(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "5cab83db-e2be-4e1b-8239-b30942bb4810",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "e3ac977e-1cb2-4daf-9acb-f6e28ba016f4",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+
+    def test_push_list_multilayer_multidelta_same_pk(self):
+        """
+        Test that multiple deltas with same PK value in different layers are applied correctly
+
+        1. Create two features with same local PK in different layers (and unknown remote PK).
+        2. Push the deltas (NOT sync, we should not know the remote PK on the client).
+        3. Modify the same two features and push the deltas.
+        4. Check that the deltas have been applied correctly.
+        5. Delete the same two features and push the deltas.
+        6. Check that the deltas have been applied correctly.
+
+        See https://github.com/opengisch/QFieldCloud/issues/570#issuecomment-3183791135
+        """
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self.upload_project_files(self.project1)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta_create.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc1",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc2",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta_modify.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc3",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc4",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="multilayer_multidelta_delete.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc5",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+                [
+                    "9311eb96-bff8-4d5b-ab36-c314a007cfc6",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ],
+            ],
+        )
+
     def get_file_contents(self, project, filename):
         response = self.client.get(f"/api/v1/files/{project.id}/{filename}/")
 
@@ -1085,7 +1175,13 @@ class QfcTestCase(APITransactionTestCase):
             {"file": self.get_delta_file_with_project_id(project, delta_file)},
             format="multipart",
         )
-        return rest_framework.status.is_success(response.status_code)
+
+        is_sucess = rest_framework.status.is_success(response.status_code)
+
+        if not is_sucess:
+            print("Failed to upload delta file:", response.status_code, response.data)
+
+        return is_sucess
 
     def upload_and_check_deltas(
         self,
@@ -1196,14 +1292,16 @@ class QfcTestCase(APITransactionTestCase):
                         json.dumps(payload[idx], sort_keys=True, indent=2),
                     )
 
-                    for job in Job.objects.all():
-                        job = Job.objects.latest("updated_at")
-                        print("Job:\n", job.type, job.status)
-                        print("Output:\n", job.output)
-                        print(
-                            "Feedback:\n",
-                            json.dumps(job.feedback, sort_keys=True, indent=2),
-                        )
+                    job = Job.objects.filter(type=Job.Type.DELTA_APPLY).latest(
+                        "updated_at"
+                    )
+
+                    print("Job:\n", job.type, job.status)
+                    print("Output:\n", job.output)
+                    print(
+                        "Feedback:\n",
+                        json.dumps(job.feedback, sort_keys=True, indent=2),
+                    )
 
                     raise err
 
