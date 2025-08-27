@@ -75,6 +75,16 @@ If QFieldCloud needs to be translated, you can compile the translations using Dj
 
     docker compose run --user root app python manage.py compilemessages
 
+### Troubleshooting
+
+To verify the instance is working fine, you can check using the healthcheck endpoint and make sure the `database` and `storage` keys have `ok` status:
+
+    curl https://localhost/api/v1/status/
+
+If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain the most of the relevant information.
+
+    docker compose logs nginx app
+
 ### Dependencies
 
 QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage it's dependencies.
