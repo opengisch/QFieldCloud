@@ -67,11 +67,6 @@ And collect the static files (CSS, JS etc):
 
     docker compose run app python manage.py collectstatic --noinput
 
-You can check if everything seems to work correctly using the
-`status` command:
-
-    docker compose exec app python manage.py status
-
 Now you can get started by adding the first user that would also be a super user:
 
     docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
@@ -79,6 +74,16 @@ Now you can get started by adding the first user that would also be a super user
 If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
 
     docker compose run --user root app python manage.py compilemessages
+
+### Troubleshooting
+
+To verify the instance is working fine, you can check using the healthcheck endpoint and make sure the `database` and `storage` keys have `ok` status:
+
+    curl https://localhost/api/v1/status/
+
+If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain the most of the relevant information.
+
+    docker compose logs nginx app
 
 ### Dependencies
 
