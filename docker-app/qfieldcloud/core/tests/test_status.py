@@ -19,13 +19,6 @@ class QfcTestCase(APITransactionTestCase):
         # Empty cache value
         cache.clear()
 
-        # # Create needed subscription relations
-        # setup_subscription_plans()
-
-        # # Set up a user to own projects
-        # self.user = Person.objects.create_user(username="user1", password="abc123")
-        # self.token = AuthToken.objects.get_or_create(user=self.user)[0]
-
     def test_status_api(self):
         response = self.client.get("/api/v1/status/")
 
