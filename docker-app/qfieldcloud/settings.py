@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -638,6 +638,22 @@ CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
 CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = 60 * 60 * 24
 CONSTANCE_CONFIG = {
+    "INCIDENT_IS_ACTIVE": (
+        False,
+        "Is there an ongoing incident? If checked, a banner will be shown on top of every page with the content of `INCIDENT_MESSAGE`.",
+        bool,
+    ),
+    "INCIDENT_TIMESTAMP_UTC": (
+        datetime(2025, 1, 1, 0, 0, 0),
+        "When the incident started. Put time in UTC!",
+        datetime,
+    ),
+    "INCIDENT_MESSAGE": (
+        "QFieldCloud is currently experiencing stability issues. Our team is investigating the problem.",
+        """The banner content to be shown on top of every page if `INCIDENT_IS_ACTIVE` is checked.
+        If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
+        "textarea",
+    ),
     "WORKER_TIMEOUT_S": (
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
@@ -663,6 +679,11 @@ CONSTANCE_CONFIG = {
         "Days in which the trial period expires.",
         int,
     ),
+    "STATUS_PAGE_URL": (
+        "https://status.qfield.cloud/",
+        "Status page URL",
+        str,
+    ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -673,6 +694,11 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     ]
 }
 CONSTANCE_CONFIG_FIELDSETS = {
+    "Incidents": (
+        "INCIDENT_IS_ACTIVE",
+        "INCIDENT_TIMESTAMP_UTC",
+        "INCIDENT_MESSAGE",
+    ),
     "Worker": (
         "WORKER_TIMEOUT_S",
         "WORKER_QGIS_MEMORY_LIMIT",
@@ -680,6 +706,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Debug": ("SENTRY_REQUEST_MAX_SIZE_TO_SEND",),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
+    "Web": ("STATUS_PAGE_URL",),
 }
 
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
