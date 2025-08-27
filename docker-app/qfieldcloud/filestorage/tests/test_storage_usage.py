@@ -77,6 +77,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(self.p1.project_files.count(), 1)
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 2)
         self.assertEqual(self.p1.file_storage_bytes, 13)
+        # TODO: Change the number of files with QF-4963 Drop support for legacy storage
         # p2 checks
         # since the project is in the legacy storage, no `File`` object is created.
         self.assertEqual(p2.project_files.count(), 0)
