@@ -30,6 +30,7 @@ from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
+from encrypted_fields.fields import EncryptedTextField
 from model_utils.managers import (
     InheritanceManagerMixin,
     InheritanceQuerySet,
@@ -2533,7 +2534,15 @@ class Secret(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-    value = django_cryptography.fields.encrypt(models.TextField())
+
+    # TODO Remove with QF-6361 Remove legacy `django_cryptography`'s encrypted field support
+    # legacy field to store the encrypted value of the secret.
+    old_value = django_cryptography.fields.encrypt(
+        models.TextField(blank=True, null=True)
+    )
+
+    # encrypted value of the secret.
+    value = EncryptedTextField()
 
     def clean(self, **kwargs) -> None:
         # for project secrets assigned to a user,

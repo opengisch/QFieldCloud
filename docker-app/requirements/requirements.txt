@@ -37,6 +37,7 @@ charset-normalizer==3.4.3
 cryptography==45.0.6
     # via
     #   django-cryptography
+    #   django-fernet-encrypted-fields
     #   pyjwt
 deprecated==1.2.18
     # via -r /requirements/requirements.in
@@ -55,6 +56,7 @@ django==4.2.23
     #   django-currentuser
     #   django-debug-toolbar
     #   django-extensions
+    #   django-fernet-encrypted-fields
     #   django-filter
     #   django-invitations
     #   django-jazzmin
@@ -99,6 +101,8 @@ django-currentuser==0.9.0
 django-debug-toolbar==6.0.0
     # via -r /requirements/requirements.in
 django-extensions==4.1
+    # via -r /requirements/requirements.in
+django-fernet-encrypted-fields==0.3.0
     # via -r /requirements/requirements.in
 django-filter==25.1
     # via -r /requirements/requirements.in
