@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 
+from qfieldcloud.billing.integrations.stripe.enums import RecurringInterval
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
@@ -28,6 +29,10 @@ from qfieldcloud.core.models import (
 from .exceptions import NotPremiumPlanException
 
 logger = logging.getLogger(__name__)
+
+RECURRING_INTERVAL_CHOICES = [
+    (interval.value, interval.value.title()) for interval in RecurringInterval
+]
 
 
 def get_subscription_model() -> "Subscription":
@@ -494,6 +499,13 @@ class AbstractSubscription(models.Model):
         max_length=100, choices=Status.choices, default=Status.INACTIVE_DRAFT
     )
 
+    interval = models.CharField(
+        max_length=100,
+        choices=RECURRING_INTERVAL_CHOICES,
+        default=RecurringInterval.MONTH,
+        help_text="Recurring interval for this subscription (e.g., month, year)",
+    )
+
     created_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -870,6 +882,7 @@ class AbstractSubscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: datetime | None = None,
+        interval: RecurringInterval = RecurringInterval.MONTH,
     ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
@@ -905,6 +918,7 @@ class AbstractSubscription(models.Model):
                 status=plan.initial_subscription_status,
                 active_since=active_since,
                 active_until=active_until,
+                interval=RecurringInterval.MONTH,
             )
             # NOTE to get annotations, mostly `is_active`
             trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
@@ -947,6 +961,7 @@ class AbstractSubscription(models.Model):
             created_by=created_by,
             status=regular_plan.initial_subscription_status,
             active_since=regular_active_since,
+            interval=interval,
         )
         # NOTE to get annotations, mostly `is_active`
         regular_subscription_obj = cls.objects.get(pk=regular_subscription.pk)
