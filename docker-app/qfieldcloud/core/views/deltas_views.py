@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.translation import gettext as _
@@ -132,7 +133,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                     created_deltas.append(delta_obj)
 
         except Exception as err:
-            if request_file:
+            if request_file and settings.LEGACY_STORAGE_NAME:
                 key = f"projects/{projectid}/deltas/{datetime.now().isoformat()}.json"
                 # otherwise we upload an empty file
                 request_file.seek(0)
