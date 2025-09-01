@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from qfieldcloud.core.admin import qfc_admin_site
+
 from .models import File, FileVersion
 
 
@@ -36,5 +38,5 @@ class FileVersionAdmin(admin.ModelAdmin):
     ]
 
 
-admin.site.register(File, FileAdmin)
-admin.site.register(FileVersion, FileVersionAdmin)
+qfc_admin_site.register(File, FileAdmin)
+qfc_admin_site.register(FileVersion, FileVersionAdmin)

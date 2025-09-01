@@ -17,6 +17,7 @@ from auditlog.models import ContentType, LogEntry
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
+from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -62,9 +63,23 @@ from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 
-admin.site.unregister(LogEntry)
 
-Invitation = get_invitation_model()
+class QfcAdminSite(AdminSite):
+    site_header = _("QFieldCloud Admin")
+    site_title = _("QFieldCloud Admin")
+    index_title = _("QFieldCloud Admin")
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        # a little trick, to ensure that the `qfc_admin_site` has all the models registered on the Django's default admin site
+        self._registry.update(admin.site._registry)
+
+        for _model, model_admin in self._registry.items():
+            model_admin.admin_site = self
+
+
+qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
 
 
 class NoPkOrderChangeList(ChangeList):
@@ -145,11 +160,6 @@ def admin_urlname_by_obj(value, arg):
     else:
         return admin_urlname(value._meta, arg)
 
-
-# Unregister admins from other Django apps
-admin.site.unregister(Invitation)
-admin.site.unregister(TokenProxy)
-admin.site.unregister(EmailAddress)
 
 UserEmailDetails = namedtuple(
     "UserEmailDetails",
@@ -1596,17 +1606,25 @@ class LogEntryAdmin(
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
 
-admin.site.register(Invitation, InvitationAdmin)
-admin.site.register(Person, PersonAdmin)
-admin.site.register(Organization, OrganizationAdmin)
-admin.site.register(Team, TeamAdmin)
-admin.site.register(Project, ProjectAdmin)
-admin.site.register(Secret, SecretAdmin)
-admin.site.register(Delta, DeltaAdmin)
-admin.site.register(Job, JobAdmin)
-admin.site.register(LogEntry, LogEntryAdmin)
+Invitation = get_invitation_model()
+
+# Unregister admins from other Django apps
+qfc_admin_site.unregister(Invitation)
+qfc_admin_site.unregister(TokenProxy)
+qfc_admin_site.unregister(EmailAddress)
+qfc_admin_site.unregister(LogEntry)
+
+qfc_admin_site.register(Invitation, InvitationAdmin)
+qfc_admin_site.register(Person, PersonAdmin)
+qfc_admin_site.register(Organization, OrganizationAdmin)
+qfc_admin_site.register(Team, TeamAdmin)
+qfc_admin_site.register(Project, ProjectAdmin)
+qfc_admin_site.register(Secret, SecretAdmin)
+qfc_admin_site.register(Delta, DeltaAdmin)
+qfc_admin_site.register(Job, JobAdmin)
+qfc_admin_site.register(LogEntry, LogEntryAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
-admin.site.register(User, UserAdmin)
-admin.site.register(UserAccount, UserAccountAdmin)
-admin.site.register(EmailAddress, EmailAddressAdmin)
+qfc_admin_site.register(User, UserAdmin)
+qfc_admin_site.register(UserAccount, UserAccountAdmin)
+qfc_admin_site.register(EmailAddress, EmailAddressAdmin)
