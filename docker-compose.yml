@@ -140,7 +140,7 @@ services:
     volumes:
       - ./conf/certbot/conf:/etc/letsencrypt
       - certbot_www:/var/www/certbot
-      - ./conf/certbot/credentials:/etc/letsencrypt/credentials:ro
+      - ./credentials:/etc/letsencrypt/credentials:ro
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   qgis:
