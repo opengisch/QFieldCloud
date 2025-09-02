@@ -22,5 +22,8 @@ class Migration(migrations.Migration):
                 WHERE active_since < now()
                   AND (active_until IS NULL OR active_until > now());
             """,
+            reverse_sql="""
+                DROP VIEW IF EXISTS current_subscriptions_vw;
+            """,
         ),
     ]
