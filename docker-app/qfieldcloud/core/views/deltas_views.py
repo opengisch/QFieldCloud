@@ -1,10 +1,11 @@
 import json
 import logging
-from datetime import datetime
+from typing import IO
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.db import transaction
+from django.http import HttpRequest
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -13,7 +14,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
-from qfieldcloud.core.models import Delta, Project
+from qfieldcloud.core.models import Delta, FaultyDeltaFile, Project
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
 from rest_framework import generics, permissions, views
@@ -133,12 +134,8 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
                     created_deltas.append(delta_obj)
 
         except Exception as err:
-            if request_file and settings.LEGACY_STORAGE_NAME:
-                key = f"projects/{projectid}/deltas/{datetime.now().isoformat()}.json"
-                # otherwise we upload an empty file
-                request_file.seek(0)
-                utils.get_s3_bucket().upload_fileobj(request_file, key)
-                logger.info(f'Invalid deltafile saved as "{key}"')
+            if request_file:
+                self.preserve_faulty_deltafile(request_file, project_obj, self.request)
 
             logger.exception(err)
 
@@ -158,6 +155,35 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             logger.warning("Failed to start delta apply job.")
 
         return Response()
+
+    def preserve_faulty_deltafile(
+        self, request_file: IO, project: Project, request: HttpRequest
+    ):
+        """Preserve a faulty deltafile for later inspection."""
+
+        # Be defensive about figuring out the deltafile id - we might not
+        # even have a valid JSON file.
+        try:
+            deltafile_json = json.load(request_file)
+            deltafile_id = deltafile_json.get("id", "unknown")
+        except Exception:
+            deltafile_id = "unknown"
+
+        filename = f"{deltafile_id}.json"
+        user_agent = request.META.get("HTTP_USER_AGENT")
+
+        # File contents might already have been partially read by JSON parser.
+        # Rewind to avoid uploading an empty file.
+        request_file.seek(0)
+
+        faulty_deltafile = FaultyDeltaFile(
+            deltafile=ContentFile(request_file.read(), filename),
+            project=project,
+            user_agent=user_agent,
+        )
+        faulty_deltafile.save()
+
+        logger.info(f'Faulty deltafile saved as "{faulty_deltafile.deltafile.name}"')
 
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]

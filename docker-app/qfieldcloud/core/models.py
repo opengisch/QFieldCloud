@@ -2609,3 +2609,47 @@ class Secret(models.Model):
                 name="secret_assigned_to_organization_or_user",
             ),
         ]
+
+
+def get_faulty_deltafile_upload_to(
+    instance: models.Model,
+    filename: str,
+) -> str:
+    instance = cast(FaultyDeltaFile, instance)
+    key = f"{datetime.now().isoformat()}-{filename}"
+    return f"projects/{instance.project.id}/deltafiles/{key}"
+
+
+class FaultyDeltaFile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    deltafile = DynamicStorageFileField(
+        _("Deltafile"),
+        upload_to=get_faulty_deltafile_upload_to,
+        max_length=1024,
+        null=False,
+        blank=False,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        related_name="faulty_deltafiles",
+        null=True,
+    )
+
+    user_agent = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    def _get_file_storage_name(self) -> str:
+        # Legacy storage - use default storage
+        if self.project.uses_legacy_storage:
+            return "default"
+        # Non-legacy storage - use same storage as project
+        else:
+            return self.project.file_storage
