@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 
+from qfieldcloud.billing.integrations.stripe.enums import RecurringInterval
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
@@ -28,6 +29,10 @@ from qfieldcloud.core.models import (
 from .exceptions import NotPremiumPlanException
 
 logger = logging.getLogger(__name__)
+
+RECURRING_INTERVAL_CHOICES = [
+    (interval.value, interval.value.title()) for interval in RecurringInterval
+]
 
 
 def get_subscription_model() -> "Subscription":
@@ -275,7 +280,7 @@ class PackageType(models.Model):
     display_name = models.CharField(max_length=100)
 
     # the type of the package
-    type = models.CharField(choices=Type.choices, max_length=100, unique=True)
+    type = models.CharField(choices=Type.choices, max_length=100)
 
     # whether the package is available for the general public
     is_public = models.BooleanField(default=False)
@@ -291,6 +296,13 @@ class PackageType(models.Model):
 
     # Unit of measurement (e.g. gigabyte, minute, etc)
     unit_label = models.CharField(max_length=100, null=True, blank=True)
+
+    interval = models.CharField(
+        max_length=100,
+        choices=RECURRING_INTERVAL_CHOICES,
+        default=RecurringInterval.MONTH,
+        help_text="Recurring interval for this subscription (e.g., month, year)",
+    )
 
     # created at
     created_at = models.DateTimeField(auto_now_add=True)
@@ -308,12 +320,22 @@ class PackageType(models.Model):
         ),
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["type", "interval"],
+                name="uniq_packagetype_type_interval",
+            ),
+        ]
+
     @classmethod
     @lru_cache
-    def get_storage_package_type(cls) -> "PackageType":
+    def get_storage_package_type(
+        cls, interval: RecurringInterval = RecurringInterval.MONTH
+    ) -> "PackageType":
         # NOTE if the cache is still returning the old result, please restart the whole `app` container
         try:
-            return cls.objects.get(type=cls.Type.STORAGE)
+            return cls.objects.get(type=cls.Type.STORAGE, interval=interval)
         except cls.DoesNotExist:
             return cls.objects.create(
                 code="storage_package",
@@ -322,6 +344,7 @@ class PackageType(models.Model):
                 unit_label="MB",
                 min_quantity=0,
                 max_quantity=100,
+                interval=interval,
             )
 
 
@@ -494,6 +517,13 @@ class AbstractSubscription(models.Model):
         max_length=100, choices=Status.choices, default=Status.INACTIVE_DRAFT
     )
 
+    interval = models.CharField(
+        max_length=100,
+        choices=RECURRING_INTERVAL_CHOICES,
+        default=RecurringInterval.MONTH,
+        help_text="Recurring interval for this subscription (e.g., month, year)",
+    )
+
     created_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -548,26 +578,34 @@ class AbstractSubscription(models.Model):
 
     @property
     def active_storage_package(self) -> Package:
-        return self.get_active_package(PackageType.get_storage_package_type())
+        return self.get_active_package(
+            PackageType.get_storage_package_type(self.interval)
+        )
 
     @property
     def active_storage_package_quantity(self) -> int:
-        return self.get_active_package_quantity(PackageType.get_storage_package_type())
+        return self.get_active_package_quantity(
+            PackageType.get_storage_package_type(self.interval)
+        )
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_package_bytes` instead")
     def active_storage_package_mb(self) -> int:
         return (
-            self.get_active_package_quantity(PackageType.get_storage_package_type())
-            * PackageType.get_storage_package_type().unit_amount
+            self.get_active_package_quantity(
+                PackageType.get_storage_package_type(self.interval)
+            )
+            * PackageType.get_storage_package_type(self.interval).unit_amount
         )
 
     @property
     def active_storage_package_bytes(self) -> int:
         return (
             (
-                self.get_active_package_quantity(PackageType.get_storage_package_type())
-                * PackageType.get_storage_package_type().unit_amount
+                self.get_active_package_quantity(
+                    PackageType.get_storage_package_type(self.interval)
+                )
+                * PackageType.get_storage_package_type(self.interval).unit_amount
             )
             * 1000
             * 1000
@@ -579,17 +617,23 @@ class AbstractSubscription(models.Model):
 
     @property
     def future_storage_package(self) -> Package:
-        return self.get_future_package(PackageType.get_storage_package_type())
+        return self.get_future_package(
+            PackageType.get_storage_package_type(self.interval)
+        )
 
     @property
     def future_storage_package_quantity(self) -> int:
-        return self.get_future_package_quantity(PackageType.get_storage_package_type())
+        return self.get_future_package_quantity(
+            PackageType.get_storage_package_type(self.interval)
+        )
 
     @property
     def future_storage_package_mb(self) -> int:
         return (
-            self.get_future_package_quantity(PackageType.get_storage_package_type())
-            * PackageType.get_storage_package_type().unit_amount
+            self.get_future_package_quantity(
+                PackageType.get_storage_package_type(self.interval)
+            )
+            * PackageType.get_storage_package_type(self.interval).unit_amount
         )
 
     @property
@@ -608,7 +652,7 @@ class AbstractSubscription(models.Model):
     def future_storage_package_changed_mb(self) -> int:
         return (
             self.future_storage_package_changed_quantity
-            * PackageType.get_storage_package_type().unit_amount
+            * PackageType.get_storage_package_type(self.interval).unit_amount
         )
 
     @property
@@ -870,6 +914,7 @@ class AbstractSubscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: datetime | None = None,
+        interval: RecurringInterval = RecurringInterval.MONTH,
     ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
@@ -905,6 +950,7 @@ class AbstractSubscription(models.Model):
                 status=plan.initial_subscription_status,
                 active_since=active_since,
                 active_until=active_until,
+                interval=RecurringInterval.MONTH,
             )
             # NOTE to get annotations, mostly `is_active`
             trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
@@ -947,6 +993,7 @@ class AbstractSubscription(models.Model):
             created_by=created_by,
             status=regular_plan.initial_subscription_status,
             active_since=regular_active_since,
+            interval=interval,
         )
         # NOTE to get annotations, mostly `is_active`
         regular_subscription_obj = cls.objects.get(pk=regular_subscription.pk)
