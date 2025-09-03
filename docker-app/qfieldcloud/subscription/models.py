@@ -477,7 +477,7 @@ class AbstractSubscription(models.Model):
     max_organization_members = models.IntegerField(
         default=-1,
         help_text=_(
-            "Maximum organization members allowed for this subscription."
+            "Maximum organization members allowed for this subscription. "
             "Used for enforcing seat limits on a per-subscription basis for specific plans."
         ),
     )

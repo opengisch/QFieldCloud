@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
             name="max_organization_members",
             field=models.IntegerField(
                 default=-1,
-                help_text="Maximum organization members allowed for this subscription.Used for enforcing seat limits on a per-subscription basis for specific plans.",
+                help_text="Maximum organization members allowed for this subscription. Used for enforcing seat limits on a per-subscription basis for specific plans.",
             ),
         ),
     ]
