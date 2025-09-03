@@ -539,8 +539,8 @@ class AbstractSubscription(models.Model):
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
-    def active_storage_total_mb(self) -> int:
-        return int(self.active_storage_total_bytes / 1000 / 1000)
+    def active_storage_total_mb(self) -> float:
+        return float(self.active_storage_total_bytes / 1000 / 1000)
 
     @property
     def active_storage_total_bytes(self) -> int:
