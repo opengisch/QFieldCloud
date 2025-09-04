@@ -74,10 +74,11 @@ def migrate_project_storage(
         # NOTE do not allow migration on projects that have currently active jobs.
         # The worker wrapper is going to skip all PENDING jobs for locked projects.
         active_jobs_count = Job.objects.filter(
+            project=project,
             status__in=[
                 Job.Status.QUEUED,
                 Job.Status.STARTED,
-            ]
+            ],
         ).count()
 
         if active_jobs_count:
@@ -96,7 +97,9 @@ def migrate_project_storage(
         )
 
         if not project_files:
-            raise Exception("No files to migrate")
+            logger.warning(
+                f'No files to migrate for project "{project.name}" ({str(project.id)})!'
+            )
 
         # NOTE we must set the `Project.file_storage` to the new value before we start adding versions!
         project.file_storage = to_storage
@@ -204,6 +207,8 @@ def migrate_project_storage(
                 f'No thumbnail to migrate for project "{project.name}" ({str(project.id)})'
             )
 
+        project.file_storage_migrated_at = now
+
     except Exception as err:
         # TODO make sure the created data is deleted from the destination storage if something fails
 
@@ -237,7 +242,6 @@ def migrate_project_storage(
         raise err
     finally:
         project.is_locked = False
-        project.file_storage_migrated_at = now
         project.save(
             update_fields=[
                 "is_locked",
