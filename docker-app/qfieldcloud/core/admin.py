@@ -5,6 +5,7 @@ import uuid
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
+from os.path import basename
 from typing import Any, Generator
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
@@ -45,6 +46,7 @@ from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
+    FaultyDeltaFile,
     Geodb,
     Job,
     Organization,
@@ -614,6 +616,40 @@ class ProjectCollaboratorInline(admin.TabularInline):
     autocomplete_fields = ("collaborator",)
 
 
+class FaultyDeltaFilesInline(admin.TabularInline):
+    model = FaultyDeltaFile
+    extra = 0
+
+    fields = (
+        "created_at",
+        "short_file_link",
+        "user_agent",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "short_file_link",
+        "user_agent",
+    )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def short_file_link(self, obj):
+        """Shorten storage path to make inline view less unwieldy."""
+
+        if obj.deltafile:
+            filename = basename(obj.deltafile.name)
+            return format_html(
+                '<a href="{}" target="_blank">{}</a>',
+                obj.deltafile.url,
+                filename,
+            )
+        return "-"
+
+    short_file_link.short_description = "Faulty Delta File"
+
+
 class ProjectFilesWidget(widgets.Input):
     template_name = "admin/project_files_widget.html"
 
@@ -904,6 +940,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     inlines = (
         ProjectSecretInline,
         ProjectCollaboratorInline,
+        FaultyDeltaFilesInline,
     )
     search_fields = (
         "id",
@@ -1606,6 +1643,16 @@ class LogEntryAdmin(
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
 
+class FaultyDeltaFilesAdmin(admin.ModelAdmin):
+    readonly_fields = ("created_at",)
+
+    list_display = (
+        "created_at",
+        "deltafile",
+        "user_agent",
+    )
+
+
 Invitation = get_invitation_model()
 
 # Unregister admins from other Django apps
@@ -1623,6 +1670,7 @@ qfc_admin_site.register(Secret, SecretAdmin)
 qfc_admin_site.register(Delta, DeltaAdmin)
 qfc_admin_site.register(Job, JobAdmin)
 qfc_admin_site.register(LogEntry, LogEntryAdmin)
+qfc_admin_site.register(FaultyDeltaFile, FaultyDeltaFilesAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 qfc_admin_site.register(User, UserAdmin)
