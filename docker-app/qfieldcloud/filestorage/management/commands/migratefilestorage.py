@@ -193,4 +193,9 @@ class Command(BaseCommand):
                 f'⏳ {index}/{projects_count}: migrating storage for project "{project.name}" ({project.id}) from "{project.file_storage}" to "default".'
             )
 
-            migrate_project_storage(project, DEFAULT_STORAGE, force)
+            try:
+                migrate_project_storage(project, DEFAULT_STORAGE, force)
+            except Exception as e:
+                self.stderr.write(
+                    f"Error when migrating project '{project.name}' ({project.id}): {e}"
+                )
