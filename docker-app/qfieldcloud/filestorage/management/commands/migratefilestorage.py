@@ -1,4 +1,5 @@
 import logging
+import traceback
 import uuid
 from collections.abc import Collection
 from datetime import datetime
@@ -21,6 +22,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--force", action="store_true", default=False)
         parser.add_argument("--accept", action="store_true", default=False)
+        parser.add_argument("--no-raise", action="store_true", default=False)
 
         group = parser.add_mutually_exclusive_group()
 
@@ -57,6 +59,7 @@ class Command(BaseCommand):
 
         force: bool = options.get("force", False)
         accept: bool = options.get("accept", False)
+        no_raise: bool = options.get("no_raise", False)
 
         # these should be alternative to each other
         project_id = options.get("project_id")
@@ -199,3 +202,8 @@ class Command(BaseCommand):
                 self.stderr.write(
                     f"Error when migrating project '{project.name}' ({project.id}): {e}"
                 )
+
+                if no_raise:
+                    self.stderr.write(traceback.format_exc())
+                else:
+                    raise e
