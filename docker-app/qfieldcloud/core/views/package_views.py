@@ -96,6 +96,16 @@ class LegacyLatestPackageView(views.APIView):
                 "Packaging has never been triggered or successful for this project."
             )
 
+        # Check if the latest package job is still in progress
+        if latest_package_job.status in [
+            PackageJob.Status.PENDING,
+            PackageJob.Status.QUEUED,
+            PackageJob.Status.STARTED,
+        ]:
+            raise exceptions.InvalidJobError(
+                "Packaging is still in progress, retry later when the packaging is finished."
+            )
+
         filenames = set()
         files = []
 
@@ -275,6 +285,16 @@ class LatestPackageView(views.APIView):
         if not latest_package_job:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
+            )
+
+        # Check if the latest package job is still in progress
+        if latest_package_job.status in [
+            PackageJob.Status.PENDING,
+            PackageJob.Status.QUEUED,
+            PackageJob.Status.STARTED,
+        ]:
+            raise exceptions.InvalidJobError(
+                "Packaging is still in progress, retry later when the packaging is finished."
             )
 
         files_qs = File.objects.filter(
