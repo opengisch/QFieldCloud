@@ -132,11 +132,11 @@ def migrate_project_storage(
                     f'Migrating file "{file_version.name}" with version "{file_version.id}" for "{project.name}" ({str(project.id)})...'
                 )
 
-                django_thumbnail_file = ContentFile(b"", file_version.name)
+                django_content_file = ContentFile(b"", file_version.name)
 
                 from_storage_bucket.download_fileobj(
                     file_version.key,
-                    django_thumbnail_file,
+                    django_content_file,
                     {
                         "VersionId": file_version.id,
                     },
@@ -145,7 +145,7 @@ def migrate_project_storage(
                 _file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=file_version.name,
-                    content=django_thumbnail_file,
+                    content=django_content_file,
                     file_type=File.FileType.PROJECT_FILE,
                     uploaded_at=file_version.last_modified,
                     uploaded_by=project.owner,
@@ -166,17 +166,17 @@ def migrate_project_storage(
 
         if len(package_files) > 0:
             for package_job, package_file in package_files:
-                django_thumbnail_file = ContentFile(b"", package_file.name)
+                django_content_file = ContentFile(b"", package_file.name)
 
                 from_storage_bucket.download_fileobj(
                     package_file.key,
-                    django_thumbnail_file,
+                    django_content_file,
                 )
 
                 _file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=package_file.name,
-                    content=django_thumbnail_file,
+                    content=django_content_file,
                     file_type=File.FileType.PACKAGE_FILE,
                     uploaded_at=package_file.last_modified,
                     uploaded_by=project.owner,
