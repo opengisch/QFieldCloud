@@ -207,6 +207,8 @@ def migrate_project_storage(
                 f'No thumbnail to migrate for project "{project.name}" ({str(project.id)})'
             )
 
+        project.file_storage_migrated_at = now
+
     except Exception as err:
         # TODO make sure the created data is deleted from the destination storage if something fails
 
@@ -240,7 +242,6 @@ def migrate_project_storage(
         raise err
     finally:
         project.is_locked = False
-        project.file_storage_migrated_at = now
         project.save(
             update_fields=[
                 "is_locked",
