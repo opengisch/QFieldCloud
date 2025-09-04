@@ -126,7 +126,7 @@ class Command(BaseCommand):
 
             if advanced_filter:
                 if updated_until:
-                    project_qs = project_qs.filter(updated_at__lt=dt_zoned)
+                    project_qs = project_qs.filter(data_last_packaged_at__lt=dt_zoned)
 
                 if only_community:
                     project_qs = project_qs.filter(
