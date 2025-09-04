@@ -1,4 +1,5 @@
 import logging
+import traceback
 import uuid
 from collections.abc import Collection
 from datetime import datetime
@@ -21,6 +22,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--force", action="store_true", default=False)
         parser.add_argument("--accept", action="store_true", default=False)
+        parser.add_argument("--no-raise", action="store_true", default=False)
 
         group = parser.add_mutually_exclusive_group()
 
@@ -57,6 +59,7 @@ class Command(BaseCommand):
 
         force: bool = options.get("force", False)
         accept: bool = options.get("accept", False)
+        no_raise: bool = options.get("no_raise", False)
 
         # these should be alternative to each other
         project_id = options.get("project_id")
@@ -126,7 +129,7 @@ class Command(BaseCommand):
 
             if advanced_filter:
                 if updated_until:
-                    project_qs = project_qs.filter(updated_at__lt=dt_zoned)
+                    project_qs = project_qs.filter(data_last_packaged_at__lt=dt_zoned)
 
                 if only_community:
                     project_qs = project_qs.filter(
@@ -193,4 +196,14 @@ class Command(BaseCommand):
                 f'⏳ {index}/{projects_count}: migrating storage for project "{project.name}" ({project.id}) from "{project.file_storage}" to "default".'
             )
 
-            migrate_project_storage(project, DEFAULT_STORAGE, force)
+            try:
+                migrate_project_storage(project, DEFAULT_STORAGE, force)
+            except Exception as err:
+                self.stderr.write(
+                    f"Error when migrating project '{project.name}' ({project.id}): {err}"
+                )
+
+                if no_raise:
+                    self.stderr.write(traceback.format_exc())
+                else:
+                    raise
