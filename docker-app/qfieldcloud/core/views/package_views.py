@@ -90,8 +90,8 @@ class LegacyLatestPackageView(views.APIView):
         project = Project.objects.get(id=project_id)
         latest_finished_package_job = (
             project.package_jobs_for_user(request.user)
-            .filter(
-                status__not_in=[
+            .exclude(
+                status__in=[
                     Job.Status.PENDING,
                     Job.Status.QUEUED,
                     Job.Status.STARTED,
@@ -284,8 +284,8 @@ class LatestPackageView(views.APIView):
         project = get_object_or_404(Project, id=project_id)
         latest_finished_package_job = (
             project.package_jobs_for_user(request.user)
-            .filter(
-                status__not_in=[
+            .exclude(
+                status__in=[
                     Job.Status.PENDING,
                     Job.Status.QUEUED,
                     Job.Status.STARTED,
