@@ -43,37 +43,41 @@ To fetch upstream development, don't forget to update the submodules too:
 
 ### Launch a local instance
 
-Copy the `.env.example` into `.env` file and configure it to your
-desire with a good editor:
+1. Copy the `.env.example` into `.env` file:
 
     cp .env.example .env
-    emacs .env
 
+2. Change the `ENVIRONMENT` variable to `development`.
 
-Make sure the host's firewall allows port _8009_, required by the `minio` service. Failing to meet this requirement is likely to result in the service being unable to start.
+    ENVIRONMENT=development
 
-To build development images and run the containers:
+3. Build development images and run the containers:
 
     docker compose up -d --build
 
-It will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE`
-variable and start a django built-in server at `http://localhost:8011`.
+The command will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE` variable from the `.env` file. Then Django built-in server will be directly reachable at `http://localhost:8011` or through `nginx` at `https://localhost`.
+You should avoid using the Django's built-in server and better always develop and test QFieldCloud through the `nginx` [reverse proxy with SSL](#add-root-certificate).
 
-Run the django database migrations.
+4. (OPTIONAL) In case you have a database dump, you can directly load some data in your development database.
+
+    psql 'service=localhost.qfield.cloud' < ./qfc_dump_20220304.sql
+
+5. Run Django database migrations.
 
     docker compose exec app python manage.py migrate
 
-And collect the static files (CSS, JS etc):
+6. And collect the static files (CSS, JS etc):
 
     docker compose run app python manage.py collectstatic --noinput
 
-Now you can get started by adding the first user that would also be a super user:
+7. Now you can get started by adding your super user that has access to the Django Admin interface:
 
     docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
 
-If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
+8. If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
 
     docker compose run --user root app python manage.py compilemessages
+
 
 ### Troubleshooting
 
@@ -84,6 +88,39 @@ To verify the instance is working fine, you can check using the healthcheck endp
 If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain the most of the relevant information.
 
     docker compose logs nginx app
+
+
+### Accessing the database
+
+Sometimes we should inspect the database contents.
+It is stored in the `postgres_data` volume and managed via the `db` container.
+
+One can connect to the database via running the `psql` command within the `db` container:
+
+    docker compose exec -it db psql -U qfieldcloud_db_admin -d qfieldcloud_db
+
+Or by creating `~/.pg_service.conf` in their user home directory and appending:
+
+    [localhost.qfield.cloud]
+    host=localhost
+    dbname=qfieldcloud_db
+    user=qfieldcloud_db_admin
+    port=5433
+    password=3shJDd2r7Twwkehb
+    sslmode=disable
+
+    [test.localhost.qfield.cloud]
+    host=localhost
+    dbname=test_qfieldcloud_db
+    user=qfieldcloud_db_admin
+    port=5433
+    password=3shJDd2r7Twwkehb
+    sslmode=disable
+
+And then connecting to the database via:
+
+    psql 'service=localhost.qfield.cloud'
+
 
 ### Dependencies
 
@@ -157,6 +194,8 @@ Build the test docker compose stack:
 You can then launch the tests:
 
     docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
+
+Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in your `.pg_service.conf` file](#accessing-the-database).
 
 </details>
 
