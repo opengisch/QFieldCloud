@@ -8,7 +8,7 @@ django-bootstrap4==25.2
 django-classy-tags==4.1.0
 django-cleanup==9.0.0
 django-common-helpers==0.9.2
-django-constance[database]==4.3.2
+django-constance==4.3.2
 django-countries==7.6.1
 django-cron==0.6.0
 django-cryptography==1.1
