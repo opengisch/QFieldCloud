@@ -45,49 +45,69 @@ To fetch upstream development, don't forget to update the submodules too:
 
 1. Copy the `.env.example` into `.env` file:
 
-    cp .env.example .env
+```shell
+cp .env.example .env
+```
 
 2. Change the `ENVIRONMENT` variable to `development`.
 
-    ENVIRONMENT=development
+```shell
+ENVIRONMENT=development
+```
 
 3. Build development images and run the containers:
 
-    docker compose up -d --build
+```shell
+docker compose up -d --build
+```
 
 The command will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE` variable from the `.env` file. Then Django built-in server will be directly reachable at `http://localhost:8011` or through `nginx` at `https://localhost`.
 You should avoid using the Django's built-in server and better always develop and test QFieldCloud through the `nginx` [reverse proxy with SSL](#add-root-certificate).
 
 4. (OPTIONAL) In case you have a database dump, you can directly load some data in your development database.
 
-    psql 'service=localhost.qfield.cloud' < ./qfc_dump_20220304.sql
+```shell
+psql 'service=localhost.qfield.cloud' < ./qfc_dump_20220304.sql
+```
 
 5. Run Django database migrations.
 
-    docker compose exec app python manage.py migrate
+```shell
+docker compose exec app python manage.py migrate
+```
 
 6. And collect the static files (CSS, JS etc):
 
-    docker compose run app python manage.py collectstatic --noinput
+```shell
+docker compose run app python manage.py collectstatic --noinput
+```
 
 7. Now you can get started by adding your super user that has access to the Django Admin interface:
 
-    docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
+```shell
+docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
+```
 
 8. If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
 
-    docker compose run --user root app python manage.py compilemessages
+```shell
+docker compose run --user root app python manage.py compilemessages
+```
 
 
 ### Troubleshooting
 
 To verify the instance is working fine, you can check using the healthcheck endpoint and make sure the `database` and `storage` keys have `ok` status:
 
-    curl https://localhost/api/v1/status/
+```shell
+curl https://localhost/api/v1/status/
+```
 
 If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain the most of the relevant information.
 
-    docker compose logs nginx app
+```shell
+docker compose logs nginx app
+```
 
 
 ### Accessing the database
