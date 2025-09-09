@@ -67,6 +67,8 @@ django==4.2.24
     #   django-phonenumber-field
     #   django-sri
     #   django-storages
+    #   django-stubs
+    #   django-stubs-ext
     #   django-tables2
     #   django-timezone-field
     #   djangorestframework
@@ -128,6 +130,12 @@ django-sri==0.8.0
     # via -r /requirements/requirements.in
 django-storages==1.14.6
     # via -r /requirements/requirements.in
+django-stubs==5.2.2
+    # via
+    #   -r /requirements/requirements.in
+    #   djangorestframework-stubs
+django-stubs-ext==5.2.2
+    # via django-stubs
 django-tables2==2.7.5
     # via -r /requirements/requirements.in
 django-timezone-field==7.1
@@ -136,6 +144,8 @@ djangorestframework==3.16.1
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
+djangorestframework-stubs==3.16.2
+    # via -r /requirements/requirements.in
 drf-spectacular==0.28.0
     # via -r /requirements/requirements.in
 idna==3.10
@@ -185,6 +195,7 @@ referencing==0.36.2
 requests==2.32.5
     # via
     #   django-allauth
+    #   djangorestframework-stubs
     #   stripe
 rpds-py==0.27.0
     # via
@@ -206,8 +217,16 @@ stripe==4.2.0
     # via -r /requirements/requirements.in
 swapper==1.4.0
     # via django-notifications-hq
+tomli==2.2.1
+    # via django-stubs
 types-awscrt==0.27.6
     # via botocore-stubs
+types-pyyaml==6.0.12.20250822
+    # via
+    #   django-stubs
+    #   djangorestframework-stubs
+types-requests==2.32.4.20250809
+    # via djangorestframework-stubs
 types-s3transfer==0.13.0
     # via boto3-stubs
 typing-extensions==4.14.1
@@ -216,6 +235,9 @@ typing-extensions==4.14.1
     #   beautifulsoup4
     #   boto3-stubs
     #   django-countries
+    #   django-stubs
+    #   django-stubs-ext
+    #   djangorestframework-stubs
     #   mypy-boto3-s3
     #   referencing
 uritemplate==4.2.0
@@ -225,5 +247,6 @@ urllib3==2.5.0
     #   botocore
     #   requests
     #   sentry-sdk
+    #   types-requests
 wrapt==1.17.3
     # via deprecated
