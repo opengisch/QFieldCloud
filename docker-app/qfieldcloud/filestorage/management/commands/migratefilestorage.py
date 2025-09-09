@@ -119,13 +119,13 @@ class Command(BaseCommand):
                         "You are going to migrate projects owned by community accounts."
                     )
 
-            yes_no = input("Are you sure you want to continue? [y/n]\n")
-
-            if yes_no != "y":
-                self.stderr.write(
-                    "The files migration will not happen, probably a good choice!"
-                )
-                return
+            if not accept:
+                yes_no = input("Are you sure you want to continue? [y/n]\n")
+                if yes_no != "y":
+                    self.stderr.write(
+                        "The files migration will not happen, probably a good choice!"
+                    )
+                    return
 
             if advanced_filter:
                 if updated_until:
