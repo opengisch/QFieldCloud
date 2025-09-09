@@ -72,7 +72,7 @@ django==4.2.23
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.11.0
+django-allauth[socialaccount]==65.11.1
     # via -r /requirements/requirements.in
 django-appconf==1.1.0
     # via django-cryptography
