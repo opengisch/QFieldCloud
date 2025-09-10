@@ -1,4 +1,3 @@
-import logging
 import traceback
 import uuid
 from collections.abc import Collection
@@ -7,9 +6,13 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from qfieldcloud.core.models import Project
-from qfieldcloud.filestorage.migrate_project_storage import migrate_project_storage
+from qfieldcloud.filestorage.migrate_project_storage import (
+    migrate_project_storage,
+    setup_fs_migration_logger,
+)
 
-logger = logging.getLogger(__name__)
+logger = setup_fs_migration_logger()
+
 
 DEFAULT_STORAGE = "default"
 
@@ -94,7 +97,7 @@ class Command(BaseCommand):
                 exit(1)
 
             if no_filter:
-                self.stderr.write(
+                self.stdout.write(
                     "You are going to migrate all files on this installation, without any project filtering!"
                     "This will take a long time to finish and should be done only if you know what is going on!"
                 )
@@ -110,12 +113,12 @@ class Command(BaseCommand):
                     dt_naive = datetime.fromisoformat(updated_until)
                     dt_zoned = timezone.make_aware(dt_naive)
 
-                    self.stderr.write(
+                    self.stdout.write(
                         f"You are going to migrate projects updated until '{dt_zoned}'."
                     )
 
                 if only_community:
-                    self.stderr.write(
+                    self.stdout.write(
                         "You are going to migrate projects owned by community accounts."
                     )
 
@@ -174,13 +177,13 @@ class Command(BaseCommand):
 
             exit(1)
 
-        self.stderr.write(
+        self.stdout.write(
             f"The storage migration will affect {len(projects)} project(s):"
         )
 
-        self.stderr.write("ID\tNAME")
+        self.stdout.write("ID\tNAME")
         for project in project_qs:
-            self.stderr.write(f"{project.id}\t{project.owner.username}/{project.name}")
+            self.stdout.write(f"{project.id}\t{project.owner.username}/{project.name}")
 
         if not accept:
             yes_no = input("Are you sure you want to continue? [y/n]\n")
@@ -192,7 +195,7 @@ class Command(BaseCommand):
                 return
 
         for index, project in enumerate(project_qs, start=1):
-            self.stderr.write(
+            self.stdout.write(
                 f'⏳ {index}/{projects_count}: migrating storage for project "{project.name}" ({project.id}) from "{project.file_storage}" to "default".'
             )
 

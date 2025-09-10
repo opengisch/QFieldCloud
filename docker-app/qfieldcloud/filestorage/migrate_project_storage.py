@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -13,7 +14,39 @@ from qfieldcloud.core.utils import (
 )
 from qfieldcloud.filestorage.models import File, FileVersion
 
-logger = logging.getLogger(__name__)
+
+def setup_fs_migration_logger() -> logging.Logger:
+    """Set up a logger for the file storage migration process.
+    This logger outputs INFO and WARNING messages to stdout,
+    and ERROR messages to stderr.
+
+    Returns:
+        logging.Logger: Configured logger instance.
+    """
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    logger.handlers.clear()
+    logger.propagate = False
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.DEBUG)
+    stdout_handler.addFilter(lambda record: record.levelno <= logging.WARNING)
+
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setLevel(logging.ERROR)
+
+    formatter = logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s")
+    stdout_handler.setFormatter(formatter)
+    stderr_handler.setFormatter(formatter)
+
+    logger.addHandler(stdout_handler)
+    logger.addHandler(stderr_handler)
+
+    return logger
+
+
+logger = setup_fs_migration_logger()
 
 
 class ActiveJobsError(Exception): ...
@@ -32,7 +65,7 @@ def migrate_project_storage(
         to_storage: Target storage to migrate to
         force: Overwrite the target storage if the project files already exist by deleting all objects with the project id prefix. Defaults to False.
     """
-    logger.info(f'Migrating project "{project.name}" ({str(project.id)})...')
+    logger.debug(f'Migrating project "{project.name}" ({str(project.id)})...')
 
     from_storage = project.file_storage
 
@@ -64,12 +97,12 @@ def migrate_project_storage(
     now = timezone.now()
 
     try:
-        logger.info(f'Locking project "{project.name}" ({str(project.id)})...')
+        logger.debug(f'Locking project "{project.name}" ({str(project.id)})...')
 
         project.is_locked = True
         project.save(update_fields=["is_locked"])
 
-        logger.info(f'Project "{project.name}" ({str(project.id)}) locked!')
+        logger.debug(f'Project "{project.name}" ({str(project.id)}) locked!')
 
         # NOTE do not allow migration on projects that have currently active jobs.
         # The worker wrapper is going to skip all PENDING jobs for locked projects.
@@ -86,7 +119,7 @@ def migrate_project_storage(
                 f'Cannot migrate a project with active jobs, {active_jobs_count} jobs are active for project "{project.name}" ({str(project.id)})!'
             )
 
-        logger.info(
+        logger.debug(
             f'Getting project files for project "{project.name}" ({str(project.id)})...'
         )
 
@@ -105,7 +138,7 @@ def migrate_project_storage(
         project.file_storage = to_storage
         project.save(update_fields=["file_storage"])
 
-        logger.info(
+        logger.debug(
             f'Checking for files for project "{project.name}" ({str(project.id)}) already stored in the destination storage...'
         )
 
@@ -199,11 +232,11 @@ def migrate_project_storage(
             )
             project.thumbnail = django_thumbnail_file  # type: ignore
 
-            logger.info(
+            logger.debug(
                 f'Migrated project "{project.name}" ({str(project.id)}) thumbnail!'
             )
         else:
-            logger.info(
+            logger.debug(
                 f'No thumbnail to migrate for project "{project.name}" ({str(project.id)})'
             )
 
