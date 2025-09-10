@@ -2,7 +2,9 @@ import io
 import json
 import logging
 import time
+from datetime import datetime
 from unittest import mock, skip
+from uuid import UUID
 
 import fiona
 import rest_framework
@@ -15,6 +17,7 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import utils
 from qfieldcloud.core.models import (
     Delta,
+    FaultyDeltaFile,
     Job,
     Organization,
     OrganizationMember,
@@ -260,21 +263,42 @@ class QfcTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
 
-        bucket = utils.get_s3_bucket()
-        prefix = utils.safe_join(f"projects/{project.id}/deltas/")
-        wrong_deltas_before = list(bucket.objects.filter(Prefix=prefix))
+        self.assertEqual(FaultyDeltaFile.objects.count(), 0)
         delta_file = testdata_path("delta/deltas/not_schema_valid.json")
 
-        self.assertFalse(self.upload_deltas(project, "not_schema_valid.json"))
-
-        # check it is uploaded
-        wrong_deltas = list(bucket.objects.filter(Prefix=prefix))
+        self.assertFalse(
+            self.upload_deltas(
+                project,
+                "not_schema_valid.json",
+                headers={"user-agent": "QFieldCloudTestClient/1.0"},
+            ),
+        )
 
         # TODO : cleanup buckets before in setUp so tests are completely independent
-        self.assertEqual(len(wrong_deltas), len(wrong_deltas_before) + 1)
+
+        # Check the invalid delta file was preserved in a FaultyDeltaFile
+        self.assertEqual(FaultyDeltaFile.objects.count(), 1)
+
+        faulty_deltafile = FaultyDeltaFile.objects.first()
+        prefix = utils.safe_join(f"projects/{project.id}/deltafiles/")
+
+        self.assertTrue(faulty_deltafile.deltafile.name.startswith(prefix))
+        self.assertEqual(faulty_deltafile.project, project)
+        self.assertEqual(faulty_deltafile.user_agent, "QFieldCloudTestClient/1.0")
+        self.assertTrue(isinstance(faulty_deltafile.created_at, datetime))
+        self.assertEqual(
+            faulty_deltafile.deltafile_id,
+            UUID("7c77388e-f902-43b9-8016-4e44c5394f66"),
+        )
+
+        tb = faulty_deltafile.traceback
+        self.assertTrue(tb.startswith("Traceback (most recent call last):"))
+        self.assertIn("jsonschema.exceptions.ValidationError:", tb)
+        self.assertIn("'deltas' is a required property", tb)
+        self.assertIn("Failed validating 'required' in schema:", tb)
 
         f = self.get_delta_file_with_project_id(self.project1, delta_file)
-        self.assertEqual(wrong_deltas[-1].get()["Body"].read().decode(), f.read())
+        self.assertEqual(faulty_deltafile.deltafile.read().decode(), f.read())
 
     def test_push_apply_delta_file_not_json(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -1167,13 +1191,19 @@ class QfcTestCase(APITransactionTestCase):
             json_str = json.dumps(deltafile)
             return io.StringIO(json_str)
 
-    def upload_deltas(self, project, delta_filename):
+    def upload_deltas(
+        self,
+        project: Project,
+        delta_filename: str,
+        headers: dict[str, str] | None = None,
+    ) -> bool:
         delta_file = testdata_path(f"delta/deltas/{delta_filename}")
 
         response = self.client.post(
             f"/api/v1/deltas/{project.id}/",
             {"file": self.get_delta_file_with_project_id(project, delta_file)},
             format="multipart",
+            headers=headers,
         )
 
         is_sucess = rest_framework.status.is_success(response.status_code)

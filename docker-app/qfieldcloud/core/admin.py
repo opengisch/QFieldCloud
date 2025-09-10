@@ -5,6 +5,7 @@ import uuid
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
+from os.path import basename
 from typing import Any, Generator
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
@@ -45,6 +46,7 @@ from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
+    FaultyDeltaFile,
     Geodb,
     Job,
     Organization,
@@ -1606,6 +1608,70 @@ class LogEntryAdmin(
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
 
+class FaultyDeltaFilesAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "created_at",
+        "project__owner",
+        "project__name",
+        "short_file_link",
+        "user_agent",
+    )
+
+    list_filter = ("project", "project__owner__username", "created_at")
+
+    list_select_related = ("project", "project__owner")
+
+    search_fields = (
+        "project__id__iexact",
+        "project__name__icontains",
+        "project__owner__username__icontains",
+    )
+
+    readonly_fields = (
+        "id",
+        "project",
+        "created_at",
+        "deltafile",
+        "deltafile_id",
+        "user_agent",
+        "traceback__pre",
+    )
+
+    exclude = ("traceback",)
+
+    def traceback__pre(self, instance) -> str:
+        return format_pre(instance.traceback)
+
+    @admin.display(description=_("Faulty deltafile"))
+    def short_file_link(self, obj: FaultyDeltaFile) -> str:
+        """Shorten storage path to make list view less unwieldy."""
+
+        if obj.deltafile:
+            filename = basename(obj.deltafile.name)
+            return format_html(
+                '<a href="{}" target="_blank">{}</a>',
+                obj.deltafile.url,
+                filename,
+            )
+
+        return "-"
+
+    @admin.display(ordering="project__owner")
+    def project__owner(self, instance: FaultyDeltaFile) -> str:
+        if instance.project:
+            return model_admin_url(instance.project.owner)
+
+        return "-"
+
+    @admin.display(ordering="project__name")
+    def project__name(self, instance: FaultyDeltaFile) -> str:
+        if instance.project:
+            return model_admin_url(instance.project, instance.project.name)
+
+        return "-"
+
+
 Invitation = get_invitation_model()
 
 # Unregister admins from other Django apps
@@ -1623,6 +1689,7 @@ qfc_admin_site.register(Secret, SecretAdmin)
 qfc_admin_site.register(Delta, DeltaAdmin)
 qfc_admin_site.register(Job, JobAdmin)
 qfc_admin_site.register(LogEntry, LogEntryAdmin)
+qfc_admin_site.register(FaultyDeltaFile, FaultyDeltaFilesAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 qfc_admin_site.register(User, UserAdmin)

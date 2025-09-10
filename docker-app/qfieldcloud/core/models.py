@@ -2609,3 +2609,63 @@ class Secret(models.Model):
                 name="secret_assigned_to_organization_or_user",
             ),
         ]
+
+
+def get_faulty_deltafile_upload_to(
+    instance: models.Model,
+    filename: str,
+) -> str:
+    instance = cast(FaultyDeltaFile, instance)
+    key = f"{datetime.now().isoformat()}-{filename}"
+    return f"projects/{instance.project.id}/deltafiles/{key}"
+
+
+class FaultyDeltaFile(models.Model):
+    class Meta:
+        verbose_name = "Faulty deltafile"
+
+    # The deltafile id if parseable UUID value
+    deltafile_id = models.UUIDField(_("Deltafile ID"), editable=False, null=True)
+
+    # The deltafile contents as submitted from the client. It might contain non-valid JSON.
+    deltafile = DynamicStorageFileField(
+        _("Deltafile"),
+        upload_to=get_faulty_deltafile_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=False,
+        blank=False,
+    )
+
+    # Time when processing the deltafile failed and the faulty deltafile was created
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Project that the faulty deltafile was attempted to be uploaded to
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        related_name="faulty_deltafiles",
+        null=True,
+    )
+
+    # User agent of the client that attempted to upload the faulty deltafile
+    user_agent = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    # Traceback of the exception that occurred while processing the deltafile
+    traceback = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    def _get_file_storage_name(self) -> str:
+        # TODO Delete with QF-4963 Drop support for legacy storage
+        # Legacy storage - use default storage
+        if self.project.uses_legacy_storage:
+            return "default"
+
+        # Non-legacy storage - use same storage as project
+        return self.project.file_storage
