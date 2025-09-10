@@ -42,7 +42,7 @@ for storage_name, storage_config in STORAGES.items():
         check=True,
     )
 
-    result = subprocess.run(
+    subprocess.run(
         f"/usr/bin/mc mb --ignore-existing {storage_name}/{bucket_name}",
         shell=True,
     )
