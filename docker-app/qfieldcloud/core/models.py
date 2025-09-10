@@ -1305,6 +1305,54 @@ class Project(models.Model):
         except Project.DoesNotExist:
             return None
 
+    def package_jobs_for_user(self, user: User) -> PackageJobQuerySet:
+        """Returns all package jobs for the user.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            QuerySet of all package jobs for the user.
+        """
+        secret_filters = Q(project=self, organization=None, assigned_to=user)
+
+        if self.owner.is_organization:
+            secret_filters |= Q(project=None, organization=self.owner, assigned_to=user)
+
+        secret_qs = Secret.objects.filter(secret_filters)
+
+        jobs_qs = self.jobs.filter(
+            type=Job.Type.PACKAGE,
+        )
+
+        jobs_qs = jobs_qs.annotate(has_user_secret=Exists(secret_qs)).filter(
+            Q(has_user_secret=False) | Q(triggered_by=user)
+        )
+
+        return jobs_qs
+
+    def latest_finished_package_job_for_user(self, user: User) -> PackageJob | None:
+        """Returns the last finished package job for the user.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            The last finished package job for the user.
+        """
+        return (
+            self.package_jobs_for_user(user)
+            .exclude(
+                status__in=[
+                    Job.Status.PENDING,
+                    Job.Status.QUEUED,
+                    Job.Status.STARTED,
+                ]
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
     def latest_package_job_for_user(self, user: User) -> PackageJob | None:
         """Returns the last package job for the user.
 
@@ -1314,29 +1362,7 @@ class Project(models.Model):
         Returns:
             The last package job for the user.
         """
-        if self.owner.is_organization:
-            secret_qs = Secret.objects.filter(
-                Q(organization=self.owner, assigned_to=user)
-                | Q(project=self, assigned_to=user)
-            )
-        else:
-            secret_qs = Secret.objects.filter(project=self, assigned_to=user)
-
-        jobs_qs = (
-            self.jobs.annotate(has_user_secret=Exists(secret_qs))
-            .filter(Q(has_user_secret=False) | Q(triggered_by=user))
-            .order_by("-created_at")
-        )
-
-        jobs_qs = jobs_qs.order_by("-created_at")
-
-        return (
-            jobs_qs.filter(
-                type=Job.Type.PACKAGE,
-            )
-            .order_by("-created_at")
-            .first()
-        )
+        return self.package_jobs_for_user(user).order_by("-created_at").first()
 
     def latest_package_jobs(self) -> PackageJobQuerySet:
         """Returns all the last package jobs for the users of the project.
