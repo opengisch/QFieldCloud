@@ -64,12 +64,12 @@ def migrate_project_storage(
     now = timezone.now()
 
     try:
-        logger.info(f'Locking project "{project.name}" ({str(project.id)})...')
+        logger.debug(f'Locking project "{project.name}" ({str(project.id)})...')
 
         project.is_locked = True
         project.save(update_fields=["is_locked"])
 
-        logger.info(f'Project "{project.name}" ({str(project.id)}) locked!')
+        logger.debug(f'Project "{project.name}" ({str(project.id)}) locked!')
 
         # NOTE do not allow migration on projects that have currently active jobs.
         # The worker wrapper is going to skip all PENDING jobs for locked projects.
@@ -86,7 +86,7 @@ def migrate_project_storage(
                 f'Cannot migrate a project with active jobs, {active_jobs_count} jobs are active for project "{project.name}" ({str(project.id)})!'
             )
 
-        logger.info(
+        logger.debug(
             f'Getting project files for project "{project.name}" ({str(project.id)})...'
         )
 
@@ -105,7 +105,7 @@ def migrate_project_storage(
         project.file_storage = to_storage
         project.save(update_fields=["file_storage"])
 
-        logger.info(
+        logger.debug(
             f'Checking for files for project "{project.name}" ({str(project.id)}) already stored in the destination storage...'
         )
 
@@ -199,7 +199,7 @@ def migrate_project_storage(
             )
             project.thumbnail = django_thumbnail_file  # type: ignore
 
-            logger.info(
+            logger.debug(
                 f'Migrated project "{project.name}" ({str(project.id)}) thumbnail!'
             )
         else:
