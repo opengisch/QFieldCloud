@@ -15,6 +15,7 @@ from allauth.account.utils import user_pk_to_url_str
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
+from constance.admin import Config, ConstanceAdmin
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
@@ -1679,6 +1680,7 @@ qfc_admin_site.unregister(Invitation)
 qfc_admin_site.unregister(TokenProxy)
 qfc_admin_site.unregister(EmailAddress)
 qfc_admin_site.unregister(LogEntry)
+qfc_admin_site.unregister([Config])
 
 qfc_admin_site.register(Invitation, InvitationAdmin)
 qfc_admin_site.register(Person, PersonAdmin)
@@ -1695,3 +1697,4 @@ qfc_admin_site.register(FaultyDeltaFile, FaultyDeltaFilesAdmin)
 qfc_admin_site.register(User, UserAdmin)
 qfc_admin_site.register(UserAccount, UserAccountAdmin)
 qfc_admin_site.register(EmailAddress, EmailAddressAdmin)
+qfc_admin_site.register([Config], ConstanceAdmin)
