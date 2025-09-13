@@ -28,7 +28,7 @@ class AuthToken(models.Model):
         UNKNOWN = "unknown", _("Unknown")
 
     @staticmethod
-    def guess_client_type(user_agent: str) -> ClientType:
+    def guess_client_type(user_agent: str) -> tuple[str, str]:
         if not user_agent:
             return AuthToken.ClientType.UNKNOWN
 
