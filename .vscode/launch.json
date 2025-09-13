@@ -1,0 +1,40 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "QFieldCloud Debug (Attach) - app",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        // must match the value of `DEBUG_DEBUGPY_APP_PORT` from `.env` file, by default 5678
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/classic/docker-app",
+          "remoteRoot": "/usr/src/app"
+        },
+      ]
+    },
+    {
+      "name": "QFieldCloud Debug (Attach) - worker_wrapper",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        // must match the value of `DEBUG_DEBUGPY_WORKER_WRAPPER_PORT` from `.env` file, by default 5679
+        "port": 5679
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/classic/docker-app",
+          "remoteRoot": "/usr/src/app"
+        },
+      ]
+    }
+  ]
+}
