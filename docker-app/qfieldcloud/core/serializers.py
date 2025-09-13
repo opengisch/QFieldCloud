@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Any
 
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.utils.translation import gettext as _
+from django_stubs_ext import StrOrPromise
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
@@ -26,7 +27,7 @@ from qfieldcloud.core.models import (
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
 
 
-def get_avatar_url(user: User, request: Request | None = None) -> str | None:
+def get_avatar_url(user: User, request: Request | None = None) -> StrOrPromise | None:
     if user.type == user.Type.TEAM:
         return None
 
@@ -36,7 +37,7 @@ def get_avatar_url(user: User, request: Request | None = None) -> str | None:
     filename = user.useraccount.avatar.name
     file_extension = Path(filename).suffix
 
-    reversed_uri = reverse_lazy(
+    reversed_uri = reverse(
         "filestorage_named_avatars",
         kwargs={
             "username": user.username,

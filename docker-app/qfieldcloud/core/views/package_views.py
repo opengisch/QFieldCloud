@@ -3,7 +3,7 @@ from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -413,7 +413,7 @@ class PackageUploadFilesView(views.APIView):
         )
 
         headers = {
-            "Location": reverse_lazy(
+            "Location": reverse(
                 "filestorage_crud_file",
                 kwargs={
                     "project_id": project_id,

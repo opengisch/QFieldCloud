@@ -5,7 +5,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.db.models import Q, QuerySet
 from django.http.response import HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -146,7 +146,7 @@ class FileCrudView(views.APIView):
         )
 
         headers = {
-            "Location": reverse_lazy(
+            "Location": reverse(
                 "filestorage_crud_file",
                 kwargs={
                     "project_id": project_id,

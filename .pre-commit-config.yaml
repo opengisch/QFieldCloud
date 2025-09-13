@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-ast
         files: '.*\.py$'
@@ -24,14 +24,14 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: '1.25.0'
+    rev: '1.28.0'
     hooks:
     -   id: django-upgrade
         args: [--target-version, '4.2', '--skip', 'admin_register']
         files: '^docker-app/qfieldcloud/.*.py$'
 
   - repo: https://github.com/pycqa/flake8
-    rev: '7.2.0'
+    rev: '7.3.0'
     hooks:
     -   id: flake8
         additional_dependencies: [flake8-clean-block]
@@ -39,7 +39,7 @@ repos:
   # Lint and format
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.11.13
+    rev: v0.13.0
     hooks:
       # Run the linter.
       - id: ruff
@@ -50,7 +50,7 @@ repos:
 
   # Static type-checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.0
+    rev: v1.18.1
     hooks:
       - id: mypy
         additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs, django-stubs-ext, djangorestframework-stubs]
