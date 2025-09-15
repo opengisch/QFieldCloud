@@ -18,7 +18,14 @@
           "localRoot": "${workspaceFolder}/classic/docker-app",
           "remoteRoot": "/usr/src/app"
         },
-      ]
+        // enable only if you want to debug vendor modules installed via `pip` or `apt`
+        // {
+        //   "localRoot": "${workspaceFolder}/docker-app/site-packages",
+        //   "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
+        // },
+      ],
+      // enable only if you want to debug vendor modules installed via `pip` or `apt`
+      // "justMyCode": false,
     },
     {
       "name": "QFieldCloud Debug (Attach) - worker_wrapper",
@@ -34,7 +41,14 @@
           "localRoot": "${workspaceFolder}/classic/docker-app",
           "remoteRoot": "/usr/src/app"
         },
-      ]
+        // enable only if you want to debug vendor modules installed via `pip` or `apt`
+        // {
+        //   "localRoot": "${workspaceFolder}/docker-app/site-packages",
+        //   "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
+        // },
+      ],
+      // enable only if you want to debug vendor modules installed via `pip` or `apt`
+      // "justMyCode": false,
     }
   ]
 }

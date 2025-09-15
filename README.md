@@ -253,16 +253,17 @@ debugpy.wait_for_client()  # optional
 
 3. Or permanently change the command in `docker-compose.override.local.yml` to add the `--wait-for-client`.
 
-To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code.
+To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code on your host machine.
 The easiest way to achieve that is do actual copy of them:
 
 ```
 docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
 ```
 
-The configuration for the vendor modules is the second object in the example `pathMappings` above, as well as setting `justMyCode` to `false`.
+Then uncomment the respective parts of `pathMappings` and `justMyCode` in `.vscode/launch.json`.
+Identify them by searching for "debug vendor modules" in the file.
 
-Do not forget to copy the site packages every time any of the `requirements.txt` files are changed!
+Do not forget to copy the site packages every time any of the `requirements*.txt` files are changed!
 
 
 ## Add root certificate
