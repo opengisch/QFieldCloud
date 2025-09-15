@@ -39,7 +39,8 @@ def _call_libqfieldsync_packager(
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
-    vl_extent_wkt = QgsRectangle()
+    vl_extent_wkt = ""
+    vl_extent = QgsRectangle()
     vl_extent_crs = project.crs()
 
     logger.info("Getting project area of interest…")
@@ -72,8 +73,9 @@ def _call_libqfieldsync_packager(
             logger.info("Failed to obtain the project extent from project layers.")
 
             try:
-                vl_extent = qfc_worker.utils.extract_project_details(project)["extent"]
-                vl_extent = QgsRectangle.fromWkt(vl_extent)
+                vl_extent = QgsRectangle.fromWkt(
+                    qfc_worker.utils.extract_project_details(project)["extent"]
+                )
             except Exception as err:
                 logger.error(
                     "Failed to get the project extent from the current map canvas.",
