@@ -21,7 +21,7 @@ from qfc_worker.utils import (
     layers_data_to_string,
     open_qgis_project,
 )
-from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle
+from qgis.core import Qgis, QgsCoordinateTransform, QgsProject, QgsRectangle
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -155,12 +155,13 @@ def _extract_layer_data(the_qgis_file_name: str | Path) -> dict:
 def _open_read_only_project(the_qgis_file_name: str) -> QgsProject:
     flags = (
         # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
-        QgsProject.ReadFlags()
-        | QgsProject.ForceReadOnlyLayers
-        | QgsProject.FlagDontLoadLayouts
-        | QgsProject.FlagDontLoad3DViews
-        | QgsProject.DontLoadProjectStyles
+        Qgis.ProjectReadFlags()
+        | Qgis.ProjectReadFlag.ForceReadOnlyLayers
+        | Qgis.ProjectReadFlag.DontLoadLayouts
+        | Qgis.ProjectReadFlag.DontLoad3DViews
+        | Qgis.ProjectReadFlag.DontLoadProjectStyles
     )
+
     return open_qgis_project(
         the_qgis_file_name,
         force_reload=True,
