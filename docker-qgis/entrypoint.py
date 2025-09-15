@@ -7,6 +7,7 @@ from pathlib import Path
 
 import qfc_worker.apply_deltas
 import qfc_worker.process_projectfile
+import qfc_worker.utils
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
