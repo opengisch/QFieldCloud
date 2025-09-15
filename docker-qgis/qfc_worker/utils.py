@@ -225,6 +225,8 @@ def open_qgis_project(
 
     project = QgsProject.instance()
 
+    assert project
+
     if project.fileName() == str(the_qgis_file_name) and not force_reload:
         logging.info(
             f'Skip loading the QGIS file "{the_qgis_file_name}", it is already loaded'
