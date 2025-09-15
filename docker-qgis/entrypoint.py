@@ -95,6 +95,8 @@ def _call_libqfieldsync_packager(
 
     attachment_dirs, _ = project.readListEntry("QFieldSync", "attachmentDirs", ["DCIM"])
     data_dirs, _ = project.readListEntry("QFieldSync", "dataDirs", [])
+
+    offliner: QgisCoreOffliner | PythonMiniOffliner
     if offliner_type == OfflinerType.QGISCORE:
         offliner = QgisCoreOffliner()
     elif offliner_type == OfflinerType.PYTHONMINI:
