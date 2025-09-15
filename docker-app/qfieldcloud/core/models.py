@@ -30,6 +30,7 @@ from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
+from django_stubs_ext import StrOrPromise
 from encrypted_fields.fields import EncryptedTextField
 from model_utils.managers import (
     InheritanceManagerMixin,
@@ -1476,7 +1477,7 @@ class Project(models.Model):
         return keep_count
 
     @property
-    def thumbnail_url(self) -> str:
+    def thumbnail_url(self) -> StrOrPromise:
         """Returns the url to the project's thumbnail or empty string if no URL provided.
 
         Todo:

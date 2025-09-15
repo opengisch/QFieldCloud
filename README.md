@@ -221,68 +221,22 @@ Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in y
 
 ### Debugging
 
-> This section gives examples for VSCode, please adapt to your IDE)
+> [!NOTE]
+> This section gives examples for VSCode, please adapt to your IDE.
 
-If you are using the provided `docker-compose.override.local.yml`, then `debugpy` is automatically installed and configured for use.
+QFieldCloud source code ships with the required dependencies and configurations for debugging.
+For local development you use `docker-compose.override.local.yml` with `DEBUG=True` in the `.env` file, in that case `debugpy` is ready to use.
+The VSCode debugger will attach to the debugger in the container as configured in `.vscode/launch.json`.
 
-Add the following to your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
+There are two debugger configurations: for `app` and for `worker_wrapper` services.
+The debugger can triggered with `F5`.
 
-```
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "QFC debug app",
-            "type": "python",
-            "request": "attach",
-            "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5678},
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
-                    "remoteRoot": "/usr/src/app/qfieldcloud"
-                },
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/site-packages",
-                    "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
-                },
-            ],
-        },
-        {
-            "name": "QFC debug worker_wrapper",
-            "type": "python",
-            "request": "attach",
-            "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5679},
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
-                    "remoteRoot": "/usr/src/app/qfieldcloud"
-                },
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/site-packages",
-                    "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
-                },
-            ],
-        }
-    ]
-}
-```
+The default debugger configuration would not pause on boostrapping operations (module imports, class/function definitions etc).
 
-To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code.
-The easiest way to achieve that is do actual copy of them:
+To make sure the debugger is running before any application code is running, you have several options.
 
-```
-docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
-```
+1. You can debug interactively by adding this snippet anywhere in the code.
 
-The configuration for the vendor modules is the second object in the example `pathMappings` above, as well as setting `justMyCode` to `false`.
-
-Do not forget to copy the site packages every time any of the `requirements.txt` files are changed!
-
-If you are not using `docker-compose.override.local.yml`, there are other options.
-
-You can debug interactively by adding this snippet anywhere in the code.
 ```python
 import debugpy
 debugpy.listen(("0.0.0.0", 5680))
@@ -290,12 +244,26 @@ print("debugpy waiting for debugger... 🐛")
 debugpy.wait_for_client()  # optional
 ```
 
-Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`.
+2. Alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`. Note the exposed port here might be different from your local configuration.
 
-    docker compose run -p 5680:5680 app python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
-    docker compose run -p 5681:5681 worker_wrapper python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
+```shell
+    docker compose run --rm -p 5680:5680 app python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
+    docker compose run --rm -p 5681:5681 worker_wrapper python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
+```
 
-Note if you run tests using the `docker-compose.test.yml` configuration, the `app` and `worker-wrapper` containers expose ports `5680` and `5681` respectively.
+3. Or permanently change the command in `docker-compose.override.local.yml` to add the `--wait-for-client`.
+
+To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code on your host machine.
+The easiest way to achieve that is do actual copy of them:
+
+```
+docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
+```
+
+Then uncomment the respective parts of `pathMappings` and `justMyCode` in `.vscode/launch.json`.
+Identify them by searching for "debug vendor modules" in the file.
+
+Do not forget to copy the site packages every time any of the `requirements*.txt` files are changed!
 
 
 ## Add root certificate
