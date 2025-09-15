@@ -4,7 +4,6 @@ import argparse
 import logging
 import os
 from pathlib import Path
-from typing import Union
 
 import qfc_worker.apply_deltas
 import qfc_worker.process_projectfile
@@ -136,7 +135,7 @@ def _call_libqfieldsync_packager(
     return the_packaged_qgis_filename
 
 
-def _extract_layer_data(the_qgis_file_name: Union[str, Path]) -> dict:
+def _extract_layer_data(the_qgis_file_name: str | Path) -> dict:
     logger.info("Extracting QGIS project layer data…")
 
     project = open_qgis_project(str(the_qgis_file_name))
