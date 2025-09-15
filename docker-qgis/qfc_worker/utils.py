@@ -249,6 +249,28 @@ def open_qgis_project(
     return project
 
 
+def open_qgis_project_as_readonly(
+    the_qgis_file_name: str,
+    force_reload: bool = False,
+    disable_feature_count: bool = False,
+) -> QgsProject:
+    flags = (
+        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
+        Qgis.ProjectReadFlags()
+        | Qgis.ProjectReadFlag.ForceReadOnlyLayers
+        | Qgis.ProjectReadFlag.DontLoadLayouts
+        | Qgis.ProjectReadFlag.DontLoad3DViews
+        | Qgis.ProjectReadFlag.DontLoadProjectStyles
+    )
+
+    return open_qgis_project(
+        the_qgis_file_name,
+        force_reload=force_reload,
+        disable_feature_count=disable_feature_count,
+        flags=flags,
+    )
+
+
 def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
     """Rewrites project XML file with feature count disabled.
 

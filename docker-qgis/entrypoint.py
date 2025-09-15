@@ -153,24 +153,6 @@ def _extract_layer_data(the_qgis_file_name: str | Path) -> dict:
     return layers_by_id
 
 
-def _open_read_only_project(the_qgis_file_name: str) -> QgsProject:
-    flags = (
-        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
-        Qgis.ProjectReadFlags()
-        | Qgis.ProjectReadFlag.ForceReadOnlyLayers
-        | Qgis.ProjectReadFlag.DontLoadLayouts
-        | Qgis.ProjectReadFlag.DontLoad3DViews
-        | Qgis.ProjectReadFlag.DontLoadProjectStyles
-    )
-
-    return open_qgis_project(
-        the_qgis_file_name,
-        force_reload=True,
-        disable_feature_count=True,
-        flags=flags,
-    )
-
-
 def cmd_package_project(args: argparse.Namespace):
     workflow = Workflow(
         id="package_project",
@@ -346,8 +328,10 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 name="Opening Check",
                 arguments={
                     "the_qgis_file_name": WorkDirPathAsStr("files", args.project_file),
+                    "force_reload": True,
+                    "disable_feature_count": True,
                 },
-                method=_open_read_only_project,
+                method=qfc_worker.utils.open_qgis_project_as_readonly,
                 return_names=["project"],
             ),
             Step(
