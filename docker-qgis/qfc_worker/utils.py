@@ -133,7 +133,7 @@ def _write_log_message(message, tag, level):
     )
 
 
-QGISAPP: QgsApplication = None
+QGISAPP: QgsApplication | None = None
 
 
 def start_app() -> str:
