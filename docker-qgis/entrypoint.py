@@ -22,7 +22,7 @@ from qfc_worker.utils import (
     layers_data_to_string,
     open_qgis_project,
 )
-from qgis.core import Qgis, QgsCoordinateTransform, QgsProject, QgsRectangle
+from qgis.core import QgsCoordinateTransform, QgsRectangle
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 

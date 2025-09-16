@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Any, Callable, NamedTuple
+from typing import IO, Any, Callable, NamedTuple, TypedDict, cast
 
 from libqfieldsync.layer import LayerSource
 from libqfieldsync.utils.bad_layer_handler import (
@@ -28,6 +28,7 @@ from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
     QgsApplication,
+    QgsLayerTree,
     QgsMapLayer,
     QgsMapSettings,
     QgsProject,
@@ -36,6 +37,9 @@ from qgis.core import (
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
+from qgis.PyQt.QtCore import QSize
+from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtXml import QDomDocument
 from tabulate import tabulate
 
 # Get environment variables
@@ -134,6 +138,15 @@ def _write_log_message(message, tag, level):
 
 
 QGISAPP: QgsApplication | None = None
+
+
+qgis_project_readonly_flags = (
+    Qgis.ProjectReadFlags()
+    | Qgis.ProjectReadFlag.ForceReadOnlyLayers
+    | Qgis.ProjectReadFlag.DontLoadLayouts
+    | Qgis.ProjectReadFlag.DontLoad3DViews
+    | Qgis.ProjectReadFlag.DontLoadProjectStyles
+)
 
 
 def start_app() -> str:
@@ -256,21 +269,109 @@ def open_qgis_project_as_readonly(
     force_reload: bool = False,
     disable_feature_count: bool = False,
 ) -> QgsProject:
-    flags = (
-        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
-        Qgis.ProjectReadFlags()
-        | Qgis.ProjectReadFlag.ForceReadOnlyLayers
-        | Qgis.ProjectReadFlag.DontLoadLayouts
-        | Qgis.ProjectReadFlag.DontLoad3DViews
-        | Qgis.ProjectReadFlag.DontLoadProjectStyles
-    )
-
     return open_qgis_project(
         the_qgis_file_name,
         force_reload=force_reload,
         disable_feature_count=disable_feature_count,
-        flags=flags,
+        flags=qgis_project_readonly_flags,
     )
+
+
+class OpenQgisProjectTemporarilySettings(TypedDict):
+    layer_tree: QgsLayerTree | None
+    output_size: tuple[int, int]
+
+
+class OpenQgisProjectTemporarilyDetailsInner(TypedDict):
+    background_color: str
+    extent: str
+    map_settings: QgsMapSettings
+
+
+class OpenQgisProjectTemporarilyDetails(OpenQgisProjectTemporarilyDetailsInner):
+    project: QgsProject
+
+
+def open_qgis_project_temporarily(
+    qgis_filename: str,
+) -> OpenQgisProjectTemporarilyDetails:
+    """Opens a QGIS project temporarily to extract some details from it and returns the details and the project instance.
+
+    Args:
+        qgis_filename: the path of the QGIS project file (.qgs or .qgz)
+
+    Returns:
+        a dictionary with the project details and the project instance
+    """
+    map_settings = QgsMapSettings()
+
+    def on_project_read_wrapper(
+        tmp_project: QgsProject,
+        map_settings: QgsMapSettings,
+        settings: OpenQgisProjectTemporarilySettings,
+        details: OpenQgisProjectTemporarilyDetailsInner,
+    ) -> Callable[[QDomDocument], None]:
+        def on_project_read(doc: QDomDocument) -> None:
+            r, _success = tmp_project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
+            g, _success = tmp_project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
+            b, _success = tmp_project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
+            background_color = QColor(r, g, b)
+            map_settings.setBackgroundColor(background_color)
+
+            nodes = doc.elementsByTagName("mapcanvas")
+
+            for i in range(nodes.size()):
+                node = nodes.item(i)
+                element = node.toElement()
+                if (
+                    element.hasAttribute("name")
+                    and element.attribute("name") == "theMapCanvas"
+                ):
+                    map_settings.readXml(node)
+
+            map_settings.setRotation(0)
+            map_settings.setTransformContext(tmp_project.transformContext())
+            map_settings.setPathResolver(tmp_project.pathResolver())
+
+            output_size = settings["output_size"]
+            map_settings.setOutputSize(QSize(output_size[0], output_size[1]))
+
+            layer_tree = settings["layer_tree"]
+            if layer_tree:
+                map_settings.setLayers(reversed(list(layer_tree.customLayerOrder())))
+
+            details["background_color"] = background_color.name()
+            details["extent"] = map_settings.extent().asWktPolygon()
+            details["map_settings"] = map_settings
+
+        return on_project_read
+
+    details = cast(OpenQgisProjectTemporarilyDetailsInner, {})
+    tmp_project = QgsProject()
+    tmp_layer_tree = tmp_project.layerTreeRoot()
+
+    tmp_project.readProject.connect(
+        on_project_read_wrapper(
+            tmp_project,
+            map_settings,
+            {
+                "layer_tree": tmp_layer_tree,
+                "output_size": (100, 100),
+            },
+            details,
+        )
+    )
+    tmp_project.read(qgis_filename, qgis_project_readonly_flags)
+
+    details = cast(
+        OpenQgisProjectTemporarilyDetails,
+        {
+            **details,
+            "project": tmp_project,
+        },
+    )
+
+    return details
 
 
 def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
