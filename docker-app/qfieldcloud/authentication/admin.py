@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING
 
 from django.contrib import admin
-from django.contrib.admin import register
 from django.db.models import Q, QuerySet
 from django.http import HttpRequest
 from django.utils import timezone
+
+from qfieldcloud.core.admin import qfc_admin_site
 
 from .models import AuthToken
 
@@ -54,7 +55,6 @@ class AuthTokenClientTypeFilter(admin.SimpleListFilter):
         return queryset.filter(Q(client_type=value))
 
 
-@register(AuthToken)
 class AuthTokenAdmin(admin.ModelAdmin):
     list_display = ("user", "created_at", "expires_at", "last_used_at", "client_type")
     readonly_fields = (
@@ -83,3 +83,6 @@ class AuthTokenAdmin(admin.ModelAdmin):
         """
         now = timezone.now()
         queryset.filter(Q(expires_at__gt=now)).update(expires_at=now)
+
+
+qfc_admin_site.register(AuthToken, AuthTokenAdmin)

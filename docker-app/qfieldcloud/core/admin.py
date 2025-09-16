@@ -22,6 +22,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
+from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
@@ -1692,6 +1693,7 @@ qfc_admin_site.register(Delta, DeltaAdmin)
 qfc_admin_site.register(Job, JobAdmin)
 qfc_admin_site.register(LogEntry, LogEntryAdmin)
 qfc_admin_site.register(FaultyDeltaFile, FaultyDeltaFilesAdmin)
+qfc_admin_site.register(Group)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 qfc_admin_site.register(User, UserAdmin)
