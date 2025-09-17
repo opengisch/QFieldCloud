@@ -15,6 +15,8 @@ from allauth.account.utils import user_pk_to_url_str
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
+from axes.admin import AccessAttemptAdmin, AccessFailureLogAdmin, AccessLogAdmin
+from axes.models import AccessAttempt, AccessFailureLog, AccessLog
 from constance.admin import Config, ConstanceAdmin
 from django import forms
 from django.conf import settings
@@ -1681,6 +1683,9 @@ qfc_admin_site.unregister(Invitation)
 qfc_admin_site.unregister(TokenProxy)
 qfc_admin_site.unregister(EmailAddress)
 qfc_admin_site.unregister(LogEntry)
+qfc_admin_site.unregister(AccessAttempt)
+qfc_admin_site.unregister(AccessFailureLog)
+qfc_admin_site.unregister(AccessLog)
 qfc_admin_site.unregister([Config])
 
 qfc_admin_site.register(Invitation, InvitationAdmin)
@@ -1694,6 +1699,9 @@ qfc_admin_site.register(Job, JobAdmin)
 qfc_admin_site.register(LogEntry, LogEntryAdmin)
 qfc_admin_site.register(FaultyDeltaFile, FaultyDeltaFilesAdmin)
 qfc_admin_site.register(Group)
+qfc_admin_site.register(AccessAttempt, AccessAttemptAdmin)
+qfc_admin_site.register(AccessFailureLog, AccessFailureLogAdmin)
+qfc_admin_site.register(AccessLog, AccessLogAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
 qfc_admin_site.register(User, UserAdmin)
