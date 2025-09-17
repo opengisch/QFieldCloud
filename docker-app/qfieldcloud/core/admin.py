@@ -68,6 +68,7 @@ from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
+from qfieldcloud.filestorage.models import File
 
 
 class QfcAdminSite(AdminSite):
@@ -841,6 +842,13 @@ class ProjectForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.fields["file_storage"] = forms.ChoiceField(
+            choices=get_file_storage_choices(), required=True
+        )
+        if File.objects.filter(project=self.instance).exists():
+            self.fields["file_storage"].disabled = True
+
         self.fields["attachments_file_storage"] = forms.ChoiceField(
             choices=get_file_storage_choices(), required=True
         )
@@ -904,7 +912,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_packaged_at",
         "project_details__pre",
         "is_locked",
-        "file_storage",
         "file_storage_migrated_at",
     )
     inlines = (
