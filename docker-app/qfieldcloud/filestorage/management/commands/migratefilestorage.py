@@ -82,27 +82,28 @@ class Command(BaseCommand):
             assert owner_username_matches is None
 
             if not no_filter and not advanced_filter:
-                self.stderr.write(
+                logger.error(
                     "Can not migrate all projects files without --no-filter or --advanced-filter options."
                 )
                 exit(1)
 
             if no_filter and advanced_filter:
-                self.stderr.write(
+                logger.error(
                     "Can not use --no-filter and --advanced-filter options together."
                 )
                 exit(1)
 
             if no_filter:
-                self.stderr.write(
+                logger.info(
+                    "Running migration on all projects with --no-filter set."
                     "You are going to migrate all files on this installation, without any project filtering!"
                     "This will take a long time to finish and should be done only if you know what is going on!"
                 )
 
             if advanced_filter:
                 if not updated_until and not only_community:
-                    self.stderr.write(
-                        "You are using advanced filtering, but no specific filters are set. Please use one."
+                    logger.error(
+                        "--advanced-filter set but mandatory options missing, aborting."
                     )
                     exit(1)
 
@@ -110,21 +111,15 @@ class Command(BaseCommand):
                     dt_naive = datetime.fromisoformat(updated_until)
                     dt_zoned = timezone.make_aware(dt_naive)
 
-                    self.stderr.write(
-                        f"You are going to migrate projects updated until '{dt_zoned}'."
-                    )
+                    logger.info(f"Migrating projects updated until '{dt_zoned}'.")
 
                 if only_community:
-                    self.stderr.write(
-                        "You are going to migrate projects owned by community accounts."
-                    )
+                    logger.info("Migrating projects owned by community accounts.")
 
             if not accept:
                 yes_no = input("Are you sure you want to continue? [y/n]\n")
                 if yes_no != "y":
-                    self.stderr.write(
-                        "The files migration will not happen, probably a good choice!"
-                    )
+                    logger.info("File storage migration aborted by user.")
                     return
 
             if advanced_filter:
@@ -162,48 +157,43 @@ class Command(BaseCommand):
                 owner__username=owner_username_matches,
             )
         else:
-            self.stderr.write(
-                "You must pass exactly one of filter arguments: --project-id, --all, --owner-username-startswith, or --owner-username-matches!"
+            logger.error(
+                "Filters --project-id, --all, --owner-username-startswith, or --owner-username-matches must be mutually exclusive, aborting."
             )
 
             exit(1)
 
         projects_count = project_qs.count()
         if projects_count == 0:
-            self.stderr.write("No projects match the passed filters!")
+            logger.error("No projects match the passed filters, aborting.")
 
             exit(1)
 
-        self.stderr.write(
-            f"The storage migration will affect {len(projects)} project(s):"
-        )
+        logger.info(f"The storage migration will affect {len(projects)} project(s):")
 
-        self.stderr.write("ID\tNAME")
         for project in project_qs:
-            self.stderr.write(f"{project.id}\t{project.owner.username}/{project.name}")
+            logger.info(f"{project.id};{project.owner.username};{project.name}")
 
         if not accept:
             yes_no = input("Are you sure you want to continue? [y/n]\n")
 
             if yes_no != "y":
-                self.stderr.write(
-                    "The files migration will not happen, probably a good choice!"
-                )
+                logger.info("File storage migration aborted by user.")
                 return
 
         for index, project in enumerate(project_qs, start=1):
-            self.stderr.write(
-                f'⏳ {index}/{projects_count}: migrating storage for project "{project.name}" ({project.id}) from "{project.file_storage}" to "default".'
+            logger.info(
+                f'{index}/{projects_count}: migrating storage for project "{project.name}" ({project.id}) from "{project.file_storage}" to "default".'
             )
 
             try:
                 migrate_project_storage(project, DEFAULT_STORAGE, force)
             except Exception as err:
-                self.stderr.write(
+                logger.error(
                     f"Error when migrating project '{project.name}' ({project.id}): {err}"
                 )
 
                 if no_raise:
-                    self.stderr.write(traceback.format_exc())
+                    logger.error(traceback.format_exc())
                 else:
                     raise
