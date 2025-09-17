@@ -5,6 +5,7 @@ import uuid
 from collections import namedtuple
 from datetime import datetime
 from itertools import chain
+from os.path import basename
 from typing import Any, Generator
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
@@ -14,11 +15,16 @@ from allauth.account.utils import user_pk_to_url_str
 from auditlog.admin import LogEntryAdmin as BaseLogEntryAdmin
 from auditlog.filters import ResourceTypeFilter
 from auditlog.models import ContentType, LogEntry
+from axes.admin import AccessAttemptAdmin, AccessFailureLogAdmin, AccessLogAdmin
+from axes.models import AccessAttempt, AccessFailureLog, AccessLog
+from constance.admin import Config, ConstanceAdmin
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
+from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
+from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
@@ -44,6 +50,7 @@ from qfieldcloud.core.models import (
     ApplyJob,
     ApplyJobDelta,
     Delta,
+    FaultyDeltaFile,
     Geodb,
     Job,
     Organization,
@@ -61,10 +68,25 @@ from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
+from qfieldcloud.filestorage.models import File
 
-admin.site.unregister(LogEntry)
 
-Invitation = get_invitation_model()
+class QfcAdminSite(AdminSite):
+    site_header = _("QFieldCloud Admin")
+    site_title = _("QFieldCloud Admin")
+    index_title = _("QFieldCloud Admin")
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        # a little trick, to ensure that the `qfc_admin_site` has all the models registered on the Django's default admin site
+        self._registry.update(admin.site._registry)
+
+        for _model, model_admin in self._registry.items():
+            model_admin.admin_site = self
+
+
+qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
 
 
 class NoPkOrderChangeList(ChangeList):
@@ -145,11 +167,6 @@ def admin_urlname_by_obj(value, arg):
     else:
         return admin_urlname(value._meta, arg)
 
-
-# Unregister admins from other Django apps
-admin.site.unregister(Invitation)
-admin.site.unregister(TokenProxy)
-admin.site.unregister(EmailAddress)
 
 UserEmailDetails = namedtuple(
     "UserEmailDetails",
@@ -703,7 +720,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "name__icontains",
         "project__name__icontains",
         "assigned_to__username__icontains",
-        "organization__name__icontains",
+        "organization__username__icontains",
     )
 
     @admin.display(ordering="created_by", description=_("Created by"))
@@ -825,6 +842,13 @@ class ProjectForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.fields["file_storage"] = forms.ChoiceField(
+            choices=get_file_storage_choices(), required=True
+        )
+        if File.objects.filter(project=self.instance).exists():
+            self.fields["file_storage"].disabled = True
+
         self.fields["attachments_file_storage"] = forms.ChoiceField(
             choices=get_file_storage_choices(), required=True
         )
@@ -888,7 +912,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_packaged_at",
         "project_details__pre",
         "is_locked",
-        "file_storage",
         "file_storage_migrated_at",
     )
     inlines = (
@@ -1596,17 +1619,99 @@ class LogEntryAdmin(
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
 
-admin.site.register(Invitation, InvitationAdmin)
-admin.site.register(Person, PersonAdmin)
-admin.site.register(Organization, OrganizationAdmin)
-admin.site.register(Team, TeamAdmin)
-admin.site.register(Project, ProjectAdmin)
-admin.site.register(Secret, SecretAdmin)
-admin.site.register(Delta, DeltaAdmin)
-admin.site.register(Job, JobAdmin)
-admin.site.register(LogEntry, LogEntryAdmin)
+class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
+    list_display = (
+        "id",
+        "created_at",
+        "project__owner",
+        "project__name",
+        "short_file_link",
+        "user_agent",
+    )
+
+    list_filter = ("project", "project__owner__username", "created_at")
+
+    list_select_related = ("project", "project__owner")
+
+    search_fields = (
+        "project__id__iexact",
+        "project__name__icontains",
+        "project__owner__username__icontains",
+    )
+
+    readonly_fields = (
+        "id",
+        "project",
+        "created_at",
+        "deltafile",
+        "deltafile_id",
+        "user_agent",
+        "traceback__pre",
+    )
+
+    exclude = ("traceback",)
+
+    def traceback__pre(self, instance) -> str:
+        return format_pre(instance.traceback)
+
+    @admin.display(description=_("Faulty deltafile"))
+    def short_file_link(self, obj: FaultyDeltaFile) -> str:
+        """Shorten storage path to make list view less unwieldy."""
+
+        if obj.deltafile:
+            filename = basename(obj.deltafile.name)
+            return format_html(
+                '<a href="{}" target="_blank">{}</a>',
+                obj.deltafile.url,
+                filename,
+            )
+
+        return "-"
+
+    @admin.display(ordering="project__owner")
+    def project__owner(self, instance: FaultyDeltaFile) -> str:
+        if instance.project:
+            return model_admin_url(instance.project.owner)
+
+        return "-"
+
+    @admin.display(ordering="project__name")
+    def project__name(self, instance: FaultyDeltaFile) -> str:
+        if instance.project:
+            return model_admin_url(instance.project, instance.project.name)
+
+        return "-"
+
+
+Invitation = get_invitation_model()
+
+# Unregister admins from other Django apps
+qfc_admin_site.unregister(Invitation)
+qfc_admin_site.unregister(TokenProxy)
+qfc_admin_site.unregister(EmailAddress)
+qfc_admin_site.unregister(LogEntry)
+qfc_admin_site.unregister(AccessAttempt)
+qfc_admin_site.unregister(AccessFailureLog)
+qfc_admin_site.unregister(AccessLog)
+qfc_admin_site.unregister([Config])
+
+qfc_admin_site.register(Invitation, InvitationAdmin)
+qfc_admin_site.register(Person, PersonAdmin)
+qfc_admin_site.register(Organization, OrganizationAdmin)
+qfc_admin_site.register(Team, TeamAdmin)
+qfc_admin_site.register(Project, ProjectAdmin)
+qfc_admin_site.register(Secret, SecretAdmin)
+qfc_admin_site.register(Delta, DeltaAdmin)
+qfc_admin_site.register(Job, JobAdmin)
+qfc_admin_site.register(LogEntry, LogEntryAdmin)
+qfc_admin_site.register(FaultyDeltaFile, FaultyDeltaFilesAdmin)
+qfc_admin_site.register(Group)
+qfc_admin_site.register(AccessAttempt, AccessAttemptAdmin)
+qfc_admin_site.register(AccessFailureLog, AccessFailureLogAdmin)
+qfc_admin_site.register(AccessLog, AccessLogAdmin)
 
 # The sole purpose of the `User` and `UserAccount` admin modules is only to support autocomplete fields in Django admin
-admin.site.register(User, UserAdmin)
-admin.site.register(UserAccount, UserAccountAdmin)
-admin.site.register(EmailAddress, EmailAddressAdmin)
+qfc_admin_site.register(User, UserAdmin)
+qfc_admin_site.register(UserAccount, UserAccountAdmin)
+qfc_admin_site.register(EmailAddress, EmailAddressAdmin)
+qfc_admin_site.register([Config], ConstanceAdmin)

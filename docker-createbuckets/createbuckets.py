@@ -42,7 +42,7 @@ for storage_name, storage_config in STORAGES.items():
         check=True,
     )
 
-    result = subprocess.run(
+    subprocess.run(
         f"/usr/bin/mc mb --ignore-existing {storage_name}/{bucket_name}",
         shell=True,
     )
@@ -53,9 +53,9 @@ for storage_name, storage_config in STORAGES.items():
         check=True,
     )
 
-    if storage_config["QFC_IS_LEGACY"]:
-        subprocess.run(
-            f"/usr/bin/mc version enable {storage_name}/{bucket_name}",
-            shell=True,
-            check=True,
-        )
+    # We should always enable versioning even for non-legacy storage, as we want to have soft delete on application level
+    subprocess.run(
+        f"/usr/bin/mc version enable {storage_name}/{bucket_name}",
+        shell=True,
+        check=True,
+    )

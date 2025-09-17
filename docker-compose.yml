@@ -27,6 +27,7 @@ services:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
       SECRET_KEY: ${SECRET_KEY}
+      SALT_KEY: ${SALT_KEY}
       DEBUG: ${DEBUG}
       ENVIRONMENT: ${ENVIRONMENT}
       SENTRY_DSN: ${SENTRY_DSN}
@@ -185,7 +186,7 @@ services:
     image: k3rnelpan1c/alpine-wget:latest
     command: |
       wget --mirror https://cdn.proj.org/ -P /transformation_grids --no-host-directories
-      chmod a+r /transformation_grids/*
+      && chmod a+r /transformation_grids/*
     volumes:
       - transformation_grids:/transformation_grids
 

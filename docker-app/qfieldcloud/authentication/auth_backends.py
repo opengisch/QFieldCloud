@@ -1,7 +1,11 @@
+from typing import cast
+
 from allauth.account.auth_backends import (
     AuthenticationBackend as AllAuthAuthenticationBackend,
 )
 from django.contrib.auth import get_user_model
+
+from qfieldcloud.core.models import Person
 
 
 class AuthenticationBackend(AllAuthAuthenticationBackend):
@@ -10,23 +14,23 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
     Sign in via team or organization should be forbidden.
     """
 
-    def _authenticate_by_username(self, **credentials):
-        user = super()._authenticate_by_username(**credentials)
+    def _authenticate_by_username(self, *args, **kwargs) -> Person | None:
+        user = super()._authenticate_by_username(*args, **kwargs)
 
         if user and user.is_person:
             return user
 
         return None
 
-    def _authenticate_by_email(self, **credentials):
-        user = super()._authenticate_by_email(**credentials)
+    def _authenticate_by_email(self, *args, **kwargs) -> Person | None:
+        user = super()._authenticate_by_email(*args, **kwargs)
 
         if user and user.is_person:
             return user
 
         return None
 
-    def get_user(self, user_id):
+    def get_user(self, user_id: int) -> Person | None:
         """Almost the same as `contrib.auth.backends.ModelBackend`, but not using the default manager, but the normal `objects` manager
 
         Returns:
@@ -39,4 +43,7 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
         except UserModel.DoesNotExist:
             return None
 
-        return user if self.user_can_authenticate(user) else None
+        if self.user_can_authenticate(user):
+            return cast(Person, user)
+
+        return None

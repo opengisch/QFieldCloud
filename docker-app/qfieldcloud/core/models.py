@@ -30,6 +30,8 @@ from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
+from django_stubs_ext import StrOrPromise
+from encrypted_fields.fields import EncryptedTextField
 from model_utils.managers import (
     InheritanceManagerMixin,
     InheritanceQuerySet,
@@ -514,13 +516,28 @@ class UserAccount(models.Model):
     @property
     def storage_used_bytes(self) -> float:
         """Returns the storage used in bytes"""
-        used_quota = (
-            self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
-                "sum_bytes"
-            ]
+        from qfieldcloud.filestorage.models import File, FileVersion
+
+        project_files_used_quota = (
+            FileVersion.objects.filter(
+                file__file_type=File.FileType.PROJECT_FILE,
+                file__project__in=self.user.projects.exclude(
+                    file_storage=settings.LEGACY_STORAGE_NAME
+                ),
+            ).aggregate(sum_bytes=Sum("size"))["sum_bytes"]
+            or 0
+        )
+
+        # TODO: Delete with QF-4963 Drop support for legacy storage
+        legacy_used_quota = (
+            self.user.projects.filter(
+                file_storage=settings.LEGACY_STORAGE_NAME
+            ).aggregate(sum_bytes=Sum("file_storage_bytes"))["sum_bytes"]
             # if there are no projects, the value will be `None`
             or 0
         )
+
+        used_quota = project_files_used_quota + legacy_used_quota
 
         return used_quota
 
@@ -1243,7 +1260,6 @@ class Project(models.Model):
         max_length=100,
         validators=[validators.file_storage_name_validator],
         default=get_project_file_storage_default,
-        editable=False,
     )
 
     file_storage_migrated_at = models.DateTimeField(
@@ -1460,7 +1476,7 @@ class Project(models.Model):
         return keep_count
 
     @property
-    def thumbnail_url(self) -> str:
+    def thumbnail_url(self) -> StrOrPromise:
         """Returns the url to the project's thumbnail or empty string if no URL provided.
 
         Todo:
@@ -2560,7 +2576,15 @@ class Secret(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-    value = django_cryptography.fields.encrypt(models.TextField())
+
+    # TODO Remove with QF-6361 Remove legacy `django_cryptography`'s encrypted field support
+    # legacy field to store the encrypted value of the secret.
+    old_value = django_cryptography.fields.encrypt(
+        models.TextField(blank=True, null=True)
+    )
+
+    # encrypted value of the secret.
+    value = EncryptedTextField()
 
     def clean(self, **kwargs) -> None:
         # for project secrets assigned to a user,
@@ -2612,3 +2636,63 @@ class Secret(models.Model):
                 name="secret_assigned_to_organization_or_user",
             ),
         ]
+
+
+def get_faulty_deltafile_upload_to(
+    instance: models.Model,
+    filename: str,
+) -> str:
+    instance = cast(FaultyDeltaFile, instance)
+    key = f"{datetime.now().isoformat()}-{filename}"
+    return f"projects/{instance.project.id}/deltafiles/{key}"
+
+
+class FaultyDeltaFile(models.Model):
+    class Meta:
+        verbose_name = "Faulty deltafile"
+
+    # The deltafile id if parseable UUID value
+    deltafile_id = models.UUIDField(_("Deltafile ID"), editable=False, null=True)
+
+    # The deltafile contents as submitted from the client. It might contain non-valid JSON.
+    deltafile = DynamicStorageFileField(
+        _("Deltafile"),
+        upload_to=get_faulty_deltafile_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=False,
+        blank=False,
+    )
+
+    # Time when processing the deltafile failed and the faulty deltafile was created
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Project that the faulty deltafile was attempted to be uploaded to
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        related_name="faulty_deltafiles",
+        null=True,
+    )
+
+    # User agent of the client that attempted to upload the faulty deltafile
+    user_agent = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    # Traceback of the exception that occurred while processing the deltafile
+    traceback = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    def _get_file_storage_name(self) -> str:
+        # TODO Delete with QF-4963 Drop support for legacy storage
+        # Legacy storage - use default storage
+        if self.project.uses_legacy_storage:
+            return "default"
+
+        # Non-legacy storage - use same storage as project
+        return self.project.file_storage

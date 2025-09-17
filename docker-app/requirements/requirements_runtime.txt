@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=/requirements/requirements_runtime.txt /requirements/requirements_runtime.in
 #
-gunicorn==22.0.0
+gunicorn==23.0.0
     # via -r /requirements/requirements_runtime.in
-packaging==24.1
+packaging==25.0
     # via gunicorn

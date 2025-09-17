@@ -43,42 +43,104 @@ To fetch upstream development, don't forget to update the submodules too:
 
 ### Launch a local instance
 
-Copy the `.env.example` into `.env` file and configure it to your
-desire with a good editor:
+1. Copy the `.env.example` into `.env` file:
 
-    cp .env.example .env
-    emacs .env
+```shell
+cp .env.example .env
+```
+
+2. Change the `ENVIRONMENT` variable to `development`.
+
+```shell
+ENVIRONMENT=development
+```
+
+3. Build development images and run the containers:
+
+```shell
+docker compose up -d --build
+```
+
+The command will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE` variable from the `.env` file. Then Django built-in server will be directly reachable at `http://localhost:8011` or through `nginx` at `https://localhost`.
+You should avoid using the Django's built-in server and better always develop and test QFieldCloud through the `nginx` [reverse proxy with SSL](#add-root-certificate).
+
+4. (OPTIONAL) In case you have a database dump, you can directly load some data in your development database.
+
+```shell
+psql 'service=localhost.qfield.cloud' < ./qfc_dump_20220304.sql
+```
+
+5. Run Django database migrations.
+
+```shell
+docker compose exec app python manage.py migrate
+```
+
+6. And collect the static files (CSS, JS etc):
+
+```shell
+docker compose run app python manage.py collectstatic --noinput
+```
+
+7. Now you can get started by adding your super user that has access to the Django Admin interface:
+
+```shell
+docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
+```
+
+8. If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
+
+```shell
+docker compose run --user root app python manage.py compilemessages
+```
 
 
-Make sure the host's firewall allows port _8009_, required by the `minio` service. Failing to meet this requirement is likely to result in the service being unable to start.
+### Troubleshooting
 
-To build development images and run the containers:
+To verify the instance is working fine, you can check using the healthcheck endpoint and make sure the `database` and `storage` keys have `ok` status:
 
-    docker compose up -d --build
+```shell
+curl https://localhost/api/v1/status/
+```
 
-It will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE`
-variable and start a django built-in server at `http://localhost:8011`.
+If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain the most of the relevant information.
 
-Run the django database migrations.
+```shell
+docker compose logs nginx app
+```
 
-    docker compose exec app python manage.py migrate
 
-And collect the static files (CSS, JS etc):
+### Accessing the database
 
-    docker compose run app python manage.py collectstatic --noinput
+Sometimes we should inspect the database contents.
+It is stored in the `postgres_data` volume and managed via the `db` container.
 
-You can check if everything seems to work correctly using the
-`status` command:
+One can connect to the database via running the `psql` command within the `db` container:
 
-    docker compose exec app python manage.py status
+    docker compose exec -it db psql -U qfieldcloud_db_admin -d qfieldcloud_db
 
-Now you can get started by adding the first user that would also be a super user:
+Or by creating `~/.pg_service.conf` in their user home directory and appending:
 
-    docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
+    [localhost.qfield.cloud]
+    host=localhost
+    dbname=qfieldcloud_db
+    user=qfieldcloud_db_admin
+    port=5433
+    password=3shJDd2r7Twwkehb
+    sslmode=disable
 
-If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
+    [test.localhost.qfield.cloud]
+    host=localhost
+    dbname=test_qfieldcloud_db
+    user=qfieldcloud_db_admin
+    port=5433
+    password=3shJDd2r7Twwkehb
+    sslmode=disable
 
-    docker compose run --user root app python manage.py compilemessages
+And then connecting to the database via:
+
+    psql 'service=localhost.qfield.cloud'
+
 
 ### Dependencies
 
@@ -153,72 +215,28 @@ You can then launch the tests:
 
     docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
 
+Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in your `.pg_service.conf` file](#accessing-the-database).
+
 </details>
 
 ### Debugging
 
-> This section gives examples for VSCode, please adapt to your IDE)
+> [!NOTE]
+> This section gives examples for VSCode, please adapt to your IDE.
 
-If you are using the provided `docker-compose.override.local.yml`, then `debugpy` is automatically installed and configured for use.
+QFieldCloud source code ships with the required dependencies and configurations for debugging.
+For local development you use `docker-compose.override.local.yml` with `DEBUG=True` in the `.env` file, in that case `debugpy` is ready to use.
+The VSCode debugger will attach to the debugger in the container as configured in `.vscode/launch.json`.
 
-Add the following to your IDE to connect (example given for VSCode's `.vscode/launch.json`, triggered with `F5`):
+There are two debugger configurations: for `app` and for `worker_wrapper` services.
+The debugger can triggered with `F5`.
 
-```
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "QFC debug app",
-            "type": "python",
-            "request": "attach",
-            "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5678},
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
-                    "remoteRoot": "/usr/src/app/qfieldcloud"
-                },
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/site-packages",
-                    "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
-                },
-            ],
-        },
-        {
-            "name": "QFC debug worker_wrapper",
-            "type": "python",
-            "request": "attach",
-            "justMyCode": false,
-            "connect": {"host": "localhost", "port": 5679},
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/qfieldcloud",
-                    "remoteRoot": "/usr/src/app/qfieldcloud"
-                },
-                {
-                    "localRoot": "${workspaceFolder}/docker-app/site-packages",
-                    "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
-                },
-            ],
-        }
-    ]
-}
-```
+The default debugger configuration would not pause on boostrapping operations (module imports, class/function definitions etc).
 
-To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code.
-The easiest way to achieve that is do actual copy of them:
+To make sure the debugger is running before any application code is running, you have several options.
 
-```
-docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
-```
+1. You can debug interactively by adding this snippet anywhere in the code.
 
-The configuration for the vendor modules is the second object in the example `pathMappings` above, as well as setting `justMyCode` to `false`.
-
-Do not forget to copy the site packages every time any of the `requirements.txt` files are changed!
-
-If you are not using `docker-compose.override.local.yml`, there are other options.
-
-You can debug interactively by adding this snippet anywhere in the code.
 ```python
 import debugpy
 debugpy.listen(("0.0.0.0", 5680))
@@ -226,12 +244,26 @@ print("debugpy waiting for debugger... 🐛")
 debugpy.wait_for_client()  # optional
 ```
 
-Or alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`.
+2. Alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`. Note the exposed port here might be different from your local configuration.
 
-    docker compose run -p 5680:5680 app python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
-    docker compose run -p 5681:5681 worker_wrapper python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
+```shell
+    docker compose run --rm -p 5680:5680 app python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
+    docker compose run --rm -p 5681:5681 worker_wrapper python -m debugpy --listen 0.0.0.0:5681 --wait-for-client manage.py test
+```
 
-Note if you run tests using the `docker-compose.test.yml` configuration, the `app` and `worker-wrapper` containers expose ports `5680` and `5681` respectively.
+3. Or permanently change the command in `docker-compose.override.local.yml` to add the `--wait-for-client`.
+
+To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code on your host machine.
+The easiest way to achieve that is do actual copy of them:
+
+```
+docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
+```
+
+Then uncomment the respective parts of `pathMappings` and `justMyCode` in `.vscode/launch.json`.
+Identify them by searching for "debug vendor modules" in the file.
+
+Do not forget to copy the site packages every time any of the `requirements*.txt` files are changed!
 
 
 ## Add root certificate

@@ -54,7 +54,7 @@ def setup_subscription_plans():
 
 def set_subscription(
     users: User | Iterable[User],
-    code: str = None,
+    code: str | None = None,
     **kwargs,
 ):
     users: list[User] = [users] if isinstance(users, User) else users

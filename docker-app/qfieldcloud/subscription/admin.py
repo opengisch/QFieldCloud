@@ -7,9 +7,12 @@ from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from qfieldcloud.core.admin import QFieldCloudModelAdmin, model_admin_url
-
-from .models import PackageType, Plan, Subscription
+from qfieldcloud.core.admin import (
+    QFieldCloudModelAdmin,
+    model_admin_url,
+    qfc_admin_site,
+)
+from qfieldcloud.subscription.models import PackageType, Plan, Subscription
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -194,14 +197,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
 
         return self.readonly_fields
 
-    @admin.display(description="Account")
+    @admin.display(description=_("Account"))
     def account__link(self, instance):
         return model_admin_url(
             instance.account.user, instance.account.user.username_with_full_name
         )
 
     # NOTE if the property is computed property, it cannot be `list_display`/`readonly_fields`
-    @admin.display(description="Active", boolean=True)
+    @admin.display(description=_("Active"), boolean=True)
     def is_active(self, instance):
         return instance.is_active
 
@@ -216,7 +219,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     def get_queryset(self, request: HttpRequest):
         return super().get_queryset(request).select_related("account__user", "plan")
 
-    @admin.display(description="Subscriber email")
+    @admin.display(description=_("Subscriber email"))
     def account__user__email(self, instance):
         return instance.account.user.email
 
@@ -227,6 +230,6 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         return super().save_model(request, obj, form, change)
 
 
-admin.site.register(Plan, PlanAdmin)
-admin.site.register(PackageType, PackageTypeAdmin)
-admin.site.register(Subscription, SubscriptionAdmin)
+qfc_admin_site.register(Plan, PlanAdmin)
+qfc_admin_site.register(PackageType, PackageTypeAdmin)
+qfc_admin_site.register(Subscription, SubscriptionAdmin)

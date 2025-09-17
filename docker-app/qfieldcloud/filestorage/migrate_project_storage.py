@@ -64,20 +64,21 @@ def migrate_project_storage(
     now = timezone.now()
 
     try:
-        logger.info(f'Locking project "{project.name}" ({str(project.id)})...')
+        logger.debug(f'Locking project "{project.name}" ({str(project.id)})...')
 
         project.is_locked = True
         project.save(update_fields=["is_locked"])
 
-        logger.info(f'Project "{project.name}" ({str(project.id)}) locked!')
+        logger.debug(f'Project "{project.name}" ({str(project.id)}) locked!')
 
         # NOTE do not allow migration on projects that have currently active jobs.
         # The worker wrapper is going to skip all PENDING jobs for locked projects.
         active_jobs_count = Job.objects.filter(
+            project=project,
             status__in=[
                 Job.Status.QUEUED,
                 Job.Status.STARTED,
-            ]
+            ],
         ).count()
 
         if active_jobs_count:
@@ -85,7 +86,7 @@ def migrate_project_storage(
                 f'Cannot migrate a project with active jobs, {active_jobs_count} jobs are active for project "{project.name}" ({str(project.id)})!'
             )
 
-        logger.info(
+        logger.debug(
             f'Getting project files for project "{project.name}" ({str(project.id)})...'
         )
 
@@ -96,13 +97,15 @@ def migrate_project_storage(
         )
 
         if not project_files:
-            raise Exception("No files to migrate")
+            logger.warning(
+                f'No files to migrate for project "{project.name}" ({str(project.id)})!'
+            )
 
         # NOTE we must set the `Project.file_storage` to the new value before we start adding versions!
         project.file_storage = to_storage
         project.save(update_fields=["file_storage"])
 
-        logger.info(
+        logger.debug(
             f'Checking for files for project "{project.name}" ({str(project.id)}) already stored in the destination storage...'
         )
 
@@ -132,11 +135,11 @@ def migrate_project_storage(
                     f'Migrating file "{file_version.name}" with version "{file_version.id}" for "{project.name}" ({str(project.id)})...'
                 )
 
-                django_thumbnail_file = ContentFile(b"", file_version.name)
+                django_content_file = ContentFile(b"", file_version.name)
 
                 from_storage_bucket.download_fileobj(
                     file_version.key,
-                    django_thumbnail_file,
+                    django_content_file,
                     {
                         "VersionId": file_version.id,
                     },
@@ -145,7 +148,7 @@ def migrate_project_storage(
                 _file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=file_version.name,
-                    content=django_thumbnail_file,
+                    content=django_content_file,
                     file_type=File.FileType.PROJECT_FILE,
                     uploaded_at=file_version.last_modified,
                     uploaded_by=project.owner,
@@ -166,17 +169,17 @@ def migrate_project_storage(
 
         if len(package_files) > 0:
             for package_job, package_file in package_files:
-                django_thumbnail_file = ContentFile(b"", package_file.name)
+                django_content_file = ContentFile(b"", package_file.name)
 
                 from_storage_bucket.download_fileobj(
                     package_file.key,
-                    django_thumbnail_file,
+                    django_content_file,
                 )
 
                 _file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=package_file.name,
-                    content=django_thumbnail_file,
+                    content=django_content_file,
                     file_type=File.FileType.PACKAGE_FILE,
                     uploaded_at=package_file.last_modified,
                     uploaded_by=project.owner,
@@ -196,13 +199,15 @@ def migrate_project_storage(
             )
             project.thumbnail = django_thumbnail_file  # type: ignore
 
-            logger.info(
+            logger.debug(
                 f'Migrated project "{project.name}" ({str(project.id)}) thumbnail!'
             )
         else:
             logger.info(
                 f'No thumbnail to migrate for project "{project.name}" ({str(project.id)})'
             )
+
+        project.file_storage_migrated_at = now
 
     except Exception as err:
         # TODO make sure the created data is deleted from the destination storage if something fails
@@ -237,7 +242,6 @@ def migrate_project_storage(
         raise err
     finally:
         project.is_locked = False
-        project.file_storage_migrated_at = now
         project.save(
             update_fields=[
                 "is_locked",

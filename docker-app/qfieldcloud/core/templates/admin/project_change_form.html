@@ -6,5 +6,7 @@
 
   <div class="submit-row">
     <a href="{% url 'admin:core_job_changelist' %}?q={{original.id}}">{% trans 'Project jobs' %}</a>
+    |
+    <a href="{% url 'admin:core_faultydeltafile_changelist' %}?q={{original.id}}">{% trans 'Faulty deltafiles' %}</a>
   </div>
 {% endblock %}
