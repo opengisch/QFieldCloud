@@ -1612,7 +1612,7 @@ class LogEntryAdmin(
     list_filter = ("action", QFieldCloudResourceTypeFilter)
 
 
-class FaultyDeltaFilesAdmin(admin.ModelAdmin):
+class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "created_at",
