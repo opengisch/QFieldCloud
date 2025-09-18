@@ -35,6 +35,7 @@ def migrate_project_storage(
     logger.info(f'Migrating project "{project.name}" ({str(project.id)})...')
 
     from_storage = project.file_storage
+    from_attachments_storage = project.attachments_file_storage
 
     # project given as parameter should already have been filtered, to exclude the new/default storage.
     # basically, this should never happen, but we check it just in case.
@@ -46,6 +47,11 @@ def migrate_project_storage(
     if from_storage not in settings.STORAGES:
         raise Exception(
             f'Cannot migrate from "{from_storage}", not preset in STORAGES!'
+        )
+
+    if from_attachments_storage not in settings.STORAGES:
+        raise Exception(
+            f'Cannot migrate attachments from "{from_attachments_storage}", not preset in STORAGES!'
         )
 
     if to_storage not in settings.STORAGES:
@@ -103,8 +109,10 @@ def migrate_project_storage(
             )
 
         # NOTE we must set the Project's `file_storage` and `attachments_file_storage` to the new value before we start adding versions!
+        if project.attachments_file_storage == project.file_storage:
+            project.attachments_file_storage = to_storage
+
         project.file_storage = to_storage
-        project.attachments_file_storage = to_storage
         project.save(update_fields=["file_storage", "attachments_file_storage"])
 
         logger.debug(
@@ -242,7 +250,7 @@ def migrate_project_storage(
         # restore the old storage, it will be saved in the `finally` block
         project.legacy_thumbnail_uri = before_legacy_thumbnail_uri
         project.file_storage = from_storage
-        project.attachments_file_storage = from_storage
+        project.attachments_file_storage = from_attachments_storage
 
         raise err
     finally:
