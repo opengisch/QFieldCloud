@@ -7,7 +7,7 @@ services:
     ports:
       # allow direct access without nginx
       - ${DJANGO_DEV_PORT}:8000
-      - ${DEBUG_DEBUGPY_APP_PORT:-5678}:5678
+      - ${DEBUG_APP_DEBUGPY_PORT:-5678}:5678
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -33,11 +33,11 @@ services:
       args:
         - DEBUG_BUILD=1
     ports:
-      - ${DEBUG_DEBUGPY_WORKER_WRAPPER_PORT:-5679}:5679
+      - ${DEBUG_WORKER_WRAPPER_DEBUGPY_PORT:-5679}:5679
     environment:
       QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH: ${QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}
       QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH: ${QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH}
-      DEBUG_DEBUGPY_QGIS_PORT: ${DEBUG_DEBUGPY_QGIS_PORT}
+      DEBUG_QGIS_DEBUGPY_PORT: ${DEBUG_QGIS_DEBUGPY_PORT}
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud

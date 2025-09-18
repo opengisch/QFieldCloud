@@ -81,12 +81,12 @@ class JobRun:
                 logger.critical(msg, exc_info=err)
 
         self.debug_qgis_container_is_enabled = (
-            settings.DEBUG and settings.DEBUG_DEBUGPY_QGIS_PORT
+            settings.DEBUG and settings.DEBUG_QGIS_DEBUGPY_PORT
         )
 
         if self.debug_qgis_container_is_enabled:
             logger.warning(
-                f"Debugging is enabled for job {self.job.id}. The worker will wait for debugger to attach on port {settings.DEBUG_DEBUGPY_QGIS_PORT}."
+                f"Debugging is enabled for job {self.job.id}. The worker will wait for debugger to attach on port {settings.DEBUG_QGIS_DEBUGPY_PORT}."
             )
 
     def get_context(self) -> dict[str, Any]:
@@ -107,7 +107,7 @@ class JobRun:
                 "-m",
                 "debugpy",
                 "--listen",
-                f"0.0.0.0:{settings.DEBUG_DEBUGPY_QGIS_PORT}",
+                f"0.0.0.0:{settings.DEBUG_QGIS_DEBUGPY_PORT}",
                 "--wait-for-client",
             ]
         else:
@@ -343,7 +343,7 @@ class JobRun:
             # but not when new `qgis` containers are started dynamically by the worker wrapper
             ports.update(
                 {
-                    f"{settings.DEBUG_DEBUGPY_QGIS_PORT}/tcp": settings.DEBUG_DEBUGPY_QGIS_PORT,
+                    f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
                 }
             )
 

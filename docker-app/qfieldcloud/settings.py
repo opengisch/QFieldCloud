@@ -734,7 +734,7 @@ QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH = os.environ.get(
 )
 
 # Port to be used by `debugpy` to connect to the QGIS process inside the `qgis` container
-DEBUG_DEBUGPY_QGIS_PORT = os.environ.get("DEBUG_DEBUGPY_QGIS_PORT")
+DEBUG_QGIS_DEBUGPY_PORT = os.environ.get("DEBUG_QGIS_DEBUGPY_PORT")
 
 # Volume name where transformation grids required by `PROJ` are downloaded to
 QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
