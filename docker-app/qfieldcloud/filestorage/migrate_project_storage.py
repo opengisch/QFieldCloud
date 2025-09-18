@@ -35,6 +35,7 @@ def migrate_project_storage(
     logger.info(f'Migrating project "{project.name}" ({str(project.id)})...')
 
     from_storage = project.file_storage
+    from_attachments_storage = project.attachments_file_storage
 
     # project given as parameter should already have been filtered, to exclude the new/default storage.
     # basically, this should never happen, but we check it just in case.
@@ -48,10 +49,15 @@ def migrate_project_storage(
             f'Cannot migrate from "{from_storage}", not preset in STORAGES!'
         )
 
+    if from_attachments_storage not in settings.STORAGES:
+        raise Exception(
+            f'Cannot migrate attachments from "{from_attachments_storage}", not preset in STORAGES!'
+        )
+
     if to_storage not in settings.STORAGES:
         raise Exception(f'Cannot migrate to "{to_storage}", not preset in STORAGES!')
 
-    if project.is_locked:
+    if project.locked_at is not None:
         raise Exception("Cannot migrate a project that is locked!")
 
     if not settings.STORAGES[from_storage]["QFC_IS_LEGACY"]:
@@ -62,12 +68,13 @@ def migrate_project_storage(
     from_storage_bucket = storages[from_storage].bucket  # type: ignore
     to_storage_bucket = storages[to_storage].bucket  # type: ignore
     now = timezone.now()
+    before_legacy_thumbnail_uri = project.legacy_thumbnail_uri
 
     try:
         logger.debug(f'Locking project "{project.name}" ({str(project.id)})...')
 
-        project.is_locked = True
-        project.save(update_fields=["is_locked"])
+        project.locked_at = now
+        project.save(update_fields=["locked_at"])
 
         logger.debug(f'Project "{project.name}" ({str(project.id)}) locked!')
 
@@ -101,9 +108,12 @@ def migrate_project_storage(
                 f'No files to migrate for project "{project.name}" ({str(project.id)})!'
             )
 
-        # NOTE we must set the `Project.file_storage` to the new value before we start adding versions!
+        # NOTE we must set the Project's `file_storage` and `attachments_file_storage` to the new value before we start adding versions!
+        if project.attachments_file_storage == project.file_storage:
+            project.attachments_file_storage = to_storage
+
         project.file_storage = to_storage
-        project.save(update_fields=["file_storage"])
+        project.save(update_fields=["file_storage", "attachments_file_storage"])
 
         logger.debug(
             f'Checking for files for project "{project.name}" ({str(project.id)}) already stored in the destination storage...'
@@ -187,7 +197,7 @@ def migrate_project_storage(
                     package_job_id=package_job.id,
                 )
 
-        if project.legacy_thumbnail_uri:
+        if before_legacy_thumbnail_uri:
             logger.info(
                 f'Migrate project "{project.name}" ({str(project.id)}) thumbnail "{project.legacy_thumbnail_uri}"...'
             )
@@ -198,6 +208,7 @@ def migrate_project_storage(
                 django_thumbnail_file,
             )
             project.thumbnail = django_thumbnail_file  # type: ignore
+            project.legacy_thumbnail_uri = ""
 
             logger.debug(
                 f'Migrated project "{project.name}" ({str(project.id)}) thumbnail!'
@@ -237,16 +248,20 @@ def migrate_project_storage(
         )
 
         # restore the old storage, it will be saved in the `finally` block
+        project.legacy_thumbnail_uri = before_legacy_thumbnail_uri
         project.file_storage = from_storage
+        project.attachments_file_storage = from_attachments_storage
 
         raise err
     finally:
-        project.is_locked = False
+        project.locked_at = None
         project.save(
             update_fields=[
-                "is_locked",
+                "locked_at",
                 "file_storage",
+                "attachments_file_storage",
                 "file_storage_migrated_at",
                 "thumbnail",
+                "legacy_thumbnail_uri",
             ]
         )
