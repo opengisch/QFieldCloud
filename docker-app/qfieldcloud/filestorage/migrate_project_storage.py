@@ -62,6 +62,7 @@ def migrate_project_storage(
     from_storage_bucket = storages[from_storage].bucket  # type: ignore
     to_storage_bucket = storages[to_storage].bucket  # type: ignore
     now = timezone.now()
+    before_legacy_thumbnail_uri = project.legacy_thumbnail_uri
 
     try:
         logger.debug(f'Locking project "{project.name}" ({str(project.id)})...')
@@ -188,7 +189,7 @@ def migrate_project_storage(
                     package_job_id=package_job.id,
                 )
 
-        if project.legacy_thumbnail_uri:
+        if before_legacy_thumbnail_uri:
             logger.info(
                 f'Migrate project "{project.name}" ({str(project.id)}) thumbnail "{project.legacy_thumbnail_uri}"...'
             )
@@ -199,6 +200,7 @@ def migrate_project_storage(
                 django_thumbnail_file,
             )
             project.thumbnail = django_thumbnail_file  # type: ignore
+            project.legacy_thumbnail_uri = ""
 
             logger.debug(
                 f'Migrated project "{project.name}" ({str(project.id)}) thumbnail!'
@@ -238,6 +240,7 @@ def migrate_project_storage(
         )
 
         # restore the old storage, it will be saved in the `finally` block
+        project.legacy_thumbnail_uri = before_legacy_thumbnail_uri
         project.file_storage = from_storage
         project.attachments_file_storage = from_storage
 
@@ -251,5 +254,6 @@ def migrate_project_storage(
                 "attachments_file_storage",
                 "file_storage_migrated_at",
                 "thumbnail",
+                "legacy_thumbnail_uri",
             ]
         )
