@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+from uuid import uuid4
 
 import django_cryptography.fields
 from deprecated import deprecated
@@ -1061,7 +1062,17 @@ def get_project_file_storage_default() -> str:
 
 
 def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
-    return f"projects/{instance.id}/meta/thumbnail.png"
+    """Variable storage key for thumbnails.
+
+    We use a variable storage key to avoid creating object storage level versions for
+    thumbnails that we then would need to manage (purge old versions, make sure we don't
+    exceed version limit).
+    """
+    ts = datetime.now().strftime("v%Y%m%d%H%M%S")
+    # Random suffix because the second precision of the timestamp alone might
+    # not be enough to avoid collisions
+    suffix = str(uuid4())[:8]
+    return f"projects/{instance.id}/meta/thumbnail_{ts}_{suffix}.png"
 
 
 class Project(models.Model):
