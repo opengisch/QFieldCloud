@@ -298,19 +298,23 @@ class JobRun:
         self.job.docker_started_at = timezone.now()
         self.job.save(update_fields=["docker_started_at"])
 
+        environment = {
+            **extra_envvars,
+            "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
+            "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
+            "QFIELDCLOUD_TOKEN": token.key,
+            "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+            "JOB_ID": self.job_id,
+            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
+            "QT_QPA_PLATFORM": "offscreen",
+        }
+        ports = {}
+
         container: Container = client.containers.run(  # type:ignore
             settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
             command,
-            environment={
-                **extra_envvars,
-                "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
-                "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
-                "QFIELDCLOUD_TOKEN": token.key,
-                "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
-                "JOB_ID": self.job_id,
-                "PROJ_DOWNLOAD_DIR": "/transformation_grids",
-                "QT_QPA_PLATFORM": "offscreen",
-            },
+            environment=environment,
+            ports=ports,
             volumes=volumes,
             # TODO stream the logs to something like redis, so they can be streamed back in project jobs page to the user live
             # auto_remove=True,
