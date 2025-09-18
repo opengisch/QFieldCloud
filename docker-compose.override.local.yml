@@ -37,6 +37,7 @@ services:
     environment:
       QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH: ${QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}
       QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH: ${QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH}
+      DEBUG_DEBUGPY_QGIS_PORT: ${DEBUG_DEBUGPY_QGIS_PORT}
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -48,6 +49,9 @@ services:
       - "${MEMCACHED_PORT}:11211"
 
   qgis:
+    build:
+      args:
+        - DEBUG_BUILD=1
     volumes:
       # allow local development for `docker-qgis`
       - ./docker-qgis/qfc_worker:/usr/src/app/qfc_worker:ro

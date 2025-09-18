@@ -78,6 +78,10 @@ ENV XDG_RUNTIME_DIR=/root
 ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
+# Install debugpy for local development and debuggability
+ARG DEBUG_BUILD
+RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --break-system-packages debugpy; fi
+
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/
 RUN pip3 install --break-system-packages --ignore-installed -r /tmp/requirements.txt

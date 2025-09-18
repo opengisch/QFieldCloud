@@ -80,6 +80,15 @@ class JobRun:
             else:
                 logger.critical(msg, exc_info=err)
 
+        self.debug_qgis_container_is_enabled = (
+            settings.DEBUG and settings.DEBUG_DEBUGPY_QGIS_PORT
+        )
+
+        if self.debug_qgis_container_is_enabled:
+            logger.warning(
+                f"Debugging is enabled for job {self.job.id}. The worker will wait for debugger to attach on port {settings.DEBUG_DEBUGPY_QGIS_PORT}."
+            )
+
     def get_context(self) -> dict[str, Any]:
         context = model_to_dict(self.job)
 
@@ -92,7 +101,22 @@ class JobRun:
 
     def get_command(self) -> list[str]:
         context = self.get_context()
-        return [p % context for p in ["python3", "entrypoint.py", *self.command]]
+
+        if self.debug_qgis_container_is_enabled:
+            debug_flags = [
+                "-m",
+                "debugpy",
+                "--listen",
+                f"0.0.0.0:{settings.DEBUG_DEBUGPY_QGIS_PORT}",
+                "--wait-for-client",
+            ]
+        else:
+            debug_flags = []
+
+        return [
+            p % context
+            for p in ["python3", *debug_flags, "entrypoint.py", *self.command]
+        ]
 
     def before_docker_run(self) -> None:
         pass
@@ -309,6 +333,19 @@ class JobRun:
             "QT_QPA_PLATFORM": "offscreen",
         }
         ports = {}
+
+        if self.debug_qgis_container_is_enabled:
+            # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
+            # otherwise the vscode deubgger won't be able to connect
+            # NOTE the port must be passed here and not in the `docker-compose` file,
+            # because the `qgis` container is started with docker in docker and the `docker-compose`
+            # configuration is valid only for the brief moment when the stack is built and started,
+            # but not when new `qgis` containers are started dynamically by the worker wrapper
+            ports.update(
+                {
+                    f"{settings.DEBUG_DEBUGPY_QGIS_PORT}/tcp": settings.DEBUG_DEBUGPY_QGIS_PORT,
+                }
+            )
 
         container: Container = client.containers.run(  # type:ignore
             settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
