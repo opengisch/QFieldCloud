@@ -4,10 +4,10 @@ import argparse
 import logging
 import os
 from pathlib import Path
-from typing import Union
 
 import qfc_worker.apply_deltas
 import qfc_worker.process_projectfile
+import qfc_worker.utils
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
@@ -22,7 +22,7 @@ from qfc_worker.utils import (
     layers_data_to_string,
     open_qgis_project,
 )
-from qgis.core import QgsCoordinateTransform, QgsProject, QgsRectangle
+from qgis.core import QgsCoordinateTransform, QgsRectangle
 
 PGSERVICE_FILE_CONTENTS = os.environ.get("PGSERVICE_FILE_CONTENTS")
 
@@ -40,7 +40,8 @@ def _call_libqfieldsync_packager(
 
     layers = project.mapLayers()
     project_config = ProjectConfiguration(project)
-    vl_extent_wkt = QgsRectangle()
+    vl_extent_wkt = ""
+    vl_extent = QgsRectangle()
     vl_extent_crs = project.crs()
 
     logger.info("Getting project area of interest…")
@@ -73,8 +74,9 @@ def _call_libqfieldsync_packager(
             logger.info("Failed to obtain the project extent from project layers.")
 
             try:
-                vl_extent = qfc_worker.utils.extract_project_details(project)["extent"]
-                vl_extent = QgsRectangle.fromWkt(vl_extent)
+                vl_extent = QgsRectangle.fromWkt(
+                    qfc_worker.utils.extract_project_details(project)["extent"]
+                )
             except Exception as err:
                 logger.error(
                     "Failed to get the project extent from the current map canvas.",
@@ -96,6 +98,8 @@ def _call_libqfieldsync_packager(
 
     attachment_dirs, _ = project.readListEntry("QFieldSync", "attachmentDirs", ["DCIM"])
     data_dirs, _ = project.readListEntry("QFieldSync", "dataDirs", [])
+
+    offliner: QgisCoreOffliner | PythonMiniOffliner
     if offliner_type == OfflinerType.QGISCORE:
         offliner = QgisCoreOffliner()
     elif offliner_type == OfflinerType.PYTHONMINI:
@@ -136,7 +140,7 @@ def _call_libqfieldsync_packager(
     return the_packaged_qgis_filename
 
 
-def _extract_layer_data(the_qgis_file_name: Union[str, Path]) -> dict:
+def _extract_layer_data(the_qgis_file_name: str | Path) -> dict:
     logger.info("Extracting QGIS project layer data…")
 
     project = open_qgis_project(str(the_qgis_file_name))
@@ -147,23 +151,6 @@ def _extract_layer_data(the_qgis_file_name: Union[str, Path]) -> dict:
     )
 
     return layers_by_id
-
-
-def _open_read_only_project(the_qgis_file_name: str) -> QgsProject:
-    flags = (
-        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
-        QgsProject.ReadFlags()
-        | QgsProject.ForceReadOnlyLayers
-        | QgsProject.FlagDontLoadLayouts
-        | QgsProject.FlagDontLoad3DViews
-        | QgsProject.DontLoadProjectStyles
-    )
-    return open_qgis_project(
-        the_qgis_file_name,
-        force_reload=True,
-        disable_feature_count=True,
-        flags=flags,
-    )
 
 
 def cmd_package_project(args: argparse.Namespace):
@@ -341,8 +328,10 @@ def cmd_process_projectfile(args: argparse.Namespace):
                 name="Opening Check",
                 arguments={
                     "the_qgis_file_name": WorkDirPathAsStr("files", args.project_file),
+                    "force_reload": True,
+                    "disable_feature_count": True,
                 },
-                method=_open_read_only_project,
+                method=qfc_worker.utils.open_qgis_project_as_readonly,
                 return_names=["project"],
             ),
             Step(

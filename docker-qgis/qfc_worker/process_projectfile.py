@@ -1,17 +1,13 @@
 import logging
 from pathlib import Path
-from typing import Callable
+from typing import Any, TypedDict, cast
 from xml.etree import ElementTree
 
 from qgis.core import (
-    QgsLayerTree,
     QgsMapRendererCustomPainterJob,
-    QgsMapSettings,
     QgsProject,
 )
-from qgis.PyQt.QtCore import QSize
-from qgis.PyQt.QtGui import QColor, QImage, QPainter
-from qgis.PyQt.QtXml import QDomDocument
+from qgis.PyQt.QtGui import QImage, QPainter
 
 from .utils import (
     FailedThumbnailGenerationException,
@@ -21,6 +17,7 @@ from .utils import (
     get_layers_data,
     get_qgis_xml_error_context,
     layers_data_to_string,
+    open_qgis_project_temporarily,
 )
 
 logger = logging.getLogger("PROCPRJ")
@@ -52,62 +49,31 @@ def check_valid_project_file(the_qgis_file_name: Path) -> None:
     logger.info("QGIS project file is valid!")
 
 
-def extract_project_details(project: QgsProject) -> dict[str, str]:
+class ProjectDetails(TypedDict):
+    background_color: str
+    extent: str
+    crs: str
+    project_name: str
+    layers_by_id: dict[str, Any]
+    ordered_layer_ids: list[str]
+    attachment_dirs: list[str]
+    data_dirs: list[str]
+
+
+def extract_project_details(project: QgsProject) -> ProjectDetails:
     """Extract project details"""
     logger.info("Extract project details…")
-
-    details = {}
-
     logger.info("Reading QGIS project file…")
-    map_settings = QgsMapSettings()
 
-    def on_project_read_wrapper(
-        tmp_project: QgsProject,
-    ) -> Callable[[QDomDocument], None]:
-        def on_project_read(doc: QDomDocument) -> None:
-            r, _success = tmp_project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
-            g, _success = tmp_project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
-            b, _success = tmp_project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
-            background_color = QColor(r, g, b)
-            map_settings.setBackgroundColor(background_color)
-
-            details["background_color"] = background_color.name()
-
-            nodes = doc.elementsByTagName("mapcanvas")
-
-            for i in range(nodes.size()):
-                node = nodes.item(i)
-                element = node.toElement()
-                if (
-                    element.hasAttribute("name")
-                    and element.attribute("name") == "theMapCanvas"
-                ):
-                    map_settings.readXml(node)
-
-            map_settings.setRotation(0)
-            map_settings.setOutputSize(QSize(1024, 768))
-
-            details["extent"] = map_settings.extent().asWktPolygon()
-
-        return on_project_read
-
-    # NOTE use a temporary project to get the project extent and background color
-    # as we can disable resolving layers, which results in great speed gains
-    tmp_project = QgsProject()
-    tmp_project_read_flags = (
-        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
-        QgsProject.ReadFlags()
-        | QgsProject.FlagDontResolveLayers
-        | QgsProject.FlagDontLoadLayouts
-        | QgsProject.FlagDontLoad3DViews
-        | QgsProject.DontLoadProjectStyles
-    )
-    tmp_project.readProject.connect(on_project_read_wrapper(tmp_project))
-    tmp_project.read(project.fileName(), tmp_project_read_flags)
+    details: ProjectDetails = cast(ProjectDetails, {})
+    tmp_project_details = open_qgis_project_temporarily(project.fileName())
+    tmp_project = tmp_project_details["project"]
 
     # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
     del tmp_project
 
+    details["background_color"] = tmp_project_details["background_color"]
+    details["extent"] = tmp_project_details["extent"]
     details["crs"] = project.crs().authid()
     details["project_name"] = project.title()
 
@@ -138,55 +104,9 @@ def generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> Non
     """
     logger.info("Generate project thumbnail image…")
 
-    map_settings = QgsMapSettings()
-
-    def on_project_read_wrapper(
-        tmp_project: QgsProject,
-        tmp_layer_tree: QgsLayerTree,
-    ) -> Callable[[QDomDocument], None]:
-        def on_project_read(doc: QDomDocument) -> None:
-            r, _success = tmp_project.readNumEntry("Gui", "/CanvasColorRedPart", 255)
-            g, _success = tmp_project.readNumEntry("Gui", "/CanvasColorGreenPart", 255)
-            b, _success = tmp_project.readNumEntry("Gui", "/CanvasColorBluePart", 255)
-            map_settings.setBackgroundColor(QColor(r, g, b))
-
-            nodes = doc.elementsByTagName("mapcanvas")
-
-            for i in range(nodes.size()):
-                node = nodes.item(i)
-                element = node.toElement()
-                if (
-                    element.hasAttribute("name")
-                    and element.attribute("name") == "theMapCanvas"
-                ):
-                    map_settings.readXml(node)
-
-            map_settings.setRotation(0)
-            map_settings.setTransformContext(tmp_project.transformContext())
-            map_settings.setPathResolver(tmp_project.pathResolver())
-            map_settings.setOutputSize(QSize(100, 100))
-            map_settings.setLayers(reversed(list(tmp_layer_tree.customLayerOrder())))
-
-        return on_project_read
-
-    # NOTE use a temporary project to generate the layer rendering with improved speed
-    tmp_project = QgsProject()
-    tmp_layer_tree = tmp_project.layerTreeRoot()
-    tmp_project_read_flags = (
-        # TODO we use `QgsProject` read flags, as the ones in `Qgis.ProjectReadFlags` do not work in QGIS 3.34.2
-        QgsProject.ReadFlags()
-        | QgsProject.ForceReadOnlyLayers
-        | QgsProject.FlagDontLoadLayouts
-        | QgsProject.FlagDontLoad3DViews
-        | QgsProject.DontLoadProjectStyles
-    )
-    tmp_project.readProject.connect(
-        on_project_read_wrapper(tmp_project, tmp_layer_tree)
-    )
-    tmp_project.read(
-        the_qgis_file_name,
-        tmp_project_read_flags,
-    )
+    tmp_project_details = open_qgis_project_temporarily(the_qgis_file_name)
+    tmp_project = tmp_project_details["project"]
+    map_settings = tmp_project_details["map_settings"]
 
     img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
     painter = QPainter(img)
@@ -211,6 +131,6 @@ def generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> Non
 
 
 if __name__ == "__main__":
-    from qfieldcloud.qgis.utils import setup_basic_logging_config
+    from qfc_worker.utils import setup_basic_logging_config
 
     setup_basic_logging_config()
