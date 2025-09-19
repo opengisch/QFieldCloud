@@ -80,6 +80,15 @@ class JobRun:
             else:
                 logger.critical(msg, exc_info=err)
 
+        self.debug_qgis_container_is_enabled = (
+            settings.DEBUG and settings.DEBUG_QGIS_DEBUGPY_PORT
+        )
+
+        if self.debug_qgis_container_is_enabled:
+            logger.warning(
+                f"Debugging is enabled for job {self.job.id}. The worker will wait for debugger to attach on port {settings.DEBUG_QGIS_DEBUGPY_PORT}."
+            )
+
     def get_context(self) -> dict[str, Any]:
         context = model_to_dict(self.job)
 
@@ -92,7 +101,22 @@ class JobRun:
 
     def get_command(self) -> list[str]:
         context = self.get_context()
-        return [p % context for p in ["python3", "entrypoint.py", *self.command]]
+
+        if self.debug_qgis_container_is_enabled:
+            debug_flags = [
+                "-m",
+                "debugpy",
+                "--listen",
+                f"0.0.0.0:{settings.DEBUG_QGIS_DEBUGPY_PORT}",
+                "--wait-for-client",
+            ]
+        else:
+            debug_flags = []
+
+        return [
+            p % context
+            for p in ["python3", *debug_flags, "entrypoint.py", *self.command]
+        ]
 
     def before_docker_run(self) -> None:
         pass
@@ -283,34 +307,51 @@ class JobRun:
         )
 
         # used for local development of QFieldCloud
-        if settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH:
+        if settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH:
             volumes.append(
-                f"{settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}:/libqfieldsync:ro"
+                f"{settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH}:/libqfieldsync:ro"
             )
 
         # used for local development of QFieldCloud
-        if settings.QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH:
+        if settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH:
             volumes.append(
-                f"{settings.QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH}:/qfieldcloud-sdk-python:ro"
+                f"{settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH}:/qfieldcloud-sdk-python:ro"
             )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
         self.job.save(update_fields=["docker_started_at"])
 
+        environment = {
+            **extra_envvars,
+            "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
+            "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
+            "QFIELDCLOUD_TOKEN": token.key,
+            "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+            "JOB_ID": self.job_id,
+            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
+            "QT_QPA_PLATFORM": "offscreen",
+        }
+        ports = {}
+
+        if self.debug_qgis_container_is_enabled:
+            # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
+            # otherwise the vscode deubgger won't be able to connect
+            # NOTE the port must be passed here and not in the `docker-compose` file,
+            # because the `qgis` container is started with docker in docker and the `docker-compose`
+            # configuration is valid only for the brief moment when the stack is built and started,
+            # but not when new `qgis` containers are started dynamically by the worker wrapper
+            ports.update(
+                {
+                    f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
+                }
+            )
+
         container: Container = client.containers.run(  # type:ignore
             settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
             command,
-            environment={
-                **extra_envvars,
-                "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
-                "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
-                "QFIELDCLOUD_TOKEN": token.key,
-                "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
-                "JOB_ID": self.job_id,
-                "PROJ_DOWNLOAD_DIR": "/transformation_grids",
-                "QT_QPA_PLATFORM": "offscreen",
-            },
+            environment=environment,
+            ports=ports,
             volumes=volumes,
             # TODO stream the logs to something like redis, so they can be streamed back in project jobs page to the user live
             # auto_remove=True,

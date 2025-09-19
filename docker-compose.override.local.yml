@@ -7,7 +7,7 @@ services:
     ports:
       # allow direct access without nginx
       - ${DJANGO_DEV_PORT}:8000
-      - ${DEBUG_DEBUGPY_APP_PORT:-5678}:5678
+      - ${DEBUG_APP_DEBUGPY_PORT:-5678}:5678
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -33,10 +33,11 @@ services:
       args:
         - DEBUG_BUILD=1
     ports:
-      - ${DEBUG_DEBUGPY_WORKER_WRAPPER_PORT:-5679}:5679
+      - ${DEBUG_WORKER_WRAPPER_DEBUGPY_PORT:-5679}:5679
     environment:
-      QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH: ${QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}
-      QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH: ${QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH}
+      DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH: ${DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH}
+      DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH: ${DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH}
+      DEBUG_QGIS_DEBUGPY_PORT: ${DEBUG_QGIS_DEBUGPY_PORT}
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud
@@ -48,10 +49,13 @@ services:
       - "${MEMCACHED_PORT}:11211"
 
   qgis:
+    build:
+      args:
+        - DEBUG_BUILD=1
     volumes:
       # allow local development for `docker-qgis`
-      - ./docker-qgis/qfc_worker:/usr/src/qfc_worker:ro
-      - ./docker-qgis/entrypoint.py:/usr/src/entrypoint.py:ro
+      - ./docker-qgis/qfc_worker:/usr/src/app/qfc_worker:ro
+      - ./docker-qgis/entrypoint.py:/usr/src/app/entrypoint.py:ro
       # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
       - ./docker-qgis/libqfieldsync:/libqfieldsync:ro
       # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`

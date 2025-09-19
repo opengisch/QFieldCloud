@@ -201,8 +201,8 @@ Create an <code>.env.test</code> file with the following variables that override
     SMTP4DEV_IMAP_PORT=8143
     COMPOSE_PROJECT_NAME=qfieldcloud_test
     COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
-    DEBUG_DEBUGPY_APP_PORT=5781
-    DEBUG_DEBUGPY_WORKER_WRAPPER_PORT=5780
+    DEBUG_APP_DEBUGPY_PORT=5781
+    DEBUG_WORKER_WRAPPER_DEBUGPY_PORT=5780
     DEMGEN_PORT=8201
 
 Build the test docker compose stack:

@@ -49,6 +49,26 @@
       ],
       // enable only if you want to debug vendor modules installed via `pip` or `apt`
       // "justMyCode": false,
-    }
+    },
+    {
+      "name": "QFieldCloud Debug (Attach) - qgis",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        // must match the value of `DEBUG_DEBUGPY_QGIS_PORT` from `.env` file, by default 5680
+        "port": 5680
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/docker-qgis",
+          "remoteRoot": "/usr/src/app"
+        },
+        {
+          "localRoot": "${workspaceFolder}/docker-qgis/libqfieldsync",
+          "remoteRoot": "/libqfieldsync"
+        },
+      ],
+    },
   ]
 }
