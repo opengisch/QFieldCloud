@@ -307,15 +307,15 @@ class JobRun:
         )
 
         # used for local development of QFieldCloud
-        if settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH:
+        if settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH:
             volumes.append(
-                f"{settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}:/libqfieldsync:ro"
+                f"{settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH}:/libqfieldsync:ro"
             )
 
         # used for local development of QFieldCloud
-        if settings.QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH:
+        if settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH:
             volumes.append(
-                f"{settings.QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH}:/qfieldcloud-sdk-python:ro"
+                f"{settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH}:/qfieldcloud-sdk-python:ro"
             )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
