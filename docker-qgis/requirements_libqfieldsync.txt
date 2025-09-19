@@ -1,1 +1,1 @@
-libqfieldsync @ git+https://github.com/opengisch/libqfieldsync@c670dcffb9aada9a7066591a7588188f024102a0
+libqfieldsync @ git+https://github.com/opengisch/libqfieldsync@62853968a3cc98953ff7f41f8770a7f9d1b6a80e

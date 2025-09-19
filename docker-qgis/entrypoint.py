@@ -32,7 +32,7 @@ logger.setLevel(logging.INFO)
 
 def _call_libqfieldsync_packager(
     the_qgis_file_name: Path, package_dir: Path, offliner_type: OfflinerType
-) -> str:
+) -> Path:
     """Call `libqfieldsync` to package a project for QField"""
     logger.info("Preparing QGIS project for packaging…")
 
@@ -107,12 +107,15 @@ def _call_libqfieldsync_packager(
 
     logger.info("Packaging…")
 
+    the_packaged_qgis_filename = package_dir.joinpath(
+        f"{the_qgis_file_name.stem}_qfield.qgs"
+    )
     offline_converter = OfflineConverter(
         project,
-        str(package_dir),
-        vl_extent_wkt,
-        vl_extent_crs,
-        attachment_dirs + data_dirs,
+        export_filename=str(the_packaged_qgis_filename),
+        area_of_interest_wkt=vl_extent_wkt,
+        area_of_interest_crs=vl_extent_crs,
+        attachment_dirs=attachment_dirs + data_dirs,
         offliner=offliner,
         export_type=ExportType.Cloud,
         create_basemap=False,
@@ -125,7 +128,8 @@ def _call_libqfieldsync_packager(
 
     logger.info("Packaging finished!")
 
-    the_packaged_qgis_filename = get_project_in_folder(str(package_dir))
+    assert str(the_packaged_qgis_filename) == get_project_in_folder(str(package_dir))
+
     if Path(the_packaged_qgis_filename).stat().st_size == 0:
         raise Exception("The packaged QGIS project file is empty.")
 
