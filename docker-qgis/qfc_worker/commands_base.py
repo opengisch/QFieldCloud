@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import argparse
+import logging
+from inspect import getfile
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+registry = {}
+
+parser = argparse.ArgumentParser(prog="COMMAND")
+subparsers = parser.add_subparsers(dest="cmd")
+
+
+class QfcBaseCommand:
+    def __init__(self) -> None:
+        self.name = Path(getfile(self.__class__)).stem
+
+        if self.name in registry:
+            raise Exception(
+                f"Only one command allowed per file. Check the definition of {self.__class__.__name__}"
+            )
+
+        self.parser = self.create_parser()
+
+    def create_parser(self) -> argparse.ArgumentParser:
+        parser = subparsers.add_parser(self.name, help=self.name)
+        parser.set_defaults(func=self.handle)
+
+        self.add_arguments(parser)
+
+        return parser
+
+    def run_from_argv(self) -> None:
+        options = self.parser.parse_args()
+
+        cmd_options = vars(options)
+        # Move positional args out of options to mimic legacy optparse
+        args = cmd_options.pop("args", ())
+
+        self.execute(*args, **cmd_options)
+
+    def execute(self, *args: Any, **options: Any) -> None:
+        self.handle(*args, **options)
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        """
+        Entry point for subclassed commands to add custom arguments.
+        """
+        pass
+
+    def handle(self, /, **kwargs) -> None:
+        """
+        The actual logic of the command. Subclasses must implement
+        this method.
+        """
+        raise NotImplementedError(
+            "subclasses of QfcBaseCommand must provide a handle() method"
+        )
+
+
+def run_command() -> None:
+    # import all commands so they register themselves
+    import qfc_worker.commands  # noqa: F401
+
+    args: argparse.Namespace = parser.parse_args()
+
+    options = vars(args)
+
+    if hasattr(args, "func") is False:
+        parser.print_help()
+        return
+
+    # temporarily store the function to call, as if removed from options, it would not be available in the args method anymore
+    command_func = args.func
+
+    # remove the keys that would not be expected by the `handle` method
+    options.pop("cmd")
+    options.pop("func")
+
+    command_func(**options)

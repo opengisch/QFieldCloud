@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import argparse
 import logging
 from pathlib import Path
+from uuid import UUID
 
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
@@ -9,13 +11,17 @@ from libqfieldsync.project import ProjectConfiguration
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from qgis.core import QgsCoordinateTransform, QgsRectangle
 
-import qfc_worker.apply_deltas
-import qfc_worker.process_projectfile
 import qfc_worker.utils
+from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
+    Step,
+    StepOutput,
+    WorkDirPath,
+    Workflow,
     get_layers_data,
     layers_data_to_string,
     open_qgis_project,
+    run_workflow,
 )
 
 logger = logging.getLogger(__name__)
@@ -143,3 +149,105 @@ def extract_layer_data(the_qgis_file_name: str | Path) -> dict:
     )
 
     return layers_by_id
+
+
+class PackageCommand(QfcBaseCommand):
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("project_id", type=UUID, help="Project ID")
+        parser.add_argument("project_file", type=str, help="QGIS project file path")
+        parser.add_argument(
+            "offliner_type",
+            type=str,
+            choices=(OfflinerType.QGISCORE, OfflinerType.PYTHONMINI),
+            default=OfflinerType.QGISCORE,
+        )
+
+    def handle(  # type: ignore
+        self,
+        project_id: UUID,
+        project_file: str,
+        offliner_type: OfflinerType,
+    ) -> None:
+        workflow = Workflow(
+            id="package_project",
+            name="Package Project",
+            version="2.0",
+            description="Packages a QGIS project to be used on QField. Converts layers for offline editing if configured.",
+            steps=[
+                Step(
+                    id="start_qgis_app",
+                    name="Start QGIS Application",
+                    method=qfc_worker.utils.start_app,
+                    return_names=["qgis_version"],
+                ),
+                Step(
+                    id="download_project_directory",
+                    name="Download Project Directory",
+                    arguments={
+                        "project_id": project_id,
+                        "destination": WorkDirPath(mkdir=True),
+                        "skip_attachments": True,
+                    },
+                    method=qfc_worker.utils.download_project,
+                    return_names=["tmp_project_dir"],
+                ),
+                Step(
+                    id="qgis_layers_data",
+                    name="QGIS Layers Data",
+                    arguments={
+                        "the_qgis_file_name": WorkDirPath("files", project_file),
+                    },
+                    method=extract_layer_data,
+                    return_names=["layers_by_id"],
+                    outputs=["layers_by_id"],
+                ),
+                Step(
+                    id="package_project",
+                    name="Package Project",
+                    arguments={
+                        "the_qgis_file_name": WorkDirPath("files", project_file),
+                        "package_dir": WorkDirPath("export", mkdir=True),
+                        "offliner_type": offliner_type,
+                    },
+                    method=call_libqfieldsync_packager,
+                    return_names=["the_qgis_file_name_in_qfield"],
+                ),
+                Step(
+                    id="qfield_layer_data",
+                    name="Packaged Layers Data",
+                    arguments={
+                        "the_qgis_file_name": StepOutput(
+                            "package_project", "the_qgis_file_name_in_qfield"
+                        ),
+                    },
+                    method=extract_layer_data,
+                    return_names=["layers_by_id"],
+                    outputs=["layers_by_id"],
+                ),
+                Step(
+                    id="stop_qgis_app",
+                    name="Stop QGIS Application",
+                    method=qfc_worker.utils.stop_app,
+                ),
+                Step(
+                    id="upload_packaged_project",
+                    name="Upload Packaged Project",
+                    arguments={
+                        "project_id": project_id,
+                        "package_dir": WorkDirPath("export", mkdir=True),
+                    },
+                    method=qfc_worker.utils.upload_package,
+                ),
+            ],
+        )
+
+        run_workflow(
+            workflow,
+            Path("/io/feedback.json"),
+        )
+
+
+cmd = PackageCommand()
+
+if __name__ == "__main__":
+    cmd.run_from_argv()

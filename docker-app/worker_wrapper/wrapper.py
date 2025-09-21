@@ -450,9 +450,9 @@ class PackageJobRun(JobRun):
         packages.delete_obsolete_packages(projects=[self.job.project])
 
 
-class DeltaApplyJobRun(JobRun):
+class ApplyDeltaJobRun(JobRun):
     job_class = ApplyJob
-    command = ["delta_apply", "%(project__id)s", "%(project__the_qgis_file_name)s"]
+    command = ["apply_deltas", "%(project__id)s", "%(project__the_qgis_file_name)s"]
 
     def __init__(self, job_id: str) -> None:
         super().__init__(job_id)

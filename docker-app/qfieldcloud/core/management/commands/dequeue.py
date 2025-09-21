@@ -10,7 +10,7 @@ from django.db import connection, transaction
 from django.db.models import Q
 from qfieldcloud.core.models import Job
 from worker_wrapper.wrapper import (
-    DeltaApplyJobRun,
+    ApplyDeltaJobRun,
     JobRun,
     PackageJobRun,
     ProcessProjectfileJobRun,
@@ -117,7 +117,7 @@ class Command(BaseCommand):
     def _run(self, job: Job) -> None:
         job_run_classes: dict[Job.Type, type[JobRun]] = {
             Job.Type.PACKAGE: PackageJobRun,
-            Job.Type.DELTA_APPLY: DeltaApplyJobRun,
+            Job.Type.DELTA_APPLY: ApplyDeltaJobRun,
             Job.Type.PROCESS_PROJECTFILE: ProcessProjectfileJobRun,
         }
 
