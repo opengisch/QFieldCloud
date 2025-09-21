@@ -9,25 +9,29 @@ from qgis.core import QgsMapRendererCustomPainterJob, QgsProject
 from qgis.PyQt.QtGui import QImage, QPainter
 
 from qfc_worker.commands_base import QfcBaseCommand
-from qfc_worker.utils import (
+from qfc_worker.exceptions import (
     FailedThumbnailGenerationException,
     InvalidFileExtensionException,
     InvalidXmlFileException,
     ProjectFileNotFoundException,
-    Step,
-    StepOutput,
-    WorkDirPath,
-    WorkDirPathAsStr,
-    Workflow,
+)
+from qfc_worker.utils import (
     download_project,
     get_layers_data,
     get_qgis_xml_error_context,
     layers_data_to_string,
     open_qgis_project_as_readonly,
     open_qgis_project_temporarily,
-    run_workflow,
     start_app,
     stop_app,
+)
+from qfc_worker.workflow import (
+    Step,
+    StepOutput,
+    WorkDirPath,
+    WorkDirPathAsStr,
+    Workflow,
+    run_workflow,
 )
 
 logger = logging.getLogger(__name__)

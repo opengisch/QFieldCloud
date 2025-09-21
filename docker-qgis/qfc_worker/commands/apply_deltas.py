@@ -28,14 +28,16 @@ from qgis.PyQt.QtCore import QCoreApplication, QDate, QDateTime, Qt, QTime
 
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
-    Step,
-    WorkDirPath,
-    Workflow,
     download_project,
-    run_workflow,
     start_app,
     stop_app,
     upload_project,
+)
+from qfc_worker.workflow import (
+    Step,
+    WorkDirPath,
+    Workflow,
+    run_workflow,
 )
 
 logger = logging.getLogger(__name__)
