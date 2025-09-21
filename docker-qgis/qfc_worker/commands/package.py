@@ -14,13 +14,15 @@ from qgis.core import QgsCoordinateTransform, QgsRectangle
 import qfc_worker.utils
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
+    get_layers_data,
+    layers_data_to_string,
+    open_qgis_project,
+)
+from qfc_worker.workflow import (
     Step,
     StepOutput,
     WorkDirPath,
     Workflow,
-    get_layers_data,
-    layers_data_to_string,
-    open_qgis_project,
     run_workflow,
 )
 
