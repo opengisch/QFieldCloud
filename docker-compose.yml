@@ -172,6 +172,8 @@ services:
     logging: *default-logging
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
     stop_grace_period: 15m
+    labels:
+      ofelia.enabled: "false"
 
   ofelia:
     image: mcuadros/ofelia:v0.3.4
