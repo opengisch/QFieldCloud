@@ -1280,12 +1280,14 @@ class Project(models.Model):
         editable=False,
     )
 
-    is_locked = models.BooleanField(
-        _("Is locked"),
+    locked_at = models.DateTimeField(
+        _("Locked at"),
         help_text=_(
-            "If set to true, the project is temporarily locked. Locking is internal QFieldCloud mechanism related to file storage migration or other file operations."
+            "If not null, it means that the project is being migrated, and the datetime represents when the project was temporarily locked. Locking is internal QFieldCloud mechanism related to file storage migration or other file operations."
         ),
-        default=False,
+        blank=True,
+        null=True,
+        editable=False,
     )
 
     is_featured = models.BooleanField(
@@ -1853,7 +1855,7 @@ class Project(models.Model):
         Todo:
             * Delete with QF-4963 Drop support for legacy storage
         """
-        if self.legacy_thumbnail_uri:
+        if self.uses_legacy_storage:
             storage.delete_project_thumbnail(self)
 
         return super().delete(*args, **kwargs)
