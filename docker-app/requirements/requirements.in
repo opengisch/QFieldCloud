@@ -36,7 +36,7 @@ djangorestframework-stubs==3.16.3
 drf-spectacular==0.28.0
 json-log-formatter==1.1.1
 mypy-boto3-s3==1.35.81
-phonenumbers==9.0.13
+phonenumbers==9.0.14
 Pillow==11.3.0
 psycopg2==2.9.10
 pymemcache==4.0.0
