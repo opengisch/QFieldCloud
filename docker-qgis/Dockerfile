@@ -1,6 +1,9 @@
 # NOTE if the ubuntu version is changed, also change it in `Suites:` in apt sources, and in `QGIS_VERSION`
 FROM ubuntu:noble
 
+# Create the expected /io directory that is usually created via the `worker_wrapper`
+RUN mkdir -p /io
+
 # Install dependencies needed to add QGIS repository
 RUN apt-get update \
     && apt-get install -y \
