@@ -40,8 +40,18 @@ class Workflow:
                 f'The workflow "{self.id}" should contain at least one step.'
             )
 
+        step_ids = set()
         all_step_returns = {}
         for step in self.steps:
+            # check step id uniqueness
+            if step.id in step_ids:
+                raise WorkflowValidationException(
+                    f'The workflow "{self.id}" has duplicated step id "{step.id}".'
+                )
+
+            step_ids.add(step.id)
+
+            # check step parameters match the step method signature (no extra, no missing, no positional-only parameters)
             param_names = []
             sig = inspect.signature(step.method)
             for param in sig.parameters.values():
@@ -60,6 +70,7 @@ class Workflow:
 
                 param_names.append(param.name)
 
+            # check step arguments match available previous step return values
             for name, value in step.arguments.items():
                 if isinstance(value, StepOutput):
                     if value.step_id not in all_step_returns:
