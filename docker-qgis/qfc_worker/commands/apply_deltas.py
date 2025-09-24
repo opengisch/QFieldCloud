@@ -1173,17 +1173,17 @@ class ApplyDeltasCommand(QfcBaseCommand):
             help="Inverses the direction of the deltas. Makes the delta `old` to `new` and `new` to `old`. Mainly used to rollback the applied changes using the same delta file..",
         )
         parser.add_argument(
-            "--delta-filename",
+            "--delta-file",
             type=str,
             default="/io/deltafile.json",
             help="Path to the delta file JSON file",
         )
-        parser.add_argument("--delta-log", type=str, help="Path to delta log file")
 
     def handle(  # type: ignore
         self,
         project_id: UUID,
         project_file: str,
+        delta_file: str,
         overwrite_conflicts: bool,
         inverse: bool,
     ) -> None:
@@ -1214,7 +1214,7 @@ class ApplyDeltasCommand(QfcBaseCommand):
                     name="Apply Deltas",
                     arguments={
                         "the_qgis_file_name": WorkDirPath("files", project_file),
-                        "delta_filename": "/io/deltafile.json",
+                        "delta_filename": delta_file,
                         "inverse": inverse,
                         "overwrite_conflicts": overwrite_conflicts,
                     },
