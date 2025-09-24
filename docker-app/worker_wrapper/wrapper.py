@@ -118,6 +118,53 @@ class JobRun:
             for p in ["python3", *debug_flags, "entrypoint.py", *self.command]
         ]
 
+    def get_volumes(self) -> list[str]:
+        volumes = [
+            f"{str(self.shared_tempdir)}:/io/:rw",
+            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro",
+        ]
+
+        return volumes
+
+    def get_ports(self) -> dict[str, int]:
+        ports = {}
+
+        return ports
+
+    def get_environment(self) -> dict[str, str]:
+        environment = {}
+        extra_envvars = {}
+
+        pgservice_file_contents = ""
+        for secret in Secret.objects.for_user_and_project(  # type:ignore
+            self.job.triggered_by, self.job.project
+        ):
+            if secret.type == Secret.Type.ENVVAR:
+                extra_envvars[secret.name] = secret.value
+            elif secret.type == Secret.Type.PGSERVICE:
+                pgservice_file_contents += f"\n{secret.value}"
+            else:
+                raise NotImplementedError(f"Unknown secret type: {secret.type}")
+
+        token = AuthToken.objects.create(
+            user=self.job.created_by,
+            client_type=AuthToken.ClientType.WORKER,
+            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+        )
+
+        environment = {
+            **extra_envvars,
+            "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
+            "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
+            "QFIELDCLOUD_TOKEN": token.key,
+            "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+            "JOB_ID": self.job_id,
+            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
+            "QT_QPA_PLATFORM": "offscreen",
+        }
+
+        return environment
+
     def before_docker_run(self) -> None:
         pass
 
@@ -169,10 +216,7 @@ class JobRun:
             volumes = []
             volumes.append(f"{str(self.shared_tempdir)}:/io/:rw")
 
-            exit_code, output = self._run_docker(
-                command,
-                volumes=volumes,
-            )
+            exit_code, output = self._run_docker(command)
 
             if exit_code == DOCKER_SIGKILL_EXIT_CODE:
                 feedback["error"] = "Docker engine sigkill."
@@ -275,77 +319,47 @@ class JobRun:
                     "Failed to handle exception and update the job status", exc_info=err
                 )
 
-    def _run_docker(
-        self, command: list[str], volumes: list[str], run_opts: dict[str, Any] = {}
-    ) -> tuple[int, bytes]:
+    def _run_docker(self, command: list[str]) -> tuple[int, bytes]:
         assert settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
         assert settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME
 
-        token = AuthToken.objects.create(
-            user=self.job.created_by,
-            client_type=AuthToken.ClientType.WORKER,
-            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
-        )
-
         client = docker.from_env()
 
-        extra_envvars = {}
-        pgservice_file_contents = ""
-        for secret in Secret.objects.for_user_and_project(
-            self.job.triggered_by, self.job.project
-        ):
-            if secret.type == Secret.Type.ENVVAR:
-                extra_envvars[secret.name] = secret.value
-            elif secret.type == Secret.Type.PGSERVICE:
-                pgservice_file_contents += f"\n{secret.value}"
-            else:
-                raise NotImplementedError(f"Unknown secret type: {secret.type}")
+        volumes = self.get_volumes()
+        ports = self.get_ports()
+        environment = self.get_environment()
+
+        if settings.DEBUG:
+            if self.debug_qgis_container_is_enabled:
+                # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
+                # otherwise the vscode deubgger won't be able to connect
+                # NOTE the port must be passed here and not in the `docker-compose` file,
+                # because the `qgis` container is started with docker in docker and the `docker-compose`
+                # configuration is valid only for the brief moment when the stack is built and started,
+                # but not when new `qgis` containers are started dynamically by the worker wrapper
+                ports.update(
+                    {
+                        f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
+                    }
+                )
+
+            # used for local development of QFieldCloud
+            if settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH:
+                volumes.append(
+                    f"{settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH}:/libqfieldsync:ro"
+                )
+
+            # used for local development of QFieldCloud
+            if settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH:
+                volumes.append(
+                    f"{settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH}:/qfieldcloud-sdk-python:ro"
+                )
 
         logger.info(f"Execute: {' '.join(command)}")
-        volumes.append(
-            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro"
-        )
-
-        # used for local development of QFieldCloud
-        if settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH:
-            volumes.append(
-                f"{settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH}:/libqfieldsync:ro"
-            )
-
-        # used for local development of QFieldCloud
-        if settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH:
-            volumes.append(
-                f"{settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH}:/qfieldcloud-sdk-python:ro"
-            )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
         self.job.save(update_fields=["docker_started_at"])
-
-        environment = {
-            **extra_envvars,
-            "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
-            "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
-            "QFIELDCLOUD_TOKEN": token.key,
-            "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
-            "JOB_ID": self.job_id,
-            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
-            "QT_QPA_PLATFORM": "offscreen",
-        }
-        ports = {}
-
-        if self.debug_qgis_container_is_enabled:
-            # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
-            # otherwise the vscode deubgger won't be able to connect
-            # NOTE the port must be passed here and not in the `docker-compose` file,
-            # because the `qgis` container is started with docker in docker and the `docker-compose`
-            # configuration is valid only for the brief moment when the stack is built and started,
-            # but not when new `qgis` containers are started dynamically by the worker wrapper
-            ports.update(
-                {
-                    f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
-                }
-            )
 
         container: Container = client.containers.run(  # type:ignore
             settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
