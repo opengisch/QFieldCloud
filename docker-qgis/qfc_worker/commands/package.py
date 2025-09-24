@@ -23,7 +23,6 @@ from qfc_worker.workflow import (
     StepOutput,
     WorkDirPath,
     Workflow,
-    run_workflow,
 )
 
 logger = logging.getLogger(__name__)
@@ -164,12 +163,12 @@ class PackageCommand(QfcBaseCommand):
             default=OfflinerType.QGISCORE,
         )
 
-    def handle(  # type: ignore
+    def get_workflow(  # type: ignore
         self,
         project_id: UUID,
         project_file: str,
         offliner_type: OfflinerType,
-    ) -> None:
+    ) -> Workflow:
         workflow = Workflow(
             id="package_project",
             name="Package Project",
@@ -243,10 +242,7 @@ class PackageCommand(QfcBaseCommand):
             ],
         )
 
-        run_workflow(
-            workflow,
-            Path("/io/feedback.json"),
-        )
+        return workflow
 
 
 cmd = PackageCommand()

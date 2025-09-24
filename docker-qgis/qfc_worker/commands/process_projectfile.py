@@ -31,7 +31,6 @@ from qfc_worker.workflow import (
     WorkDirPath,
     WorkDirPathAsStr,
     Workflow,
-    run_workflow,
 )
 
 logger = logging.getLogger(__name__)
@@ -149,11 +148,7 @@ class ProcessProjectfileCommand(QfcBaseCommand):
         parser.add_argument("project_id", type=UUID, help="Project ID")
         parser.add_argument("project_file", type=str, help="QGIS project file path")
 
-    def handle(  # type: ignore
-        self,
-        project_id: UUID,
-        project_file: str,
-    ) -> None:
+    def get_workflow(self, project_id: UUID, project_file: str) -> Workflow:  # type: ignore
         workflow = Workflow(
             id="process_projectfile",
             name="Process Projectfile",
@@ -222,10 +217,7 @@ class ProcessProjectfileCommand(QfcBaseCommand):
             ],
         )
 
-        run_workflow(
-            workflow,
-            Path("/io/feedback.json"),
-        )
+        return workflow
 
 
 cmd = ProcessProjectfileCommand()
