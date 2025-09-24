@@ -6,6 +6,8 @@ from inspect import getfile
 from pathlib import Path
 from typing import Any
 
+from qfc_worker.workflow import Workflow, run_workflow
+
 logger = logging.getLogger(__name__)
 
 registry = {}
@@ -40,10 +42,19 @@ class QfcBaseCommand:
         # Move positional args out of options to mimic legacy optparse
         args = cmd_options.pop("args", ())
 
-        self.execute(*args, **cmd_options)
+        self.handle(*args, **cmd_options)
 
-    def execute(self, *args: Any, **options: Any) -> None:
-        self.handle(*args, **options)
+    def handle(self, *args: Any, **options: Any) -> None:
+        """
+        The actual logic of the command. Subclasses could reimplement this method,
+        but always provide feedback.json path as output.
+        """
+        workflow = self.get_workflow(*args, **options)
+
+        run_workflow(
+            workflow,
+            Path("/io/feedback.json"),
+        )
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         """
@@ -51,13 +62,13 @@ class QfcBaseCommand:
         """
         pass
 
-    def handle(self, /, **kwargs) -> None:
+    def get_workflow(self, /, **kwargs) -> Workflow:
         """
         The actual logic of the command. Subclasses must implement
         this method.
         """
         raise NotImplementedError(
-            "subclasses of QfcBaseCommand must provide a handle() method"
+            "subclasses of QfcBaseCommand must provide a `get_workflow()` method"
         )
 
 

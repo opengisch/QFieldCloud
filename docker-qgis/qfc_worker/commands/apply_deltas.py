@@ -37,7 +37,6 @@ from qfc_worker.workflow import (
     Step,
     WorkDirPath,
     Workflow,
-    run_workflow,
 )
 
 logger = logging.getLogger(__name__)
@@ -1090,14 +1089,14 @@ class ApplyDeltasCommand(QfcBaseCommand):
             help="Path to the delta file JSON file",
         )
 
-    def handle(  # type: ignore
+    def get_workflow(  # type: ignore
         self,
         project_id: UUID,
         project_file: str,
         delta_file: str,
         overwrite_conflicts: bool,
         inverse: bool,
-    ) -> None:
+    ) -> Workflow:
         workflow = Workflow(
             id="apply_changes",
             name="Apply Changes",
@@ -1150,10 +1149,7 @@ class ApplyDeltasCommand(QfcBaseCommand):
             ],
         )
 
-        run_workflow(
-            workflow,
-            Path("/io/feedback.json"),
-        )
+        return workflow
 
 
 cmd = ApplyDeltasCommand()
