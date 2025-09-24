@@ -26,4 +26,7 @@ class FailedThumbnailGenerationException(QfcWorkerException):
     message = "Failed to generate project thumbnail:\n%(reason)s"
 
 
+class WorkflowModificationException(Exception): ...
+
+
 class WorkflowValidationException(Exception): ...

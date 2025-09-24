@@ -13,6 +13,7 @@ from qfieldcloud_sdk import sdk
 
 from qfc_worker.exceptions import (
     InvalidXmlFileException,
+    WorkflowModificationException,
     WorkflowValidationException,
 )
 
@@ -31,6 +32,7 @@ class Workflow:
         self.name = name
         self.description = description
         self.steps = steps
+        self._step_idx_by_id = self._get_step_idx_by_id(steps)
 
         self.validate()
 
@@ -89,6 +91,51 @@ class Workflow:
                     )
 
             all_step_returns[step.id] = all_step_returns.get(step.id, step.return_names)
+
+    def _get_step_idx_by_id(self, steps: list["Step"]) -> dict[str, int]:
+        step_idx_by_id = {}
+
+        for idx, step in enumerate(steps):
+            step_idx_by_id[step.id] = idx
+
+        return step_idx_by_id
+
+    def insert_step(
+        self,
+        step: "Step",
+        before_id: str | None = None,
+        after_id: str | None = None,
+    ) -> None:
+        if (before_id is None and after_id is None) or (
+            before_id is not None and after_id is not None
+        ):
+            raise WorkflowModificationException(
+                "Either before_id or after_id must be provided, but not both."
+            )
+
+        insert_idx = -1
+
+        if before_id is not None:
+            if before_id not in self._step_idx_by_id:
+                raise WorkflowModificationException(
+                    f'Step with id "{before_id}" not found.'
+                )
+
+            insert_idx = self._step_idx_by_id[before_id]
+
+        if after_id is not None:
+            if after_id not in self._step_idx_by_id:
+                raise WorkflowModificationException(
+                    f'Step with id "{after_id}" not found.'
+                )
+
+            insert_idx = self._step_idx_by_id[after_id] + 1
+
+        if insert_idx == -1:
+            raise WorkflowModificationException("Invalid insert index computed.")
+
+        self.steps.insert(insert_idx, step)
+        self._step_idx_by_id = self._get_step_idx_by_id(self.steps)
 
 
 class Step:
