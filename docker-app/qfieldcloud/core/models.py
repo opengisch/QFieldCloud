@@ -2207,6 +2207,8 @@ class Job(models.Model):
         FAILED = "failed", _("Failed")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project_id: uuid.UUID
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
