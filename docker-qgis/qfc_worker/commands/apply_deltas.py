@@ -1,23 +1,15 @@
 #!/usr/bin/env python3
 
-import re
-from enum import Enum
-from typing import Any, Callable, cast
-
-try:
-    # 3.8
-    from typing import TypedDict
-except ImportError:
-    # 3.7
-    from typing_extensions import TypedDict
-
 import argparse
 import json
 import logging
-import textwrap
+import re
 import traceback
+from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from typing import Any, Callable, TypedDict, cast
+from uuid import UUID
 
 import jsonschema
 
@@ -35,6 +27,19 @@ from qgis.core import (
     QgsVectorLayerUtils,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QDate, QDateTime, Qt, QTime
+
+from qfc_worker.commands_base import QfcBaseCommand
+from qfc_worker.utils import (
+    download_project,
+    start_app,
+    stop_app,
+    upload_project,
+)
+from qfc_worker.workflow import (
+    Step,
+    WorkDirPath,
+    Workflow,
+)
 
 logger = logging.getLogger(__name__)
 # /LOGGER
@@ -1152,98 +1157,91 @@ def inverse_delta(delta: Delta) -> Delta:
     return cast(Delta, copy)
 
 
+class ApplyDeltasCommand(QfcBaseCommand):
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("project_id", type=str, help="Project ID")
+        parser.add_argument("project_file", type=str, help="QGIS project file path")
+        parser.add_argument(
+            "--overwrite-conflicts",
+            action="store_true",
+            help="Apply deltas even if there are conflicts.",
+        )
+        parser.add_argument(
+            "--inverse",
+            action="store_true",
+            help="Inverses the direction of the deltas. Makes the delta `old` to `new` and `new` to `old`. Mainly used to rollback the applied changes using the same delta file..",
+        )
+        parser.add_argument(
+            "--delta-file",
+            type=str,
+            default="/io/deltafile.json",
+            help="Path to the delta file JSON file",
+        )
+
+    def get_workflow(  # type: ignore
+        self,
+        project_id: UUID,
+        project_file: str,
+        delta_file: str,
+        overwrite_conflicts: bool,
+        inverse: bool,
+    ) -> Workflow:
+        workflow = Workflow(
+            id="apply_changes",
+            name="Apply Changes",
+            version="2.0",
+            steps=[
+                Step(
+                    id="start_qgis_app",
+                    name="Start QGIS Application",
+                    method=start_app,
+                    return_names=["qgis_version"],
+                ),
+                Step(
+                    id="download_project_directory",
+                    name="Download Project Directory",
+                    arguments={
+                        "project_id": project_id,
+                        "destination": WorkDirPath(mkdir=True),
+                        "skip_attachments": True,
+                    },
+                    method=download_project,
+                    return_names=["tmp_project_dir"],
+                ),
+                Step(
+                    id="apply_deltas",
+                    name="Apply Deltas",
+                    arguments={
+                        "the_qgis_file_name": WorkDirPath("files", project_file),
+                        "delta_filename": delta_file,
+                        "inverse": inverse,
+                        "overwrite_conflicts": overwrite_conflicts,
+                    },
+                    method=delta_apply,
+                    return_names=["delta_feedback"],
+                    outputs=["delta_feedback"],
+                ),
+                Step(
+                    id="stop_qgis_app",
+                    name="Stop QGIS Application",
+                    method=stop_app,
+                ),
+                Step(
+                    id="upload_exported_project",
+                    name="Upload Project",
+                    arguments={
+                        "project_id": project_id,
+                        "project_dir": WorkDirPath("files"),
+                    },
+                    method=upload_project,
+                ),
+            ],
+        )
+
+        return workflow
+
+
+cmd = ApplyDeltasCommand()
+
 if __name__ == "__main__":
-    from qfieldcloud.qgis.utils import setup_basic_logging_config
-
-    setup_basic_logging_config()
-
-    parser = argparse.ArgumentParser(
-        prog="COMMAND",
-        description="",
-        formatter_class=argparse.RawDescriptionHelpFormatter,  # type: ignore
-        epilog=textwrap.dedent(
-            """
-            example:
-                # apply deltas on a project
-                ./apply_delta.py delta apply ./path/to/project.qgs ./path/to/delta.json
-
-                # rollback deltas on a project
-                ./apply_delta.py delta apply --inverse ./path/to/project.qgs ./path/to/delta.json
-
-                # rollback deltas on a project
-                ./apply_delta.py backup cleanup
-        """
-        ),
-    )
-    parser.add_argument(
-        "--skip-csv-header",
-        action="store_true",
-        help="Skip writing CSV header in the log file",
-    )
-
-    subparsers = parser.add_subparsers(dest="cmd0")
-
-    # deltas
-    parser_delta = subparsers.add_parser(
-        "delta", help="rollback a delta file on a project"
-    )
-    delta_subparsers = parser_delta.add_subparsers(dest="cmd1")
-
-    parser_delta_apply = delta_subparsers.add_parser(
-        "apply", help="apply a delta file on a project"
-    )
-    parser_delta_apply.add_argument("project", type=str, help="Path to QGIS project")
-    parser_delta_apply.add_argument("delta_file", type=str, help="Path to delta file")
-    parser_delta_apply.add_argument(
-        "--delta-log", type=str, help="Path to delta log file"
-    )
-    parser_delta_apply.add_argument(
-        "--overwrite-conflicts",
-        action="store_true",
-        help="Apply deltas even if there are conflicts.",
-    )
-    parser_delta_apply.add_argument(
-        "--inverse",
-        action="store_true",
-        help="Inverses the direction of the deltas. Makes the delta `old` to `new` and `new` to `old`. Mainly used to rollback the applied changes using the same delta file..",
-    )
-    parser_delta_apply.set_defaults(func=cmd_delta_apply)
-    # /deltas
-
-    # backup
-    parser_backup = subparsers.add_parser(
-        "backup", help="rollback a delta file on a project"
-    )
-    backup_subparsers = parser_backup.add_subparsers(dest="cmd1")
-
-    parser_backup_cleanup = backup_subparsers.add_parser(
-        "cleanup", help="rollback a delta file on a project"
-    )
-    parser_backup_cleanup.add_argument("project", type=str, help="Path to QGIS project")
-    parser_backup_cleanup.add_argument(
-        "--transaction",
-        action="store_true",
-        help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled',
-    )
-    parser_backup_cleanup.set_defaults(func=cmd_backup_cleanup)
-
-    parser_backup_rollback = backup_subparsers.add_parser(
-        "rollback", help="rollback a delta file on a project"
-    )
-    parser_backup_rollback.add_argument(
-        "project", type=str, help="Path to QGIS project"
-    )
-    parser_backup_rollback.add_argument(
-        "--transaction",
-        action="store_true",
-        help='Apply individual deltas in the deltafile in the "all-or-nothing" manner, with transaction mode enabled',
-    )
-    parser_backup_rollback.set_defaults(func=cmd_backup_rollback)
-    # /backup
-
-    args = parser.parse_args()
-
-    if "func" in args:
-        args.func(vars(args))  # type: ignore
-    else:
-        parser.parse_args(["-h"])
+    cmd.run_from_argv()
