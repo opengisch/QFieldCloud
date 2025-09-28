@@ -1100,7 +1100,7 @@ class ApplyDeltasCommand(QfcBaseCommand):
         workflow = Workflow(
             id="apply_changes",
             name="Apply Changes",
-            version="2.0",
+            version="3.0",
             steps=[
                 Step(
                     id="start_qgis_app",
@@ -1138,7 +1138,7 @@ class ApplyDeltasCommand(QfcBaseCommand):
                     method=stop_app,
                 ),
                 Step(
-                    id="upload_exported_project",
+                    id="upload_project_directory",
                     name="Upload Project",
                     arguments={
                         "project_id": project_id,
