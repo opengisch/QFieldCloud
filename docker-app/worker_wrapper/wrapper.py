@@ -213,8 +213,6 @@ class JobRun:
             self.before_docker_run()
 
             command = self.get_command()
-            volumes = []
-            volumes.append(f"{str(self.shared_tempdir)}:/io/:rw")
 
             exit_code, output = self._run_docker(command)
 
@@ -343,16 +341,19 @@ class JobRun:
                     }
                 )
 
-            # used for local development of QFieldCloud
-            if settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH:
-                volumes.append(
-                    f"{settings.DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH}:/libqfieldsync:ro"
-                )
+            if settings.DEBUG_QGIS_WORKER_HOST_PATH:
+                debug_host_path = Path(settings.DEBUG_QGIS_WORKER_HOST_PATH)
 
-            # used for local development of QFieldCloud
-            if settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH:
-                volumes.append(
-                    f"{settings.DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH}:/qfieldcloud-sdk-python:ro"
+                volumes.extend(
+                    [
+                        # allow local development for `docker-qgis`
+                        f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
+                        f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
+                        # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
+                        f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync.py:ro",
+                        # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`"
+                        f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python.py:ro",
+                    ]
                 )
 
         logger.info(f"Execute: {' '.join(command)}")
