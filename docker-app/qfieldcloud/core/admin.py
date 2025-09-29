@@ -1628,7 +1628,7 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
         "user_agent",
     )
 
-    list_filter = ("project", "project__owner__username", "created_at")
+    list_filter = ("created_at",)
 
     list_select_related = ("project", "project__owner")
 
