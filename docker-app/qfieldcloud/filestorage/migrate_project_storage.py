@@ -176,6 +176,10 @@ def migrate_project_storage(
             for package_job_file in package_job_files:
                 package_files.append((package_job, package_job_file))
 
+        logger.info(
+            f'Migrating {len(package_files)} package file(s) for project "{project.name}" ({str(project.id)})...'
+        )
+
         if len(package_files) > 0:
             for package_job, package_file in package_files:
                 django_content_file = ContentFile(b"", package_file.name)
