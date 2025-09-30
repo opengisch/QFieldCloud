@@ -154,7 +154,7 @@ def migrate_project_storage(
                     },
                 )
 
-                _file_version = FileVersion.objects.add_version(
+                new_file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=file_version.name,
                     content=django_content_file,
@@ -164,6 +164,23 @@ def migrate_project_storage(
                     created_at=now,
                     legacy_version_id=file_version.id,
                 )
+
+                # check that etags before and after are the same.
+                legacy_storage_etag = file_version.e_tag.strip('"')
+
+                new_file_version.content.open()
+                to_storage_etag = new_file_version.content._file.obj.e_tag.strip('"')
+                new_file_version.content.close()
+
+                if legacy_storage_etag != to_storage_etag:
+                    raise Exception(
+                        f"ETag mismatch: '{new_file_version}' on legacy has value {legacy_storage_etag} but new storage has {to_storage_etag} !"
+                    )
+
+                if legacy_storage_etag != new_file_version.etag:
+                    raise Exception(
+                        f"ETag mismatch: version object has ETag {new_file_version.etag} but remote systems have {to_storage_etag} !"
+                    )
 
         package_files = []
 
@@ -189,7 +206,7 @@ def migrate_project_storage(
                     django_content_file,
                 )
 
-                _file_version = FileVersion.objects.add_version(
+                new_file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=package_file.name,
                     content=django_content_file,
@@ -199,6 +216,23 @@ def migrate_project_storage(
                     created_at=now,
                     package_job_id=package_job.id,
                 )
+
+                # check that etags before and after are the same.
+                legacy_storage_etag = package_file.etag.strip('"')
+
+                new_file_version.content.open()
+                to_storage_etag = new_file_version.content._file.obj.e_tag.strip('"')
+                new_file_version.content.close()
+
+                if legacy_storage_etag != to_storage_etag:
+                    raise Exception(
+                        f"ETag package mismatch: '{new_file_version}' on legacy has value {legacy_storage_etag} but new storage has {to_storage_etag} !"
+                    )
+
+                if legacy_storage_etag != new_file_version.etag:
+                    raise Exception(
+                        f"ETag package mismatch: version object has ETag {new_file_version.etag} but remote systems have {to_storage_etag} !"
+                    )
 
         if project.legacy_thumbnail_uri:
             logger.info(
