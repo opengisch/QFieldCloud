@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import docker
+import docker.errors
 import requests
 import sentry_sdk
 from constance import config
@@ -18,8 +19,6 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from docker.client import DockerClient
-from docker.errors import APIError
 from docker.models.containers import Container
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -648,7 +647,7 @@ class ProcessProjectfileJobRun(JobRun):
 
 
 def cancel_orphaned_workers() -> None:
-    client: DockerClient = docker.from_env()
+    client: docker.client.DockerClient = docker.from_env()
 
     try:
         running_workers: list[Container] = client.containers.list(
@@ -677,6 +676,6 @@ def cancel_orphaned_workers() -> None:
             container.kill()
             container.remove()
             logger.info(f"Cancel orphaned worker {worker_id}")
-        except APIError:
+        except docker.errors.APIError:
             # Container already removed
             pass
