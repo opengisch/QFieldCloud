@@ -2,7 +2,6 @@
 
 import argparse
 import logging
-from inspect import getfile
 from pathlib import Path
 from typing import Any
 
@@ -10,25 +9,49 @@ from qfc_worker.workflow import Workflow, run_workflow
 
 logger = logging.getLogger(__name__)
 
-registry = {}
 
 parser = argparse.ArgumentParser(prog="COMMAND")
 subparsers = parser.add_subparsers(dest="cmd")
 
 
-class QfcBaseCommand:
+class QfcBaseCommandRegistry(type):
+    registry = {}
+
+    def __new__(mcs, name, bases, attrs):
+        cls = super().__new__(mcs, name, bases, attrs)
+
+        if name == "QfcBaseCommand":
+            return cls
+
+        module_path = attrs.get("__module__")
+
+        if module_path:
+            command_name = module_path.split(".")[-1]
+
+            if command_name in mcs.registry:
+                raise Exception(
+                    f"Only one command definition allowed per file. Check the definition of {cls.__name__}."
+                )
+
+            setattr(cls, "command_name", command_name)
+
+            mcs.registry[command_name] = cls
+
+        return cls
+
+
+class QfcBaseCommand(metaclass=QfcBaseCommandRegistry):
+    command_name: str
+    """Command name, derived from the module (file) name and used to call the command from CLI"""
+
+    command_help: str = ""
+    """Help text for the command, shown in CLI help"""
+
     def __init__(self) -> None:
-        self.name = Path(getfile(self.__class__)).stem
-
-        if self.name in registry:
-            raise Exception(
-                f"Only one command allowed per file. Check the definition of {self.__class__.__name__}"
-            )
-
         self.parser = self.create_parser()
 
     def create_parser(self) -> argparse.ArgumentParser:
-        parser = subparsers.add_parser(self.name, help=self.name)
+        parser = subparsers.add_parser(self.command_name, help=self.command_help)
         parser.set_defaults(func=self.handle)
 
         self.add_arguments(parser)
