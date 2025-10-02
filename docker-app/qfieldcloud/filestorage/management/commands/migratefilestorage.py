@@ -1,7 +1,6 @@
 import logging
 import traceback
 import uuid
-from collections.abc import Collection
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
@@ -55,8 +54,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options) -> None:
-        projects: Collection = []
-
         force: bool = options.get("force", False)
         accept: bool = options.get("accept", False)
         no_raise: bool = options.get("no_raise", False)
@@ -169,7 +166,7 @@ class Command(BaseCommand):
 
             exit(1)
 
-        logger.info(f"The storage migration will affect {len(projects)} project(s):")
+        logger.info(f"The storage migration will affect {projects_count} project(s):")
 
         for project in project_qs:
             logger.info(f"{project.id};{project.owner.username};{project.name}")

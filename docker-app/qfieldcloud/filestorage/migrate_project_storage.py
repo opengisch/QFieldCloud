@@ -35,6 +35,7 @@ def migrate_project_storage(
     logger.info(f'Migrating project "{project.name}" ({str(project.id)})...')
 
     from_storage = project.file_storage
+    from_attachments_storage = project.attachments_file_storage
 
     # project given as parameter should already have been filtered, to exclude the new/default storage.
     # basically, this should never happen, but we check it just in case.
@@ -48,10 +49,15 @@ def migrate_project_storage(
             f'Cannot migrate from "{from_storage}", not preset in STORAGES!'
         )
 
+    if from_attachments_storage not in settings.STORAGES:
+        raise Exception(
+            f'Cannot migrate attachments from "{from_attachments_storage}", not preset in STORAGES!'
+        )
+
     if to_storage not in settings.STORAGES:
         raise Exception(f'Cannot migrate to "{to_storage}", not preset in STORAGES!')
 
-    if project.is_locked:
+    if project.locked_at is not None:
         raise Exception("Cannot migrate a project that is locked!")
 
     if not settings.STORAGES[from_storage]["QFC_IS_LEGACY"]:
@@ -66,8 +72,8 @@ def migrate_project_storage(
     try:
         logger.debug(f'Locking project "{project.name}" ({str(project.id)})...')
 
-        project.is_locked = True
-        project.save(update_fields=["is_locked"])
+        project.locked_at = now
+        project.save(update_fields=["locked_at"])
 
         logger.debug(f'Project "{project.name}" ({str(project.id)}) locked!')
 
@@ -101,9 +107,12 @@ def migrate_project_storage(
                 f'No files to migrate for project "{project.name}" ({str(project.id)})!'
             )
 
-        # NOTE we must set the `Project.file_storage` to the new value before we start adding versions!
+        # NOTE we must set the Project's `file_storage` and `attachments_file_storage` to the new value before we start adding versions!
+        if project.attachments_file_storage == project.file_storage:
+            project.attachments_file_storage = to_storage
+
         project.file_storage = to_storage
-        project.save(update_fields=["file_storage"])
+        project.save(update_fields=["file_storage", "attachments_file_storage"])
 
         logger.debug(
             f'Checking for files for project "{project.name}" ({str(project.id)}) already stored in the destination storage...'
@@ -145,7 +154,7 @@ def migrate_project_storage(
                     },
                 )
 
-                _file_version = FileVersion.objects.add_version(
+                new_file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=file_version.name,
                     content=django_content_file,
@@ -155,6 +164,23 @@ def migrate_project_storage(
                     created_at=now,
                     legacy_version_id=file_version.id,
                 )
+
+                # check that etags before and after are the same.
+                legacy_storage_etag = file_version.e_tag.strip('"')
+
+                new_file_version.content.open()
+                to_storage_etag = new_file_version.content._file.obj.e_tag.strip('"')
+                new_file_version.content.close()
+
+                if legacy_storage_etag != to_storage_etag:
+                    raise Exception(
+                        f"ETag mismatch: '{new_file_version}' on legacy has value {legacy_storage_etag} but new storage has {to_storage_etag} !"
+                    )
+
+                if legacy_storage_etag != new_file_version.etag:
+                    raise Exception(
+                        f"ETag mismatch: version object has ETag {new_file_version.etag} but remote systems have {to_storage_etag} !"
+                    )
 
         package_files = []
 
@@ -167,6 +193,10 @@ def migrate_project_storage(
             for package_job_file in package_job_files:
                 package_files.append((package_job, package_job_file))
 
+        logger.info(
+            f'Migrating {len(package_files)} package file(s) for project "{project.name}" ({str(project.id)})...'
+        )
+
         if len(package_files) > 0:
             for package_job, package_file in package_files:
                 django_content_file = ContentFile(b"", package_file.name)
@@ -176,7 +206,7 @@ def migrate_project_storage(
                     django_content_file,
                 )
 
-                _file_version = FileVersion.objects.add_version(
+                new_file_version = FileVersion.objects.add_version(
                     project=project,
                     filename=package_file.name,
                     content=django_content_file,
@@ -186,6 +216,23 @@ def migrate_project_storage(
                     created_at=now,
                     package_job_id=package_job.id,
                 )
+
+                # check that etags before and after are the same.
+                legacy_storage_etag = package_file.etag.strip('"')
+
+                new_file_version.content.open()
+                to_storage_etag = new_file_version.content._file.obj.e_tag.strip('"')
+                new_file_version.content.close()
+
+                if legacy_storage_etag != to_storage_etag:
+                    raise Exception(
+                        f"ETag package mismatch: '{new_file_version}' on legacy has value {legacy_storage_etag} but new storage has {to_storage_etag} !"
+                    )
+
+                if legacy_storage_etag != new_file_version.etag:
+                    raise Exception(
+                        f"ETag package mismatch: version object has ETag {new_file_version.etag} but remote systems have {to_storage_etag} !"
+                    )
 
         if project.legacy_thumbnail_uri:
             logger.info(
@@ -238,14 +285,16 @@ def migrate_project_storage(
 
         # restore the old storage, it will be saved in the `finally` block
         project.file_storage = from_storage
+        project.attachments_file_storage = from_attachments_storage
 
         raise err
     finally:
-        project.is_locked = False
+        project.locked_at = None
         project.save(
             update_fields=[
-                "is_locked",
+                "locked_at",
                 "file_storage",
+                "attachments_file_storage",
                 "file_storage_migrated_at",
                 "thumbnail",
             ]

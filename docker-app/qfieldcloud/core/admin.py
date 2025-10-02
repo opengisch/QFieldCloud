@@ -866,7 +866,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "description",
         "created_at",
         "updated_at",
-        "is_locked",
     )
     list_filter = (
         "is_public",
@@ -893,7 +892,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
-        "is_locked",
+        "locked_at",
         "is_featured",
         "file_storage",
         "file_storage_migrated_at",
@@ -911,7 +910,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
-        "is_locked",
+        "locked_at",
         "file_storage_migrated_at",
     )
     inlines = (
@@ -1629,7 +1628,7 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
         "user_agent",
     )
 
-    list_filter = ("project", "project__owner__username", "created_at")
+    list_filter = ("created_at",)
 
     list_select_related = ("project", "project__owner")
 

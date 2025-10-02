@@ -1,15 +1,17 @@
 import logging
 import signal
 from time import sleep
+from typing import Any
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandParser
 from django.db import connection, transaction
 from django.db.models import Q
 from qfieldcloud.core.models import Job
 from worker_wrapper.wrapper import (
     DeltaApplyJobRun,
+    JobRun,
     PackageJobRun,
     ProcessProjectfileJobRun,
     cancel_orphaned_workers,
@@ -21,23 +23,28 @@ SECONDS = 5
 class GracefulKiller:
     alive = True
 
-    def __init__(self):
+    def __init__(self) -> None:
         signal.signal(signal.SIGINT, self._kill)
         signal.signal(signal.SIGTERM, self._kill)
 
-    def _kill(self, *args):
+    def _kill(self, *_args: Any) -> None:
         self.alive = False
 
 
 class Command(BaseCommand):
     help = "Dequeue QFieldCloud Jobs from the DB"
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
             "--single-shot", action="store_true", help="Don't run infinite loop."
         )
 
-    def handle(self, *args, **options):
+    def handle(
+        self,
+        *args: Any,
+        single_shot: bool | None = None,
+        **kwargs: Any,
+    ) -> None:
         logging.info("Dequeue QFieldCloud Jobs from the DB")
         killer = GracefulKiller()
 
@@ -71,14 +78,14 @@ class Command(BaseCommand):
                     ]
                 ).values("project_id")
 
-                # select all the pending jobs, that their project has no other active job or `is_locked` flag is `True`
+                # select all the pending jobs, that their project has no other active job or `locked_at` is not null
                 jobs_qs = (
                     Job.objects.select_for_update(skip_locked=True)
                     .filter(status=Job.Status.PENDING)
                     .exclude(
                         Q(project_id__in=busy_projects_ids_qs)
                         # skip all projects that are currently locked, most probably because of file transfer
-                        | Q(project__is_locked=True),
+                        | Q(project__locked_at__isnull=False),
                     )
                     .order_by("created_at")
                 )
@@ -96,7 +103,7 @@ class Command(BaseCommand):
                 self._run(queued_job)
                 queued_job = None
             else:
-                if options["single_shot"]:
+                if single_shot:
                     break
 
                 for _i in range(SECONDS):
@@ -104,11 +111,11 @@ class Command(BaseCommand):
                         cancel_orphaned_workers()
                         sleep(1)
 
-            if options["single_shot"]:
+            if single_shot:
                 break
 
-    def _run(self, job: Job):
-        job_run_classes = {
+    def _run(self, job: Job) -> None:
+        job_run_classes: dict[Job.Type, type[JobRun]] = {
             Job.Type.PACKAGE: PackageJobRun,
             Job.Type.DELTA_APPLY: DeltaApplyJobRun,
             Job.Type.PROCESS_PROJECTFILE: ProcessProjectfileJobRun,
