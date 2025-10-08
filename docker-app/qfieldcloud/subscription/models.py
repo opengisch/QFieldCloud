@@ -310,12 +310,14 @@ class PackageType(models.Model):
             return cls.objects.get(type=cls.Type.STORAGE)
         except cls.DoesNotExist:
             return cls.objects.create(
-                code="storage_package",
+                code="storage",
+                display_name="Additional storage",
+                is_public=True,
                 type=cls.Type.STORAGE,
                 unit_amount=1000,
                 unit_label="MB",
                 min_quantity=0,
-                max_quantity=100,
+                max_quantity=50,
             )
 
 
