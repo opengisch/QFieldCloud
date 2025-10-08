@@ -11,6 +11,7 @@ def replace_with_single_storage_package_type(apps, schema_editor):
         id=1,
         code="storage",
         display_name="Additional storage",
+        type="storage",
         is_public=True,
         unit_amount=1000,
         unit_label="MB",
