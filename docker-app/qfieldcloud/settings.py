@@ -723,15 +723,8 @@ QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
 # URL the qgis worker will use to access the running API endpoint on the app service
 QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ["QFIELDCLOUD_WORKER_QFIELDCLOUD_URL"]
 
-# Absolute path on the docker host where `libqfieldsync` is mounted from for development
-DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH = os.environ.get(
-    "DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH"
-)
-
-# Absolute path on the docker host where `qfieldcloud-sdk-python` is mounted from for development
-DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH = os.environ.get(
-    "DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH"
-)
+# Host path which will be mounted by the `worker_wrapper` into the `worker` containers to facilitate development and debugging pythons files.
+DEBUG_QGIS_WORKER_HOST_PATH = os.environ.get("DEBUG_QGIS_WORKER_HOST_PATH")
 
 # Port to be used by `debugpy` to connect to the QGIS process inside the `qgis` container
 DEBUG_QGIS_DEBUGPY_PORT = os.environ.get("DEBUG_QGIS_DEBUGPY_PORT")
