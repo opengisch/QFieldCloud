@@ -3,7 +3,7 @@ services:
   app:
     build:
       args:
-        DEBUG_BUILD: ${DEBUG}
+        DEBUG_BUILD: ${DEBUG:-0}
 
   geodb:
     image: postgis/postgis:${POSTGIS_IMAGE_VERSION}

@@ -28,7 +28,7 @@ services:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
       SECRET_KEY: ${SECRET_KEY}
       SALT_KEY: ${SALT_KEY}
-      DEBUG: ${DEBUG}
+      DEBUG: ${DEBUG:-0}
       ENVIRONMENT: ${ENVIRONMENT}
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_RELEASE: ${SENTRY_RELEASE}
@@ -107,7 +107,7 @@ services:
       - ${WEB_HTTP_PORT}:80
       - ${WEB_HTTPS_PORT}:443
     environment:
-      DEBUG: ${DEBUG}
+      DEBUG: ${DEBUG:-0}
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_TLS_CERT: ${QFIELDCLOUD_TLS_CERT}
       QFIELDCLOUD_TLS_KEY: ${QFIELDCLOUD_TLS_KEY}
@@ -147,7 +147,7 @@ services:
       context: ./docker-qgis
       network: host
       args:
-        DEBUG_BUILD: ${DEBUG}
+        DEBUG_BUILD: ${DEBUG:-0}
     tty: true
     command: bash -c "echo QGIS built"
     logging: *default-logging
