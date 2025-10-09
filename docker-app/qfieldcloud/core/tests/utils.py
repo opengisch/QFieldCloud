@@ -5,6 +5,8 @@ from datetime import timedelta
 from time import sleep
 from typing import IO, Iterable
 
+import psycopg2
+from django.conf import settings
 from django.utils import timezone
 
 from qfieldcloud.core.models import Job, Project, User
@@ -148,3 +150,39 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
 
 def fail(msg):
     raise AssertionError(msg or "Test case failed")
+
+
+def get_test_postgis_connection() -> psycopg2.extensions.connection:
+    # Temporarily connect to the 'postgres' database so we can recreate the test postgis database
+    admin_conn = psycopg2.connect(
+        host=settings.TEST_POSTGIS_DB_HOST,
+        port=settings.TEST_POSTGIS_DB_PORT,
+        dbname="postgres",
+        user=settings.TEST_POSTGIS_DB_USER,
+        password=settings.TEST_POSTGIS_DB_PASSWORD,
+    )
+    admin_conn.autocommit = True
+
+    escaped_db_name = psycopg2.extensions.quote_ident(
+        settings.TEST_POSTGIS_DB_NAME, scope=admin_conn
+    )
+    cursor = admin_conn.cursor()
+    cursor.execute(f"DROP DATABASE IF EXISTS {escaped_db_name}")
+    cursor.execute(f"CREATE DATABASE {escaped_db_name}")
+    cursor.close()
+    admin_conn.close()
+
+    # Now connect to the newly created test postgis database
+    conn = psycopg2.connect(
+        host=settings.TEST_POSTGIS_DB_HOST,
+        port=settings.TEST_POSTGIS_DB_PORT,
+        dbname=settings.TEST_POSTGIS_DB_NAME,
+        user=settings.TEST_POSTGIS_DB_USER,
+        password=settings.TEST_POSTGIS_DB_PASSWORD,
+    )
+
+    cursor = conn.cursor()
+    cursor.execute("CREATE EXTENSION postgis")
+    cursor.close()
+
+    return conn
