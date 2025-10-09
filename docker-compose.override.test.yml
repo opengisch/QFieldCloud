@@ -8,6 +8,11 @@ services:
       # we must use the same db for test and runserver
       POSTGRES_DB: test_${POSTGRES_DB}
       POSTGRES_DB_TEST: test_${POSTGRES_DB}
+      GEODB_HOST: ${GEODB_HOST}
+      GEODB_PORT: ${GEODB_PORT}
+      GEODB_USER: ${GEODB_USER}
+      GEODB_PASSWORD: ${GEODB_PASSWORD}
+      GEODB_DB: ${GEODB_DB}
   worker_wrapper:
     environment:
       # we must use the same db for test and runserver
