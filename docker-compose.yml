@@ -165,7 +165,6 @@ services:
       - media_volume:/usr/src/app/mediafiles/
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${LOG_DIRECTORY}:/log
       - ${TMP_DIRECTORY}:/tmp
     logging: *default-logging
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
