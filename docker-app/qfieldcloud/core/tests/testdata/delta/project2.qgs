@@ -20,7 +20,7 @@
   </projectCrs>
   <layer-tree-group>
     <customproperties/>
-    <layer-tree-layer checked="Qt::Checked" legend_exp="" id="point_6b900fa7_af52_4082_bbff_6077f4a91d02" expanded="1" name="point" source="dbname='test' host=geodb port=5432 user='postgres' sslmode=disable key='tid' srid=2056 type=Point checkPrimaryKeyUnicity='0' table=&quot;public&quot;.&quot;point&quot; (geometry)" legend_split_behavior="0" providerKey="postgres" patch_size="-1,-1">
+    <layer-tree-layer checked="Qt::Checked" legend_exp="" id="point_6b900fa7_af52_4082_bbff_6077f4a91d02" expanded="1" name="point" source="dbname='test_postgis_db_name' host=test_postgis_db port=5432 user='test_postgis_db_user' sslmode=disable key='tid' srid=2056 type=Point checkPrimaryKeyUnicity='0' table=&quot;public&quot;.&quot;point&quot; (geometry)" legend_split_behavior="0" providerKey="postgres" patch_size="-1,-1">
       <customproperties/>
     </layer-tree-layer>
     <custom-order enabled="0">
@@ -200,7 +200,7 @@
         <ymax>1121435</ymax>
       </extent>
       <id>point_6b900fa7_af52_4082_bbff_6077f4a91d02</id>
-      <datasource>dbname='test' host=geodb port=5432 user='postgres' password='KUAa7h!G&amp;wQEmkS3' sslmode=disable key='tid' srid=2056 type=Point checkPrimaryKeyUnicity='0' table="public"."point" (geometry)</datasource>
+      <datasource>dbname='test_postgis_db_name' host=test_postgis_db port=5432 user='test_postgis_db_user' password='test_postgis_db_password' sslmode=disable key='tid' srid=2056 type=Point checkPrimaryKeyUnicity='0' table="public"."point" (geometry)</datasource>
       <keywordList>
         <value></value>
       </keywordList>

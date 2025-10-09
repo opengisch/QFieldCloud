@@ -42,13 +42,13 @@ class Migration(migrations.Migration):
                 (
                     "hostname",
                     models.CharField(
-                        default=settings.GEODB_HOST,
+                        default="",
                         max_length=255,
                     ),
                 ),
                 (
                     "port",
-                    models.PositiveIntegerField(default=settings.GEODB_PORT),
+                    models.PositiveIntegerField(default=0),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],

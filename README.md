@@ -191,7 +191,6 @@ Create an <code>.env.test</code> file with the following variables that override
     WEB_HTTP_PORT=8101
     WEB_HTTPS_PORT=8102
     HOST_POSTGRES_PORT=8103
-    HOST_GEODB_PORT=8107
     MEMCACHED_PORT=11212
     QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
     QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
@@ -378,7 +377,6 @@ Based on this example
 | django http   | 8011  | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
 | postgres      | 5433  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | memcached     | 11211 | MEMCACHED_PORT       | :white_check_mark: | :x:                | :x:                |
-| geodb         | 5432  | HOST_GEODB_PORT      | :white_check_mark: | :white_check_mark: | :x:                |
 | minio API     | 8009  | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
 | minio browser | 8010  | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
 | smtp web      | 8012  | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
@@ -397,23 +395,6 @@ For great `nginx` logs, use:
     QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
     docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
 
-
-### Geodb
-
-The geodb (database for the users projects data) is installed on
-separated machines (db1.qfield.cloud, db2.qfield.cloud, db3&#x2026;)
-and they are load balanced and available through the
-db.qfield.cloud address.
-
-There is a template database called
-`template_postgis` that is used to create the databases for the
-users. The template db has the following extensions installed:
-
--   fuzzystrmatch
--   plpgsql
--   postgis
--   postgis<sub>tiger</sub><sub>geocoder</sub>
--   postgis<sub>topology</sub>
 
 ### Storage
 
