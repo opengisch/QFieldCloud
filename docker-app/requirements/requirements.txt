@@ -124,7 +124,7 @@ django-nonrelated-inlines==0.2
     # via -r /requirements/requirements.in
 django-notifications-hq==1.8.3
     # via -r /requirements/requirements.in
-django-phonenumber-field==8.1.0
+django-phonenumber-field==8.3.0
     # via -r /requirements/requirements.in
 django-sri==0.8.0
     # via -r /requirements/requirements.in
