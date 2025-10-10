@@ -168,7 +168,7 @@ mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.3.1
     # via django-allauth
-phonenumbers==9.0.14
+phonenumbers==9.0.15
     # via -r /requirements/requirements.in
 pillow==11.3.0
     # via -r /requirements/requirements.in
