@@ -242,13 +242,10 @@ def download_field_file(
     if not filename:
         raise Exception("Missing filename in `download_field_file`!")
 
-    # check if we are in NGINX proxy
-    http_host = request.headers.get("host", "")
-    https_port = http_host.split(":")[-1] if ":" in http_host else "443"
-
     range = get_range(request, field_file.size)
 
-    if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
+    # Assume that if the request is secure, we are behind a nginx proxy and we can use `X-Accel-Redirect`
+    if request.is_secure() and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
         storage_filename = field_file.name
