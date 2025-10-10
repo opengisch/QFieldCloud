@@ -13,18 +13,6 @@ services:
       - ${HOST_POSTGRES_PORT}:5432
     command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
 
-  geodb:
-    image: postgis/postgis:${POSTGIS_IMAGE_VERSION}
-    restart: unless-stopped
-    volumes:
-      - geodb_data:/var/lib/postgresql
-    environment:
-      POSTGRES_DB: ${GEODB_DB}
-      POSTGRES_USER: ${GEODB_USER}
-      POSTGRES_PASSWORD: ${GEODB_PASSWORD}
-    ports:
-      - ${HOST_GEODB_PORT}:5432
-
   smtp4dev:
     image: rnwood/smtp4dev:v3
     restart: always
@@ -94,7 +82,6 @@ services:
 
 volumes:
   postgres_data:
-  geodb_data:
   smtp4dev_data:
   minio_data1:
   minio_data2:

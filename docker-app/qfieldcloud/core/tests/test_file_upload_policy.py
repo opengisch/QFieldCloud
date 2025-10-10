@@ -1,17 +1,18 @@
 import logging
 
-import psycopg2
-from django.conf import settings
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import ApplyJob, Geodb, Job, PackageJob, Person, Project
+from qfieldcloud.core.models import ApplyJob, Job, PackageJob, Person, Project
+from qfieldcloud.core.tests.utils import (
+    get_test_postgis_connection,
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_project_ok_status,
+)
 from qfieldcloud.subscription.exceptions import SubscriptionException
 from qfieldcloud.subscription.models import SubscriptionStatus
-
-from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
 
 logging.disable(logging.CRITICAL)
 
@@ -66,22 +67,7 @@ class QfcTestCase(APITransactionTestCase):
         plan.storage_mb = 0
         plan.save()
 
-        delete_db_and_role("test", self.user.username)
-
-        self.geodb = Geodb.objects.create(
-            user=self.user,
-            dbname="test",
-            hostname=settings.GEODB_HOST,
-            port=settings.GEODB_PORT,
-        )
-
-        self.conn = psycopg2.connect(
-            dbname="test",
-            user=settings.GEODB_USER,
-            password=settings.GEODB_PASSWORD,
-            host=settings.GEODB_HOST,
-            port=settings.GEODB_PORT,
-        )
+        self.conn = get_test_postgis_connection()
 
         cur = self.conn.cursor()
 

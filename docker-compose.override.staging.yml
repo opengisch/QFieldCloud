@@ -5,22 +5,7 @@ services:
       args:
         DEBUG_BUILD: ${DEBUG}
 
-  geodb:
-    image: postgis/postgis:${POSTGIS_IMAGE_VERSION}
-    restart: unless-stopped
-    volumes:
-      - geodb_data:/var/lib/postgresql
-    environment:
-      POSTGRES_DB: ${GEODB_DB}
-      POSTGRES_USER: ${GEODB_USER}
-      POSTGRES_PASSWORD: ${GEODB_PASSWORD}
-    ports:
-      - ${HOST_GEODB_PORT}:5432
-
   nginx:
     volumes:
       - static_volume:/var/www/html/staticfiles/
       - media_volume:/var/www/html/mediafiles/
-
-volumes:
-  geodb_data:

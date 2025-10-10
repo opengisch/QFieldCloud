@@ -1,12 +1,8 @@
 import io
 
-import psycopg2
-from django.conf import settings
 from rest_framework.test import APITransactionTestCase
 
-from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import (
-    Geodb,
     Job,
     Organization,
     OrganizationMember,
@@ -17,6 +13,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
+    get_test_postgis_connection,
     set_subscription,
     setup_subscription_plans,
     testdata_path,
@@ -60,21 +57,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.p1.direct_collaborators.bulk_create(collaborators)
 
-        delete_db_and_role("test", self.u1.username)
-        self.geodb = Geodb.objects.create(
-            user=self.u1,
-            dbname="test",
-            hostname="geodb",
-            port=5432,
-        )
-
-        self.conn = psycopg2.connect(
-            dbname="test",
-            user=settings.GEODB_USER,
-            password=settings.GEODB_PASSWORD,
-            host=settings.GEODB_HOST,
-            port=settings.GEODB_PORT,
-        )
+        self.conn = get_test_postgis_connection()
 
     def _create_secret(self, **kwargs) -> Secret:
         return Secret.objects.create(
@@ -243,11 +226,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             organization=self.o1,
             value=(
                 "[geodb1]\n"
-                "dbname=test\n"
-                "host=geodb\n"
+                "dbname=test_postgis_db_name\n"
+                "host=test_postgis_db\n"
                 "port=5432\n"
-                f"user={settings.GEODB_USER}\n"
-                f"password={settings.GEODB_PASSWORD}\n"
+                "user=test_postgis_db_user\n"
+                "password=test_postgis_db_password\n"
                 "sslmode=disable\n"
             ),
         )
@@ -259,11 +242,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             organization=self.o1,
             value=(
                 "[geodb2]\n"
-                "dbname=test\n"
-                "host=geodb\n"
+                "dbname=test_postgis_db_name\n"
+                "host=test_postgis_db\n"
                 "port=5432\n"
-                f"user={settings.GEODB_USER}\n"
-                f"password={settings.GEODB_PASSWORD}\n"
+                "user=test_postgis_db_user\n"
+                "password=test_postgis_db_password\n"
                 "sslmode=disable\n"
             ),
         )
