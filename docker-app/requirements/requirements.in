@@ -32,7 +32,7 @@ django-timezone-field==7.1
 django==4.2.25
 django-stubs==5.2.7
 djangorestframework==3.16.1
-djangorestframework-stubs==3.16.3
+djangorestframework-stubs==3.16.4
 drf-spectacular==0.28.0
 json-log-formatter==1.1.1
 mypy-boto3-s3==1.35.81
