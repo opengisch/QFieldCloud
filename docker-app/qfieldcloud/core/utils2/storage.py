@@ -259,11 +259,8 @@ def file_response(
     if version is not None:
         extra_params["VersionId"] = version
 
-    # check if we are in NGINX proxy
-    http_host = request.headers.get("host", "")
-    https_port = http_host.split(":")[-1] if ":" in http_host else "443"
-
-    if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
+    # Assume that if the request is secure, we are behind a nginx proxy and we can use `X-Accel-Redirect`
+    if request.is_secure() and not settings.IN_TEST_SUITE:
         if as_attachment:
             extra_params["ResponseContentType"] = "application/force-download"
             extra_params["ResponseContentDisposition"] = (

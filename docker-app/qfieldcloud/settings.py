@@ -65,9 +65,6 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 # Read more: https://docs.djangoproject.com/en/4.2/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-WEB_HTTP_PORT = os.environ.get("WEB_HTTP_PORT")
-WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT")
-
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
     # custom QFC backend that extends the `allauth` specific authentication methods
