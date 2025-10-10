@@ -130,7 +130,7 @@ django-sri==0.8.0
     # via -r /requirements/requirements.in
 django-storages==1.14.6
     # via -r /requirements/requirements.in
-django-stubs==5.2.5
+django-stubs==5.2.7
     # via
     #   -r /requirements/requirements.in
     #   djangorestframework-stubs
