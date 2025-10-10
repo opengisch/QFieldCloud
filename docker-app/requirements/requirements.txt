@@ -74,13 +74,13 @@ django==4.2.25
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.11.1
+django-allauth[socialaccount]==65.11.2
     # via -r /requirements/requirements.in
 django-appconf==1.1.0
     # via django-cryptography
 django-auditlog==3.2.1
     # via -r /requirements/requirements.in
-django-axes==7.0.2
+django-axes==8.0.0
     # via -r /requirements/requirements.in
 django-bootstrap4==25.2
     # via -r /requirements/requirements.in
@@ -144,7 +144,7 @@ djangorestframework==3.16.1
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
-djangorestframework-stubs==3.16.2
+djangorestframework-stubs==3.16.3
     # via -r /requirements/requirements.in
 drf-spectacular==0.28.0
     # via -r /requirements/requirements.in
@@ -168,7 +168,7 @@ mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.3.1
     # via django-allauth
-phonenumbers==9.0.13
+phonenumbers==9.0.14
     # via -r /requirements/requirements.in
 pillow==11.3.0
     # via -r /requirements/requirements.in
