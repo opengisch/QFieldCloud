@@ -1,11 +1,12 @@
 import logging
 from io import StringIO
 
-from django.test import override_settings
+from django.test import RequestFactory, override_settings
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.exceptions import InvalidRangeError
 from qfieldcloud.core.models import (
     Person,
     Project,
@@ -14,7 +15,7 @@ from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
-from qfieldcloud.filestorage.utils import parse_range
+from qfieldcloud.filestorage.utils import get_range, parse_range_header
 
 logging.disable(logging.CRITICAL)
 
@@ -39,9 +40,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
     def test_parsing_range_function_succeeds(self):
-        self.assertEquals(parse_range("bytes=4-8", 10), (4, 8))
+        self.assertEquals(parse_range_header("bytes=4-8", 10), (4, 8))
 
-        start_byte, end_byte = parse_range("bytes=2-", 10)
+        start_byte, end_byte = parse_range_header("bytes=2-", 10)
 
         self.assertEquals(start_byte, 2)
         self.assertIsNone(end_byte)
@@ -50,39 +51,85 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         file_size = 1000000
 
         # not starting with 'bytes'
-        self.assertIsNone(parse_range("byte=4-8", file_size))
+        self.assertIsNone(parse_range_header("byte=4-8", file_size))
 
         # start byte can not be negative
-        self.assertIsNone(parse_range("bytes=-1-15", file_size))
+        self.assertIsNone(parse_range_header("bytes=-1-15", file_size))
 
         # start and end bytes can not be negative
-        self.assertIsNone(parse_range("bytes=-10--15", file_size))
+        self.assertIsNone(parse_range_header("bytes=-10--15", file_size))
 
         # start position cannot be greater than the end position
-        self.assertIsNone(parse_range("bytes=9-1", file_size))
+        self.assertIsNone(parse_range_header("bytes=9-1", file_size))
 
         # suffix ranges are not supported (yet), see https://www.rfc-editor.org/rfc/rfc9110.html#rule.suffix-range
-        self.assertIsNone(parse_range("bytes=-5", file_size))
+        self.assertIsNone(parse_range_header("bytes=-5", file_size))
 
         # bytes should be numbers
-        self.assertIsNone(parse_range("bytes=one-two", file_size))
+        self.assertIsNone(parse_range_header("bytes=one-two", file_size))
         # whitespaces are not accepted
-        self.assertIsNone(parse_range("bytes= 1-9", file_size))
-        self.assertIsNone(parse_range("bytes=1 -9", file_size))
-        self.assertIsNone(parse_range("bytes=1- 9", file_size))
-        self.assertIsNone(parse_range("bytes=1-9 ", file_size))
-        self.assertIsNone(parse_range("bytes=1- ", file_size))
-        self.assertIsNone(parse_range(" bytes=1-9", file_size))
+        self.assertIsNone(parse_range_header("bytes= 1-9", file_size))
+        self.assertIsNone(parse_range_header("bytes=1 -9", file_size))
+        self.assertIsNone(parse_range_header("bytes=1- 9", file_size))
+        self.assertIsNone(parse_range_header("bytes=1-9 ", file_size))
+        self.assertIsNone(parse_range_header("bytes=1- ", file_size))
+        self.assertIsNone(parse_range_header(" bytes=1-9", file_size))
         # typos in bytes
-        self.assertIsNone(parse_range("bites=0-9", file_size))
-        self.assertIsNone(parse_range("starting bytes=0-9", file_size))
-        self.assertIsNone(parse_range("bytes=0-9 closing bytes", file_size))
+        self.assertIsNone(parse_range_header("bites=0-9", file_size))
+        self.assertIsNone(parse_range_header("starting bytes=0-9", file_size))
+        self.assertIsNone(parse_range_header("bytes=0-9 closing bytes", file_size))
         # empty range
-        self.assertIsNone(parse_range("bytes=0-0", file_size))
-        self.assertIsNone(parse_range("bytes=1-1", file_size))
+        self.assertIsNone(parse_range_header("bytes=0-0", file_size))
+        self.assertIsNone(parse_range_header("bytes=1-1", file_size))
         # multiple ranges are not supported (yet), see https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2-9.4.1
-        self.assertIsNone(parse_range("bytes=1-5, 10-15", file_size))
-        self.assertIsNone(parse_range("bytes=1-5,10-15", file_size))
+        self.assertIsNone(parse_range_header("bytes=1-5, 10-15", file_size))
+        self.assertIsNone(parse_range_header("bytes=1-5,10-15", file_size))
+
+    def test_get_range_function(self):
+        factory = RequestFactory()
+
+        request = factory.get("")
+        range = get_range(request, 10)
+
+        self.assertIsNone(range)
+
+        request = factory.get("", headers={"Range": "bytes=4-8"})
+        range = get_range(request, 10)
+
+        self.assertIsNotNone(range)
+        # typing is not aware that the above function checks for `None`
+        assert range
+
+        self.assertEqual(range.start, 4)
+        self.assertEqual(range.end, 8)
+        self.assertEqual(range.length, 5)
+        self.assertEqual(range.total_size, 10)
+        self.assertEqual(range.header, "bytes=4-8")
+
+        request = factory.get("", headers={"Range": "bytes=4-8"})
+
+        request = factory.get("", headers={"Range": "bytes=2-"})
+        range = get_range(request, 10)
+
+        self.assertIsNotNone(range)
+        assert range
+
+        self.assertEqual(range.start, 2)
+        self.assertEqual(range.end, 9)
+        self.assertEqual(range.length, 8)
+        self.assertEqual(range.total_size, 10)
+        self.assertEqual(range.header, "bytes=2-")
+
+        request = factory.get("", headers={"Range": "bytes= 2 - "})
+
+        with self.assertRaises(InvalidRangeError):
+            get_range(request, 10)
+
+        with override_settings(QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH=3):
+            request = factory.get("", headers={"Range": "bytes=0-1"})
+
+            with self.assertRaises(InvalidRangeError):
+                get_range(request, 10)
 
     def test_upload_file_then_download_range_succeeds(self):
         for project in [self.project_default_storage, self.project_webdav_storage]:

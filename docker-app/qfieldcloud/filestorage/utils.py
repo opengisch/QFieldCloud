@@ -4,11 +4,15 @@ import uuid
 from pathlib import Path, PurePath
 from typing import Any
 
+from attr import dataclass
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
+from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
+
+from qfieldcloud.core.exceptions import InvalidRangeError
 
 filename_validator = RegexValidator(
     settings.STORAGES_FILENAME_VALIDATION_REGEX,
@@ -158,7 +162,10 @@ def to_uuid(value: Any) -> uuid.UUID | None:
         return None
 
 
-def parse_range(input_range: str, file_size: int) -> tuple[int, int | None] | None:
+def parse_range_header(
+    input_range: str,
+    file_size: int,
+) -> tuple[int, int | None] | None:
     """Parses a range HTTP Header string.
 
     Arguments:
@@ -189,3 +196,54 @@ def parse_range(input_range: str, file_size: int) -> tuple[int, int | None] | No
         range_end = None
 
     return (range_start, range_end)
+
+
+@dataclass
+class RangeForFile:
+    """A range for a file, as parsed from a HTTP Range header."""
+
+    start: int
+    end: int
+    length: int
+    total_size: int
+    header: str
+
+
+def get_range(request: HttpRequest, total_size: int) -> RangeForFile | None:
+    """Get a parsed range for a file, if any.
+
+    Arguments:
+        request: the HTTP request to get the range from.
+        file: the file to get the range for.
+    """
+    range_header = request.headers.get("Range", "")
+
+    if not range_header:
+        return None
+
+    range_match = parse_range_header(range_header, total_size)
+
+    if not range_match:
+        raise InvalidRangeError("The provided HTTP range header is invalid.")
+
+    range_start, range_end = range_match
+
+    if range_end is None:
+        range_end = total_size - 1
+
+    range_length = range_end - range_start + 1
+
+    if range_length < settings.QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH:
+        raise InvalidRangeError(
+            "Requested range too small, expected at least {} but got {} bytes".format(
+                settings.QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH, range_length
+            )
+        )
+
+    return RangeForFile(
+        start=range_start,
+        end=range_end,
+        length=range_length,
+        total_size=total_size,
+        header=range_header,
+    )
