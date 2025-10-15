@@ -1,29 +1,42 @@
+import argparse
 import logging
 from pathlib import Path
 from typing import Any, TypedDict, cast
+from uuid import UUID
 from xml.etree import ElementTree
 
-from qgis.core import (
-    QgsMapRendererCustomPainterJob,
-    QgsProject,
-)
+from qgis.core import QgsMapRendererCustomPainterJob, QgsProject
 from qgis.PyQt.QtGui import QImage, QPainter
 
-from .utils import (
+from qfc_worker.commands_base import QfcBaseCommand
+from qfc_worker.exceptions import (
     FailedThumbnailGenerationException,
     InvalidFileExtensionException,
     InvalidXmlFileException,
     ProjectFileNotFoundException,
+)
+from qfc_worker.utils import (
+    download_project,
     get_layers_data,
     get_qgis_xml_error_context,
     layers_data_to_string,
+    open_qgis_project_as_readonly,
     open_qgis_project_temporarily,
+    start_app,
+    stop_app,
+)
+from qfc_worker.workflow import (
+    Step,
+    StepOutput,
+    WorkDirPath,
+    WorkDirPathAsStr,
+    Workflow,
 )
 
-logger = logging.getLogger("PROCPRJ")
+logger = logging.getLogger(__name__)
 
 
-def check_valid_project_file(the_qgis_file_name: Path) -> None:
+def _check_valid_project_file(the_qgis_file_name: Path) -> None:
     logger.info("Check QGIS project file validity…")
 
     if not the_qgis_file_name.exists():
@@ -60,7 +73,7 @@ class ProjectDetails(TypedDict):
     data_dirs: list[str]
 
 
-def extract_project_details(project: QgsProject) -> ProjectDetails:
+def _extract_project_details(project: QgsProject) -> ProjectDetails:
     """Extract project details"""
     logger.info("Extract project details…")
     logger.info("Reading QGIS project file…")
@@ -93,7 +106,7 @@ def extract_project_details(project: QgsProject) -> ProjectDetails:
     return details
 
 
-def generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> None:
+def _generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> None:
     """Create a thumbnail for the project
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
@@ -130,7 +143,84 @@ def generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> Non
     logger.info("Project thumbnail image generated!")
 
 
-if __name__ == "__main__":
-    from qfc_worker.utils import setup_basic_logging_config
+class ProcessProjectfileCommand(QfcBaseCommand):
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("project_id", type=UUID, help="Project ID")
+        parser.add_argument("project_file", type=str, help="QGIS project file path")
 
-    setup_basic_logging_config()
+    def get_workflow(self, project_id: UUID, project_file: str) -> Workflow:  # type: ignore
+        workflow = Workflow(
+            id="process_projectfile",
+            name="Process Projectfile",
+            version="2.0",
+            steps=[
+                Step(
+                    id="start_qgis_app",
+                    name="Start QGIS Application",
+                    method=start_app,
+                    return_names=["qgis_version"],
+                ),
+                Step(
+                    id="download_project_directory",
+                    name="Download Project Directory",
+                    arguments={
+                        "project_id": project_id,
+                        "destination": WorkDirPath(mkdir=True),
+                        "skip_attachments": True,
+                    },
+                    method=download_project,
+                    return_names=["tmp_project_dir"],
+                ),
+                Step(
+                    id="project_validity_check",
+                    name="Project Validity Check",
+                    arguments={
+                        "the_qgis_file_name": WorkDirPath("files", project_file),
+                    },
+                    method=_check_valid_project_file,
+                ),
+                Step(
+                    id="opening_check",
+                    name="Opening Check",
+                    arguments={
+                        "the_qgis_file_name": WorkDirPathAsStr("files", project_file),
+                        "force_reload": True,
+                        "disable_feature_count": True,
+                    },
+                    method=open_qgis_project_as_readonly,
+                    return_names=["project"],
+                ),
+                Step(
+                    id="project_details",
+                    name="Project Details",
+                    arguments={
+                        "project": StepOutput("opening_check", "project"),
+                    },
+                    method=_extract_project_details,
+                    return_names=["project_details"],
+                    outputs=["project_details"],
+                ),
+                Step(
+                    id="generate_thumbnail_image",
+                    name="Generate Thumbnail Image",
+                    arguments={
+                        "the_qgis_file_name": WorkDirPathAsStr("files", project_file),
+                        "thumbnail_filename": Path("/io/thumbnail.png"),
+                    },
+                    method=_generate_thumbnail,
+                ),
+                Step(
+                    id="stop_qgis_app",
+                    name="Stop QGIS Application",
+                    method=stop_app,
+                ),
+            ],
+        )
+
+        return workflow
+
+
+cmd = ProcessProjectfileCommand()
+
+if __name__ == "__main__":
+    cmd.run_from_argv()

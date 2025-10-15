@@ -35,9 +35,8 @@ services:
     ports:
       - ${DEBUG_WORKER_WRAPPER_DEBUGPY_PORT:-5679}:5679
     environment:
-      DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH: ${DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH}
-      DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH: ${DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH}
       DEBUG_QGIS_DEBUGPY_PORT: ${DEBUG_QGIS_DEBUGPY_PORT}
+      DEBUG_QGIS_WORKER_HOST_PATH: ${DEBUG_QGIS_WORKER_HOST_PATH:-}
     volumes:
       # mount the source for live reload
       - ./docker-app/qfieldcloud:/usr/src/app/qfieldcloud

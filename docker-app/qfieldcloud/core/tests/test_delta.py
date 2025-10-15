@@ -3,6 +3,7 @@ import json
 import logging
 import time
 from datetime import datetime
+from typing import NoReturn
 from unittest import mock, skip
 from uuid import UUID
 
@@ -111,9 +112,10 @@ class QfcTestCase(APITransactionTestCase):
                 time.sleep(1)
                 return
 
-    def fail(self, msg: str, job: Job = None):
+    def fail(self, msg: str = "", job: Job | None = None) -> NoReturn:
         if job:
-            msg += f"\n\nOutput:\n================\n{job.output}\n================"
+            msg += f"\n\nJobType:{job.type}\n"
+            msg += f"Output:\n================\n{job.output}\n================"
 
             if job.feedback:
                 if "error_stack" in job.feedback:
