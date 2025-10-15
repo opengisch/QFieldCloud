@@ -2,7 +2,6 @@
 
 import django.core.validators
 import django.db.models.deletion
-import django_cryptography.fields
 from django.db import migrations, models
 
 
@@ -65,7 +64,7 @@ class Migration(migrations.Migration):
                         to="core.user",
                     ),
                 ),
-                ("value", django_cryptography.fields.encrypt(models.TextField())),
+                ("value", models.TextField()),
             ],
         ),
     ]

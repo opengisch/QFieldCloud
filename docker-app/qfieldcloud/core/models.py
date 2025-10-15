@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-import django_cryptography.fields
 from deprecated import deprecated
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -2589,12 +2588,6 @@ class Secret(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-
-    # TODO Remove with QF-6361 Remove legacy `django_cryptography`'s encrypted field support
-    # legacy field to store the encrypted value of the secret.
-    old_value = django_cryptography.fields.encrypt(
-        models.TextField(blank=True, null=True)
-    )
 
     # encrypted value of the secret.
     value = EncryptedTextField()

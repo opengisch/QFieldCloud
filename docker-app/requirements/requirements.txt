@@ -36,7 +36,6 @@ charset-normalizer==3.4.3
     # via requests
 cryptography==45.0.6
     # via
-    #   django-cryptography
     #   django-fernet-encrypted-fields
     #   pyjwt
 deprecated==1.2.18
@@ -45,14 +44,12 @@ django==4.2.25
     # via
     #   -r /requirements/requirements.in
     #   django-allauth
-    #   django-appconf
     #   django-auditlog
     #   django-axes
     #   django-bootstrap4
     #   django-classy-tags
     #   django-common-helpers
     #   django-cron
-    #   django-cryptography
     #   django-currentuser
     #   django-debug-toolbar
     #   django-extensions
@@ -76,8 +73,6 @@ django==4.2.25
     #   jsonfield
 django-allauth[socialaccount]==65.11.1
     # via -r /requirements/requirements.in
-django-appconf==1.1.0
-    # via django-cryptography
 django-auditlog==3.2.1
     # via -r /requirements/requirements.in
 django-axes==7.0.2
@@ -95,8 +90,6 @@ django-constance==4.3.2
 django-countries==7.6.1
     # via -r /requirements/requirements.in
 django-cron==0.6.0
-    # via -r /requirements/requirements.in
-django-cryptography==1.1
     # via -r /requirements/requirements.in
 django-currentuser==0.9.0
     # via -r /requirements/requirements.in
