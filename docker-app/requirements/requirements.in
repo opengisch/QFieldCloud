@@ -15,6 +15,7 @@ django-currentuser==0.9.0
 django-debug-toolbar==6.0.0
 django-extensions==4.1
 django-fernet-encrypted-fields==0.3.0
+# NOTE `django-filter>=25.2` requires Django>=5.2, so we pin to 25.1 until we upgrade Django
 django-filter==25.1
 django-invitations==2.1.0
 django-jazzmin==3.0.1
@@ -23,21 +24,22 @@ django-migrate-sql-3==3.0.2
 django-model-utils==5.0.0
 django-nonrelated-inlines==0.2
 django-notifications-hq==1.8.3
-django-phonenumber-field==8.1.0
+django-phonenumber-field==8.3.0
 django-sri==0.8.0
 django-storages==1.14.6
 django-tables2==2.7.5
 django-timezone-field==7.1
 django==4.2.25
-django-stubs==5.2.5
+django-stubs==5.2.7
+django-stubs-ext==5.2.7
 djangorestframework==3.16.1
-djangorestframework-stubs==3.16.3
+djangorestframework-stubs==3.16.4
 drf-spectacular==0.28.0
 json-log-formatter==1.1.1
 mypy-boto3-s3==1.35.81
-phonenumbers==9.0.14
+phonenumbers==9.0.15
 Pillow==11.3.0
-psycopg2==2.9.10
+psycopg2==2.9.11
 pymemcache==4.0.0
 sentry-sdk==1.45.1
 stripe==4.2.0

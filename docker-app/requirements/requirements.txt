@@ -71,11 +71,11 @@ django==4.2.25
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.11.1
+django-allauth[socialaccount]==65.11.2
     # via -r /requirements/requirements.in
 django-auditlog==3.2.1
     # via -r /requirements/requirements.in
-django-axes==7.0.2
+django-axes==8.0.0
     # via -r /requirements/requirements.in
 django-bootstrap4==25.2
     # via -r /requirements/requirements.in
@@ -117,18 +117,20 @@ django-nonrelated-inlines==0.2
     # via -r /requirements/requirements.in
 django-notifications-hq==1.8.3
     # via -r /requirements/requirements.in
-django-phonenumber-field==8.1.0
+django-phonenumber-field==8.3.0
     # via -r /requirements/requirements.in
 django-sri==0.8.0
     # via -r /requirements/requirements.in
 django-storages==1.14.6
     # via -r /requirements/requirements.in
-django-stubs==5.2.5
+django-stubs==5.2.7
     # via
     #   -r /requirements/requirements.in
     #   djangorestframework-stubs
-django-stubs-ext==5.2.5
-    # via django-stubs
+django-stubs-ext==5.2.7
+    # via
+    #   -r /requirements/requirements.in
+    #   django-stubs
 django-tables2==2.7.5
     # via -r /requirements/requirements.in
 django-timezone-field==7.1
@@ -137,7 +139,7 @@ djangorestframework==3.16.1
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
-djangorestframework-stubs==3.16.2
+djangorestframework-stubs==3.16.4
     # via -r /requirements/requirements.in
 drf-spectacular==0.28.0
     # via -r /requirements/requirements.in
@@ -161,11 +163,11 @@ mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.3.1
     # via django-allauth
-phonenumbers==9.0.13
+phonenumbers==9.0.15
     # via -r /requirements/requirements.in
 pillow==11.3.0
     # via -r /requirements/requirements.in
-psycopg2==2.9.10
+psycopg2==2.9.11
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi
