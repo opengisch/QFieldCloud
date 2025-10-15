@@ -23,10 +23,16 @@ RUN apt-get update \
     libgdal-dev \
     gdal-bin \
     git \
+# GDAL development headers needed for building fiona and other geospatial packages on ARM64
+    libgdal-dev \
+    gdal-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # install `pip-compile` (as part of `pip-tools`)
 RUN pip3 install pip-tools
+
+# Set GDAL environment variables for building packages like fiona
+ENV GDAL_CONFIG=/usr/bin/gdal-config
 
 # Set GDAL environment variables for building packages like fiona
 ENV GDAL_CONFIG=/usr/bin/gdal-config
@@ -59,6 +65,8 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_CACHE_DIR=1
 # GDAL configuration for building geospatial packages
 ENV GDAL_CONFIG=/usr/bin/gdal-config
+# GDAL configuration for building geospatial packages
+ENV GDAL_CONFIG=/usr/bin/gdal-config
 
 # install dependencies
 RUN apt-get update \
@@ -69,6 +77,8 @@ RUN apt-get update \
     libgdal-dev \
 # Build tools needed for compiling Python packages with C++ extensions
     gcc g++ python3-dev \
+# GDAL development headers needed for building packages like fiona in test environments
+    libgdal-dev \
 # needed for Django's `manage.py makemessages`
     gettext \
 # for development purposes only (optional dependency for `django-extensions`)
