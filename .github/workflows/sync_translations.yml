@@ -1,14 +1,12 @@
 name: 🌎 Synchronize translations with Transifex
 
 on:
-    schedule:
-      - cron: "0 2 * * *"
-    workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
 
 jobs:
-
   sync_translations:
-
     name: Synchronize Transifex translations
     runs-on: ubuntu-latest
 
@@ -16,7 +14,6 @@ jobs:
       TX_TOKEN: ${{ secrets.TX_TOKEN }}
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -43,12 +40,12 @@ jobs:
 
       - name: Perform docker pre operations
         run: |
-            docker compose pull
-            docker compose build
+          docker compose pull
+          docker compose build
 
       - name: Generate Django translation po files
         run: |
-            docker compose run --user root app python manage.py makemessages -l es
+          docker compose run --user root app python manage.py makemessages -l es
 
       - name: Push translation files to Transifex
         run: ./tx push --source

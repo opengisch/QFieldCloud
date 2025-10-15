@@ -12,52 +12,44 @@ jobs:
       fail-fast: true
       matrix:
         services:
-          -
-            service_name: app
+          - service_name: app
             dockerfile: docker-app/Dockerfile
             docker_context: docker-app
             docker_target: webserver_runtime
             enable_dockerhub: true
 
-          -
-            service_name: app-test
+          - service_name: app-test
             dockerfile: docker-app/Dockerfile
             docker_context: docker-app
             docker_target: webserver_test
             enable_dockerhub: false
 
-          -
-            service_name: worker-wrapper
+          - service_name: worker-wrapper
             dockerfile: docker-app/Dockerfile
             docker_context: docker-app
             docker_target: worker_wrapper_runtime
             enable_dockerhub: true
 
-          -
-            service_name: qgis
+          - service_name: qgis
             dockerfile: docker-qgis/Dockerfile
             docker_context: docker-qgis
             enable_dockerhub: true
 
-          -
-            service_name: nginx
+          - service_name: nginx
             dockerfile: docker-nginx/Dockerfile
             docker_context: docker-nginx
             enable_dockerhub: true
 
-          -
-            service_name: createbuckets
+          - service_name: createbuckets
             dockerfile: docker-createbuckets/Dockerfile
             docker_context: docker-createbuckets
             enable_dockerhub: true
 
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      -
-        name: Docker Metadata
+      - name: Docker Metadata
         id: docker_metadata
         uses: docker/metadata-action@v5
         with:
@@ -76,29 +68,25 @@ jobs:
             type=match,pattern=v(.*),group=1
             type=edge,branch=master
 
-      -
-        name: Login to GitHub Container Repository (ghcr.io)
+      - name: Login to GitHub Container Repository (ghcr.io)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      -
-        name: Login to Docker Hub
+      - name: Login to Docker Hub
         if: ${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      -
-        name: Docker Build ${{ matrix.services.service_name }}
+      - name: Docker Build ${{ matrix.services.service_name }}
         id: docker_test_application
         uses: docker/build-push-action@v6
         with:

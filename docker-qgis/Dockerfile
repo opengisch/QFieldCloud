@@ -41,7 +41,7 @@ RUN apt-get update \
 
 
 # Set QGIS version as in the debian repos
-# Choose your version from here: 
+# Choose your version from here:
 # AMD64: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
 # ARM64: Uses Ubuntu's default QGIS packages (QGIS.org doesn't provide ARM64 builds)
 ARG QGIS_VERSION=1:3.44.3+40noble

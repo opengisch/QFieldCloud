@@ -1,5 +1,4 @@
 services:
-
   db:
     image: postgis/postgis:${POSTGIS_IMAGE_VERSION}
     restart: unless-stopped
@@ -11,7 +10,8 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     ports:
       - ${HOST_POSTGRES_PORT}:5432
-    command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
+    command:
+      ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
 
   geodb:
     image: postgis/postgis:${POSTGIS_IMAGE_VERSION}
@@ -36,7 +36,7 @@ services:
       # IMAP
       - ${SMTP4DEV_IMAP_PORT}:143
     volumes:
-        - smtp4dev_data:/smtp4dev
+      - smtp4dev_data:/smtp4dev
     environment:
       # Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
       - ServerOptions__HostName=smtp4dev
@@ -55,17 +55,18 @@ services:
       MINIO_BROWSER_REDIRECT_URL: http://${QFIELDCLOUD_HOST}:${MINIO_BROWSER_PORT}
     command: server /data{1...4} --console-address :9001
     healthcheck:
-        test: [
+      test:
+        [
           "CMD",
           "curl",
           "-A",
           "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
           "-f",
-          "http://localhost:9001/minio/index.html"
+          "http://localhost:9001/minio/index.html",
         ]
-        interval: 5s
-        timeout: 20s
-        retries: 5
+      interval: 5s
+      timeout: 20s
+      retries: 5
     ports:
       - ${MINIO_BROWSER_PORT}:9001
       - ${MINIO_API_PORT}:9000
