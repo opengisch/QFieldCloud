@@ -464,6 +464,14 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
 
+# Third-party auth header names configuration
+QFIELDCLOUD_IDP_ID_HEADER_NAME = os.environ.get(
+    "QFIELDCLOUD_IDP_ID_HEADER_NAME", "X-QFC-IDP-ID"
+)
+QFIELDCLOUD_ID_TOKEN_HEADER_NAME = os.environ.get(
+    "QFIELDCLOUD_ID_TOKEN_HEADER_NAME", "X-QFC-ID-Token"
+)
+
 #########################
 # /Django allauth settings
 #########################

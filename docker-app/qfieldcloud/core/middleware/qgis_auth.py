@@ -3,6 +3,7 @@ import logging
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.helpers import complete_social_login
 from allauth.socialaccount.models import SocialToken
+from django.conf import settings
 from django.http import HttpRequest
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ class QGISAuthenticationMiddleware:
             return self.get_response(request)
 
         # Require QFC clients to send a header to explicitly specify the IDP
-        idp_id = request.headers.get("X-QFC-IDP-ID")
+        idp_id = request.headers.get(settings.QFIELDCLOUD_IDP_ID_HEADER_NAME)
         if not idp_id:
             return self.get_response(request)
 
@@ -109,7 +110,7 @@ class QGISAuthenticationMiddleware:
         return self.get_response(request)
 
     def get_id_token(self, request: HttpRequest):
-        return request.headers.get("X-QFC-ID-Token")
+        return request.headers.get(settings.QFIELDCLOUD_ID_TOKEN_HEADER_NAME)
 
     def get_access_token(self, request: HttpRequest):
         auth_header = request.headers.get("Authorization")

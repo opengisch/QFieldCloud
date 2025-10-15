@@ -189,7 +189,8 @@ class ListProvidersView(APIView):
             "redirect_port": self.QGIS_REDIRECT_PORT,
             "redirect_url": self.QGIS_REDIRECT_URL,
             "client_id": provider.app.client_id,
-            "extra_tokens": {"id_token": "X-QFC-ID-Token"},
+            "extra_tokens": {"id_token": settings.QFIELDCLOUD_ID_TOKEN_HEADER_NAME},
+            "idp_id_header": settings.QFIELDCLOUD_IDP_ID_HEADER_NAME,
             "styles": SSOProviderStyles(request).get(provider_id),
         }
         return provider_data
