@@ -18,6 +18,7 @@ RUN apt-get update \
     libpq-dev \
     python3-dev \
     gcc \
+    g++ \
 # GDAL development headers needed for building fiona and other geospatial packages
     libgdal-dev \
     gdal-bin \
@@ -65,6 +66,8 @@ RUN apt-get update \
     binutils libproj-dev gdal-bin \
 # GDAL development headers needed for building packages like fiona in test environments
     libgdal-dev \
+# Build tools needed for compiling Python packages with C++ extensions
+    gcc g++ python3-dev \
 # needed for Django's `manage.py makemessages`
     gettext \
 # for development purposes only (optional dependency for `django-extensions`)
