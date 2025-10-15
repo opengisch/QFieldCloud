@@ -73,6 +73,9 @@ services:
   createbuckets:
     build:
       context: ./docker-createbuckets
+      platforms:
+        - linux/amd64
+        - linux/arm64/v8
     depends_on:
       minio:
         condition: service_healthy

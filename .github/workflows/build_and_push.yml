@@ -62,8 +62,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            name=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=true
-            name=opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
+            name=ghcr.io/${{ github.repository_owner }}/qfieldcloud-${{ matrix.services.service_name }},enable=true
+            name=${{ secrets.DOCKER_HUB_USERNAME }}/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
 
           flavor: |
             latest=auto
@@ -104,8 +104,9 @@ jobs:
         with:
           file: ${{ matrix.services.dockerfile }}
           context: ${{ matrix.services.docker_context }}
+          platforms: linux/amd64,linux/arm64/v8
           push: ${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
           target: ${{ matrix.services.docker_target }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
-          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache
-          cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/qfieldcloud-${{ matrix.services.service_name }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/qfieldcloud-${{ matrix.services.service_name }}:buildcache,mode=max

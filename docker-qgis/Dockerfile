@@ -19,7 +19,7 @@ RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org
 RUN echo "Types: deb deb-src\n\
 URIs: https://qgis.org/debian\n\
 Suites: noble\n\
-Architectures: amd64\n\
+Architectures: amd64 arm64\n\
 Components: main\n\
 Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources
 
@@ -41,7 +41,9 @@ RUN apt-get update \
 
 
 # Set QGIS version as in the debian repos
-# Choose your version from here: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
+# Choose your version from here: 
+# AMD64: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
+# ARM64: https://debian.qgis.org/debian/dists/noble/main/binary-arm64/Packages
 ARG QGIS_VERSION=1:3.44.3+40noble
 
 # Install QGIS dependencies
@@ -69,8 +71,8 @@ RUN if [ "$DEBUG_BUILD" = "1" ]; then \
 
 WORKDIR /usr/src/app
 
-# crashes to STDERR
-ENV LD_PRELOAD="/lib/x86_64-linux-gnu/libSegFault.so"
+# crashes to STDERR - architecture-aware library path
+ENV LD_PRELOAD="/lib/$(uname -m)-linux-gnu/libSegFault.so"
 ENV SEGFAULT_SIGNALS="abrt segv"
 ENV LIBC_FATAL_STDERR_=1
 
