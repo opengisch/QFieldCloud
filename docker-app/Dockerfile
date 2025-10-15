@@ -12,16 +12,22 @@ ARG PIP_DISABLE_PIP_VERSION_CHECK=1
 # Do not create and use redundant cache dir in the current user home
 ARG PIP_NO_CACHE_DIR=1
 
-# install psycopg2 requirements
+# install psycopg2 and GDAL requirements for building packages like fiona
 RUN apt-get update \
     && apt-get install -y \
     libpq-dev \
     python3-dev \
     gcc \
+# GDAL development headers needed for building fiona and other geospatial packages
+    libgdal-dev \
+    gdal-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # install `pip-compile` (as part of `pip-tools`)
 RUN pip3 install pip-tools
+
+# Set GDAL environment variables for building packages like fiona
+ENV GDAL_CONFIG=/usr/bin/gdal-config
 
 # install pip dependencies
 COPY ./requirements/requirements.txt /requirements/requirements.txt
@@ -49,12 +55,16 @@ ENV PYTHONUNBUFFERED=1
 # NOTE while using ARG would be more appropriate, the following vars would have to be redifined for each build stage.
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_CACHE_DIR=1
+# GDAL configuration for building geospatial packages
+ENV GDAL_CONFIG=/usr/bin/gdal-config
 
 # install dependencies
 RUN apt-get update \
     && apt-get install -y \
 # GeoDjango as recommended at https://docs.djangoproject.com/en/4.1/ref/contrib/gis/install/geolibs/#installing-geospatial-libraries
     binutils libproj-dev gdal-bin \
+# GDAL development headers needed for building packages like fiona in test environments
+    libgdal-dev \
 # needed for Django's `manage.py makemessages`
     gettext \
 # for development purposes only (optional dependency for `django-extensions`)
