@@ -213,12 +213,12 @@ DATABASES = {
     }
 }
 
-# Connection details for the geodb
-GEODB_HOST = os.environ.get("GEODB_HOST")
-GEODB_PORT = os.environ.get("GEODB_PORT")
-GEODB_DB = os.environ.get("GEODB_DB")
-GEODB_USER = os.environ.get("GEODB_USER")
-GEODB_PASSWORD = os.environ.get("GEODB_PASSWORD")
+# Connection details for the test PostGIS database. This database is used only in tests for temporarily storing spatial data.
+TEST_POSTGIS_DB_HOST = os.environ.get("TEST_POSTGIS_DB_HOST")
+TEST_POSTGIS_DB_PORT = os.environ.get("TEST_POSTGIS_DB_PORT")
+TEST_POSTGIS_DB_NAME = os.environ.get("TEST_POSTGIS_DB_NAME")
+TEST_POSTGIS_DB_USER = os.environ.get("TEST_POSTGIS_DB_USER")
+TEST_POSTGIS_DB_PASSWORD = os.environ.get("TEST_POSTGIS_DB_PASSWORD")
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -744,9 +744,6 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
     # {
     #     "model": "constance.config",
     # },
-    {
-        "model": "core.geodb",
-    },
     {
         "model": "core.organization",
     },
