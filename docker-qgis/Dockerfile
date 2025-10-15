@@ -12,16 +12,16 @@ RUN apt-get update \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Add QGIS GPG key
-RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
-
-# Add QGIS repository
-RUN echo "Types: deb deb-src\n\
+# Add QGIS repository only for AMD64 (ARM64 packages not available from QGIS.org)
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+        wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg && \
+        echo "Types: deb deb-src\n\
 URIs: https://qgis.org/debian\n\
 Suites: noble\n\
-Architectures: amd64 arm64\n\
+Architectures: amd64\n\
 Components: main\n\
-Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources
+Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources; \
+    fi
 
 # Disable annoying pip version check, we don't care if pip is slightly older
 ARG PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -43,21 +43,40 @@ RUN apt-get update \
 # Set QGIS version as in the debian repos
 # Choose your version from here: 
 # AMD64: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
-# ARM64: https://debian.qgis.org/debian/dists/noble/main/binary-arm64/Packages
+# ARM64: Uses Ubuntu's default QGIS packages (QGIS.org doesn't provide ARM64 builds)
 ARG QGIS_VERSION=1:3.44.3+40noble
 
-# Install QGIS dependencies
-RUN apt-get update \
-    # NOTE `DEBIAN_FRONTEND=noninteractive` is required to be able to install tzinfo
-    && DEBIAN_FRONTEND=noninteractive apt-get install -yf \
-        qgis=${QGIS_VERSION} \
-        qgis-dbg=${QGIS_VERSION} \
-        qgis-common=${QGIS_VERSION} \
-        python3-qgis=${QGIS_VERSION} \
-        python3-qgis-common=${QGIS_VERSION} \
-        qgis-providers=${QGIS_VERSION} \
-        qgis-providers-common=${QGIS_VERSION} \
-    && rm -rf /var/lib/apt/lists/*
+# Install QGIS dependencies with architecture-aware package selection
+RUN apt-get update && \
+    if [ "$(uname -m)" = "x86_64" ]; then \
+        echo "Installing QGIS from official repository for AMD64"; \
+        if ! DEBIAN_FRONTEND=noninteractive apt-get install -yf \
+            qgis=${QGIS_VERSION} \
+            qgis-common=${QGIS_VERSION} \
+            python3-qgis=${QGIS_VERSION} \
+            python3-qgis-common=${QGIS_VERSION} \
+            qgis-providers=${QGIS_VERSION} \
+            qgis-providers-common=${QGIS_VERSION}; then \
+            echo "Specific QGIS version ${QGIS_VERSION} not available, installing latest from official repo"; \
+            DEBIAN_FRONTEND=noninteractive apt-get install -yf \
+                qgis \
+                qgis-common \
+                python3-qgis \
+                python3-qgis-common \
+                qgis-providers \
+                qgis-providers-common; \
+        fi; \
+    else \
+        echo "Installing QGIS from Ubuntu repositories for ARM64 ($(uname -m))"; \
+        DEBIAN_FRONTEND=noninteractive apt-get install -yf \
+            qgis \
+            qgis-common \
+            python3-qgis \
+            python3-qgis-common \
+            qgis-providers \
+            qgis-providers-common; \
+    fi && \
+    rm -rf /var/lib/apt/lists/*
 
 # If debug build, install `gdbserver`
 ARG DEBUG_BUILD
@@ -71,8 +90,19 @@ RUN if [ "$DEBUG_BUILD" = "1" ]; then \
 
 WORKDIR /usr/src/app
 
-# crashes to STDERR - architecture-aware library path
-ENV LD_PRELOAD="/lib/$(uname -m)-linux-gnu/libSegFault.so"
+# crashes to STDERR - create script to set architecture-aware library path
+RUN echo '#!/bin/bash\n\
+ARCH=$(uname -m)\n\
+if [ "$ARCH" = "x86_64" ]; then\n\
+    export LD_PRELOAD="/lib/x86_64-linux-gnu/libSegFault.so"\n\
+elif [ "$ARCH" = "aarch64" ]; then\n\
+    export LD_PRELOAD="/lib/aarch64-linux-gnu/libSegFault.so"\n\
+fi\n\
+export SEGFAULT_SIGNALS="abrt segv"\n\
+export LIBC_FATAL_STDERR_=1\n\
+exec "$@"' > /usr/local/bin/set-segfault-env.sh && \
+    chmod +x /usr/local/bin/set-segfault-env.sh
+
 ENV SEGFAULT_SIGNALS="abrt segv"
 ENV LIBC_FATAL_STDERR_=1
 
@@ -99,4 +129,4 @@ COPY schemas schemas
 COPY qfc_worker qfc_worker
 COPY entrypoint.py .
 
-ENTRYPOINT ["/bin/sh", "-c", "/usr/bin/xvfb-run -a \"$@\"", ""]
+ENTRYPOINT ["/bin/sh", "-c", "/usr/local/bin/set-segfault-env.sh /usr/bin/xvfb-run -a \"$@\"", ""]
