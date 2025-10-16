@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from qfieldcloud.core.models import Job, Project
 from qfieldcloud.core.utils import (
+    check_s3_key,
     get_project_files_with_versions,
     get_project_package_files,
 )
@@ -239,16 +240,22 @@ def migrate_project_storage(
                 f'Migrate project "{project.name}" ({str(project.id)}) thumbnail "{project.legacy_thumbnail_uri}"...'
             )
 
-            django_thumbnail_file = ContentFile(b"", project.legacy_thumbnail_uri)
-            from_storage_bucket.download_fileobj(
-                project.legacy_thumbnail_uri,
-                django_thumbnail_file,
-            )
-            project.thumbnail = django_thumbnail_file  # type: ignore
+            if not check_s3_key(project.legacy_thumbnail_uri):
+                logger.warning(
+                    f"Thumbnail '{project.legacy_thumbnail_uri}' does not exist in legacy storage, skip thumbnail migration!"
+                )
 
-            logger.debug(
-                f'Migrated project "{project.name}" ({str(project.id)}) thumbnail!'
-            )
+            else:
+                django_thumbnail_file = ContentFile(b"", project.legacy_thumbnail_uri)
+                from_storage_bucket.download_fileobj(
+                    project.legacy_thumbnail_uri,
+                    django_thumbnail_file,
+                )
+                project.thumbnail = django_thumbnail_file  # type: ignore
+
+                logger.debug(
+                    f'Migrated project "{project.name}" ({str(project.id)}) thumbnail!'
+                )
         else:
             logger.info(
                 f'No thumbnail to migrate for project "{project.name}" ({str(project.id)})'
