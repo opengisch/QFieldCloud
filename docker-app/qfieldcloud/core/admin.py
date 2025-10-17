@@ -32,7 +32,7 @@ from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
-from django.shortcuts import resolve_url
+from django.shortcuts import resolve_url, redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
@@ -84,6 +84,12 @@ class QfcAdminSite(AdminSite):
 
         for _model, model_admin in self._registry.items():
             model_admin.admin_site = self
+
+
+    def login(self, request, extra_context=None):
+        next_url = request.GET.get("next", request.get_full_path())
+        login_url = reverse("account_login")
+        return redirect(f"{login_url}?{urlencode({'next': next_url})}")
 
 
 qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
