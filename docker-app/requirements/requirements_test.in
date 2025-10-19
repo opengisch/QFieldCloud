@@ -3,3 +3,4 @@ imageio==2.*
 requests-mock==1.*
 selenium==4.*
 shapely==2.*
+coverage==7.11.0
