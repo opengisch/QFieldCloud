@@ -1342,10 +1342,8 @@ class Project(models.Model):
             QuerySet of all the last package jobs.
         """
         if self.owner.is_organization:
-            # all the admin users including the organization owner
-            triggered_by_qs = Person.objects.for_organization(self.owner).filter(
-                organization_role=OrganizationMember.Roles.ADMIN,
-            )
+            # all the users including the organization owner
+            triggered_by_qs = Person.objects.for_organization(self.owner)
         else:
             triggered_by_qs = Person.objects.filter(id=self.owner.pk)
 
