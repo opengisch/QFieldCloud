@@ -3,10 +3,9 @@ branch = True
 source =
     qfieldcloud
 omit =
-    **migrations*
-    **tests*
-    **/admin.py
-    **/wsgi.py
+    */tests/*
+    */migrations/*
+    */wsgi.py
 
 [report]
 precision = 2
@@ -19,6 +18,3 @@ exclude_lines =
     raise NotImplementedError
     if 0:
     if __name__ == .__main__.:
-
-[html]
-directory = .htmlcov

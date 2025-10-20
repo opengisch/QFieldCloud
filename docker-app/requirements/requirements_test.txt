@@ -25,6 +25,8 @@ click-plugins==1.1.1.2
     # via fiona
 cligj==0.7.2
     # via fiona
+coverage==7.11.0
+    # via -r /requirements/requirements_test.in
 exceptiongroup==1.3.0
     # via
     #   trio
