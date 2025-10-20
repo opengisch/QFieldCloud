@@ -191,7 +191,6 @@ Create an <code>.env.test</code> file with the following variables that override
     WEB_HTTP_PORT=8101
     WEB_HTTPS_PORT=8102
     HOST_POSTGRES_PORT=8103
-    MEMCACHED_PORT=11212
     QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
     QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
     DJANGO_DEV_PORT=8111
@@ -387,7 +386,6 @@ Based on this example
 | nginx https   | 443   | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | django http   | 8011  | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
 | postgres      | 5433  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| memcached     | 11211 | MEMCACHED_PORT       | :white_check_mark: | :x:                | :x:                |
 | minio API     | 8009  | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
 | minio browser | 8010  | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
 | smtp web      | 8012  | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
