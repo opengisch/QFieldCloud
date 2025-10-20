@@ -1,14 +1,12 @@
 name: 🌎 Synchronize translations with Transifex
 
 on:
-    schedule:
-      - cron: "0 2 * * *"
-    workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
 
 jobs:
-
   sync_translations:
-
     name: Synchronize Transifex translations
     runs-on: ubuntu-latest
 
@@ -16,16 +14,25 @@ jobs:
       TX_TOKEN: ${{ secrets.TX_TOKEN }}
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.NYUKI_TOKEN }}
 
-      - name: Install Transifex CLI
+      - name: Install transifex client
         run: |
+          # Detect architecture and download appropriate binary
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then
             curl -OL https://github.com/transifex/cli/releases/download/v1.6.17/tx-linux-amd64.tar.gz
             tar -xvzf tx-linux-amd64.tar.gz
+          elif [ "$ARCH" = "aarch64" ]; then
+            curl -OL https://github.com/transifex/cli/releases/download/v1.6.17/tx-linux-arm64.tar.gz
+            tar -xvzf tx-linux-arm64.tar.gz
+          else
+            echo "Unsupported architecture: $ARCH" && exit 1
+          fi
+          sudo mv tx /usr/local/bin/tx
 
       - name: Copy .env file
         run: |
@@ -33,12 +40,12 @@ jobs:
 
       - name: Perform docker pre operations
         run: |
-            docker compose pull
-            docker compose build
+          docker compose pull
+          docker compose build
 
       - name: Generate Django translation po files
         run: |
-            docker compose run --user root app python manage.py makemessages -l es
+          docker compose run --user root app python manage.py makemessages -l es
 
       - name: Push translation files to Transifex
         run: ./tx push --source
