@@ -1,7 +1,6 @@
 import urllib
 from typing import IO
 
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.http import FileResponse, HttpResponse
 from django.urls import reverse
 from rest_framework.response import Response
@@ -17,12 +16,14 @@ class QfcFilesTestCaseMixin:
     """
 
     def _get_token_for_user(self, user: User) -> AuthToken:
-        try:
-            return AuthToken.objects.get(user=user)
-        except ObjectDoesNotExist:
-            return AuthToken.objects.create(user=user)
-        except MultipleObjectsReturned:
-            return AuthToken.objects.filter(user=user).first()
+        # We pass the client_type to prevent get_or_create() from failing with
+        # MultipleObjectsReturned if a worker token for the same user happens
+        # to be created during the test.
+        token = AuthToken.objects.get_or_create(
+            user=user,
+            client_type=AuthToken.ClientType.UNKNOWN,
+        )[0]
+        return token
 
     def _upload_file(
         self, user: User, project: Project, filename: str, content: IO
@@ -84,7 +85,7 @@ class QfcFilesTestCaseMixin:
         params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> HttpResponse | Response | FileResponse:
-        token = AuthToken.objects.get_or_create(user=user)[0]
+        token = self._get_token_for_user(user)
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
@@ -112,7 +113,7 @@ class QfcFilesTestCaseMixin:
         params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
     ) -> HttpResponse | Response:
-        token = AuthToken.objects.get_or_create(user=user)[0]
+        token = self._get_token_for_user(user)
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
@@ -138,7 +139,7 @@ class QfcFilesTestCaseMixin:
         return response
 
     def _list_files(self, user: User, project: Project) -> HttpResponse | Response:
-        token = AuthToken.objects.get_or_create(user=user)[0]
+        token = self._get_token_for_user(user)
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 

@@ -16,7 +16,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITransactionTestCase
 
-from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
@@ -41,7 +40,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         # Create a user
         self.u1 = Person.objects.create_user(username="u1", password="abc123")
-        self.t1 = AuthToken.objects.get_or_create(user=self.u1)[0]
+        self.t1 = self._get_token_for_user(self.u1)
         self.p1 = Project.objects.create(
             owner=self.u1,
             name="p1",
