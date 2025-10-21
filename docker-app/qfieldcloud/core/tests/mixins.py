@@ -1,4 +1,5 @@
 import urllib
+from pathlib import Path
 from typing import IO
 
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
@@ -8,6 +9,7 @@ from rest_framework.response import Response
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.tests.utils import testdata_path
 
 
 class QfcFilesTestCaseMixin:
@@ -60,7 +62,7 @@ class QfcFilesTestCaseMixin:
         return response
 
     def _upload_files(
-        self, user: User, project: Project, files: list[tuple[str, IO]]
+        self, user: User, project: Project, files: list[tuple[str, IO | str | Path]]
     ) -> list[HttpResponse | Response]:
         """
         Uploads several files to the API.
@@ -71,7 +73,12 @@ class QfcFilesTestCaseMixin:
 
         responses = []
         for remote_filename, content in files:
-            response = self._upload_file(user, project, remote_filename, content)
+            if isinstance(content, (str, Path)):
+                file = open(testdata_path(content), "r")
+            else:
+                file = content
+
+            response = self._upload_file(user, project, remote_filename, file)
             responses.append(response)
 
         return responses
