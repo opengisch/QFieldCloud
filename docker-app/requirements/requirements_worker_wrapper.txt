@@ -5,18 +5,40 @@
 #    pip-compile --output-file=/requirements/requirements_worker_wrapper.txt /requirements/requirements_worker_wrapper.in
 #
 certifi==2025.8.3
-    # via requests
+    # via 
+    #   kubernetes
+    #   requests
 charset-normalizer==3.4.3
     # via requests
 docker==7.1.0
     # via -r /requirements/requirements_worker_wrapper.in
 idna==3.10
     # via requests
+kubernetes==29.0.0
+    # via -r /requirements/requirements_worker_wrapper.in
+oauthlib==3.2.2
+    # via requests-oauthlib
+python-dateutil==2.9.0.post0
+    # via kubernetes
+pyyaml==6.0.2
+    # via kubernetes
 requests==2.32.5
-    # via docker
+    # via
+    #   docker
+    #   kubernetes
+    #   requests-oauthlib
+requests-oauthlib==2.0.0
+    # via kubernetes
+six==1.17.0
+    # via
+    #   kubernetes
+    #   python-dateutil
 tenacity==9.1.2
     # via -r /requirements/requirements_worker_wrapper.in
 urllib3==2.5.0
     # via
     #   docker
+    #   kubernetes
     #   requests
+websocket-client==1.8.0
+    # via kubernetes
