@@ -14,7 +14,7 @@ def check_backend_dependencies():
         from django.conf import settings
 
         backend = getattr(settings, "QFIELDCLOUD_WORKER_BACKEND", "docker")
-    except:
+    except Exception:
         # Not in Django context, check environment
         import os
 

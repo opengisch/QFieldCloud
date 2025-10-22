@@ -465,7 +465,7 @@ class K8sJobRun:
 
         try:
             # Create the job
-            job_response = self.k8s_batch_v1.create_namespaced_job(
+            self.k8s_batch_v1.create_namespaced_job(
                 namespace=self.namespace, body=k8s_job
             )
 
