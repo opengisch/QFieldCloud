@@ -5,7 +5,7 @@ This directory contains both the original Docker-based worker wrapper and a new 
 ## Files Overview
 
 - `wrapper.py` - Original Docker-based implementation (requires docker.sock mount)
-- `k8s_wrapper.py` - New Kubernetes-compatible implementation 
+- `k8s_wrapper.py` - New Kubernetes-compatible implementation
 - `factory.py` - Factory pattern for choosing between Docker/K8s backends
 - `K8S_MIGRATION_GUIDE.md` - Detailed migration guide
 - `k8s_settings_example.py` - Example settings for Kubernetes support
@@ -15,6 +15,7 @@ This directory contains both the original Docker-based worker wrapper and a new 
 ### 1. Install Dependencies
 
 Add to your requirements:
+
 ```bash
 pip install kubernetes>=29.0.0
 ```
@@ -22,6 +23,7 @@ pip install kubernetes>=29.0.0
 ### 2. Update Settings
 
 Add to your `settings.py`:
+
 ```python
 # Choose worker backend: 'docker' or 'kubernetes'
 QFIELDCLOUD_WORKER_BACKEND = os.environ.get("QFIELDCLOUD_WORKER_BACKEND", "docker")
@@ -35,6 +37,7 @@ if QFIELDCLOUD_WORKER_BACKEND in ['kubernetes', 'k8s']:
 ### 3. Update Imports (Optional)
 
 For maximum compatibility, use the factory:
+
 ```python
 # Instead of:
 from worker_wrapper.wrapper import JobRun, PackageJobRun
@@ -44,6 +47,7 @@ from worker_wrapper.factory import JobRun, PackageJobRun
 ```
 
 Or directly import the K8s version:
+
 ```python
 from worker_wrapper.k8s_wrapper import JobRun, PackageJobRun
 ```

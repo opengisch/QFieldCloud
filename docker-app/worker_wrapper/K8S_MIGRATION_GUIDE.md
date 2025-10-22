@@ -110,7 +110,7 @@ Replace Docker-based imports:
 # OLD: Docker-based wrapper
 from worker_wrapper.wrapper import JobRun, PackageJobRun, ApplyDeltaJobRun, ProcessProjectfileJobRun
 
-# NEW: Kubernetes-based wrapper  
+# NEW: Kubernetes-based wrapper
 from worker_wrapper.k8s_wrapper import JobRun, PackageJobRun, ApplyDeltaJobRun, ProcessProjectfileJobRun
 ```
 
@@ -119,11 +119,13 @@ from worker_wrapper.k8s_wrapper import JobRun, PackageJobRun, ApplyDeltaJobRun, 
 The transformation grids volume configuration changes:
 
 **Docker (old):**
+
 ```python
 QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = "transformation_grids_volume"
 ```
 
 **Kubernetes (new):**
+
 ```python
 # Name of the PVC containing transformation grids
 QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = "transformation-grids"
@@ -191,6 +193,7 @@ spec:
 ### Debugging
 
 Check job status:
+
 ```bash
 kubectl get jobs -l app=dev-worker
 kubectl describe job qfc-worker-{job-id}

@@ -61,7 +61,7 @@ class K8sJobRun:
             self.job_id = job_id
             self.job = self.job_class.objects.select_related().get(id=job_id)
             self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
-            
+
             # Initialize Kubernetes client
             try:
                 # Try in-cluster config first (when running inside k8s)
@@ -69,16 +69,16 @@ class K8sJobRun:
             except k8s_config.ConfigException:
                 # Fall back to local kubeconfig (for development)
                 k8s_config.load_kube_config()
-            
+
             self.k8s_core_v1 = client.CoreV1Api()
             self.k8s_batch_v1 = client.BatchV1Api()
-            
+
             # K8s namespace for jobs
-            self.namespace = getattr(settings, 'QFIELDCLOUD_K8S_NAMESPACE', 'default')
-            
+            self.namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
+
             # Job name for k8s (must be DNS compliant)
-            self.k8s_job_name = f"qfc-worker-{self.job_id}".lower().replace('_', '-')
-            
+            self.k8s_job_name = f"qfc-worker-{self.job_id}".lower().replace("_", "-")
+
         except Exception as err:
             feedback: dict[str, Any] = {}
             (_type, _value, tb) = sys.exc_info()
@@ -89,7 +89,7 @@ class K8sJobRun:
             msg = "Uncaught exception when constructing a K8sJobRun:\n"
             msg += json.dumps(feedback, indent=2, sort_keys=True)
 
-            if hasattr(self, 'job') and self.job:
+            if hasattr(self, "job") and self.job:
                 self.job.status = Job.Status.FAILED
                 self.job.feedback = feedback
                 self.job.save(update_fields=["status", "feedback"])
@@ -97,8 +97,8 @@ class K8sJobRun:
             else:
                 logger.critical(msg, exc_info=err)
 
-        self.debug_qgis_container_is_enabled = (
-            settings.DEBUG and getattr(settings, 'DEBUG_QGIS_DEBUGPY_PORT', None)
+        self.debug_qgis_container_is_enabled = settings.DEBUG and getattr(
+            settings, "DEBUG_QGIS_DEBUGPY_PORT", None
         )
 
         if self.debug_qgis_container_is_enabled:
@@ -137,20 +137,16 @@ class K8sJobRun:
 
     def get_volume_mounts(self) -> list[client.V1VolumeMount]:
         volume_mounts = [
-            client.V1VolumeMount(
-                name="shared-io",
-                mount_path="/io",
-                read_only=False
-            ),
+            client.V1VolumeMount(name="shared-io", mount_path="/io", read_only=False),
         ]
-        
+
         # Add transformation grids volume if configured
-        if getattr(settings, 'QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME', None):
+        if getattr(settings, "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME", None):
             volume_mounts.append(
                 client.V1VolumeMount(
                     name="transformation-grids",
                     mount_path="/transformation_grids",
-                    read_only=True
+                    read_only=True,
                 )
             )
 
@@ -161,14 +157,13 @@ class K8sJobRun:
             client.V1Volume(
                 name="shared-io",
                 host_path=client.V1HostPathVolumeSource(
-                    path=str(self.shared_tempdir),
-                    type="Directory"
-                )
+                    path=str(self.shared_tempdir), type="Directory"
+                ),
             )
         ]
-        
+
         # Add transformation grids volume if configured
-        if getattr(settings, 'QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME', None):
+        if getattr(settings, "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME", None):
             # For K8s, this could be a PVC, ConfigMap, or HostPath
             # Using PVC as the most common case
             volumes.append(
@@ -176,7 +171,7 @@ class K8sJobRun:
                     name="transformation-grids",
                     persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
                         claim_name=settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME
-                    )
+                    ),
                 )
             )
 
@@ -312,7 +307,9 @@ class K8sJobRun:
 
             feedback["container_exit_code"] = exit_code
 
-            self.job.output = output.decode("utf-8") if isinstance(output, bytes) else output
+            self.job.output = (
+                output.decode("utf-8") if isinstance(output, bytes) else output
+            )
             self.job.feedback = feedback
             self.job.save(update_fields=["output", "feedback"])
 
@@ -385,12 +382,16 @@ class K8sJobRun:
         resources = client.V1ResourceRequirements(
             limits={
                 "memory": config.WORKER_QGIS_MEMORY_LIMIT,
-                "cpu": str(config.WORKER_QGIS_CPU_SHARES / 1024.0)  # Convert from shares to CPU units
+                "cpu": str(
+                    config.WORKER_QGIS_CPU_SHARES / 1024.0
+                ),  # Convert from shares to CPU units
             },
             requests={
                 "memory": config.WORKER_QGIS_MEMORY_LIMIT,
-                "cpu": str(config.WORKER_QGIS_CPU_SHARES / 1024.0 / 2)  # Request half of limit
-            }
+                "cpu": str(
+                    config.WORKER_QGIS_CPU_SHARES / 1024.0 / 2
+                ),  # Request half of limit
+            },
         )
 
         # Create container spec
@@ -407,8 +408,7 @@ class K8sJobRun:
         if self.debug_qgis_container_is_enabled:
             container.ports = [
                 client.V1ContainerPort(
-                    container_port=int(settings.DEBUG_QGIS_DEBUGPY_PORT),
-                    protocol="TCP"
+                    container_port=int(settings.DEBUG_QGIS_DEBUGPY_PORT), protocol="TCP"
                 )
             ]
 
@@ -427,8 +427,10 @@ class K8sJobRun:
                 volumes=volumes,
                 restart_policy="Never",
                 # Use service account with appropriate permissions
-                service_account_name=getattr(settings, 'QFIELDCLOUD_K8S_SERVICE_ACCOUNT', 'default'),
-            )
+                service_account_name=getattr(
+                    settings, "QFIELDCLOUD_K8S_SERVICE_ACCOUNT", "default"
+                ),
+            ),
         )
 
         # Create job spec
@@ -448,7 +450,7 @@ class K8sJobRun:
                 labels={
                     "app": f"{getattr(settings, 'ENVIRONMENT', 'dev')}-worker",
                     "managed-by": "qfieldcloud-worker-wrapper",
-                }
+                },
             ),
             spec=job_spec,
         )
@@ -456,20 +458,23 @@ class K8sJobRun:
         logger.info(f"Execute K8s Job {self.k8s_job_name}: {' '.join(command)}")
 
         # Start timing
-        self.job.docker_started_at = timezone.now()  # Keep same field name for compatibility
+        self.job.docker_started_at = (
+            timezone.now()
+        )  # Keep same field name for compatibility
         self.job.save(update_fields=["docker_started_at"])
 
         try:
             # Create the job
             job_response = self.k8s_batch_v1.create_namespaced_job(
-                namespace=self.namespace,
-                body=k8s_job
+                namespace=self.namespace, body=k8s_job
             )
-            
+
             # Store job name for tracking
-            self.job.container_id = self.k8s_job_name  # Keep same field name for compatibility
+            self.job.container_id = (
+                self.k8s_job_name
+            )  # Keep same field name for compatibility
             self.job.save(update_fields=["container_id"])
-            
+
             logger.info(f"Starting K8s worker job {self.k8s_job_name}...")
 
             # Wait for job completion
@@ -482,21 +487,22 @@ class K8sJobRun:
             return TIMEOUT_ERROR_EXIT_CODE, f"Failed to create K8s job: {e}"
         finally:
             # End timing
-            self.job.docker_finished_at = timezone.now()  # Keep same field name for compatibility
+            self.job.docker_finished_at = (
+                timezone.now()
+            )  # Keep same field name for compatibility
             self.job.save(update_fields=["docker_finished_at"])
 
     def _wait_for_job_completion(self) -> tuple[int, str]:
         """Wait for the Kubernetes job to complete and retrieve logs"""
         start_time = time.time()
-        
+
         while time.time() - start_time < self.container_timeout_secs:
             try:
                 # Check job status
                 job_status = self.k8s_batch_v1.read_namespaced_job_status(
-                    name=self.k8s_job_name,
-                    namespace=self.namespace
+                    name=self.k8s_job_name, namespace=self.namespace
                 )
-                
+
                 if job_status.status.completion_time:
                     # Job completed successfully
                     logs = self._get_job_logs()
@@ -507,14 +513,14 @@ class K8sJobRun:
                     logs = self._get_job_logs()
                     self._cleanup_job()
                     return 1, logs
-                
+
                 # Job still running, wait a bit
                 time.sleep(5)
-                
+
             except ApiException as e:
                 logger.error(f"Error checking job status: {e}")
                 time.sleep(5)
-        
+
         # Timeout reached
         logs = self._get_job_logs()
         self._cleanup_job()
@@ -526,23 +532,20 @@ class K8sJobRun:
         try:
             # Get pods for this job
             pods = self.k8s_core_v1.list_namespaced_pod(
-                namespace=self.namespace,
-                label_selector=f"job-name={self.k8s_job_name}"
+                namespace=self.namespace, label_selector=f"job-name={self.k8s_job_name}"
             )
-            
+
             if not pods.items:
                 return "[QFC/Worker/K8s/1001] No pods found for job."
-            
+
             # Get logs from the first pod
             pod_name = pods.items[0].metadata.name
             logs = self.k8s_core_v1.read_namespaced_pod_log(
-                name=pod_name,
-                namespace=self.namespace,
-                container="qgis-worker"
+                name=pod_name, namespace=self.namespace, container="qgis-worker"
             )
-            
+
             return logs
-            
+
         except ApiException as e:
             logger.error(f"Failed to retrieve logs: {e}")
             return f"[QFC/Worker/K8s/1002] Failed to read logs: {e}"
@@ -554,7 +557,7 @@ class K8sJobRun:
             self.k8s_batch_v1.delete_namespaced_job(
                 name=self.k8s_job_name,
                 namespace=self.namespace,
-                propagation_policy="Background"
+                propagation_policy="Background",
             )
             logger.info(f"Cleaned up K8s job {self.k8s_job_name}")
         except ApiException as e:
@@ -688,7 +691,7 @@ class K8sApplyDeltaJobRun(K8sJobRun):
             self.job.project.save(update_fields=("data_last_updated_at",))
 
     def after_k8s_exception(self) -> None:
-        if hasattr(self, 'delta_ids'):
+        if hasattr(self, "delta_ids"):
             Delta.objects.filter(
                 id__in=self.delta_ids,
             ).update(
@@ -775,15 +778,15 @@ def cancel_orphaned_k8s_workers() -> None:
             k8s_config.load_incluster_config()
         except k8s_config.ConfigException:
             k8s_config.load_kube_config()
-        
+
         k8s_batch_v1 = client.BatchV1Api()
-        namespace = getattr(settings, 'QFIELDCLOUD_K8S_NAMESPACE', 'default')
-        environment = getattr(settings, 'ENVIRONMENT', 'dev')
+        namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
+        environment = getattr(settings, "ENVIRONMENT", "dev")
 
         # List all jobs with our label
         jobs = k8s_batch_v1.list_namespaced_job(
             namespace=namespace,
-            label_selector=f"app={environment}-worker,managed-by=qfieldcloud-worker-wrapper"
+            label_selector=f"app={environment}-worker,managed-by=qfieldcloud-worker-wrapper",
         )
 
         if len(jobs.items) == 0:
@@ -795,8 +798,8 @@ def cancel_orphaned_k8s_workers() -> None:
         # Extract job IDs from k8s job names (format: qfc-worker-{job_id})
         k8s_job_ids = []
         for name in job_names:
-            if name.startswith('qfc-worker-'):
-                job_id = name.replace('qfc-worker-', '').replace('-', '_')
+            if name.startswith("qfc-worker-"):
+                job_id = name.replace("qfc-worker-", "").replace("-", "_")
                 k8s_job_ids.append(job_id)
 
         # Check which jobs exist in database
@@ -806,15 +809,15 @@ def cancel_orphaned_k8s_workers() -> None:
 
         # Find orphaned jobs
         orphaned_job_ids = set(k8s_job_ids) - existing_job_ids
-        orphaned_job_names = [f"qfc-worker-{job_id.replace('_', '-')}" for job_id in orphaned_job_ids]
+        orphaned_job_names = [
+            f"qfc-worker-{job_id.replace('_', '-')}" for job_id in orphaned_job_ids
+        ]
 
         # Delete orphaned jobs
         for job_name in orphaned_job_names:
             try:
                 k8s_batch_v1.delete_namespaced_job(
-                    name=job_name,
-                    namespace=namespace,
-                    propagation_policy="Background"
+                    name=job_name, namespace=namespace, propagation_policy="Background"
                 )
                 logger.info(f"Cancelled orphaned K8s worker job {job_name}")
             except ApiException as e:

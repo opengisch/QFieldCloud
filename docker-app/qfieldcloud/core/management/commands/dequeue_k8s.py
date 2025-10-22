@@ -11,7 +11,7 @@ from django.db.models import Q
 from qfieldcloud.core.models import Job
 
 # Import based on configured backend
-if getattr(settings, 'QFIELDCLOUD_WORKER_BACKEND', 'docker') in ['kubernetes', 'k8s']:
+if getattr(settings, "QFIELDCLOUD_WORKER_BACKEND", "docker") in ["kubernetes", "k8s"]:
     from worker_wrapper.k8s_wrapper import (
         K8sApplyDeltaJobRun as ApplyDeltaJobRun,
         K8sJobRun as JobRun,
@@ -56,7 +56,7 @@ class Command(BaseCommand):
         single_shot: bool | None = None,
         **kwargs: Any,
     ) -> None:
-        backend = getattr(settings, 'QFIELDCLOUD_WORKER_BACKEND', 'docker')
+        backend = getattr(settings, "QFIELDCLOUD_WORKER_BACKEND", "docker")
         logging.info(f"Dequeue QFieldCloud Jobs from the DB using {backend} backend")
         killer = GracefulKiller()
 

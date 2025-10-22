@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand, CommandParser
 from django.db import connection, transaction
 from django.db.models import Q
 from qfieldcloud.core.models import Job
-from worker_wrapper.wrapper import (
+from worker_wrapper.factory import (
     ApplyDeltaJobRun,
     JobRun,
     PackageJobRun,
