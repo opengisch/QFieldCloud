@@ -6,6 +6,7 @@ from uuid import UUID
 from xml.etree import ElementTree
 
 from qgis.core import QgsMapRendererCustomPainterJob, QgsProject
+from qgis.PyQt.QtCore import QTimer
 from qgis.PyQt.QtGui import QImage, QPainter
 
 from qfc_worker.commands_base import QfcBaseCommand
@@ -124,9 +125,16 @@ def _generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> No
     img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
     painter = QPainter(img)
     job = QgsMapRendererCustomPainterJob(map_settings, painter)
-    # NOTE we use `renderSynchronously` as it does not crash and produces the thumbnail.
-    # `waitForFinishedWithEventLoop` hangs forever and `waitForFinished` produces blank thumbnail, so don't use them!
-    job.renderSynchronously()
+
+    timer = QTimer()
+    timer.setSingleShot(True)
+    timer.setInterval(10000)
+    timer.timeout.connect(lambda: job.cancel())  # noqa: F821
+
+    job.start()
+    timer.start()
+    job.waitForFinishedWithEventLoop()
+    timer.stop()
 
     if not img.save(str(thumbnail_filename)):
         raise FailedThumbnailGenerationException(reason="Failed to save.")
