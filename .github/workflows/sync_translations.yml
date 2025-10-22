@@ -51,10 +51,10 @@ jobs:
           docker compose run --user root app python manage.py makemessages -l es
 
       - name: Push translation files to Transifex
-        run: ./tx push --source
+        run: tx push --source
 
       - name: Pull from Transifex
-        run: ./tx pull --all --minimum-perc 0 --force
+        run: tx pull --all --minimum-perc 0 --force
 
       - name: Add and commit new translations
         uses: EndBug/add-and-commit@v9
