@@ -1,0 +1,4 @@
+# Kubernetes-specific requirements for worker wrapper
+kubernetes>=29.0.0
+requests>=2.32.0
+tenacity>=9.0.0

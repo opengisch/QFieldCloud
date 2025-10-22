@@ -218,6 +218,17 @@ Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in y
 
 </details>
 
+
+#### Test coverage
+
+To get information about the current test coverage, run:
+
+```
+docker compose exec app coverage run manage.py test --keepdb
+docker compose exec app coverage report
+```
+
+
 ### Debugging
 
 > [!NOTE]
