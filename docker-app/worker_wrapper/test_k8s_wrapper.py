@@ -36,7 +36,6 @@ def test_k8s_wrapper_basic():
     mock_settings.QFIELDCLOUD_K8S_SERVICE_ACCOUNT = "qfieldcloud-worker"
 
     # Mock Kubernetes client
-    mock_k8s_client = Mock()
     mock_k8s_core_v1 = Mock()
     mock_k8s_batch_v1 = Mock()
 
