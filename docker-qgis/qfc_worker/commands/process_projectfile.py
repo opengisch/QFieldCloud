@@ -34,6 +34,8 @@ from qfc_worker.workflow import (
     Workflow,
 )
 
+THUMBNAIL_TIMEOUT_S = 10
+
 logger = logging.getLogger(__name__)
 
 
@@ -107,14 +109,14 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
     return details
 
 
-def _generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> None:
+def _generate_thumbnail(
+    the_qgis_file_name: str,
+    thumbnail_filename: Path,
+    thumbnail_timeout_s: int = THUMBNAIL_TIMEOUT_S,
+) -> None:
     """Create a thumbnail for the project
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
-
-    Args:
-        the_qgis_file_name:
-        thumbnail_filename:
     """
     logger.info("Generate project thumbnail image…")
 
@@ -128,7 +130,7 @@ def _generate_thumbnail(the_qgis_file_name: str, thumbnail_filename: Path) -> No
 
     timer = QTimer()
     timer.setSingleShot(True)
-    timer.setInterval(10000)
+    timer.setInterval(thumbnail_timeout_s * 1000)
     timer.timeout.connect(lambda: job.cancel())  # noqa: F821
 
     job.start()
