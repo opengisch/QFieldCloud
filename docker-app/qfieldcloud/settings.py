@@ -734,6 +734,10 @@ DEBUG_QGIS_WORKER_HOST_PATH = os.environ.get("DEBUG_QGIS_WORKER_HOST_PATH")
 # Port to be used by `debugpy` to connect to the QGIS process inside the `qgis` container
 DEBUG_QGIS_DEBUGPY_PORT = os.environ.get("DEBUG_QGIS_DEBUGPY_PORT")
 
+# The temporary directory to share QGIS projects between the `worker_wrapper` and `worker` containers
+# FIXME this solution will not work in distributed deployments, such as Kubernetes, so perhaps needs to be refactored
+QFIELDCLOUD_QGIS_TMP_DIRECTORY = os.getenv("QFIELDCLOUD_QGIS_TMP_DIRECTORY", "/tmp")
+
 # Volume name where transformation grids required by `PROJ` are downloaded to
 QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
     "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME"

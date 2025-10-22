@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 import shutil
@@ -45,7 +44,6 @@ logger = logging.getLogger(__name__)
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
-TMP_FILE = Path(os.getenv("TMP_DIRECTORY", "/tmp"))
 
 
 class QgisException(Exception):
@@ -61,7 +59,9 @@ class JobRun:
         try:
             self.job_id = job_id
             self.job = self.job_class.objects.select_related().get(id=job_id)
-            self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
+            self.shared_tempdir = Path(
+                tempfile.mkdtemp(dir=settings.QFIELDCLOUD_QGIS_TMP_DIRECTORY)
+            )
         except Exception as err:
             feedback: dict[str, Any] = {}
             (_type, _value, tb) = sys.exc_info()

@@ -62,7 +62,6 @@ services:
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
       # Settings below are specific to worker_wrapper
       # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
-      TMP_DIRECTORY: ${TMP_DIRECTORY}
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       QFIELDCLOUD_WORKER_QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
@@ -73,6 +72,7 @@ services:
       QFIELDCLOUD_DEFAULT_LANGUAGE: ${QFIELDCLOUD_DEFAULT_LANGUAGE}
       QFIELDCLOUD_DEFAULT_TIME_ZONE: ${QFIELDCLOUD_DEFAULT_TIME_ZONE}
       QFIELDCLOUD_QGIS_IMAGE_NAME: ${QFIELDCLOUD_QGIS_IMAGE_NAME:-${COMPOSE_PROJECT_NAME}-qgis}
+      QFIELDCLOUD_QGIS_TMP_DIRECTORY: ${QFIELDCLOUD_QGIS_TMP_DIRECTORY}
       QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
     logging:
       driver: "json-file"
@@ -160,7 +160,7 @@ services:
       - media_volume:/usr/src/app/mediafiles/
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${TMP_DIRECTORY}:/tmp
+      - ${QFIELDCLOUD_QGIS_TMP_DIRECTORY:-/tmp}:/tmp
     logging: *default-logging
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
     stop_grace_period: 15m
