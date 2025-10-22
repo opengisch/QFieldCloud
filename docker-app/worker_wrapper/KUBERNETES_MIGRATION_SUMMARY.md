@@ -7,6 +7,7 @@ Yes, it's absolutely possible to make the QFieldCloud worker wrapper compatible 
 ## What I've Created
 
 ### 1. Core Files
+
 - **`k8s_wrapper.py`** - Complete Kubernetes-compatible worker wrapper
 - **`factory.py`** - Backend selection factory for smooth migration
 - **`dequeue_k8s.py`** - Updated dequeue command supporting both backends
@@ -14,6 +15,7 @@ Yes, it's absolutely possible to make the QFieldCloud worker wrapper compatible 
 - **`README.md`** - Quick start and overview
 
 ### 2. Configuration Files
+
 - **`requirements_k8s_wrapper.in`** - Additional dependencies
 - **`k8s_settings_example.py`** - Django settings example
 - **`test_k8s_wrapper.py`** - Validation test script
@@ -21,7 +23,9 @@ Yes, it's absolutely possible to make the QFieldCloud worker wrapper compatible 
 ## Key Changes Made
 
 ### From Docker to Kubernetes API
+
 **Before (Docker):**
+
 ```python
 import docker
 client = docker.from_env()
@@ -29,6 +33,7 @@ container = client.containers.run(...)
 ```
 
 **After (Kubernetes):**
+
 ```python
 from kubernetes import client, config
 k8s_config.load_incluster_config()
@@ -37,7 +42,9 @@ job = k8s_batch_v1.create_namespaced_job(...)
 ```
 
 ### Volume Management
+
 **Before (Docker volumes):**
+
 ```python
 volumes = [
     f"{tempdir}:/io/:rw",
@@ -46,6 +53,7 @@ volumes = [
 ```
 
 **After (K8s volumes):**
+
 ```python
 volumes = [
     client.V1Volume(name="shared-io", host_path=...),
@@ -54,13 +62,16 @@ volumes = [
 ```
 
 ### Resource Management
+
 **Before (Docker limits):**
+
 ```python
 mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
 cpu_shares=config.WORKER_QGIS_CPU_SHARES
 ```
 
 **After (K8s resources):**
+
 ```python
 resources = client.V1ResourceRequirements(
     limits={"memory": "1000Mi", "cpu": "0.5"},
@@ -71,16 +82,19 @@ resources = client.V1ResourceRequirements(
 ## Migration Path
 
 ### Phase 1: Preparation (Zero Downtime)
+
 1. Install Kubernetes Python client
 2. Add new settings (keep Docker as backend)
 3. Deploy Kubernetes RBAC resources
 
 ### Phase 2: Testing
+
 1. Set `QFIELDCLOUD_WORKER_BACKEND=kubernetes`
 2. Test with development workloads
 3. Validate functionality
 
 ### Phase 3: Production Switch
+
 1. Update production configuration
 2. Monitor job execution
 3. Remove Docker dependencies (optional)
@@ -98,6 +112,7 @@ resources = client.V1ResourceRequirements(
 ## Required Kubernetes Resources
 
 ### 1. RBAC Permissions
+
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -111,6 +126,7 @@ rules:
 ```
 
 ### 2. Service Account
+
 ```yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -119,6 +135,7 @@ metadata:
 ```
 
 ### 3. Optional: Persistent Volume for Transformation Grids
+
 ```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -159,6 +176,7 @@ if QFIELDCLOUD_WORKER_BACKEND in ['kubernetes', 'k8s']:
 ## Validation
 
 The test script confirms the approach is sound:
+
 - ✅ Job lifecycle management
 - ✅ Volume and resource configuration
 - ✅ Environment variable handling
