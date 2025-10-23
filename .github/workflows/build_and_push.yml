@@ -56,10 +56,10 @@ jobs:
         with:
           images: |
             name=ghcr.io/${{ github.repository_owner }}/qfieldcloud-${{ matrix.services.service_name }},enable=true
-            name=${{ secrets.DOCKER_HUB_USERNAME }}/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
+            name=${{ secrets.DOCKER_HUB_USERNAME }}/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master' || (github.event_name == 'pull_request' && github.base_ref == 'master')) }}
 
           flavor: |
-            latest=auto
+            latest=${{ github.event_name == 'release' || github.ref_name == 'master' || (github.event_name == 'pull_request' && github.base_ref == 'master') }}
             prefix=,onlatest=false
             suffix=
 
