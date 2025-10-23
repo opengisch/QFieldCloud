@@ -65,9 +65,9 @@ class Workflow:
                         f'The workflow "{self.id}" method "{step.method.__name__}" has a non keyword parameter "{param.name}".'
                     )
 
-                if param.name not in step.arguments:
+                if param.default == inspect._empty and param.name not in step.arguments:
                     raise WorkflowValidationException(
-                        f'The workflow "{self.id}" method "{step.method.__name__}" has an argument "{param.name}" that is not available in the step definition "arguments", expected one of {list(step.arguments.keys())}.'
+                        f'The workflow "{self.id}" method "{step.method.__name__}" has an argument "{param.name}" without default value that is not available in the step definition "arguments", expected one of {list(step.arguments.keys())}.'
                     )
 
                 param_names.append(param.name)
