@@ -1002,3 +1002,52 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertTrue(p1.needs_repackaging(u1))
         self.assertTrue(p1.needs_repackaging(u2))
+
+    def test_org_members_latest_package_jobs(self):
+        org_owner = Person.objects.create_user(username="org_owner")
+
+        organization = Organization.objects.create(
+            username="org1", organization_owner=org_owner
+        )
+
+        org_admin = Person.objects.create_user(username="org_admin")
+
+        OrganizationMember.objects.create(
+            member=org_admin,
+            organization=organization,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        org_member = Person.objects.create_user(username="org_member")
+
+        OrganizationMember.objects.create(
+            member=org_member,
+            organization=organization,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+
+        project = Project.objects.create(
+            name="org_project",
+            owner=organization,
+        )
+
+        package_job_owner = PackageJob.objects.create(
+            project=project,
+            created_by=org_owner,
+        )
+
+        package_job_admin = PackageJob.objects.create(
+            project=project,
+            created_by=org_admin,
+        )
+
+        package_job_member = PackageJob.objects.create(
+            project=project,
+            created_by=org_member,
+        )
+
+        latest_package_jobs_qs = project.latest_package_jobs()
+
+        self.assertIn(package_job_owner, latest_package_jobs_qs)
+        self.assertIn(package_job_admin, latest_package_jobs_qs)
+        self.assertIn(package_job_member, latest_package_jobs_qs)

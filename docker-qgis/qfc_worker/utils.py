@@ -589,21 +589,26 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         layer_id = layer.id()
         layer_source = LayerSource(layer)
         filename = layer_source.filename
-        datasource = None
+        data_provider = layer.dataProvider()
+        data_provider_source: str | None = None
+        data_provider_name: str | None = None
 
         # TODO: Move localized layer handling functionality inside libqfieldsync (ClickUp: QF-5875)
         if layer_source.is_localized_path:
-            datasource = bad_layer_handler.invalid_layer_sources_by_id.get(layer_id)
+            data_provider_source = bad_layer_handler.invalid_layer_sources_by_id.get(
+                layer_id
+            )
 
-            if datasource and "localized:" in datasource:
+            if data_provider_source and "localized:" in data_provider_source:
                 # TODO: refactor and extract filename splitting logic into a reusable utility.
-                filename = datasource.split("localized:")[-1]
+                filename = data_provider_source.split("localized:")[-1]
 
                 if "|" in filename:
                     filename = filename.split("|")[0]
 
-        elif layer.dataProvider():
-            datasource = layer.dataProvider().uri().uri()
+        elif data_provider:
+            data_provider_source = layer.dataProvider().uri().uri()
+            data_provider_name = layer.dataProvider().name()
 
         layers_by_id[layer_id] = {
             "id": layer_id,
@@ -624,22 +629,20 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             ),
             "is_valid": layer.isValid(),
             "is_localized": layer_source.is_localized_path,
-            "datasource": datasource,
+            "datasource": data_provider_source,
             "type": layer.type(),
             "type_name": layer.type().name,
             "error_code": "no_error",
             "error_summary": error.summary() if error.messageList() else "",
             "error_message": layer.error().message(),
             "filename": filename,
-            "provider_name": None,
+            "provider_name": data_provider_name,
             "provider_error_summary": None,
             "provider_error_message": None,
         }
 
         if layers_by_id[layer_id]["is_valid"]:
             continue
-
-        data_provider = layer.dataProvider()
 
         if data_provider:
             data_provider_error = data_provider.error()
@@ -661,8 +664,6 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             layers_by_id[layer_id]["provider_error_message"] = (
                 data_provider_error.message()
             )
-
-            layers_by_id[layer_id]["provider_name"] = data_provider.name()
 
             if not layers_by_id[layer_id]["provider_error_summary"]:
                 service = data_provider.uri().service()

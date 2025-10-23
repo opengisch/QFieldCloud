@@ -165,8 +165,8 @@ server {
     # if a Range header is provided
     set $file_range "$upstream_http_file_range";
 
-    # required DNS
-    resolver 8.8.8.8 ipv6=off;
+    # Add Docker's DNS resolver with IPv6 turned off
+    resolver 127.0.0.11 ipv6=off;
 
     # Stops the local disk from being written to (just forwards data through)
     proxy_max_temp_file_size 0;
