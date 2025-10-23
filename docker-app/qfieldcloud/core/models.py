@@ -1564,28 +1564,12 @@ class Project(models.Model):
     def has_online_vector_data(self) -> bool | None:
         """Returns None if project details or layers details are not available"""
 
-        if not self.project_details:
+        if not self.project_details or not self.project_details.get("layers_by_id"):
             return None
 
-        layers_by_id: dict[str, dict[str, Any]] = self.project_details.get(
-            "layers_by_id"
-        )
+        from qfieldcloud.core.utils2.project import has_online_vector_data
 
-        if layers_by_id is None:
-            return None
-
-        has_online_vector_layers = False
-
-        for layer_data in layers_by_id.values():
-            # NOTE QGIS 3.30.x returns "Vector", while previous versions return "VectorLayer"
-            if layer_data.get("type_name") in (
-                "VectorLayer",
-                "Vector",
-            ) and not layer_data.get("filename", ""):
-                has_online_vector_layers = True
-                break
-
-        return has_online_vector_layers
+        return has_online_vector_data(self)
 
     @property
     def can_repackage(self) -> bool:
