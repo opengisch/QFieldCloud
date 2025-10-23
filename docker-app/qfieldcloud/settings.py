@@ -608,7 +608,9 @@ QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializ
 # Worker backend configuration
 QFIELDCLOUD_WORKER_BACKEND = os.environ.get("QFIELDCLOUD_WORKER_BACKEND", "docker")
 QFIELDCLOUD_K8S_NAMESPACE = os.environ.get("QFIELDCLOUD_K8S_NAMESPACE", "default")
-QFIELDCLOUD_K8S_SERVICE_ACCOUNT = os.environ.get("QFIELDCLOUD_K8S_SERVICE_ACCOUNT", "default")
+QFIELDCLOUD_K8S_SERVICE_ACCOUNT = os.environ.get(
+    "QFIELDCLOUD_K8S_SERVICE_ACCOUNT", "default"
+)
 
 # Admin URLS which will be skipped from checking if they return HTTP 200
 QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
