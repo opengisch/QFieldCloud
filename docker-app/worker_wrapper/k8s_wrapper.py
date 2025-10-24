@@ -802,6 +802,18 @@ def get_k8s_batch_client():
     # This ensures we always have a fresh token
     try:
         k8s_config.load_incluster_config()
+        
+        # Override API host if KUBERNETES_SERVICE_HOST is set (for token audience fix)
+        k8s_host = os.environ.get("KUBERNETES_SERVICE_HOST")
+        k8s_port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
+        if k8s_host:
+            # Get the current configuration
+            configuration = client.Configuration.get_default_copy()
+            configuration.host = f"https://{k8s_host}:{k8s_port}"
+            # Set as the default configuration
+            client.Configuration.set_default(configuration)
+            logger.info(f"Overrode Kubernetes API host to {configuration.host}")
+        
         logger.info("Loaded in-cluster Kubernetes configuration")
         _k8s_config_loaded = True
     except k8s_config.ConfigException:
