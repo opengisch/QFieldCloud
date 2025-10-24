@@ -5,8 +5,6 @@ import os
 import tempfile
 import time
 
-import psycopg2
-from django.conf import settings
 from django.http import FileResponse
 from django.test import tag
 from django.utils import timezone
@@ -14,9 +12,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.geodb_utils import delete_db_and_role
 from qfieldcloud.core.models import (
-    Geodb,
     Job,
     Organization,
     OrganizationMember,
@@ -29,11 +25,15 @@ from qfieldcloud.core.models import (
     TeamMember,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
+from qfieldcloud.core.tests.utils import (
+    get_test_postgis_connection,
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_project_ok_status,
+)
 from qfieldcloud.core.utils2.jobs import repackage
 from qfieldcloud.core.utils2.storage import get_stored_package_ids
 from qfieldcloud.filestorage.models import File
-
-from .utils import setup_subscription_plans, testdata_path, wait_for_project_ok_status
 
 logging.disable(logging.CRITICAL)
 
@@ -51,22 +51,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             name="project1", is_public=False, owner=self.user1
         )
 
-        delete_db_and_role("test", self.user1.username)
-
-        self.geodb = Geodb.objects.create(
-            user=self.user1,
-            dbname="test",
-            hostname="geodb",
-            port=5432,
-        )
-
-        self.conn = psycopg2.connect(
-            dbname="test",
-            user=settings.GEODB_USER,
-            password=settings.GEODB_PASSWORD,
-            host=settings.GEODB_HOST,
-            port=settings.GEODB_PORT,
-        )
+        self.conn = get_test_postgis_connection()
 
     def tearDown(self):
         self.conn.close()
@@ -467,11 +452,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             created_by=self.project1.owner,
             value=(
                 "[geodb1]\n"
-                "dbname=test\n"
-                "host=geodb\n"
+                "dbname=test_postgis_db_name\n"
+                "host=test_postgis_db\n"
                 "port=5432\n"
-                f"user={settings.GEODB_USER}\n"
-                f"password={settings.GEODB_PASSWORD}\n"
+                "user=test_postgis_db_user\n"
+                "password=test_postgis_db_password\n"
                 "sslmode=disable\n"
             ),
         )
@@ -483,11 +468,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             created_by=self.project1.owner,
             value=(
                 "[geodb2]\n"
-                "dbname=test\n"
-                "host=geodb\n"
+                "dbname=test_postgis_db_name\n"
+                "host=test_postgis_db\n"
                 "port=5432\n"
-                f"user={settings.GEODB_USER}\n"
-                f"password={settings.GEODB_PASSWORD}\n"
+                "user=test_postgis_db_user\n"
+                "password=test_postgis_db_password\n"
                 "sslmode=disable\n"
             ),
         )
@@ -1017,3 +1002,52 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertTrue(p1.needs_repackaging(u1))
         self.assertTrue(p1.needs_repackaging(u2))
+
+    def test_org_members_latest_package_jobs(self):
+        org_owner = Person.objects.create_user(username="org_owner")
+
+        organization = Organization.objects.create(
+            username="org1", organization_owner=org_owner
+        )
+
+        org_admin = Person.objects.create_user(username="org_admin")
+
+        OrganizationMember.objects.create(
+            member=org_admin,
+            organization=organization,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        org_member = Person.objects.create_user(username="org_member")
+
+        OrganizationMember.objects.create(
+            member=org_member,
+            organization=organization,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+
+        project = Project.objects.create(
+            name="org_project",
+            owner=organization,
+        )
+
+        package_job_owner = PackageJob.objects.create(
+            project=project,
+            created_by=org_owner,
+        )
+
+        package_job_admin = PackageJob.objects.create(
+            project=project,
+            created_by=org_admin,
+        )
+
+        package_job_member = PackageJob.objects.create(
+            project=project,
+            created_by=org_member,
+        )
+
+        latest_package_jobs_qs = project.latest_package_jobs()
+
+        self.assertIn(package_job_owner, latest_package_jobs_qs)
+        self.assertIn(package_job_admin, latest_package_jobs_qs)
+        self.assertIn(package_job_member, latest_package_jobs_qs)

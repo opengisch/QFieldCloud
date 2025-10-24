@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-import django_cryptography.fields
 from deprecated import deprecated
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -39,7 +38,7 @@ from model_utils.managers import (
 )
 from timezone_field import TimeZoneField
 
-from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.core import utils, validators
 from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
@@ -328,10 +327,6 @@ class User(AbstractUser):
         else:
             return self.username
 
-    @property
-    def has_geodb(self) -> bool:
-        return hasattr(self, "geodb")
-
     def save(self, *args, **kwargs):
         from qfieldcloud.subscription.models import get_subscription_model
 
@@ -460,10 +455,6 @@ class UserAccount(models.Model):
     # These will be moved one day to the package. We don't touch for now (they are only used
     # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
-    is_geodb_enabled = models.BooleanField(
-        default=False,
-        help_text=_("Whether the account has the option to create a GeoDB."),
-    )
 
     bio = models.CharField(max_length=255, default="", blank=True)
     company = models.CharField(max_length=255, default="", blank=True)
@@ -614,55 +605,6 @@ def random_password() -> str:
     )
     secure_str = "".join(secrets.choice(password_characters) for i in range(16))
     return secure_str
-
-
-class Geodb(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    username = models.CharField(blank=False, max_length=255, default=random_string)
-    dbname = models.CharField(blank=False, max_length=255, default=random_string)
-    hostname = models.CharField(
-        blank=False, max_length=255, default=settings.GEODB_HOST
-    )
-    port = models.PositiveIntegerField(default=settings.GEODB_PORT)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    # The password is generated but not stored into the db
-    password = ""
-    last_geodb_error = None
-
-    def __init__(self, *args, password="", **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.password = password
-
-        if not self.password:
-            self.password = random_password()
-
-    def size(self):
-        try:
-            return geodb_utils.get_db_size(self)
-        except Exception as err:
-            self.last_geodb_error = str(err)
-            return None
-
-    def __str__(self):
-        return "{}'s db account, dbname: {}, username: {}".format(
-            self.user.username, self.dbname, self.username
-        )
-
-    def save(self, *args, **kwargs):
-        created = self._state.adding
-        super().save(*args, **kwargs)
-        # Automatically create a role and database when a Geodb object is created.
-        if created:
-            geodb_utils.create_role_and_db(self)
-
-    def delete(self, *args, **kwargs):
-        result = super().delete(*args, **kwargs)
-        # Automatically delete role and database when a Geodb object is deleted.
-        geodb_utils.delete_db_and_role(self.dbname, self.username)
-
-        return result
 
 
 class OrganizationQueryset(models.QuerySet):
@@ -1400,10 +1342,8 @@ class Project(models.Model):
             QuerySet of all the last package jobs.
         """
         if self.owner.is_organization:
-            # all the admin users including the organization owner
-            triggered_by_qs = Person.objects.for_organization(self.owner).filter(
-                organization_role=OrganizationMember.Roles.ADMIN,
-            )
+            # all the users including the organization owner
+            triggered_by_qs = Person.objects.for_organization(self.owner)
         else:
             triggered_by_qs = Person.objects.filter(id=self.owner.pk)
 
@@ -1622,28 +1562,12 @@ class Project(models.Model):
     def has_online_vector_data(self) -> bool | None:
         """Returns None if project details or layers details are not available"""
 
-        if not self.project_details:
+        if not self.project_details or not self.project_details.get("layers_by_id"):
             return None
 
-        layers_by_id: dict[str, dict[str, Any]] = self.project_details.get(
-            "layers_by_id"
-        )
+        from qfieldcloud.core.utils2.project import has_online_vector_data
 
-        if layers_by_id is None:
-            return None
-
-        has_online_vector_layers = False
-
-        for layer_data in layers_by_id.values():
-            # NOTE QGIS 3.30.x returns "Vector", while previous versions return "VectorLayer"
-            if layer_data.get("type_name") in (
-                "VectorLayer",
-                "Vector",
-            ) and not layer_data.get("filename", ""):
-                has_online_vector_layers = True
-                break
-
-        return has_online_vector_layers
+        return has_online_vector_data(self)
 
     @property
     def can_repackage(self) -> bool:
@@ -2207,6 +2131,8 @@ class Job(models.Model):
         FAILED = "failed", _("Failed")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project_id: uuid.UUID
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -2589,12 +2515,6 @@ class Secret(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-
-    # TODO Remove with QF-6361 Remove legacy `django_cryptography`'s encrypted field support
-    # legacy field to store the encrypted value of the secret.
-    old_value = django_cryptography.fields.encrypt(
-        models.TextField(blank=True, null=True)
-    )
 
     # encrypted value of the secret.
     value = EncryptedTextField()

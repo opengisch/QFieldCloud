@@ -51,7 +51,6 @@ from qfieldcloud.core.models import (
     ApplyJobDelta,
     Delta,
     FaultyDeltaFile,
-    Geodb,
     Job,
     Organization,
     OrganizationMember,
@@ -366,18 +365,6 @@ def format_pre_json(value):
         return format_pre(value)
 
 
-class GeodbInline(admin.TabularInline):
-    model = Geodb
-    extra = 0
-    has_direct_delete_permission = False
-
-    def has_add_permission(self, request, obj):
-        return False
-
-    def has_change_permission(self, request, obj):
-        return False
-
-
 class MemberOrganizationInline(admin.TabularInline):
     model = OrganizationMember
     extra = 0
@@ -521,10 +508,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         "storage_usage__field",
     )
 
-    inlines = (
-        UserAccountInline,
-        GeodbInline,
-    )
+    inlines = (UserAccountInline,)
 
     add_form_template = "admin/change_form.html"
     change_form_template = "admin/person_change_form.html"
@@ -1416,7 +1400,6 @@ class TeamInline(admin.TabularInline):
 class OrganizationAdmin(QFieldCloudModelAdmin):
     inlines = (
         UserAccountInline,
-        GeodbInline,
         ProjectInline,
         OrganizationMemberInline,
         TeamInline,

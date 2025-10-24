@@ -65,9 +65,6 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 # Read more: https://docs.djangoproject.com/en/4.2/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-WEB_HTTP_PORT = os.environ.get("WEB_HTTP_PORT")
-WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT")
-
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
     # custom QFC backend that extends the `allauth` specific authentication methods
@@ -216,12 +213,12 @@ DATABASES = {
     }
 }
 
-# Connection details for the geodb
-GEODB_HOST = os.environ.get("GEODB_HOST")
-GEODB_PORT = os.environ.get("GEODB_PORT")
-GEODB_DB = os.environ.get("GEODB_DB")
-GEODB_USER = os.environ.get("GEODB_USER")
-GEODB_PASSWORD = os.environ.get("GEODB_PASSWORD")
+# Connection details for the test PostGIS database. This database is used only in tests for temporarily storing spatial data.
+TEST_POSTGIS_DB_HOST = os.environ.get("TEST_POSTGIS_DB_HOST")
+TEST_POSTGIS_DB_PORT = os.environ.get("TEST_POSTGIS_DB_PORT")
+TEST_POSTGIS_DB_NAME = os.environ.get("TEST_POSTGIS_DB_NAME")
+TEST_POSTGIS_DB_USER = os.environ.get("TEST_POSTGIS_DB_USER")
+TEST_POSTGIS_DB_PASSWORD = os.environ.get("TEST_POSTGIS_DB_PASSWORD")
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -467,6 +464,14 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
 
+# Third-party auth header names configuration
+QFIELDCLOUD_IDP_ID_HEADER_NAME = os.environ.get(
+    "QFIELDCLOUD_IDP_ID_HEADER_NAME", "X-QFC-IDP-ID"
+)
+QFIELDCLOUD_ID_TOKEN_HEADER_NAME = os.environ.get(
+    "QFIELDCLOUD_ID_TOKEN_HEADER_NAME", "X-QFC-ID-Token"
+)
+
 #########################
 # /Django allauth settings
 #########################
@@ -564,7 +569,11 @@ GENERATE_REQUEST_ID_IF_NOT_IN_HEADER = False
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {"request_id": {"()": "log_request_id.filters.RequestIDFilter"}},
+    "filters": {
+        "request_id": {
+            "()": "log_request_id.filters.RequestIDFilter",
+        },
+    },
     "formatters": {
         "json": {
             "()": "qfieldcloud.core.logging.formatters.CustomisedJSONFormatter",
@@ -723,15 +732,8 @@ QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
 # URL the qgis worker will use to access the running API endpoint on the app service
 QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ["QFIELDCLOUD_WORKER_QFIELDCLOUD_URL"]
 
-# Absolute path on the docker host where `libqfieldsync` is mounted from for development
-DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH = os.environ.get(
-    "DEBUG_QGIS_LIBQFIELDSYNC_HOST_PATH"
-)
-
-# Absolute path on the docker host where `qfieldcloud-sdk-python` is mounted from for development
-DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH = os.environ.get(
-    "DEBUG_QGIS_QFIELDCLOUD_SDK_HOST_PATH"
-)
+# Host path which will be mounted by the `worker_wrapper` into the `worker` containers to facilitate development and debugging pythons files.
+DEBUG_QGIS_WORKER_HOST_PATH = os.environ.get("DEBUG_QGIS_WORKER_HOST_PATH")
 
 # Port to be used by `debugpy` to connect to the QGIS process inside the `qgis` container
 DEBUG_QGIS_DEBUGPY_PORT = os.environ.get("DEBUG_QGIS_DEBUGPY_PORT")
@@ -754,9 +756,6 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
     # {
     #     "model": "constance.config",
     # },
-    {
-        "model": "core.geodb",
-    },
     {
         "model": "core.organization",
     },

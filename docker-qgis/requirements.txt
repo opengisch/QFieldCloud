@@ -28,7 +28,7 @@ jsonschema-specifications==2023.12.1
     # via jsonschema
 pathvalidate==3.3.1
     # via qfieldcloud-sdk
-qfieldcloud-sdk==0.10.0
+qfieldcloud-sdk==0.11.0
     # via -r requirements.in
 referencing==0.35.1
     # via
@@ -38,6 +38,9 @@ requests==2.32.5
     # via
     #   -r requirements.in
     #   qfieldcloud-sdk
+    #   requests-toolbelt
+requests-toolbelt==1.0.0
+    # via qfieldcloud-sdk
 rpds-py==0.20.0
     # via
     #   jsonschema

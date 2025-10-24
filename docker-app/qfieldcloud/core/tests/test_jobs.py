@@ -201,3 +201,35 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             is_localized=False,
             error_code="invalid_dataprovider",
         )
+
+    def test_has_online_vector_data_with_virtual_layer(self):
+        self._upload_files(
+            self.u1,
+            self.p1,
+            files=[
+                ("project.qgs", "delta/project_with_virtual.qgs"),
+            ],
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        self.p1.refresh_from_db()
+
+        self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
+        self.assertFalse(self.p1.has_online_vector_data)
+
+    def test_has_online_vector_data_with_virtual_layer_with_embedded(self):
+        self._upload_files(
+            self.u1,
+            self.p1,
+            files=[
+                ("project.qgs", "delta/project_with_virtual_with_embedded.qgs"),
+            ],
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        self.p1.refresh_from_db()
+
+        self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
+        self.assertTrue(self.p1.has_online_vector_data)
