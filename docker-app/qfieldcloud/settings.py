@@ -569,7 +569,11 @@ GENERATE_REQUEST_ID_IF_NOT_IN_HEADER = False
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {"request_id": {"()": "log_request_id.filters.RequestIDFilter"}},
+    "filters": {
+        "request_id": {
+            "()": "log_request_id.filters.RequestIDFilter",
+        },
+    },
     "formatters": {
         "json": {
             "()": "qfieldcloud.core.logging.formatters.CustomisedJSONFormatter",
