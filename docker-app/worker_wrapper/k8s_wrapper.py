@@ -134,8 +134,16 @@ class K8sJobRun:
         ]
 
     def get_volume_mounts(self) -> list[client.V1VolumeMount]:
+        # Mount to a job-specific subdirectory to avoid conflicts
+        job_subpath = f"jobs/{self.job_id}"
+        
         volume_mounts = [
-            client.V1VolumeMount(name="shared-io", mount_path="/io", read_only=False),
+            client.V1VolumeMount(
+                name="shared-io",
+                mount_path="/io",
+                sub_path=job_subpath,
+                read_only=False
+            ),
         ]
 
         # Add transformation grids volume if configured
@@ -151,11 +159,19 @@ class K8sJobRun:
         return volume_mounts
 
     def get_volumes(self) -> list[client.V1Volume]:
+        # Use the shared PVC from the worker StatefulSet
+        # PVC name format for StatefulSet: {pvc-name}-{statefulset-name}-{ordinal}
+        pvc_name = getattr(
+            settings,
+            "QFIELDCLOUD_WORKER_SHARED_PVC",
+            "shared-io-qfieldcloud-worker-0"  # Default for StatefulSet
+        )
+        
         volumes = [
             client.V1Volume(
                 name="shared-io",
-                host_path=client.V1HostPathVolumeSource(
-                    path=str(self.shared_tempdir), type="Directory"
+                persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
+                    claim_name=pvc_name
                 ),
             )
         ]
@@ -213,7 +229,7 @@ class K8sJobRun:
         return env_vars
 
     def before_k8s_run(self) -> None:
-        """Hook called before starting the Kubernetes job"""
+        """Hook called before Kubernetes job execution"""
         pass
 
     def after_k8s_run(self) -> None:
@@ -289,7 +305,9 @@ class K8sJobRun:
                 feedback["error_stack"] = ""
             else:
                 try:
-                    with open(self.shared_tempdir.joinpath("feedback.json")) as f:
+                    # Read feedback.json from the shared PVC
+                    feedback_path = Path(f"/io/jobs/{self.job_id}/feedback.json")
+                    with open(feedback_path) as f:
                         feedback = json.load(f)
 
                         if feedback.get("error"):
@@ -400,6 +418,14 @@ class K8sJobRun:
             env=env_vars,
             volume_mounts=volume_mounts,
             resources=resources,
+            # Security context to comply with restricted PodSecurity standards
+            security_context=client.V1SecurityContext(
+                allow_privilege_escalation=False,
+                run_as_non_root=True,
+                run_as_user=1000,  # Non-root user
+                capabilities=client.V1Capabilities(drop=["ALL"]),
+                seccomp_profile=client.V1SeccompProfile(type="RuntimeDefault"),
+            ),
         )
 
         # Add debug port if enabled
