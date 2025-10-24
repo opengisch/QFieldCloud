@@ -41,6 +41,10 @@ from tenacity import (
 
 logger = logging.getLogger(__name__)
 
+# TODO @suricactus: Delete when QF-6868 Log DEBUG level when DEBUG=True, see https://app.clickup.com/t/QF-6868
+if settings.DEBUG:
+    logger.setLevel(logging.DEBUG)
+
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
@@ -340,6 +344,10 @@ class JobRun:
                     }
                 )
 
+                logger.debug(
+                    f"Exposing ports from the qgis container for debugging: {ports=}"
+                )
+
             if settings.DEBUG_QGIS_WORKER_HOST_PATH:
                 debug_host_path = Path(settings.DEBUG_QGIS_WORKER_HOST_PATH)
 
@@ -353,6 +361,10 @@ class JobRun:
                         # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`"
                         f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python.py:ro",
                     ]
+                )
+
+                logger.debug(
+                    f"Mounting host path into qgis container for debugging: {volumes=}"
                 )
 
         logger.info(f"Execute: {' '.join(command)}")

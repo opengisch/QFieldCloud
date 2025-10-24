@@ -49,13 +49,8 @@ To fetch upstream development, don't forget to update the submodules too:
 cp .env.example .env
 ```
 
-2. Change the `ENVIRONMENT` variable to `development`.
 
-```shell
-ENVIRONMENT=development
-```
-
-3. Build development images and run the containers:
+2. Build development images and run the containers:
 
 ```shell
 docker compose up -d --build
@@ -64,31 +59,31 @@ docker compose up -d --build
 The command will read the `docker-compose*.yml` files specified in the `COMPOSE_FILE` variable from the `.env` file. Then Django built-in server will be directly reachable at `http://localhost:8011` or through `nginx` at `https://localhost`.
 You should avoid using the Django's built-in server and better always develop and test QFieldCloud through the `nginx` [reverse proxy with SSL](#add-root-certificate).
 
-4. (OPTIONAL) In case you have a database dump, you can directly load some data in your development database.
+3. (OPTIONAL) In case you have a database dump, you can directly load some data in your development database.
 
 ```shell
 psql 'service=localhost.qfield.cloud' < ./qfc_dump_20220304.sql
 ```
 
-5. Run Django database migrations.
+4. Run Django database migrations.
 
 ```shell
 docker compose exec app python manage.py migrate
 ```
 
-6. And collect the static files (CSS, JS etc):
+5. And collect the static files (CSS, JS etc):
 
 ```shell
 docker compose run app python manage.py collectstatic --noinput
 ```
 
-7. Now you can get started by adding your super user that has access to the Django Admin interface:
+6. Now you can get started by adding your super user that has access to the Django Admin interface:
 
 ```shell
 docker compose run app python manage.py createsuperuser --username super_user --email super@user.com
 ```
 
-8. If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
+7. If QFieldCloud needs to be translated, you can compile the translations using Django's tooling:
 
 ```shell
 docker compose run --user root app python manage.py compilemessages
@@ -191,7 +186,6 @@ Create an <code>.env.test</code> file with the following variables that override
     WEB_HTTP_PORT=8101
     WEB_HTTPS_PORT=8102
     HOST_POSTGRES_PORT=8103
-    MEMCACHED_PORT=11212
     QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
     QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
     DJANGO_DEV_PORT=8111
@@ -387,7 +381,6 @@ Based on this example
 | nginx https   | 443   | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | django http   | 8011  | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
 | postgres      | 5433  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| memcached     | 11211 | MEMCACHED_PORT       | :white_check_mark: | :x:                | :x:                |
 | minio API     | 8009  | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
 | minio browser | 8010  | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
 | smtp web      | 8012  | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
@@ -428,9 +421,37 @@ Migration to a newer database version is a risky operation to your data, so prep
 
 Contributions welcome!
 
-Any PR including the `[WIP]` should be:
-- able to be checked-out without breaking the stack;
+
+### Before considering a new PR
+
+For the best chance of having your PR merged, you must first communicate your idea(s) and clarify the details with the QFieldCloud developers.
+
+1) Create a dedicated [issue in the QFieldCloud repository](https://github.com/opengisch/QFieldCloud/issues) detailing your suggestion.
+2) Engage in the feedback and guidance provided by the development team during their review of your issue.
+
+Discussing it first is crucial. Not every idea is accepted, and these steps will save you the time and energy of creating a PR that wouldn't be merged.
+
+Any new, follow-up discussions should be opened in a new issue that references the original.
+
+
+### Before opening a new PR
+
+- Make sure you prepare a small focused branch with your changes, properly referencing the source issue and add a detailed description to the PR opening message.
+- If the change addresses a UI/UX change, provide a before and after screenshot.
+- Your branch should be based on the latest `master` branch.
+- In the rare occurances when it is not based on `master`, please base your PR on the respective branch.
+
+
+### Pull requests
+
+If your PR is not ready to be merged, please mark it as a [draft PR](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/changing-the-stage-of-a-pull-request#converting-a-pull-request-to-a-draft).
+
+A draft PR can allow QFieldCloud developers to provide you early feedback.
+However, make sure a draft PR:
+
+- can be checked-out without breaking the stack;
 - the specific feature being developed/modified should be testable locally (does not mean it should work correctly).
+
 
 ## Resources
 
