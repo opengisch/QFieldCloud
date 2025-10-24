@@ -35,7 +35,7 @@ six==1.17.0
     #   python-dateutil
 tenacity==9.1.2
     # via -r /requirements/requirements_worker_wrapper.in
-urllib3==2.5.0
+urllib3==2.3.0
     # via
     #   docker
     #   kubernetes
