@@ -798,33 +798,65 @@ def get_k8s_batch_client():
     """Get a cached Kubernetes BatchV1Api client, initializing it only once."""
     global _k8s_batch_v1_client, _k8s_config_loaded
     
-    if not _k8s_config_loaded:
-        try:
-            # Use standard in-cluster config loading for now
-            # TODO: Investigate projected volume token authentication issues
-            k8s_config.load_incluster_config()
-            logger.info("Loaded in-cluster Kubernetes configuration")
-        except k8s_config.ConfigException:
-            try:
-                k8s_config.load_kube_config()
-                logger.info("Loaded kube config from file")
-            except Exception as e:
-                logger.error(f"Failed to load Kubernetes configuration: {e}")
-                raise
+    # Force reload config each time to work around K8s 1.34.1 token issues
+    # This ensures we always have a fresh token
+    try:
+        k8s_config.load_incluster_config()
+        logger.info("Loaded in-cluster Kubernetes configuration")
         _k8s_config_loaded = True
+    except k8s_config.ConfigException:
+        try:
+            k8s_config.load_kube_config()
+            logger.info("Loaded kube config from file")
+            _k8s_config_loaded = True
+        except Exception as e:
+            logger.error(f"Failed to load Kubernetes configuration: {e}")
+            raise
     
-    if _k8s_batch_v1_client is None:
-        _k8s_batch_v1_client = client.BatchV1Api()
-        logger.info("Initialized Kubernetes BatchV1Api client")
+    # Always create a fresh client to avoid stale token issues
+    _k8s_batch_v1_client = client.BatchV1Api()
+    logger.info("Initialized Kubernetes BatchV1Api client")
     
     return _k8s_batch_v1_client
 
 
 def cancel_orphaned_k8s_workers() -> None:
-    """Cancel orphaned Kubernetes worker jobs - TEMPORARILY DISABLED due to auth issues"""
-    logger.warning("cancel_orphaned_k8s_workers temporarily disabled due to service account token authentication issues")
-    # TODO: Re-enable once token authentication is resolved
-    return
+    """Cancel orphaned Kubernetes worker jobs that are not associated with active jobs."""
+    try:
+        batch_v1 = get_k8s_batch_client()
+        namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
+        
+        # Get all jobs with our label
+        jobs = batch_v1.list_namespaced_job(
+            namespace=namespace,
+            label_selector="app=qfieldcloud-worker"
+        )
+        
+        # Get all active job IDs from the database
+        active_job_ids = set(
+            Job.objects.filter(
+                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED]
+            ).values_list('id', flat=True)
+        )
+        
+        # Cancel jobs that are not in the active list
+        for job in jobs.items:
+            # Extract job_id from the job name (format: qfc-worker-{job_id})
+            job_name = job.metadata.name
+            if not job_name.startswith("qfc-worker-"):
+                continue
+                
+            job_id = job_name.replace("qfc-worker-", "").replace("-", "")
+            
+            if job_id not in active_job_ids:
+                logger.info(f"Canceling orphaned K8s job: {job_name}")
+                batch_v1.delete_namespaced_job(
+                    name=job_name,
+                    namespace=namespace,
+                    propagation_policy='Background'
+                )
+    except Exception as e:
+        logger.error(f"Failed to cancel orphaned K8s workers: {e}")
 
 
 # Compatibility aliases - use these instead of the original Docker-based classes
