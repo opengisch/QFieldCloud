@@ -773,11 +773,31 @@ def get_k8s_batch_client():
     
     if not _k8s_config_loaded:
         try:
-            k8s_config.load_incluster_config()
-            logger.info("Loaded in-cluster Kubernetes configuration")
-        except k8s_config.ConfigException:
-            k8s_config.load_kube_config()
-            logger.info("Loaded kube config from file")
+            # Use manual configuration which works reliably in containers
+            import os
+            configuration = client.Configuration()
+            
+            # Read service account token and CA cert
+            with open('/var/run/secrets/kubernetes.io/serviceaccount/token', 'r') as f:
+                token = f.read().strip()
+            
+            # Use the same endpoint format that works in our tests
+            configuration.host = f"https://{os.environ['KUBERNETES_SERVICE_HOST']}:{os.environ['KUBERNETES_SERVICE_PORT']}"
+            configuration.ssl_ca_cert = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+            configuration.api_key = {"authorization": f"Bearer {token}"}
+            configuration.verify_ssl = True
+            
+            # Set the configuration globally
+            client.Configuration.set_default(configuration)
+            logger.info("Loaded manual in-cluster Kubernetes configuration")
+        except (FileNotFoundError, Exception) as e:
+            # Fallback to standard config loading
+            try:
+                k8s_config.load_incluster_config()
+                logger.info("Loaded in-cluster Kubernetes configuration")
+            except k8s_config.ConfigException:
+                k8s_config.load_kube_config()
+                logger.info("Loaded kube config from file")
         _k8s_config_loaded = True
     
     if _k8s_batch_v1_client is None:
