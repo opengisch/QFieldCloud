@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import shutil
 import sys
 import tempfile
@@ -773,31 +774,17 @@ def get_k8s_batch_client():
     
     if not _k8s_config_loaded:
         try:
-            # Use manual configuration which works reliably in containers
-            import os
-            configuration = client.Configuration()
-            
-            # Read service account token and CA cert
-            with open('/var/run/secrets/kubernetes.io/serviceaccount/token', 'r') as f:
-                token = f.read().strip()
-            
-            # Use the same endpoint format that works in our tests
-            configuration.host = f"https://{os.environ['KUBERNETES_SERVICE_HOST']}:{os.environ['KUBERNETES_SERVICE_PORT']}"
-            configuration.ssl_ca_cert = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
-            configuration.api_key = {"authorization": f"Bearer {token}"}
-            configuration.verify_ssl = True
-            
-            # Set the configuration globally
-            client.Configuration.set_default(configuration)
-            logger.info("Loaded manual in-cluster Kubernetes configuration")
-        except (FileNotFoundError, Exception) as e:
-            # Fallback to standard config loading
+            # Use standard in-cluster config loading for now
+            # TODO: Investigate projected volume token authentication issues
+            k8s_config.load_incluster_config()
+            logger.info("Loaded in-cluster Kubernetes configuration")
+        except k8s_config.ConfigException:
             try:
-                k8s_config.load_incluster_config()
-                logger.info("Loaded in-cluster Kubernetes configuration")
-            except k8s_config.ConfigException:
                 k8s_config.load_kube_config()
                 logger.info("Loaded kube config from file")
+            except Exception as e:
+                logger.error(f"Failed to load Kubernetes configuration: {e}")
+                raise
         _k8s_config_loaded = True
     
     if _k8s_batch_v1_client is None:
@@ -808,55 +795,10 @@ def get_k8s_batch_client():
 
 
 def cancel_orphaned_k8s_workers() -> None:
-    """Cancel orphaned Kubernetes worker jobs"""
-    try:
-        # Use the cached Kubernetes client instead of reloading config
-        k8s_batch_v1 = get_k8s_batch_client()
-        namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
-        environment = getattr(settings, "ENVIRONMENT", "dev")
-
-        # List all jobs with our label
-        jobs = k8s_batch_v1.list_namespaced_job(
-            namespace=namespace,
-            label_selector=f"app={environment}-worker,managed-by=qfieldcloud-worker-wrapper",
-        )
-
-        if len(jobs.items) == 0:
-            return
-
-        job_names = [job.metadata.name for job in jobs.items]
-
-        # Find jobs that exist in k8s but not in database
-        # Extract job IDs from k8s job names (format: qfc-worker-{job_id})
-        k8s_job_ids = []
-        for name in job_names:
-            if name.startswith("qfc-worker-"):
-                job_id = name.replace("qfc-worker-", "").replace("-", "_")
-                k8s_job_ids.append(job_id)
-
-        # Check which jobs exist in database
-        existing_job_ids = set(
-            Job.objects.filter(id__in=k8s_job_ids).values_list("id", flat=True)
-        )
-
-        # Find orphaned jobs
-        orphaned_job_ids = set(k8s_job_ids) - existing_job_ids
-        orphaned_job_names = [
-            f"qfc-worker-{job_id.replace('_', '-')}" for job_id in orphaned_job_ids
-        ]
-
-        # Delete orphaned jobs
-        for job_name in orphaned_job_names:
-            try:
-                k8s_batch_v1.delete_namespaced_job(
-                    name=job_name, namespace=namespace, propagation_policy="Background"
-                )
-                logger.info(f"Cancelled orphaned K8s worker job {job_name}")
-            except ApiException as e:
-                logger.warning(f"Failed to cancel orphaned job {job_name}: {e}")
-
-    except Exception as e:
-        logger.error(f"Error cancelling orphaned K8s workers: {e}")
+    """Cancel orphaned Kubernetes worker jobs - TEMPORARILY DISABLED due to auth issues"""
+    logger.warning("cancel_orphaned_k8s_workers temporarily disabled due to service account token authentication issues")
+    # TODO: Re-enable once token authentication is resolved
+    return
 
 
 # Compatibility aliases - use these instead of the original Docker-based classes
