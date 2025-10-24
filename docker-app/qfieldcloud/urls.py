@@ -21,7 +21,8 @@ from functools import wraps
 
 from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, reverse
+from django.shortcuts import redirect
 from django.utils.translation import gettext as _
 from django.views.generic import RedirectView
 from drf_spectacular.views import (
@@ -33,7 +34,10 @@ from rest_framework import permissions
 
 from qfieldcloud.authentication import views as auth_views
 from qfieldcloud.core.admin import qfc_admin_site
-from qfieldcloud.core.views.redirect_views import redirect_to_admin_project_view
+from qfieldcloud.core.views.redirect_views import (
+    redirect_to_admin_project_view,
+    drf_login_redirect,
+)
 from qfieldcloud.filestorage.views import (
     compatibility_file_crud_view,
     compatibility_file_list_view,
@@ -100,6 +104,9 @@ urlpatterns = [
     path("api/v1/auth/providers/", auth_views.ListProvidersView.as_view()),
     path("api/v1/auth/logout/", auth_views.LogoutView.as_view()),
     path("api/v1/", include("qfieldcloud.core.urls")),
+    # Overide the default login and logout views to use the allauth views (order is important)
+    path("auth/login/", drf_login_redirect, name="rest_login_redirect"),
+    path("auth/logout/", RedirectView.as_view(url="/accounts/logout/")),
     path("auth/", include("rest_framework.urls")),
     path("accounts/", include("allauth.urls")),
     path("invitations/", include("invitations.urls", namespace="invitations")),
