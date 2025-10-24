@@ -428,9 +428,37 @@ Migration to a newer database version is a risky operation to your data, so prep
 
 Contributions welcome!
 
-Any PR including the `[WIP]` should be:
-- able to be checked-out without breaking the stack;
+
+### Before considering a new PR
+
+For the best chance of having your PR merged, you must first communicate your idea(s) and clarify the details with the QFieldCloud developers.
+
+1) Create a dedicated [issue in the QFieldCloud repository](https://github.com/opengisch/QFieldCloud/issues) detailing your suggestion.
+2) Engage in the feedback and guidance provided by the development team during their review of your issue.
+
+Discussing it first is crucial. Not every idea is accepted, and these steps will save you the time and energy of creating a PR that wouldn't be merged.
+
+Any new, follow-up discussions should be opened in a new issue that references the original.
+
+
+### Before opening a new PR
+
+- Make sure you prepare a small focused branch with your changes, properly referencing the source issue and add a detailed description to the PR opening message.
+- If the change addresses a UI/UX change, provide a before and after screenshot.
+- Your branch should be based on the latest `master` branch.
+- In the rare occurances when it is not based on `master`, please base your PR on the respective branch.
+
+
+### Pull requests
+
+If your PR is not ready to be merged, please mark it as a [draft PR](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/changing-the-stage-of-a-pull-request#converting-a-pull-request-to-a-draft).
+
+A draft PR can allow QFieldCloud developers to provide you early feedback.
+However, make sure a draft PR:
+
+- can be checked-out without breaking the stack;
 - the specific feature being developed/modified should be testable locally (does not mean it should work correctly).
+
 
 ## Resources
 
