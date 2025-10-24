@@ -20,6 +20,10 @@ from django.forms.models import model_to_dict
 from django.utils import timezone
 from kubernetes import client, config as k8s_config
 from kubernetes.client.rest import ApiException
+
+# Global kubernetes client - initialized once and reused
+_k8s_batch_v1_client = None
+_k8s_config_loaded = False
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -62,16 +66,9 @@ class K8sJobRun:
             self.job = self.job_class.objects.select_related().get(id=job_id)
             self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
 
-            # Initialize Kubernetes client
-            try:
-                # Try in-cluster config first (when running inside k8s)
-                k8s_config.load_incluster_config()
-            except k8s_config.ConfigException:
-                # Fall back to local kubeconfig (for development)
-                k8s_config.load_kube_config()
-
+            # Use cached Kubernetes clients
             self.k8s_core_v1 = client.CoreV1Api()
-            self.k8s_batch_v1 = client.BatchV1Api()
+            self.k8s_batch_v1 = get_k8s_batch_client()
 
             # K8s namespace for jobs
             self.namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
@@ -770,16 +767,31 @@ class K8sProcessProjectfileJobRun(K8sJobRun):
             project.save(update_fields=("project_details",))
 
 
+def get_k8s_batch_client():
+    """Get a cached Kubernetes BatchV1Api client, initializing it only once."""
+    global _k8s_batch_v1_client, _k8s_config_loaded
+    
+    if not _k8s_config_loaded:
+        try:
+            k8s_config.load_incluster_config()
+            logger.info("Loaded in-cluster Kubernetes configuration")
+        except k8s_config.ConfigException:
+            k8s_config.load_kube_config()
+            logger.info("Loaded kube config from file")
+        _k8s_config_loaded = True
+    
+    if _k8s_batch_v1_client is None:
+        _k8s_batch_v1_client = client.BatchV1Api()
+        logger.info("Initialized Kubernetes BatchV1Api client")
+    
+    return _k8s_batch_v1_client
+
+
 def cancel_orphaned_k8s_workers() -> None:
     """Cancel orphaned Kubernetes worker jobs"""
     try:
-        # Initialize Kubernetes client
-        try:
-            k8s_config.load_incluster_config()
-        except k8s_config.ConfigException:
-            k8s_config.load_kube_config()
-
-        k8s_batch_v1 = client.BatchV1Api()
+        # Use the cached Kubernetes client instead of reloading config
+        k8s_batch_v1 = get_k8s_batch_client()
         namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
         environment = getattr(settings, "ENVIRONMENT", "dev")
 
