@@ -14,7 +14,7 @@ docker==7.1.0
     # via -r /requirements/requirements_worker_wrapper.in
 idna==3.10
     # via requests
-kubernetes==29.0.0
+kubernetes==34.1.0
     # via -r /requirements/requirements_worker_wrapper.in
 oauthlib==3.2.2
     # via requests-oauthlib
