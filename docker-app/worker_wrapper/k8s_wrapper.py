@@ -120,7 +120,6 @@ class K8sJobRun:
         if self.debug_qgis_container_is_enabled:
             debug_flags = [
                 "-m",
-                "debugpy",
                 "--listen",
                 f"0.0.0.0:{settings.DEBUG_QGIS_DEBUGPY_PORT}",
                 "--wait-for-client",
@@ -136,13 +135,13 @@ class K8sJobRun:
     def get_volume_mounts(self) -> list[client.V1VolumeMount]:
         # Mount to a job-specific subdirectory to avoid conflicts
         job_subpath = f"jobs/{self.job_id}"
-        
+
         volume_mounts = [
             client.V1VolumeMount(
                 name="shared-io",
                 mount_path="/io",
                 sub_path=job_subpath,
-                read_only=False
+                read_only=False,
             ),
         ]
 
@@ -164,9 +163,9 @@ class K8sJobRun:
         pvc_name = getattr(
             settings,
             "QFIELDCLOUD_WORKER_SHARED_PVC",
-            "shared-io-qfieldcloud-worker-0"  # Default for StatefulSet
+            "shared-io-qfieldcloud-worker-0",  # Default for StatefulSet
         )
-        
+
         volumes = [
             client.V1Volume(
                 name="shared-io",
@@ -797,23 +796,10 @@ class K8sProcessProjectfileJobRun(K8sJobRun):
 def get_k8s_batch_client():
     """Get a cached Kubernetes BatchV1Api client, initializing it only once."""
     global _k8s_batch_v1_client, _k8s_config_loaded
-    
-    # Force reload config each time to work around K8s 1.34.1 token issues
-    # This ensures we always have a fresh token
+
+    # Reload config each time to ensure fresh configuration
     try:
         k8s_config.load_incluster_config()
-        
-        # Override API host if KUBERNETES_SERVICE_HOST is set (for token audience fix)
-        k8s_host = os.environ.get("KUBERNETES_SERVICE_HOST")
-        k8s_port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
-        if k8s_host:
-            # Get the current configuration
-            configuration = client.Configuration.get_default_copy()
-            configuration.host = f"https://{k8s_host}:{k8s_port}"
-            # Set as the default configuration
-            client.Configuration.set_default(configuration)
-            logger.info(f"Overrode Kubernetes API host to {configuration.host}")
-        
         logger.info("Loaded in-cluster Kubernetes configuration")
         _k8s_config_loaded = True
     except k8s_config.ConfigException:
@@ -824,11 +810,11 @@ def get_k8s_batch_client():
         except Exception as e:
             logger.error(f"Failed to load Kubernetes configuration: {e}")
             raise
-    
-    # Always create a fresh client to avoid stale token issues
+
+    # Always create a fresh client
     _k8s_batch_v1_client = client.BatchV1Api()
     logger.info("Initialized Kubernetes BatchV1Api client")
-    
+
     return _k8s_batch_v1_client
 
 
@@ -837,35 +823,32 @@ def cancel_orphaned_k8s_workers() -> None:
     try:
         batch_v1 = get_k8s_batch_client()
         namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
-        
+
         # Get all jobs with our label
         jobs = batch_v1.list_namespaced_job(
-            namespace=namespace,
-            label_selector="app=qfieldcloud-worker"
+            namespace=namespace, label_selector="app=qfieldcloud-worker"
         )
-        
+
         # Get all active job IDs from the database
         active_job_ids = set(
             Job.objects.filter(
                 status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED]
-            ).values_list('id', flat=True)
+            ).values_list("id", flat=True)
         )
-        
+
         # Cancel jobs that are not in the active list
         for job in jobs.items:
             # Extract job_id from the job name (format: qfc-worker-{job_id})
             job_name = job.metadata.name
             if not job_name.startswith("qfc-worker-"):
                 continue
-                
+
             job_id = job_name.replace("qfc-worker-", "").replace("-", "")
-            
+
             if job_id not in active_job_ids:
                 logger.info(f"Canceling orphaned K8s job: {job_name}")
                 batch_v1.delete_namespaced_job(
-                    name=job_name,
-                    namespace=namespace,
-                    propagation_policy='Background'
+                    name=job_name, namespace=namespace, propagation_policy="Background"
                 )
     except Exception as e:
         logger.error(f"Failed to cancel orphaned K8s workers: {e}")
