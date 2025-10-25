@@ -387,64 +387,19 @@ class K8sJobRun:
         """Run a Kubernetes Job and wait for completion"""
         assert settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
 
-        volume_mounts = self.get_volume_mounts()
-        volumes = self.get_volumes()
-        env_vars = self.get_environment_vars()
-
-        # Create resource limits and requests
-        resources = client.V1ResourceRequirements(
-            limits={
-                "memory": config.WORKER_QGIS_MEMORY_LIMIT,
-                "cpu": str(
-                    config.WORKER_QGIS_CPU_SHARES / 1024.0
-                ),  # Convert from shares to CPU units
-            },
-            requests={
-                "memory": config.WORKER_QGIS_MEMORY_LIMIT,
-                "cpu": str(
-                    config.WORKER_QGIS_CPU_SHARES / 1024.0 / 2
-                ),  # Request half of limit
-            },
-        )
-
-        # Create container spec
+        # Start with absolute bare minimum - just a simple container
+        # No volumes, no env vars, no resource limits, no security context
         container = client.V1Container(
             name="qgis-worker",
             image=settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
-            command=command,
-            env=env_vars,
-            volume_mounts=volume_mounts,
-            resources=resources,
+            command=["sleep", "30"],  # Just sleep for 30 seconds to test pod creation
         )
 
-        # Add debug port if enabled
-        if self.debug_qgis_container_is_enabled:
-            container.ports = [
-                client.V1ContainerPort(
-                    container_port=int(settings.DEBUG_QGIS_DEBUGPY_PORT), protocol="TCP"
-                )
-            ]
-
-        # Create pod template
+        # Minimal pod spec
         pod_template = client.V1PodTemplateSpec(
-            metadata=client.V1ObjectMeta(
-                labels={
-                    "app": f"{getattr(settings, 'ENVIRONMENT', 'dev')}-worker",
-                    "type": self.job.type,
-                    "job-id": str(self.job.id),
-                    "project-id": str(self.job.project_id),
-                }
-            ),
             spec=client.V1PodSpec(
                 containers=[container],
-                volumes=volumes,
                 restart_policy="Never",
-                # Use service account with appropriate permissions
-                service_account_name=getattr(
-                    settings, "QFIELDCLOUD_K8S_SERVICE_ACCOUNT", "default"
-                ),
-                # Disable automatic service account token mounting since QGIS jobs don't need K8s API access
-                automount_service_account_token=False,
             ),
         )
 
@@ -452,7 +407,6 @@ class K8sJobRun:
         job_spec = client.V1JobSpec(
             template=pod_template,
             backoff_limit=0,  # Don't retry failed jobs
-            active_deadline_seconds=self.container_timeout_secs,
         )
 
         # Create job object
