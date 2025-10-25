@@ -389,12 +389,14 @@ class K8sJobRun:
 
         volume_mounts = self.get_volume_mounts()
         volumes = self.get_volumes()
+        env_vars = self.get_environment_vars()
 
-        # Create container with volumes
+        # Create container with volumes, env vars, and actual command
         container = client.V1Container(
             name="qgis-worker",
             image=settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
-            command=["sleep", "30"],  # Still testing with sleep
+            command=command,
+            env=env_vars,
             volume_mounts=volume_mounts,
         )
 
