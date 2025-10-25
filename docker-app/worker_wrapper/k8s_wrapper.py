@@ -392,12 +392,14 @@ class K8sJobRun:
         env_vars = self.get_environment_vars()
 
         # Create container - no resource limits to avoid cgroup allocation issues
+        # Set working directory to job-specific path so feedback.json writes to correct location
         container = client.V1Container(
             name="qgis-worker",
             image=settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
             command=command,
             env=env_vars,
             volume_mounts=volume_mounts,
+            working_dir=f"/io/jobs/{self.job_id}",
         )
 
         # Add debug port if enabled
