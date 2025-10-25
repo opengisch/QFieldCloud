@@ -128,9 +128,10 @@ class K8sJobRun:
         else:
             debug_flags = []
 
+        # Use absolute path for entrypoint since we change working directory
         return [
             p % context
-            for p in ["python3", *debug_flags, "entrypoint.py", *self.command]
+            for p in ["python3", *debug_flags, "/entrypoint.py", *self.command]
         ]
 
     def get_volume_mounts(self) -> list[client.V1VolumeMount]:
