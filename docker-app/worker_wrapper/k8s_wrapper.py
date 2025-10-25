@@ -488,9 +488,15 @@ class K8sJobRun:
 
         try:
             # Create the job
+            if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                logger.info(f"[K8S_DEBUG] Creating job {self.k8s_job_name} in namespace: {self.namespace}")
+            
             self.k8s_batch_v1.create_namespaced_job(
                 namespace=self.namespace, body=k8s_job
             )
+            
+            if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                logger.info(f"[K8S_DEBUG] Successfully created job {self.k8s_job_name}")
 
             # Store job name for tracking
             self.job.container_id = (
@@ -522,9 +528,15 @@ class K8sJobRun:
         while time.time() - start_time < self.container_timeout_secs:
             try:
                 # Check job status
+                if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                    logger.info(f"[K8S_DEBUG] Reading job status for {self.k8s_job_name} in namespace: {self.namespace}")
+                
                 job_status = self.k8s_batch_v1.read_namespaced_job_status(
                     name=self.k8s_job_name, namespace=self.namespace
                 )
+                
+                if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                    logger.info(f"[K8S_DEBUG] Job status - completed: {job_status.status.completion_time is not None}, failed: {job_status.status.failed}")
 
                 if job_status.status.completion_time:
                     # Job completed successfully
@@ -541,7 +553,10 @@ class K8sJobRun:
                 time.sleep(5)
 
             except ApiException as e:
-                logger.error(f"Error checking job status: {e}")
+                if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                    logger.error(f"[K8S_DEBUG] Error checking job status: {type(e).__name__}: {e}")
+                else:
+                    logger.error(f"Error checking job status: {e}")
                 time.sleep(5)
 
         # Timeout reached
@@ -554,9 +569,15 @@ class K8sJobRun:
         """Retrieve logs from the job's pod"""
         try:
             # Get pods for this job
+            if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                logger.info(f"[K8S_DEBUG] Listing pods for job {self.k8s_job_name} in namespace: {self.namespace}")
+            
             pods = self.k8s_core_v1.list_namespaced_pod(
                 namespace=self.namespace, label_selector=f"job-name={self.k8s_job_name}"
             )
+            
+            if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                logger.info(f"[K8S_DEBUG] Found {len(pods.items)} pod(s) for job {self.k8s_job_name}")
 
             if not pods.items:
                 return "[QFC/Worker/K8s/1001] No pods found for job."
@@ -800,7 +821,11 @@ def get_k8s_batch_client():
     # Reload config each time to ensure fresh configuration
     try:
         k8s_config.load_incluster_config()
-        logger.info("Loaded in-cluster Kubernetes configuration")
+        if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+            config = client.Configuration.get_default_copy()
+            logger.info(f"Loaded in-cluster Kubernetes configuration - API host: {config.host}")
+        else:
+            logger.info("Loaded in-cluster Kubernetes configuration")
         _k8s_config_loaded = True
     except k8s_config.ConfigException:
         try:
@@ -813,7 +838,12 @@ def get_k8s_batch_client():
 
     # Always create a fresh client
     _k8s_batch_v1_client = client.BatchV1Api()
-    logger.info("Initialized Kubernetes BatchV1Api client")
+    
+    if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+        config = client.Configuration.get_default_copy()
+        logger.info(f"Initialized Kubernetes BatchV1Api client with host: {config.host}")
+    else:
+        logger.info("Initialized Kubernetes BatchV1Api client")
 
     return _k8s_batch_v1_client
 
@@ -823,20 +853,22 @@ def cancel_orphaned_k8s_workers() -> None:
     try:
         batch_v1 = get_k8s_batch_client()
         namespace = getattr(settings, "QFIELDCLOUD_K8S_NAMESPACE", "default")
+        
+        if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+            logger.info(f"[K8S_DEBUG] Listing jobs in namespace: {namespace}")
+        
+        # Get all jobs with the qfc-worker prefix
+        jobs = batch_v1.list_namespaced_job(namespace=namespace)
+        
+        if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+            logger.info(f"[K8S_DEBUG] Successfully listed {len(jobs.items)} jobs")
 
-        # Get all jobs with our label
-        jobs = batch_v1.list_namespaced_job(
-            namespace=namespace, label_selector="app=qfieldcloud-worker"
-        )
+        # Get active job IDs from the database
+        from qfieldcloud.core.models import Job
 
-        # Get all active job IDs from the database
-        active_job_ids = set(
-            Job.objects.filter(
-                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED]
-            ).values_list("id", flat=True)
-        )
+        active_job_ids = set(Job.objects.values_list("id", flat=True))
 
-        # Cancel jobs that are not in the active list
+        # Cancel jobs that are not in the active jobs list
         for job in jobs.items:
             # Extract job_id from the job name (format: qfc-worker-{job_id})
             job_name = job.metadata.name
@@ -846,12 +878,22 @@ def cancel_orphaned_k8s_workers() -> None:
             job_id = job_name.replace("qfc-worker-", "").replace("-", "")
 
             if job_id not in active_job_ids:
-                logger.info(f"Canceling orphaned K8s job: {job_name}")
+                if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                    logger.info(f"[K8S_DEBUG] Deleting orphaned job: {job_name} in namespace: {namespace}")
+                else:
+                    logger.info(f"Canceling orphaned K8s job: {job_name}")
+                    
                 batch_v1.delete_namespaced_job(
                     name=job_name, namespace=namespace, propagation_policy="Background"
                 )
+                
+                if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+                    logger.info(f"[K8S_DEBUG] Successfully deleted job: {job_name}")
     except Exception as e:
-        logger.error(f"Failed to cancel orphaned K8s workers: {e}")
+        if os.getenv("QFIELDCLOUD_K8S_DEBUG"):
+            logger.error(f"[K8S_DEBUG] Failed to cancel orphaned K8s workers: {type(e).__name__}: {e}")
+        else:
+            logger.error(f"Failed to cancel orphaned K8s workers: {e}")
 
 
 # Compatibility aliases - use these instead of the original Docker-based classes
