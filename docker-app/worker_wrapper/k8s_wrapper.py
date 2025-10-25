@@ -134,14 +134,11 @@ class K8sJobRun:
         ]
 
     def get_volume_mounts(self) -> list[client.V1VolumeMount]:
-        # Mount to a job-specific subdirectory to avoid conflicts
-        job_subpath = f"jobs/{self.job_id}"
-
+        # Mount the entire shared PVC - worker and job both use /io/jobs/{job_id}
         volume_mounts = [
             client.V1VolumeMount(
                 name="shared-io",
                 mount_path="/io",
-                sub_path=job_subpath,
                 read_only=False,
             ),
         ]
