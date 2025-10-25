@@ -128,19 +128,20 @@ class K8sJobRun:
         else:
             debug_flags = []
 
-        # Use absolute path for entrypoint since we change working directory
-        # entrypoint.py is at /usr/src/app/entrypoint.py per Dockerfile WORKDIR
+        # entrypoint.py is relative to WORKDIR /usr/src/app in Dockerfile
         return [
             p % context
-            for p in ["python3", *debug_flags, "/usr/src/app/entrypoint.py", *self.command]
+            for p in ["python3", *debug_flags, "entrypoint.py", *self.command]
         ]
 
     def get_volume_mounts(self) -> list[client.V1VolumeMount]:
-        # Mount the entire shared PVC - worker and job both use /io/jobs/{job_id}
+        # Mount job-specific directory at /io so QGIS writes to correct location
+        # QGIS container uses absolute path /io/feedback.json
         volume_mounts = [
             client.V1VolumeMount(
                 name="shared-io",
                 mount_path="/io",
+                sub_path=f"jobs/{self.job_id}",  # Mount only the job directory
                 read_only=False,
             ),
         ]
@@ -394,14 +395,13 @@ class K8sJobRun:
         env_vars = self.get_environment_vars()
 
         # Create container - no resource limits to avoid cgroup allocation issues
-        # Set working directory to job-specific path so feedback.json writes to correct location
+        # Mount job directory at /io via subPath, so QGIS writes to /io/feedback.json correctly
         container = client.V1Container(
             name="qgis-worker",
             image=settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
             command=command,
             env=env_vars,
             volume_mounts=volume_mounts,
-            working_dir=f"/io/jobs/{self.job_id}",
         )
 
         # Add debug port if enabled
