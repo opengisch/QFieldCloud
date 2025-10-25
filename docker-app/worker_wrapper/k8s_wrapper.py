@@ -391,7 +391,7 @@ class K8sJobRun:
         volumes = self.get_volumes()
         env_vars = self.get_environment_vars()
 
-        # Create container with volumes, env vars, and actual command
+        # Create container - no resource limits to avoid cgroup allocation issues
         container = client.V1Container(
             name="qgis-worker",
             image=settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
@@ -399,6 +399,14 @@ class K8sJobRun:
             env=env_vars,
             volume_mounts=volume_mounts,
         )
+
+        # Add debug port if enabled
+        if self.debug_qgis_container_is_enabled:
+            container.ports = [
+                client.V1ContainerPort(
+                    container_port=int(settings.DEBUG_QGIS_DEBUGPY_PORT), protocol="TCP"
+                )
+            ]
 
         # Pod spec with volumes and labels
         pod_template = client.V1PodTemplateSpec(
@@ -417,10 +425,11 @@ class K8sJobRun:
             ),
         )
 
-        # Create job spec
+        # Create job spec with timeout
         job_spec = client.V1JobSpec(
             template=pod_template,
             backoff_limit=0,  # Don't retry failed jobs
+            active_deadline_seconds=self.container_timeout_secs,
         )
 
         # Create job object
