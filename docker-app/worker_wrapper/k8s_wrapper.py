@@ -387,18 +387,30 @@ class K8sJobRun:
         """Run a Kubernetes Job and wait for completion"""
         assert settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
 
-        # Start with absolute bare minimum - just a simple container
-        # No volumes, no env vars, no resource limits, no security context
+        volume_mounts = self.get_volume_mounts()
+        volumes = self.get_volumes()
+
+        # Create container with volumes
         container = client.V1Container(
             name="qgis-worker",
             image=settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
-            command=["sleep", "30"],  # Just sleep for 30 seconds to test pod creation
+            command=["sleep", "30"],  # Still testing with sleep
+            volume_mounts=volume_mounts,
         )
 
-        # Minimal pod spec
+        # Pod spec with volumes and labels
         pod_template = client.V1PodTemplateSpec(
+            metadata=client.V1ObjectMeta(
+                labels={
+                    "app": f"{getattr(settings, 'ENVIRONMENT', 'dev')}-worker",
+                    "type": self.job.type,
+                    "job-id": str(self.job.id),
+                    "project-id": str(self.job.project_id),
+                }
+            ),
             spec=client.V1PodSpec(
                 containers=[container],
+                volumes=volumes,
                 restart_policy="Never",
             ),
         )
