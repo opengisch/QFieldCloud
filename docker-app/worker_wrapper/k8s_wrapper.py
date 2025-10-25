@@ -453,6 +453,8 @@ class K8sJobRun:
                 service_account_name=getattr(
                     settings, "QFIELDCLOUD_K8S_SERVICE_ACCOUNT", "default"
                 ),
+                # Disable automatic service account token mounting since QGIS jobs don't need K8s API access
+                automount_service_account_token=False,
             ),
         )
 
