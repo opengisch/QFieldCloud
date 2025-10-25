@@ -65,7 +65,9 @@ class K8sJobRun:
         try:
             self.job_id = job_id
             self.job = self.job_class.objects.select_related().get(id=job_id)
-            self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
+            # Use shared PVC mounted at /io, create job-specific directory
+            self.shared_tempdir = Path(f"/io/jobs/{job_id}")
+            self.shared_tempdir.mkdir(parents=True, exist_ok=True)
 
             # Use cached Kubernetes clients
             self.k8s_core_v1 = client.CoreV1Api()
