@@ -415,14 +415,6 @@ class K8sJobRun:
             env=env_vars,
             volume_mounts=volume_mounts,
             resources=resources,
-            # Security context to comply with restricted PodSecurity standards
-            security_context=client.V1SecurityContext(
-                allow_privilege_escalation=False,
-                run_as_non_root=True,
-                run_as_user=1000,  # Non-root user
-                capabilities=client.V1Capabilities(drop=["ALL"]),
-                seccomp_profile=client.V1SeccompProfile(type="RuntimeDefault"),
-            ),
         )
 
         # Add debug port if enabled
