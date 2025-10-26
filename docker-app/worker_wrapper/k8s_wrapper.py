@@ -218,6 +218,7 @@ class K8sJobRun:
             "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
             "QFIELDCLOUD_TOKEN": token.key,
             "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+            "QFIELDCLOUD_HOST": settings.QFIELDCLOUD_HOST,
             "JOB_ID": self.job_id,
             "PROJ_DOWNLOAD_DIR": "/transformation_grids",
             "QT_QPA_PLATFORM": "offscreen",
