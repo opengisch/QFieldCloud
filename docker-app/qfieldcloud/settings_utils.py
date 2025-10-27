@@ -49,11 +49,11 @@ def get_storages_config() -> StoragesConfig:
             "bucket_name": os.environ["STORAGE_BUCKET_NAME"],
             "endpoint_url": os.environ["STORAGE_ENDPOINT_URL"],
         }
-        
+
         # Only add region_name if it's set and not empty
         if os.environ.get("STORAGE_REGION_NAME"):
             storage_options["region_name"] = os.environ["STORAGE_REGION_NAME"]
-            
+
         raw_storages["default"] = {
             "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
             "OPTIONS": storage_options,

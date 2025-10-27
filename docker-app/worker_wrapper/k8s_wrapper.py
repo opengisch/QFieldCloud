@@ -225,20 +225,29 @@ class K8sJobRun:
         }
 
         # Add storage environment variables for S3 access
-        if hasattr(settings, 'STORAGES'):
+        if hasattr(settings, "STORAGES"):
             # Pass through the STORAGES configuration
-            environment['STORAGES'] = json.dumps(settings.STORAGES)
-        
+            environment["STORAGES"] = json.dumps(settings.STORAGES)
+
         # Add STORAGE environment variables if available (matching Docker pattern)
-        for storage_var in ['STORAGE_ACCESS_KEY_ID', 'STORAGE_SECRET_ACCESS_KEY', 'STORAGE_BUCKET_NAME', 
-                           'STORAGE_REGION_NAME', 'STORAGE_ENDPOINT_URL']:
+        for storage_var in [
+            "STORAGE_ACCESS_KEY_ID",
+            "STORAGE_SECRET_ACCESS_KEY",
+            "STORAGE_BUCKET_NAME",
+            "STORAGE_REGION_NAME",
+            "STORAGE_ENDPOINT_URL",
+        ]:
             if hasattr(settings, storage_var):
                 environment[storage_var] = getattr(settings, storage_var)
             elif storage_var in os.environ:
                 environment[storage_var] = os.environ[storage_var]
 
         # Add additional storage-related environment variables
-        for storage_var in ['STORAGES_PROJECT_DEFAULT_STORAGE', 'MINIO_API_PORT', 'MINIO_BROWSER_PORT']:
+        for storage_var in [
+            "STORAGES_PROJECT_DEFAULT_STORAGE",
+            "MINIO_API_PORT",
+            "MINIO_BROWSER_PORT",
+        ]:
             if hasattr(settings, storage_var):
                 environment[storage_var] = getattr(settings, storage_var)
             elif storage_var in os.environ:
@@ -694,6 +703,9 @@ class K8sApplyDeltaJobRun(K8sJobRun):
         ).update(status=Delta.Status.STARTED)
 
         self.job.deltas_to_apply.update(last_status=Delta.Status.STARTED)
+
+        # Ensure the directory exists before writing (mimics Docker tempfile.mkdtemp behavior)
+        self.shared_tempdir.mkdir(parents=True, exist_ok=True)
 
         with open(self.shared_tempdir.joinpath("deltafile.json"), "w") as f:
             json.dump(deltafile_contents, f)
