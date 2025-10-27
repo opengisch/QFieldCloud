@@ -43,15 +43,20 @@ def get_storages_config() -> StoragesConfig:
                 "Envvar STORAGES should be a parsable JSON string!"
             )
     else:
+        storage_options = {
+            "access_key": os.environ["STORAGE_ACCESS_KEY_ID"],
+            "secret_key": os.environ["STORAGE_SECRET_ACCESS_KEY"],
+            "bucket_name": os.environ["STORAGE_BUCKET_NAME"],
+            "endpoint_url": os.environ["STORAGE_ENDPOINT_URL"],
+        }
+        
+        # Only add region_name if it's set and not empty
+        if os.environ.get("STORAGE_REGION_NAME"):
+            storage_options["region_name"] = os.environ["STORAGE_REGION_NAME"]
+            
         raw_storages["default"] = {
             "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
-            "OPTIONS": {
-                "access_key": os.environ["STORAGE_ACCESS_KEY_ID"],
-                "secret_key": os.environ["STORAGE_SECRET_ACCESS_KEY"],
-                "bucket_name": os.environ["STORAGE_BUCKET_NAME"],
-                "region_name": os.environ["STORAGE_REGION_NAME"],
-                "endpoint_url": os.environ["STORAGE_ENDPOINT_URL"],
-            },
+            "OPTIONS": storage_options,
             "QFC_IS_LEGACY": True,
         }
 
