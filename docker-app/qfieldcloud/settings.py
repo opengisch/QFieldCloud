@@ -63,7 +63,9 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 # CSRF trusted origins for secure form submissions
 # Format: 'https://domain1.com https://domain2.com'
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(" ") if origin.strip()
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(" ")
+    if origin.strip()
 ]
 
 # A tuple representing an HTTP header/value combination that signifies a request is secure, which is important for Django's CSRF protection.
