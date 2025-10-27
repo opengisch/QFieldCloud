@@ -33,7 +33,7 @@ from rest_framework import permissions
 
 from qfieldcloud.authentication import views as auth_views
 from qfieldcloud.core.admin import qfc_admin_site
-from qfieldcloud.core.views.redirect_views import redirect_to_admin_project_view
+from qfieldcloud.core.views.redirect_views import redirect_to_admin_project_view, redirect_to_project_api_view
 from qfieldcloud.filestorage.views import (
     compatibility_file_crud_view,
     compatibility_file_list_view,
@@ -105,4 +105,8 @@ urlpatterns = [
     path("invitations/", include("invitations.urls", namespace="invitations")),
     path("__debug__/", include("debug_toolbar.urls")),
     path("a/<str:username>/<str:project_name>/", redirect_to_admin_project_view),
+    # Add project overview URL pattern for admin "view on site" functionality
+    path("projects/<str:username>/<str:project>/", 
+         redirect_to_project_api_view, 
+         name="project_overview"),
 ]
