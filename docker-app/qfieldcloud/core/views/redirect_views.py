@@ -27,7 +27,7 @@ def redirect_to_project_api_view(
     request: HttpRequest, username: str, project: str
 ) -> HttpResponseRedirect | HttpResponsePermanentRedirect:
     """Redirect to the API endpoint for project overview.
-    
+
     This provides a clean URL for Django admin's 'view on site' functionality
     while redirecting to the actual API endpoint.
     """

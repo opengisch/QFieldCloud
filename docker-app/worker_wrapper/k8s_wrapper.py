@@ -224,6 +224,26 @@ class K8sJobRun:
             "QT_QPA_PLATFORM": "offscreen",
         }
 
+        # Add storage environment variables for S3 access
+        if hasattr(settings, 'STORAGES'):
+            # Pass through the STORAGES configuration
+            environment['STORAGES'] = json.dumps(settings.STORAGES)
+        
+        # Add AWS S3 environment variables if available
+        for aws_var in ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_STORAGE_BUCKET_NAME', 
+                        'AWS_S3_REGION_NAME', 'AWS_S3_ENDPOINT_URL', 'STORAGE_TYPE']:
+            if hasattr(settings, aws_var):
+                environment[aws_var] = getattr(settings, aws_var)
+            elif aws_var in os.environ:
+                environment[aws_var] = os.environ[aws_var]
+
+        # Add additional storage-related environment variables
+        for storage_var in ['STORAGES_PROJECT_DEFAULT_STORAGE', 'MINIO_API_PORT', 'MINIO_BROWSER_PORT']:
+            if hasattr(settings, storage_var):
+                environment[storage_var] = getattr(settings, storage_var)
+            elif storage_var in os.environ:
+                environment[storage_var] = os.environ[storage_var]
+
         for key, value in environment.items():
             env_vars.append(client.V1EnvVar(name=key, value=str(value)))
 
