@@ -65,10 +65,6 @@ h1, h2, h3, h4, h5, h6 {
   background-color: rgba(230, 236, 234, 0.5);
 }
 
-.qfc-header-logo {
-  height: 1.5rem;
-}
-
 .required label::after {
   content: ' *';
   color: red;
