@@ -1,0 +1,43 @@
+{% extends 'account/base.html' %}
+{% load i18n %}
+{% load bootstrap4 %}
+
+{% block title_contents %}{% trans 'Sign-In' %}{% endblock %}
+
+{% block extrahead %}
+<meta name="description" content="{% trans 'Sign in QFieldCloud to collaborate and merge the data collected by your team in QField. From small individual projects to large data collection campaigns, QFieldCloud removes the pain from synchronizing and merging data.' %}" />
+{% endblock extrahead %}
+
+
+{% block content %}
+
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">{% trans 'Sign-In' %}</h5>
+
+    <form action="{% url 'account_login' %}" method="POST">
+      {% csrf_token %}
+
+      {% bootstrap_form form %}
+
+      {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+      {% endif %}
+
+      <div class="float-right">
+        <a class="btn btn-default" href="{% url 'account_reset_password' %}">{% trans 'Forgot Password?' %}</a>
+
+        {% if is_signup_open %}
+        <a class="btn btn-outline-success" href="{% url 'account_signup' %}">{% trans 'Register' %}</a>
+        {% endif %}
+
+        <button class="btn btn-primary" type="submit">{% trans 'Sign In' %}</button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+{% include "socialaccount/snippets/login.html" %}
+
+{% endblock content %}
