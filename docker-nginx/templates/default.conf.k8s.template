@@ -40,56 +40,30 @@ upstream django {
   # the number of keepalive connections comes from the number Django workers we have
   keepalive 32;
 
-  # Use Docker DNS resolution to dynamically resolve the app backend hostname for Docker Compose
-  # For Kubernetes, use 127.0.0.1:8000 since containers are in the same pod
+  # Use localhost since Django app is in the same pod
   # `max_fails=1` and `fail_timeout=1s` ensures Nginx retries on almost every request from `loading.html`
-  server app:8000 max_fails=1 fail_timeout=1s resolve;
+  server 127.0.0.1:8000 max_fails=1 fail_timeout=1s;
 }
 
 server {
   listen 80;
   server_name ${QFIELDCLOUD_HOST};
 
-  # cerbot
-  location /.well-known/acme-challenge/ {
-    root /var/www/certbot;
-  }
-
-  # prevent access by IP
-  if ($http_host !~ "${QFIELDCLOUD_HOST}(:${WEB_HTTP_PORT})?") {
-    return 444;
-  }
-
-  # use $WEB_HTTPS_PORT in the configuration, since it might be different from 443 (e.g. localhost)
-  location / {
-    return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
-  }
-}
-
-server {
-  listen 443 ssl;
-
-  ssl_certificate     ${QFIELDCLOUD_TLS_CERT};
-  ssl_certificate_key ${QFIELDCLOUD_TLS_KEY};
-
-  ssl_dhparam ${QFIELDCLOUD_TLS_DHPARAMS};
-  include /etc/nginx/options-ssl-nginx.conf;
-
   access_log /var/log/nginx/access.log json-logger;
   error_log /var/log/nginx/error.log ${NGINX_ERROR_LOG_LEVEL};
 
-  server_name ${QFIELDCLOUD_HOST} nginx;
   client_max_body_size 10G;
   keepalive_timeout 5;
 
   # path for static files (only needed for serving local staticfiles)
   root /var/www/html/;
 
-  # upgrade to https
-  error_page 497 https://$host:${WEB_HTTPS_PORT}$request_uri;
-
-  # prevent access by IP
-  if ($http_host !~ "${QFIELDCLOUD_HOST}(:${WEB_HTTPS_PORT})?") {
+  # prevent access by IP (adapted for Kubernetes - check X-Forwarded-Host from Traefik)
+  set $forwarded_host $http_x_forwarded_host;
+  if ($forwarded_host = "") {
+    set $forwarded_host $http_host;
+  }
+  if ($forwarded_host !~ "${QFIELDCLOUD_HOST}") {
     return 444;
   }
 
