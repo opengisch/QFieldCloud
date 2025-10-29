@@ -136,6 +136,7 @@ INSTALLED_APPS = [
     "constance",
     "django_extensions",
     "bootstrap4",
+    "sri",
     "django_cleanup.apps.CleanupConfig",
 ]
 
@@ -181,6 +182,7 @@ TEMPLATES = [
         "OPTIONS": {
             "builtins": [
                 "qfieldcloud.core.templatetags.filters",
+                "qfieldcloud.core.templatetags.smooth_timedelta",
             ],
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -264,6 +266,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "qfieldcloud", "core", "staticfiles"),
 ]
+
+BOOTSTRAP4 = {
+    "success_css_class": " ",
+    "bound_css_class": " ",
+    "required_css_class": "required",
+}
 
 MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
@@ -533,7 +541,7 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
 
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
-###########################
+AXES_LOCKOUT_TEMPLATE = "axes/lockedout.html"
 # The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
 AXES_FAILURE_LIMIT = 5
 # Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)
