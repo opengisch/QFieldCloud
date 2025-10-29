@@ -25,8 +25,7 @@
   <!-- Navbar -->
   <nav class="navbar navbar-expand-md navbar-dark nav-fill w-100 bg-primary">
     <a href="{% url 'index' %}">
-      <img src="{% static 'logo_sidetext_white.svg' %}" alt="QFieldCloud" class="logo-nav qfc-header-logo ml-1"
-      >
+      <img src="{% static 'logo_sidetext_white.svg' %}" alt="QFieldCloud" class="logo-nav qfc-header-logo ml-1">
     </a>
 
 
@@ -35,19 +34,19 @@
   <!-- Page content -->
   <div class="container w-100">
     <div class="row my-3">
-  <div class="flex-shrink-0 col-12">
-  <div class="row">
-    <div class="col-lg-6 offset-lg-3">
-      <p class="text-center">
-      <img src="{% static 'logo_undertext.svg' %}" alt="QFieldCloud" class="logo-nav" style="height: 15rem">
-      </p>
+      <div class="flex-shrink-0 col-12">
+        <div class="row">
+          <div class="col-lg-6 offset-lg-3">
+            <p class="text-center">
+              <img src="{% static 'logo_undertext.svg' %}" alt="QFieldCloud" class="logo-nav" style="height: 15rem">
+            </p>
 
-      {% block content %}{% endblock content %}
+            {% block content %}{% endblock content %}
 
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-</div>
 </div>
 
 
@@ -68,7 +67,6 @@
 
   {% sri_static 'js/vendor/jquery.js' %}
   {% sri_static 'js/vendor/popper.min.js' %}
-  {% sri_static 'js/vendor/bootstrap.min.js' %}
   {% sri_static 'js/vendor/bootstrap-autocomplete.js' %}
 
   {% block additional_js %}{% endblock additional_js %}
