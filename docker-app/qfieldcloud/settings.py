@@ -182,7 +182,6 @@ TEMPLATES = [
         "OPTIONS": {
             "builtins": [
                 "qfieldcloud.core.templatetags.filters",
-                "qfieldcloud.core.templatetags.smooth_timedelta",
             ],
             "context_processors": [
                 "django.template.context_processors.debug",
