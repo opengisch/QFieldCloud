@@ -1,0 +1,48 @@
+{% extends 'account/base.html' %}
+{% load i18n %}
+{% load bootstrap4 %}
+
+{% block title_contents %}{% trans 'Registration' %}{% endblock %}
+
+
+{% block content %}
+
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">{% trans 'Registration' %}</h5>
+    <p class="card-text">
+      {% url 'account_login' as login_url %}
+      {% blocktrans with login_url=login_url %}
+        Already have an account? Proceed to the <a href="{{ login_url }}">sign-in form</a>.
+      {% endblocktrans %}
+    </p>
+  </div>
+  <div class="card-body">
+    <form action="{% url 'account_signup' %}" method="POST">
+      {% csrf_token %}
+      {% bootstrap_form form %}
+
+      {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+      {% endif %}
+
+      <div class="float-right">
+        <button class="btn btn-success" type="submit">{% trans 'Register' %}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block additional_js %}
+<script type="application/javascript">
+  try {
+    const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    document.querySelector("#id_timezone").value = tzName;
+  } catch(err) {
+    console.error("Failed to automatically select timezone: ", err);
+  }
+</script>
+{% endblock additional_js %}
+
+{% endblock content %}
