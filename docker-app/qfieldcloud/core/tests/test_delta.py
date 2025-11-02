@@ -114,7 +114,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def fail(self, msg: str = "", job: Job | None = None) -> NoReturn:
         if job:
-            msg += f"\n\nJobType:{job.type}\n"
+            msg += f"\n\nJobType: {job.type}\n"
             msg += f"Output:\n================\n{job.output}\n================"
 
             if job.feedback:
