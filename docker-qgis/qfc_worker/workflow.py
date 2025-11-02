@@ -144,23 +144,24 @@ class Step:
         id: str,
         name: str,
         method: Callable,
-        arguments: dict[str, Any] = {},
-        return_names: list[str] = [],
-        outputs: list[str] = [],
-    ):
+        arguments: dict[str, Any] | None = None,
+        return_names: list[str] | None = None,
+        outputs: list[str] | None = None,
+    ) -> None:
         self.id = id
         self.name = name
         self.method = method
-        self.arguments = arguments
+        self.arguments = arguments or {}
         # names of method return values
-        self.return_names = return_names
+        self.return_names = return_names or []
         # names of method return values that will be part of the outputs. They are assumed to be safe to be shown to the user.
-        self.outputs = outputs
+        self.outputs = outputs or []
+        # stage of the step execution: 0 = not started, 1 = in progress, 2 = completed
         self.stage = 0
 
 
 class StepOutput:
-    def __init__(self, step_id: str, return_name: str):
+    def __init__(self, step_id: str, return_name: str) -> None:
         self.step_id = step_id
         self.return_name = return_name
 
