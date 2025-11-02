@@ -49,6 +49,7 @@ RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
 TMP_FILE = Path("/tmp")
+TRANSFORMATION_GRIDS_PATH = "/transformation_grids"
 
 
 class QgisException(Exception):
@@ -124,7 +125,7 @@ class JobRun:
     def get_volumes(self) -> list[str]:
         volumes = [
             f"{str(self.shared_tempdir)}:/io/:rw",
-            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro",
+            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:{TRANSFORMATION_GRIDS_PATH}:ro",
         ]
 
         return volumes
@@ -161,7 +162,7 @@ class JobRun:
             "QFIELDCLOUD_TOKEN": token.key,
             "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
             "JOB_ID": self.job_id,
-            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
+            "PROJ_DOWNLOAD_DIR": TRANSFORMATION_GRIDS_PATH,
             "QT_QPA_PLATFORM": "offscreen",
         }
 
