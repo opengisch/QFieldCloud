@@ -333,16 +333,15 @@ class JobRun:
         if settings.DEBUG:
             if self.debug_qgis_container_is_enabled:
                 # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
-                # otherwise the vscode deubgger won't be able to connect
+                # otherwise the vscode debugger won't be able to connect
                 # NOTE the port must be passed here and not in the `docker-compose` file,
                 # because the `qgis` container is started with docker in docker and the `docker-compose`
                 # configuration is valid only for the brief moment when the stack is built and started,
                 # but not when new `qgis` containers are started dynamically by the worker wrapper
-                ports.update(
-                    {
-                        f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
-                    }
-                )
+                ports = {
+                    **ports,
+                    f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
+                }
 
                 logger.debug(
                     f"Exposing ports from the qgis container for debugging: {ports=}"
@@ -351,17 +350,16 @@ class JobRun:
             if settings.DEBUG_QGIS_WORKER_HOST_PATH:
                 debug_host_path = Path(settings.DEBUG_QGIS_WORKER_HOST_PATH)
 
-                volumes.extend(
-                    [
-                        # allow local development for `docker-qgis`
-                        f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
-                        f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
-                        # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}` within the worker container.
-                        f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync:ro",
-                        # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}` within the worker container.
-                        f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python:ro",
-                    ]
-                )
+                volumes = [
+                    *volumes,
+                    # allow local development for `docker-qgis`
+                    f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
+                    f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
+                    # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}` within the worker container.
+                    f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync:ro",
+                    # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}` within the worker container.
+                    f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python:ro",
+                ]
 
                 logger.debug(
                     f"Mounting host path into qgis container for debugging: {volumes=}"
