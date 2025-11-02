@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import docker
+import docker.client
 import docker.errors
 import requests
 import sentry_sdk
