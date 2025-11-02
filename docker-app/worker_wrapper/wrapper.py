@@ -135,7 +135,6 @@ class JobRun:
         return ports
 
     def get_environment(self) -> dict[str, str]:
-        environment = {}
         extra_envvars = {}
 
         pgservice_file_contents = ""
