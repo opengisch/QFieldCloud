@@ -51,6 +51,10 @@ TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
 TMP_FILE = Path("/tmp")
 TRANSFORMATION_GRIDS_PATH = "/transformation_grids"
+"""Path inside the worker container where the transformation grids volume `settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME` is mounted."""
+
+TOKEN_EXPIRATION_TIME_BUFFER_S = 60
+"""Extra time in seconds for the dedicated worker token to keep the token valid, in addition to `JobRun.container_timeout_secs`. Useful when the worker takes longer to start."""
 
 
 class QgisException(Exception):
@@ -150,10 +154,14 @@ class JobRun:
             else:
                 raise NotImplementedError(f"Unknown secret type: {secret.type}")
 
+        # expire the token a bit after the container timeout to avoid edge cases
+        token_expires_at = timezone.now() + timedelta(
+            seconds=self.container_timeout_secs + TOKEN_EXPIRATION_TIME_BUFFER_S
+        )
         token = AuthToken.objects.create(
             user=self.job.created_by,
             client_type=AuthToken.ClientType.WORKER,
-            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+            expires_at=token_expires_at,
         )
 
         environment = {
