@@ -356,10 +356,10 @@ class JobRun:
                         # allow local development for `docker-qgis`
                         f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
                         f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
-                        # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
-                        f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync.py:ro",
-                        # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`"
-                        f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python.py:ro",
+                        # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}` within the worker container.
+                        f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync:ro",
+                        # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}` within the worker container.
+                        f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python:ro",
                     ]
                 )
 
