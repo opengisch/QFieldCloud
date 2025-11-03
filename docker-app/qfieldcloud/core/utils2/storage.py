@@ -296,7 +296,6 @@ def file_response(
             return_file.open(),
             as_attachment=as_attachment,
             filename=filename,
-            content_type="text/html",
         )
 
     raise Exception(
