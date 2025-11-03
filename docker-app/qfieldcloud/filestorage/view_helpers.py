@@ -326,7 +326,6 @@ def download_field_file(
             field_file.open(),
             as_attachment=as_attachment,
             filename=filename,
-            content_type="text/html",
         )
 
     raise Exception(
