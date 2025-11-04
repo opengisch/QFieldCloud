@@ -33,7 +33,7 @@ class JobPermissions(permissions.BasePermission):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 required=True,
-                description="File to be uploaded",
+                description="Project id to get the jobs for.",
             ),
             OpenApiParameter(
                 name="force",
@@ -106,7 +106,7 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
         qs = Job.objects.select_subclasses()
 
         if self.action == "list":
-            project_id = self.request.data.get("project_id")
+            project_id = self.request.query_params.get("project_id")
             project = generics.get_object_or_404(Project, pk=project_id)
             qs = qs.filter(project=project)
 
