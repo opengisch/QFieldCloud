@@ -329,6 +329,29 @@ def get_qgis_project_file(project_id: str) -> str | None:
     return None
 
 
+def check_legacy_s3_file_exists(key: str, should_raise: bool = True) -> bool:
+    """Check to see if an object exists on S3.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    client = get_s3_client()
+    try:
+        client.head_object(
+            Bucket=get_legacy_s3_credentials()["OPTIONS"]["bucket_name"],
+            Key=key,
+        )
+        return True
+    except ClientError as e:
+        if e.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 404:
+            return False
+        else:
+            if should_raise:
+                raise e
+            else:
+                return False
+
+
 def check_s3_key(key: str) -> str | None:
     """Check to see if an object exists on S3. It it exists, the function
     returns the sha256 of the file from the metadata
