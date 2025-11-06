@@ -136,6 +136,8 @@ INSTALLED_APPS = [
     "constance",
     "django_extensions",
     "bootstrap4",
+    "sri",
+    # To ensure that exceptions inside other apps' signal handlers do not affect the integrity of file deletions within transactions, `django_cleanup` should be placed last in `INSTALLED_APPS`. See https://github.com/un1t/django-cleanup#configuration
     "django_cleanup.apps.CleanupConfig",
 ]
 
@@ -187,6 +189,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "qfieldcloud.core.context_processors.signup_open",
             ],
         },
     },
@@ -264,6 +267,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "qfieldcloud", "core", "staticfiles"),
 ]
+
+BOOTSTRAP4 = {
+    "success_css_class": " ",
+    "bound_css_class": " ",
+    "required_css_class": "required",
+}
 
 MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
@@ -534,6 +543,8 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
 ###########################
+# Template for the page shown when the user is locked out of their account for too many failed attempts.
+AXES_LOCKOUT_TEMPLATE = "axes/lockedout.html"
 # The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
 AXES_FAILURE_LIMIT = 5
 # Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)

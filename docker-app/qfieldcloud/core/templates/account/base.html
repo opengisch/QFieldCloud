@@ -1,0 +1,74 @@
+{% load i18n sri static %}
+
+<!doctype html>
+<html lang="en" class="h-100">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="color-scheme" content="dark light">
+
+  {% sri_static 'css/vendor.css' %}
+  {% sri_static 'css/qfieldcloud.css' %}
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'favicon.ico' %}" />
+
+  <title>
+    {% block title %}
+      {% block title_contents %}{{ title }}{% endblock title_contents %} | {{ site_title|default:_('QFieldCloud') }}
+    {% endblock title %}
+  </title>
+
+  {% block extrahead %}{% endblock extrahead %}
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-md navbar-dark nav-fill w-100 bg-primary">
+    <a href="{% url 'index' %}">
+      <img src="{% static 'logo_sidetext_white.svg' %}" alt="QFieldCloud" class="logo-nav qfc-header-logo ml-1">
+    </a>
+
+
+  </nav>
+
+  <!-- Page content -->
+  <div class="container w-100">
+    <div class="row my-3">
+      <div class="flex-shrink-0 col-12">
+        <div class="row">
+          <div class="col-lg-6 offset-lg-3">
+            <p class="text-center">
+              <img src="{% static 'logo_undertext.svg' %}" alt="QFieldCloud" class="logo-nav" style="height: 15rem">
+            </p>
+
+            {% block content %}{% endblock content %}
+
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+
+  <!-- Footer (kept exactly like original) -->
+  <footer class="footer mt-auto py-3">
+    <div class="container">
+      <nav class="navbar navbar-expand-md">
+        <div class="collapse navbar-collapse" id="navbarText">
+          {% blocktrans %}
+          <span class="text-muted navbar-text">
+            Made with 💝 by <a href="//opengis.ch" target="blank">OPENGIS.ch</a>. ©
+          </span>
+          {% endblocktrans %}
+        </div>
+      </nav>
+    </div>
+  </footer>
+
+  {% sri_static 'js/vendor/jquery.js' %}
+  {% sri_static 'js/vendor/popper.min.js' %}
+  {% sri_static 'js/vendor/bootstrap.min.js' %}
+
+  {% block additional_js %}{% endblock additional_js %}
+</body>
+</html>
