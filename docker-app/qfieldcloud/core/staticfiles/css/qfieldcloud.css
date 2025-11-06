@@ -1,0 +1,71 @@
+:root {
+  --bs-gray: #6c757d;
+  --bs-gray-dark: #343a40;
+  --bs-gray-light: #f5f5f5;
+  --bs-primary: #0d6efd;
+  --bs-secondary: #6c757d;
+  --bs-success: #87af87;
+  --bs-info: #0dcaf0;
+  --bs-warning: #9e6a03;
+  --bs-danger: #dc3545;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.container {
+  width: auto;
+  max-width: 1024px;
+  padding: 0 15px;
+}
+
+.footer {
+  background-color: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+  .w-sm-100 {
+    width: 100% !important;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}
+
+.qfc-header-logo {
+  height: 1.5rem;
+}
+
+.ml-5rem {
+  margin-left: 5rem;
+}
+
+.toasts {
+  position: absolute;
+  top: 5rem;
+  right: 1rem;
+  z-index: 10000;
+}
+
+.toast-logo {
+  max-height: 2rem;
+  max-width: 2rem;
+}
+
+.qfc-cookie-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 2147483645;
+  box-sizing: border-box;
+  width: 100%;
+  background-color: rgba(230, 236, 234, 0.5);
+}
+
+.required label::after {
+  content: ' *';
+  color: red;
+}

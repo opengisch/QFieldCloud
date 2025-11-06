@@ -21,7 +21,7 @@
     <customproperties>
       <Option></Option>
     </customproperties>
-    <layer-tree-layer checked="Qt::Checked" expanded="1" id="point_6ed9e32d_b677_466f_ae6b_c86d48412d22" legend_exp="" legend_split_behavior="0" name="point" patch_size="-1,-1" providerKey="postgres" source="dbname='test' host='geodb' port=5432 user='postgres' sslmode=disable key='tid' checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;point&quot;">
+    <layer-tree-layer checked="Qt::Checked" expanded="1" id="point_6ed9e32d_b677_466f_ae6b_c86d48412d22" legend_exp="" legend_split_behavior="0" name="point" patch_size="-1,-1" providerKey="postgres" source="dbname='test_postgis_db_name' host='test_postgis_db' port=5432 user='test_postgis_db_user' sslmode=disable key='tid' checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;point&quot;">
       <customproperties>
         <Option></Option>
       </customproperties>
@@ -122,7 +122,7 @@
   <projectlayers>
     <maplayer autoRefreshEnabled="0" autoRefreshTime="0" geometry="No geometry" hasScaleBasedVisibilityFlag="0" legendPlaceholderImage="" maxScale="0" minScale="1e+08" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" styleCategories="AllStyleCategories" type="vector" wkbType="NoGeometry">
       <id>point_6ed9e32d_b677_466f_ae6b_c86d48412d22</id>
-      <datasource>dbname='test' host='geodb' port=5432 user='usr1' password='pwd' sslmode=disable key='tid' checkPrimaryKeyUnicity='1' table="public"."point"</datasource>
+      <datasource>dbname='test_postgis_db_name' host='test_postgis_db' port=5432 user='test_postgis_db_user' password='test_postgis_db_password' sslmode=disable key='tid' checkPrimaryKeyUnicity='1' table="public"."point"</datasource>
       <keywordList>
         <value></value>
       </keywordList>

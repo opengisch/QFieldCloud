@@ -3,7 +3,7 @@ from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -88,10 +88,12 @@ class LegacyLatestPackageView(views.APIView):
     def get(self, request, project_id):
         """Get last project package status and file list."""
         project = Project.objects.get(id=project_id)
-        latest_package_job = project.latest_package_job_for_user(request.user)
+        latest_finished_package_job = project.latest_finished_package_job_for_user(
+            request.user
+        )
 
         # Check if the project was packaged at least once
-        if not latest_package_job:
+        if not latest_finished_package_job:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
@@ -107,7 +109,9 @@ class LegacyLatestPackageView(views.APIView):
         else:
             skip_metadata = bool(skip_metadata_param)
 
-        for f in get_project_package_files(project_id, str(latest_package_job.id)):
+        for f in get_project_package_files(
+            project_id, str(latest_finished_package_job.id)
+        ):
             file_data = {
                 "name": f.name,
                 "size": f.size,
@@ -146,18 +150,18 @@ class LegacyLatestPackageView(views.APIView):
         if not files:
             raise exceptions.InvalidJobError("Empty project package.")
 
-        assert latest_package_job.feedback
+        assert latest_finished_package_job.feedback
 
-        feedback_version = latest_package_job.feedback.get("feedback_version")
+        feedback_version = latest_finished_package_job.feedback.get("feedback_version")
 
         # version 2 and 3 have the same format
         if feedback_version in ["2.0", "3.0"]:
-            layers = latest_package_job.feedback["outputs"]["qgis_layers_data"][
-                "layers_by_id"
-            ]
+            layers = latest_finished_package_job.feedback["outputs"][
+                "qgis_layers_data"
+            ]["layers_by_id"]
         # support some ancient QFieldCloud job data
         elif feedback_version is None:
-            steps = latest_package_job.feedback.get("steps", [])
+            steps = latest_finished_package_job.feedback.get("steps", [])
             layers = (
                 steps[1]["outputs"]["layer_checks"]
                 if len(steps) > 2 and steps[1].get("stage", 1) == 2
@@ -171,10 +175,10 @@ class LegacyLatestPackageView(views.APIView):
             {
                 "files": files,
                 "layers": layers,
-                "status": latest_package_job.status,
-                "package_id": latest_package_job.pk,
-                "packaged_at": latest_package_job.project.data_last_packaged_at,
-                "data_last_updated_at": latest_package_job.project.data_last_updated_at,
+                "status": latest_finished_package_job.status,
+                "package_id": latest_finished_package_job.pk,
+                "packaged_at": latest_finished_package_job.project.data_last_packaged_at,
+                "data_last_updated_at": latest_finished_package_job.project.data_last_updated_at,
             }
         )
 
@@ -197,15 +201,17 @@ class LegacyLatestPackageDownloadFilesView(views.APIView):
             exceptions.InvalidJobError: [description]
         """
         project = Project.objects.get(id=project_id)
-        latest_package_job = project.latest_package_job_for_user(request.user)
+        latest_finished_package_job = project.latest_finished_package_job_for_user(
+            request.user
+        )
 
         # Check if the project was packaged at least once
-        if not latest_package_job:
+        if not latest_finished_package_job:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
 
-        key = f"projects/{project_id}/packages/{latest_package_job.id}/{filename}"
+        key = f"projects/{project_id}/packages/{latest_finished_package_job.id}/{filename}"
 
         # files within attachment dirs that do not exist is the packaged files should be served
         # directly from the original data storage
@@ -269,17 +275,19 @@ class LatestPackageView(views.APIView):
     def get(self, request, project_id):
         """Get last project package status and file list."""
         project = get_object_or_404(Project, id=project_id)
-        latest_package_job = project.latest_package_job_for_user(request.user)
+        latest_finished_package_job = project.latest_finished_package_job_for_user(
+            request.user
+        )
 
         # Check if the project was packaged at least once
-        if not latest_package_job:
+        if not latest_finished_package_job:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
 
         files_qs = File.objects.filter(
             project_id=project_id,
-            package_job=latest_package_job,
+            package_job=latest_finished_package_job,
             file_type=File.FileType.PACKAGE_FILE,
         )
 
@@ -298,17 +306,17 @@ class LatestPackageView(views.APIView):
         if not file_serializer.data:
             raise exceptions.InvalidJobError("Empty project package.")
 
-        assert latest_package_job.feedback
+        assert latest_finished_package_job.feedback
 
-        feedback_version = latest_package_job.feedback.get("feedback_version")
+        feedback_version = latest_finished_package_job.feedback.get("feedback_version")
         # version 2 and 3 have the same format
         if feedback_version in ["2.0", "3.0"]:
-            layers = latest_package_job.feedback["outputs"]["qgis_layers_data"][
-                "layers_by_id"
-            ]
+            layers = latest_finished_package_job.feedback["outputs"][
+                "qgis_layers_data"
+            ]["layers_by_id"]
         # support some ancient QFieldCloud job data
         elif feedback_version is None:
-            steps = latest_package_job.feedback.get("steps", [])
+            steps = latest_finished_package_job.feedback.get("steps", [])
             layers = (
                 steps[1]["outputs"]["layer_checks"]
                 if len(steps) > 2 and steps[1].get("stage", 1) == 2
@@ -322,10 +330,10 @@ class LatestPackageView(views.APIView):
             {
                 "files": file_serializer.data,
                 "layers": layers,
-                "status": latest_package_job.status,
-                "package_id": latest_package_job.pk,
-                "packaged_at": latest_package_job.project.data_last_packaged_at,
-                "data_last_updated_at": latest_package_job.project.data_last_updated_at,
+                "status": latest_finished_package_job.status,
+                "package_id": latest_finished_package_job.pk,
+                "packaged_at": latest_finished_package_job.project.data_last_packaged_at,
+                "data_last_updated_at": latest_finished_package_job.project.data_last_updated_at,
             }
         )
 
@@ -348,10 +356,12 @@ class LatestPackageDownloadFilesView(views.APIView):
             exceptions.InvalidJobError: raised when packaging has never been triggered or successful for this project
         """
         project = get_object_or_404(Project, id=project_id)
-        latest_package_job = project.latest_package_job_for_user(request.user)
+        latest_finished_package_job = project.latest_finished_package_job_for_user(
+            request.user
+        )
 
         # Check if the project was packaged at least once
-        if not latest_package_job:
+        if not latest_finished_package_job:
             raise exceptions.InvalidJobError(
                 "Packaging has never been triggered or successful for this project."
             )
@@ -369,7 +379,7 @@ class LatestPackageDownloadFilesView(views.APIView):
             project_id,
             filename,
             file_type=file_type,
-            package_job_id=latest_package_job.id,
+            package_job_id=latest_finished_package_job.id,
         )
 
 
@@ -403,7 +413,7 @@ class PackageUploadFilesView(views.APIView):
         )
 
         headers = {
-            "Location": reverse_lazy(
+            "Location": reverse(
                 "filestorage_crud_file",
                 kwargs={
                     "project_id": project_id,

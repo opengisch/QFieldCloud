@@ -16,7 +16,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITransactionTestCase
 
-from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
@@ -41,7 +40,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         # Create a user
         self.u1 = Person.objects.create_user(username="u1", password="abc123")
-        self.t1 = AuthToken.objects.get_or_create(user=self.u1)[0]
+        self.t1 = self._get_token_for_user(self.u1)
         self.p1 = Project.objects.create(
             owner=self.u1,
             name="p1",
@@ -1055,3 +1054,17 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertFalse(storages[p2.file_storage].exists(p2.thumbnail.name))
         self.assertFalse(storages[p2.file_storage].exists(latest_version.content.name))
+
+    def test_thumbnail_storage_key_is_variable(self):
+        self.p1.thumbnail = ContentFile("<svg />", "thumbnail.svg")
+        self.p1.save()
+        thumbnail_key1 = self.p1.thumbnail.file.name
+
+        self.p1.thumbnail = ContentFile("<svg />", "thumbnail2.svg")
+        self.p1.save()
+        thumbnail_key2 = self.p1.thumbnail.file.name
+
+        self.assertNotEqual(thumbnail_key1, "thumbnail.svg")
+        self.assertNotEqual(thumbnail_key1, "thumbnail.png")
+        self.assertNotEqual(thumbnail_key2, "thumbnail2.svg")
+        self.assertNotEqual(thumbnail_key1, thumbnail_key2)

@@ -3,15 +3,15 @@ import json
 from pathlib import Path
 from time import sleep
 
-import psycopg2
-from django.conf import settings
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.geodb_utils import delete_db_and_role
-from qfieldcloud.core.models import Delta, Geodb, Job, Person, Project
-from qfieldcloud.core.tests.utils import setup_subscription_plans
+from qfieldcloud.core.models import Delta, Job, Person, Project
+from qfieldcloud.core.tests.utils import (
+    get_test_postgis_connection,
+    setup_subscription_plans,
+)
 
 from ..models import Plan
 
@@ -73,22 +73,7 @@ class QfcTestCase(APITransactionTestCase):
 
         p1 = Project.objects.create(name="p1", owner=u1)
 
-        delete_db_and_role("test", "usr1")
-        Geodb.objects.create(
-            dbname="test",
-            user=u1,
-            username="usr1",
-            password="pwd",
-            hostname=settings.GEODB_HOST,
-            port=settings.GEODB_PORT,
-        )
-        conn = psycopg2.connect(
-            dbname="test",
-            user="usr1",
-            password="pwd",
-            host=settings.GEODB_HOST,
-            port=settings.GEODB_PORT,
-        )
+        conn = get_test_postgis_connection()
         conn.cursor().execute("CREATE TABLE point (id integer PRIMARY KEY, name text)")
         conn.commit()
 
@@ -96,11 +81,13 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.client.post(
             f"/api/v1/files/{p1.id}/project.qgs/",
-            {"file": open(DATA_FOLDER / "project_pgservice.qgs", "rb")},
+            {"file": open(DATA_FOLDER / "project_plaintext.qgs", "rb")},
             format="multipart",
         )
         self.assertTrue(status.is_success(response.status_code))
         self._wait(p1, Job.Type.PROCESS_PROJECTFILE)
+
+        # TODO @suricactus: check if the process_projectfile job could connect to the postgis layer
 
         # Ensure we start without delta
 
@@ -113,7 +100,7 @@ class QfcTestCase(APITransactionTestCase):
             f"/api/v1/deltas/{p1.id}/",
             {
                 "file": self._get_delta_file_with_project_id(
-                    p1, DATA_FOLDER / "project_pgservice_delta_1.json"
+                    p1, DATA_FOLDER / "project_plaintext_delta_1.json"
                 )
             },
             format="multipart",
@@ -137,7 +124,7 @@ class QfcTestCase(APITransactionTestCase):
             f"/api/v1/deltas/{p1.id}/",
             {
                 "file": self._get_delta_file_with_project_id(
-                    p1, DATA_FOLDER / "project_pgservice_delta_2.json"
+                    p1, DATA_FOLDER / "project_plaintext_delta_2.json"
                 )
             },
             format="multipart",

@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from datetime import timezone as tz
 from pathlib import PurePath
 from uuid import UUID
 
@@ -11,12 +13,12 @@ from django.http import FileResponse, HttpResponse
 from django.http.response import HttpResponseBase
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.http import parse_http_date_safe
 from rest_framework.exceptions import NotFound
 from rest_framework.request import Request
 
 from qfieldcloud.core import exceptions, permissions_utils
 from qfieldcloud.core.exceptions import (
-    InvalidRangeError,
     MultipleProjectsError,
     RestrictedProjectModificationError,
 )
@@ -33,9 +35,9 @@ from qfieldcloud.filestorage.models import (
     FileVersion,
 )
 from qfieldcloud.filestorage.utils import (
+    get_range,
     is_admin_restricted_file,
     is_qgis_project_file,
-    parse_range,
     validate_filename,
 )
 
@@ -240,37 +242,39 @@ def download_field_file(
     if not filename:
         raise Exception("Missing filename in `download_field_file`!")
 
-    # check if we are in NGINX proxy
-    http_host = request.headers.get("host", "")
-    https_port = http_host.split(":")[-1] if ":" in http_host else "443"
+    range = get_range(request, field_file.size)
 
-    download_range = request.headers.get("Range", "")
-    if download_range:
-        file_size = field_file.size
-        range_match = parse_range(download_range, file_size)
-
-        if not range_match:
-            raise InvalidRangeError("The provided HTTP range header is invalid.")
-
-        range_start, range_end = range_match
-
-        if range_end is None:
-            range_end = file_size - 1
-
-        range_length = range_end - range_start + 1
-
-        if range_length < settings.QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH:
-            raise InvalidRangeError(
-                "Requested range too small, expected at least {} but got {} bytes".format(
-                    settings.QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH, range_length
-                )
-            )
-
-    if https_port == settings.WEB_HTTPS_PORT and not settings.IN_TEST_SUITE:
+    # Assume that if the request is secure, we are behind a nginx proxy and we can use `X-Accel-Redirect`
+    if request.is_secure() and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
         storage_filename = field_file.name
-        parameters = {}
+        parameters: dict[str, str | datetime] = {}
+
+        if_match_etags = request.headers.get("if-match", "")
+        if_none_match_etags = request.headers.get("if-none-match", "")
+        if_modified_since_int = parse_http_date_safe(
+            request.headers.get("if-modified-since", "")
+        )
+        if_unmodified_since_int = parse_http_date_safe(
+            request.headers.get("if-unmodified-since", "")
+        )
+
+        if if_match_etags:
+            parameters["IfMatch"] = if_match_etags
+
+        if if_none_match_etags:
+            parameters["IfNoneMatch"] = if_none_match_etags
+
+        if if_modified_since_int:
+            parameters["IfModifiedSince"] = datetime.fromtimestamp(
+                if_modified_since_int, tz=tz.utc
+            )
+
+        if if_unmodified_since_int:
+            parameters["IfUnmodifiedSince"] = datetime.fromtimestamp(
+                if_unmodified_since_int, tz=tz.utc
+            )
 
         if as_attachment:
             parameters.update(
@@ -293,25 +297,27 @@ def download_field_file(
         response["X-Accel-Redirect"] = "/storage-download/"
         response["redirect_uri"] = url
 
-        if download_range:
-            response["file_range"] = download_range
+        if range:
+            response["file_range"] = range.header
 
         field_file.storage.patch_nginx_download_redirect(response)  # type: ignore
 
         return response
     elif settings.DEBUG or settings.IN_TEST_SUITE:
-        if download_range:
+        if range:
             file = field_file.open()
 
-            file.seek(range_start)
-            content = file.read(range_length)
+            file.seek(range.start)
+            content = file.read(range.length)
 
             response = HttpResponse(
                 content, status=206, content_type="application/octet-stream"
             )
 
-            response["Content-Range"] = f"bytes {range_start}-{range_end}/{file_size}"
-            response["Content-Length"] = str(range_length)
+            response["Content-Range"] = (
+                f"bytes {range.start}-{range.end}/{range.total_size}"
+            )
+            response["Content-Length"] = str(range.length)
             response["Accept-Ranges"] = "bytes"
 
             return response
@@ -320,7 +326,6 @@ def download_field_file(
             field_file.open(),
             as_attachment=as_attachment,
             filename=filename,
-            content_type="text/html",
         )
 
     raise Exception(

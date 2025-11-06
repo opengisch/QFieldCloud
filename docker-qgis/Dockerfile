@@ -1,6 +1,9 @@
 # NOTE if the ubuntu version is changed, also change it in `Suites:` in apt sources, and in `QGIS_VERSION`
 FROM ubuntu:noble
 
+# Create the expected /io directory that is usually created via the `worker_wrapper`
+RUN mkdir -p /io
+
 # Install dependencies needed to add QGIS repository
 RUN apt-get update \
     && apt-get install -y \
@@ -39,7 +42,7 @@ RUN apt-get update \
 
 # Set QGIS version as in the debian repos
 # Choose your version from here: https://debian.qgis.org/debian/dists/noble/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.44.1+40noble
+ARG QGIS_VERSION=1:3.44.3+40noble
 
 # Install QGIS dependencies
 RUN apt-get update \
@@ -77,6 +80,10 @@ ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
 ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
+
+# Install debugpy for local development and debuggability
+ARG DEBUG_BUILD
+RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --break-system-packages debugpy; fi
 
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/

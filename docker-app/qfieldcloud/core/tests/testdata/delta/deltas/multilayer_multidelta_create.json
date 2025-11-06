@@ -1,0 +1,41 @@
+{
+    "deltas": [
+        {
+            "uuid": "9311eb96-bff8-4d5b-ab36-c314a007cfc1",
+            "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+            "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+            "localPk": "1000",
+            "sourcePk": "",
+            "localLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "sourceLayerId": "points_xy_897d5ed7_b810_4624_abe3_9f7c0a93d6a1",
+            "method": "create",
+            "new": {
+                "attributes": {
+                    "fid": 1000,
+                    "int": 1000
+                }
+            }
+        },
+        {
+            "uuid": "9311eb96-bff8-4d5b-ab36-c314a007cfc2",
+            "clientId": "cd517e24-a520-4021-8850-e5af70e3a612",
+            "exportId": "f70c7286-fcec-4dbe-85b5-63d4735dac47",
+            "localPk": "2000",
+            "sourcePk": "",
+            "localLayerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
+            "sourceLayerId": "points_c2784cf9_c9c3_45f6_9ce5_98a6047e4d6c",
+            "method": "create",
+            "new": {
+                "geometry": "POINT (666 0)",
+                "attributes": {
+                    "fid": 2000,
+                    "int": 2000
+                }
+            }
+        }
+    ],
+    "files": [],
+    "id": "b7c17bc6-e5af-4fa7-b905-4b395729d782",
+    "project": "504ef91b-43f2-4b2e-a617-ea9f29cd7abc",
+    "version": "1.0"
+}

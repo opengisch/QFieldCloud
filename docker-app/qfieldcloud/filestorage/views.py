@@ -5,7 +5,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.db.models import Q, QuerySet
 from django.http.response import HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -56,7 +56,7 @@ class FileListViewPermissions(permissions.BasePermission):
             return False
 
         project_id = request.parser_context["kwargs"]["project_id"]
-        project = Project.objects.get(id=project_id)
+        project = get_object_or_404(Project, id=project_id)
 
         return permissions_utils.can_read_files(request.user, project)
 
@@ -67,7 +67,7 @@ class FileCrudViewPermissions(permissions.BasePermission):
             return False
 
         project_id = request.parser_context["kwargs"]["project_id"]
-        project = Project.objects.get(id=project_id)
+        project = get_object_or_404(Project, id=project_id)
         user = request.user
 
         if request.method == "GET":
@@ -146,7 +146,7 @@ class FileCrudView(views.APIView):
         )
 
         headers = {
-            "Location": reverse_lazy(
+            "Location": reverse(
                 "filestorage_crud_file",
                 kwargs={
                     "project_id": project_id,
@@ -247,8 +247,13 @@ def compatibility_file_list_view(
     """
     # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
     project_id: UUID = kwargs["project_id"]
-    project = get_object_or_404(Project, id=project_id)
     view_kwargs = kwargs.pop("view_kwargs", {})
+
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
+        return FileListView.as_view(**view_kwargs)(request, *args, **kwargs)
 
     if project.uses_legacy_storage:
         # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
@@ -275,8 +280,13 @@ def compatibility_file_crud_view(
     """
     # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
     project_id: UUID = kwargs["project_id"]
-    project = get_object_or_404(Project, id=project_id)
     view_kwargs = kwargs.pop("view_kwargs", {})
+
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
+        return FileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
 
     if project.uses_legacy_storage:
         # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
@@ -303,8 +313,13 @@ def compatibility_project_meta_file_read_view(
     """
     # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
     project_id: UUID = kwargs["project_id"]
-    project = get_object_or_404(Project, id=project_id)
     view_kwargs = kwargs.pop("view_kwargs", {})
+
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
+        return ProjectMetaFileReadView.as_view(**view_kwargs)(request, *args, **kwargs)
 
     if project.uses_legacy_storage:
         # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code

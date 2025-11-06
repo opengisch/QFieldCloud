@@ -49,7 +49,7 @@ def apply_deltas(
     # so we better assume the deltas will reach a non-"pending" status.
     apply_jobs = models.ApplyJob.objects.filter(
         project=project,
-        status=[
+        status__in=[
             models.Job.Status.PENDING,
             models.Job.Status.QUEUED,
             models.Job.Status.STARTED,

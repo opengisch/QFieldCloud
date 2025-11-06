@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import docker
+import docker.errors
 import requests
 import sentry_sdk
 from constance import config
@@ -18,8 +19,6 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from docker.client import DockerClient
-from docker.errors import APIError
 from docker.models.containers import Container
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -41,6 +40,10 @@ from tenacity import (
 )
 
 logger = logging.getLogger(__name__)
+
+# TODO @suricactus: Delete when QF-6868 Log DEBUG level when DEBUG=True, see https://app.clickup.com/t/QF-6868
+if settings.DEBUG:
+    logger.setLevel(logging.DEBUG)
 
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
@@ -80,6 +83,15 @@ class JobRun:
             else:
                 logger.critical(msg, exc_info=err)
 
+        self.debug_qgis_container_is_enabled = (
+            settings.DEBUG and settings.DEBUG_QGIS_DEBUGPY_PORT
+        )
+
+        if self.debug_qgis_container_is_enabled:
+            logger.warning(
+                f"Debugging is enabled for job {self.job.id}. The worker will wait for debugger to attach on port {settings.DEBUG_QGIS_DEBUGPY_PORT}."
+            )
+
     def get_context(self) -> dict[str, Any]:
         context = model_to_dict(self.job)
 
@@ -92,7 +104,69 @@ class JobRun:
 
     def get_command(self) -> list[str]:
         context = self.get_context()
-        return [p % context for p in ["python3", "entrypoint.py", *self.command]]
+
+        if self.debug_qgis_container_is_enabled:
+            debug_flags = [
+                "-m",
+                "debugpy",
+                "--listen",
+                f"0.0.0.0:{settings.DEBUG_QGIS_DEBUGPY_PORT}",
+                "--wait-for-client",
+            ]
+        else:
+            debug_flags = []
+
+        return [
+            p % context
+            for p in ["python3", *debug_flags, "entrypoint.py", *self.command]
+        ]
+
+    def get_volumes(self) -> list[str]:
+        volumes = [
+            f"{str(self.shared_tempdir)}:/io/:rw",
+            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro",
+        ]
+
+        return volumes
+
+    def get_ports(self) -> dict[str, int]:
+        ports = {}
+
+        return ports
+
+    def get_environment(self) -> dict[str, str]:
+        environment = {}
+        extra_envvars = {}
+
+        pgservice_file_contents = ""
+        for secret in Secret.objects.for_user_and_project(  # type:ignore
+            self.job.triggered_by, self.job.project
+        ):
+            if secret.type == Secret.Type.ENVVAR:
+                extra_envvars[secret.name] = secret.value
+            elif secret.type == Secret.Type.PGSERVICE:
+                pgservice_file_contents += f"\n{secret.value}"
+            else:
+                raise NotImplementedError(f"Unknown secret type: {secret.type}")
+
+        token = AuthToken.objects.create(
+            user=self.job.created_by,
+            client_type=AuthToken.ClientType.WORKER,
+            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+        )
+
+        environment = {
+            **extra_envvars,
+            "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
+            "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
+            "QFIELDCLOUD_TOKEN": token.key,
+            "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
+            "JOB_ID": self.job_id,
+            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
+            "QT_QPA_PLATFORM": "offscreen",
+        }
+
+        return environment
 
     def before_docker_run(self) -> None:
         pass
@@ -142,13 +216,8 @@ class JobRun:
             self.before_docker_run()
 
             command = self.get_command()
-            volumes = []
-            volumes.append(f"{str(self.shared_tempdir)}:/io/:rw")
 
-            exit_code, output = self._run_docker(
-                command,
-                volumes=volumes,
-            )
+            exit_code, output = self._run_docker(command)
 
             if exit_code == DOCKER_SIGKILL_EXIT_CODE:
                 feedback["error"] = "Docker engine sigkill."
@@ -251,48 +320,54 @@ class JobRun:
                     "Failed to handle exception and update the job status", exc_info=err
                 )
 
-    def _run_docker(
-        self, command: list[str], volumes: list[str], run_opts: dict[str, Any] = {}
-    ) -> tuple[int, bytes]:
+    def _run_docker(self, command: list[str]) -> tuple[int, bytes]:
         assert settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
         assert settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME
 
-        token = AuthToken.objects.create(
-            user=self.job.created_by,
-            client_type=AuthToken.ClientType.WORKER,
-            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
-        )
-
         client = docker.from_env()
 
-        extra_envvars = {}
-        pgservice_file_contents = ""
-        for secret in Secret.objects.for_user_and_project(
-            self.job.triggered_by, self.job.project
-        ):
-            if secret.type == Secret.Type.ENVVAR:
-                extra_envvars[secret.name] = secret.value
-            elif secret.type == Secret.Type.PGSERVICE:
-                pgservice_file_contents += f"\n{secret.value}"
-            else:
-                raise NotImplementedError(f"Unknown secret type: {secret.type}")
+        volumes = self.get_volumes()
+        ports = self.get_ports()
+        environment = self.get_environment()
+
+        if settings.DEBUG:
+            if self.debug_qgis_container_is_enabled:
+                # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
+                # otherwise the vscode deubgger won't be able to connect
+                # NOTE the port must be passed here and not in the `docker-compose` file,
+                # because the `qgis` container is started with docker in docker and the `docker-compose`
+                # configuration is valid only for the brief moment when the stack is built and started,
+                # but not when new `qgis` containers are started dynamically by the worker wrapper
+                ports.update(
+                    {
+                        f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
+                    }
+                )
+
+                logger.debug(
+                    f"Exposing ports from the qgis container for debugging: {ports=}"
+                )
+
+            if settings.DEBUG_QGIS_WORKER_HOST_PATH:
+                debug_host_path = Path(settings.DEBUG_QGIS_WORKER_HOST_PATH)
+
+                volumes.extend(
+                    [
+                        # allow local development for `docker-qgis`
+                        f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
+                        f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
+                        # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
+                        f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync.py:ro",
+                        # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`"
+                        f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python.py:ro",
+                    ]
+                )
+
+                logger.debug(
+                    f"Mounting host path into qgis container for debugging: {volumes=}"
+                )
 
         logger.info(f"Execute: {' '.join(command)}")
-        volumes.append(
-            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro"
-        )
-
-        # used for local development of QFieldCloud
-        if settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH:
-            volumes.append(
-                f"{settings.QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH}:/libqfieldsync:ro"
-            )
-
-        # used for local development of QFieldCloud
-        if settings.QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH:
-            volumes.append(
-                f"{settings.QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH}:/qfieldcloud-sdk-python:ro"
-            )
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
         self.job.docker_started_at = timezone.now()
@@ -301,16 +376,8 @@ class JobRun:
         container: Container = client.containers.run(  # type:ignore
             settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
             command,
-            environment={
-                **extra_envvars,
-                "PGSERVICE_FILE_CONTENTS": pgservice_file_contents,
-                "QFIELDCLOUD_EXTRA_ENVVARS": json.dumps(sorted(extra_envvars.keys())),
-                "QFIELDCLOUD_TOKEN": token.key,
-                "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
-                "JOB_ID": self.job_id,
-                "PROJ_DOWNLOAD_DIR": "/transformation_grids",
-                "QT_QPA_PLATFORM": "offscreen",
-            },
+            environment=environment,
+            ports=ports,
             volumes=volumes,
             # TODO stream the logs to something like redis, so they can be streamed back in project jobs page to the user live
             # auto_remove=True,
@@ -409,9 +476,9 @@ class PackageJobRun(JobRun):
         packages.delete_obsolete_packages(projects=[self.job.project])
 
 
-class DeltaApplyJobRun(JobRun):
+class ApplyDeltaJobRun(JobRun):
     job_class = ApplyJob
-    command = ["delta_apply", "%(project__id)s", "%(project__the_qgis_file_name)s"]
+    command = ["apply_deltas", "%(project__id)s", "%(project__the_qgis_file_name)s"]
 
     def __init__(self, job_id: str) -> None:
         super().__init__(job_id)
@@ -592,7 +659,7 @@ class ProcessProjectfileJobRun(JobRun):
 
 
 def cancel_orphaned_workers() -> None:
-    client: DockerClient = docker.from_env()
+    client: docker.client.DockerClient = docker.from_env()
 
     try:
         running_workers: list[Container] = client.containers.list(
@@ -621,6 +688,6 @@ def cancel_orphaned_workers() -> None:
             container.kill()
             container.remove()
             logger.info(f"Cancel orphaned worker {worker_id}")
-        except APIError:
+        except docker.errors.APIError:
             # Container already removed
             pass

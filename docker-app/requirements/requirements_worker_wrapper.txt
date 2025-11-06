@@ -4,19 +4,19 @@
 #
 #    pip-compile --output-file=/requirements/requirements_worker_wrapper.txt /requirements/requirements_worker_wrapper.in
 #
-certifi==2024.8.30
+certifi==2025.8.3
     # via requests
-charset-normalizer==3.3.2
+charset-normalizer==3.4.3
     # via requests
 docker==7.1.0
     # via -r /requirements/requirements_worker_wrapper.in
-idna==3.8
+idna==3.10
     # via requests
-requests==2.32.3
+requests==2.32.5
     # via docker
-tenacity==8.3.0
+tenacity==9.1.2
     # via -r /requirements/requirements_worker_wrapper.in
-urllib3==2.2.2
+urllib3==2.5.0
     # via
     #   docker
     #   requests

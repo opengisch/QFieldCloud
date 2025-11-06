@@ -4,6 +4,7 @@ import requests_mock
 from allauth.socialaccount.models import SocialApp
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 from allauth.socialaccount.providers.oauth2.views import OAuth2Adapter
+from django.conf import settings
 from django.http import HttpRequest
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -141,7 +142,8 @@ class QfcTestCase(APITestCase):
                 "redirect_port": 7070,
                 "redirect_url": "",
                 "client_id": "keycloak-client-id",
-                "extra_tokens": {"id_token": "X-QFC-ID-Token"},
+                "extra_tokens": {"id_token": settings.QFIELDCLOUD_ID_TOKEN_HEADER_NAME},
+                "idp_id_header": settings.QFIELDCLOUD_IDP_ID_HEADER_NAME,
                 "styles": {},
             },
         ]

@@ -1,0 +1,74 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "QFieldCloud Debug (Attach) - app",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        // must match the value of `DEBUG_DEBUGPY_APP_PORT` from `.env` file, by default 5678
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/classic/docker-app",
+          "remoteRoot": "/usr/src/app"
+        },
+        // enable only if you want to debug vendor modules installed via `pip` or `apt`
+        // {
+        //   "localRoot": "${workspaceFolder}/docker-app/site-packages",
+        //   "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
+        // },
+      ],
+      // enable only if you want to debug vendor modules installed via `pip` or `apt`
+      // "justMyCode": false,
+    },
+    {
+      "name": "QFieldCloud Debug (Attach) - worker_wrapper",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        // must match the value of `DEBUG_DEBUGPY_WORKER_WRAPPER_PORT` from `.env` file, by default 5679
+        "port": 5679
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/classic/docker-app",
+          "remoteRoot": "/usr/src/app"
+        },
+        // enable only if you want to debug vendor modules installed via `pip` or `apt`
+        // {
+        //   "localRoot": "${workspaceFolder}/docker-app/site-packages",
+        //   "remoteRoot": "/usr/local/lib/python3.10/site-packages/"
+        // },
+      ],
+      // enable only if you want to debug vendor modules installed via `pip` or `apt`
+      // "justMyCode": false,
+    },
+    {
+      "name": "QFieldCloud Debug (Attach) - qgis",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        // must match the value of `DEBUG_DEBUGPY_QGIS_PORT` from `.env` file, by default 5680
+        "port": 5680
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/docker-qgis",
+          "remoteRoot": "/usr/src/app"
+        },
+        {
+          "localRoot": "${workspaceFolder}/docker-qgis/libqfieldsync",
+          "remoteRoot": "/libqfieldsync"
+        },
+      ],
+    },
+  ]
+}

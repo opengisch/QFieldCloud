@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -34,6 +34,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_KEY")
+
+# Key used for cryptographic operations on encrypted fields.
+# More infos about usage and rotation can be found here:
+# https://pypi.org/project/django-fernet-encrypted-fields/
+SALT_KEY = [os.environ.get("SALT_KEY")]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.environ.get("DEBUG", 0)))
@@ -59,9 +64,6 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 # We need to set it in QFieldCloud as we run behind a proxy.
 # Read more: https://docs.djangoproject.com/en/4.2/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
-WEB_HTTP_PORT = os.environ.get("WEB_HTTP_PORT")
-WEB_HTTPS_PORT = os.environ.get("WEB_HTTPS_PORT")
 
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
@@ -134,6 +136,8 @@ INSTALLED_APPS = [
     "constance",
     "django_extensions",
     "bootstrap4",
+    "sri",
+    # To ensure that exceptions inside other apps' signal handlers do not affect the integrity of file deletions within transactions, `django_cleanup` should be placed last in `INSTALLED_APPS`. See https://github.com/un1t/django-cleanup#configuration
     "django_cleanup.apps.CleanupConfig",
 ]
 
@@ -185,6 +189,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "qfieldcloud.core.context_processors.signup_open",
             ],
         },
     },
@@ -211,12 +216,12 @@ DATABASES = {
     }
 }
 
-# Connection details for the geodb
-GEODB_HOST = os.environ.get("GEODB_HOST")
-GEODB_PORT = os.environ.get("GEODB_PORT")
-GEODB_DB = os.environ.get("GEODB_DB")
-GEODB_USER = os.environ.get("GEODB_USER")
-GEODB_PASSWORD = os.environ.get("GEODB_PASSWORD")
+# Connection details for the test PostGIS database. This database is used only in tests for temporarily storing spatial data.
+TEST_POSTGIS_DB_HOST = os.environ.get("TEST_POSTGIS_DB_HOST")
+TEST_POSTGIS_DB_PORT = os.environ.get("TEST_POSTGIS_DB_PORT")
+TEST_POSTGIS_DB_NAME = os.environ.get("TEST_POSTGIS_DB_NAME")
+TEST_POSTGIS_DB_USER = os.environ.get("TEST_POSTGIS_DB_USER")
+TEST_POSTGIS_DB_PASSWORD = os.environ.get("TEST_POSTGIS_DB_PASSWORD")
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -262,6 +267,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "qfieldcloud", "core", "staticfiles"),
 ]
+
+BOOTSTRAP4 = {
+    "success_css_class": " ",
+    "bound_css_class": " ",
+    "required_css_class": "required",
+}
 
 MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
@@ -336,6 +347,10 @@ SITE_ID = 1
 LOGIN_URL = "account_login"
 LOGIN_REDIRECT_URL = "index"
 
+#########################
+# Sentry settings
+#########################
+
 # Sentry configuration
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 if SENTRY_DSN:
@@ -350,6 +365,7 @@ if SENTRY_DSN:
             InvalidRangeError,
             MultipleProjectsError,
             ProjectAlreadyExistsError,
+            TooManyLoginAttemptsError,
             ValidationError,
         )
         from qfieldcloud.subscription.exceptions import (
@@ -374,6 +390,8 @@ if SENTRY_DSN:
             InvalidRangeError,
             # the client attempted to upload a new .qgs/.qgz file, but the project already has one. The user must delete the QGIS file first before reuploading it.
             MultipleProjectsError,
+            # The client sent too many login attempts, the user should wait before trying again
+            TooManyLoginAttemptsError,
         )
 
         if "exc_info" in hint:
@@ -410,41 +428,62 @@ if SENTRY_DSN:
 # Only requests with a < 10MB body will be reported
 SENTRY_REPORT_FULL_BODY = True
 
-# Django allauth configurations
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_LOGIN_METHODS = {"username", "email"}
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
-ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
+#########################
+# /Sentry settings
+#########################
 
-# Django allauth's RateLimiter configuration
-# https://docs.allauth.org/en/latest/account/rate_limits.html
-ACCOUNT_RATE_LIMITS = False
 
-# Choose one of "mandatory", "optional", or "none".
-# For local development and test use "optional" or "none"
-ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+#########################
+# Django allauth settings
+#########################
 
-# This setting determines whether the username is stored in lowercase (False) or whether its casing is to be preserved (True).
-# Note that when casing is preserved, potentially expensive __iexact lookups are performed when filter on username.
-# For now, the default is set to True to maintain backwards compatibility.
-# See https://docs.allauth.org/en/dev/account/configuration.html
-ACCOUNT_PRESERVE_USERNAME_CASING = True
-ACCOUNT_USERNAME_REQUIRED = True
+# https://docs.allauth.org/en/latest/account/configuration.html#overall
 ACCOUNT_ADAPTER = os.environ.get(
     "QFIELDCLOUD_ACCOUNT_ADAPTER", "qfieldcloud.core.adapters.AccountAdapterSignUpOpen"
 )
+
+# https://docs.allauth.org/en/latest/account/configuration.html#signup
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
+# https://docs.allauth.org/en/latest/account/configuration.html#login
+ACCOUNT_LOGIN_METHODS = ["username", "email"]
+
+# https://docs.allauth.org/en/latest/account/configuration.html#logout
 ACCOUNT_LOGOUT_ON_GET = True
 
+# https://docs.allauth.org/en/latest/account/configuration.html#email-verification
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
+ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+
+# https://docs.allauth.org/en/latest/account/rate_limits.html
+ACCOUNT_RATE_LIMITS = False
+
+# https://docs.allauth.org/en/latest/account/configuration.html#user-model
+# NOTE when casing is preserved, potentially expensive `__iexact`` lookups are performed when filter on username.
+# For now, the default is set to `True` to maintain backwards compatibility.
+ACCOUNT_PRESERVE_USERNAME_CASING = True
+
 # Django allauth's social account configuration
-# https://docs.allauth.org/en/dev/socialaccount/configuration.html
+# https://docs.allauth.org/en/latest/socialaccount/configuration.html
 SOCIALACCOUNT_ADAPTER = "qfieldcloud.core.adapters.SocialAccountAdapter"
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
-
 SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
+
+# Third-party auth header names configuration
+QFIELDCLOUD_IDP_ID_HEADER_NAME = os.environ.get(
+    "QFIELDCLOUD_IDP_ID_HEADER_NAME", "X-QFC-IDP-ID"
+)
+QFIELDCLOUD_ID_TOKEN_HEADER_NAME = os.environ.get(
+    "QFIELDCLOUD_ID_TOKEN_HEADER_NAME", "X-QFC-ID-Token"
+)
+
+#########################
+# /Django allauth settings
+#########################
 
 QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = bool(
     int(os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED", 0))
@@ -504,6 +543,8 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
 ###########################
+# Template for the page shown when the user is locked out of their account for too many failed attempts.
+AXES_LOCKOUT_TEMPLATE = "axes/lockedout.html"
 # The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
 AXES_FAILURE_LIMIT = 5
 # Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)
@@ -539,7 +580,11 @@ GENERATE_REQUEST_ID_IF_NOT_IN_HEADER = False
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {"request_id": {"()": "log_request_id.filters.RequestIDFilter"}},
+    "filters": {
+        "request_id": {
+            "()": "log_request_id.filters.RequestIDFilter",
+        },
+    },
     "formatters": {
         "json": {
             "()": "qfieldcloud.core.logging.formatters.CustomisedJSONFormatter",
@@ -618,6 +663,22 @@ CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
 CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = 60 * 60 * 24
 CONSTANCE_CONFIG = {
+    "INCIDENT_IS_ACTIVE": (
+        False,
+        "Is there an ongoing incident? If checked, a banner will be shown on top of every page with the content of `INCIDENT_MESSAGE`.",
+        bool,
+    ),
+    "INCIDENT_TIMESTAMP_UTC": (
+        datetime(2025, 1, 1, 0, 0, 0),
+        "When the incident started. Put time in UTC!",
+        datetime,
+    ),
+    "INCIDENT_MESSAGE": (
+        "QFieldCloud is currently experiencing stability issues. Our team is investigating the problem.",
+        """The banner content to be shown on top of every page if `INCIDENT_IS_ACTIVE` is checked.
+        If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
+        "textarea",
+    ),
     "WORKER_TIMEOUT_S": (
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
@@ -643,6 +704,11 @@ CONSTANCE_CONFIG = {
         "Days in which the trial period expires.",
         int,
     ),
+    "STATUS_PAGE_URL": (
+        "https://status.qfield.cloud/",
+        "Status page URL",
+        str,
+    ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -653,6 +719,11 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     ]
 }
 CONSTANCE_CONFIG_FIELDSETS = {
+    "Incidents": (
+        "INCIDENT_IS_ACTIVE",
+        "INCIDENT_TIMESTAMP_UTC",
+        "INCIDENT_MESSAGE",
+    ),
     "Worker": (
         "WORKER_TIMEOUT_S",
         "WORKER_QGIS_MEMORY_LIMIT",
@@ -660,10 +731,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Debug": ("SENTRY_REQUEST_MAX_SIZE_TO_SEND",),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
+    "Web": ("STATUS_PAGE_URL",),
 }
 
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
-QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 1000000
+QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
 
 # Name of the qgis docker image used as a worker by worker_wrapper
 QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
@@ -671,15 +743,11 @@ QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
 # URL the qgis worker will use to access the running API endpoint on the app service
 QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ["QFIELDCLOUD_WORKER_QFIELDCLOUD_URL"]
 
-# Absolute path on the docker host where `libqfieldsync` is mounted from for development
-QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH = os.environ.get(
-    "QFIELDCLOUD_LIBQFIELDSYNC_VOLUME_PATH"
-)
+# Host path which will be mounted by the `worker_wrapper` into the `worker` containers to facilitate development and debugging pythons files.
+DEBUG_QGIS_WORKER_HOST_PATH = os.environ.get("DEBUG_QGIS_WORKER_HOST_PATH")
 
-# Absolute path on the docker host where `qfieldcloud-sdk-python` is mounted from for development
-QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH = os.environ.get(
-    "QFIELDCLOUD_QFIELDCLOUD_SDK_VOLUME_PATH"
-)
+# Port to be used by `debugpy` to connect to the QGIS process inside the `qgis` container
+DEBUG_QGIS_DEBUGPY_PORT = os.environ.get("DEBUG_QGIS_DEBUGPY_PORT")
 
 # Volume name where transformation grids required by `PROJ` are downloaded to
 QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
@@ -699,9 +767,6 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
     # {
     #     "model": "constance.config",
     # },
-    {
-        "model": "core.geodb",
-    },
     {
         "model": "core.organization",
     },

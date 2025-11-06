@@ -197,14 +197,14 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
 
         return self.readonly_fields
 
-    @admin.display(description="Account")
+    @admin.display(description=_("Account"))
     def account__link(self, instance):
         return model_admin_url(
             instance.account.user, instance.account.user.username_with_full_name
         )
 
     # NOTE if the property is computed property, it cannot be `list_display`/`readonly_fields`
-    @admin.display(description="Active", boolean=True)
+    @admin.display(description=_("Active"), boolean=True)
     def is_active(self, instance):
         return instance.is_active
 
@@ -219,7 +219,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     def get_queryset(self, request: HttpRequest):
         return super().get_queryset(request).select_related("account__user", "plan")
 
-    @admin.display(description="Subscriber email")
+    @admin.display(description=_("Subscriber email"))
     def account__user__email(self, instance):
         return instance.account.user.email
 

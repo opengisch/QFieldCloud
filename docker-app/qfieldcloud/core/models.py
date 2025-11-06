@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+from uuid import uuid4
 
-import django_cryptography.fields
 from deprecated import deprecated
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -30,13 +30,15 @@ from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
+from django_stubs_ext import StrOrPromise
+from encrypted_fields.fields import EncryptedTextField
 from model_utils.managers import (
     InheritanceManagerMixin,
     InheritanceQuerySet,
 )
 from timezone_field import TimeZoneField
 
-from qfieldcloud.core import geodb_utils, utils, validators
+from qfieldcloud.core import utils, validators
 from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
@@ -325,10 +327,6 @@ class User(AbstractUser):
         else:
             return self.username
 
-    @property
-    def has_geodb(self) -> bool:
-        return hasattr(self, "geodb")
-
     def save(self, *args, **kwargs):
         from qfieldcloud.subscription.models import get_subscription_model
 
@@ -457,10 +455,6 @@ class UserAccount(models.Model):
     # These will be moved one day to the package. We don't touch for now (they are only used
     # in some tests)
     db_limit_mb = models.PositiveIntegerField(default=25)
-    is_geodb_enabled = models.BooleanField(
-        default=False,
-        help_text=_("Whether the account has the option to create a GeoDB."),
-    )
 
     bio = models.CharField(max_length=255, default="", blank=True)
     company = models.CharField(max_length=255, default="", blank=True)
@@ -514,13 +508,28 @@ class UserAccount(models.Model):
     @property
     def storage_used_bytes(self) -> float:
         """Returns the storage used in bytes"""
-        used_quota = (
-            self.user.projects.aggregate(sum_bytes=Sum("file_storage_bytes"))[
-                "sum_bytes"
-            ]
+        from qfieldcloud.filestorage.models import File, FileVersion
+
+        project_files_used_quota = (
+            FileVersion.objects.filter(
+                file__file_type=File.FileType.PROJECT_FILE,
+                file__project__in=self.user.projects.exclude(
+                    file_storage=settings.LEGACY_STORAGE_NAME
+                ),
+            ).aggregate(sum_bytes=Sum("size"))["sum_bytes"]
+            or 0
+        )
+
+        # TODO: Delete with QF-4963 Drop support for legacy storage
+        legacy_used_quota = (
+            self.user.projects.filter(
+                file_storage=settings.LEGACY_STORAGE_NAME
+            ).aggregate(sum_bytes=Sum("file_storage_bytes"))["sum_bytes"]
             # if there are no projects, the value will be `None`
             or 0
         )
+
+        used_quota = project_files_used_quota + legacy_used_quota
 
         return used_quota
 
@@ -596,55 +605,6 @@ def random_password() -> str:
     )
     secure_str = "".join(secrets.choice(password_characters) for i in range(16))
     return secure_str
-
-
-class Geodb(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    username = models.CharField(blank=False, max_length=255, default=random_string)
-    dbname = models.CharField(blank=False, max_length=255, default=random_string)
-    hostname = models.CharField(
-        blank=False, max_length=255, default=settings.GEODB_HOST
-    )
-    port = models.PositiveIntegerField(default=settings.GEODB_PORT)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    # The password is generated but not stored into the db
-    password = ""
-    last_geodb_error = None
-
-    def __init__(self, *args, password="", **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.password = password
-
-        if not self.password:
-            self.password = random_password()
-
-    def size(self):
-        try:
-            return geodb_utils.get_db_size(self)
-        except Exception as err:
-            self.last_geodb_error = str(err)
-            return None
-
-    def __str__(self):
-        return "{}'s db account, dbname: {}, username: {}".format(
-            self.user.username, self.dbname, self.username
-        )
-
-    def save(self, *args, **kwargs):
-        created = self._state.adding
-        super().save(*args, **kwargs)
-        # Automatically create a role and database when a Geodb object is created.
-        if created:
-            geodb_utils.create_role_and_db(self)
-
-    def delete(self, *args, **kwargs):
-        result = super().delete(*args, **kwargs)
-        # Automatically delete role and database when a Geodb object is deleted.
-        geodb_utils.delete_db_and_role(self.dbname, self.username)
-
-        return result
 
 
 class OrganizationQueryset(models.QuerySet):
@@ -1044,7 +1004,17 @@ def get_project_file_storage_default() -> str:
 
 
 def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
-    return f"projects/{instance.id}/meta/thumbnail.png"
+    """Variable storage key for thumbnails.
+
+    We use a variable storage key to avoid creating object storage level versions for
+    thumbnails that we then would need to manage (purge old versions, make sure we don't
+    exceed version limit).
+    """
+    ts = datetime.now().strftime("v%Y%m%d%H%M%S")
+    # Random suffix because the second precision of the timestamp alone might
+    # not be enough to avoid collisions
+    suffix = str(uuid4())[:8]
+    return f"projects/{instance.id}/meta/thumbnail_{ts}_{suffix}.png"
 
 
 class Project(models.Model):
@@ -1243,7 +1213,6 @@ class Project(models.Model):
         max_length=100,
         validators=[validators.file_storage_name_validator],
         default=get_project_file_storage_default,
-        editable=False,
     )
 
     file_storage_migrated_at = models.DateTimeField(
@@ -1253,12 +1222,14 @@ class Project(models.Model):
         editable=False,
     )
 
-    is_locked = models.BooleanField(
-        _("Is locked"),
+    locked_at = models.DateTimeField(
+        _("Locked at"),
         help_text=_(
-            "If set to true, the project is temporarily locked. Locking is internal QFieldCloud mechanism related to file storage migration or other file operations."
+            "If not null, it means that the project is being migrated, and the datetime represents when the project was temporarily locked. Locking is internal QFieldCloud mechanism related to file storage migration or other file operations."
         ),
-        default=False,
+        blank=True,
+        null=True,
+        editable=False,
     )
 
     is_featured = models.BooleanField(
@@ -1305,6 +1276,54 @@ class Project(models.Model):
         except Project.DoesNotExist:
             return None
 
+    def package_jobs_for_user(self, user: User) -> PackageJobQuerySet:
+        """Returns all package jobs for the user.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            QuerySet of all package jobs for the user.
+        """
+        secret_filters = Q(project=self, organization=None, assigned_to=user)
+
+        if self.owner.is_organization:
+            secret_filters |= Q(project=None, organization=self.owner, assigned_to=user)
+
+        secret_qs = Secret.objects.filter(secret_filters)
+
+        jobs_qs = self.jobs.filter(
+            type=Job.Type.PACKAGE,
+        )
+
+        jobs_qs = jobs_qs.annotate(has_user_secret=Exists(secret_qs)).filter(
+            Q(has_user_secret=False) | Q(triggered_by=user)
+        )
+
+        return jobs_qs
+
+    def latest_finished_package_job_for_user(self, user: User) -> PackageJob | None:
+        """Returns the last finished package job for the user.
+
+        Args:
+            user: The user to check for.
+
+        Returns:
+            The last finished package job for the user.
+        """
+        return (
+            self.package_jobs_for_user(user)
+            .exclude(
+                status__in=[
+                    Job.Status.PENDING,
+                    Job.Status.QUEUED,
+                    Job.Status.STARTED,
+                ]
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
     def latest_package_job_for_user(self, user: User) -> PackageJob | None:
         """Returns the last package job for the user.
 
@@ -1314,29 +1333,7 @@ class Project(models.Model):
         Returns:
             The last package job for the user.
         """
-        if self.owner.is_organization:
-            secret_qs = Secret.objects.filter(
-                Q(organization=self.owner, assigned_to=user)
-                | Q(project=self, assigned_to=user)
-            )
-        else:
-            secret_qs = Secret.objects.filter(project=self, assigned_to=user)
-
-        jobs_qs = (
-            self.jobs.annotate(has_user_secret=Exists(secret_qs))
-            .filter(Q(has_user_secret=False) | Q(triggered_by=user))
-            .order_by("-created_at")
-        )
-
-        jobs_qs = jobs_qs.order_by("-created_at")
-
-        return (
-            jobs_qs.filter(
-                type=Job.Type.PACKAGE,
-            )
-            .order_by("-created_at")
-            .first()
-        )
+        return self.package_jobs_for_user(user).order_by("-created_at").first()
 
     def latest_package_jobs(self) -> PackageJobQuerySet:
         """Returns all the last package jobs for the users of the project.
@@ -1345,10 +1342,8 @@ class Project(models.Model):
             QuerySet of all the last package jobs.
         """
         if self.owner.is_organization:
-            # all the admin users including the organization owner
-            triggered_by_qs = Person.objects.for_organization(self.owner).filter(
-                organization_role=OrganizationMember.Roles.ADMIN,
-            )
+            # all the users including the organization owner
+            triggered_by_qs = Person.objects.for_organization(self.owner)
         else:
             triggered_by_qs = Person.objects.filter(id=self.owner.pk)
 
@@ -1434,7 +1429,7 @@ class Project(models.Model):
         return keep_count
 
     @property
-    def thumbnail_url(self) -> str:
+    def thumbnail_url(self) -> StrOrPromise:
         """Returns the url to the project's thumbnail or empty string if no URL provided.
 
         Todo:
@@ -1567,28 +1562,12 @@ class Project(models.Model):
     def has_online_vector_data(self) -> bool | None:
         """Returns None if project details or layers details are not available"""
 
-        if not self.project_details:
+        if not self.project_details or not self.project_details.get("layers_by_id"):
             return None
 
-        layers_by_id: dict[str, dict[str, Any]] = self.project_details.get(
-            "layers_by_id"
-        )
+        from qfieldcloud.core.utils2.project import has_online_vector_data
 
-        if layers_by_id is None:
-            return None
-
-        has_online_vector_layers = False
-
-        for layer_data in layers_by_id.values():
-            # NOTE QGIS 3.30.x returns "Vector", while previous versions return "VectorLayer"
-            if layer_data.get("type_name") in (
-                "VectorLayer",
-                "Vector",
-            ) and not layer_data.get("filename", ""):
-                has_online_vector_layers = True
-                break
-
-        return has_online_vector_layers
+        return has_online_vector_data(self)
 
     @property
     def can_repackage(self) -> bool:
@@ -1800,7 +1779,7 @@ class Project(models.Model):
         Todo:
             * Delete with QF-4963 Drop support for legacy storage
         """
-        if self.legacy_thumbnail_uri:
+        if self.uses_legacy_storage:
             storage.delete_project_thumbnail(self)
 
         return super().delete(*args, **kwargs)
@@ -2152,6 +2131,8 @@ class Job(models.Model):
         FAILED = "failed", _("Failed")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project_id: uuid.UUID
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -2414,19 +2395,25 @@ class SecretQueryset(models.QuerySet):
         secrets_qs = self.filter(
             Q(
                 # organization-assigned secrets
-                Q(organization=organization) & Q(assigned_to__isnull=True)
+                Q(organization=organization)
+                & Q(project__isnull=True)
+                & Q(assigned_to__isnull=True)
             )
             | Q(
                 # user-assigned organization secrets
-                Q(organization=organization) & Q(assigned_to=user)
+                Q(organization=organization)
+                & Q(project__isnull=True)
+                & Q(assigned_to=user)
             )
             | Q(
                 # project-assigned secrets
-                Q(project=project) & Q(assigned_to__isnull=True)
+                Q(organization__isnull=True)
+                & Q(project=project)
+                & Q(assigned_to__isnull=True)
             )
             | Q(
                 # user assigned project secrets
-                Q(project=project) & Q(assigned_to=user)
+                Q(organization__isnull=True) & Q(project=project) & Q(assigned_to=user)
             )
         )
 
@@ -2528,7 +2515,9 @@ class Secret(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-    value = django_cryptography.fields.encrypt(models.TextField())
+
+    # encrypted value of the secret.
+    value = EncryptedTextField()
 
     def clean(self, **kwargs) -> None:
         # for project secrets assigned to a user,
@@ -2580,3 +2569,63 @@ class Secret(models.Model):
                 name="secret_assigned_to_organization_or_user",
             ),
         ]
+
+
+def get_faulty_deltafile_upload_to(
+    instance: models.Model,
+    filename: str,
+) -> str:
+    instance = cast(FaultyDeltaFile, instance)
+    key = f"{datetime.now().isoformat()}-{filename}"
+    return f"projects/{instance.project.id}/deltafiles/{key}"
+
+
+class FaultyDeltaFile(models.Model):
+    class Meta:
+        verbose_name = "Faulty deltafile"
+
+    # The deltafile id if parseable UUID value
+    deltafile_id = models.UUIDField(_("Deltafile ID"), editable=False, null=True)
+
+    # The deltafile contents as submitted from the client. It might contain non-valid JSON.
+    deltafile = DynamicStorageFileField(
+        _("Deltafile"),
+        upload_to=get_faulty_deltafile_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=False,
+        blank=False,
+    )
+
+    # Time when processing the deltafile failed and the faulty deltafile was created
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Project that the faulty deltafile was attempted to be uploaded to
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        related_name="faulty_deltafiles",
+        null=True,
+    )
+
+    # User agent of the client that attempted to upload the faulty deltafile
+    user_agent = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    # Traceback of the exception that occurred while processing the deltafile
+    traceback = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    def _get_file_storage_name(self) -> str:
+        # TODO Delete with QF-4963 Drop support for legacy storage
+        # Legacy storage - use default storage
+        if self.project.uses_legacy_storage:
+            return "default"
+
+        # Non-legacy storage - use same storage as project
+        return self.project.file_storage

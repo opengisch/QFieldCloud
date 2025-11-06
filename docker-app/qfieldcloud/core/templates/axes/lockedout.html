@@ -1,0 +1,22 @@
+{% extends 'account/base.html' %}
+{% load i18n %}
+{% load bootstrap4 %}
+{% load filters %}
+
+{% block title_contents %}{% trans 'Account locked' %}{% endblock %}
+
+
+{% block content %}
+
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">{% trans 'Account Locked' %}</h5>
+    <p class="card-text">
+      {% blocktrans with username=username timedelta=cooloff_timedelta|smooth_timedelta %}
+        Too many failed login attempts for {{ username }}! Please try again {{ timedelta }} after your last login attempt.
+      {% endblocktrans %}
+    </p>
+  </div>
+</div>
+
+{% endblock content %}

@@ -12,7 +12,6 @@ certifi==2024.8.30
     # via
     #   qfieldcloud-sdk
     #   requests
-    #   sentry-sdk
 charset-normalizer==3.3.2
     # via
     #   qfieldcloud-sdk
@@ -23,34 +22,36 @@ idna==3.8
     # via
     #   qfieldcloud-sdk
     #   requests
-jsonschema==4.23.0
+jsonschema==4.25.1
     # via -r requirements.in
 jsonschema-specifications==2023.12.1
     # via jsonschema
-qfieldcloud-sdk==0.8.4
+pathvalidate==3.3.1
+    # via qfieldcloud-sdk
+qfieldcloud-sdk==0.11.0
     # via -r requirements.in
 referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.3
+requests==2.32.5
     # via
     #   -r requirements.in
     #   qfieldcloud-sdk
+    #   requests-toolbelt
+requests-toolbelt==1.0.0
+    # via qfieldcloud-sdk
 rpds-py==0.20.0
     # via
     #   jsonschema
     #   referencing
-sentry-sdk==2.13.0
-    # via -r requirements.in
 tabulate==0.9.0
     # via -r requirements.in
 tqdm==4.66.5
     # via qfieldcloud-sdk
-typing-extensions==4.12.2
+typing-extensions==4.14.1
     # via -r requirements.in
-urllib3==2.2.2
+urllib3==2.5.0
     # via
     #   qfieldcloud-sdk
     #   requests
-    #   sentry-sdk

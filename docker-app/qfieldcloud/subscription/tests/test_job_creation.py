@@ -1,6 +1,7 @@
 import logging
 from unittest import mock
 
+from django.core.files.base import ContentFile
 from rest_framework.test import APITestCase
 
 from qfieldcloud.authentication.models import AuthToken
@@ -13,6 +14,7 @@ from qfieldcloud.core.models import (
     Project,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.filestorage.models import File, FileVersion
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
     PlanInsufficientError,
@@ -91,14 +93,21 @@ class QfcTestCase(APITestCase):
 
     def test_create_job_if_project_owner_is_over_quota(self):
         plan = self.user1.useraccount.current_subscription.plan
-
-        # Create a project that uses all the storage
         more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
-        Project.objects.create(
-            name="p1",
-            owner=self.user1,
-            file_storage_bytes=more_bytes_than_plan,
-        )
+
+        # TODO Delete with QF-4963 Drop support for legacy storage
+        if self.project1.uses_legacy_storage:
+            # Create a project that uses all the storage
+            self.project1.file_storage_bytes = more_bytes_than_plan
+            self.project1.save()
+        else:
+            FileVersion.objects.add_version(
+                project=self.project1,
+                filename="bigfile.name",
+                content=ContentFile(b"x" * more_bytes_than_plan, "dummy.name"),
+                file_type=File.FileType.PROJECT_FILE,
+                uploaded_by=self.user1,
+            )
 
         self.check_cannot_create_jobs(QuotaError)
         self.check_can_update_existing_jobs()
