@@ -6,6 +6,7 @@ Todo:
 import copy
 import io
 import logging
+import time
 from pathlib import PurePath
 from traceback import print_stack
 
@@ -37,6 +38,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class ListFilesViewPermissions(permissions.BasePermission):
@@ -225,6 +227,23 @@ class DownloadPushDeleteFileView(views.APIView):
 
     # TODO refactor this function by moving the actual upload and Project model updates to library function outside the view
     def post(self, request, projectid, filename, format=None):
+        view_start_time = time.time()
+        content_length = request.META.get("CONTENT_LENGTH", "unknown")
+
+        logger.info(
+            f"[UPLOAD_DEBUG] View started - "
+            f"Project: {projectid}, Filename: {filename}, "
+            f"Content-Length: {content_length}, Time: {view_start_time}"
+        )
+
+        # Calculate time since middleware (if available)
+        if hasattr(request, "_middleware_start_time"):
+            parsing_duration = view_start_time - request._middleware_start_time
+            logger.info(
+                f"[UPLOAD_DEBUG] Time from middleware to view - "
+                f"Duration: {parsing_duration:.2f}s"
+            )
+
         if len(request.FILES.getlist("file")) > 1:
             raise exceptions.MultipleContentsError()
 
@@ -287,6 +306,12 @@ class DownloadPushDeleteFileView(views.APIView):
             )
 
         request_file = request.FILES.get("file")
+        file_size = request_file.size if request_file else 0
+
+        logger.info(
+            f"[UPLOAD_DEBUG] File object obtained - "
+            f"File size: {file_size} bytes ({file_size / (1024*1024):.2f} MB)"
+        )
 
         if hasattr(request, "auth") and hasattr(request.auth, "client_type"):
             client_type = request.auth.client_type
@@ -296,13 +321,39 @@ class DownloadPushDeleteFileView(views.APIView):
         permissions_utils.check_can_upload_file(project, client_type, request_file.size)
 
         old_object = get_project_file_with_versions(project.id, filename)
+
+        # Log before SHA256 computation
+        sha256_start_time = time.time()
+        logger.info(
+            f"[UPLOAD_DEBUG] Starting SHA256 computation - "
+            f"Time: {sha256_start_time}"
+        )
         sha256sum = utils.get_sha256(request_file)
+        sha256_end_time = time.time()
+        sha256_duration = sha256_end_time - sha256_start_time
+        logger.info(
+            f"[UPLOAD_DEBUG] SHA256 computation completed - "
+            f"Duration: {sha256_duration:.2f}s, Hash: {sha256sum[:16]}..."
+        )
+
         bucket = utils.get_s3_bucket()
 
         key = utils.safe_join(f"projects/{projectid}/files/", filename)
         metadata = {"Sha256sum": sha256sum}
 
+        # Log before S3 upload
+        s3_upload_start_time = time.time()
+        logger.info(
+            f"[UPLOAD_DEBUG] Starting S3 upload - "
+            f"Key: {key}, Time: {s3_upload_start_time}"
+        )
         bucket.upload_fileobj(request_file, key, ExtraArgs={"Metadata": metadata})
+        s3_upload_end_time = time.time()
+        s3_upload_duration = s3_upload_end_time - s3_upload_start_time
+        logger.info(
+            f"[UPLOAD_DEBUG] S3 upload completed - "
+            f"Duration: {s3_upload_duration:.2f}s"
+        )
 
         new_object = get_project_file_with_versions(project.id, filename)
 
@@ -358,6 +409,13 @@ class DownloadPushDeleteFileView(views.APIView):
 
         # Delete the old file versions
         purge_old_file_versions_legacy(project)
+
+        view_end_time = time.time()
+        total_view_duration = view_end_time - view_start_time
+        logger.info(
+            f"[UPLOAD_DEBUG] View completed - "
+            f"Total view duration: {total_view_duration:.2f}s"
+        )
 
         return Response(status=status.HTTP_201_CREATED)
 
