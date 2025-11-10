@@ -125,10 +125,10 @@ def upload_project_file_version(
         )
 
         if file_type == File.FileType.PROJECT_FILE:
-            # Select for update the project so we can update it, especially the `file_storage_bytes` bit.
+            # Select for update the project so we can update it.
             # It guarantees there will be no other file upload editing the same project row.
             project = Project.objects.select_for_update().get(id=project.id)
-            update_fields = ["data_last_updated_at", "file_storage_bytes"]
+            update_fields = ["data_last_updated_at"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
                 is_qgis_file or project.the_qgis_file_name is not None
@@ -153,8 +153,7 @@ def upload_project_file_version(
                     )
 
             project.data_last_updated_at = timezone.now()
-            project.file_storage_bytes += file_version.size
-            project.save(update_fields=update_fields)
+            project.save(update_fields=update_fields, recompute_storage=True)
         elif file_type == File.FileType.PACKAGE_FILE:
             # nothing to do when we upload a package file
             pass
@@ -352,7 +351,6 @@ def delete_project_file_version(
         NotFound: Raised when the requested file version is not found.
     """
     version_id = request.GET.get("version", request.headers.get("x-file-version"))
-    bytes_to_delete = 0
 
     try:
         if version_id:
@@ -368,14 +366,12 @@ def delete_project_file_version(
                 )
 
             object_to_delete = file_versions_qs.get(id=version_id)
-            bytes_to_delete = object_to_delete.size
         else:
             object_to_delete = File.objects.get(
                 project_id=project_id,
                 name=filename,
                 file_type=File.FileType.PROJECT_FILE,
             )
-            bytes_to_delete = object_to_delete.get_total_versions_size()
     except File.DoesNotExist:
         raise NotFound(
             detail=f"The requested {filename=} for {project_id=} does not exist!"
@@ -389,7 +385,7 @@ def delete_project_file_version(
 
     with transaction.atomic():
         project = Project.objects.select_for_update().get(id=project_id)
-        update_fields = ["file_storage_bytes"]
+        update_fields = []
 
         if (
             is_qgis_project_file(filename)
@@ -401,6 +397,4 @@ def delete_project_file_version(
             project.the_qgis_file_name = None
             update_fields.append("the_qgis_file_name")
 
-        project.file_storage_bytes -= bytes_to_delete
-
-        project.save(update_fields=update_fields)
+        project.save(update_fields=update_fields, recompute_storage=True)
