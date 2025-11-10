@@ -42,4 +42,4 @@ volumes:
   # We use a different volume, just so that the test_ database
   # gets created in the entrypoint.
   postgres_data:
-    name: qfieldcloud_postgres_data_test
+    name: ${COMPOSE_PROJECT_NAME}_postgres_data_test
