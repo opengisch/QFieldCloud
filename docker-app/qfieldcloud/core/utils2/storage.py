@@ -641,18 +641,13 @@ def delete_project_file_permanently(
     with transaction.atomic():
         _delete_by_key_permanently(file.latest.key)
 
-        update_fields = ["file_storage_bytes"]
+        update_fields = []
 
         if qfieldcloud.core.utils.is_the_qgis_file(filename):
             update_fields.append("the_qgis_file_name")
             project.the_qgis_file_name = None
 
-        file_storage_bytes = project.file_storage_bytes - sum(
-            [v.size for v in file.versions]
-        )
-        project.file_storage_bytes = max(file_storage_bytes, 0)
-
-        project.save(update_fields=update_fields)
+        project.save(update_fields=update_fields, recompute_storage=True)
 
         # NOTE force audits to be required when deleting files
         audit(

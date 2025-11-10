@@ -314,7 +314,7 @@ class DownloadPushDeleteFileView(views.APIView):
             # project and update it now, it guarantees there will be no other file upload editing
             # the same project row.
             project = Project.objects.select_for_update().get(id=projectid)
-            update_fields = ["data_last_updated_at", "file_storage_bytes"]
+            update_fields = ["data_last_updated_at"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
                 is_the_qgis_file or project.has_the_qgis_file
@@ -339,9 +339,7 @@ class DownloadPushDeleteFileView(views.APIView):
                     )
 
             project.data_last_updated_at = timezone.now()
-            # NOTE just incrementing the fils_storage_bytes when uploading might make the database out of sync if a files is uploaded/deleted bypassing this function
-            project.file_storage_bytes += request_file.size
-            project.save(update_fields=update_fields)
+            project.save(update_fields=update_fields, recompute_storage=True)
 
         if old_object:
             audit(
