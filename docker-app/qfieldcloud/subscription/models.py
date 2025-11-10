@@ -152,9 +152,6 @@ class Plan(models.Model):
     # the plan is set as trial
     is_trial = models.BooleanField(default=False)
 
-    # the plan is metered or licensed. If it metered, it is automatically post-paid.
-    is_metered = models.BooleanField(default=False)
-
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_cancellable = models.BooleanField(default=True)
 
