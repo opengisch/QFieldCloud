@@ -191,7 +191,6 @@ requests==2.32.5
     # via
     #   django-allauth
     #   djangorestframework-stubs
-    #   stripe
 rpds-py==0.27.0
     # via
     #   jsonschema
@@ -208,8 +207,6 @@ sqlparse==0.5.3
     # via
     #   django
     #   django-debug-toolbar
-stripe==4.2.0
-    # via -r /requirements/requirements.in
 swapper==1.4.0
     # via django-notifications-hq
 tomli==2.2.1

@@ -42,4 +42,3 @@ Pillow==11.3.0
 psycopg2==2.9.11
 pymemcache==4.0.0
 sentry-sdk==2.42.0
-stripe==4.2.0
