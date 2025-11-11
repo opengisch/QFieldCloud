@@ -19,12 +19,14 @@ from django.core.files.storage import storages
 from django.db import transaction
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
+from django.utils import timezone
 from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
+from qfieldcloud.filestorage.utils import is_admin_restricted_file
 
 logger = logging.getLogger(__name__)
 
@@ -643,6 +645,10 @@ def delete_project_file_permanently(
 
         update_fields = []
 
+        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+            update_fields.append("restricted_data_last_updated_at")
+            project.restricted_data_last_updated_at = timezone.now()
+
         if qfieldcloud.core.utils.is_the_qgis_file(filename):
             update_fields.append("the_qgis_file_name")
             project.the_qgis_file_name = None
@@ -738,6 +744,9 @@ def delete_project_file_version_permanently(
             )
 
             delete_version_permanently(file_version)
+
+        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+            project.restricted_data_last_updated_at = timezone.now()
 
     project.save(recompute_storage=True)
 

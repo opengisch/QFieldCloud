@@ -152,7 +152,13 @@ def upload_project_file_version(
                         project=project, created_by=request.user
                     )
 
-            project.data_last_updated_at = timezone.now()
+            now = timezone.now()
+            project.data_last_updated_at = now
+
+            if is_admin_restricted_file(filename, project.the_qgis_file_name):
+                update_fields.append("restricted_data_last_updated_at")
+                project.restricted_data_last_updated_at = now
+
             project.save(update_fields=update_fields, recompute_storage=True)
         elif file_type == File.FileType.PACKAGE_FILE:
             # nothing to do when we upload a package file
@@ -386,6 +392,10 @@ def delete_project_file_version(
     with transaction.atomic():
         project = Project.objects.select_for_update().get(id=project_id)
         update_fields = []
+
+        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+            update_fields.append("restricted_data_last_updated_at")
+            project.restricted_data_last_updated_at = timezone.now()
 
         if (
             is_qgis_project_file(filename)
