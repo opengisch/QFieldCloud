@@ -1,4 +1,7 @@
+import io
 import logging
+import time
+from io import StringIO
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
@@ -18,7 +21,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.subscription.models import Subscription
 
-from .utils import set_subscription, setup_subscription_plans
+from .utils import set_subscription, setup_subscription_plans, testdata_path
 
 logging.disable(logging.CRITICAL)
 
@@ -804,3 +807,97 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(data[3]["owner"], "user1")
         self.assertEqual(data[3]["name"], "public_project_of_user1")
         self.assertTrue(data[3]["is_public"])
+
+    def test_restricted_data_last_updated_at_on_file_upload(self):
+        """Test that restricted_data_last_updated_at is updated when restricted files are uploaded."""
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create a project
+        project = Project.objects.create(name="test_restricted_data", owner=self.user1)
+
+        # Upload a non-restricted file (e.g. a `csv` file)
+        response = self.client.post(
+            f"/api/v1/files/{project.id}/data.csv/",
+            {"file": StringIO("c1,c2\r\nv1,v2")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        # Initially, `restricted_data_last_updated_at` should be None
+        self.assertIsNone(project.restricted_data_last_updated_at)
+
+        # Upload a QGIS project file (restricted file)
+        response = self.client.post(
+            f"/api/v1/files/{project.id}/simple_bumblebees.qgs/",
+            {"file": io.FileIO(testdata_path("simple_bumblebees.qgs"), "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project.refresh_from_db()
+        # After uploading a restricted file, `restricted_data_last_updated_at` should be set
+        self.assertIsNotNone(project.restricted_data_last_updated_at)
+        first_update_time = project.restricted_data_last_updated_at
+
+        # Upload a non-restricted file (e.g. a `csv` file)
+        response = self.client.post(
+            f"/api/v1/files/{project.id}/data.csv/",
+            {"file": StringIO("c1,c2\r\nv1,v2")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project.refresh_from_db()
+        # After uploading a non-restricted file, `restricted_data_last_updated_at` should NOT change
+        self.assertEqual(project.restricted_data_last_updated_at, first_update_time)
+
+        # Upload another restricted file (e.g. `.qml` file)
+        time.sleep(0.01)
+        response = self.client.post(
+            f"/api/v1/files/{project.id}/simple_bumblebees.qml/",
+            {"file": StringIO("import QtQuick")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project.refresh_from_db()
+        # After uploading another restricted file, `restricted_data_last_updated_at` should be updated
+        self.assertIsNotNone(project.restricted_data_last_updated_at)
+        self.assertGreater(project.restricted_data_last_updated_at, first_update_time)
+
+    def test_restricted_data_last_updated_at_on_file_delete(self):
+        """Test that restricted_data_last_updated_at is updated when restricted files are deleted."""
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create a project
+        project = Project.objects.create(
+            name="test_restricted_data_delete", is_public=False, owner=self.user1
+        )
+
+        # Upload restricted file (e.g. `.qgs` file)
+        response = self.client.post(
+            f"/api/v1/files/{project.id}/simple_bumblebees.qgs/",
+            {"file": io.FileIO(testdata_path("simple_bumblebees.qgs"), "rb")},
+            format="multipart",
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project.refresh_from_db()
+        first_update_time = project.restricted_data_last_updated_at
+        self.assertIsNotNone(first_update_time)
+
+        # Wait a bit to ensure timestamp difference
+        time.sleep(0.01)
+
+        # Delete the restricted file
+        response = self.client.delete(
+            f"/api/v1/files/{project.id}/simple_bumblebees.qgs/"
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project.refresh_from_db()
+        # After deleting a restricted file, `restricted_data_last_updated_at` should be updated
+        self.assertIsNotNone(project.restricted_data_last_updated_at)
+        self.assertGreater(project.restricted_data_last_updated_at, first_update_time)
