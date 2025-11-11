@@ -1262,6 +1262,13 @@ class Project(models.Model):
         ),
     )
 
+    restricted_data_last_updated_at = models.DateTimeField(
+        _("Restricted data last updated at"),
+        blank=True,
+        null=True,
+        editable=False,
+    )
+
     @cached_property
     def shared_datasets_project(self) -> Project | None:
         """
