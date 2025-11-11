@@ -5,6 +5,7 @@ __pycache__/
 .coverage
 .vscode
 .env
+.env.test
 docker-compose.override.yml
 client/projects
 conf/mkcert/*
@@ -16,6 +17,7 @@ Pipfile*
 **/site-packages
 docker-qgis/libqfieldsync
 docker-qgis/qfieldcloud-sdk-python
+.venv
 
 # compiled translations
 docker-app/qfieldcloud/locale/**/*.mo
