@@ -1797,6 +1797,7 @@ class Project(models.Model):
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
         logger.debug(f"Saving project {self}...")
+        additional_update_fields = set()
 
         if recompute_storage:
             # TODO Delete with QF-4963 Drop support for legacy storage
@@ -1809,15 +1810,24 @@ class Project(models.Model):
                     file_storage_bytes=Sum("versions__size", default=0)
                 )["file_storage_bytes"]
 
+            additional_update_fields.add("file_storage_bytes")
+
         # Ensure that the Project's storage_keep_versions is at least 1, and reflects the plan's default storage_keep_versions value.
         if not self.storage_keep_versions:
             self.storage_keep_versions = (
                 self.owner.useraccount.current_subscription.plan.storage_keep_versions
             )
 
+            additional_update_fields.add("storage_keep_versions")
+
         assert self.storage_keep_versions >= 1, (
             "If 0, storage_keep_versions mean that all file versions are deleted!"
         )
+
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = list(
+                set(kwargs["update_fields"]) | additional_update_fields
+            )
 
         super().save(*args, **kwargs)
 
