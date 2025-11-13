@@ -40,7 +40,7 @@ cryptography==45.0.6
     #   pyjwt
 deprecated==1.2.18
     # via -r /requirements/requirements.in
-django==4.2.25
+django==4.2.26
     # via
     #   -r /requirements/requirements.in
     #   django-allauth
