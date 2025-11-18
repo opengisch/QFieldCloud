@@ -855,6 +855,7 @@ class ProjectForm(ModelForm):
         )
         if self.instance.has_attachments_files:
             self.fields["attachments_file_storage"].disabled = True
+            self.fields["are_attachments_versioned"].disabled = True
 
 
 class ProjectAdmin(QFieldCloudModelAdmin):
@@ -899,6 +900,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "file_storage",
         "file_storage_migrated_at",
         "attachments_file_storage",
+        "are_attachments_versioned",
         "is_attachment_download_on_demand",
         "project_files",
     )
