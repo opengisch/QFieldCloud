@@ -643,11 +643,14 @@ def delete_project_file_permanently(
     with transaction.atomic():
         _delete_by_key_permanently(file.latest.key)
 
-        update_fields = []
+        update_fields = ["data_last_updated_at"]
+
+        now = timezone.now()
+        project.data_last_updated_at = now
 
         if is_admin_restricted_file(filename, project.the_qgis_file_name):
             update_fields.append("restricted_data_last_updated_at")
-            project.restricted_data_last_updated_at = timezone.now()
+            project.restricted_data_last_updated_at = now
 
         if qfieldcloud.core.utils.is_the_qgis_file(filename):
             update_fields.append("the_qgis_file_name")
@@ -723,6 +726,7 @@ def delete_project_file_version_permanently(
             versions_to_delete.append(file_version)
 
     with transaction.atomic():
+        update_fields = ["data_last_updated_at"]
         for file_version in versions_to_delete:
             if (
                 not re.match(
@@ -745,10 +749,14 @@ def delete_project_file_version_permanently(
 
             delete_version_permanently(file_version)
 
-        if is_admin_restricted_file(filename, project.the_qgis_file_name):
-            project.restricted_data_last_updated_at = timezone.now()
+        now = timezone.now()
+        project.data_last_updated_at = now
 
-    project.save(recompute_storage=True)
+        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+            update_fields.append("restricted_data_last_updated_at")
+            project.restricted_data_last_updated_at = now
+
+    project.save(update_fields=update_fields, recompute_storage=True)
 
     return versions_to_delete
 
