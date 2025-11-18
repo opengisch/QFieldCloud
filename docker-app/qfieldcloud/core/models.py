@@ -1262,6 +1262,14 @@ class Project(models.Model):
         ),
     )
 
+    are_attachments_versioned = models.BooleanField(
+        default=True,
+        verbose_name=_("Versioned attachment files"),
+        help_text=_(
+            "If enabled, attachment files will make use of the file versioning system. If disabled, only the latest version of each attachment file will be kept, and stored with the extension in the filename."
+        ),
+    )
+
     restricted_data_last_updated_at = models.DateTimeField(
         _("Restricted data last updated at"),
         blank=True,
