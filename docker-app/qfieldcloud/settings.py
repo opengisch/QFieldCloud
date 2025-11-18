@@ -361,6 +361,7 @@ LOGIN_REDIRECT_URL = "index"
 
 # Sentry configuration
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+SENTRY_RELEASE = os.environ.get("SENTRY_RELEASE", "dev")
 if SENTRY_DSN:
     SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
 
