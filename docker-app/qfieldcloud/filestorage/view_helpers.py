@@ -391,11 +391,14 @@ def delete_project_file_version(
 
     with transaction.atomic():
         project = Project.objects.select_for_update().get(id=project_id)
-        update_fields = []
+        update_fields = ["data_last_updated_at"]
+
+        now = timezone.now()
+        project.data_last_updated_at = now
 
         if is_admin_restricted_file(filename, project.the_qgis_file_name):
             update_fields.append("restricted_data_last_updated_at")
-            project.restricted_data_last_updated_at = timezone.now()
+            project.restricted_data_last_updated_at = now
 
         if (
             is_qgis_project_file(filename)
