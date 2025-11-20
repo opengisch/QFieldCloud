@@ -3,6 +3,7 @@
 import argparse
 import json
 import logging
+import os
 import re
 from enum import Enum
 from functools import lru_cache
@@ -14,6 +15,7 @@ import jsonschema
 
 # pylint: disable=no-name-in-module
 from qgis.core import (
+    QgsDataSourceUri,
     QgsExpression,
     QgsFeature,
     QgsGeometry,
@@ -47,6 +49,8 @@ WKT = str
 Uuid = str
 FeaturePk = str
 LayerId = str
+
+qfc_pg_effective_role = os.getenv("QFC_PG_EFFECTIVE_ROLE")
 
 
 class BaseOptions(TypedDict):
@@ -422,6 +426,13 @@ def apply_deltas_without_transaction(
                     f'Cannot start editing layer "{layer_id}"',
                     provider_errors=layer.dataProvider().errors(),
                 )
+
+            # check if a PostGIS layer's session_role override is requested.
+            if layer.providerType() == "postgres" and qfc_pg_effective_role:
+                uri = QgsDataSourceUri(layer.dataProvider().dataSourceUri())
+                uri.setParam("session_role", qfc_pg_effective_role)
+                layer.setDataSource(uri.uri(), layer.name(), "postgres")
+                layer.reload()
 
             pk_attr_name = get_pk_attr_name(layer)
             if not pk_attr_name:
