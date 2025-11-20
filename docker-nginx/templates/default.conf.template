@@ -79,7 +79,7 @@ server {
   error_log /var/log/nginx/error.log ${NGINX_ERROR_LOG_LEVEL};
 
   server_name ${QFIELDCLOUD_HOST} nginx;
-  client_max_body_size 10G;
+  client_max_body_size ${NGINX_CLIENT_MAX_BODY_SIZE};
   keepalive_timeout 5;
 
   # path for static files (only needed for serving local staticfiles)
@@ -107,9 +107,9 @@ server {
   proxy_set_header X-Request-Id $request_id;
   proxy_set_header Host $http_host;
 
-  proxy_connect_timeout 5s;
-  proxy_read_timeout 300;
-  proxy_send_timeout 300;
+  proxy_connect_timeout ${NGINX_PROXY_CONNECT_TIMEOUT};
+  proxy_read_timeout ${NGINX_PROXY_READ_TIMEOUT};
+  proxy_send_timeout ${NGINX_PROXY_SEND_TIMEOUT};
   proxy_redirect off;
   proxy_intercept_errors off;
 
