@@ -9,13 +9,24 @@ from django.core.management.base import BaseCommand, CommandParser
 from django.db import connection, transaction
 from django.db.models import Q
 from qfieldcloud.core.models import Job
-from worker_wrapper.factory import (
-    ApplyDeltaJobRun,
-    JobRun,
-    PackageJobRun,
-    ProcessProjectfileJobRun,
-    cancel_orphaned_workers,
-)
+
+# Import based on configured backend
+if getattr(settings, "QFIELDCLOUD_WORKER_BACKEND", "docker") in ["kubernetes", "k8s"]:
+    from worker_wrapper.k8s_wrapper import (
+        K8sApplyDeltaJobRun as ApplyDeltaJobRun,
+        K8sJobRun as JobRun,
+        K8sPackageJobRun as PackageJobRun,
+        K8sProcessProjectfileJobRun as ProcessProjectfileJobRun,
+        cancel_orphaned_k8s_workers as cancel_orphaned_workers,
+    )
+else:
+    from worker_wrapper.wrapper import (
+        ApplyDeltaJobRun,
+        JobRun,
+        PackageJobRun,
+        ProcessProjectfileJobRun,
+        cancel_orphaned_workers,
+    )
 
 SECONDS = 5
 
@@ -45,7 +56,8 @@ class Command(BaseCommand):
         single_shot: bool | None = None,
         **kwargs: Any,
     ) -> None:
-        logging.info("Dequeue QFieldCloud Jobs from the DB")
+        backend = getattr(settings, "QFIELDCLOUD_WORKER_BACKEND", "docker")
+        logging.info(f"Dequeue QFieldCloud Jobs from the DB using {backend} backend")
         killer = GracefulKiller()
 
         while killer.alive:
