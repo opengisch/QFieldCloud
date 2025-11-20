@@ -261,12 +261,21 @@ class FileVersionQueryset(models.QuerySet):
 
 def get_file_version_upload_to(instance: "FileVersion", _filename: str) -> str:
     if instance.file.file_type == File.FileType.PROJECT_FILE:
+        # if the project is configured to not version attachments, store them without version id.
+        if (
+            instance.file.is_attachment()
+            and not instance.file.project.are_attachments_versioned
+        ):
+            return f"projects/{instance.file.project.id}/files/{instance.file.name}"
+
         return f"projects/{instance.file.project.id}/files/{instance.file.name}/{instance.display}-{str(instance.id)[0:8]}"
+
     elif instance.file.file_type == File.FileType.PACKAGE_FILE:
         # TODO decide whether we need to add the version id in there?
         # Currently we don't add it, since there is no situation to have multiple versions of the same file in a packaged file.
         # On the other hand, having this differing from regular files will make it harder to manage.
         return f"projects/{instance.file.project.id}/packages/{instance.file.package_job_id}/{instance.file.name}"
+
     else:
         raise NotImplementedError()
 
