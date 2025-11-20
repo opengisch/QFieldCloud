@@ -35,8 +35,13 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-.qfc-header-logo {
+.header-logo {
   height: 1.5rem;
+  margin-left: 1rem;
+}
+
+.main-logo {
+  height: 15rem;
 }
 
 .ml-5rem {
