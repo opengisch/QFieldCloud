@@ -30,6 +30,7 @@ from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
     purge_old_file_versions_legacy,
 )
+from qfieldcloud.filestorage.utils import is_admin_restricted_file
 from rest_framework import permissions, serializers, status, views
 from rest_framework.exceptions import NotFound
 from rest_framework.parsers import DataAndFiles, MultiPartParser
@@ -314,7 +315,7 @@ class DownloadPushDeleteFileView(views.APIView):
             # project and update it now, it guarantees there will be no other file upload editing
             # the same project row.
             project = Project.objects.select_for_update().get(id=projectid)
-            update_fields = ["data_last_updated_at", "file_storage_bytes"]
+            update_fields = ["data_last_updated_at"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
                 is_the_qgis_file or project.has_the_qgis_file
@@ -338,10 +339,14 @@ class DownloadPushDeleteFileView(views.APIView):
                         project=project, created_by=self.request.user
                     )
 
-            project.data_last_updated_at = timezone.now()
-            # NOTE just incrementing the fils_storage_bytes when uploading might make the database out of sync if a files is uploaded/deleted bypassing this function
-            project.file_storage_bytes += request_file.size
-            project.save(update_fields=update_fields)
+            now = timezone.now()
+            project.data_last_updated_at = now
+
+            if is_admin_restricted_file(filename, project.the_qgis_file_name):
+                update_fields.append("restricted_data_last_updated_at")
+                project.restricted_data_last_updated_at = now
+
+            project.save(update_fields=update_fields, recompute_storage=True)
 
         if old_object:
             audit(

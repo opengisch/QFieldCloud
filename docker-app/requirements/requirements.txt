@@ -40,7 +40,7 @@ cryptography==45.0.6
     #   pyjwt
 deprecated==1.2.18
     # via -r /requirements/requirements.in
-django==4.2.25
+django==4.2.26
     # via
     #   -r /requirements/requirements.in
     #   django-allauth
@@ -73,7 +73,7 @@ django==4.2.25
     #   jsonfield
 django-allauth[socialaccount]==65.11.2
     # via -r /requirements/requirements.in
-django-auditlog==3.2.1
+django-auditlog==3.3.0
     # via -r /requirements/requirements.in
 django-axes==8.0.0
     # via -r /requirements/requirements.in
@@ -141,7 +141,7 @@ djangorestframework==3.16.1
     #   drf-spectacular
 djangorestframework-stubs==3.16.4
     # via -r /requirements/requirements.in
-drf-spectacular==0.28.0
+drf-spectacular==0.29.0
     # via -r /requirements/requirements.in
 idna==3.10
     # via requests
@@ -198,7 +198,7 @@ rpds-py==0.27.0
     #   referencing
 s3transfer==0.10.4
     # via boto3
-sentry-sdk==2.42.0
+sentry-sdk==2.44.0
     # via -r /requirements/requirements.in
 six==1.17.0
     # via python-dateutil

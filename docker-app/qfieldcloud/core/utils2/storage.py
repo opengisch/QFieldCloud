@@ -19,12 +19,14 @@ from django.core.files.storage import storages
 from django.db import transaction
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
+from django.utils import timezone
 from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
+from qfieldcloud.filestorage.utils import is_admin_restricted_file
 
 logger = logging.getLogger(__name__)
 
@@ -296,7 +298,6 @@ def file_response(
             return_file.open(),
             as_attachment=as_attachment,
             filename=filename,
-            content_type="text/html",
         )
 
     raise Exception(
@@ -642,18 +643,20 @@ def delete_project_file_permanently(
     with transaction.atomic():
         _delete_by_key_permanently(file.latest.key)
 
-        update_fields = ["file_storage_bytes"]
+        update_fields = ["data_last_updated_at"]
+
+        now = timezone.now()
+        project.data_last_updated_at = now
+
+        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+            update_fields.append("restricted_data_last_updated_at")
+            project.restricted_data_last_updated_at = now
 
         if qfieldcloud.core.utils.is_the_qgis_file(filename):
             update_fields.append("the_qgis_file_name")
             project.the_qgis_file_name = None
 
-        file_storage_bytes = project.file_storage_bytes - sum(
-            [v.size for v in file.versions]
-        )
-        project.file_storage_bytes = max(file_storage_bytes, 0)
-
-        project.save(update_fields=update_fields)
+        project.save(update_fields=update_fields, recompute_storage=True)
 
         # NOTE force audits to be required when deleting files
         audit(
@@ -723,6 +726,7 @@ def delete_project_file_version_permanently(
             versions_to_delete.append(file_version)
 
     with transaction.atomic():
+        update_fields = ["data_last_updated_at"]
         for file_version in versions_to_delete:
             if (
                 not re.match(
@@ -745,7 +749,14 @@ def delete_project_file_version_permanently(
 
             delete_version_permanently(file_version)
 
-    project.save(recompute_storage=True)
+        now = timezone.now()
+        project.data_last_updated_at = now
+
+        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+            update_fields.append("restricted_data_last_updated_at")
+            project.restricted_data_last_updated_at = now
+
+    project.save(update_fields=update_fields, recompute_storage=True)
 
     return versions_to_delete
 

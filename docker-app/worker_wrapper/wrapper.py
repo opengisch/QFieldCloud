@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import docker
+import docker.client
 import docker.errors
 import requests
 import sentry_sdk
@@ -49,6 +50,11 @@ RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
 TMP_FILE = Path("/tmp")
+TRANSFORMATION_GRIDS_PATH = "/transformation_grids"
+"""Path inside the worker container where the transformation grids volume `settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME` is mounted."""
+
+TOKEN_EXPIRATION_TIME_BUFFER_S = 60
+"""Extra time in seconds for the dedicated worker token to keep the token valid, in addition to `JobRun.container_timeout_secs`. Useful when the worker takes longer to start."""
 
 
 class QgisException(Exception):
@@ -124,7 +130,7 @@ class JobRun:
     def get_volumes(self) -> list[str]:
         volumes = [
             f"{str(self.shared_tempdir)}:/io/:rw",
-            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro",
+            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:{TRANSFORMATION_GRIDS_PATH}:ro",
         ]
 
         return volumes
@@ -135,7 +141,6 @@ class JobRun:
         return ports
 
     def get_environment(self) -> dict[str, str]:
-        environment = {}
         extra_envvars = {}
 
         pgservice_file_contents = ""
@@ -149,10 +154,14 @@ class JobRun:
             else:
                 raise NotImplementedError(f"Unknown secret type: {secret.type}")
 
+        # expire the token a bit after the container timeout to avoid edge cases
+        token_expires_at = timezone.now() + timedelta(
+            seconds=self.container_timeout_secs + TOKEN_EXPIRATION_TIME_BUFFER_S
+        )
         token = AuthToken.objects.create(
             user=self.job.created_by,
             client_type=AuthToken.ClientType.WORKER,
-            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+            expires_at=token_expires_at,
         )
 
         environment = {
@@ -162,7 +171,7 @@ class JobRun:
             "QFIELDCLOUD_TOKEN": token.key,
             "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
             "JOB_ID": self.job_id,
-            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
+            "PROJ_DOWNLOAD_DIR": TRANSFORMATION_GRIDS_PATH,
             "QT_QPA_PLATFORM": "offscreen",
         }
 
@@ -333,16 +342,15 @@ class JobRun:
         if settings.DEBUG:
             if self.debug_qgis_container_is_enabled:
                 # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
-                # otherwise the vscode deubgger won't be able to connect
+                # otherwise the vscode debugger won't be able to connect
                 # NOTE the port must be passed here and not in the `docker-compose` file,
                 # because the `qgis` container is started with docker in docker and the `docker-compose`
                 # configuration is valid only for the brief moment when the stack is built and started,
                 # but not when new `qgis` containers are started dynamically by the worker wrapper
-                ports.update(
-                    {
-                        f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
-                    }
-                )
+                ports = {
+                    **ports,
+                    f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
+                }
 
                 logger.debug(
                     f"Exposing ports from the qgis container for debugging: {ports=}"
@@ -351,17 +359,16 @@ class JobRun:
             if settings.DEBUG_QGIS_WORKER_HOST_PATH:
                 debug_host_path = Path(settings.DEBUG_QGIS_WORKER_HOST_PATH)
 
-                volumes.extend(
-                    [
-                        # allow local development for `docker-qgis`
-                        f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
-                        f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
-                        # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
-                        f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync.py:ro",
-                        # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`"
-                        f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python.py:ro",
-                    ]
-                )
+                volumes = [
+                    *volumes,
+                    # allow local development for `docker-qgis`
+                    f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
+                    f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
+                    # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}` within the worker container.
+                    f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync:ro",
+                    # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}` within the worker container.
+                    f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python:ro",
+                ]
 
                 logger.debug(
                     f"Mounting host path into qgis container for debugging: {volumes=}"

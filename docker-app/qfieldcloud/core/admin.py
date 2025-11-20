@@ -25,6 +25,7 @@ from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
@@ -83,6 +84,22 @@ class QfcAdminSite(AdminSite):
 
         for _model, model_admin in self._registry.items():
             model_admin.admin_site = self
+
+    def login(
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> HttpResponse:
+        """Override the default Django admin login view to redirect to the Allauth's login view."""
+        if request.method == "GET" and self.has_permission(request):
+            # Already logged-in, redirect to admin index
+            index_path = reverse("admin:index", current_app=self.name)
+            return HttpResponseRedirect(index_path)
+
+        # If the user is not authenticated, redirect to the accounts login page, but keep the query string that has the original request URL.
+        return redirect_to_login(
+            request.GET.get("next", ""), login_url=reverse(settings.LOGIN_URL)
+        )
+
+    # TODO consider adding a logout view to redirect to the Allauth's logout view, but then we lose the nice template we have right now.
 
 
 qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
@@ -874,6 +891,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "created_at",
         "updated_at",
         "data_last_updated_at",
+        "restricted_data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
         "locked_at",
@@ -892,6 +910,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "created_at",
         "updated_at",
         "data_last_updated_at",
+        "restricted_data_last_updated_at",
         "data_last_packaged_at",
         "project_details__pre",
         "locked_at",

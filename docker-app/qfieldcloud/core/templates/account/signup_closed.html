@@ -1,0 +1,32 @@
+{% extends 'account/base.html' %}
+{% load i18n %}
+{% load bootstrap4 %}
+
+{% block title_contents %}{% trans 'Registration (closed)' %}{% endblock %}
+
+
+{% block content %}
+
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">{% trans 'Registration is closed' %}</h5>
+    <p class="card-text">
+      {% blocktrans %}
+        We are sorry, but the registration is currently closed.
+      {% endblocktrans %}
+    </p>
+    <p class="card-text">
+      {% url 'account_login' as login_url %}
+      {% blocktrans with login_url=login_url %}
+        Already have an account? Then you can still <a href="{{ login_url }}">sign in</a>.
+      {% endblocktrans %}
+    </p>
+    <p class="card-text">
+      {% blocktrans %}
+      No account yet? Then please <a href="{{ config.ABOUT_QFIELDCLOUD_URL }}#register">join the waiting list</a>.
+      {% endblocktrans %}
+    </p>
+  </div>
+</div>
+
+{% endblock content %}

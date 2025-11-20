@@ -274,7 +274,7 @@ Do not forget to copy the site packages every time any of the `requirements*.txt
 
 QFieldCloud will automatically generate a certificate and its root certificate in `./conf/nginx/certs`.
 However, you need to trust the root certificate first,
-so other programs (e.g. curl) can create secure connection to the local QFieldCloud instance.
+so other programs (e.g. `curl`) can create secure connection to the local QFieldCloud instance.
 
 On Debian/Ubuntu, copy the root certificate to the directory with trusted certificates. Note the extension has been changed to `.crt`:
 
@@ -307,7 +307,7 @@ Now connecting with `curl` should fail with a similar error:
 
 ## Code style
 
-Code style done with [`precommit`](https://pre-commit.com):
+Code style done with [`pre-commit`](https://pre-commit.com):
 
     pip install pre-commit
     # install pre-commit hook
@@ -402,7 +402,7 @@ For great `nginx` logs, use:
 
 ### Storage
 
-You can use either the integrated `minio` object storage, or use an external provider (e. g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
+You can use either the integrated `minio` object storage, or use an external provider (e.g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
 
 ### Database
 
