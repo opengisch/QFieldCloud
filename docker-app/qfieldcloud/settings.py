@@ -547,6 +547,22 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
             "color_text": "#E3E3E3",
         },
     },
+    "entra": {
+        # https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps
+        "required": True,
+        "light": {
+            "logo": "sso/microsoft.svg",
+            "color_fill": "#FFFFFF",
+            "color_stroke": "#8C8C8C",
+            "color_text": "#5E5E5E",
+        },
+        "dark": {
+            "logo": "sso/microsoft.svg",
+            "color_fill": "#2F2F2F",
+            "color_stroke": "#2F2F2F",
+            "color_text": "#FFFFFF",
+        },
+    },
 }
 
 # Django axes configuration
