@@ -45,6 +45,12 @@ urlpatterns = [
     *filestorage_urlpatterns,
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
+    # Add project overview URL pattern for get_absolute_url compatibility
+    path(
+        "projects/<str:username>/<str:project>/",
+        projects_views.ProjectViewSet.as_view({"get": "retrieve"}),
+        name="project_overview",
+    ),
     path("users/", users_views.ListUsersView.as_view()),
     path(
         "users/<str:username>/organizations/",

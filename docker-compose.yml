@@ -11,6 +11,9 @@ services:
       context: ./docker-app
       target: webserver_runtime
       network: host
+      platforms:
+        - linux/amd64
+        - linux/arm64/v8
     restart: unless-stopped
     command: >
       gunicorn
@@ -89,6 +92,9 @@ services:
   nginx:
     build:
       context: ./docker-nginx
+      platforms:
+        - linux/amd64
+        - linux/arm64/v8
     restart: unless-stopped
     volumes:
       - ./conf/certbot/conf:/etc/letsencrypt:ro
@@ -143,6 +149,9 @@ services:
     build:
       context: ./docker-qgis
       network: host
+      platforms:
+        - linux/amd64
+        - linux/arm64/v8
       args:
         DEBUG_BUILD: ${DEBUG}
     tty: true
@@ -155,6 +164,9 @@ services:
     build:
       context: ./docker-app
       network: host
+      platforms:
+        - linux/amd64
+        - linux/arm64/v8
       target: worker_wrapper_runtime
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)

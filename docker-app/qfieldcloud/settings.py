@@ -60,7 +60,15 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT")
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
 
-# A tuple representing an HTTP header/value combination that signifies a request is secure, which is important for Django’s CSRF protection.
+# CSRF trusted origins for secure form submissions
+# Format: 'https://domain1.com https://domain2.com'
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(" ")
+    if origin.strip()
+]
+
+# A tuple representing an HTTP header/value combination that signifies a request is secure, which is important for Django's CSRF protection.
 # We need to set it in QFieldCloud as we run behind a proxy.
 # Read more: https://docs.djangoproject.com/en/4.2/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -636,6 +644,13 @@ QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
 
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
+
+# Worker backend configuration
+QFIELDCLOUD_WORKER_BACKEND = os.environ.get("QFIELDCLOUD_WORKER_BACKEND", "docker")
+QFIELDCLOUD_K8S_NAMESPACE = os.environ.get("QFIELDCLOUD_K8S_NAMESPACE", "default")
+QFIELDCLOUD_K8S_SERVICE_ACCOUNT = os.environ.get(
+    "QFIELDCLOUD_K8S_SERVICE_ACCOUNT", "default"
+)
 
 # Admin URLS which will be skipped from checking if they return HTTP 200
 QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
