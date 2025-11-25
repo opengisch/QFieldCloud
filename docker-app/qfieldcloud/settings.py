@@ -790,6 +790,7 @@ QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
 QFIELDCLOUD_DEFAULT_NETWORK = os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK")
 
 # `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
+AUDITLOG_LOGENTRY_MODEL = "auditlog.LogEntry"
 AUDITLOG_INCLUDE_TRACKING_MODELS = [
     # NOTE `Delta` and `Job` models are not being automatically audited, because their data changes very often and timestamps are available in their models.
     {
