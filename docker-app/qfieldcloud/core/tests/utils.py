@@ -76,8 +76,13 @@ def set_subscription(
         )
         subscription: Subscription = user.useraccount.current_subscription
         subscription.plan = plan
+        subscription.max_organization_members = (
+            subscription.plan.max_organization_members
+        )
         subscription.active_since = timezone.now() - timedelta(days=1)
-        subscription.save(update_fields=["plan", "active_since"])
+        subscription.save(
+            update_fields=["plan", "max_organization_members", "active_since"]
+        )
 
     return subscription
 
