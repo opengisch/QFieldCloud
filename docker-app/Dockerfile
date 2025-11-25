@@ -22,6 +22,7 @@ RUN apt-get update \
 # GDAL development headers needed for building fiona and other geospatial packages
     libgdal-dev \
     gdal-bin \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # install `pip-compile` (as part of `pip-tools`)

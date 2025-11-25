@@ -2,7 +2,8 @@ boto3-stubs==1.35.90
 boto3==1.35.90
 deprecated==1.2.18
 django-allauth[socialaccount]==65.11.2
-django-auditlog==3.3.0
+# TODO: Switch this back to regular version once django-auditlog >3.3.0 is released
+django-auditlog @ git+https://github.com/jazzband/django-auditlog.git@d02ed6b9
 django-axes==8.0.0
 django-bootstrap4==25.2
 django-classy-tags==4.1.0
