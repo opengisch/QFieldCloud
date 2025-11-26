@@ -14,7 +14,7 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Project, ProjectQueryset
+from qfieldcloud.core.models import Project, ProjectQueryset, ProjectSeed
 from qfieldcloud.core.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
