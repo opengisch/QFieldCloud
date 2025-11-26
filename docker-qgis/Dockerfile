@@ -94,8 +94,8 @@ COPY requirements.txt /tmp/
 RUN pip3 install --break-system-packages --ignore-installed -r /tmp/requirements.txt
 
 # Install `libqfieldsync` dependecy since it changes more frequently compared to regular dependencies
-COPY requirements_libqfieldsync.txt /tmp/
-RUN pip3 install --break-system-packages --use-deprecated=legacy-resolver -r /tmp/requirements_libqfieldsync.txt
+COPY requirements_internal.txt /tmp/
+RUN pip3 install --break-system-packages --use-deprecated=legacy-resolver -r /tmp/requirements_internal.txt
 
 COPY schemas schemas
 COPY qfc_worker qfc_worker

@@ -55,6 +55,18 @@ SHARED_DATASETS_PROJECT_NAME = "shared_datasets"
 logger = logging.getLogger(__name__)
 
 
+class BasemapProvider(models.TextChoices):
+    NONE = "none", _("No basemap")
+    OSM = "osm", _("OpenStreetMap")
+    CUSTOM = "custom", _("Custom XYZ basemap URL")
+
+
+class BasemapStyle(models.TextChoices):
+    STANDARD = "standard", _("Standard")
+    GRAYSCALE_LIGHT = "grayscale_light", _("Grayscale Light")
+    GRAYSCALE_DARK = "grayscale_dark", _("Grayscale Dark")
+
+
 class PersonQueryset(models.QuerySet):
     """Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
 
@@ -1134,6 +1146,9 @@ class Project(models.Model):
     # The jobs that are ran for a specific project.
     jobs: "JobQuerySet"
 
+    # The project create seed.
+    seed: "ProjectSeed"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
         max_length=255,
@@ -1918,6 +1933,64 @@ class Project(models.Model):
         return next(files)
 
 
+def get_seed_xlsform_upload_to(instance: "ProjectSeed", filename: str) -> str:
+    file_extension = Path(filename).suffix.lower()
+    return f"projects/{instance.project.id}/seeds/xlsforms/xlsform{file_extension}"
+
+
+class ProjectSeed(models.Model):
+    SETTINGS_SCHEMA_ID = "https://app.qfield.cloud/schemas/project-seed-20251201.json"
+    """Represents the seed data version used to create a project."""
+
+    project = models.OneToOneField(
+        Project,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="seed",
+    )
+    """The project the seed refers to."""
+
+    copy_from_project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="derived_seeds",
+    )
+    """The project to copy from, if any. It is mutually exclusive with `xlsform_file`."""
+
+    extent = models.PolygonField(
+        null=False,
+        blank=False,
+        srid=3857,
+    )
+    """The initial extent of the project as EPSG:3857 polygon."""
+
+    xlsform_file = models.FileField(
+        upload_to=get_seed_xlsform_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=False,
+        blank=False,
+    )
+    """XLSForm file used to create the project, if any. It is mutually exclusive with `copy_from_project`."""
+
+    settings = models.JSONField()
+    """The settings used during the project creation. There must be a `version` field."""
+
+    def clean(self, *args, **kwargs) -> None:
+        if self.xlsform_file and self.copy_from_project:
+            raise ValidationError(
+                _(
+                    "Both `xlsform_file` or `copy_from_project` cannot be set at the same time."
+                )
+            )
+
+        if not self.settings.get("version"):
+            raise ValidationError(_("The seed settings version must be present."))
+
+        super().clean(*args, **kwargs)
+
+
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):
         """Annotates the queryset with `is_valid` and by default filters out all invalid memberships if `skip_invalid` is set to True.
@@ -2209,6 +2282,7 @@ class Job(models.Model):
         PACKAGE = "package", _("Package")
         DELTA_APPLY = "delta_apply", _("Delta Apply")
         PROCESS_PROJECTFILE = "process_projectfile", _("Process QGIS Project File")
+        CREATE_PROJECT = "create_project", _("Create Project")
 
     class Status(models.TextChoices):
         PENDING = "pending", _("Pending")
