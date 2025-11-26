@@ -418,6 +418,8 @@ def download_project(
     working_dir = destination.joinpath("files")
     working_dir.mkdir(parents=True)
 
+    logging.info(f"Downloading project files to {working_dir}…")
+
     client = sdk.Client()
     files = client.list_remote_files(project_id)
 
@@ -478,7 +480,7 @@ def upload_project(project_id: str, project_dir: Path) -> None:
         show_progress=False,
     )
 
-    logging.info("Uploading packaged project files finished!")
+    logging.info("Uploading project files finished!")
 
 
 def list_local_files(project_id: str, project_dir: Path):

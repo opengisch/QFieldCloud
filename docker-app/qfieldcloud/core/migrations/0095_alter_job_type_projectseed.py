@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                     models.OneToOneField(
                         on_delete=django.db.models.deletion.CASCADE,
                         primary_key=True,
-                        related_name="+",
+                        related_name="seed",
                         serialize=False,
                         to="core.project",
                     ),
