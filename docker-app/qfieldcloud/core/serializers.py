@@ -534,6 +534,12 @@ class ProcessProjectfileJobSerializer(JobMixin, serializers.ModelSerializer):
         allow_parallel_jobs = True
 
 
+class CreateProjectJobSerializer(JobMixin, serializers.ModelSerializer):
+    class Meta(JobMixin.Meta):
+        model = Job
+        allow_parallel_jobs = True
+
+
 class JobSerializer(serializers.ModelSerializer):
     def get_lastest_not_finished_job(self):
         return None
