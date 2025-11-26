@@ -1733,7 +1733,9 @@ class Project(models.Model):
             max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
-            if not self.has_the_qgis_file or not self.project_details:
+            if (
+                not self.has_the_qgis_file or not self.project_details
+            ) and not self.is_shared_datasets_project:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
             elif (
