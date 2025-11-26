@@ -152,7 +152,15 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         if project.status == Project.Status.OK:
             return
         elif project.status == Project.Status.FAILED:
+            job = project.jobs.latest("updated_at")
+
+            print("FEEDBACK:", job.feedback)
+            print("type1`", job.type)
+            print("type2", job)
+            print("output:", job.output)
+
             fail("Waited for ok status, but got failed")
+
             return
 
         sleep(1)
