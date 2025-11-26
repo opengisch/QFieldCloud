@@ -1,5 +1,9 @@
+from pathlib import Path
+from uuid import UUID
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.http import Http404, StreamingHttpResponse
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import (
     extend_schema,
@@ -9,12 +13,15 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Project, ProjectQueryset
-from qfieldcloud.core.serializers import ProjectSerializer
+from qfieldcloud.core.models import Project, ProjectQueryset, ProjectSeed
+from qfieldcloud.core.serializers import ProjectSeedSerializer, ProjectSerializer
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, viewsets
+from rest_framework.decorators import action
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 User = get_user_model()
 
@@ -51,6 +58,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             raise ObjectNotFoundError(detail="Project not found.")
 
         if view.action == "retrieve":
+            return permissions_utils.can_retrieve_project(user, project)
+        elif view.action == "seed":
+            return permissions_utils.can_retrieve_project(user, project)
+        elif view.action == "seed_xlsform":
             return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "destroy":
             return permissions_utils.can_delete_project(user, project)
@@ -147,6 +158,32 @@ class ProjectViewSet(viewsets.ModelViewSet):
             storage.delete_all_project_files_permanently(projectid)
 
         return super().destroy(request, projectid)
+
+    @action(detail=True, methods=["get"])
+    def seed(self, _request: Request, projectid: UUID):
+        project = ProjectSeed.objects.select_related("project").get(
+            project_id=projectid
+        )
+
+        return Response(ProjectSeedSerializer(project).data)
+
+    @action(detail=True, methods=["get"], url_path="seed/xlsform")
+    def seed_xlsform(self, request: Request, projectid: UUID) -> StreamingHttpResponse:
+        project = Project.objects.select_related("seed").get(id=projectid)
+
+        if not project.seed.xlsform_file:
+            raise Http404("Project has no XLSForm file.")
+
+        xlsform_file = project.seed.xlsform_file
+        extension = Path(xlsform_file.name).suffix.lower()
+
+        return StreamingHttpResponse(
+            xlsform_file,
+            content_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="xlsform{extension}"',
+            },
+        )
 
 
 @extend_schema_view(get=extend_schema(description="List all public projects"))
