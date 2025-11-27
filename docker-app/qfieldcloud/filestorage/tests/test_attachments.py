@@ -242,8 +242,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         second_content_name = file.latest_version.content.name
 
-        # Following line fails since the implementation of `bytemark/webdav` adds a random file suffix before the extension.
-        # self.assertTrue(second_content_name.endswith("DCIM/file.name"))
+        self.assertTrue(second_content_name.endswith("DCIM/file.name"))
         self.assertTrue(second_content_name.endswith(".name"))
 
         response = self._delete_file(self.u1, p, "DCIM/file.name")
