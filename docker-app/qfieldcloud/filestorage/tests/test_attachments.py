@@ -191,3 +191,64 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
             for package_file in package_files_qs:
                 self.assertFileOnStorage(package_file, "default")
+
+    def test_not_versioned_attachment_upload_succeeds(self):
+        p = Project.objects.create(
+            owner=self.u1,
+            name="p2",
+            file_storage="default",
+            attachments_file_storage="webdav",
+            are_attachments_versioned=False,
+        )
+
+        # Upload a first version of the file.
+        response = self._upload_file(
+            self.u1,
+            p,
+            "DCIM/file.name",
+            io.FileIO(testdata_path("DCIM/1.jpg"), "rb"),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(p.project_files.count(), 1)
+
+        file = p.get_file("DCIM/file.name")
+
+        self.assertFileOnStorage(file, "webdav")
+
+        version = file.latest_version
+
+        self.assertIsNotNone(version)
+
+        first_content_name = version.content.name
+
+        self.assertTrue(first_content_name.endswith("DCIM/file.name"))
+
+        # Upload a second version of the same file (with different content).
+        response = self._upload_file(
+            self.u1,
+            p,
+            "DCIM/file.name",
+            io.FileIO(testdata_path("DCIM/2.jpg"), "rb"),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(p.project_files.count(), 1)
+
+        file = p.get_file("DCIM/file.name")
+
+        self.assertFileOnStorage(file, "webdav")
+        self.assertEqual(file.versions.count(), 2)
+
+        second_content_name = file.latest_version.content.name
+
+        self.assertTrue(second_content_name.endswith("DCIM/file.name"))
+        self.assertTrue(second_content_name.endswith(".name"))
+
+        response = self._delete_file(self.u1, p, "DCIM/file.name")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(p.project_files.count(), 0)
+
+        self.assertFalse(version.content.storage.exists(first_content_name))
+        self.assertFalse(version.content.storage.exists(second_content_name))

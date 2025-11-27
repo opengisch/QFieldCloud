@@ -27,6 +27,7 @@ from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.files.storage import storages
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
@@ -68,6 +69,7 @@ from qfieldcloud.core.paginators import LargeTablePaginator
 from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
+from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
 
 
@@ -855,6 +857,26 @@ class ProjectForm(ModelForm):
         )
         if self.instance.has_attachments_files:
             self.fields["attachments_file_storage"].disabled = True
+            self.fields["are_attachments_versioned"].disabled = True
+
+    def clean_are_attachments_versioned(self):
+        value = self.cleaned_data["are_attachments_versioned"]
+
+        if value:
+            return value
+
+        # attachments can not be unversioned if attachments are stored on S3.
+        attachment_storage_value = self.cleaned_data["attachments_file_storage"]
+        attachment_storage = storages[attachment_storage_value]
+
+        if isinstance(attachment_storage, QfcS3Boto3Storage):
+            raise ValidationError(
+                _(
+                    "The '{}' attachments file storage is not compatible with unversioned attachment files."
+                ).format(attachment_storage_value)
+            )
+
+        return value
 
 
 class ProjectAdmin(QFieldCloudModelAdmin):
@@ -899,6 +921,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "file_storage",
         "file_storage_migrated_at",
         "attachments_file_storage",
+        "are_attachments_versioned",
         "is_attachment_download_on_demand",
         "project_files",
     )
