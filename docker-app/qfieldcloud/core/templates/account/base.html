@@ -8,12 +8,12 @@
   <meta name="color-scheme" content="dark light">
 
   {% sri_static 'css/vendor.css' %}
-  {% sri_static 'css/qfieldcloud.css' %}
-  <link rel="shortcut icon" type="image/x-icon" href="{% static 'favicon.ico' %}" />
+  {% sri_static whitelabel.custom_css %}
+  <link rel="shortcut icon" type="image/x-icon" href="{% static whitelabel.favicon %}" />
 
   <title>
     {% block title %}
-      {% block title_contents %}{{ title }}{% endblock title_contents %} | {{ site_title|default:_('QFieldCloud') }}
+      {% block title_contents %}{{ title }}{% endblock title_contents %} | {{ whitelabel.site_title }}
     {% endblock title %}
   </title>
 
@@ -25,7 +25,7 @@
   <!-- Navbar -->
   <nav class="navbar navbar-expand-md navbar-dark nav-fill w-100 bg-primary">
     <a href="{% url 'index' %}">
-      <img src="{% static 'logo_sidetext_white.svg' %}" alt="QFieldCloud" class="logo-nav qfc-header-logo ml-1">
+      <img src="{% static whitelabel.logo_navbar %}" alt="{{ whitelabel.logo_alt }}" class="qfc-header-logo">
     </a>
 
 
@@ -38,7 +38,7 @@
         <div class="row">
           <div class="col-lg-6 offset-lg-3">
             <p class="text-center">
-              <img src="{% static 'logo_undertext.svg' %}" alt="QFieldCloud" class="logo-nav" style="height: 15rem">
+              <img src="{% static whitelabel.logo_main %}" alt="{{ whitelabel.logo_alt }}" class="qfc-main-logo">
             </p>
 
             {% block content %}{% endblock content %}
