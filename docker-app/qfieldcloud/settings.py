@@ -881,5 +881,4 @@ JAZZMIN_SETTINGS = {
 #     "logo_main": "path/to/logo_main.svg",
 #     "logo_alt": "Your logo description",
 #     "favicon": "path/to/favicon.ico",
-#     "custom_css": "path/to/custom.css",
 # }

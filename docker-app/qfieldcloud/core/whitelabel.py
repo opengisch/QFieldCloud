@@ -13,8 +13,6 @@ DEFAULT_WHITELABEL = {
     "logo_navbar": "logo_sidetext_white.svg",
     "logo_main": "logo_undertext.svg",
     "favicon": "favicon.ico",
-    # Styling
-    "custom_css": "css/qfieldcloud.css",
 }
 
 
