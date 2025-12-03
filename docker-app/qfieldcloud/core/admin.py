@@ -25,7 +25,7 @@ from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
-from django.contrib.auth.views import redirect_to_login
+from django.contrib.auth.views import logout_then_login, redirect_to_login
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.storage import storages
 from django.db.models import Q, QuerySet
@@ -100,6 +100,12 @@ class QfcAdminSite(AdminSite):
         return redirect_to_login(
             request.GET.get("next", ""), login_url=reverse(settings.LOGIN_URL)
         )
+
+    def logout(  # type: ignore[override]
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> HttpResponse:
+        """Override the default Django admin logout view to redirect to the Allauth's logout view."""
+        return logout_then_login(request)
 
     # TODO consider adding a logout view to redirect to the Allauth's logout view, but then we lose the nice template we have right now.
 
