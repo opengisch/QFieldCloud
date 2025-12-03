@@ -190,6 +190,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "qfieldcloud.core.context_processors.signup_open",
+                "qfieldcloud.core.whitelabel.whitelabel",
             ],
         },
     },
@@ -539,6 +540,22 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
             "color_text": "#E3E3E3",
         },
     },
+    "entra": {
+        # https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps
+        "required": True,
+        "light": {
+            "logo": "sso/microsoft.svg",
+            "color_fill": "#FFFFFF",
+            "color_stroke": "#8C8C8C",
+            "color_text": "#5E5E5E",
+        },
+        "dark": {
+            "logo": "sso/microsoft.svg",
+            "color_fill": "#2F2F2F",
+            "color_stroke": "#2F2F2F",
+            "color_text": "#FFFFFF",
+        },
+    },
 }
 
 # Django axes configuration
@@ -759,6 +776,7 @@ QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
 QFIELDCLOUD_DEFAULT_NETWORK = os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK")
 
 # `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
+AUDITLOG_LOGENTRY_MODEL = "auditlog.LogEntry"
 AUDITLOG_INCLUDE_TRACKING_MODELS = [
     # NOTE `Delta` and `Job` models are not being automatically audited, because their data changes very often and timestamps are available in their models.
     {
@@ -870,3 +888,14 @@ JAZZMIN_SETTINGS = {
     # Additional custom CSS file for the Django Admin pages.
     "custom_css": "css/admin.css",
 }
+
+# Whitelabel configuration
+# Uncomment and customize to override default branding
+# See qfieldcloud/core/whitelabel.py for all available options and defaults
+# WHITELABEL = {
+#     "site_title": "Your Custom Title",
+#     "logo_navbar": "path/to/logo_navbar.svg",
+#     "logo_main": "path/to/logo_main.svg",
+#     "logo_alt": "Your logo description",
+#     "favicon": "path/to/favicon.ico",
+# }

@@ -17,6 +17,7 @@ RUN apt-get update \
     libpq-dev \
     python3-dev \
     gcc \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # install `pip-compile` (as part of `pip-tools`)
