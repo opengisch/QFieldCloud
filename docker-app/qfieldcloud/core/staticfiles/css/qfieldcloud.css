@@ -37,6 +37,22 @@ h1, h2, h3, h4, h5, h6 {
 
 .qfc-header-logo {
   height: 1.5rem;
+  margin-left: 1rem;
+}
+
+.qfc-logo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 15rem;
+  padding: 1rem 0;
+}
+
+.qfc-main-logo {
+  max-width: 100%;
+  max-height: 15rem;
+  width: auto;
+  height: auto;
 }
 
 .ml-5rem {

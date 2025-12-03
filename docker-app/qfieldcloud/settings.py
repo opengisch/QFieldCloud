@@ -190,6 +190,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "qfieldcloud.core.context_processors.signup_open",
+                "qfieldcloud.core.whitelabel.whitelabel",
             ],
         },
     },
@@ -887,3 +888,14 @@ JAZZMIN_SETTINGS = {
     # Additional custom CSS file for the Django Admin pages.
     "custom_css": "css/admin.css",
 }
+
+# Whitelabel configuration
+# Uncomment and customize to override default branding
+# See qfieldcloud/core/whitelabel.py for all available options and defaults
+# WHITELABEL = {
+#     "site_title": "Your Custom Title",
+#     "logo_navbar": "path/to/logo_navbar.svg",
+#     "logo_main": "path/to/logo_main.svg",
+#     "logo_alt": "Your logo description",
+#     "favicon": "path/to/favicon.ico",
+# }
