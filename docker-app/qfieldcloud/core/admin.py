@@ -72,6 +72,7 @@ from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.subscription.models import get_subscription_model
 
 
 class QfcAdminSite(AdminSite):
@@ -175,6 +176,10 @@ class ModelAdminSearchParserMixin:
 
 
 class QFieldCloudModelAdmin(  # type: ignore
+    ModelAdminNoPkOrderChangeListMixin,
+    ModelAdminEstimateCountMixin,
+    ModelAdminSearchParserMixin,
+    admin.ModelAdmin,
     ModelAdminNoPkOrderChangeListMixin,
     ModelAdminEstimateCountMixin,
     ModelAdminSearchParserMixin,
@@ -594,6 +599,18 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
         obj.clean()
         obj.save()
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        # Add the subscription model is editable flag to the extra context
+        extra_context = extra_context or {}
+
+        extra_context["is_frontend_user_editable"] = (
+            get_subscription_model().is_frontend_user_editable
+        )
+
+        return super().change_view(
+            request, object_id, form_url, extra_context=extra_context
+        )
 
     def get_urls(self):
         urls = super().get_urls()
@@ -1142,6 +1159,12 @@ class JobAdmin(QFieldCloudModelAdmin):
 
     change_form_template = "admin/job_change_form.html"
 
+    search_parser_config = {
+        "created_by": {
+            "filter": "created_by__username__iexact",
+        },
+    }
+
     def get_queryset(self, request):
         return super().get_queryset(request).defer("output", "feedback")
 
@@ -1359,6 +1382,12 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     formfield_overrides = {JSONField: {"widget": PrettyJSONWidget}}
 
     change_form_template = "admin/delta_change_form.html"
+
+    search_parser_config = {
+        "created_by": {
+            "filter": "created_by__username__iexact",
+        },
+    }
 
     def old_geom_truncated(self, instance):
         return self.geom_truncated(instance.old_geom)
@@ -1667,9 +1696,18 @@ class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
 
 
 class LogEntryAdmin(
-    ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, BaseLogEntryAdmin
+    ModelAdminNoPkOrderChangeListMixin,
+    ModelAdminEstimateCountMixin,
+    ModelAdminSearchParserMixin,
+    BaseLogEntryAdmin,
 ):
     list_filter = ("action", QFieldCloudResourceTypeFilter)
+
+    search_parser_config = {
+        "user": {
+            "filter": "actor__username__iexact",
+        },
+    }
 
 
 class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
@@ -1703,6 +1741,12 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     )
 
     exclude = ("traceback",)
+
+    search_parser_config = {
+        "owner": {
+            "filter": "project__owner__username__iexact",
+        },
+    }
 
     def traceback__pre(self, instance) -> str:
         return format_pre(instance.traceback)

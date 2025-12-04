@@ -169,6 +169,12 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "account__user__username__iexact",
     )
 
+    search_parser_config = {
+        "account": {
+            "filter": "account__user__username__iexact",
+        },
+    }
+
     def get_fields(
         self, request: HttpRequest, obj: Subscription | None = None
     ) -> Iterable[str]:
