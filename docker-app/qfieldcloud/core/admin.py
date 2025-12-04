@@ -71,6 +71,7 @@ from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.subscription.models import get_subscription_model
 
 
 class QfcAdminSite(AdminSite):
@@ -141,8 +142,33 @@ class ModelAdminEstimateCountMixin:
     list_per_page = settings.QFIELDCLOUD_ADMIN_LIST_PER_PAGE
 
 
+class ModelAdminSearchParserMixin:
+    """
+    Mixin to add search parser to the model admin.
+    """
+
+    search_parser_config: dict[str, dict[str, Any]] | None = None
+
+    def get_search_results(self, request, queryset, search_term):
+        if self.search_parser_config:
+            filters = search_parser(
+                request,
+                queryset,
+                search_term,
+                self.search_parser_config,
+            )
+
+            if filters:
+                return queryset.filter(**filters), True
+
+        return super().get_search_results(request, queryset, search_term)
+
+
 class QFieldCloudModelAdmin(  # type: ignore
-    ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, admin.ModelAdmin
+    ModelAdminNoPkOrderChangeListMixin,
+    ModelAdminEstimateCountMixin,
+    ModelAdminSearchParserMixin,
+    admin.ModelAdmin,
 ):
     def has_delete_permission(self, request, obj=None):
         """Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
@@ -500,7 +526,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
         "is_staff",
     )
 
-    search_fields = ("username__icontains", "email__iexact")
+    search_fields = ("username__icontains", "email__icontains")
 
     fields = (
         "storage_usage__field",
@@ -558,6 +584,18 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
         obj.clean()
         obj.save()
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        # Add the subscription model is editable flag to the extra context
+        extra_context = extra_context or {}
+
+        extra_context["is_frontend_user_editable"] = (
+            get_subscription_model().is_frontend_user_editable
+        )
+
+        return super().change_view(
+            request, object_id, form_url, extra_context=extra_context
+        )
 
     def get_urls(self):
         urls = super().get_urls()
@@ -954,6 +992,18 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     change_form_template = "admin/project_change_form.html"
 
+    search_parser_config = {
+        "owner": {
+            "filter": "owner__username__iexact",
+        },
+        "collaborator": {
+            "filter": "user_roles__user__username__iexact",
+            "extra_filters": {
+                "is_public": False,
+            },
+        },
+    }
+
     def get_form(self, *args, **kwargs):
         help_texts = {
             "file_storage_bytes": _(
@@ -962,33 +1012,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         }
         kwargs.update({"help_texts": help_texts})
         return super().get_form(*args, **kwargs)
-
-    def get_search_results(self, request, queryset, search_term):
-        filters = search_parser(
-            request,
-            queryset,
-            search_term,
-            {
-                "owner": {
-                    "filter": "owner__username__iexact",
-                },
-                "collaborator": {
-                    "filter": "user_roles__user__username__iexact",
-                    "extra_filters": {
-                        "is_public": False,
-                    },
-                },
-            },
-        )
-
-        if filters:
-            return queryset.filter(**filters), True
-
-        queryset, use_distinct = super().get_search_results(
-            request, queryset, search_term
-        )
-
-        return queryset, use_distinct
 
     def project_files(self, instance):
         return instance.pk
@@ -1100,6 +1123,12 @@ class JobAdmin(QFieldCloudModelAdmin):
     has_direct_delete_permission = False
 
     change_form_template = "admin/job_change_form.html"
+
+    search_parser_config = {
+        "created_by": {
+            "filter": "created_by__username__iexact",
+        },
+    }
 
     def get_queryset(self, request):
         return super().get_queryset(request).defer("output", "feedback")
@@ -1319,6 +1348,12 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     change_form_template = "admin/delta_change_form.html"
 
+    search_parser_config = {
+        "created_by": {
+            "filter": "created_by__username__iexact",
+        },
+    }
+
     def old_geom_truncated(self, instance):
         return self.geom_truncated(instance.old_geom)
 
@@ -1481,6 +1516,15 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
     autocomplete_fields = ("organization_owner",)
 
+    search_parser_config = {
+        "owner": {
+            "filter": "organization_owner__username__iexact",
+        },
+        "member": {
+            "filter": "membership_roles__user__username__iexact",
+        },
+    }
+
     @admin.display(description=_("Active members"))
     def active_users_links(self, instance) -> str:
         persons = instance.useraccount.current_subscription.active_users
@@ -1509,30 +1553,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
         used_storage_perc = instance.useraccount.storage_used_ratio * 100
         return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
-
-    def get_search_results(self, request, queryset, search_term):
-        filters = search_parser(
-            request,
-            queryset,
-            search_term,
-            {
-                "owner": {
-                    "filter": "organization_owner__username__iexact",
-                },
-                "member": {
-                    "filter": "membership_roles__user__username__iexact",
-                },
-            },
-        )
-
-        if filters:
-            return queryset.filter(**filters), True
-
-        queryset, use_distinct = super().get_search_results(
-            request, queryset, search_term
-        )
-
-        return queryset, use_distinct
 
     def save_formset(self, request, form, formset, change):
         for form_obj in formset:
@@ -1638,9 +1658,18 @@ class QFieldCloudResourceTypeFilter(ResourceTypeFilter):
 
 
 class LogEntryAdmin(
-    ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, BaseLogEntryAdmin
+    ModelAdminNoPkOrderChangeListMixin,
+    ModelAdminEstimateCountMixin,
+    ModelAdminSearchParserMixin,
+    BaseLogEntryAdmin,
 ):
     list_filter = ("action", QFieldCloudResourceTypeFilter)
+
+    search_parser_config = {
+        "user": {
+            "filter": "actor__username__iexact",
+        },
+    }
 
 
 class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
@@ -1674,6 +1703,12 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     )
 
     exclude = ("traceback",)
+
+    search_parser_config = {
+        "owner": {
+            "filter": "project__owner__username__iexact",
+        },
+    }
 
     def traceback__pre(self, instance) -> str:
         return format_pre(instance.traceback)
