@@ -13,6 +13,20 @@
     |
     <a href="{% url 'admin:core_organization_changelist' %}?q=owner:{{original.username}}">{% trans 'Owned organizations' %}</a>
     |
+    {% if is_frontend_user_editable %}
+      <a href="{% url 'admin:billing_billingsubscription_changelist' %}?q={{ original.username }}">{% trans 'Billing' %}</a>
+    {% else %}
+      <a href="{% url 'admin:subscription_subscription_changelist' %}?q={{ original.username }}">{% trans 'Subscription' %}</a>
+    {% endif %}
+    |
     <a href="{% url 'admin:core_organization_changelist' %}?q=member:{{original.username}}">{% trans 'Organization memberships' %}</a>
+    |
+    <a href="{% url 'admin:core_job_changelist' %}?q=created_by:{{original.username}}">{% trans 'Jobs' %}</a>
+    |
+    <a href="{% url 'admin:core_delta_changelist' %}?q=created_by:{{original.username}}">{% trans 'Deltas' %}</a>
+    |
+    <a href="{% url 'admin:core_faultydeltafile_changelist' %}?q=owner:{{original.username}}">{% trans 'Faulty deltas' %}</a>
+    |
+    <a href="{% url 'admin:auditlog_logentry_changelist' %}?q=user:{{original.username}}">{% trans 'Audit logs' %}</a>
   </div>
 {% endblock %}
