@@ -1003,6 +1003,24 @@ def get_project_file_storage_default() -> str:
     return settings.STORAGES_PROJECT_DEFAULT_STORAGE
 
 
+def get_project_attachments_file_storage_default() -> str:
+    """Get the default attachments file storage for the newly created project.
+
+    Returns:
+        the name of the storage
+    """
+    return settings.STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE
+
+
+def get_project_are_attachments_versioned_default() -> bool:
+    """Get the default value for versioning of project attachments.
+
+    Returns:
+        whether the attachments are versioned by default
+    """
+    return settings.STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED
+
+
 def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
     """Variable storage key for thumbnails.
 
@@ -1247,7 +1265,7 @@ class Project(models.Model):
         ),
         max_length=100,
         validators=[validators.file_storage_name_validator],
-        default=get_project_file_storage_default,
+        default=get_project_attachments_file_storage_default,
     )
 
     # When enabled, the client (e.g. QField) is informed that attachments
@@ -1263,7 +1281,7 @@ class Project(models.Model):
     )
 
     are_attachments_versioned = models.BooleanField(
-        default=True,
+        default=get_project_are_attachments_versioned_default,
         verbose_name=_("Versioned attachment files"),
         help_text=_(
             "If enabled, attachment files will make use of the file versioning system. If disabled, only the latest version of each attachment file will be kept, and stored with the extension in the filename."
