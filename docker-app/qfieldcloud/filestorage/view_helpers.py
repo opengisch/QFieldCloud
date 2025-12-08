@@ -91,7 +91,7 @@ def upload_project_file_version(
 
     is_qgis_file = is_qgis_project_file(filename)
 
-    if project.is_shared_datasets_project and is_qgis_file:
+    if is_qgis_file and project.is_shared_datasets_project:
         raise exceptions.ValidationError(
             "QGIS project files are not allowed in shared datasets projects."
         )

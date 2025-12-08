@@ -127,10 +127,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 
             if data["name"].lower() == SHARED_DATASETS_PROJECT_NAME:
                 if self.instance and self.instance.has_the_qgis_file:
-                    raise ValidationError(
-                        _(
-                            "Cannot rename project to '{}' because it contains a QGIS project file."
-                        ).format(data["name"])
+                    raise exceptions.QGISProjectFileNotAllowedError(
+                        "QGIS project files are not allowed in shared datasets projects."
                     )
 
         return data

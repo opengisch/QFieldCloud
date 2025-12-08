@@ -269,8 +269,8 @@ class DownloadPushDeleteFileView(views.APIView):
 
         is_the_qgis_file = utils.is_the_qgis_file(filename)
 
-        if project.is_shared_datasets_project and is_the_qgis_file:
-            raise exceptions.ValidationError(
+        if is_the_qgis_file and project.is_shared_datasets_project:
+            raise exceptions.QGISProjectFileNotAllowedError(
                 "QGIS project files are not allowed in shared datasets projects."
             )
 
