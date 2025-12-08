@@ -81,6 +81,10 @@ ENV XDG_RUNTIME_DIR=/root
 ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
+# QFC specific variables
+# Controls whether libqfiedlsync should log also to the QGIS message log
+ENV IS_WITHIN_QFC_WORKER=1
+
 # Install debugpy for local development and debuggability
 ARG DEBUG_BUILD
 RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --break-system-packages debugpy; fi
