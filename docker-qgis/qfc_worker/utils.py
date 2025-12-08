@@ -306,6 +306,10 @@ def open_qgis_project_temporarily(
             if layer_tree:
                 map_settings.setLayers(reversed(list(layer_tree.customLayerOrder())))
 
+            if map_settings.extent().isEmpty():
+                # set to full extent if empty
+                map_settings.setExtent(map_settings.fullExtent())
+
             details["background_color"] = background_color.name()
             details["extent"] = map_settings.extent().asWktPolygon()
             details["map_settings"] = map_settings
