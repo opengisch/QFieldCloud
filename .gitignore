@@ -17,6 +17,7 @@ Pipfile*
 **/site-packages
 docker-qgis/libqfieldsync
 docker-qgis/qfieldcloud-sdk-python
+docker-qgis/xlsform2qgis
 .venv
 
 # compiled translations

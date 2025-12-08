@@ -1,0 +1,5 @@
+qfieldcloud-sdk==0.11.0
+
+# NOTE dependency versions should be defined in the `*.tar.gz` format, not `git+https://` to make `wheel` happy
+libqfieldsync @ git+https://github.com/opengisch/libqfieldsync@62853968a3cc98953ff7f41f8770a7f9d1b6a80e
+xlsform2qgis @ git+https://github.com/opengisch/xlsform2qgis@ab8f8014ea4465a454f709f733fcd173dd5bdd24

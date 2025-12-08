@@ -11,12 +11,15 @@ from qgis.core import (
     QgsProject,
     QgsRasterLayer,
 )
+from xlsform2qgis.converter import XLSFormConverter
 
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
-    download_project,
+    get_layers_data,
+    layers_data_to_string,
     open_qgis_project,
     start_app,
+    stop_app,
     upload_project,
 )
 from qfc_worker.workflow import (
@@ -25,7 +28,6 @@ from qfc_worker.workflow import (
     WorkDirPath,
     Workflow,
 )
-from qfc_worker.xlsforms import XLSFormConverter
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +202,17 @@ def create_project_from_seed(
     return str(project_filename)
 
 
-def extract_layer_data(project_id: str): ...
+def extract_layer_data(the_qgis_file_name: str | Path) -> dict:
+    logger.info("Extracting QGIS project layer data…")
+
+    project = open_qgis_project(str(the_qgis_file_name))
+    layers_by_id: dict = get_layers_data(project)
+
+    logger.info(
+        f"QGIS project layer data\n{layers_data_to_string(layers_by_id)}",
+    )
+
+    return layers_by_id
 
 
 def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer:
@@ -259,17 +271,6 @@ class CloneProjectCommand(QfcBaseCommand):
                     return_names=["qgis_version"],
                 ),
                 Step(
-                    id="download_project_directory",
-                    name="Download Project Directory",
-                    arguments={
-                        "project_id": project_id,
-                        "destination": WorkDirPath(mkdir=True),
-                        "skip_attachments": True,
-                    },
-                    method=download_project,
-                    return_names=["tmp_project_dir"],
-                ),
-                Step(
                     id="get_project_seed",
                     name="Get Project Seed",
                     arguments={
@@ -294,9 +295,7 @@ class CloneProjectCommand(QfcBaseCommand):
                     name="Create project from seed",
                     arguments={
                         "project_seed": StepOutput("get_project_seed", "project_seed"),
-                        "tmp_project_dir": StepOutput(
-                            "download_project_directory", "tmp_project_dir"
-                        ),
+                        "tmp_project_dir": WorkDirPath(),
                         "xlsform_filename": StepOutput(
                             "get_project_seed_xlsform", "xlsform_filename"
                         ),
@@ -304,16 +303,18 @@ class CloneProjectCommand(QfcBaseCommand):
                     method=create_project_from_seed,
                     return_names=["qgis_project_file"],
                 ),
-                # Step(
-                #     id="qgis_layers_data",
-                #     name="QGIS Layers Data",
-                #     arguments={
-                #         # "the_qgis_file_name": WorkDirPath("files", project_file),
-                #     },
-                #     method=extract_layer_data,
-                #     return_names=["layers_by_id"],
-                #     outputs=["layers_by_id"],
-                # ),
+                Step(
+                    id="qgis_layers_data",
+                    name="QGIS Layers Data",
+                    arguments={
+                        "the_qgis_file_name": StepOutput(
+                            "create_project_from_seed", "qgis_project_file"
+                        ),
+                    },
+                    method=extract_layer_data,
+                    return_names=["layers_by_id"],
+                    outputs=["layers_by_id"],
+                ),
                 Step(
                     id="upload_project_directory",
                     name="Upload Project",
@@ -322,6 +323,11 @@ class CloneProjectCommand(QfcBaseCommand):
                         "project_dir": WorkDirPath("files"),
                     },
                     method=upload_project,
+                ),
+                Step(
+                    id="stop_qgis_app",
+                    name="Stop QGIS Application",
+                    method=stop_app,
                 ),
             ],
         )
