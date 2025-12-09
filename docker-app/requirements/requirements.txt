@@ -87,7 +87,7 @@ django-common-helpers==0.9.2
     # via -r /requirements/requirements.in
 django-constance==4.3.2
     # via -r /requirements/requirements.in
-django-countries==7.6.1
+django-countries==8.2.0
     # via -r /requirements/requirements.in
 django-cron==0.6.0
     # via -r /requirements/requirements.in
