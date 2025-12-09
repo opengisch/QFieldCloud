@@ -1609,6 +1609,21 @@ class Project(models.Model):
 
         # Check if localized datasets project, then skip the rest of the checks as they are not applicable
         if self.name == SHARED_DATASETS_PROJECT_NAME:
+            if self.has_the_qgis_file:
+                problems.append(
+                    {
+                        "layer": None,
+                        "level": "error",
+                        "code": "qgis_project_file_not_allowed",
+                        "description": _(
+                            "Shared datasets projects cannot contain QGIS project files (.qgs/.qgz)."
+                        ),
+                        "solution": _(
+                            "Remove the QGIS project file (.qgs/.qgz) or rename the project to use it normally."
+                        ),
+                    }
+                )
+
             return problems
 
         if not self.has_the_qgis_file:
