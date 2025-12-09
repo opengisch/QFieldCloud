@@ -28,7 +28,7 @@ django-notifications-hq==1.8.3
 django-phonenumber-field==8.3.0
 django-sri==0.8.0
 django-storages==1.14.6
-django-tables2==2.7.5
+django-tables2==2.8.0
 django-timezone-field==7.1
 django==4.2.26
 django-stubs==5.2.7
