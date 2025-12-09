@@ -126,7 +126,13 @@ class ProjectSerializer(serializers.ModelSerializer):
                 raise exceptions.ProjectAlreadyExistsError()
 
             if data["name"].lower() == SHARED_DATASETS_PROJECT_NAME:
-                if self.instance and self.instance.has_the_qgis_file:
+                if (
+                    self.instance
+                    and self.instance.name.lower() == SHARED_DATASETS_PROJECT_NAME
+                ):
+                    pass
+
+                elif self.instance and self.instance.has_the_qgis_file:
                     raise exceptions.QGISProjectFileNotAllowedError(
                         "QGIS project files are not allowed in shared datasets projects."
                     )
