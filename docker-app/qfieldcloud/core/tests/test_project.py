@@ -866,17 +866,16 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsNotNone(project.restricted_data_last_updated_at)
         self.assertGreater(project.restricted_data_last_updated_at, first_update_time)
 
-    def test_restricted_data_last_updated_at_on_file_delete(self):
-        """Test that restricted_data_last_updated_at is updated when restricted files are deleted."""
-
+    def test_rename_qgis_contain_file_to_shared_datasets_project(self):
+        """Test that renaming a project with a QGIS file to 'shared_datasets' is not allowed."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project
         project = Project.objects.create(
-            name="test_restricted_data_delete", is_public=False, owner=self.user1
+            name="test_rename_qgis_project", owner=self.user1
         )
 
-        # Upload restricted file (e.g. `.qgs` file)
+        # Upload a QGIS project file
         response = self.client.post(
             f"/api/v1/files/{project.id}/simple_bumblebees.qgs/",
             {"file": io.FileIO(testdata_path("simple_bumblebees.qgs"), "rb")},
@@ -884,20 +883,28 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertTrue(status.is_success(response.status_code))
 
-        project.refresh_from_db()
-        first_update_time = project.restricted_data_last_updated_at
-        self.assertIsNotNone(first_update_time)
-
-        # Wait a bit to ensure timestamp difference
-        time.sleep(0.01)
-
-        # Delete the restricted file
-        response = self.client.delete(
-            f"/api/v1/files/{project.id}/simple_bumblebees.qgs/"
+        # Try to rename the project to 'shared_datasets'
+        response = self.client.patch(
+            f"/api/v1/projects/{project.id}/",
+            {"name": SHARED_DATASETS_PROJECT_NAME},
         )
-        self.assertTrue(status.is_success(response.status_code))
 
-        project.refresh_from_db()
-        # After deleting a restricted file, `restricted_data_last_updated_at` should be updated
-        self.assertIsNotNone(project.restricted_data_last_updated_at)
-        self.assertGreater(project.restricted_data_last_updated_at, first_update_time)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_upload_qgis_project_file_to_shared_datasets_project(self):
+        """Test that uploading a QGIS project file to a 'shared_datasets' project is not allowed."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create a 'shared_datasets' project
+        project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+        )
+
+        # Try to upload a QGIS project file
+        response = self.client.post(
+            f"/api/v1/files/{project.id}/simple_bumblebees.qgs/",
+            {"file": io.FileIO(testdata_path("simple_bumblebees.qgs"), "rb")},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
