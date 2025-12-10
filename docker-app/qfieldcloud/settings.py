@@ -489,6 +489,9 @@ ACCOUNT_RATE_LIMITS = False
 # For now, the default is set to `True` to maintain backwards compatibility.
 ACCOUNT_PRESERVE_USERNAME_CASING = True
 
+# User inactivity threshold
+USER_INACTIVITY_THRESHOLD = timedelta(days=30)
+
 # Django allauth's social account configuration
 # https://docs.allauth.org/en/latest/socialaccount/configuration.html
 SOCIALACCOUNT_ADAPTER = "qfieldcloud.core.adapters.SocialAccountAdapter"
