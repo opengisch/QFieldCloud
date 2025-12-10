@@ -49,6 +49,7 @@ from rest_framework.authtoken.models import TokenProxy
 
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
+    SHARED_DATASETS_PROJECT_NAME,
     ApplyJob,
     ApplyJobDelta,
     Delta,
@@ -883,6 +884,26 @@ class ProjectForm(ModelForm):
             )
 
         return value
+
+    def clean(self):
+        cleaned_data = super().clean()
+        name = cleaned_data.get("name")
+
+        if name and name.lower() == SHARED_DATASETS_PROJECT_NAME:
+            if (
+                self.instance.pk
+                and self.instance.name.lower() == SHARED_DATASETS_PROJECT_NAME
+            ):
+                pass
+
+            elif self.instance.has_the_qgis_file:
+                raise ValidationError(
+                    _(
+                        "Cannot rename project to '{}' because it contains a QGIS project file."
+                    ).format(name)
+                )
+
+        return cleaned_data
 
 
 class ProjectAdmin(QFieldCloudModelAdmin):

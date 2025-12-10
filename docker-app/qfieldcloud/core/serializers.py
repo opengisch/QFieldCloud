@@ -11,6 +11,7 @@ from rest_framework.request import Request
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
+    SHARED_DATASETS_PROJECT_NAME,
     ApplyJob,
     Delta,
     Job,
@@ -123,6 +124,18 @@ class ProjectSerializer(serializers.ModelSerializer):
 
             if matching_projects != 0:
                 raise exceptions.ProjectAlreadyExistsError()
+
+            if data["name"].lower() == SHARED_DATASETS_PROJECT_NAME:
+                if (
+                    self.instance
+                    and self.instance.name.lower() == SHARED_DATASETS_PROJECT_NAME
+                ):
+                    pass
+
+                elif self.instance and self.instance.has_the_qgis_file:
+                    raise exceptions.QGISProjectFileNotAllowedError(
+                        "QGIS project files are not allowed in shared datasets projects."
+                    )
 
         return data
 
