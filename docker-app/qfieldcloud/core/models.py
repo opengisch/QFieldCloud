@@ -15,6 +15,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
@@ -307,6 +308,10 @@ class User(AbstractUser):
         return self.type == User.Type.PERSON
 
     @property
+    def public_id(self):
+        return signing.dumps({"id": self.pk})
+
+    @property
     def is_organization(self):
         return self.type == User.Type.ORGANIZATION
 
@@ -431,7 +436,7 @@ def get_user_account_avatar_download_from(
     return reverse(
         "filestorage_avatars",
         kwargs={
-            "username": useraccount.user.username,
+            "public_id": useraccount.user.public_id,
         },
     )
 
