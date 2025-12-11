@@ -39,12 +39,9 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
 
         if previous_last_login:
             delta = timezone.now() - previous_last_login
-            threshold = getattr(
-                settings,
-                "USER_INACTIVITY_THRESHOLD",
-                timedelta(days=30),
-            )
-            if delta > threshold:
+            if delta > timedelta(
+                days=settings.QFIELDCLOUD_USER_INACTIVITY_THRESHOLD_DAYS
+            ):
                 messages.add_message(
                     request,
                     messages.INFO,

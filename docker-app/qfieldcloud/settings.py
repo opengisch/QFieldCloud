@@ -490,7 +490,7 @@ ACCOUNT_RATE_LIMITS = False
 ACCOUNT_PRESERVE_USERNAME_CASING = True
 
 # User inactivity threshold
-USER_INACTIVITY_THRESHOLD = timedelta(days=30)
+QFIELDCLOUD_USER_INACTIVITY_THRESHOLD_DAYS = 30
 
 # Django allauth's social account configuration
 # https://docs.allauth.org/en/latest/socialaccount/configuration.html
