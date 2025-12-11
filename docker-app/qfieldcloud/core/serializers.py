@@ -40,7 +40,7 @@ def get_avatar_url(user: User, request: Request | None = None) -> StrOrPromise |
     reversed_uri = reverse(
         "filestorage_named_avatars",
         kwargs={
-            "username": user.username,
+            "public_id": user.public_id,
             "filename": f"avatar.{file_extension}",
         },
     )
