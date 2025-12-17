@@ -61,8 +61,6 @@ class ObjectStorageScanner:
         region_name: str | None = None,
         profile: str | None = None,
         endpoint_url: str | None = None,
-        access_key_id: str | None = None,
-        secret_access_key: str | None = None,
         prefix: str | None = None,
         deleted_after: datetime | None = None,
     ):
@@ -77,9 +75,7 @@ class ObjectStorageScanner:
         self.scanned_count = 0
 
         # Initialize client
-        self.s3_client = self._create_s3_client(
-            region_name, profile, endpoint_url, access_key_id, secret_access_key
-        )
+        self.s3_client = self._create_s3_client(region_name, profile, endpoint_url)
 
         # Validate bucket immediately
         self._validate_bucket_versioning()
@@ -102,28 +98,23 @@ class ObjectStorageScanner:
         region: str | None,
         profile: str | None,
         endpoint: str | None,
-        key_id: str | None,
-        secret: str | None,
     ) -> BaseClient:
         """Create the Boto3 S3 client."""
-        session_kwargs = (
-            {"profile_name": profile}
-            if profile
-            else {
-                "aws_access_key_id": key_id,
-                "aws_secret_access_key": secret,
-                "region_name": region,
-            }
-        )
+        session_kwargs = {}
+        client_kwargs = {}
+
+        if profile:
+            session_kwargs.update({"profile_name": profile})
+
+        if region:
+            session_kwargs.update({"region_name": region})
+
+        if endpoint:
+            client_kwargs.update({"endpoint_url": endpoint})
 
         try:
-            # Filter None values to let boto3 use defaults
-            clean_session_kwargs = {
-                k: v for k, v in session_kwargs.items() if v is not None
-            }
-            session = boto3.Session(**clean_session_kwargs)
+            session = boto3.Session(**session_kwargs)
 
-            client_kwargs = {"endpoint_url": endpoint} if endpoint else {}
             return session.client("s3", **client_kwargs)
         except (BotoCoreError, ClientError) as e:
             raise RuntimeError(f"Failed to initialize S3 client: {e}") from e
@@ -441,11 +432,9 @@ def main() -> int:
 
     # Connection options
     parser.add_argument("--prefix", help="Key prefix to scan")
-    parser.add_argument("--region", help="AWS region")
-    parser.add_argument("--profile", help="AWS profile")
+    parser.add_argument("--region", help="Region")
+    parser.add_argument("--profile", help="Profile")
     parser.add_argument("--endpoint-url", help="Custom S3 endpoint URL")
-    parser.add_argument("--access-key-id", help="Access key ID")
-    parser.add_argument("--secret-access-key", help="Secret access key")
 
     # Filter options
     parser.add_argument(
@@ -484,8 +473,6 @@ def main() -> int:
             region_name=args.region,
             profile=args.profile,
             endpoint_url=args.endpoint_url,
-            access_key_id=args.access_key_id,
-            secret_access_key=args.secret_access_key,
             prefix=args.prefix,
             deleted_after=args.deleted_after,
         )
