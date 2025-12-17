@@ -200,3 +200,12 @@ class InvalidRangeError(QFieldCloudException):
     code = "invalid_http_range"
     message = "The provided HTTP range header is invalid."
     status_code = status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
+
+
+class QGISProjectFileNotAllowedError(QFieldCloudException):
+    """Raised when a QGIS project file is uploaded to a project that does not allow it
+    (e.g. shared datasets project)"""
+
+    code = "qgis_project_file_not_allowed"
+    message = "QGIS project files are not allowed in this project."
+    status_code = status.HTTP_400_BAD_REQUEST
