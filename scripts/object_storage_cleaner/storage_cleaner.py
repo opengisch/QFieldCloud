@@ -133,6 +133,7 @@ class ObjectStorageScanner:
         try:
             response = self.s3_client.get_bucket_versioning(Bucket=self.bucket)
             status = response.get("Status")
+
             if status not in ("Enabled", "Suspended"):
                 raise RuntimeError(
                     f"Bucket '{self.bucket}' does not have versioning history (Status: {status}). "
@@ -407,17 +408,6 @@ class ObjectStorageScanner:
         return stats_keys, stats_deleted_versions, stats_bytes
 
 
-def parse_dt(value: str) -> datetime:
-    """Parse a datetime string from ISO 8601 format."""
-    if value:
-        try:
-            return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-        except ValueError:
-            raise argparse.ArgumentTypeError(f"Invalid ISO 8601 date: '{value}'")
-    else:
-        return None
-
-
 def signal_handler(sig, frame):
     print("\n\nScan interrupted by user. Cleaning up...")
     sys.exit(0)
@@ -460,8 +450,8 @@ def main() -> int:
     # Filter options
     parser.add_argument(
         "--deleted-after",
-        type=parse_dt,
-        help="Only process objects deleted after this date (ISO 8601 format)",
+        type=datetime.fromisoformat,
+        help="Only process objects deleted after this date (ISO 8601 format, e.g. 2024-12-01:00:00:00)",
     )
 
     # Action flags
@@ -484,6 +474,9 @@ def main() -> int:
 
     args = parser.parse_args()
 
+    if args.deleted_after:
+        args.deleted_after = args.deleted_after.replace(tzinfo=timezone.utc)
+
     # Create scanner
     try:
         cleaner = ObjectStorageScanner(
@@ -494,9 +487,7 @@ def main() -> int:
             access_key_id=args.access_key_id,
             secret_access_key=args.secret_access_key,
             prefix=args.prefix,
-            deleted_after=args.deleted_after
-            if isinstance(args.deleted_after, datetime)
-            else parse_dt(args.deleted_after),
+            deleted_after=args.deleted_after,
         )
     except RuntimeError as e:
         print(f"ERROR: {e}")
