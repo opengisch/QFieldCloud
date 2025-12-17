@@ -44,7 +44,13 @@ class Command(BaseCommand):
         adv_filter_group.add_argument(
             "--updated-until",
             type=str,
-            help="Migrate only projects updated until this date, using format YYYY-MM-DD. Active only if --all and --advanced-filter arguments are passed.",
+            help="Migrate only projects updated until this date, using format YYYY-MM-DD. Active only if --all and --advanced-filter arguments are passed. Can not be used together with --not-yet-packaged.",
+        )
+        adv_filter_group.add_argument(
+            "--not-yet-packaged",
+            action="store_true",
+            help="Migrate only projects having a null `data_last_packaged_at` value. Active only if --all and --advanced-filter arguments are passed. Can not be used together with --updated-until.",
+            default=False,
         )
         adv_filter_group.add_argument(
             "--only-community",
@@ -63,9 +69,12 @@ class Command(BaseCommand):
         all = options.get("all")
         owner_username_startswith = options.get("owner_username_startswith")
         owner_username_matches = options.get("owner_username_matches")
+
         no_filter = options.get("no_filter", False)
+
         advanced_filter = options.get("advanced_filter", False)
         updated_until = options.get("updated_until")
+        not_yet_packaged = options.get("not_yet_packaged", False)
         only_community = options.get("only_community", False)
 
         # exclude from migration the projects that already use the default storage.
@@ -105,10 +114,27 @@ class Command(BaseCommand):
                     exit(1)
 
                 if updated_until:
+                    if not_yet_packaged:
+                        logger.error(
+                            "--updated-until can not be used together with --not-yet-packaged, aborting."
+                        )
+                        exit(1)
+
                     dt_naive = datetime.fromisoformat(updated_until)
                     dt_zoned = timezone.make_aware(dt_naive)
 
                     logger.info(f"Migrating projects updated until '{dt_zoned}'.")
+
+                if not_yet_packaged:
+                    if updated_until:
+                        logger.error(
+                            "--not-yet-packaged can not be used together with --updated-until, aborting."
+                        )
+                        exit(1)
+
+                    logger.info(
+                        "Migrating projects not yet packaged (data_last_packaged_at is NULL)."
+                    )
 
                 if only_community:
                     logger.info("Migrating projects owned by community accounts.")
@@ -122,6 +148,9 @@ class Command(BaseCommand):
             if advanced_filter:
                 if updated_until:
                     project_qs = project_qs.filter(data_last_packaged_at__lt=dt_zoned)
+
+                if not_yet_packaged:
+                    project_qs = project_qs.filter(data_last_packaged_at__isnull=True)
 
                 if only_community:
                     project_qs = project_qs.filter(
