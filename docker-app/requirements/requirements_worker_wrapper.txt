@@ -9,14 +9,14 @@ certifi==2025.8.3
 charset-normalizer==3.4.3
     # via requests
 docker==7.1.0
-    # via -r /requirements/requirements_worker_wrapper.in
+    # via -r requirements_worker_wrapper.in
 idna==3.10
     # via requests
 requests==2.32.5
     # via docker
 tenacity==9.1.2
-    # via -r /requirements/requirements_worker_wrapper.in
-urllib3==2.5.0
+    # via -r requirements_worker_wrapper.in
+urllib3==2.6.0
     # via
     #   docker
     #   requests
