@@ -1,9 +1,9 @@
 import argparse
 import signal
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, Iterator, List, Optional, Tuple
 
 import boto3
 from botocore.client import BaseClient
@@ -58,13 +58,13 @@ class ObjectStorageScanner:
     def __init__(
         self,
         bucket: str,
-        region_name: Optional[str] = None,
-        profile: Optional[str] = None,
-        endpoint_url: Optional[str] = None,
-        access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None,
-        prefix: Optional[str] = None,
-        deleted_after: Optional[datetime] = None,
+        region_name: str | None = None,
+        profile: str | None = None,
+        endpoint_url: str | None = None,
+        access_key_id: str | None = None,
+        secret_access_key: str | None = None,
+        prefix: str | None = None,
+        deleted_after: datetime | None = None,
     ):
         self.bucket = bucket
         self.prefix = prefix
@@ -99,11 +99,11 @@ class ObjectStorageScanner:
 
     def _create_s3_client(
         self,
-        region: Optional[str],
-        profile: Optional[str],
-        endpoint: Optional[str],
-        key_id: Optional[str],
-        secret: Optional[str],
+        region: str | None,
+        profile: str | None,
+        endpoint: str | None,
+        key_id: str | None,
+        secret: str | None,
     ) -> BaseClient:
         """Create the Boto3 S3 client."""
         session_kwargs = (
@@ -153,7 +153,7 @@ class ObjectStorageScanner:
             kwargs["Prefix"] = self.prefix
 
         for page in paginator.paginate(**kwargs):
-            items: List[VersionRef] = []
+            items: list[VersionRef] = []
 
             for v in page.get("Versions", []):
                 items.append(
@@ -186,8 +186,8 @@ class ObjectStorageScanner:
             yield from items
 
     def _aggregate_versions(
-        self, key: str, versions: List[VersionRef]
-    ) -> Optional[Tuple[LogicallyDeletedObject, List[VersionRef]]]:
+        self, key: str, versions: list[VersionRef]
+    ) -> tuple[LogicallyDeletedObject, list[VersionRef]] | None:
         """Determine if a key is logically deleted and aggregate its stats."""
         if not versions:
             return None
@@ -217,7 +217,7 @@ class ObjectStorageScanner:
         )
         return aggregate, versions
 
-    def _delete_batch(self, versions: List[Dict[str, str]]) -> int:
+    def _delete_batch(self, versions: list[dict[str, str]]) -> int:
         """Helper to delete a batch of objects."""
         if not versions:
             return 0
@@ -252,10 +252,10 @@ class ObjectStorageScanner:
 
     def _find_logically_deleted(
         self,
-    ) -> Iterator[Tuple[LogicallyDeletedObject, List[VersionRef]]]:
+    ) -> Iterator[tuple[LogicallyDeletedObject, list[VersionRef]]]:
         """Yields logically deleted objects."""
-        current_key: Optional[str] = None
-        current_versions: List[VersionRef] = []
+        current_key: str | None = None
+        current_versions: list[VersionRef] = []
 
         for item in self._iter_all_versions():
             if item.key != current_key:
@@ -275,7 +275,7 @@ class ObjectStorageScanner:
             if result:
                 yield result
 
-    def scan(self) -> Tuple[int, int, int]:
+    def scan(self) -> tuple[int, int, int]:
         """Scan and print report of logically deleted objects."""
         # Reset metrics
         self.scanned_count = 0
@@ -348,7 +348,7 @@ class ObjectStorageScanner:
 
         return stats_keys, stats_versions, stats_bytes
 
-    def clean(self) -> Tuple[int, int, int]:
+    def clean(self) -> tuple[int, int, int]:
         """Scan and delete logically deleted objects."""
         # Reset metrics
         self.scanned_count = 0
@@ -365,7 +365,7 @@ class ObjectStorageScanner:
 
         print()
 
-        batch: List[Dict[str, str]] = []
+        batch: list[dict[str, str]] = []
 
         stats_keys = 0
         stats_deleted_versions = 0
