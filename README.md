@@ -305,6 +305,29 @@ Now connecting with `curl` should fail with a similar error:
     establish a secure connection to it. To learn more about this situation and
     how to fix it, please visit the web page mentioned above.
 
+## Connecting QField to a local QFieldCloud instance
+
+In order to connect the QField mobile app to your local QFieldCloud development instance, the following prerequisites must be met:
+
+- The QFieldCloud app container's ports must be exposed on the public interface (0.0.0.0) of your dev machine
+  To check this, run `docker compose ps app`. It should say `0.0.0.0:8011->8000/tcp`.
+- Your dev machien and your mobile phone need to be on the same network (e.g. same WiFi)
+- Find out the external IP address of the interface that the app container's HTTP port is bound to.
+  E.g. something like `ip -f inet addr show eth1` (make sure to pick the right interface if you have several NICs, like Ethernet and WiFi)
+- For easier access via hostname, you need to have an mDNS service like avahi running on your dev machine.
+  On Linux, check that `avahi` is running: `systemctl status avahi-daemon`
+  If not, install `avahi-daemon` and make sure it's running. That should then allow you to access your dev machine as `<your-dev-machine-hostname>.local` from devices on the same network. E.g. if the hostname of your dev machine is `foo`, you should be able to reach it using `ping foo.local` from another machine on the same network.
+- In QFieldCloud's settings, the external IP address and hostname need to be added to `DJANGO_ALLOWED_HOSTS`
+
+This should then be enough to connect the QField mobile app to your local QFieldCloud instance:
+
+- Start QField
+- When asked to sign in, double tap on the Nyuki logo to enter a custom QFieldCloud server URL
+- Enter the URL using your mDNS hostname (or IP address, if mDNS doesn't work for you):
+  - `http://192.168.1.x:8011/` or
+  - `http://<your-dev-machine-hostname>.local:8011/`
+
+
 ## Code style
 
 Code style done with [`pre-commit`](https://pre-commit.com):
