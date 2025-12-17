@@ -197,15 +197,16 @@ class ObjectStorageScanner:
             return None
 
         total_size = sum(v.size for v in versions)
-        count = sum(
-            1 for v in versions if not v.is_delete_marker
-        )  # count actual data versions
+
+        actual_versions_count = len(
+            list(filter(lambda v: not v.is_delete_marker, versions))
+        )
 
         aggregate = LogicallyDeletedObject(
             key=key,
             deleted_at=latest.last_modified,
             total_size_bytes=total_size,
-            versions_count=count,
+            versions_count=actual_versions_count,
         )
         return aggregate, versions
 
