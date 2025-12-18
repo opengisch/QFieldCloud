@@ -17,7 +17,13 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 
-from qfieldcloud.core.models import Organization, Person, User, UserAccount
+from qfieldcloud.core.models import (
+    Organization,
+    OrganizationMember,
+    Person,
+    User,
+    UserAccount,
+)
 
 from .exceptions import NotPremiumPlanException
 
@@ -157,6 +163,9 @@ class Plan(models.Model):
 
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_storage_modifiable = models.BooleanField(default=True)
+
+    # has seats flexibility
+    is_seat_flexible = models.BooleanField(default=False)
 
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
@@ -449,6 +458,11 @@ class AbstractSubscription(models.Model):
 
     objects = SubscriptionManager()
 
+    ###
+    # ID is implicitly set by Django.
+    ###
+    id: int
+
     Status = SubscriptionStatus
 
     class UpdateSubscriptionKwargs(TypedDict):
@@ -463,6 +477,16 @@ class AbstractSubscription(models.Model):
         Plan,
         on_delete=models.DO_NOTHING,
         related_name="+",
+    )
+
+    # The maximum number of organization members (seats) allowed under this specific subscription.
+    # This value is set at subscription creation time, typically based on the quantity selected during checkout (for per-seat pricing).
+    max_organization_members = models.IntegerField(
+        default=-1,
+        help_text=_(
+            "Maximum organization members allowed for this subscription. "
+            "Used for enforcing seat limits on a per-subscription basis for specific plans."
+        ),
     )
 
     is_frontend_user_editable = False
@@ -522,12 +546,12 @@ class AbstractSubscription(models.Model):
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
-    def active_storage_total_mb(self) -> int:
-        return self.plan.storage_mb + self.active_storage_package_mb
+    def active_storage_total_mb(self) -> float:
+        return float(self.active_storage_total_bytes / 1000 / 1000)
 
     @property
     def active_storage_total_bytes(self) -> int:
-        return self.plan.storage_bytes + self.active_storage_package_bytes
+        return self.included_storage_bytes + self.active_storage_package_bytes
 
     @property
     def active_storage_package(self) -> Package:
@@ -625,6 +649,33 @@ class AbstractSubscription(models.Model):
             return 0
 
         return self.active_users.count()
+
+    @property
+    def organization_members_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        return (
+            OrganizationMember.objects.filter(organization_id=self.account.user.pk)
+            .exclude(member_id=self.account.user.organization_owner_id)
+            .count()
+            # +1 for the organization owner
+            + 1
+        )
+
+    @property
+    def included_storage_bytes(self) -> int:
+        """
+        How much storage (in bytes) this subscription comes with by default.
+        - For the `flat` plan (1GB per seat) is calculated as `Subscription.max_organization_members * Plan.storage_bytes`
+        - For any other plan, just use `Plan.storage_bytes`
+        """
+        if self.plan.is_seat_flexible:
+            return self.max_organization_members * self.plan.storage_bytes
+
+        # whatever the plan ships by default
+        return self.plan.storage_bytes
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
@@ -943,9 +994,13 @@ class AbstractSubscription(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        active_storage_total_mb = (
-            self.active_storage_package_mb if hasattr(self, "packages") else 0
-        )
+        if hasattr(self, "packages"):
+            active_storage_total_mb = int(
+                self.active_storage_package_bytes / 1000 / 1000
+            )
+        else:
+            active_storage_total_mb = 0
+
         return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{active_storage_total_mb}MB"
 
 

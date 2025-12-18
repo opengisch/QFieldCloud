@@ -141,6 +141,8 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "account__link",
         "account__user__email",
         "plan__link",
+        "plan__is_seat_flexible",
+        "max_organization_members",
         "active_since",
         "active_until",
         "is_active",
@@ -159,6 +161,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "created_at",
         "updated_at",
         "requested_cancel_at",
+        "plan__is_seat_flexible",
     )
 
     autocomplete_fields = ("account",)
@@ -211,6 +214,10 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Plan"))
     def plan__link(self, instance):
         return model_admin_url(instance.plan, str(instance.plan))
+
+    @admin.display(description="Seat-flexible plan")
+    def plan__is_seat_flexible(self, instance):
+        return instance.plan.is_seat_flexible
 
     @admin.display(description=_("Promotion"))
     def promotion__link(self, instance):
