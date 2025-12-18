@@ -107,7 +107,7 @@ class Command(BaseCommand):
                 )
 
             if advanced_filter:
-                if not updated_until and not only_community:
+                if not updated_until and not only_community and not not_yet_packaged:
                     logger.error(
                         "--advanced-filter set but mandatory options missing, aborting."
                     )
