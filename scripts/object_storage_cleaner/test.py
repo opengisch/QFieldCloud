@@ -10,8 +10,6 @@ import pytest
 # --- Configuration ---
 CONNECTION_CONFIG = {
     "endpoint_url": "http://localhost:8009",
-    "aws_access_key_id": "XXXXXXXXX",
-    "aws_secret_access_key": "XXXXXXXXX",
     "region_name": "us-east-1",
 }
 BUCKET_NAME = "test-bucket"
@@ -123,7 +121,7 @@ def test_logically_deleted_files_cleanup(s3_client, unique_prefix):
 
     # 4. Verify output and state
     assert result.returncode == 0
-    assert "Deleted" in result.stdout
+    assert "Deleted 2 versions from 1 keys" in result.stdout
 
     # Verify file is completely gone (no versions left)
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
@@ -210,8 +208,52 @@ def test_complex_version_history(s3_client, unique_prefix):
     result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
 
     assert result.returncode == 0
-    assert "Deleted" in result.stdout
+    assert "Deleted 4 versions from 1 keys" in result.stdout
 
     # Verify completely empty
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
     assert len(versions) == 0
+
+
+def test_large_data_complex_version_history(s3_client, unique_prefix):
+    """
+    Upload a large amount of data, delete some, test deleted-after filter.
+    """
+    # Create key1
+    key1 = f"{unique_prefix}_SHOULD_BE_DELETED"
+    create_file(s3_client, BUCKET_NAME, key1, "a" * 1000000)
+
+    # Create 100 files
+    for i in range(100):
+        create_file(
+            s3_client, BUCKET_NAME, f"{unique_prefix}file_{i}.txt", "a" * 1000000
+        )
+
+    # Delete key1
+    delete_file(s3_client, BUCKET_NAME, key1)
+
+    # Create 100 files
+    for i in range(100):
+        create_file(
+            s3_client, BUCKET_NAME, f"{unique_prefix}file_{i}_a.txt", "a" * 1000000
+        )
+
+    # Restore key1
+    create_file(s3_client, BUCKET_NAME, key1, "a" * 1000000)
+
+    # Run purge
+    result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
+
+    # Verify output (should not find any logically deleted objects)
+    assert result.returncode == 0
+    assert "No logically deleted objects found" in result.stdout
+
+    # delete the key A again
+    delete_file(s3_client, BUCKET_NAME, key1)
+
+    # Run purge
+    result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
+
+    # Verify output (should find logically deleted objects)
+    assert result.returncode == 0
+    assert "Deleted 4 versions from 1 keys" in result.stdout
