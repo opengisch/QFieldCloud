@@ -9,9 +9,8 @@ import boto3
 from botocore.client import BaseClient
 from botocore.exceptions import BotoCoreError, ClientError
 
+
 # Data classes
-
-
 @dataclass
 class VersionRef:
     """Represents a single object version or delete marker.
@@ -208,6 +207,7 @@ class ObjectStorageScanner:
             total_size_bytes=total_size,
             versions_count=actual_versions_count,
         )
+
         return aggregate, versions
 
     def _delete_batch(self, versions: list[dict[str, str]]) -> int:
