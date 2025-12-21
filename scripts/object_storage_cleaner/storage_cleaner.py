@@ -251,16 +251,20 @@ class ObjectStorageScanner:
         current_versions: list[VersionRef] = []
 
         for item in self._iter_all_versions():
-            if item.key != current_key:
-                if current_key is not None:
-                    result = self._aggregate_versions(current_key, current_versions)
-                    if result:
-                        yield result
+            # Same key, just accumulate and continue
+            if item.key == current_key:
+                current_versions.append(item)
+                continue
 
-                current_key = item.key
-                current_versions = []
+            # Another key, process the previous key.
+            if current_key is not None:
+                result = self._aggregate_versions(current_key, current_versions)
+                if result:
+                    yield result
 
-            current_versions.append(item)
+            # Start a new batch for the new key
+            current_key = item.key
+            current_versions = [item]
 
         # Process the final key
         if current_key is not None:
