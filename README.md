@@ -327,22 +327,31 @@ Code style done with [`pre-commit`](https://pre-commit.com):
 
 Copy the `.env.example` into `.env` file:
 
-    cp .env.example .env
-    vi .env
+```
+cp .env.example .env
+vi .env
+```
 
 Do not forget to set `DEBUG=0` and to adapt `COMPOSE_FILE` environment variable to not load local development configurations.
 
 Run and build the docker containers:
 
-    docker compose up -d --build
+```
+docker compose up -d --build
+```
 
 Run the django database migrations:
 
-    docker compose exec app python manage.py migrate
+```
+docker compose exec app python manage.py migrate
+```
 
 Collect the static files:
 
-    docker compose exec app python manage.py collectstatic
+```
+docker compose exec app python manage.py collectstatic
+```
+
 
 ### Using certificate from Let's Encrypt
 
@@ -352,40 +361,47 @@ Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and 
 
 On a server with a public domain, you can get a certificate issued by Let's Encrypt using certbot running the following command:
 
-    ./scripts/init_letsencrypt.sh
+```
+./scripts/init_letsencrypt.sh
+```
 
 The certificates will be renewed automatically.
 
 To use this Let's Encrypt certificate within QFieldCloud you just need to uncomment the following lines in your `.env`:
 
-    QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
-    QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
+```
+QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
+QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
+```
 
 You can also use your own certificates by placing them in `conf/nginx/certs/` and changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
 Don't forget to create your Diffie-Hellman parameters.
+
 
 ### Additional NGINX config
 
 You can add additional config to nginx placing files in `conf/nginx/config.d/` ending with `.conf`. They will be included in the main `nginx.conf`.
 
+
 ## Infrastructure
 
-Based on this example
-<https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/>
 
 ### Ports
 
-| service       | port  | configuration        | local              | development        | production         |
-|---------------|-------|----------------------|--------------------|--------------------|--------------------|
-| nginx http    | 80    | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| nginx https   | 443   | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| django http   | 8011  | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
-| postgres      | 5433  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| minio API     | 8009  | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
-| minio browser | 8010  | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
+Table of some of the relevant ports being exposed and how to configure them.
+
+| service                | port | configuration               | local              | staging            | production         |
+|------------------------|------|-----------------------------|--------------------|--------------------|--------------------|
+| nginx http             | 80   | WEB_HTTP_PORT               | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| nginx https            | 443  | WEB_HTTPS_PORT              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| django http            | 8011 | DJANGO_DEV_PORT             | :white_check_mark: | :x:                | :x:                |
+| postgres               | 5433 | HOST_POSTGRES_PORT          | :white_check_mark: | :x:                | :x:                |
 | object storage API     | 8009 | OBJECT_STORAGE_API_PORT     | :white_check_mark: | :x:                | :x:                |
 | object storage browser | 8010 | OBJECT_STORAGE_BROWSER_PORT | :white_check_mark: | :x:                | :x:                |
-| imap          | 143   | SMTP4DEV_IMAP_PORT   | :white_check_mark: | :x:                | :x:                |
+| smtp web               | 8012 | SMTP4DEV_WEB_PORT           | :white_check_mark: | :x:                | :x:                |
+| smtp                   | 25   | SMTP4DEV_SMTP_PORT          | :white_check_mark: | :x:                | :x:                |
+| imap                   | 143  | SMTP4DEV_IMAP_PORT          | :white_check_mark: | :x:                | :x:                |
+| imap                   | 8020 | WEBDAV_PUBLIC_PORT          | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
 
