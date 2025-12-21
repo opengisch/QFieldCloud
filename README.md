@@ -181,8 +181,8 @@ Create an <code>.env.test</code> file with the following variables that override
     QFIELDCLOUD_HOST=nginx
     DJANGO_SETTINGS_MODULE=qfieldcloud.settings
     STORAGE_ENDPOINT_URL=http://172.17.0.1:8109
-    MINIO_API_PORT=8109
-    MINIO_BROWSER_PORT=8110
+    OBJECT_STORAGE_API_PORT=8109
+    OBJECT_STORAGE_BROWSER_PORT=8110
     WEB_HTTP_PORT=8101
     WEB_HTTPS_PORT=8102
     HOST_POSTGRES_PORT=8103
@@ -383,8 +383,8 @@ Based on this example
 | postgres      | 5433  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | minio API     | 8009  | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
 | minio browser | 8010  | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
-| smtp web      | 8012  | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
-| smtp          | 25    | SMTP4DEV_SMTP_PORT   | :white_check_mark: | :x:                | :x:                |
+| object storage API     | 8009 | OBJECT_STORAGE_API_PORT     | :white_check_mark: | :x:                | :x:                |
+| object storage browser | 8010 | OBJECT_STORAGE_BROWSER_PORT | :white_check_mark: | :x:                | :x:                |
 | imap          | 143   | SMTP4DEV_IMAP_PORT   | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
@@ -402,7 +402,7 @@ For great `nginx` logs, use:
 
 ### Storage
 
-You can use either the integrated `minio` object storage, or use an external provider (e.g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
+You can use either the integrated `rustfs` object storage, or use an external provider (e.g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
 
 ### Database
 
