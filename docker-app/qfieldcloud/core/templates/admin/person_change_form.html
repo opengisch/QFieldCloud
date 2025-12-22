@@ -13,11 +13,9 @@
     |
     <a href="{% url 'admin:core_organization_changelist' %}?q=owner:{{original.username}}">{% trans 'Owned organizations' %}</a>
     |
-    {% if is_frontend_user_editable %}
-      <a href="{% url 'admin:billing_billingsubscription_changelist' %}?q={{ original.username }}">{% trans 'Billing' %}</a>
-    {% else %}
-      <a href="{% url 'admin:subscription_subscription_changelist' %}?q={{ original.username }}">{% trans 'Subscription' %}</a>
-    {% endif %}
+    {% with subscription_model.get_admin_url_prefix|add:"_changelist" as admin_view_name %}
+      <a href="{% url admin_view_name %}?q={{ original.username }}">{% trans 'Subscriptions' %}</a>
+    {% endwith %}
     |
     <a href="{% url 'admin:core_organization_changelist' %}?q=member:{{original.username}}">{% trans 'Organization memberships' %}</a>
     |

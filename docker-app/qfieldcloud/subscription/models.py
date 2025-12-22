@@ -942,6 +942,9 @@ class AbstractSubscription(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
+    def get_admin_url_prefix(self) -> str:
+        return f"admin:{self._meta.app_label}_{self._meta.model_name}"
+
     def __str__(self):
         active_storage_total_mb = (
             self.active_storage_package_mb if hasattr(self, "packages") else 0
