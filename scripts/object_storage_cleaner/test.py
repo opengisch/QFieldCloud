@@ -101,7 +101,7 @@ def test_no_logically_deleted_files(s3_client, unique_prefix):
 
     # 3. Verify output
     assert result.returncode == 0
-    assert "No logically deleted objects found" in result.stdout
+    assert "Total logically deleted keys: 0" in result.stdout
 
 
 def test_logically_deleted_files_cleanup(s3_client, unique_prefix):
@@ -121,7 +121,8 @@ def test_logically_deleted_files_cleanup(s3_client, unique_prefix):
 
     # 4. Verify output and state
     assert result.returncode == 0
-    assert "Deleted 2 versions from 1 keys" in result.stdout
+    assert "Total logically deleted keys: 1" in result.stdout
+    assert "Total versions deleted: 2" in result.stdout
 
     # Verify file is completely gone (no versions left)
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
@@ -148,7 +149,7 @@ def test_restored_files_ignored(s3_client, unique_prefix):
 
     # 5. Verify output - should not find it
     assert result.returncode == 0
-    assert "No logically deleted objects found" in result.stdout
+    assert "Total logically deleted keys: 0" in result.stdout
 
 
 def test_deleted_after_filter(s3_client, unique_prefix):
@@ -177,14 +178,13 @@ def test_deleted_after_filter(s3_client, unique_prefix):
             future_date.isoformat(),
         ]
     )
-    assert "No logically deleted objects found" in result_future.stdout
+    assert "Total logically deleted keys: 0" in result_future.stdout
 
     # Filter is in the PAST.
 
     result_past = run_script(
         ["--scan", "--prefix", unique_prefix, "--deleted-after", past_date.isoformat()]
     )
-    assert "No logically deleted objects found" not in result_past.stdout
     assert "Total logically deleted keys: 1" in result_past.stdout
 
 
@@ -208,7 +208,8 @@ def test_complex_version_history(s3_client, unique_prefix):
     result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
 
     assert result.returncode == 0
-    assert "Deleted 4 versions from 1 keys" in result.stdout
+    assert "Total logically deleted keys: 1" in result.stdout
+    assert "Total versions deleted: 4" in result.stdout
 
     # Verify completely empty
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
@@ -246,7 +247,7 @@ def test_large_data_complex_version_history(s3_client, unique_prefix):
 
     # Verify output (should not find any logically deleted objects)
     assert result.returncode == 0
-    assert "No logically deleted objects found" in result.stdout
+    assert "Total logically deleted keys: 0" in result.stdout
 
     # delete the key A again
     delete_file(s3_client, BUCKET_NAME, key1)
@@ -256,4 +257,5 @@ def test_large_data_complex_version_history(s3_client, unique_prefix):
 
     # Verify output (should find logically deleted objects)
     assert result.returncode == 0
-    assert "Deleted 4 versions from 1 keys" in result.stdout
+    assert "Total logically deleted keys: 1" in result.stdout
+    assert "Total versions deleted: 4" in result.stdout

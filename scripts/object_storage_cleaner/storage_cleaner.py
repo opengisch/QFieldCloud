@@ -1,7 +1,7 @@
 import argparse
 import signal
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -71,7 +71,10 @@ class ObjectStorageScanner:
         self.endpoint_url = endpoint_url
 
         # Metrics
-        self.scanned_count = 0
+        self._scanned_count = 0
+        self._stats_keys = 0
+        self._stats_versions = 0
+        self._stats_bytes = 0
 
         # Initialize client
         self.s3_client = self._create_s3_client(region_name, profile, endpoint_url)
@@ -136,7 +139,44 @@ class ObjectStorageScanner:
 
         return status == "Enabled"
 
-    def _iter_all_versions(self) -> Iterator[VersionRef]:
+    def _print_progress(self, delta: int, label: str = "Deletable") -> None:
+        self._scanned_count += delta
+        print(
+            f"Scanned {self._scanned_count} versions | Found {self._stats_keys} keys | "
+            f"{label}: {self._stats_versions} versions ({self._format_bytes(self._stats_bytes)})"
+            + " "
+            * 20,
+            end="\r",
+            flush=True,
+        )
+
+    def _print_filters(self):
+        print(f"\nScanning bucket: '{self.bucket}'")
+        if self.prefix:
+            print(f"  Prefix filter: {self.prefix}")
+
+        if self.deleted_after:
+            print(
+                f"  Date filter:   Objects deleted after {self.deleted_after.isoformat()}"
+            )
+
+        print()
+
+    def _print_summary(self, is_clean: bool = False):
+        versions_action = "deleted" if is_clean else "to delete"
+        storage_action = "freed" if is_clean else "to free"
+
+        print("-" * 100)
+        print(f"  Total logically deleted keys: {self._stats_keys}")
+        print(f"  Total versions {versions_action}: {self._stats_versions}")
+        print(
+            f"  Total storage {storage_action}: {self._format_bytes(self._stats_bytes)}"
+        )
+        print("-" * 100)
+
+    def _iter_all_versions(
+        self, progress: Callable[[int], None] | None = None
+    ) -> Iterator[VersionRef]:
         """Low-level generator that yields all versions and delete markers, sorted by Key."""
         paginator = self.s3_client.get_paginator("list_object_versions")
         kwargs = {"Bucket": self.bucket, "MaxKeys": 10000}
@@ -171,8 +211,8 @@ class ObjectStorageScanner:
             # Sort by Key to keep versions of the same object together
             items.sort(key=lambda x: x.key)
 
-            # Update scanned count
-            self.scanned_count += len(items)
+            if progress:
+                progress(len(items))
 
             yield from items
 
@@ -245,12 +285,13 @@ class ObjectStorageScanner:
 
     def _find_logically_deleted(
         self,
+        progress: Callable[[int], None] | None = None,
     ) -> Iterator[tuple[LogicallyDeletedObject, list[VersionRef]]]:
         """Yields logically deleted objects."""
         current_key: str | None = None
         current_versions: list[VersionRef] = []
 
-        for item in self._iter_all_versions():
+        for item in self._iter_all_versions(progress=progress):
             # Same key, just accumulate and continue
             if item.key == current_key:
                 current_versions.append(item)
@@ -272,136 +313,48 @@ class ObjectStorageScanner:
             if result:
                 yield result
 
-    def scan(self) -> tuple[int, int, int]:
+    def scan(self) -> None:
         """Scan and print report of logically deleted objects."""
-        # Reset metrics
-        self.scanned_count = 0
 
-        # Print filters
-        print(f"\nScanning bucket: '{self.bucket}'")
-        if self.prefix:
-            print(f"  Prefix filter: {self.prefix}")
+        self._print_filters()
 
-        if self.deleted_after:
-            print(
-                f"  Date filter:   Objects deleted after {self.deleted_after.isoformat()}"
-            )
+        def progress(delta):
+            self._print_progress(delta)
 
-        print()
+        for aggregate, _ in self._find_logically_deleted(progress=progress):
+            self._stats_keys += 1
+            self._stats_versions += aggregate.versions_count + 1
+            self._stats_bytes += aggregate.total_size_bytes
 
-        # Print table header
-        print("-" * 100)
-        print(f"{'Size':>9}  {'Versions':>10}  {'Deleted At':<33}  Key")
-        print("-" * 100)
+        self._print_summary(is_clean=False)
 
-        stats_keys = 0
-        stats_versions = 0
-        stats_bytes = 0
-
-        # Iterate
-        for aggregate, _ in self._find_logically_deleted():
-            stats_keys += 1
-            stats_versions += aggregate.versions_count + 1
-            stats_bytes += aggregate.total_size_bytes
-
-            # Print row if <= 10
-            if stats_keys <= 10:
-                deleted_at_iso = aggregate.deleted_at.astimezone(
-                    timezone.utc
-                ).isoformat()
-                print(
-                    f"{self._format_bytes(aggregate.total_size_bytes):>12}  "
-                    f"{aggregate.versions_count:>8}  "
-                    f"{deleted_at_iso:<25}  "
-                    f"{aggregate.key}"
-                )
-
-            elif stats_keys == 11:
-                # Clear previous progress line
-                print(" " * 100, end="\r")
-                # Print aligned continuation markers (matches table columns)
-                print(f"{'....':>9}  {'....':>11}  {'....':<32}  ....")
-                # Add blank vertical space
-                print()
-
-            # Dynamic progress
-            print(
-                f"Scanned {self.scanned_count} versions | Found {stats_keys} keys | Deletable: {stats_versions} versions ({self._format_bytes(stats_bytes)})"
-                + " " * 20,
-                end="\r",
-            )
-
-        # Clear progress line
-        print(" " * 100, end="\r")
-
-        print("-" * 100)
-        if stats_keys == 0:
-            print("\nNo logically deleted objects found.")
-        else:
-            print("\nSummary:")
-            print(f"  Total logically deleted keys: {stats_keys}")
-            print(f"  Total versions to delete: {stats_versions}")
-            print(f"  Total storage to free: {self._format_bytes(stats_bytes)}")
-
-        return stats_keys, stats_versions, stats_bytes
-
-    def clean(self) -> tuple[int, int, int]:
+    def clean(self) -> None:
         """Scan and delete logically deleted objects."""
-        # Reset metrics
-        self.scanned_count = 0
 
-        # Print filters
-        print(f"\nScanning bucket: '{self.bucket}'")
-        if self.prefix:
-            print(f"  Prefix filter: {self.prefix}")
-
-        if self.deleted_after:
-            print(
-                f"  Date filter:   Objects deleted after {self.deleted_after.isoformat()}"
-            )
-
-        print()
+        self._print_filters()
 
         batch: list[dict[str, str]] = []
 
-        stats_keys = 0
-        stats_deleted_versions = 0
-        stats_bytes = 0
+        def progress(delta):
+            self._print_progress(delta, label="Deleted")
 
         # Iterate
-        for aggregate, versions in self._find_logically_deleted():
-            stats_keys += 1
-            stats_bytes += aggregate.total_size_bytes
+        for aggregate, versions in self._find_logically_deleted(progress=progress):
+            self._stats_keys += 1
+            self._stats_bytes += aggregate.total_size_bytes
 
             for v in versions:
                 batch.append({"Key": v.key, "VersionId": v.version_id})
                 if len(batch) >= self.BATCH_SIZE:
-                    stats_deleted_versions += self._delete_batch(batch)
+                    self._stats_versions += self._delete_batch(batch)
                     batch.clear()
-
-            # Dynamic progress
-            print(
-                f"Scanned {self.scanned_count} versions | Found {stats_keys} keys | Deleted {stats_deleted_versions} versions ({self._format_bytes(stats_bytes)})"
-                + " " * 20,
-                end="\r",
-            )
+                    self._print_progress(0, label="Deleted")
 
         # Flush remaining
         if batch:
-            stats_deleted_versions += self._delete_batch(batch)
+            self._stats_versions += self._delete_batch(batch)
 
-        # Clear progress line
-        print(" " * 100, end="\r")
-
-        if stats_keys == 0:
-            print("No logically deleted objects found.")
-        else:
-            print(
-                f"\nDone. Deleted {stats_deleted_versions} versions from {stats_keys} keys."
-            )
-            print(f"Freed {self._format_bytes(stats_bytes)}.")
-
-        return stats_keys, stats_deleted_versions, stats_bytes
+        self._print_summary(is_clean=True)
 
 
 def signal_handler(sig, frame):
@@ -509,12 +462,6 @@ def main() -> int:
             if confirm != "yes":
                 print("Operation cancelled.")
                 return 0
-
-        # Execute deletion
-        if args.noinput:
-            print("\nDeleting...")
-        else:
-            print("\nStarting cleanup...")
 
         cleaner.clean()
 
