@@ -589,8 +589,10 @@ class PersonAdmin(QFieldCloudModelAdmin):
         # Add the subscription model is editable flag to the extra context
         extra_context = extra_context or {}
 
-        extra_context["is_frontend_user_editable"] = (
-            get_subscription_model().is_frontend_user_editable
+        extra_context.update(
+            {
+                "subscription_model": get_subscription_model(),
+            }
         )
 
         return super().change_view(
