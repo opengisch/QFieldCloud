@@ -4,6 +4,7 @@ from uuid import UUID
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core import signing
 from django.db.models import Q, QuerySet
+from django.http import Http404
 from django.http.response import HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -224,8 +225,8 @@ class AvatarFileReadView(views.APIView):
         try:
             data = signing.loads(public_id)
             user_id = data["id"]
-        except Exception:
-            return redirect(staticfiles_storage.url("logo.svg"))
+        except signing.BadSignature:
+            raise Http404("Invalid avatar ID.")
 
         useraccount = get_object_or_404(UserAccount, user__id=user_id)
 

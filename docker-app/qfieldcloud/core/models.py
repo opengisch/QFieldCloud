@@ -307,8 +307,8 @@ class User(AbstractUser):
     def is_person(self):
         return self.type == User.Type.PERSON
 
-    @property
-    def public_id(self):
+    @cached_property
+    def public_id(self) -> str:
         return signing.dumps({"id": self.pk})
 
     @property
