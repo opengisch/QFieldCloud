@@ -124,6 +124,22 @@ def _generate_thumbnail(
     tmp_project = tmp_project_details["project"]
     map_settings = tmp_project_details["map_settings"]
 
+    if map_settings.extent().isEmpty():
+        logger.warning(
+            "Project has empty extent, using the full extent for the thumbnail."
+        )
+
+        map_settings.setExtent(map_settings.fullExtent())
+
+    # NOTE when the extent is still empty, QGIS hangs forever, so we just skip thumbnail generation.
+    if map_settings.extent().isEmpty():
+        logger.warning("Project has empty extent, no thumbnail can be generated.")
+
+        # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected.
+        del tmp_project
+
+        return
+
     img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
     painter = QPainter(img)
     job = QgsMapRendererCustomPainterJob(map_settings, painter)
