@@ -1,13 +1,20 @@
 import argparse
+import logging
 import signal
 import sys
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import boto3
 from botocore.client import BaseClient
 from botocore.exceptions import BotoCoreError, ClientError
+
+logger = logging.getLogger(__name__)
+TRACE_LEVEL = 5
+logging.addLevelName(TRACE_LEVEL, "TRACE")
 
 
 # Data classes
@@ -137,42 +144,54 @@ class ObjectStorageScanner:
                 f"Could not check versioning status for '{self.bucket}': {e}"
             ) from e
 
+        logger.debug(
+            "\nBucket: '%s'\nVersioning: %s\nRegion: %s\nEndpoint: %s\nPrefix: %s \nDeleted After: %s",
+            self.bucket,
+            status,
+            self.s3_client.meta.region_name,
+            self.s3_client.meta.endpoint_url,
+            self.prefix or "No prefix specified",
+            self.deleted_after.isoformat()
+            if self.deleted_after
+            else "No deleted after date specified",
+        )
+
         return status == "Enabled"
 
     def _print_progress(self, delta: int, label: str = "Deletable") -> None:
         self._scanned_count += delta
-        print(
-            f"Scanned {self._scanned_count} versions | Found {self._stats_keys} keys | "
-            f"{label}: {self._stats_versions} versions ({self._format_bytes(self._stats_bytes)})"
-            + " "
-            * 20,
-            end="\r",
-            flush=True,
-        )
+        if sys.stdout.isatty():
+            sys.stdout.write(
+                f"Scanned {self._scanned_count} versions | Found {self._stats_keys} keys | "
+                f"{label}: {self._stats_versions} versions ({self._format_bytes(self._stats_bytes)})"
+                + " " * 20
+                + "\r",
+            )
+            sys.stdout.flush()
 
     def _print_filters(self):
-        print(f"\nScanning bucket: '{self.bucket}'")
+        msg = [f"Scanning bucket: '{self.bucket}'"]
         if self.prefix:
-            print(f"  Prefix filter: {self.prefix}")
+            msg.append(f"Prefix filter: {self.prefix}")
 
         if self.deleted_after:
-            print(
-                f"  Date filter:   Objects deleted after {self.deleted_after.isoformat()}"
+            msg.append(
+                f"Date filter: Objects deleted after {self.deleted_after.isoformat()}"
             )
 
-        print()
+        logger.info("\n".join(msg) + "\n")
 
     def _print_summary(self, is_clean: bool = False):
         versions_action = "deleted" if is_clean else "to delete"
         storage_action = "freed" if is_clean else "to free"
 
-        print("-" * 100)
-        print(f"  Total logically deleted keys: {self._stats_keys}")
-        print(f"  Total versions {versions_action}: {self._stats_versions}")
-        print(
+        logger.info("-" * 100)
+        logger.info(f"  Total logically deleted keys: {self._stats_keys}")
+        logger.info(f"  Total versions {versions_action}: {self._stats_versions}")
+        logger.info(
             f"  Total storage {storage_action}: {self._format_bytes(self._stats_bytes)}"
         )
-        print("-" * 100)
+        logger.info("-" * 100)
 
     def _iter_all_versions(
         self, progress: Callable[[int], None] | None = None
@@ -255,6 +274,15 @@ class ObjectStorageScanner:
         if not versions:
             return 0
 
+        if logger.isEnabledFor(TRACE_LEVEL):
+            for v in versions:
+                logger.log(
+                    TRACE_LEVEL,
+                    "Deleting object: Key=%s Version=%s",
+                    v["Key"],
+                    v["VersionId"],
+                )
+
         try:
             self.s3_client.delete_objects(
                 Bucket=self.bucket, Delete={"Objects": versions, "Quiet": True}
@@ -262,26 +290,26 @@ class ObjectStorageScanner:
 
             return len(versions)
         except ClientError as e:
-            print(f"Failed to delete batch: {e}")
+            logger.error(f"Failed to delete batch: {e}")
             return 0
 
     def get_bucket_info(self):
         """Display bucket and connection information."""
 
-        print("\nBucket Information:")
-        print("-" * 80)
-        print(f"Bucket:            {self.bucket}")
-        print("Versioning Status: Enabled")
-        print(f"Region:            {self.s3_client.meta.region_name}")
-        print(f"Endpoint URL:      {self.s3_client.meta.endpoint_url}")
-        print(f"Prefix Filter:     {self.prefix or 'No prefix specified'}")
-        print(
+        logger.info("\nBucket Information:")
+        logger.info("-" * 80)
+        logger.info(f"Bucket:            {self.bucket}")
+        logger.info("Versioning Status: Enabled")
+        logger.info(f"Region:            {self.s3_client.meta.region_name}")
+        logger.info(f"Endpoint URL:      {self.s3_client.meta.endpoint_url}")
+        logger.info(f"Prefix Filter:     {self.prefix or 'No prefix specified'}")
+        logger.info(
             f"Deleted After:     {self.deleted_after.isoformat() if self.deleted_after else 'No deleted after date specified'}"
         )
-        print("-" * 80)
-        print("✓ Connection successful.")
-        print("✓ Bucket is accessible.")
-        print("\nUse --scan to find logically deleted objects.")
+        logger.info("-" * 80)
+        logger.info("✓ Connection successful.")
+        logger.info("✓ Bucket is accessible.")
+        logger.info("\nUse --scan to find logically deleted objects.")
 
     def _find_logically_deleted(
         self,
@@ -321,10 +349,21 @@ class ObjectStorageScanner:
         def progress(delta):
             self._print_progress(delta)
 
-        for aggregate, _ in self._find_logically_deleted(progress=progress):
+        for aggregate, versions in self._find_logically_deleted(progress=progress):
             self._stats_keys += 1
             self._stats_versions += aggregate.versions_count + 1
             self._stats_bytes += aggregate.total_size_bytes
+
+            if logger.isEnabledFor(TRACE_LEVEL):
+                for v in versions:
+                    logger.log(
+                        TRACE_LEVEL,
+                        "Version: Key=%s VersionId=%s Size=%s LastModified=%s",
+                        v.key,
+                        v.version_id,
+                        v.size,
+                        v.last_modified,
+                    )
 
         self._print_summary(is_clean=False)
 
@@ -337,6 +376,8 @@ class ObjectStorageScanner:
 
         def progress(delta):
             self._print_progress(delta, label="Deleted")
+
+        logger.debug("Starting to delete logically deleted objects...")
 
         # Iterate
         for aggregate, versions in self._find_logically_deleted(progress=progress):
@@ -358,11 +399,48 @@ class ObjectStorageScanner:
 
 
 def signal_handler(sig, frame):
-    print("\n\nScan interrupted by user. Cleaning up...")
+    logger.info("\n\nScan interrupted by user.")
     sys.exit(0)
 
 
 signal.signal(signal.SIGINT, signal_handler)
+
+
+def setup_logging(debug: bool = False, log_file: str | None = None) -> None:
+    """Setup logging for the script."""
+    level = TRACE_LEVEL if log_file else (logging.DEBUG if debug else logging.INFO)
+    logger.setLevel(level)
+    logger.handlers.clear()
+    logger.propagate = False
+
+    # 2. Console Handler (The User UI)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.DEBUG if debug else logging.INFO)
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
+
+    # Filter out errors (they go to stderr)
+    console_handler.addFilter(lambda record: record.levelno <= logging.INFO)
+    logger.addHandler(console_handler)
+
+    # 3. Stderr Handler (Errors)
+    error_handler = logging.StreamHandler(sys.stderr)
+    error_handler.setLevel(logging.WARNING)
+    error_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    logger.addHandler(error_handler)
+
+    # 4. File Handler (The Audit Log)
+    if log_file:
+        Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=1000 * 1024 * 1024, backupCount=5, encoding="utf-8"
+        )
+        file_handler.setLevel(TRACE_LEVEL)
+        file_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            )
+        )
+        logger.addHandler(file_handler)
 
 
 def main() -> int:
@@ -419,7 +497,22 @@ def main() -> int:
         help="Skip confirmation prompt (use with --purge for automation)",
     )
 
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Enable debug logging",
+    )
+
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="Write a rotating logbook file (e.g. /tmp/s3-cleaner.log)",
+    )
+
     args = parser.parse_args()
+
+    setup_logging(debug=args.debug, log_file=args.log_file)
 
     if args.deleted_after:
         args.deleted_after = args.deleted_after.replace(tzinfo=timezone.utc)
@@ -435,7 +528,7 @@ def main() -> int:
             deleted_after=args.deleted_after,
         )
     except RuntimeError as e:
-        print(f"ERROR: {e}")
+        logger.error(e)
         return 1
 
     if args.info:
@@ -450,26 +543,26 @@ def main() -> int:
     # Mode: Purge (with or without confirmation)
     elif args.purge:
         if not args.noinput:
-            print(f"\nTarget Bucket: {args.bucket}")
+            logger.info(f"\nTarget Bucket: {args.bucket}")
             if args.prefix:
-                print(f"Prefix: {args.prefix}")
+                logger.info(f"Prefix: {args.prefix}")
 
-            print(
-                "WARNING: You are about to permanently delete logically deleted objects. This action cannot be undone!"
+            logger.warning(
+                "You are about to permanently delete logically deleted objects. This action cannot be undone!"
             )
             confirm = input("Type 'yes' to confirm deletion: ").strip().lower()
 
             if confirm != "yes":
-                print("Operation cancelled.")
+                logger.info("Operation cancelled.")
                 return 0
 
         cleaner.clean()
 
     # Default fallback to info
     else:
-        print("No action specified. Use --info, --scan, or --purge.")
-        print("Use --help for usage information.")
-        print("Defaulting to --info.")
+        logger.info("No action specified. Use --info, --scan, or --purge.")
+        logger.info("Use --help for usage information.")
+        logger.info("Defaulting to --info.")
         cleaner.get_bucket_info()
         return 0
 
