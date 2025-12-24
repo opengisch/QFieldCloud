@@ -135,5 +135,3 @@ The repository includes a test suite (`test.py`) that uses `pytest` and requires
     ```bash
     pytest test.py
     ```
-
-
