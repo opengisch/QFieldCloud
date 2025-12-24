@@ -1,10 +1,11 @@
 import argparse
 import logging
+import re
 import signal
 import sys
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -443,6 +444,44 @@ def setup_logging(debug: bool = False, log_file: str | None = None) -> None:
         logger.addHandler(file_handler)
 
 
+def parse_since(value: str) -> datetime:
+    """
+    Parse a duration like '3s', '30d', '2w', '3 days' and return a datetime object.
+
+    Args:
+        value: The duration string to parse.
+
+    Returns:
+        A datetime object representing the time delta from now.
+    """
+    value = value.strip().lower()
+
+    pattern = r"^(\d+)\s*(s|sec|secs|seconds|min|minute|minutes|h|hour|hours|d|day|days|w|week|weeks)$"
+    match = re.match(pattern, value)
+    if not match:
+        raise argparse.ArgumentTypeError(
+            "Invalid duration. Use: '3s', '10h', '15min', '30d', '2w' (or words like '3 days')"
+        )
+
+    amount = int(match.group(1))
+    unit = match.group(2)
+
+    if unit in ("s", "sec", "secs", "seconds"):
+        delta = timedelta(seconds=amount)
+    elif unit in ("min", "minute", "minutes"):
+        delta = timedelta(minutes=amount)
+    elif unit in ("h", "hour", "hours"):
+        delta = timedelta(hours=amount)
+    elif unit in ("d", "day", "days"):
+        delta = timedelta(days=amount)
+    elif unit in ("w", "week", "weeks"):
+        delta = timedelta(weeks=amount)
+    else:
+        raise argparse.ArgumentTypeError(f"Unsupported time unit: {unit}")
+
+    return datetime.now(timezone.utc) - delta
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Scan and clean logically deleted objects in S3.",
@@ -477,6 +516,13 @@ def main() -> int:
         "--deleted-after",
         type=datetime.fromisoformat,
         help="Only process objects deleted after this date (ISO 8601 format, e.g. 2024-12-01:00:00:00)",
+    )
+
+    parser.add_argument(
+        "--since",
+        type=parse_since,
+        metavar="DAYS",
+        help="Number of days ago (e.g. 3, 3d, '7 days')",
     )
 
     # Action flags
@@ -514,8 +560,16 @@ def main() -> int:
 
     setup_logging(debug=args.debug, log_file=args.log_file)
 
-    if args.deleted_after:
-        args.deleted_after = args.deleted_after.replace(tzinfo=timezone.utc)
+    deleted_after = None
+
+    if args.since and args.deleted_after:
+        raise argparse.ArgumentTypeError(
+            "Cannot use --since and --deleted-after together"
+        )
+    elif args.since:
+        deleted_after = args.since
+    elif args.deleted_after:
+        deleted_after = args.deleted_after.replace(tzinfo=timezone.utc)
 
     # Create scanner
     try:
@@ -525,7 +579,7 @@ def main() -> int:
             profile=args.profile,
             endpoint_url=args.endpoint_url,
             prefix=args.prefix,
-            deleted_after=args.deleted_after,
+            deleted_after=deleted_after,
         )
     except RuntimeError as e:
         logger.error(e)
