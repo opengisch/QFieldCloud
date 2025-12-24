@@ -290,3 +290,53 @@ def test_since_filter(s3_client, unique_prefix):
     # Filter is in the PAST.
     result = run_script(["--scan", "--prefix", unique_prefix, "--since", "5s"])
     assert "Total logically deleted keys: 1" in result.stdout
+
+
+def test_stray_delete_marker(s3_client, unique_prefix):
+    """
+    Test that a key exists only as a Delete Marker is identified and deleted.
+    """
+    key = f"{unique_prefix}stray_marker"
+
+    # 1. Create file
+    create_file(s3_client, BUCKET_NAME, key, "content")
+
+    # 2. Delete it (creates marker)
+    delete_file(s3_client, BUCKET_NAME, key)
+
+    # 3. Manually delete the data version, leaving ONLY the marker
+    versions = list_versions(s3_client, BUCKET_NAME, key)
+    data_version = next(v for v in versions if not v.get("IsDeleteMarker", False))
+    s3_client.delete_object(
+        Bucket=BUCKET_NAME, Key=key, VersionId=data_version["VersionId"]
+    )
+
+    # 4. Run Scan
+    # The script should identify the stray marker and delete it
+    result = run_script(["--scan", "--prefix", unique_prefix])
+
+    assert "Total logically deleted keys: 1" in result.stdout
+    assert "Total versions to delete: 1" in result.stdout
+
+
+def test_high_frequency_updates(s3_client, unique_prefix):
+    """
+    Test that a key with high frequency updates is identified and deleted.
+    """
+    key = f"{unique_prefix}fast_updates.txt"
+
+    # Create 20 versions as fast as possible
+    for i in range(20):
+        create_file(s3_client, BUCKET_NAME, key, f"content_{i}")
+
+    # Delete at the end
+    delete_file(s3_client, BUCKET_NAME, key)
+
+    # Run prune
+    result = run_script(["--prune", "--noinput", "--prefix", unique_prefix])
+
+    # Verify everything is gone
+    versions = list_versions(s3_client, BUCKET_NAME, key)
+    assert len(versions) == 0
+    assert "Total logically deleted keys: 1" in result.stdout
+    assert "Total versions deleted: 21" in result.stdout
