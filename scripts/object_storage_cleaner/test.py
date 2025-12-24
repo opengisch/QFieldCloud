@@ -282,13 +282,15 @@ def test_deleted_since_filter(s3_client, unique_prefix):
             "--prefix",
             unique_prefix,
             "--deleted-since",
-            "1s",
+            "1 second",
         ]
     )
     assert "Total logically deleted keys: 0" in result_future.stdout
 
     # Filter is in the PAST.
-    result = run_script(["--scan", "--prefix", unique_prefix, "--deleted-since", "5s"])
+    result = run_script(
+        ["--scan", "--prefix", unique_prefix, "--deleted-since", "5 seconds"]
+    )
     assert "Total logically deleted keys: 1" in result.stdout
 
 

@@ -457,25 +457,27 @@ def parse_since_cutoff(value: str) -> datetime:
     """
     value = value.strip().lower()
 
-    pattern = r"^(\d+)\s*(s|sec|secs|seconds|min|minute|minutes|h|hour|hours|d|day|days|w|week|weeks)$"
+    pattern = (
+        r"^(\d+)\s*(second|seconds|minute|minutes|hour|hours|day|days|week|weeks)$"
+    )
     match = re.match(pattern, value)
     if not match:
         raise argparse.ArgumentTypeError(
-            "Invalid duration. Use: '3s', '10h', '15min', '30d', '2w' (or words like '3 days')"
+            "Invalid duration. Use: '3 seconds', '10 hours', '15 minutes', '30 days', '2 weeks'"
         )
 
     amount = int(match.group(1))
     unit = match.group(2)
 
-    if unit in ("s", "sec", "secs", "seconds"):
+    if unit in ("second", "seconds"):
         delta = timedelta(seconds=amount)
-    elif unit in ("min", "minute", "minutes"):
+    elif unit in ("minute", "minutes"):
         delta = timedelta(minutes=amount)
-    elif unit in ("h", "hour", "hours"):
+    elif unit in ("hour", "hours"):
         delta = timedelta(hours=amount)
-    elif unit in ("d", "day", "days"):
+    elif unit in ("day", "days"):
         delta = timedelta(days=amount)
-    elif unit in ("w", "week", "weeks"):
+    elif unit in ("week", "weeks"):
         delta = timedelta(weeks=amount)
     else:
         raise argparse.ArgumentTypeError(f"Unsupported time unit: {unit}")
@@ -522,8 +524,8 @@ def main() -> int:
     parser.add_argument(
         "--deleted-since",
         type=parse_since_cutoff,
-        metavar="DAYS",
-        help="Number of days ago (e.g. 3, 3d, '7 days'). Cannot be used with `--deleted-after.`",
+        metavar="DURATION",
+        help="Time duration ago (e.g. '3 days', '2 weeks'). Cannot be used with `--deleted-after.`",
     )
 
     # Action flags
