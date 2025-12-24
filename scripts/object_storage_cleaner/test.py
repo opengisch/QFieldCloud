@@ -261,7 +261,7 @@ def test_large_data_complex_version_history(s3_client, unique_prefix):
     assert "Total versions deleted: 4" in result.stdout
 
 
-def test_since_filter(s3_client, unique_prefix):
+def test_deleted_since_filter(s3_client, unique_prefix):
     """
     Upload files, delete some, test since filter.
     """
@@ -281,14 +281,14 @@ def test_since_filter(s3_client, unique_prefix):
             "--scan",
             "--prefix",
             unique_prefix,
-            "--since",
+            "--deleted-since",
             "1s",
         ]
     )
     assert "Total logically deleted keys: 0" in result_future.stdout
 
     # Filter is in the PAST.
-    result = run_script(["--scan", "--prefix", unique_prefix, "--since", "5s"])
+    result = run_script(["--scan", "--prefix", unique_prefix, "--deleted-since", "5s"])
     assert "Total logically deleted keys: 1" in result.stdout
 
 

@@ -516,14 +516,14 @@ def main() -> int:
     parser.add_argument(
         "--deleted-after",
         type=datetime.fromisoformat,
-        help="Only process objects deleted after this date (ISO 8601 format, e.g. 2024-12-01:00:00:00)",
+        help="Only process objects deleted after this date (ISO 8601 format, e.g. 2024-12-01:00:00:00) Cannot be used with `--deleted-since.`",
     )
 
     parser.add_argument(
-        "--since",
+        "--deleted-since",
         type=parse_since_cutoff,
         metavar="DAYS",
-        help="Number of days ago (e.g. 3, 3d, '7 days')",
+        help="Number of days ago (e.g. 3, 3d, '7 days'). Cannot be used with `--deleted-after.`",
     )
 
     # Action flags
@@ -563,12 +563,12 @@ def main() -> int:
 
     deleted_after = None
 
-    if args.since and args.deleted_after:
+    if args.deleted_since and args.deleted_after:
         raise argparse.ArgumentTypeError(
-            "Cannot use --since and --deleted-after together"
+            "Cannot use --deleted-since and --deleted-after together"
         )
-    elif args.since:
-        deleted_after = args.since
+    elif args.deleted_since:
+        deleted_after = args.deleted_since
     elif args.deleted_after:
         deleted_after = args.deleted_after.replace(tzinfo=timezone.utc)
 
