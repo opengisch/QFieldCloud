@@ -73,7 +73,7 @@ def format_bytes(num_bytes: int) -> str:
 
 
 # Main class
-class ObjectStorageScanner:
+class ObjectStorageCleaner:
     BATCH_SIZE = 1000
 
     def __init__(
@@ -572,9 +572,9 @@ def main() -> int:
     elif args.deleted_after:
         deleted_after = args.deleted_after.replace(tzinfo=timezone.utc)
 
-    # Create scanner
+    # Create cleaner
     try:
-        scanner = ObjectStorageScanner(
+        cleaner = ObjectStorageCleaner(
             bucket=args.bucket,
             region_name=args.region,
             profile=args.profile,
@@ -587,12 +587,12 @@ def main() -> int:
         return 1
 
     if args.info:
-        scanner.print_bucket_info()
+        cleaner.print_bucket_info()
         return 0
 
     # Mode: Scan only
     elif args.scan:
-        scanner.scan()
+        cleaner.scan()
         return 0
 
     # Mode: Prune (with or without confirmation)
@@ -611,12 +611,12 @@ def main() -> int:
                 logger.info("Operation cancelled.")
                 return 0
 
-        scanner.prune()
+        cleaner.prune()
 
     # Default fallback to info
     else:
         logger.info("No action specified. Defaulting to --info.")
-        scanner.print_bucket_info()
+        cleaner.print_bucket_info()
         return 0
 
     return 0
