@@ -58,6 +58,20 @@ class LogicallyDeletedObject:
     versions_count: int
 
 
+# Utility functions
+def format_bytes(num_bytes: int) -> str:
+    """Convert a byte count to a human-readable string."""
+    units = ["B", "KB", "MB", "GB", "TB", "PB"]
+    size = float(num_bytes)
+    for unit in units:
+        if size < 1024.0 or unit == units[-1]:
+            return f"{size:.2f} {unit}"
+
+        size /= 1024.0
+
+    return f"{size:.2f} PB"
+
+
 # Main class
 class ObjectStorageScanner:
     BATCH_SIZE = 1000
@@ -90,19 +104,6 @@ class ObjectStorageScanner:
         # Validate bucket immediately
         self._validate_bucket_versioning()
 
-    @staticmethod
-    def _format_bytes(num_bytes: int) -> str:
-        """Convert a byte count to a human-readable string."""
-        units = ["B", "KB", "MB", "GB", "TB", "PB"]
-        size = float(num_bytes)
-        for unit in units:
-            if size < 1024.0 or unit == units[-1]:
-                return f"{size:.2f} {unit}"
-
-            size /= 1024.0
-
-        return f"{size:.2f} PB"
-
     def _create_s3_client(
         self,
         region: str | None,
@@ -129,16 +130,16 @@ class ObjectStorageScanner:
         except (BotoCoreError, ClientError) as e:
             raise RuntimeError(f"Failed to initialize S3 client: {e}") from e
 
-    def _validate_bucket_versioning(self) -> bool:
+    def _validate_bucket_versioning(self) -> None:
         """Ensure the bucket has versioning enabled or suspended."""
         try:
             response = self.s3_client.get_bucket_versioning(Bucket=self.bucket)
             status = response.get("Status")
 
-            if status not in ("Enabled", "Suspended"):
+            if status not in ("Enabled"):
                 raise RuntimeError(
                     f"Bucket '{self.bucket}' does not have versioning history (Status: {status}). "
-                    "Nothing to clean."
+                    "Nothing to scan."
                 )
         except ClientError as e:
             raise RuntimeError(
@@ -157,20 +158,18 @@ class ObjectStorageScanner:
             else "No deleted after date specified",
         )
 
-        return status == "Enabled"
-
     def _print_progress(self, delta: int, label: str = "Deletable") -> None:
         self._scanned_count += delta
         if sys.stdout.isatty():
             sys.stdout.write(
                 f"Scanned {self._scanned_count} versions | Found {self._stats_keys} keys | "
-                f"{label}: {self._stats_versions} versions ({self._format_bytes(self._stats_bytes)})"
+                f"{label}: {self._stats_versions} versions ({format_bytes(self._stats_bytes)})"
                 + " " * 20
                 + "\r",
             )
             sys.stdout.flush()
 
-    def _print_filters(self):
+    def _print_filters(self) -> None:
         msg = [f"Scanning bucket: '{self.bucket}'"]
         if self.prefix:
             msg.append(f"Prefix filter: {self.prefix}")
@@ -182,15 +181,15 @@ class ObjectStorageScanner:
 
         logger.info("\n".join(msg) + "\n")
 
-    def _print_summary(self, is_clean: bool = False):
-        versions_action = "deleted" if is_clean else "to delete"
-        storage_action = "freed" if is_clean else "to free"
+    def _print_summary(self, prune: bool = False) -> None:
+        versions_action = "deleted" if prune else "to delete"
+        storage_action = "freed" if prune else "to free"
 
         logger.info("-" * 100)
         logger.info(f"  Total logically deleted keys: {self._stats_keys}")
         logger.info(f"  Total versions {versions_action}: {self._stats_versions}")
         logger.info(
-            f"  Total storage {storage_action}: {self._format_bytes(self._stats_bytes)}"
+            f"  Total storage {storage_action}: {format_bytes(self._stats_bytes)}"
         )
         logger.info("-" * 100)
 
@@ -236,7 +235,7 @@ class ObjectStorageScanner:
 
             yield from items
 
-    def _aggregate_versions(
+    def _aggregate_if_logically_deleted(
         self, key: str, versions: list[VersionRef]
     ) -> tuple[LogicallyDeletedObject, list[VersionRef]] | None:
         """Determine if a key is logically deleted and aggregate its stats."""
@@ -294,7 +293,7 @@ class ObjectStorageScanner:
             logger.error(f"Failed to delete batch: {e}")
             return 0
 
-    def get_bucket_info(self):
+    def print_bucket_info(self) -> None:
         """Display bucket and connection information."""
 
         logger.info("\nBucket Information:")
@@ -312,7 +311,7 @@ class ObjectStorageScanner:
         logger.info("✓ Bucket is accessible.")
         logger.info("\nUse --scan to find logically deleted objects.")
 
-    def _find_logically_deleted(
+    def _iter_logically_deleted(
         self,
         progress: Callable[[int], None] | None = None,
     ) -> Iterator[tuple[LogicallyDeletedObject, list[VersionRef]]]:
@@ -328,7 +327,9 @@ class ObjectStorageScanner:
 
             # Another key, process the previous key.
             if current_key is not None:
-                result = self._aggregate_versions(current_key, current_versions)
+                result = self._aggregate_if_logically_deleted(
+                    current_key, current_versions
+                )
                 if result:
                     yield result
 
@@ -338,7 +339,7 @@ class ObjectStorageScanner:
 
         # Process the final key
         if current_key is not None:
-            result = self._aggregate_versions(current_key, current_versions)
+            result = self._aggregate_if_logically_deleted(current_key, current_versions)
             if result:
                 yield result
 
@@ -347,10 +348,10 @@ class ObjectStorageScanner:
 
         self._print_filters()
 
-        def progress(delta):
+        def progress(delta: int) -> None:
             self._print_progress(delta)
 
-        for aggregate, versions in self._find_logically_deleted(progress=progress):
+        for aggregate, versions in self._iter_logically_deleted(progress=progress):
             self._stats_keys += 1
             self._stats_versions += aggregate.versions_count + 1
             self._stats_bytes += aggregate.total_size_bytes
@@ -366,22 +367,22 @@ class ObjectStorageScanner:
                         v.last_modified,
                     )
 
-        self._print_summary(is_clean=False)
+        self._print_summary(prune=False)
 
-    def clean(self) -> None:
+    def prune(self) -> None:
         """Scan and delete logically deleted objects."""
 
         self._print_filters()
 
         batch: list[dict[str, str]] = []
 
-        def progress(delta):
+        def progress(delta: int) -> None:
             self._print_progress(delta, label="Deleted")
 
         logger.debug("Starting to delete logically deleted objects...")
 
         # Iterate
-        for aggregate, versions in self._find_logically_deleted(progress=progress):
+        for aggregate, versions in self._iter_logically_deleted(progress=progress):
             self._stats_keys += 1
             self._stats_bytes += aggregate.total_size_bytes
 
@@ -396,15 +397,15 @@ class ObjectStorageScanner:
         if batch:
             self._stats_versions += self._delete_batch(batch)
 
-        self._print_summary(is_clean=True)
+        self._print_summary(prune=True)
 
 
-def signal_handler(sig, frame):
+def _handle_sigint(sig: int, frame: object) -> None:
     logger.info("\n\nScan interrupted by user.")
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGINT, _handle_sigint)
 
 
 def setup_logging(debug: bool = False, log_file: str | None = None) -> None:
@@ -444,7 +445,7 @@ def setup_logging(debug: bool = False, log_file: str | None = None) -> None:
         logger.addHandler(file_handler)
 
 
-def parse_since(value: str) -> datetime:
+def parse_since_cutoff(value: str) -> datetime:
     """
     Parse a duration like '3s', '30d', '2w', '3 days' and return a datetime object.
 
@@ -452,7 +453,7 @@ def parse_since(value: str) -> datetime:
         value: The duration string to parse.
 
     Returns:
-        A datetime object representing the time delta from now.
+        A UTC datetime equal to now minus the parsed duration.
     """
     value = value.strip().lower()
 
@@ -484,7 +485,7 @@ def parse_since(value: str) -> datetime:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Scan and clean logically deleted objects in S3.",
+        description="Scan and clean logically deleted objects in object storage like S3.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
         Examples:
@@ -495,10 +496,10 @@ def main() -> int:
         %(prog)s my-bucket --prefix logs/ --deleted-after 2024-12-01
 
         # Delete with confirmation prompt
-        %(prog)s my-bucket --purge
+        %(prog)s my-bucket --prune
 
         # Delete without confirmation (automation)
-        %(prog)s my-bucket --purge --noinput
+        %(prog)s my-bucket --prune --noinput
         """,
     )
 
@@ -520,7 +521,7 @@ def main() -> int:
 
     parser.add_argument(
         "--since",
-        type=parse_since,
+        type=parse_since_cutoff,
         metavar="DAYS",
         help="Number of days ago (e.g. 3, 3d, '7 days')",
     )
@@ -532,15 +533,15 @@ def main() -> int:
     parser.add_argument("--scan", action="store_true", help="Scan only")
 
     parser.add_argument(
-        "--purge",
+        "--prune",
         action="store_true",
-        help="Delete found objects (requires confirmation unless --noinput)",
+        help="Delete found logically deleted objects (requires confirmation unless --noinput)",
     )
 
     parser.add_argument(
         "--noinput",
         action="store_true",
-        help="Skip confirmation prompt (use with --purge for automation)",
+        help="Skip confirmation prompt (use with --prune for automation)",
     )
 
     parser.add_argument(
@@ -573,7 +574,7 @@ def main() -> int:
 
     # Create scanner
     try:
-        cleaner = ObjectStorageScanner(
+        scanner = ObjectStorageScanner(
             bucket=args.bucket,
             region_name=args.region,
             profile=args.profile,
@@ -586,16 +587,16 @@ def main() -> int:
         return 1
 
     if args.info:
-        cleaner.get_bucket_info()
+        scanner.print_bucket_info()
         return 0
 
     # Mode: Scan only
     elif args.scan:
-        cleaner.scan()
+        scanner.scan()
         return 0
 
-    # Mode: Purge (with or without confirmation)
-    elif args.purge:
+    # Mode: Prune (with or without confirmation)
+    elif args.prune:
         if not args.noinput:
             logger.info(f"\nTarget Bucket: {args.bucket}")
             if args.prefix:
@@ -610,14 +611,12 @@ def main() -> int:
                 logger.info("Operation cancelled.")
                 return 0
 
-        cleaner.clean()
+        scanner.prune()
 
     # Default fallback to info
     else:
-        logger.info("No action specified. Use --info, --scan, or --purge.")
-        logger.info("Use --help for usage information.")
-        logger.info("Defaulting to --info.")
-        cleaner.get_bucket_info()
+        logger.info("No action specified. Defaulting to --info.")
+        scanner.print_bucket_info()
         return 0
 
     return 0

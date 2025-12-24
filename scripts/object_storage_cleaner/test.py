@@ -116,8 +116,8 @@ def test_logically_deleted_files_cleanup(s3_client, unique_prefix):
     # 2. Delete file (creates delete marker)
     delete_file(s3_client, BUCKET_NAME, key)
 
-    # 3. Run purge
-    result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
+    # 3. Run prune
+    result = run_script(["--prune", "--noinput", "--prefix", unique_prefix])
 
     # 4. Verify output and state
     assert result.returncode == 0
@@ -204,8 +204,8 @@ def test_complex_version_history(s3_client, unique_prefix):
     # 4. v4: Delete again (Final state is deleted)
     delete_file(s3_client, BUCKET_NAME, key)
 
-    # Run purge
-    result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
+    # Run prune
+    result = run_script(["--prune", "--noinput", "--prefix", unique_prefix])
 
     assert result.returncode == 0
     assert "Total logically deleted keys: 1" in result.stdout
@@ -242,8 +242,8 @@ def test_large_data_complex_version_history(s3_client, unique_prefix):
     # Restore key1
     create_file(s3_client, BUCKET_NAME, key1, "a" * 1000000)
 
-    # Run purge
-    result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
+    # Run prune
+    result = run_script(["--prune", "--noinput", "--prefix", unique_prefix])
 
     # Verify output (should not find any logically deleted objects)
     assert result.returncode == 0
@@ -252,8 +252,8 @@ def test_large_data_complex_version_history(s3_client, unique_prefix):
     # delete the key A again
     delete_file(s3_client, BUCKET_NAME, key1)
 
-    # Run purge
-    result = run_script(["--purge", "--noinput", "--prefix", unique_prefix])
+    # Run prune
+    result = run_script(["--prune", "--noinput", "--prefix", unique_prefix])
 
     # Verify output (should find logically deleted objects)
     assert result.returncode == 0
