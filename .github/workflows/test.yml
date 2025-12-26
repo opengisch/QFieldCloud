@@ -71,8 +71,8 @@ jobs:
               "legacy_storage": {
                   "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
                   "OPTIONS": {
-                      "access_key": "minioadmin",
-                      "secret_key": "minioadmin",
+                      "access_key": "rustfsadmin",
+                      "secret_key": "rustfsadmin",
                       "bucket_name": "qfieldcloud-local-legacy",
                       "region_name": "",
                       "endpoint_url": "http://172.17.0.1:8009"
@@ -91,8 +91,8 @@ jobs:
               "default": {
                   "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
                   "OPTIONS": {
-                      "access_key": "minioadmin",
-                      "secret_key": "minioadmin",
+                      "access_key": "rustfsadmin",
+                      "secret_key": "rustfsadmin",
                       "bucket_name": "qfieldcloud-local",
                       "region_name": "",
                       "endpoint_url": "http://172.17.0.1:8009"
