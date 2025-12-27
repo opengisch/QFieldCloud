@@ -2,7 +2,9 @@ import logging
 from uuid import UUID
 
 from django.contrib.staticfiles.storage import staticfiles_storage
+from django.core import signing
 from django.db.models import Q, QuerySet
+from django.http import Http404
 from django.http.response import HttpResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -206,7 +208,7 @@ class AvatarFileReadView(views.APIView):
     permission_classes = []
 
     def get(
-        self, request: Request, username: str, filename: str = ""
+        self, request: Request, public_id: str, filename: str = ""
     ) -> HttpResponseBase:
         """Returns an internal redirect within nginx to serve the `avatar` file directly from the Object Storage.
 
@@ -219,7 +221,14 @@ class AvatarFileReadView(views.APIView):
         Returns:
             internal redirect to the Object Storage
         """
-        useraccount = get_object_or_404(UserAccount, user__username=username)
+
+        try:
+            data = signing.loads(public_id)
+            user_id = data["id"]
+        except signing.BadSignature:
+            raise Http404("Invalid avatar ID.")
+
+        useraccount = get_object_or_404(UserAccount, user__id=user_id)
 
         if useraccount.avatar:
             return download_field_file(
