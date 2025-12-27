@@ -910,6 +910,8 @@ JAZZMIN_SETTINGS = {
     "copyright": "OPENGIS.ch",
     # Additional custom CSS file for the Django Admin pages.
     "custom_css": "css/admin.css",
+    # Search Field
+    "search_model": "core.Person",
 }
 
 # Whitelabel configuration
