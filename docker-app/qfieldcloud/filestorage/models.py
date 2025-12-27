@@ -90,7 +90,7 @@ class File(models.Model):
             # Require at least 1 character filenames
             MinLengthValidator(1),
             # NOTE the files on Windows cannot be longer than 260 _chars_ by default, see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maximum-path-length-limitation
-            # NOTE `minio` limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
+            # NOTE minio limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
             MaxLengthValidator(settings.STORAGE_FILENAME_MAX_CHAR_LENGTH),
             # NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
             MaxBytesLengthValidator(1024),
@@ -344,7 +344,7 @@ class FileVersion(models.Model):
     # TODO We do not `auto_now_add=True` to be able to set this when migrating files from legacy to the regular storage. Switch to `auto_now_add=True` when the legacy storage is no longer supported.
     created_at = models.DateTimeField(default=timezone.now, editable=False)
 
-    # The version id from the legacy object storage. The version id format is provider dependent, e.g. on S3 it is a random string, on `minio` it is a UUID.
+    # The version id from the legacy object storage. On minio it is a UUID, on other providers it might be a random string.
     legacy_id = models.TextField(max_length=255, editable=False, null=True)
 
     @property
