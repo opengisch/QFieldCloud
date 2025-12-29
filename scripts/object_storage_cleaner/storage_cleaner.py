@@ -198,7 +198,11 @@ class ObjectStorageCleaner:
     ) -> Iterator[VersionRef]:
         """Low-level generator that yields all versions and delete markers, sorted by Key."""
         paginator = self.s3_client.get_paginator("list_object_versions")
-        kwargs = {"Bucket": self.bucket, "MaxKeys": 10000}
+        kwargs = {
+            "Bucket": self.bucket,
+            "MaxKeys": 1000,
+        }
+
         if self.prefix:
             kwargs["Prefix"] = self.prefix
 
@@ -284,6 +288,7 @@ class ObjectStorageCleaner:
                 )
 
         try:
+            # Quiet=True returns only errors (no success details)
             self.s3_client.delete_objects(
                 Bucket=self.bucket, Delete={"Objects": versions, "Quiet": True}
             )
