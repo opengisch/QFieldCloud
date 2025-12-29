@@ -415,7 +415,13 @@ signal.signal(signal.SIGINT, _handle_sigint)
 
 def setup_logging(debug: bool = False, log_file: str | None = None) -> None:
     """Setup logging for the script."""
-    level = TRACE_LEVEL if log_file else (logging.DEBUG if debug else logging.INFO)
+    level = logging.INFO
+
+    if log_file:
+        level = TRACE_LEVEL
+    elif debug:
+        level = logging.DEBUG
+
     logger.setLevel(level)
     logger.handlers.clear()
     logger.propagate = False
