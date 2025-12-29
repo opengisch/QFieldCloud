@@ -44,7 +44,11 @@ class Command(BaseCommand):
 
             if level in ("version", "file"):
                 if level == "version" or version.is_latest:
-                    is_latest = "T" if version.is_latest else "F"
+                    if version.is_latest:
+                        is_latest = "T"
+                    else:
+                        is_latest = "F"
+
                     print(
                         version.id,
                         str(version.last_modified),

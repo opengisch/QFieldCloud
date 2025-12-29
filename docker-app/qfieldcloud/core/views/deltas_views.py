@@ -176,8 +176,10 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         except Exception:
             deltafile_id = None
 
-        name = deltafile_id if deltafile_id else "unkown"
-        filename = f"{name}.json"
+        if deltafile_id:
+            filename = f"{deltafile_id}.json"
+        else:
+            filename = "unknown.json"
 
         user_agent = request.headers.get("user-agent")
 
@@ -190,11 +192,13 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         )
 
         logger.info(f'Faulty deltafile saved as "{faulty_deltafile.deltafile.name}"')
+
         return faulty_deltafile
 
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
+
         return Delta.objects.filter(project=project_obj)
 
 

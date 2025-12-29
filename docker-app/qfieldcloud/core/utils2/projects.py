@@ -20,7 +20,11 @@ def create_collaborator(
         success, message - whether the collaborator creation was success and explanation message of the outcome
     """
     success, message = False, ""
-    user_type_name = "Team" if isinstance(user, Team) else "User"
+
+    if isinstance(user, Team):
+        user_type_name = "Team"
+    else:
+        user_type_name = "User"
 
     try:
         perms.check_can_become_collaborator(user, project)

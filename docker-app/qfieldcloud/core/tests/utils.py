@@ -59,7 +59,11 @@ def set_subscription(
     code: str | None = None,
     **kwargs,
 ):
-    users: list[User] = [users] if isinstance(users, User) else users
+    if isinstance(users, User):
+        users = [users]
+    else:
+        users = list(users)
+
     assert len(users), (
         "When iterable, the first argument must contain at least 1 element."
     )

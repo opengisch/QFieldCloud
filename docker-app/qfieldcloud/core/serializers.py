@@ -111,7 +111,11 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         if data.get("name") is not None:
-            owner = self.instance.owner if self.instance else data["owner"]
+            if self.instance:
+                owner = self.instance.owner
+            else:
+                owner = data["owner"]
+
             projects_qs = Project.objects.filter(
                 owner=owner,
                 name=data["name"],
