@@ -254,9 +254,10 @@ def run_workflow(
                         arguments[name] = value.eval(root_workdir)
 
                 return_values = step.method(**arguments)
-                return_values = (
-                    return_values if len(step.return_names) > 1 else (return_values,)
-                )
+
+                # ensure the return values are always a tuple
+                if len(step.return_names) <= 1:
+                    return_values = (return_values,)
 
                 step_returns[step.id] = {}
                 for name, value in zip(step.return_names, return_values):

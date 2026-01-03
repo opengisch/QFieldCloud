@@ -444,6 +444,8 @@ class SubscriptionManager(models.Manager):
 
 
 class AbstractSubscription(models.Model):
+    id: int
+
     class Meta:
         abstract = True
 
@@ -633,7 +635,11 @@ class AbstractSubscription(models.Model):
 
     def get_active_package_quantity(self, package_type: PackageType) -> int:
         package = self.get_active_package(package_type)
-        return package.quantity if package else 0
+
+        if package:
+            return package.quantity
+        else:
+            return 0
 
     def get_future_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.future().filter(type=package_type)  # type: ignore
@@ -943,9 +949,11 @@ class AbstractSubscription(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        active_storage_total_mb = (
-            self.active_storage_package_mb if hasattr(self, "packages") else 0
-        )
+        if hasattr(self, "packages"):
+            active_storage_total_mb = self.active_storage_package_mb
+        else:
+            active_storage_total_mb = 0
+
         return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{active_storage_total_mb}MB"
 
 

@@ -597,6 +597,18 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         data_provider_source: str | None = None
         data_provider_name: str | None = None
 
+        layer_error_summary = ""
+        if error.messageList():
+            layer_error_summary = error.summary()
+
+        wkb_type = None
+        if layer.type() == QgsMapLayer.VectorLayer:
+            wkb_type = layer.wkbType()
+
+        crs = None
+        if layer.crs():
+            crs = layer.crs().authid()
+
         # TODO: Move localized layer handling functionality inside libqfieldsync (ClickUp: QF-5875)
         if layer_source.is_localized_path:
             data_provider_source = bad_layer_handler.invalid_layer_sources_by_id.get(
@@ -617,10 +629,8 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         layers_by_id[layer_id] = {
             "id": layer_id,
             "name": layer.name(),
-            "crs": layer.crs().authid() if layer.crs() else None,
-            "wkb_type": layer.wkbType()
-            if layer.type() == QgsMapLayer.VectorLayer
-            else None,
+            "crs": crs,
+            "wkb_type": wkb_type,
             "qfs_action": layer.customProperty("QFieldSync/action"),
             "qfs_cloud_action": layer.customProperty("QFieldSync/cloud_action"),
             "qfs_is_geometry_locked": layer.customProperty(
@@ -637,7 +647,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             "type": layer.type(),
             "type_name": layer.type().name,
             "error_code": "no_error",
-            "error_summary": error.summary() if error.messageList() else "",
+            "error_summary": layer_error_summary,
             "error_message": layer.error().message(),
             "filename": filename,
             "provider_name": data_provider_name,
@@ -660,11 +670,12 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                 else:
                     layers_by_id[layer_id]["error_code"] = "invalid_dataprovider"
 
-            layers_by_id[layer_id]["provider_error_summary"] = (
-                data_provider_error.summary()
-                if data_provider_error.messageList()
-                else ""
-            )
+            layers_by_id[layer_id]["provider_error_summary"] = ""
+            if data_provider_error.messageList():
+                layers_by_id[layer_id]["provider_error_summary"] = (
+                    data_provider_error.summary()
+                )
+
             layers_by_id[layer_id]["provider_error_message"] = (
                 data_provider_error.message()
             )
@@ -677,11 +688,11 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                     )
 
                 host = data_provider.uri().host()
-                port = (
-                    int(data_provider.uri().port())
-                    if data_provider.uri().port()
-                    else None
-                )
+
+                port = None
+                if data_provider.uri().port():
+                    port = int(data_provider.uri().port())
+
                 if host and (is_localhost(host, port) or has_ping(host)):
                     layers_by_id[layer_id]["provider_error_summary"] = (
                         f'Unable to connect to host "{host}".'

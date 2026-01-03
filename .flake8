@@ -2,4 +2,4 @@
 exclude =
     .git,
     __pycache__
-select = CLB100
+select = CLB100, IF100

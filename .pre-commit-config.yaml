@@ -34,7 +34,7 @@ repos:
     rev: '7.3.0'
     hooks:
     -   id: flake8
-        additional_dependencies: [flake8-clean-block]
+        additional_dependencies: [flake8-clean-block, flake8-if-expr]
 
   # Lint and format
   - repo: https://github.com/astral-sh/ruff-pre-commit

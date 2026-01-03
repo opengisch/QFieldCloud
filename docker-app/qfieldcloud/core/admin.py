@@ -1354,7 +1354,10 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     # Show geometries only truncated as they are fully shown in content
     def geom_truncated(self, geom):
-        return f"{str(geom)[:70]} ..." if geom else "-"
+        if geom:
+            return f"{str(geom)[:70]} ..."
+        else:
+            return "-"
 
     # This will disable add functionality
 
