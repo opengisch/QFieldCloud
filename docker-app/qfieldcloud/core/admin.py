@@ -155,7 +155,9 @@ class ModelAdminSearchParserMixin:
 
     search_parser_config: dict[str, dict[str, Any]] | None = None
 
-    def get_search_results(self, request, queryset, search_term):
+    def get_search_results(
+        self, request: HttpRequest, queryset: QuerySet, search_term: str
+    ) -> tuple[QuerySet, bool]:
         if self.search_parser_config:
             filters = search_parser(
                 request,
@@ -165,9 +167,11 @@ class ModelAdminSearchParserMixin:
             )
 
             if filters:
+                # Bypass standard search to avoid literal matching,
+                # Return True to enable distinct to handle potential duplicates.
                 return queryset.filter(**filters), True
 
-        return super().get_search_results(request, queryset, search_term)
+        return super().get_search_results(request, queryset, search_term)  # type: ignore
 
 
 class QFieldCloudModelAdmin(  # type: ignore
