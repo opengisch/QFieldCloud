@@ -446,7 +446,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.conn.commit()
 
         Secret.objects.create(
-            name="PG_SERVICE_GEODB1",
+            name="PG_SERVICE_TESTDB1",
             type=Secret.Type.PGSERVICE,
             project=self.project1,
             created_by=self.project1.owner,
@@ -462,7 +462,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         Secret.objects.create(
-            name="PG_SERVICE_GEODB2",
+            name="PG_SERVICE_TESTDB2",
             type=Secret.Type.PGSERVICE,
             project=self.project1,
             created_by=self.project1.owner,
