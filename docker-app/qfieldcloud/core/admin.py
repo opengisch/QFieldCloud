@@ -148,8 +148,37 @@ class ModelAdminEstimateCountMixin:
     list_per_page = settings.QFIELDCLOUD_ADMIN_LIST_PER_PAGE
 
 
+class ModelAdminSearchParserMixin:
+    """
+    Mixin to add search parser to the model admin.
+    """
+
+    search_parser_config: dict[str, dict[str, Any]] | None = None
+
+    def get_search_results(
+        self, request: HttpRequest, queryset: QuerySet, search_term: str
+    ) -> tuple[QuerySet, bool]:
+        if self.search_parser_config:
+            filters = search_parser(
+                request,
+                queryset,
+                search_term,
+                self.search_parser_config,
+            )
+
+            if filters:
+                # Bypass standard search to avoid literal matching,
+                # Return True to enable distinct to handle potential duplicates.
+                return queryset.filter(**filters), True
+
+        return super().get_search_results(request, queryset, search_term)  # type: ignore
+
+
 class QFieldCloudModelAdmin(  # type: ignore
-    ModelAdminNoPkOrderChangeListMixin, ModelAdminEstimateCountMixin, admin.ModelAdmin
+    ModelAdminNoPkOrderChangeListMixin,
+    ModelAdminEstimateCountMixin,
+    ModelAdminSearchParserMixin,
+    admin.ModelAdmin,
 ):
     def has_delete_permission(self, request, obj=None):
         """Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
@@ -981,6 +1010,18 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     change_form_template = "admin/project_change_form.html"
 
+    search_parser_config = {
+        "owner": {
+            "filter": "owner__username__iexact",
+        },
+        "collaborator": {
+            "filter": "user_roles__user__username__iexact",
+            "extra_filters": {
+                "is_public": False,
+            },
+        },
+    }
+
     def get_form(self, *args, **kwargs):
         help_texts = {
             "file_storage_bytes": _(
@@ -989,33 +1030,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         }
         kwargs.update({"help_texts": help_texts})
         return super().get_form(*args, **kwargs)
-
-    def get_search_results(self, request, queryset, search_term):
-        filters = search_parser(
-            request,
-            queryset,
-            search_term,
-            {
-                "owner": {
-                    "filter": "owner__username__iexact",
-                },
-                "collaborator": {
-                    "filter": "user_roles__user__username__iexact",
-                    "extra_filters": {
-                        "is_public": False,
-                    },
-                },
-            },
-        )
-
-        if filters:
-            return queryset.filter(**filters), True
-
-        queryset, use_distinct = super().get_search_results(
-            request, queryset, search_term
-        )
-
-        return queryset, use_distinct
 
     def project_files(self, instance):
         return instance.pk
@@ -1511,6 +1525,15 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
     autocomplete_fields = ("organization_owner",)
 
+    search_parser_config = {
+        "owner": {
+            "filter": "organization_owner__username__iexact",
+        },
+        "member": {
+            "filter": "membership_roles__user__username__iexact",
+        },
+    }
+
     @admin.display(description=_("Active members"))
     def active_users_links(self, instance) -> str:
         persons = instance.useraccount.current_subscription.active_users
@@ -1539,30 +1562,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
         used_storage_perc = instance.useraccount.storage_used_ratio * 100
         return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
-
-    def get_search_results(self, request, queryset, search_term):
-        filters = search_parser(
-            request,
-            queryset,
-            search_term,
-            {
-                "owner": {
-                    "filter": "organization_owner__username__iexact",
-                },
-                "member": {
-                    "filter": "membership_roles__user__username__iexact",
-                },
-            },
-        )
-
-        if filters:
-            return queryset.filter(**filters), True
-
-        queryset, use_distinct = super().get_search_results(
-            request, queryset, search_term
-        )
-
-        return queryset, use_distinct
 
     def save_formset(self, request, form, formset, change):
         for form_obj in formset:
