@@ -596,7 +596,13 @@ class PersonAdmin(QFieldCloudModelAdmin):
         obj.clean()
         obj.save()
 
-    def change_view(self, request, object_id, form_url="", extra_context=None):
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: Any | None = None,
+    ) -> HttpResponse:
         # Add the subscription model is editable flag to the extra context
         extra_context = extra_context or {}
 
