@@ -726,6 +726,29 @@ class Organization(User):
         else:
             self.created_by = self.organization_owner
 
+        # if the org owner changes, adapt the memberships accordingly.
+        if self.pk:
+            old_org = Organization.objects.get(pk=self.pk)
+
+            if old_org.organization_owner != self.organization_owner:
+                with transaction.atomic():
+                    # remove new owner from members.
+                    OrganizationMember.objects.filter(
+                        organization=self,
+                        member=self.organization_owner,
+                    ).delete()
+
+                    # add old owner as admin member.
+                    OrganizationMember.objects.update_or_create(
+                        organization=self,
+                        member=old_org.organization_owner,
+                        defaults={
+                            "role": OrganizationMember.Roles.ADMIN,
+                            "created_by": self.created_by,
+                            "updated_by": self.created_by,
+                        },
+                    )
+
         return super().save(*args, **kwargs)
 
 
