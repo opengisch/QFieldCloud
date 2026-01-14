@@ -100,10 +100,10 @@ def test_scan_restored_files_ignored(s3_client, unique_prefix):
     assert "Total versions wasted: 0" in result.stdout
 
 
-def test_scan_deleted_since_filter(s3_client, unique_prefix):
+def test_scan_retention_period_filter(s3_client, unique_prefix):
     """
-    test that a file is not found if the deleted-within filter is in the future.
-    and that a file is found if the deleted-within filter is in the past.
+    Test that a file is NOT found if the retention period covers it (recent deletion).
+    And that a file IS found if the retention period has passed (old deletion).
     """
     key = f"{unique_prefix}file_date_test.txt"
     create_file(s3_client, BUCKET_NAME, key, "a" * 100)  # 100 bytes of content
@@ -113,29 +113,33 @@ def test_scan_deleted_since_filter(s3_client, unique_prefix):
     # This is to ensure the file is deleted before the scan is run
     time.sleep(2)
 
-    # Filter is in the FUTURE.
-    result_future = run_script(
+    # Retention period is SHORT (1 second).
+    # The file was deleted 2 seconds ago. 2s > 1s.
+    # So the file is OLDER than the retention period. It should be FOUND (not protected).
+    result_short_retention = run_script(
         [
             "--scan",
             "--prefix",
             unique_prefix,
-            "--deleted-within",
+            "--retention-period",
             "1 second",
         ]
     )
 
-    assert "Total keys found: 0" in result_future.stdout
-    assert "Total size wasted: 0 bytes" in result_future.stdout
-    assert "Total versions wasted: 0" in result_future.stdout
+    assert "Total keys found: 1" in result_short_retention.stdout
+    assert "Total size wasted: 100 bytes" in result_short_retention.stdout
+    assert "Total versions wasted: 2" in result_short_retention.stdout
 
-    # Filter is in the PAST.
-    result_past = run_script(
-        ["--scan", "--prefix", unique_prefix, "--deleted-within", "5 seconds"]
+    # Retention period is LONG (5 seconds).
+    # The file was deleted 2 seconds ago. 2s < 5s.
+    # So the file is NEWER than the retention period. It should be PROTECTED (skipped).
+    result_long_retention = run_script(
+        ["--scan", "--prefix", unique_prefix, "--retention-period", "5 seconds"]
     )
 
-    assert "Total keys found: 1" in result_past.stdout
-    assert "Total size wasted: 100 bytes" in result_past.stdout
-    assert "Total versions wasted: 2" in result_past.stdout
+    assert "Total keys found: 0" in result_long_retention.stdout
+    assert "Total size wasted: 0 bytes" in result_long_retention.stdout
+    assert "Total versions wasted: 0" in result_long_retention.stdout
 
 
 def test_scan_stray_delete_marker(s3_client, unique_prefix):

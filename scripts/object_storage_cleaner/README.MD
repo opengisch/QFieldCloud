@@ -19,10 +19,15 @@ This script helps you:
 - Python 3.8+
 - `boto3` library
 
-Install dependencies:
+1. Create a virtual environment
+
+2. Install dependencies:
 
 ```bash
 pip install boto3
+
+# Optional
+pip install mypy-boto3-s3 # for type hinting
 ```
 
 ## Usage
@@ -32,7 +37,7 @@ Run the script directly from the command line.
 ### Basic Syntax
 
 ```bash
-python storage_cleaner.py <bucket_name> [options]
+python object_storage_cleaner.py <bucket_name> [options]
 ```
 
 ### Options
@@ -44,7 +49,7 @@ python storage_cleaner.py <bucket_name> [options]
 | `--permanently-delete-versions` | Delete found objects. Requires confirmation unless `--noinput` is used. |
 | `--noinput` | Skip confirmation prompt (useful for automation). |
 | `--prefix <path>` | Limit scan to a specific prefix (folder). |
-| `--deleted-within <duration>` | Only process objects deleted within the last X time (e.g., `7 days`, `30 minutes`, `1 hour`). |
+| `--retention-period <duration>` | Only process objects deleted BEFORE this duration (e.g., `7 days`, `30 minutes`, `1 hour`). Recent deletions are preserved. |
 | `--log-level` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). |
 ---
 By default the script uses the `default` S3 profile (default boto3 behavior)
@@ -55,35 +60,35 @@ check [Configuration and credential file settings in the AWS CLI](https://docs.a
 **1. Scan a bucket to see how much space can be freed:**
 
 ```bash
-python storage_cleaner.py my-production-bucket --scan
+python object_storage_cleaner.py my-production-bucket --scan
 ```
 
 **2. Scan a specific folder:**
 
 ```bash
-python storage_cleaner.py my-production-bucket --prefix "logs/2023/" --scan
+python object_storage_cleaner.py my-production-bucket --prefix "logs/2023/" --scan
 ```
 
-**3. Cleanup objects deleted more than 30 days ago:**
+**3. Cleanup objects deleted more than 30 days ago (Retention Policy):**
 
-- `--deleted-within 30d`: Looks for objects deleted in the *last* 30 days.
+- `--retention-period '30 days'`: Only selects objects that were deleted **more than 30 days ago**. Objects deleted recently (within the last 30 days) are preserved to allow for restoration.
 
 ```bash
-# Find objects deleted in the last 7 days
-python storage_cleaner.py my-bucket --deleted-within '7 days'
+# Clean objects deleted OLDER than 30 days
+python object_storage_cleaner.py my-bucket --permanently-delete-versions --retention-period '30 days'
 ```
 
 **4. Permanently delete (permanently-delete-versions) objects:**
 
 ```bash
-python storage_cleaner.py my-bucket --permanently-delete-versions
+python object_storage_cleaner.py my-bucket --permanently-delete-versions
 # You will be prompted to confirm.
 ```
 
 **5. Automated cleanup for MinIO (local/custom endpoint):**
 
 ```bash
-python storage_cleaner.py test-bucket --permanently-delete-versions --noinput
+python object_storage_cleaner.py test-bucket --permanently-delete-versions --noinput
 ```
 
 ## Running Tests

@@ -19,8 +19,7 @@ import sys
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from operator import attrgetter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import boto3
 from botocore.client import BaseClient
@@ -32,17 +31,9 @@ if TYPE_CHECKING:
     from mypy_boto3_s3.type_defs import (
         DeleteMarkerEntryTypeDef,
         DeleteObjectsOutputTypeDef,
+        ListObjectVersionsOutputTypeDef,
         ObjectVersionTypeDef,
     )
-
-
-@dataclass
-class VersionRef:
-    key: str
-    version_id: str
-    is_delete_marker: bool
-    size: int
-    last_modified: datetime
 
 
 @dataclass
@@ -51,12 +42,12 @@ class LogicallyDeletedObject:
     deleted_at: datetime
     total_size_bytes: int
     versions_count: int
-    versions: list[VersionRef]
+    versions: list[dict[str, Any]]
 
 
 def iter_all_versions(
     s3_client: BaseClient, bucket: str, prefix: str | None = None
-) -> Iterator[VersionRef]:
+) -> Iterator[dict[str, Any]]:
     """
     Stream all object versions and delete markers from object storage, paginated.
 
@@ -71,53 +62,40 @@ def iter_all_versions(
         prefix: Optional key prefix to limit the scan.
 
     Yields:
-        VersionRef: A unified object representing either a Version or a Delete Marker.
+        dict: A dictionary representing either a Version or a Delete Marker.
     """
     paginator = s3_client.get_paginator("list_object_versions")
-    kwargs = {
+    paginate_kwargs = {
         "Bucket": bucket,
         "MaxKeys": 1000,
     }
     if prefix:
-        kwargs["Prefix"] = prefix
+        paginate_kwargs["Prefix"] = prefix
 
-    for page in paginator.paginate(**kwargs):
-        items: list[VersionRef] = []
+    for page in paginator.paginate(**paginate_kwargs):
+        page: ListObjectVersionsOutputTypeDef  # Type from mypy_boto3_s3.type_defs
+        versions: list[dict[str, Any]] = []
 
         # Yield Versions
         for version in page.get("Versions", []):
             version: ObjectVersionTypeDef  # Type from mypy_boto3_s3.type_defs
-            items.append(
-                VersionRef(
-                    key=version["Key"],
-                    version_id=version["VersionId"],
-                    is_delete_marker=False,
-                    size=version["Size"],
-                    last_modified=version["LastModified"],
-                )
-            )
+            version["IsDeleteMarker"] = False
+            versions.append(version)
 
         # Yield Delete Markers
         for delete_marker in page.get("DeleteMarkers", []):
             delete_marker: DeleteMarkerEntryTypeDef  # Type from mypy_boto3_s3.type_defs
-            items.append(
-                VersionRef(
-                    key=delete_marker["Key"],
-                    version_id=delete_marker["VersionId"],
-                    is_delete_marker=True,
-                    size=0,
-                    last_modified=delete_marker["LastModified"],
-                )
-            )
+            delete_marker["IsDeleteMarker"] = True
+            versions.append(delete_marker)
 
         # Sort by Key to keep versions of the same object together
-        items.sort(key=attrgetter("key"))
+        versions.sort(key=lambda x: (x["Key"], x["LastModified"]), reverse=True)
 
-        yield from items
+        yield from versions
 
 
 def analyze_key_history(
-    key: str, versions: list[VersionRef], deleted_after_threshold: datetime | None
+    key: str, versions: list[dict[str, Any]], retention_cutoff: datetime | None
 ) -> LogicallyDeletedObject | None:
     """
     Analyze a list of versions for a single key to see if it's logically deleted
@@ -126,7 +104,7 @@ def analyze_key_history(
     Args:
         key: The key of the object.
         versions: The list of versions.
-        deleted_after_threshold: Optional cutoff timestamp. If provided, the object is only returned if it was deleted *after* this timestamp (i.e., within the recent window). Older deletions are ignored.
+        retention_cutoff: Optional cutoff timestamp. If provided, the object is only returned if it was deleted *before* this timestamp. Recent deletions are ignored.
 
     Returns:
         A LogicallyDeletedObject if the key is logically deleted, None otherwise.
@@ -134,20 +112,15 @@ def analyze_key_history(
     if not versions:
         return None
 
-    # Sort by time descending (latest first) to check current state (latest version is a delete marker)
-    versions.sort(key=attrgetter("last_modified"), reverse=True)
     latest_version = versions[0]
 
     # Criteria: Latest version must be a delete marker
-    if not latest_version.is_delete_marker:
+    if not latest_version.get("IsDeleteMarker", False):
         return None
 
     # Filter by time
-    # If the delete marker is older than the threshold, skip it
-    if (
-        deleted_after_threshold
-        and latest_version.last_modified < deleted_after_threshold
-    ):
+    # If the delete marker is NEWER than the retention cutoff, skip it (retain it)
+    if retention_cutoff and latest_version["LastModified"] > retention_cutoff:
         return None
 
     # Calculate stats efficiently
@@ -155,11 +128,11 @@ def analyze_key_history(
     total_size = 0
 
     for v in versions:
-        total_size += v.size
+        total_size += v.get("Size", 0)
 
     return LogicallyDeletedObject(
         key=key,
-        deleted_at=latest_version.last_modified,
+        deleted_at=latest_version["LastModified"],
         total_size_bytes=total_size,
         versions_count=len(versions),
         versions=versions,
@@ -167,7 +140,7 @@ def analyze_key_history(
 
 
 def delete_versions_batch(
-    s3_client: BaseClient, bucket: str, versions: list[VersionRef]
+    s3_client: BaseClient, bucket: str, versions: list[dict[str, Any]]
 ) -> None:
     """
     Delete a batch of versions.
@@ -183,7 +156,7 @@ def delete_versions_batch(
     # Transform to boto3 format
     objects: list[dict[str, str]] = []
     for v in versions:
-        objects.append({"Key": v.key, "VersionId": v.version_id})
+        objects.append({"Key": v["Key"], "VersionId": v["VersionId"]})
 
     try:
         # Quiet=False returns success details and errors for logging
@@ -209,8 +182,8 @@ def delete_versions_batch(
 
 
 def iter_logically_deleted(
-    versions_stream: Iterator[VersionRef],
-    deleted_after_threshold: datetime | None = None,
+    version_chunks: Iterator[dict[str, Any]],
+    retention_cutoff: datetime | None = None,
 ) -> Iterator[LogicallyDeletedObject]:
     """
     Consumes a stream of all object versions and yields ONLY the objects that are logically deleted.
@@ -220,8 +193,8 @@ def iter_logically_deleted(
     `analyze_key_history` to determine if the object is currently in a deleted state.
 
     Args:
-        versions_stream: An iterator of VersionRef objects, MUST be sorted by `key`.
-        deleted_after_threshold: Optional cutoff timestamp. If provided, the object is only returned if it was deleted *after* this timestamp (i.e., within the recent window). Older deletions are ignored.
+        version_chunks: An iterator of version dictionaries, MUST be sorted by `key`.
+        retention_cutoff: Optional cutoff timestamp. If provided, the object is only returned if it was deleted *before* this timestamp. Recent deletions are ignored.
 
     Yields:
         LogicallyDeletedObject: A summary object for every key that is currently deleted.
@@ -230,37 +203,35 @@ def iter_logically_deleted(
     # Since the input stream is sorted, all versions for "Key A" will arrive sequentially
     # before any version for "Key B" appears, so we can group them together.
     current_key: str | None = None
-    current_versions: list[VersionRef] = []
+    current_versions: list[dict[str, Any]] = []
 
-    for version in versions_stream:
+    for version in version_chunks:
         # Case 1: First item in the entire stream
         if current_key is None:
-            current_key = version.key
+            current_key = version["Key"]
             current_versions.append(version)
             continue
 
         # Case 2: Same key as before -> Add to buffer
-        if version.key == current_key:
+        if version["Key"] == current_key:
             current_versions.append(version)
 
         # Case 3: New key detected -> Process the previous buffer
         else:
             # We have collected all versions for 'current_key'. Now analyze it.
             result = analyze_key_history(
-                current_key, current_versions, deleted_after_threshold
+                current_key, current_versions, retention_cutoff
             )
             if result:
                 yield result
 
             # Reset buffer for the new key
-            current_key = version.key
+            current_key = version["Key"]
             current_versions = [version]
 
     # Case 4: End of stream -> Process the final buffer remaining in memory
     if current_key and current_versions:
-        result = analyze_key_history(
-            current_key, current_versions, deleted_after_threshold
-        )
+        result = analyze_key_history(current_key, current_versions, retention_cutoff)
         if result:
             yield result
 
@@ -308,7 +279,7 @@ def action_permanently_delete_versions(
         bucket: The bucket name.
         objects_stream: The stream of logically deleted objects.
     """
-    batch: list[VersionRef] = []
+    batch: list[dict[str, Any]] = []
     batch_size = 1000
 
     for obj in objects_stream:
@@ -359,7 +330,7 @@ def get_s3_client(bucket: str, profile: str | None) -> BaseClient:
     return client
 
 
-def parse_deleted_after_threshold(value: str) -> datetime:
+def parse_retention_period(value: str) -> datetime:
     """
     Parse a duration string (e.g., '3 seconds', '30 days', '2 weeks') and return a datetime object.
 
@@ -407,10 +378,10 @@ def main() -> int:
     parser.add_argument("--prefix", help="Filter by prefix")
     parser.add_argument("--profile", help="Optional AWS Profile")
     parser.add_argument(
-        "--deleted-within",
-        type=parse_deleted_after_threshold,
-        dest="deleted_after_threshold",
-        help="Only process objects deleted in the last DURATION (e.g. '7 days'). Older deletions are IGNORED.",
+        "--retention-period",
+        type=parse_retention_period,
+        dest="retention_cutoff",
+        help="Only process objects deleted BEFORE this duration (e.g. '30 days'). Recent deletions are preserved.",
     )
     parser.add_argument(
         "--scan", action="store_true", help="Scan for logically deleted objects"
@@ -462,11 +433,12 @@ def main() -> int:
         raw_stream = iter_all_versions(client, args.bucket, args.prefix)
 
         # Transform
-        clean_stream = iter_logically_deleted(raw_stream, args.deleted_after_threshold)
+        clean_stream = iter_logically_deleted(raw_stream, args.retention_cutoff)
 
         # 3. Execute
         if args.scan:
             action_scan(clean_stream)
+            return 0
 
         elif args.permanently_delete_versions:
             if not args.noinput:
@@ -481,12 +453,8 @@ def main() -> int:
 
     except Exception as e:
         logger.error(f"Error: {e}")
-        if args.log_level == "DEBUG":
-            import traceback
 
-            traceback.print_exc()
-
-        return 1
+        raise e
 
     return 0
 
