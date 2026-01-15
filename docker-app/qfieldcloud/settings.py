@@ -256,8 +256,13 @@ USE_TZ = True
 
 
 LANGUAGES = [
+    ("bg", "Bulgarian"),
+    ("de", "German"),
     ("en", "English"),
     ("es", "Spanish"),
+    ("fr", "French"),
+    ("it", "Italian"),
+    ("km", "Khmer"),
 ]
 
 # Static files (CSS, JavaScript, Images)
