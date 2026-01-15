@@ -284,3 +284,41 @@ class QfcTestCase(APITestCase):
         )
         # There are still 2 billable users, because user4 is staff
         self.assertEqual(_active_users_count(), 2)
+
+    def test_memberships_when_owner_changes(self):
+        # Set user2 as admin of organization1
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        self.organization1.refresh_from_db()
+        members_ids = []
+        for member in OrganizationMember.objects.filter(
+            organization=self.organization1
+        ):
+            members_ids.append(member.member.id)
+
+        # Check that owner user1 is not a member
+        self.assertEqual(len(members_ids), 1)
+        self.assertEqual(self.organization1.organization_owner, self.user1)
+        self.assertNotIn(self.user1.id, members_ids)
+        self.assertIn(self.user2.id, members_ids)
+
+        # Change organization owner to user2
+        self.organization1.organization_owner = self.user2
+        self.organization1.save()
+
+        self.organization1.refresh_from_db()
+        members_ids = []
+        for member in OrganizationMember.objects.filter(
+            organization=self.organization1
+        ):
+            members_ids.append(member.member.id)
+
+        # Check that user1 is now a member
+        self.assertEqual(len(members_ids), 1)
+        self.assertEqual(self.organization1.organization_owner, self.user2)
+        self.assertIn(self.user1.id, members_ids)
+        self.assertNotIn(self.user2.id, members_ids)
