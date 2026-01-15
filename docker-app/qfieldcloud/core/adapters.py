@@ -1,5 +1,6 @@
 import logging
 import traceback
+from datetime import timedelta
 from random import randint
 from typing import Literal
 
@@ -8,9 +9,12 @@ from allauth.account.adapter import DefaultAccountAdapter
 from allauth.account.models import EmailConfirmationHMAC
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
+from constance import config
+from django.contrib import messages
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest
+from django.utils import timezone
 from invitations.adapters import BaseInvitationsAdapter
 
 from qfieldcloud.authentication.sso.provider_styles import SSOProviderStyles
@@ -26,6 +30,26 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
     except changing it globally for everyone. Therefore this adapter tries
     to overcome this limitation by providing custom `new_user` method.
     """
+
+    def login(self, request, user):
+        # last_login here is the *previous* login time
+        previous_last_login = user.last_login
+
+        response = super().login(request, user)
+
+        threshold = getattr(config, "WEB_USER_INACTIVITY_THRESHOLD_DAYS", 0)
+
+        if previous_last_login and threshold > 0:
+            delta = timezone.now() - previous_last_login
+            if delta > timedelta(days=threshold):
+                messages.add_message(
+                    request,
+                    messages.INFO,
+                    "You have been inactive for a while, welcome back!",
+                    extra_tags="inactive-user-modal",
+                )
+
+        return response
 
     def new_user(self, request):
         """

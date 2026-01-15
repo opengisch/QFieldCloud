@@ -59,7 +59,11 @@ def set_subscription(
     code: str | None = None,
     **kwargs,
 ):
-    users: list[User] = [users] if isinstance(users, User) else users
+    if isinstance(users, User):
+        users = [users]
+    else:
+        users = list(users)
+
     assert len(users), (
         "When iterable, the first argument must contain at least 1 element."
     )
@@ -70,14 +74,22 @@ def set_subscription(
         user_type=users[0].type,
         **kwargs,
     )[0]
+
+    # While technically the `users` could be empty on this line,
+    # the earlier assertion guarantees it is not, therefore the
+    # following `for` loop will always assign a subscription.
+    subscription: Subscription | None = None
     for user in users:
         assert user.type == plan.user_type, (
-            'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
+            f'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
         )
-        subscription: Subscription = user.useraccount.current_subscription
+        subscription = user.useraccount.current_subscription
         subscription.plan = plan
         subscription.active_since = timezone.now() - timedelta(days=1)
         subscription.save(update_fields=["plan", "active_since"])
+
+    # It is guaranteed that at least one user was provided.
+    assert subscription is not None
 
     return subscription
 

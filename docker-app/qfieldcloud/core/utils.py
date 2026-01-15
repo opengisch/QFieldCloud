@@ -461,7 +461,10 @@ def get_project_file_with_versions(
         if f.latest.key == prefix
     ]
 
-    return files[0] if files else None
+    if files:
+        return files[0]
+    else:
+        return None
 
 
 def get_project_package_files(project_id: str, package_id: str) -> list[S3Object]:

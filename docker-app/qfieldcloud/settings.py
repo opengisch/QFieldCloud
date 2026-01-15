@@ -256,8 +256,13 @@ USE_TZ = True
 
 
 LANGUAGES = [
+    ("bg", "Bulgarian"),
+    ("de", "German"),
     ("en", "English"),
     ("es", "Spanish"),
+    ("fr", "French"),
+    ("it", "Italian"),
+    ("km", "Khmer"),
 ]
 
 # Static files (CSS, JavaScript, Images)
@@ -319,6 +324,29 @@ STORAGES_PROJECT_DEFAULT_STORAGE = (
 if STORAGES_PROJECT_DEFAULT_STORAGE not in STORAGES:
     raise ConfigValidationError(
         f"Missing {STORAGES_PROJECT_DEFAULT_STORAGE=} from the `STORAGES` configuration, available storages: {STORAGES.keys()}"
+    )
+
+STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE = (
+    os.environ.get("STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE") or "default"
+)
+
+if STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE not in STORAGES:
+    raise ConfigValidationError(
+        f"Missing {STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE=} from the `STORAGES` configuration, available storages: {STORAGES.keys()}"
+    )
+
+STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED = bool(
+    int(os.environ.get("STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED", 1))
+)
+
+# Delete with QF-7231 Make S3 backend storage not versionable
+if (
+    not STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED
+    and STORAGES[STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE]["BACKEND"]
+    != "qfieldcloud.filestorage.backend.QfcWebDavStorage"
+):
+    raise ConfigValidationError(
+        "Attachments can be unversioned only when using an attachment storage of type WebDAV (qfieldcloud.filestorage.backend.QfcWebDavStorage)"
     )
 
 AUTH_USER_MODEL = "core.User"
@@ -727,6 +755,11 @@ CONSTANCE_CONFIG = {
         "Status page URL",
         str,
     ),
+    "WEB_USER_INACTIVITY_THRESHOLD_DAYS": (
+        30,
+        "User inactivity threshold in days. Set to 0 to disable the inactivity threshold.",
+        int,
+    ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -749,7 +782,10 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Debug": ("SENTRY_REQUEST_MAX_SIZE_TO_SEND",),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
-    "Web": ("STATUS_PAGE_URL",),
+    "Web": (
+        "STATUS_PAGE_URL",
+        "WEB_USER_INACTIVITY_THRESHOLD_DAYS",
+    ),
 }
 
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.

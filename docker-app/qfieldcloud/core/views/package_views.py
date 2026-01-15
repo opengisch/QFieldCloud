@@ -162,11 +162,11 @@ class LegacyLatestPackageView(views.APIView):
         # support some ancient QFieldCloud job data
         elif feedback_version is None:
             steps = latest_finished_package_job.feedback.get("steps", [])
-            layers = (
-                steps[1]["outputs"]["layer_checks"]
-                if len(steps) > 2 and steps[1].get("stage", 1) == 2
-                else None
-            )
+
+            layers = None
+            if len(steps) > 2 and steps[1].get("stage", 1) == 2:
+                layers = steps[1]["outputs"]["layer_checks"]
+
         # be paranoid and raise for newer versions
         else:
             raise NotImplementedError()
@@ -317,11 +317,11 @@ class LatestPackageView(views.APIView):
         # support some ancient QFieldCloud job data
         elif feedback_version is None:
             steps = latest_finished_package_job.feedback.get("steps", [])
-            layers = (
-                steps[1]["outputs"]["layer_checks"]
-                if len(steps) > 2 and steps[1].get("stage", 1) == 2
-                else None
-            )
+
+            layers = None
+            if len(steps) > 2 and steps[1].get("stage", 1) == 2:
+                layers = steps[1]["outputs"]["layer_checks"]
+
         # be paranoid and raise for newer versions
         else:
             raise NotImplementedError()

@@ -18,7 +18,9 @@ def audit(
     elif isinstance(actor, AnonymousUser):
         actor = None
 
-    actor_id = actor.pk if actor else None
+    actor_id: int | None = None
+    if actor:
+        actor_id = actor.pk
 
     return LogEntry.objects.log_create(
         instance,

@@ -11,6 +11,7 @@ from rest_framework.request import Request
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
+    SHARED_DATASETS_PROJECT_NAME,
     ApplyJob,
     Delta,
     Job,
@@ -40,7 +41,7 @@ def get_avatar_url(user: User, request: Request | None = None) -> StrOrPromise |
     reversed_uri = reverse(
         "filestorage_named_avatars",
         kwargs={
-            "username": user.username,
+            "public_id": user.public_id,
             "filename": f"avatar.{file_extension}",
         },
     )
@@ -110,7 +111,11 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         if data.get("name") is not None:
-            owner = self.instance.owner if self.instance else data["owner"]
+            if self.instance:
+                owner = self.instance.owner
+            else:
+                owner = data["owner"]
+
             projects_qs = Project.objects.filter(
                 owner=owner,
                 name=data["name"],
@@ -123,6 +128,18 @@ class ProjectSerializer(serializers.ModelSerializer):
 
             if matching_projects != 0:
                 raise exceptions.ProjectAlreadyExistsError()
+
+            if data["name"].lower() == SHARED_DATASETS_PROJECT_NAME:
+                if (
+                    self.instance
+                    and self.instance.name.lower() == SHARED_DATASETS_PROJECT_NAME
+                ):
+                    pass
+
+                elif self.instance and self.instance.has_the_qgis_file:
+                    raise exceptions.QGISProjectFileNotAllowedError(
+                        "QGIS project files are not allowed in shared datasets projects."
+                    )
 
         return data
 
@@ -157,6 +174,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "is_shared_datasets_project",
             "is_featured",
             "is_attachment_download_on_demand",
+            "file_storage_bytes",
         )
         read_only_fields = (
             "private",
@@ -171,6 +189,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "user_role",
             "user_role_origin",
             "is_attachment_download_on_demand",
+            "file_storage_bytes",
         )
         model = Project
 

@@ -15,6 +15,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.contrib.gis.db import models
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
@@ -306,6 +307,10 @@ class User(AbstractUser):
     def is_person(self):
         return self.type == User.Type.PERSON
 
+    @cached_property
+    def public_id(self) -> str:
+        return signing.dumps({"id": self.pk})
+
     @property
     def is_organization(self):
         return self.type == User.Type.ORGANIZATION
@@ -431,7 +436,7 @@ def get_user_account_avatar_download_from(
     return reverse(
         "filestorage_avatars",
         kwargs={
-            "username": useraccount.user.username,
+            "public_id": useraccount.user.public_id,
         },
     )
 
@@ -721,6 +726,29 @@ class Organization(User):
         else:
             self.created_by = self.organization_owner
 
+        # if the org owner changes, adapt the memberships accordingly.
+        if self.pk:
+            old_org = Organization.objects.get(pk=self.pk)
+
+            if old_org.organization_owner != self.organization_owner:
+                with transaction.atomic():
+                    # remove new owner from members.
+                    OrganizationMember.objects.filter(
+                        organization=self,
+                        member=self.organization_owner,
+                    ).delete()
+
+                    # add old owner as admin member.
+                    OrganizationMember.objects.update_or_create(
+                        organization=self,
+                        member=old_org.organization_owner,
+                        defaults={
+                            "role": OrganizationMember.Roles.ADMIN,
+                            "created_by": self.created_by,
+                            "updated_by": self.created_by,
+                        },
+                    )
+
         return super().save(*args, **kwargs)
 
 
@@ -1003,6 +1031,24 @@ def get_project_file_storage_default() -> str:
     return settings.STORAGES_PROJECT_DEFAULT_STORAGE
 
 
+def get_project_attachments_file_storage_default() -> str:
+    """Get the default attachments file storage for the newly created project.
+
+    Returns:
+        the name of the storage
+    """
+    return settings.STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE
+
+
+def get_project_are_attachments_versioned_default() -> bool:
+    """Get the default value for versioning of project attachments.
+
+    Returns:
+        whether the attachments are versioned by default
+    """
+    return settings.STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED
+
+
 def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
     """Variable storage key for thumbnails.
 
@@ -1247,7 +1293,7 @@ class Project(models.Model):
         ),
         max_length=100,
         validators=[validators.file_storage_name_validator],
-        default=get_project_file_storage_default,
+        default=get_project_attachments_file_storage_default,
     )
 
     # When enabled, the client (e.g. QField) is informed that attachments
@@ -1263,7 +1309,7 @@ class Project(models.Model):
     )
 
     are_attachments_versioned = models.BooleanField(
-        default=True,
+        default=get_project_are_attachments_versioned_default,
         verbose_name=_("Versioned attachment files"),
         help_text=_(
             "If enabled, attachment files will make use of the file versioning system. If disabled, only the latest version of each attachment file will be kept, and stored with the extension in the filename."
@@ -1617,6 +1663,21 @@ class Project(models.Model):
 
         # Check if localized datasets project, then skip the rest of the checks as they are not applicable
         if self.name == SHARED_DATASETS_PROJECT_NAME:
+            if self.has_the_qgis_file:
+                problems.append(
+                    {
+                        "layer": None,
+                        "level": "error",
+                        "code": "qgis_project_file_not_allowed",
+                        "description": _(
+                            "Shared datasets projects cannot contain QGIS project files (.qgs/.qgz)."
+                        ),
+                        "solution": _(
+                            "Remove the QGIS project file (.qgs/.qgz) or rename the project to use it normally."
+                        ),
+                    }
+                )
+
             return problems
 
         if not self.has_the_qgis_file:
@@ -1741,7 +1802,9 @@ class Project(models.Model):
             max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
-            if not self.has_the_qgis_file or not self.project_details:
+            if (
+                not self.has_the_qgis_file or not self.project_details
+            ) and not self.is_shared_datasets_project:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
             elif (

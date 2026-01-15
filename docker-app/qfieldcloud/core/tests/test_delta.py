@@ -1274,7 +1274,10 @@ class QfcTestCase(APITransactionTestCase):
 
             for idx, immediate_value in enumerate(immediate_values):
                 delta_id, status, created_by = immediate_value
-                status = status if isinstance(status, list) else list(status)
+
+                # ensure status is a list
+                if not isinstance(status, list):
+                    status = [status]
 
                 self.assertEqual(payload[idx]["id"], delta_id)
                 self.assertIn(payload[idx]["status"], status)
@@ -1309,7 +1312,10 @@ class QfcTestCase(APITransactionTestCase):
                     return
 
                 delta_id, status, created_by = final_value
-                status = status if isinstance(status, list) else [status]
+
+                # ensure status is a list
+                if not isinstance(status, list):
+                    status = [status]
 
                 try:
                     self.assertEqual(payload[idx]["id"], delta_id)

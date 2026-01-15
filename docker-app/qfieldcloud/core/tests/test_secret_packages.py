@@ -220,7 +220,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         # create organization pg_service secrets
         Secret.objects.create(
-            name="PG_SERVICE_GEODB1",
+            name="PG_SERVICE_TESTDB1",
             type=Secret.Type.PGSERVICE,
             created_by=self.u1,
             organization=self.o1,
@@ -236,7 +236,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         Secret.objects.create(
-            name="PG_SERVICE_GEODB2",
+            name="PG_SERVICE_TESTDB2",
             type=Secret.Type.PGSERVICE,
             created_by=self.u1,
             organization=self.o1,
