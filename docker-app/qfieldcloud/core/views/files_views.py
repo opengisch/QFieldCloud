@@ -143,6 +143,67 @@ class ListFilesView(views.APIView):
         return Response(result_list)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Get the project's file metadata",
+        responses={200: FileWithVersionsSerializer()},
+    ),
+)
+class LegacyFileMetadataView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, ListFilesViewPermissions]
+
+    def get(self, request: Request, projectid: str, filename: str) -> Response:
+        try:
+            project = Project.objects.get(id=projectid)
+        except ObjectDoesNotExist:
+            raise NotFound(detail=projectid)
+
+        file_obj = get_project_file_with_versions(projectid, filename)
+
+        if not file_obj:
+            raise NotFound(detail=filename)
+
+        versions_data = []
+        file_data: dict = {}
+
+        for version in file_obj.versions:
+            last_modified = version.last_modified.strftime(
+                settings.QFIELDCLOUD_STORAGE_DT_LAST_MODIFIED_FORMAT
+            )
+            md5sum = version.md5sum
+
+            head = version._data.head()
+            # We cannot be sure of the metadata's first letter case
+            # https://github.com/boto/boto3/issues/1709
+            metadata = head["Metadata"]
+            sha256sum = metadata.get("sha256sum") or metadata.get("Sha256sum")
+
+            version_data = {
+                "size": version.size,
+                "md5sum": md5sum,
+                "version_id": version.id,
+                "last_modified": last_modified,
+                "is_latest": version.is_latest,
+                "display": version.display,
+                "sha256": sha256sum,
+            }
+
+            versions_data.append(version_data)
+
+            if version.is_latest:
+                is_attachment = get_attachment_dir_prefix(project, filename) != ""
+
+                file_data["name"] = filename
+                file_data["size"] = version.size
+                file_data["md5sum"] = md5sum
+                file_data["last_modified"] = last_modified
+                file_data["is_attachment"] = is_attachment
+                file_data["sha256"] = sha256sum
+
+        file_data["versions"] = versions_data
+        return Response(file_data)
+
+
 class DownloadPushDeleteFileViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         if "projectid" not in request.parser_context["kwargs"]:
