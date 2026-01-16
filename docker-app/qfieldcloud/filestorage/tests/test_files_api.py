@@ -1068,3 +1068,20 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertNotEqual(thumbnail_key1, "thumbnail.png")
         self.assertNotEqual(thumbnail_key2, "thumbnail2.svg")
         self.assertNotEqual(thumbnail_key1, thumbnail_key2)
+
+    def test_get_file_metadata(self):
+        filename = "file.name"
+        content = "Hello!"
+        self.assertFileUploaded(self.u1, self.p1, filename, StringIO(content))
+
+        response = self._get_file_metadata(self.u1, self.p1, filename)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["name"], filename)
+        self.assertEqual(data["size"], len(content))
+        self.assertIn("sha256", data)
+        self.assertIn("md5sum", data)
+
+        # nonexistent file
+        response = self._get_file_metadata(self.u1, self.p1, "nonexistent.file")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
