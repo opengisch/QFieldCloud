@@ -69,7 +69,7 @@ def test_scan_no_logically_deleted_files(s3_client, unique_prefix):
     create_file(s3_client, BUCKET_NAME, key)
 
     # 2. Run scan
-    result = run_script(["--scan", "--prefix", unique_prefix])
+    result = run_script(["--dry-run", "--prefix", unique_prefix])
 
     # 3. Verify output
     assert "Total keys found: 0" in result.stdout
@@ -92,7 +92,7 @@ def test_scan_restored_files_ignored(s3_client, unique_prefix):
     create_file(s3_client, BUCKET_NAME, key, "v3")
 
     # 4. Run scan
-    result = run_script(["--scan", "--prefix", unique_prefix])
+    result = run_script(["--dry-run", "--prefix", unique_prefix])
 
     # 5. Verify output - should not find it
     assert "Total keys found: 0" in result.stdout
@@ -118,7 +118,7 @@ def test_scan_retention_period_filter(s3_client, unique_prefix):
     # So the file is OLDER than the retention period. It should be FOUND (not protected).
     result_short_retention = run_script(
         [
-            "--scan",
+            "--dry-run",
             "--prefix",
             unique_prefix,
             "--retention-period",
@@ -134,7 +134,7 @@ def test_scan_retention_period_filter(s3_client, unique_prefix):
     # The file was deleted 2 seconds ago. 2s < 5s.
     # So the file is NEWER than the retention period. It should be PROTECTED (skipped).
     result_long_retention = run_script(
-        ["--scan", "--prefix", unique_prefix, "--retention-period", "5 seconds"]
+        ["--dry-run", "--prefix", unique_prefix, "--retention-period", "5 seconds"]
     )
 
     assert "Total keys found: 0" in result_long_retention.stdout
@@ -172,7 +172,7 @@ def test_scan_stray_delete_marker(s3_client, unique_prefix):
 
     # 4. Run Scan
     # The script should identify the stray marker and delete it
-    result = run_script(["--scan", "--prefix", unique_prefix])
+    result = run_script(["--dry-run", "--prefix", unique_prefix])
 
     assert "Total keys found: 1" in result.stdout
     assert (
@@ -193,9 +193,7 @@ def test_permanently_deleted(s3_client, unique_prefix):
     delete_file(s3_client, BUCKET_NAME, key)
 
     # 3. Run prune
-    run_script(
-        ["--permanently-delete-versions", "--noinput", "--prefix", unique_prefix]
-    )
+    run_script(["--force", "--prefix", unique_prefix])
 
     # Verify file is completely gone (no versions left)
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
@@ -218,9 +216,7 @@ def test_permanently_delete_complex_version_history(s3_client, unique_prefix):
     delete_file(s3_client, BUCKET_NAME, key)
 
     # Run prune
-    run_script(
-        ["--permanently-delete-versions", "--noinput", "--prefix", unique_prefix]
-    )
+    run_script(["--force", "--prefix", unique_prefix])
 
     # Verify completely empty
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
@@ -252,9 +248,7 @@ def test_permanently_delete_versions_large_data_complex_version_history(
     create_file(s3_client, BUCKET_NAME, key1, "a" * 100)
 
     # Run permanently delete versions
-    run_script(
-        ["--permanently-delete-versions", "--noinput", "--prefix", unique_prefix]
-    )
+    run_script(["--force", "--prefix", unique_prefix])
 
     # Verify completely empty
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
@@ -266,9 +260,7 @@ def test_permanently_delete_versions_large_data_complex_version_history(
     delete_file(s3_client, BUCKET_NAME, key1)
 
     # Run permanently delete versions
-    run_script(
-        ["--permanently-delete-versions", "--noinput", "--prefix", unique_prefix]
-    )
+    run_script(["--force", "--prefix", unique_prefix])
 
     # Verify completely empty
     versions = list_versions(s3_client, BUCKET_NAME, unique_prefix)
@@ -291,9 +283,7 @@ def test_permanently_delete_versions_high_frequency_updates(s3_client, unique_pr
     delete_file(s3_client, BUCKET_NAME, key)
 
     # Run permanently delete versions
-    run_script(
-        ["--permanently-delete-versions", "--noinput", "--prefix", unique_prefix]
-    )
+    run_script(["--force", "--prefix", unique_prefix])
 
     # Verify everything is gone
     versions = list_versions(s3_client, BUCKET_NAME, key)

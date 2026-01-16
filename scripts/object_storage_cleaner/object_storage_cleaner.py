@@ -166,7 +166,7 @@ def delete_versions_batch(
 
         # Log successes
         for success in response.get("Deleted", []):
-            logger.debug(
+            logger.info(
                 f"Permanently deleted: {success['Key']} (VersionId: {success.get('VersionId')})"
             )
 
@@ -257,7 +257,7 @@ def action_scan(objects_stream: Iterable[LogicallyDeletedObject]) -> None:
         total_versions_count += obj.versions_count
 
         # Log details for each key
-        logger.debug(
+        logger.info(
             f"Found: {obj.key} | Deleted At: {obj.deleted_at} | "
             f"Wasted Size: {obj.total_size_bytes} bytes ({obj.versions_count} versions)"
         )
@@ -384,15 +384,12 @@ def main() -> int:
         help="Only process objects deleted BEFORE this duration (e.g. '30 days'). Recent deletions are preserved.",
     )
     parser.add_argument(
-        "--scan", action="store_true", help="Scan for logically deleted objects"
-    )
-    parser.add_argument(
-        "--permanently-delete-versions",
+        "--dry-run",
         action="store_true",
-        help="Permanently delete logically deleted versions",
+        help="Scan for logically deleted objects without deleting them",
     )
     parser.add_argument(
-        "--noinput",
+        "--force",
         action="store_true",
         help="Skip permanently delete confirmation prompt",
     )
@@ -411,19 +408,6 @@ def main() -> int:
         datefmt="%Y-%m-%d %H:%M:%S",
         stream=sys.stdout,
     )
-    # Suppress noisy logging
-    logging.getLogger("boto3").setLevel(logging.CRITICAL)
-    logging.getLogger("botocore").setLevel(logging.CRITICAL)
-    logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
-    logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
-    if not (args.scan or args.permanently_delete_versions):
-        logger.error("Please specify --scan or --permanently-delete-versions")
-        return 1
-
-    if args.scan and args.permanently_delete_versions:
-        parser.error("Choose either --scan or --permanently-delete-versions, not both.")
-        return 1
 
     try:
         # 1. Setup Connection
@@ -436,12 +420,12 @@ def main() -> int:
         clean_stream = iter_logically_deleted(raw_stream, args.retention_cutoff)
 
         # 3. Execute
-        if args.scan:
+        if args.dry_run:
             action_scan(clean_stream)
             return 0
 
-        elif args.permanently_delete_versions:
-            if not args.noinput:
+        else:
+            if not args.force:
                 confirmation_input = input(
                     f"Permanently delete from '{args.bucket}'? (yes/no): "
                 ).lower()

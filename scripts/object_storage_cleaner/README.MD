@@ -45,9 +45,8 @@ python object_storage_cleaner.py <bucket_name> [options]
 | Option | Description |
 |--------|-------------|
 | `bucket_name` | The name of the target S3 bucket (Required). |
-| `--scan` | Only scan and report statistics (Default). |
-| `--permanently-delete-versions` | Delete found objects. Requires confirmation unless `--noinput` is used. |
-| `--noinput` | Skip confirmation prompt (useful for automation). |
+| `--dry-run` | Only scan and report statistics without deleting. |
+| `--force` | Skip confirmation prompt (useful for automation). |
 | `--prefix <path>` | Limit scan to a specific prefix (folder). |
 | `--retention-period <duration>` | Only process objects deleted BEFORE this duration (e.g., `7 days`, `30 minutes`, `1 hour`). Recent deletions are preserved. |
 | `--log-level` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). |
@@ -60,13 +59,13 @@ check [Configuration and credential file settings in the AWS CLI](https://docs.a
 **1. Scan a bucket to see how much space can be freed:**
 
 ```bash
-python object_storage_cleaner.py my-production-bucket --scan
+python object_storage_cleaner.py my-production-bucket --dry-run
 ```
 
 **2. Scan a specific folder:**
 
 ```bash
-python object_storage_cleaner.py my-production-bucket --prefix "logs/2023/" --scan
+python object_storage_cleaner.py my-production-bucket --dry-run --prefix "logs/2023/"
 ```
 
 **3. Cleanup objects deleted more than 30 days ago (Retention Policy):**
@@ -75,20 +74,20 @@ python object_storage_cleaner.py my-production-bucket --prefix "logs/2023/" --sc
 
 ```bash
 # Clean objects deleted OLDER than 30 days
-python object_storage_cleaner.py my-bucket --permanently-delete-versions --retention-period '30 days'
+python object_storage_cleaner.py my-bucket --retention-period '30 days'
 ```
 
-**4. Permanently delete (permanently-delete-versions) objects:**
+**4. Permanently delete objects:**
 
 ```bash
-python object_storage_cleaner.py my-bucket --permanently-delete-versions
+python object_storage_cleaner.py my-bucket
 # You will be prompted to confirm.
 ```
 
 **5. Automated cleanup for MinIO (local/custom endpoint):**
 
 ```bash
-python object_storage_cleaner.py test-bucket --permanently-delete-versions --noinput
+python object_storage_cleaner.py test-bucket --force
 ```
 
 ## Running Tests
