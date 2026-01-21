@@ -4,8 +4,8 @@ __pycache__/
 .htmlcov/
 .coverage
 .vscode
-.env
-.env.test
+.env*
+!.env.example
 docker-compose.override.yml
 client/projects
 conf/mkcert/*
