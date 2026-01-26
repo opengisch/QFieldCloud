@@ -92,14 +92,11 @@ python object_storage_cleaner.py test-bucket --force
 
 ## Running Tests
 
-The repository includes a test suite (`test.py`) that uses `pytest` and requires a running S3-compatible service (like MinIO).
+The repository includes a test suite (`test.py`) that uses `unittest` and requires a running S3-compatible service (like MinIO).
 
 ### Test Requirements
-- `pytest`
 - `boto3`
-- A local S3 service (e.g., MinIO) running. By default, tests expect it at `http://localhost:8009` (us-east-1).
-
-*you can also adjust the test file for your needs to connect to a remote object storage server to run the tests*
+- S3 service (e.g., MinIO) running.
 
 ### Steps to Run Tests
 
@@ -112,10 +109,17 @@ The repository includes a test suite (`test.py`) that uses `pytest` and requires
       minio/minio server /data
     ```
 
-2.  **Configure Tests (Optional)**
-    If your local S3 is different from `http://localhost:8009`, update the `CONNECTION_CONFIG` dictionary in `test.py`.
+2.  **Configure Environment Variables**
+    Export the following variables to configure `boto3` to talk to your local MinIO instance (matching the credentials above):
 
-3.  **Run Pytest**
     ```bash
-    pytest test.py
+    export AWS_ACCESS_KEY_ID=access_key_xyz
+    export AWS_SECRET_ACCESS_KEY=secret_key_xyz
+    export AWS_ENDPOINT_URL=http://localhost:8009
+    export AWS_DEFAULT_REGION=us-east-1
+    ```
+
+3.  **Run Tests**
+    ```bash
+    python test.py
     ```
