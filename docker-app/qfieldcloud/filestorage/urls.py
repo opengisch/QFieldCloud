@@ -4,6 +4,7 @@ from .views import (
     AvatarFileReadView,
     compatibility_file_crud_view,
     compatibility_file_list_view,
+    compatibility_file_metadata_view,
     compatibility_project_meta_file_read_view,
 )
 
@@ -17,6 +18,11 @@ urlpatterns = [
         "files/<uuid:project_id>/<path:filename>/",
         compatibility_file_crud_view,
         name="filestorage_crud_file",
+    ),
+    path(
+        "files/metadata/<uuid:project_id>/<path:filename>/",
+        compatibility_file_metadata_view,
+        name="filestorage_file_metadata",
     ),
     path(
         "files/thumbnails/<uuid:project_id>/",
