@@ -20,6 +20,11 @@ urlpatterns = [
         name="filestorage_crud_file",
     ),
     path(
+        "files/metadata/<uuid:project_id>/<path:filename>/",
+        compatibility_file_metadata_view,
+        name="filestorage_file_metadata",
+    ),
+    path(
         "files/thumbnails/<uuid:project_id>/",
         compatibility_project_meta_file_read_view,
         name="filestorage_project_thumbnails",
@@ -34,10 +39,5 @@ urlpatterns = [
         "files/avatars/<str:public_id>/<str:filename>",
         AvatarFileReadView.as_view(),
         name="filestorage_named_avatars",
-    ),
-    path(
-        "files/metadata/<uuid:project_id>/<path:filename>/",
-        compatibility_file_metadata_view,
-        name="filestorage_file_metadata",
     ),
 ]

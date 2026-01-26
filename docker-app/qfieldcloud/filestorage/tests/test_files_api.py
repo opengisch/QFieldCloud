@@ -1070,17 +1070,37 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertNotEqual(thumbnail_key1, thumbnail_key2)
 
     def test_get_file_metadata(self):
-        filename = "file.name"
-        content = "Hello!"
-        self.assertFileUploaded(self.u1, self.p1, filename, StringIO(content))
+        self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Hello!"))
 
-        response = self._get_file_metadata(self.u1, self.p1, filename)
+        response = self._get_file_metadata(self.u1, self.p1, "file.name")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
-        self.assertEqual(data["name"], filename)
-        self.assertEqual(data["size"], len(content))
+        self.assertEqual(data["name"], "file.name")
+        self.assertEqual(data["size"], len("Hello!"))
         self.assertIn("sha256", data)
         self.assertIn("md5sum", data)
+        self.assertIn("versions", data)
+        self.assertEqual(len(data["versions"]), 1)
+
+        # Upload second version
+        self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Version 2"))
+
+        response = self._get_file_metadata(self.u1, self.p1, "file.name")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["size"], len("Version 2"))
+        self.assertIn("versions", data)
+        self.assertEqual(len(data["versions"]), 2)
+
+        # Upload third version
+        self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Version 3"))
+
+        response = self._get_file_metadata(self.u1, self.p1, "file.name")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["size"], len("Version 3"))
+        self.assertIn("versions", data)
+        self.assertEqual(len(data["versions"]), 3)
 
         # nonexistent file
         response = self._get_file_metadata(self.u1, self.p1, "nonexistent.file")
