@@ -51,7 +51,7 @@ tqdm==4.66.5
     # via qfieldcloud-sdk
 typing-extensions==4.14.1
     # via -r requirements.in
-urllib3==2.5.0
+urllib3==2.6.3
     # via
     #   qfieldcloud-sdk
     #   requests

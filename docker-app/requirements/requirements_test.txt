@@ -75,7 +75,7 @@ typing-extensions==4.14.1
     # via
     #   exceptiongroup
     #   selenium
-urllib3[socks]==2.5.0
+urllib3[socks]==2.6.3
     # via
     #   requests
     #   selenium
