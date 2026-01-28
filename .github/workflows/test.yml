@@ -127,6 +127,17 @@ jobs:
         run: |
           docker compose run app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
 
+      - name: Run Object Storage Cleaner tests
+        if: matrix.django_app == 'filestorage' && matrix.storage == 'default'
+        run: |
+          docker compose run --rm \
+            -e AWS_ACCESS_KEY_ID=minioadmin \
+            -e AWS_SECRET_ACCESS_KEY=minioadmin \
+            -e AWS_ENDPOINT_URL=http://172.17.0.1:8009 \
+            -e AWS_DEFAULT_REGION=us-east-1 \
+            -v ${{ github.workspace }}/scripts:/usr/src/scripts \
+            app python /usr/src/scripts/object_storage_cleaner/test.py
+
       - name: "failure logs"
         if: failure()
         run: |
