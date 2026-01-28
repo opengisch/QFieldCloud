@@ -763,9 +763,10 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "project",
         "organization",
         "created_by",
+        "created_at",
         "value",
     )
-    readonly_fields = ("created_by",)
+    readonly_fields = ("created_by", "created_at")
     list_display = (
         "name",
         "type",
@@ -773,6 +774,7 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "project__name",
         "organization",
         "created_by__link",
+        "created_at",
     )
     autocomplete_fields = ("project",)
 
