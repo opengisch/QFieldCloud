@@ -30,7 +30,7 @@ services:
       - ServerOptions__HostName=smtp4dev
 
   rustfs:
-    image: rustfs/rustfs:1.0.0-alpha.77
+    image: rustfs/rustfs:1.0.0-alpha.81
     restart: unless-stopped
     volumes:
       - rustfs_data:/data
