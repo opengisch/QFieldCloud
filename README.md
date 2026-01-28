@@ -34,11 +34,15 @@ For self-hosted issues, please use the GitHub issues at https://github.com/openg
 
 Clone the repository and all its submodules:
 
-    git clone --recurse-submodules git@github.com:opengisch/QFieldCloud.git
+```shell
+git clone --recurse-submodules git@github.com:opengisch/QFieldCloud.git
+```
 
 To fetch upstream development, don't forget to update the submodules too:
 
-    git pull --recurse-submodules  && git submodule update --recursive
+```shell
+git pull --recurse-submodules  && git submodule update --recursive
+```
 
 
 ### Launch a local instance
@@ -112,30 +116,35 @@ It is stored in the `postgres_data` volume and managed via the `db` container.
 
 One can connect to the database via running the `psql` command within the `db` container:
 
-    docker compose exec -it db psql -U qfieldcloud_db_admin -d qfieldcloud_db
+```shell
+docker compose exec -it db psql -U qfieldcloud_db_admin -d qfieldcloud_db
+```
 
 Or by creating `~/.pg_service.conf` in their user home directory and appending:
 
-    [localhost.qfield.cloud]
-    host=localhost
-    dbname=qfieldcloud_db
-    user=qfieldcloud_db_admin
-    port=5433
-    password=3shJDd2r7Twwkehb
-    sslmode=disable
+```shell
+[localhost.qfield.cloud]
+host=localhost
+dbname=qfieldcloud_db
+user=qfieldcloud_db_admin
+port=5433
+password=3shJDd2r7Twwkehb
+sslmode=disable
 
-    [test.localhost.qfield.cloud]
-    host=localhost
-    dbname=test_qfieldcloud_db
-    user=qfieldcloud_db_admin
-    port=5433
-    password=3shJDd2r7Twwkehb
-    sslmode=disable
+[test.localhost.qfield.cloud]
+host=localhost
+dbname=test_qfieldcloud_db
+user=qfieldcloud_db_admin
+port=5433
+password=3shJDd2r7Twwkehb
+sslmode=disable
+```
 
 And then connecting to the database via:
 
-    psql 'service=localhost.qfield.cloud'
-
+```shell
+psql 'service=localhost.qfield.cloud'
+```
 
 ### Dependencies
 
@@ -143,33 +152,45 @@ QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage 
 All dependencies are listed in `requirements*.in` files.
 When a `pip` a dependency is changed, the developer should produce the new `requirements*.txt` files.
 
-    docker compose run --rm pipcompile
+```shell
+docker compose run --rm pipcompile
+```
 
 Alternatively, one can create only a `requirements.txt` file for a single `requirements.in`:
 
+```shell
     docker compose run --rm pipcompile pip-compile --no-strip-extras -o requirements/requirements_worker_wrapper.txt requirements/requirements_worker_wrapper.in
+```
 
 ### Tests
 
 Rebuild the docker compose stack with the `docker-compose.override.test.yml` file added to the `COMPOSE_FILE` environment variable:
 
-    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
-    # (Re-)build the app service to install necessary test utilities (requirements_test.txt)
-    docker compose up -d --build
-    docker compose run app python manage.py migrate
-    docker compose run app python manage.py collectstatic --noinput
+```shell
+export COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
+# (Re-)build the app service to install necessary test utilities (requirements_test.txt)
+docker compose up -d --build
+docker compose run app python manage.py migrate
+docker compose run app python manage.py collectstatic --noinput
+```
 
 You can then run all the unit and functional tests:
 
-    docker compose run app python manage.py test --keepdb
+```shell
+docker compose run app python manage.py test --keepdb
+```
 
 To run only a test module (e.g. `test_permission.py`):
 
-    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
+```shell
+docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
+```
 
 To run a specific test:
 
-    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission.QfcTestCase.test_collaborator_project_takeover
+```shell
+docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission.QfcTestCase.test_collaborator_project_takeover
+```
 
 <details>
 <summary>
@@ -177,36 +198,42 @@ Instructions to have a test instance running in parallel to a dev instance
 </summary>
 Create an <code>.env.test</code> file with the following variables that override the ones in <code>.env</code>:
 
-    ENVIRONMENT=test
-    QFIELDCLOUD_HOST=nginx
-    DJANGO_SETTINGS_MODULE=qfieldcloud.settings
-    STORAGE_ENDPOINT_URL=http://172.17.0.1:8109
-    OBJECT_STORAGE_API_PORT=8109
-    OBJECT_STORAGE_BROWSER_PORT=8110
-    WEB_HTTP_PORT=8101
-    WEB_HTTPS_PORT=8102
-    HOST_POSTGRES_PORT=8103
-    QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
-    QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
-    DJANGO_DEV_PORT=8111
-    SMTP4DEV_WEB_PORT=8112
-    SMTP4DEV_SMTP_PORT=8125
-    SMTP4DEV_IMAP_PORT=8143
-    COMPOSE_PROJECT_NAME=qfieldcloud_test
-    COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
-    DEBUG_APP_DEBUGPY_PORT=5781
-    DEBUG_WORKER_WRAPPER_DEBUGPY_PORT=5780
-    DEMGEN_PORT=8201
+```shell
+ENVIRONMENT=test
+QFIELDCLOUD_HOST=nginx
+DJANGO_SETTINGS_MODULE=qfieldcloud.settings
+STORAGE_ENDPOINT_URL=http://172.17.0.1:8109
+OBJECT_STORAGE_API_PORT=8109
+OBJECT_STORAGE_BROWSER_PORT=8110
+WEB_HTTP_PORT=8101
+WEB_HTTPS_PORT=8102
+HOST_POSTGRES_PORT=8103
+QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
+QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
+DJANGO_DEV_PORT=8111
+SMTP4DEV_WEB_PORT=8112
+SMTP4DEV_SMTP_PORT=8125
+SMTP4DEV_IMAP_PORT=8143
+COMPOSE_PROJECT_NAME=qfieldcloud_test
+COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
+DEBUG_APP_DEBUGPY_PORT=5781
+DEBUG_WORKER_WRAPPER_DEBUGPY_PORT=5780
+DEMGEN_PORT=8201
+```
 
 Build the test docker compose stack:
 
-    docker compose --env-file .env --env-file .env.test up -d --build
-    docker compose --env-file .env --env-file .env.test run app python manage.py migrate
-    docker compose --env-file .env --env-file .env.test run app python manage.py collectstatic --noinput
+```shell
+docker compose --env-file .env --env-file .env.test up -d --build
+docker compose --env-file .env --env-file .env.test run app python manage.py migrate
+docker compose --env-file .env --env-file .env.test run app python manage.py collectstatic --noinput
+```
 
 You can then launch the tests:
 
-    docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
+```shell
+docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
+```
 
 Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in your `.pg_service.conf` file](#accessing-the-database).
 
@@ -217,7 +244,7 @@ Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in y
 
 To get information about the current test coverage, run:
 
-```
+```shell
 docker compose exec app coverage run manage.py test --keepdb
 docker compose exec app coverage report
 ```
@@ -260,7 +287,7 @@ debugpy.wait_for_client()  # optional
 To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code on your host machine.
 The easiest way to achieve that is do actual copy of them:
 
-```
+```shell
 docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
 ```
 
@@ -278,41 +305,52 @@ so other programs (e.g. `curl`) can create secure connection to the local QField
 
 On Debian/Ubuntu, copy the root certificate to the directory with trusted certificates. Note the extension has been changed to `.crt`:
 
-    sudo cp ./conf/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+```shell
+sudo cp ./conf/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+```
 
 Trust the newly added certificate:
 
-    sudo update-ca-certificates
+```shell
+sudo update-ca-certificates
+```
 
 Connecting with `curl` should return no errors:
-    curl https://localhost:8002/
+```shell
+curl https://localhost:8002/
+```
 
 ### Remove the root certificate
 
 If you want to remove or change the root certificate, you need to remove the root certificate file and refresh the list of certificates:
 
-    sudo rm /usr/local/share/ca-certificates/rootCA.crt
-    sudo update-ca-certificates --fresh
+```shell
+sudo rm /usr/local/share/ca-certificates/rootCA.crt
+sudo update-ca-certificates --fresh
+```
 
 Now connecting with `curl` should fail with a similar error:
 
-    $ curl https://localhost:8002/
+```
+$ curl https://localhost:8002/
 
-    curl: (60) SSL certificate problem: unable to get local issuer certificate
-    More details here: https://curl.haxx.se/docs/sslcerts.html
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.haxx.se/docs/sslcerts.html
 
-    curl failed to verify the legitimacy of the server and therefore could not
-    establish a secure connection to it. To learn more about this situation and
-    how to fix it, please visit the web page mentioned above.
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+```
 
 ## Code style
 
 Code style done with [`pre-commit`](https://pre-commit.com):
 
-    pip install pre-commit
-    # install pre-commit hook
-    pre-commit install
-
+```shell
+pip install pre-commit
+# install pre-commit hook
+pre-commit install
+```
 
 ## Deployment
 
@@ -327,7 +365,7 @@ Code style done with [`pre-commit`](https://pre-commit.com):
 
 Copy the `.env.example` into `.env` file:
 
-```
+```shell
 cp .env.example .env
 vi .env
 ```
@@ -336,19 +374,19 @@ Do not forget to set `DEBUG=0` and to adapt `COMPOSE_FILE` environment variable 
 
 Run and build the docker containers:
 
-```
+```shell
 docker compose up -d --build
 ```
 
 Run the django database migrations:
 
-```
+```shell
 docker compose exec app python manage.py migrate
 ```
 
 Collect the static files:
 
-```
+```shell
 docker compose exec app python manage.py collectstatic
 ```
 
@@ -361,7 +399,7 @@ Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and 
 
 On a server with a public domain, you can get a certificate issued by Let's Encrypt using certbot running the following command:
 
-```
+```shell
 ./scripts/init_letsencrypt.sh
 ```
 
@@ -369,7 +407,7 @@ The certificates will be renewed automatically.
 
 To use this Let's Encrypt certificate within QFieldCloud you just need to uncomment the following lines in your `.env`:
 
-```
+```shell
 QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
 QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
 ```
@@ -407,14 +445,16 @@ Table of some of the relevant ports being exposed and how to configure them.
 
 Docker logs are managed by docker in the default way. To read the logs:
 
-    docker compose logs
-
+```shell
+docker compose logs
+```
 
 For great `nginx` logs, use:
 
-    QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
-    docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
-
+```shell
+QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
+docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
+```
 
 ### Storage
 
