@@ -21,6 +21,7 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
+    ProjectSeed,
     Team,
     TeamMember,
     User,
@@ -192,6 +193,21 @@ class ProjectSerializer(serializers.ModelSerializer):
             "file_storage_bytes",
         )
         model = Project
+
+
+class ProjectSeedSerializer(serializers.Serializer):
+    class Meta:
+        model = ProjectSeed
+
+    name = serializers.StringRelatedField(source="project.name")
+    extent = serializers.SerializerMethodField()
+    copy_from_project = serializers.PrimaryKeyRelatedField(read_only=True)
+    settings = serializers.JSONField()
+    # TODO @suricactus: QF-7258 Adding a project extent field on project creation, see https://app.clickup.com/t/2192114/QF-7258
+    crs = serializers.CharField(default="EPSG:3857")
+
+    def get_extent(self, obj: ProjectSeed) -> dict[str, Any]:
+        return obj.extent.extent
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
@@ -552,6 +568,12 @@ class ApplyJobSerializer(JobMixin, serializers.ModelSerializer):
 class ProcessProjectfileJobSerializer(JobMixin, serializers.ModelSerializer):
     class Meta(JobMixin.Meta):
         model = ProcessProjectfileJob
+        allow_parallel_jobs = True
+
+
+class CreateProjectJobSerializer(JobMixin, serializers.ModelSerializer):
+    class Meta(JobMixin.Meta):
+        model = Job
         allow_parallel_jobs = True
 
 
