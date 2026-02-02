@@ -42,16 +42,10 @@ python purge_deleted_objects.py <bucket_name> [options]
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `bucket_name` | The name of the target S3 bucket (Required). |
-| `--dry-run` | Only scan and report statistics without deleting. |
-| `--force` | Skip confirmation prompt (useful for automation). |
-| `--prefix <path>` | Limit scan to a specific prefix (folder). |
-| `--retention-period <duration>` | Only process objects deleted BEFORE this duration (e.g., `7 days`, `30 minutes`, `1 hour`). Recent deletions are preserved. |
-| `--log-level` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). |
+Run the script with `--help` to see all available options.
+
 ---
-By default the script uses the `default` S3 profile (default boto3 behavior)
+By default the script uses the `default` S3 profile (default `boto3` behavior)
 check [Configuration and credential file settings in the AWS CLI](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html)
 
 ### Examples

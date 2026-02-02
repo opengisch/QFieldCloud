@@ -1,11 +1,14 @@
+import argparse
 import os
 import subprocess
 import sys
 import time
 import unittest
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import boto3
+from purge_deleted_objects import parse_retention_period
 
 
 class TestObjectStorageCleaner(unittest.TestCase):
@@ -303,6 +306,64 @@ class TestObjectStorageCleaner(unittest.TestCase):
         # Verify everything is gone
         versions = self.list_versions(key)
         self.assertEqual(len(versions), 0)
+
+    def test_parse_retention_period_valid_inputs(self):
+        """Test that parse_retention_period correctly parses valid duration strings."""
+        # Test various valid formats
+        test_cases = [
+            ("1 second", 1, "seconds"),
+            ("10 seconds", 10, "seconds"),
+            ("5 minutes", 5, "minutes"),
+            ("2 hours", 2, "hours"),
+            ("30 days", 30, "days"),
+            ("2 weeks", 2, "weeks"),
+            ("1 week", 1, "weeks"),
+        ]
+
+        for duration_str, amount, unit in test_cases:
+            result = parse_retention_period(duration_str)
+
+            # Calculate expected datetime using dictionary unpacking
+            expected = datetime.now(timezone.utc) - timedelta(**{unit: amount})
+
+            # Allow 1 second tolerance for test execution time
+            self.assertAlmostEqual(
+                result.timestamp(),
+                expected.timestamp(),
+                delta=1,
+                msg=f"Failed for input: {duration_str}",
+            )
+
+    def test_parse_retention_period_invalid_inputs(self):
+        """Test that parse_retention_period raises ArgumentTypeError for invalid inputs."""
+        invalid_inputs = [
+            "invalid",  # No number
+            "10",  # No unit
+            "10 months",  # Unsupported unit
+            "-5 days",  # Negative number
+            "3.5 hours",  # Decimal number
+            "ten days",  # Word instead of number
+            "",  # Empty string
+            "days 10",  # Reversed order
+            "5 10 days",  # Multiple numbers
+            "5 days weeks",  # Multiple units
+            "1 day 2 hours",  # Compound duration
+            "9999999999 days",  # Too many days
+            "⑤ days",  # Unicode number
+            123,  # Int
+        ]
+
+        for invalid_input in invalid_inputs:
+            with self.assertRaises(
+                argparse.ArgumentTypeError,
+                msg=f"Should raise error for: {invalid_input}",
+            ):
+                parse_retention_period(invalid_input)
+
+    def test_parse_retention_period_returns_utc_timezone(self):
+        """Test that returned datetime is UTC timezone-aware."""
+        result = parse_retention_period("1 day")
+        self.assertEqual(result.tzinfo, timezone.utc)
 
 
 if __name__ == "__main__":
