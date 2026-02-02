@@ -56,12 +56,12 @@ def iter_all_versions(
     s3_client: BaseClient, bucket: str, prefix: str | None = None
 ) -> Iterator[ObjectVersionOrDeleteMarker]:
     """
-    Stream all object versions and delete markers from object storage, paginated.
+    Iterate over all object versions and delete markers from object storage, paginated.
 
     Object storage's `list_object_versions` returns `Versions` and `DeleteMarkers` as separate
     lists within each page. This function merges and sorts them by Key locally
     to ensure that all history (versions + markers) for a specific Key is yielded
-    contiguously before the stream moves to the next Key.
+    contiguously before the iterator moves to the next Key.
 
     Args:
         s3_client: The configured boto3 object storage client.
@@ -205,31 +205,31 @@ def delete_versions_batch(
 
 
 def iter_logically_deleted(
-    version_chunks: Iterator[ObjectVersionOrDeleteMarker],
+    version_iterator: Iterator[ObjectVersionOrDeleteMarker],
     retention_cutoff_ts: datetime | None = None,
 ) -> Iterator[LogicallyDeletedObject]:
     """
-    Consumes a stream of all object versions and yields ONLY the objects that are logically deleted.
+    Consumes an iterator of all object versions and yields ONLY the objects that are logically deleted.
 
-    This function relies on the input stream being pre-sorted by `key`. It groups all versions
+    This function relies on the input iterator being pre-sorted by `key`. It groups all versions
     belonging to the same key into a list, and then passes that complete history to
     `analyze_key_history` to determine if the object is currently in a deleted state.
 
     Args:
-        version_chunks: An iterator of version dictionaries, MUST be sorted by `key`.
+        version_iterator: An iterator of version dictionaries, MUST be sorted by `key`.
         retention_cutoff_ts: Optional cutoff timestamp. If provided, the object is only returned if it was deleted *before* this timestamp. Recent deletions are ignored.
 
     Yields:
         LogicallyDeletedObject: A summary object for every key that is currently deleted.
     """
     # We maintain a buffer of versions for the "current" key we are processing.
-    # Since the input stream is sorted, all versions for "Key A" will arrive sequentially
+    # Since the input iterator is sorted, all versions for "Key A" will arrive sequentially
     # before any version for "Key B" appears, so we can group them together.
     current_key: str | None = None
     current_versions: list[ObjectVersionOrDeleteMarker] = []
 
-    for version in version_chunks:
-        # Case 1: First item in the entire stream
+    for version in version_iterator:
+        # Case 1: First item in the entire iterator
         if current_key is None:
             current_key = version["Key"]
             current_versions.append(version)
@@ -252,19 +252,19 @@ def iter_logically_deleted(
             current_key = version["Key"]
             current_versions = [version]
 
-    # Case 4: End of stream -> Process the final buffer remaining in memory
+    # Case 4: End of iterator -> Process the final buffer remaining in memory
     if current_key and current_versions:
         result = analyze_key_history(current_key, current_versions, retention_cutoff_ts)
         if result:
             yield result
 
 
-def action_scan(objects_stream: Iterable[LogicallyDeletedObject]) -> None:
+def action_scan(objects_iterator: Iterable[LogicallyDeletedObject]) -> None:
     """
-    Consume a stream of logically deleted objects and log the details.
+    Consume an iterator of logically deleted objects and log the details.
 
     Args:
-        objects_stream: The stream of logically deleted objects.
+        objects_iterator: The iterator of logically deleted objects.
     """
     logger.info("Scanning for logically deleted objects...")
 
@@ -273,7 +273,7 @@ def action_scan(objects_stream: Iterable[LogicallyDeletedObject]) -> None:
     total_size_bytes = 0
     total_versions_count = 0
 
-    for obj in objects_stream:
+    for obj in objects_iterator:
         # Update counters
         key_count += 1
         total_size_bytes += obj.total_size_bytes
@@ -292,20 +292,22 @@ def action_scan(objects_stream: Iterable[LogicallyDeletedObject]) -> None:
 
 
 def action_permanently_delete_versions(
-    s3_client: BaseClient, bucket: str, objects_stream: Iterable[LogicallyDeletedObject]
+    s3_client: BaseClient,
+    bucket: str,
+    objects_iterator: Iterable[LogicallyDeletedObject],
 ) -> None:
     """
-    Consume a stream of logically deleted objects and delete the versions in batches.
+    Consume an iterator of logically deleted objects and delete the versions in batches.
 
     Args:
         s3_client: The configured S3 client.
         bucket: The bucket name.
-        objects_stream: The stream of logically deleted objects.
+        objects_iterator: The iterator of logically deleted objects.
     """
     batch: list[ObjectVersionOrDeleteMarker] = []
     batch_size = 1000
 
-    for obj in objects_stream:
+    for obj in objects_iterator:
         for v in obj.versions:
             batch.append(v)
 
@@ -453,14 +455,14 @@ def main() -> int:
         client = get_s3_client(args.bucket, args.profile)
 
         # 2. Build Pipeline
-        raw_stream = iter_all_versions(client, args.bucket, args.prefix)
+        raw_iterator = iter_all_versions(client, args.bucket, args.prefix)
 
         # Transform
-        clean_stream = iter_logically_deleted(raw_stream, args.retention_cutoff_ts)
+        clean_iterator = iter_logically_deleted(raw_iterator, args.retention_cutoff_ts)
 
         # 3. Execute
         if args.dry_run:
-            action_scan(clean_stream)
+            action_scan(clean_iterator)
             return 0
 
         else:
@@ -472,7 +474,7 @@ def main() -> int:
                 if confirmation_input != "yes":
                     return 0
 
-            action_permanently_delete_versions(client, args.bucket, clean_stream)
+            action_permanently_delete_versions(client, args.bucket, clean_iterator)
 
     except Exception as e:
         logger.error(f"Error: {e}")
