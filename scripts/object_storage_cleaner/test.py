@@ -58,10 +58,10 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.unique_prefix = f"test-run-{uuid.uuid4()}/"
 
     def run_script(self, args):
-        """Runs the object_storage_cleaner.py script as a subprocess."""
+        """Runs the purge_deleted_objects.py script as a subprocess."""
         # Assume script is in the same directory as this test file
         script_path = os.path.join(
-            os.path.dirname(__file__), "object_storage_cleaner.py"
+            os.path.dirname(__file__), "purge_deleted_objects.py"
         )
         cmd = [sys.executable, script_path, self.bucket_name] + args
 

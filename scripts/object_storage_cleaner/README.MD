@@ -37,7 +37,7 @@ Run the script directly from the command line.
 ### Basic Syntax
 
 ```bash
-python object_storage_cleaner.py <bucket_name> [options]
+python purge_deleted_objects.py <bucket_name> [options]
 ```
 
 ### Options
@@ -59,13 +59,13 @@ check [Configuration and credential file settings in the AWS CLI](https://docs.a
 **1. Scan a bucket to see how much space can be freed:**
 
 ```bash
-python object_storage_cleaner.py my-production-bucket --dry-run
+python purge_deleted_objects.py my-production-bucket --dry-run
 ```
 
 **2. Scan a specific folder:**
 
 ```bash
-python object_storage_cleaner.py my-production-bucket --dry-run --prefix "logs/2023/"
+python purge_deleted_objects.py my-production-bucket --dry-run --prefix "logs/2023/"
 ```
 
 **3. Cleanup objects deleted more than 30 days ago (Retention Policy):**
@@ -74,20 +74,20 @@ python object_storage_cleaner.py my-production-bucket --dry-run --prefix "logs/2
 
 ```bash
 # Clean objects deleted OLDER than 30 days
-python object_storage_cleaner.py my-bucket --retention-period '30 days'
+python purge_deleted_objects.py my-bucket --retention-period '30 days'
 ```
 
 **4. Permanently delete objects:**
 
 ```bash
-python object_storage_cleaner.py my-bucket
+python purge_deleted_objects.py my-bucket
 # You will be prompted to confirm.
 ```
 
 **5. Automated cleanup for MinIO (local/custom endpoint):**
 
 ```bash
-python object_storage_cleaner.py test-bucket --force
+python purge_deleted_objects.py test-bucket --force
 ```
 
 ## Running Tests
