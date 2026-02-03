@@ -1,0 +1,211 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; {% trans 'Global Search' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" style="width: 75%; margin: 0 auto;">
+    <h1>{% trans 'Global Search' %}</h1>
+
+    {# Search Form #}
+    <div class="module" style="margin-bottom: 10px;">
+        <form method="get" action="{% url 'admin:global_search' %}" style="padding: 20px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    placeholder="{% trans 'Enter username or email...' %}"
+                    class="vTextField"
+                    style="flex: 1; padding: 8px;"
+                    autofocus>
+                <button type="submit" class="button default">{% trans 'Search' %}</button>
+            </div>
+            <p style="margin-top: 10px; color: #666; font-size: 12px;">
+                {% trans 'Tip: Enter an exact username or email address to search across all models.' %}
+            </p>
+        </form>
+    </div>
+
+    {% if query %}
+        {# Person Result table #}
+        {% if person_result %}
+            <div class="card">
+                <div class="card-body">
+                    <div class="module">
+                        <h2 style="padding: 5px 5px; background-color: #ffffff; border-bottom: 1px solid #ddd;">
+                            {% trans 'Person' %}
+                        </h2>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background-color: #ddd;">
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                            {% trans 'Username' %}
+                                        </th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                            {% trans 'Email' %}
+                                        </th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                            {% trans 'First Name' %}
+                                        </th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                            {% trans 'Last Name' %}
+                                        </th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                            {% trans 'Date Joined' %}
+                                        </th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                            {% trans 'Actions' %}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #ddd; background-color: #f8f9fa;">
+                                        <td style="padding: 10px;">{{ person_result.username|default:"-" }}</td>
+                                        <td style="padding: 10px;">{{ person_result.email|default:"-" }}</td>
+                                        <td style="padding: 10px;">{{ person_result.first_name|default:"-" }}</td>
+                                        <td style="padding: 10px;">{{ person_result.last_name|default:"-" }}</td>
+                                        <td style="padding: 10px;">{{ person_result.date_joined|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                        <td style="padding: 10px;">
+                                            <a href="{% url 'admin:core_person_change' person_result.pk %}"
+                                               target="_blank"
+                                               class="button">
+                                                {% trans 'View' %}
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Other Models Results (with pagination) #}
+        {% if results %}
+            {# Display results for each model #}
+            {% for model_key, data in results.items %}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="module">
+                            <h2 style="padding: 5px 5px; background-color: #ffffff; border-bottom: 1px solid #ddd;">
+                                {{ data.verbose_name_plural|title }}
+                            </h2>
+
+                            {% if data.page_obj.object_list %}
+                                {# Results Table #}
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="background-color: #ddd;">
+                                                {% for field_name, field_label in data.fields %}
+                                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                                        {{ field_label }}
+                                                    </th>
+                                                {% endfor %}
+                                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">
+                                                    {% trans 'Actions' %}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for obj in data.page_obj %}
+                                                <tr style="border-bottom: 1px solid #ddd; background-color: #f8f9fa;">
+                                                    {% if model_key == 'organizations' %}
+                                                        <td style="padding: 10px;">{{ obj.username|default:"-" }}</td>
+                                                        <td style="padding: 10px;">{{ obj.organization_owner|default:"-" }}</td>
+                                                        <td style="padding: 10px;">{{ obj.created_at|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                                    {% elif model_key == 'projects' %}
+                                                        <td style="padding: 10px;">{{ obj.name|default:"-" }}</td>
+                                                        <td style="padding: 10px;">{{ obj.owner|default:"-" }}</td>
+                                                        <td style="padding: 10px;">
+                                                            {% if obj.is_public %}
+                                                                <img src="{% static 'admin/img/icon-yes.svg' %}" alt="True">
+                                                            {% else %}
+                                                                <img src="{% static 'admin/img/icon-no.svg' %}" alt="False">
+                                                            {% endif %}
+                                                        </td>
+                                                        <td style="padding: 10px;">{{ obj.created_at|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                                    {% elif model_key == 'subscriptions' %}
+                                                        <td style="padding: 10px;">{{ obj.id|default:"-" }}</td>
+                                                        <td style="padding: 10px;">{{ obj.account.user|default:"-" }}</td>
+                                                        <td style="padding: 10px;">{{ obj.plan.display_name|default:"-" }}</td>
+                                                        <td style="padding: 10px;">{{ obj.status|default:"-" }}</td>
+                                                        <td style="padding: 10px;">{{ obj.active_since|date:"M. j, Y, g:i a"|default:"-" }}</td>
+                                                    {% endif %}
+                                                    <td style="padding: 10px;">
+                                                        <a href="{% url 'admin:'|add:data.app_label|add:'_'|add:data.model_name|add:'_change' obj.pk %}" target="_blank"
+                                                        class="button">
+                                                            {% trans 'View' %}
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div style="padding: 20px;">
+                                    <p style="color: #666; text-align: center; margin: 5px;">{% trans 'No results found for this model.' %}</p>
+                                </div>
+                            {% endif %}
+
+                            {% if data.page_obj.object_list %}
+                                {% if data.page_obj.has_other_pages %}
+                                    <p class="paginator" style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0px;">
+                                        <span>
+                                            {% blocktrans count counter=data.page_obj.paginator.count %}{{ counter }} result{% plural %}{{ counter }} results{% endblocktrans %}
+                                        </span>
+                                        <span>
+                                        {% if data.page_obj.has_previous %}
+                                            <a style="margin-right: 5px;"
+                                                href="?q={{ query|urlencode }}&{{ data.page_param }}={{ data.page_obj.previous_page_number }}{% for param_name, param_value in request.GET.items %}{% if param_name != 'q' and param_name != data.page_param %}&{{ param_name }}={{ param_value }}{% endif %}{% endfor %}">
+                                                &lsaquo; {% trans 'previous' %}
+                                            </a>
+                                        {% endif %}
+
+                                        {% blocktrans with page=data.page_obj.number total=data.page_obj.paginator.num_pages %}Page {{ page }} of {{ total }}.{% endblocktrans %}
+
+                                        {% if data.page_obj.has_next %}
+                                            <a style="margin-left: 5px;"
+                                            href="?q={{ query|urlencode }}&{{ data.page_param }}={{ data.page_obj.next_page_number }}{% for param_name, param_value in request.GET.items %}{% if param_name != 'q' and param_name != data.page_param %}&{{ param_name }}={{ param_value }}{% endif %}{% endfor %}">
+                                                {% trans 'next' %} &rsaquo;
+                                            </a>
+                                        {% endif %}
+
+                                        </span>
+                                    </p>
+                            {% endif %}
+                        {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {# No results message #}
+        {% if not person_result and not results %}
+            <div class="module" style="padding: 20px;">
+                <p class="info">
+                    {% blocktrans with query=query %}
+                        No results found for "{{ query }}". Please ensure you're using an exact username or email address.
+                    {% endblocktrans %}
+                </p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="module" style="padding: 20px;">
+            <p style="color: #666;">
+                {% trans 'Enter a username or email address in the search box above to find matching records across Person, Organization, Project, and Subscription models.' %}
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
