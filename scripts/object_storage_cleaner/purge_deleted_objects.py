@@ -27,6 +27,9 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
+# AWS S3 limit for delete objects batch up to 1000 keys (https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/delete_objects.html)
+DELETE_BATCH_SIZE = 1000
+
 if TYPE_CHECKING:
     from mypy_boto3_s3.type_defs import (
         DeleteObjectsOutputTypeDef,
@@ -125,7 +128,7 @@ def analyze_key_history(
     latest_version = versions[0]
 
     # Criteria: Latest version must be a delete marker
-    if not latest_version.get("IsDeleteMarker", False):
+    if not latest_version["IsDeleteMarker"]:
         return None
 
     # Filter by time
@@ -157,7 +160,7 @@ def delete_versions_batch(
     s3_client: BaseClient, bucket: str, versions: list[ObjectVersionOrDeleteMarker]
 ) -> None:
     """
-    Delete a batch of versions.
+    Delete a batch of versions, up to 1000 versions per batch.
 
     Args:
         s3_client: The configured S3 client.
@@ -166,6 +169,8 @@ def delete_versions_batch(
     """
     if not versions:
         return
+
+    assert len(versions) <= 1000
 
     # Transform to boto3 format
     objects: list[ObjectVersionOrDeleteMarker] = []
@@ -305,14 +310,13 @@ def action_permanently_delete_versions(
         objects_iterator: The iterator of logically deleted objects.
     """
     batch: list[ObjectVersionOrDeleteMarker] = []
-    batch_size = 1000
 
     for obj in objects_iterator:
         for v in obj.versions:
             batch.append(v)
 
             # Flush batch if full
-            if len(batch) == batch_size:
+            if len(batch) == DELETE_BATCH_SIZE:
                 delete_versions_batch(s3_client, bucket, batch)
                 batch.clear()
 
@@ -422,6 +426,7 @@ def main() -> int:
         "--retention-period",
         type=parse_retention_period,
         dest="retention_cutoff_ts",
+        required=True,
         help="Only process objects deleted BEFORE this duration (e.g. '30 days'). Recent deletions are preserved.",
     )
     parser.add_argument(
