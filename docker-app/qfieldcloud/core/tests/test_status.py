@@ -69,8 +69,8 @@ class QfcTestCase(APITransactionTestCase):
             "default": {
                 "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
                 "OPTIONS": {
-                    "access_key": "minioadmin",
-                    "secret_key": "minioadmin",
+                    "access_key": "rustfsadmin",
+                    "secret_key": "rustfsadmin",
                     "bucket_name": "nonexistent-bucket",
                     "region_name": "",
                     "endpoint_url": "http://wrong.url",
