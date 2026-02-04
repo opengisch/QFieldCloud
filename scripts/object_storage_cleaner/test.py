@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import os
 import subprocess
@@ -6,9 +8,17 @@ import time
 import unittest
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 
 import boto3
 from purge_deleted_objects import parse_retention_period
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3.type_defs import (
+        DeleteMarkerEntryTypeDef,
+        ListObjectVersionsOutputTypeDef,
+        ObjectVersionTypeDef,
+    )
 
 
 class TestObjectStorageCleaner(unittest.TestCase):
@@ -74,7 +84,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
 
         return result
 
-    def create_file(self, key, content="test content"):
+    def create_file(self, key: str, content: str = "test content") -> None:
         # Get number of versions before creating the file
         number_of_versions = len(self.list_versions(key))
 
@@ -98,7 +108,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         )
         self.assertEqual(file, content)
 
-    def delete_file(self, key):
+    def delete_file(self, key: str) -> None:
         # Get number of versions before deleting the file
         number_of_versions = len(self.list_versions(key))
 
@@ -112,8 +122,10 @@ class TestObjectStorageCleaner(unittest.TestCase):
         with self.assertRaises(self.s3_client.exceptions.ClientError):
             self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
 
-    def list_versions(self, prefix):
-        versions = self.s3_client.list_object_versions(
+    def list_versions(
+        self, prefix: str | None = None
+    ) -> list[DeleteMarkerEntryTypeDef | ObjectVersionTypeDef]:
+        versions: ListObjectVersionsOutputTypeDef = self.s3_client.list_object_versions(
             Bucket=self.bucket_name, Prefix=prefix
         )
         all_versions = versions.get("Versions", []) + versions.get("DeleteMarkers", [])
