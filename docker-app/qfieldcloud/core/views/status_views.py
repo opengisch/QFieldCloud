@@ -27,6 +27,9 @@ class StatusDict(TypedDict):
     status_page_url: str | None
     incident_message: str | None
     incident_timestamp_utc: str | None
+    maintenance_message: str | None
+    maintenance_start_timestamp_utc: str | None
+    maintenance_end_timestamp_utc: str | None
 
 
 @extend_schema_view(
@@ -43,6 +46,9 @@ class APIStatusView(views.APIView):
             "status_page_url": None,
             "incident_message": None,
             "incident_timestamp_utc": None,
+            "maintenance_message": None,
+            "maintenance_start_timestamp_utc": None,
+            "maintenance_end_timestamp_utc": None,
         }
 
         # add status page url if set
@@ -59,6 +65,22 @@ class APIStatusView(views.APIView):
 
             results["incident_message"] = config.INCIDENT_MESSAGE
             results["incident_timestamp_utc"] = config.INCIDENT_TIMESTAMP_UTC
+
+        if config.MAINTENANCE_IS_PLANNED:
+            logger.info(
+                "Maintenance is planned, reporting maintenance details in status API from %s to %s with message: %s",
+                config.MAINTENANCE_START_TIMESTAMP_UTC,
+                config.MAINTENANCE_END_TIMESTAMP_UTC,
+                config.MAINTENANCE_MESSAGE,
+            )
+
+            results["maintenance_message"] = config.MAINTENANCE_MESSAGE
+            results["maintenance_start_timestamp_utc"] = (
+                config.MAINTENANCE_START_TIMESTAMP_UTC
+            )
+            results["maintenance_end_timestamp_utc"] = (
+                config.MAINTENANCE_END_TIMESTAMP_UTC
+            )
 
         return Response(results, status=status.HTTP_200_OK)
 
