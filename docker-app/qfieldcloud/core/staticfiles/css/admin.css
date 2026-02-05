@@ -5,3 +5,28 @@
 #jazzy-logo img{
     box-shadow: none!important;
 }
+
+.qfc-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.qfc-table thead {
+    background-color: #ddd;
+}
+
+.qfc-table th,
+.qfc-table td {
+    padding: 10px;
+    text-align: left;
+}
+
+.qfc-table th {
+    border-bottom: 2px solid #ddd;
+    font-weight: 600;
+}
+
+.qfc-table tbody tr {
+    border-bottom: 1px solid #ddd;
+    background-color: #f8f9fa;
+}

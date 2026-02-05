@@ -162,3 +162,27 @@ class QfcFilesTestCaseMixin:
         self.client.credentials(HTTP_AUTHORIZATION="")
 
         return response
+
+    def _get_file_metadata(
+        self,
+        user: User,
+        project: Project,
+        filename: str,
+    ) -> HttpResponse | Response:
+        token = self._get_token_for_user(user)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+
+        response = self.client.get(
+            reverse(
+                "filestorage_file_metadata",
+                kwargs={
+                    "project_id": project.id,
+                    "filename": filename,
+                },
+            )
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="")
+
+        return response
