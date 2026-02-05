@@ -725,6 +725,27 @@ CONSTANCE_CONFIG = {
         If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
         "textarea",
     ),
+    "MAINTENANCE_IS_PLANNED": (
+        False,
+        "Is there a planned maintenance? If checked, a banner will be shown on top of every page with the content of `MAINTENANCE_MESSAGE`.",
+        bool,
+    ),
+    "MAINTENANCE_START_TIMESTAMP_UTC": (
+        datetime(2026, 1, 1, 18, 0, 0),
+        "When the maintenance is planned to start. Put time in UTC!",
+        datetime,
+    ),
+    "MAINTENANCE_END_TIMESTAMP_UTC": (
+        datetime(2026, 1, 1, 20, 0, 0),
+        "When the maintenance is planned to end. Put time in UTC!",
+        datetime,
+    ),
+    "MAINTENANCE_MESSAGE": (
+        "QFieldCloud will be undergoing maintenance. During this time, the service might be unavailable.",
+        """The banner content to be shown on top of every page if `MAINTENANCE_IS_PLANNED` is checked.
+        If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
+        "textarea",
+    ),
     "WORKER_TIMEOUT_S": (
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
@@ -774,6 +795,12 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "INCIDENT_IS_ACTIVE",
         "INCIDENT_TIMESTAMP_UTC",
         "INCIDENT_MESSAGE",
+    ),
+    "Maintenance": (
+        "MAINTENANCE_IS_PLANNED",
+        "MAINTENANCE_START_TIMESTAMP_UTC",
+        "MAINTENANCE_END_TIMESTAMP_UTC",
+        "MAINTENANCE_MESSAGE",
     ),
     "Worker": (
         "WORKER_TIMEOUT_S",
