@@ -456,14 +456,18 @@ class TestObjectStorageCleaner(unittest.TestCase):
 
         # Create 100 files
         for i in range(100):
-            self.create_file(f"{self.unique_prefix}file_{i}.txt", "a" * 100)
+            self.create_file(
+                f"{self.unique_prefix}file_{i}.txt", str(i).ljust(100, "a")
+            )
 
         # Delete key1
         self.delete_file(key1)
 
         # Create 100 files
         for i in range(100):
-            self.create_file(f"{self.unique_prefix}file_{i}_a.txt", "a" * 100)
+            self.create_file(
+                f"{self.unique_prefix}file_{i}_a.txt", str(i).ljust(100, "a")
+            )
 
         # Restore key1
         self.create_file(key1, "a" * 100)
@@ -543,7 +547,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
 
         # Create 20 versions as fast as possible
         for i in range(20):
-            self.create_file(key, "a" * 100)
+            self.create_file(key, str(i).ljust(100, "a"))
 
         # Delete at the end
         self.delete_file(key)
