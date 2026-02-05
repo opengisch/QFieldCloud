@@ -950,6 +950,13 @@ JAZZMIN_SETTINGS = {
     "copyright": "OPENGIS.ch",
     # Additional custom CSS file for the Django Admin pages.
     "custom_css": "css/admin.css",
+    # Top menu links
+    "topmenu_links": [
+        {
+            "name": "Global Search",
+            "url": "admin:global_search",
+        },
+    ],
 }
 
 # Whitelabel configuration

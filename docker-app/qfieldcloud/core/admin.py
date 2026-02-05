@@ -28,13 +28,15 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.views import logout_then_login, redirect_to_login
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.storage import storages
+from django.core.paginator import Paginator
+from django.core.validators import validate_email
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
 from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
-from django.shortcuts import resolve_url
+from django.shortcuts import render, resolve_url
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
@@ -110,6 +112,172 @@ class QfcAdminSite(AdminSite):
         return logout_then_login(request)
 
     # TODO consider adding a logout view to redirect to the Allauth's logout view, but then we lose the nice template we have right now.
+
+    def get_urls(self):
+        """Add custom admin URLs including the global search view."""
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "global-search/",
+                self.admin_view(self.global_search_view),
+                name="global_search",
+            ),
+        ]
+        return custom_urls + urls
+
+    def global_search_view(self, request: HttpRequest) -> HttpResponse:
+        """Custom multi-model search view with exact username/email matching.
+
+        Searches across Person, Organization, Project, and Subscription models
+        using exact username or email matching. Results are paginated independently
+        per model (except Person which is always unique).
+        """
+        query = request.GET.get("q", "").strip()
+
+        results: dict[str, dict[str, Any]] = {}
+        person_result: Person | None = None
+        PAGE_SIZE = 5
+
+        if query:
+            # Validate query length
+            if len(query) > 255:
+                messages.error(request, _("Search query too long (max 255 characters)"))
+                query = ""
+            elif len(query) < 2:
+                messages.warning(
+                    request, _("Search query too short (min 2 characters)")
+                )
+                query = ""
+
+            # Validate if the query is a valid email
+            try:
+                validate_email(query)
+                is_email_search = True
+            except ValidationError:
+                is_email_search = False
+
+            # Get the subscription model
+            subscription_model = get_subscription_model()
+
+            # Handle Person search separately
+            if is_email_search:
+                person_result = (
+                    Person.objects.filter(email__iexact=query)
+                    .only("username", "email", "first_name", "last_name", "date_joined")
+                    .first()
+                )
+            else:
+                person_result = (
+                    Person.objects.filter(username__iexact=query)
+                    .only("username", "email", "first_name", "last_name", "date_joined")
+                    .first()
+                )
+
+            # Define what to search for each model and the filters to apply
+            models_to_search: list[dict[str, Any]] = [
+                {
+                    "key": "organizations",
+                    "model": Organization,
+                    "email_filter": {"organization_owner__email__iexact": query},
+                    "username_filter": {"organization_owner__username__iexact": query},
+                    "select_related": ["organization_owner"],
+                    "only_fields": [
+                        "username",
+                        "organization_owner__username",
+                        "created_at",
+                    ],
+                    "page_param": Organization._meta.model_name + "_page",
+                    "fields": [
+                        ("username", "Username"),
+                        ("organization_owner", "Owner"),
+                        ("created_at", "Created At"),
+                    ],
+                },
+                {
+                    "key": "projects",
+                    "model": Project,
+                    "email_filter": {"owner__email__iexact": query},
+                    "username_filter": {"owner__username__iexact": query},
+                    "select_related": ["owner"],
+                    "only_fields": [
+                        "name",
+                        "owner__username",
+                        "is_public",
+                        "created_at",
+                    ],
+                    "page_param": Project._meta.model_name + "_page",
+                    "fields": [
+                        ("name", "Name"),
+                        ("owner", "Owner"),
+                        ("is_public", "Public"),
+                        ("created_at", "Created At"),
+                    ],
+                },
+                {
+                    "key": "subscriptions",
+                    "model": subscription_model,
+                    "email_filter": {"account__user__email__iexact": query},
+                    "username_filter": {"account__user__username__iexact": query},
+                    "select_related": ["account__user", "plan"],
+                    "only_fields": [
+                        "id",
+                        "account__user__username",
+                        "plan__display_name",
+                        "status",
+                        "active_since",
+                    ],
+                    "page_param": subscription_model._meta.model_name + "_page",
+                    "fields": [
+                        ("id", "ID"),
+                        ("account__user", "User"),
+                        ("plan__display_name", "Plan Name"),
+                        ("status", "Status"),
+                        ("active_since", "Active Since"),
+                    ],
+                },
+            ]
+
+            # Search each model
+            for config in models_to_search:
+                # Build queryset
+                filter_kwargs = config["username_filter"]
+
+                if is_email_search:
+                    filter_kwargs = config["email_filter"]
+
+                qs: QuerySet = config["model"].objects.filter(**filter_kwargs)
+
+                if config["select_related"]:
+                    qs = qs.select_related(*config["select_related"])
+
+                if config["only_fields"]:
+                    qs = qs.only(*config["only_fields"])
+
+                # Paginate
+                page_num = request.GET.get(config["page_param"], 1)
+                paginator = Paginator(qs, PAGE_SIZE)
+                page_obj = paginator.get_page(page_num)
+
+                # Store results
+                model = config["model"]
+                results[config["key"]] = {
+                    "verbose_name_plural": model._meta.verbose_name_plural,
+                    "model_name": model._meta.model_name,
+                    "app_label": model._meta.app_label,
+                    "page_param": config["page_param"],
+                    "page_obj": page_obj,
+                    "fields": config["fields"],
+                }
+
+        context = {
+            **self.each_context(request),
+            "title": "Global Search",
+            "query": query,
+            "person_result": person_result,
+            "results": results,
+        }
+
+        return render(request, "admin/global_search.html", context)
 
 
 qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
