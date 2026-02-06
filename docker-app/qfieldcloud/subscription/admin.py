@@ -104,7 +104,8 @@ class SubscriptionModelForm(forms.ModelForm):
         )
 
         if (
-            not hasattr(self.instance, "active_storage_package_quantity")
+            not self.instance.pk
+            or not hasattr(self.instance, "active_storage_package_quantity")
             or additional_storage_quantity
             == self.instance.active_storage_package_quantity
         ):
@@ -125,6 +126,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "account",
         "status",
         "active_since",
+        "additional_storage_quantity",
         "active_until",
         "billing_cycle_anchor_at",
         "current_period_since",
