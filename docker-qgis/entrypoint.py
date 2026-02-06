@@ -13,6 +13,7 @@ logger.setLevel(logging.INFO)
 
 
 def main() -> None:
+    from qfc_worker.memory_profiler import init_memory_profiling
     from qfc_worker.utils import setup_basic_logging_config
 
     setup_basic_logging_config()
@@ -21,6 +22,9 @@ def main() -> None:
     logging.getLogger("nose").setLevel(logging.CRITICAL)
     logging.getLogger("s3transfer").setLevel(logging.CRITICAL)
     logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+
+    # Initialize memory profiling if enabled
+    init_memory_profiling()
 
     if PGSERVICE_FILE_CONTENTS:
         with open(Path.home().joinpath(".pg_service.conf"), "w") as f:

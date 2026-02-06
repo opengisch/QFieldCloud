@@ -16,6 +16,7 @@ from qfc_worker.exceptions import (
     InvalidXmlFileException,
     ProjectFileNotFoundException,
 )
+from qfc_worker.memory_profiler import profile_memory
 from qfc_worker.utils import (
     download_project,
     get_layers_data,
@@ -82,11 +83,13 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
     logger.info("Reading QGIS project file…")
 
     details: ProjectDetails = cast(ProjectDetails, {})
-    tmp_project_details = open_qgis_project_temporarily(project.fileName())
-    tmp_project = tmp_project_details["project"]
 
-    # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
-    del tmp_project
+    with profile_memory("open_qgis_project_temporarily"):
+        tmp_project_details = open_qgis_project_temporarily(project.fileName())
+        tmp_project = tmp_project_details["project"]
+
+        # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
+        del tmp_project
 
     details["background_color"] = tmp_project_details["background_color"]
     details["extent"] = tmp_project_details["extent"]
@@ -95,7 +98,9 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
 
     logger.info("Extracting layer and datasource details…")
 
-    details["layers_by_id"] = get_layers_data(project)
+    with profile_memory("get_layers_data"):
+        details["layers_by_id"] = get_layers_data(project)
+
     details["ordered_layer_ids"] = list(details["layers_by_id"].keys())
     details["attachment_dirs"], _ = project.readListEntry(
         "QFieldSync", "attachmentDirs", ["DCIM"]
@@ -120,9 +125,10 @@ def _generate_thumbnail(
     """
     logger.info("Generate project thumbnail image…")
 
-    tmp_project_details = open_qgis_project_temporarily(the_qgis_file_name)
-    tmp_project = tmp_project_details["project"]
-    map_settings = tmp_project_details["map_settings"]
+    with profile_memory("open_qgis_project_temporarily (thumbnail)"):
+        tmp_project_details = open_qgis_project_temporarily(the_qgis_file_name)
+        tmp_project = tmp_project_details["project"]
+        map_settings = tmp_project_details["map_settings"]
 
     if map_settings.extent().isEmpty():
         logger.warning(
@@ -143,7 +149,6 @@ def _generate_thumbnail(
     img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
     painter = QPainter(img)
     job = QgsMapRendererCustomPainterJob(map_settings, painter)
-
     timer = QTimer()
     timer.setSingleShot(True)
     timer.setInterval(thumbnail_timeout_s * 1000)

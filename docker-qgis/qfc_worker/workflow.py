@@ -231,6 +231,8 @@ def run_workflow(
         workflow: workflow to be executed
         feedback_filename: write feedback to an IO device, to Path filename, or don't write it
     """
+    from qfc_worker.memory_profiler import MemoryProfiler
+
     feedback: dict[str, Any] = {
         "feedback_version": "2.0",
         "workflow_version": workflow.version,
@@ -244,24 +246,27 @@ def run_workflow(
         root_workdir = Path(tempfile.mkdtemp())
         for step in workflow.steps:
             with logger_context(step):
-                arguments = {
-                    **step.arguments,
-                }
-                for name, value in arguments.items():
-                    if isinstance(value, StepOutput):
-                        arguments[name] = step_returns[value.step_id][value.return_name]
-                    elif isinstance(value, WorkDirPathBase):
-                        arguments[name] = value.eval(root_workdir)
+                with MemoryProfiler(f"Step: {step.name}"):
+                    arguments = {
+                        **step.arguments,
+                    }
+                    for name, value in arguments.items():
+                        if isinstance(value, StepOutput):
+                            arguments[name] = step_returns[value.step_id][
+                                value.return_name
+                            ]
+                        elif isinstance(value, WorkDirPathBase):
+                            arguments[name] = value.eval(root_workdir)
 
-                return_values = step.method(**arguments)
+                    return_values = step.method(**arguments)
 
-                # ensure the return values are always a tuple
-                if len(step.return_names) <= 1:
-                    return_values = (return_values,)
+                    # ensure the return values are always a tuple
+                    if len(step.return_names) <= 1:
+                        return_values = (return_values,)
 
-                step_returns[step.id] = {}
-                for name, value in zip(step.return_names, return_values):
-                    step_returns[step.id][name] = value
+                    step_returns[step.id] = {}
+                    for name, value in zip(step.return_names, return_values):
+                        step_returns[step.id][name] = value
 
     except Exception as err:
         feedback["error"] = str(err)
