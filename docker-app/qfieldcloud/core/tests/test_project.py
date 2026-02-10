@@ -944,3 +944,24 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_upload_project_thumbnail(self):
+        """Test that uploading a thumbnail to a project is successful."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create a project
+        project = Project.objects.create(name="test_upload_thumbnail", owner=self.user1)
+
+        self.assertIsNone(project.thumbnail.name)
+
+        # Upload a thumbnail
+        response = self.client.post(
+            f"/api/v1/projects/{project.id}/thumbnail/",
+            {"thumbnail": io.FileIO(testdata_path("DCIM/1.jpg"), "rb")},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check that the thumbnail is set on the project
+        project.refresh_from_db()
+        self.assertIsNotNone(project.thumbnail)
