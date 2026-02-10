@@ -1223,7 +1223,15 @@ class Project(models.Model):
         max_length=1024,
         null=True,
         blank=True,
-        validators=(FileExtensionValidator(allowed_extensions=("png", "jpg")),),
+        validators=[
+            FileExtensionValidator(allowed_extensions=("png", "jpg")),
+            validators.MaxImageDimensionValidator(
+                settings.QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_DIMENSION
+            ),
+            validators.MaxFileSizeValidator(
+                settings.QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_BYTES
+            ),
+        ],
     )
 
     # Duplicating logic from the plan's storage_keep_versions
