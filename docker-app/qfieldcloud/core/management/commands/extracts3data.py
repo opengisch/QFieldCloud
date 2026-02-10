@@ -7,7 +7,7 @@ import mypy_boto3_s3
 from django.conf import settings
 from django.core.files.storage import storages
 from django.core.management.base import BaseCommand, CommandParser
-from storages.backends.s3boto3 import S3Boto3Storage
+from storages.backends.s3 import S3Storage
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class Command(BaseCommand):
     def get_s3_bucket(storage_name: str) -> mypy_boto3_s3.service_resource.Bucket:
         storage = storages[storage_name]
 
-        if not isinstance(storage, S3Boto3Storage):
+        if not isinstance(storage, S3Storage):
             raise NotImplementedError(
                 "Using the `extracts3data` command only supports S3 storages!"
             )
@@ -111,7 +111,7 @@ class Command(BaseCommand):
             storage = storages[storage_name]
 
             # currently we only support S3 storage
-            if not isinstance(storage, S3Boto3Storage):
+            if not isinstance(storage, S3Storage):
                 continue
 
             storage_names.append(storage_name)
