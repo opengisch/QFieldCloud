@@ -28,7 +28,6 @@ class DjangoStorages(TypedDict):
 
 class StoragesConfig(TypedDict):
     STORAGES: dict[str, DjangoStorages]
-    LEGACY_STORAGE_NAME: str
 
 
 def get_storages_config() -> StoragesConfig:
@@ -43,17 +42,7 @@ def get_storages_config() -> StoragesConfig:
                 "Envvar STORAGES should be a parsable JSON string!"
             )
     else:
-        raw_storages["default"] = {
-            "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
-            "OPTIONS": {
-                "access_key": os.environ["STORAGE_ACCESS_KEY_ID"],
-                "secret_key": os.environ["STORAGE_SECRET_ACCESS_KEY"],
-                "bucket_name": os.environ["STORAGE_BUCKET_NAME"],
-                "region_name": os.environ["STORAGE_REGION_NAME"],
-                "endpoint_url": os.environ["STORAGE_ENDPOINT_URL"],
-            },
-            "QFC_IS_LEGACY": True,
-        }
+        raise ConfigValidationError("No STORAGES envvar configured!")
 
     if not isinstance(raw_storages, dict):
         raise ConfigValidationError(
@@ -61,11 +50,7 @@ def get_storages_config() -> StoragesConfig:
         )
 
     if "default" not in raw_storages:
-        raise ConfigValidationError(
-            "Envvar STORAGES_SERVICE_BY_DEFAULT should be non-empty string!"
-        )
-
-    legacy_storage_name = ""
+        raise ConfigValidationError("Envvar STORAGES should contain a default storage!")
 
     for service_name, service_config in raw_storages.items():
         if not service_name:
@@ -83,17 +68,8 @@ def get_storages_config() -> StoragesConfig:
                 )
             )
 
-        if service_config["QFC_IS_LEGACY"]:
-            if legacy_storage_name:
-                raise ConfigValidationError(
-                    'There must be only one legacy storage, but both "{service_name}" and "{legacy_storage}" have `QFC_IS_LEGACY` set to `True`!'
-                )
-
-            legacy_storage_name = service_name
-
     return {
         "STORAGES": raw_storages,
-        "LEGACY_STORAGE_NAME": legacy_storage_name,
     }
 
 
