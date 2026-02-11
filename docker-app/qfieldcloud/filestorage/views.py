@@ -5,10 +5,9 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core import signing
 from django.db.models import Q, QuerySet
 from django.http import Http404
-from django.http.response import HttpResponse, HttpResponseBase
+from django.http.response import HttpResponseBase
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
@@ -250,81 +249,3 @@ class AvatarFileReadView(views.APIView):
             )
         else:
             return redirect(staticfiles_storage.url("logo.svg"))
-
-
-@csrf_exempt
-def compatibility_file_list_view(
-    request: Request, *args, **kwargs
-) -> Response | HttpResponse:
-    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
-    project_id: UUID = kwargs["project_id"]
-    view_kwargs = kwargs.pop("view_kwargs", {})
-
-    try:
-        _project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
-        return FileListView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-    logger.debug(f"Project {project_id=} will be using the regular file management.")
-
-    return FileListView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-
-@csrf_exempt
-def compatibility_file_metadata_view(
-    request: Request, *args, **kwargs
-) -> Response | HttpResponse:
-    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
-    project_id: UUID = kwargs["project_id"]
-    view_kwargs = kwargs.pop("view_kwargs", {})
-
-    try:
-        _project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
-        return FileMetadataView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-    logger.debug(f"Project {project_id=} will be using the regular file management.")
-
-    return FileMetadataView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-
-@csrf_exempt
-def compatibility_file_crud_view(
-    request: Request, *args, **kwargs
-) -> Response | HttpResponse:
-    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
-    project_id: UUID = kwargs["project_id"]
-    view_kwargs = kwargs.pop("view_kwargs", {})
-
-    try:
-        _project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
-        return FileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-    logger.debug(f"Project {project_id=} will be using the regular file management.")
-
-    return FileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-
-@csrf_exempt
-def compatibility_project_meta_file_read_view(
-    request: Request, *args, **kwargs
-) -> Response | HttpResponse:
-    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
-    project_id: UUID = kwargs["project_id"]
-    view_kwargs = kwargs.pop("view_kwargs", {})
-
-    try:
-        _project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
-        return ProjectMetaFileReadView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-    logger.debug(
-        f"Project {project_id=} will be using the regular file management for meta files."
-    )
-
-    return ProjectMetaFileReadView.as_view(**view_kwargs)(request, *args, **kwargs)

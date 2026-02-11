@@ -4,7 +4,6 @@ from uuid import UUID
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiTypes,
@@ -432,42 +431,3 @@ class PackageUploadFilesView(views.APIView):
             status=status.HTTP_201_CREATED,
             headers=headers,
         )
-
-
-@csrf_exempt
-def compatibility_latest_package_view(request: Request, *args, **kwargs) -> Response:
-    project_id: UUID = kwargs["project_id"]
-    _project = get_object_or_404(Project, id=project_id)
-    logger.debug(
-        f"Project {project_id=} will be using the regular package file management."
-    )
-
-    return LatestPackageView.as_view()(request, *args, **kwargs)
-
-
-@csrf_exempt
-def compatibility_package_download_files_view(
-    request: Request, *args, **kwargs
-) -> Response:
-    project_id: UUID = kwargs["project_id"]
-    _project = get_object_or_404(Project, id=project_id)
-
-    logger.debug(
-        f"Project {project_id=} will be using the regular package file management."
-    )
-
-    return LatestPackageDownloadFilesView.as_view()(request, *args, **kwargs)
-
-
-@csrf_exempt
-def compatibility_package_upload_files_view(
-    request: Request, *args, **kwargs
-) -> Response:
-    project_id: UUID = kwargs["project_id"]
-    _project = get_object_or_404(Project, id=project_id)
-
-    logger.debug(
-        f"Project {project_id=} will be using the regular package file management."
-    )
-
-    return PackageUploadFilesView.as_view()(request, *args, **kwargs)
