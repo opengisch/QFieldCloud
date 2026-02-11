@@ -336,7 +336,7 @@ if STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE not in STORAGES:
     )
 
 STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED = bool(
-    int(os.environ.get("STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED", 1))
+    int(os.environ.get("STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED") or 1)
 )
 
 # Delete with QF-7231 Make S3 backend storage not versionable
@@ -615,7 +615,8 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 # https://github.com/bee-keeper/django-invitations#additional-configuration
 INVITATIONS_INVITATION_EXPIRY = 365  # integer in days, 0 disables invitations
 INVITATIONS_INVITATION_ONLY = False
-# INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+INVITATIONS_ADAPTER = ACCOUNT_ADAPTER  # set if accepting an invite after signup
 INVITATIONS_GONE_ON_ACCEPT_ERROR = False
 
 TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"

@@ -7,7 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
-from storages.backends.s3boto3 import S3Boto3Storage
+from storages.backends.s3 import S3Storage
 
 
 class QfcBackendStorageMixin(ABC):
@@ -31,7 +31,7 @@ class QfcBackendStorageMixin(ABC):
         pass
 
 
-class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Boto3Storage):
+class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
     def check_status(self) -> bool:
         """Checks if the S3 bucket is reachable.
 

@@ -22,8 +22,8 @@
       {% endblocktrans %}
     </p>
     <p class="card-text">
-      {% blocktrans %}
-      No account yet? Then please <a href="{{ config.ABOUT_QFIELDCLOUD_URL }}#register">join the waiting list</a>.
+      {% blocktrans with about_url=config.ABOUT_QFIELDCLOUD_URL %}
+      No account yet? Then please <a href="{{ about_url }}#register">join the waiting list</a>.
       {% endblocktrans %}
     </p>
   </div>
