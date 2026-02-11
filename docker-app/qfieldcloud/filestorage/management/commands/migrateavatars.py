@@ -1,3 +1,8 @@
+"""
+Migrate avatars from the legacy storage to the `default` storage.
+NOTE: this command is legacy and deprecated, it should not be used anymore. It is only kept for historical reference and should be removed in the future.
+"""
+
 import logging
 from datetime import datetime
 
