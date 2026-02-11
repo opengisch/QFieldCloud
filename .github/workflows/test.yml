@@ -47,7 +47,6 @@ jobs:
           - __flaky__
         storage:
           - default
-          - legacy_storage
     continue-on-error: true
     steps:
       - name: Checkout repo
@@ -68,17 +67,6 @@ jobs:
 
           cat <<EOF >> .env
           STORAGES='{
-              "legacy_storage": {
-                  "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
-                  "OPTIONS": {
-                      "access_key": "minioadmin",
-                      "secret_key": "minioadmin",
-                      "bucket_name": "qfieldcloud-local-legacy",
-                      "region_name": "",
-                      "endpoint_url": "http://172.17.0.1:8009"
-                  },
-                  "QFC_IS_LEGACY": true
-              },
               "webdav": {
                   "BACKEND": "qfieldcloud.filestorage.backend.QfcWebDavStorage",
                   "OPTIONS": {
