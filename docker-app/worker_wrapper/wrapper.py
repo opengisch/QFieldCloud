@@ -634,16 +634,7 @@ class ProcessProjectfileJobRun(JobRun):
         thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
 
         with open(thumbnail_filename, "rb") as f:
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            if project.uses_legacy_storage:
-                legacy_thumbnail_uri = storage.upload_project_thumbail(
-                    project, f, "image/png", "thumbnail"
-                )
-                project.legacy_thumbnail_uri = (
-                    project.legacy_thumbnail_uri or legacy_thumbnail_uri
-                )
-            else:
-                project.thumbnail = ContentFile(f.read(), "dummy_thumbnail_name.png")
+            project.thumbnail = ContentFile(f.read(), "dummy_thumbnail_name.png")
 
         project.save(
             update_fields=(
@@ -653,8 +644,8 @@ class ProcessProjectfileJobRun(JobRun):
             )
         )
 
-        # for non-legacy storage, keep only one thumbnail version if so.
-        if not project.uses_legacy_storage and project.thumbnail:
+        # keep only one thumbnail version if so.
+        if project.thumbnail:
             storage.purge_previous_thumbnails_versions(project)
 
     def after_docker_exception(self) -> None:
