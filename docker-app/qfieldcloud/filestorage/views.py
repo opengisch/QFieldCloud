@@ -22,7 +22,6 @@ from rest_framework.response import Response
 from qfieldcloud.core import (
     pagination,
     permissions_utils,
-    utils2,
 )
 from qfieldcloud.core.models import (
     Project,
@@ -250,13 +249,7 @@ class AvatarFileReadView(views.APIView):
                 str(useraccount.avatar),
             )
         else:
-            if useraccount.legacy_avatar_uri:
-                return utils2.storage.file_response(
-                    request._request,
-                    useraccount.legacy_avatar_uri,
-                )
-            else:
-                return redirect(staticfiles_storage.url("logo.svg"))
+            return redirect(staticfiles_storage.url("logo.svg"))
 
 
 @csrf_exempt
