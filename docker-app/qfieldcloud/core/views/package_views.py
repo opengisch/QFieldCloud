@@ -436,72 +436,38 @@ class PackageUploadFilesView(views.APIView):
 
 @csrf_exempt
 def compatibility_latest_package_view(request: Request, *args, **kwargs) -> Response:
-    """
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
     project_id: UUID = kwargs["project_id"]
-    project = get_object_or_404(Project, id=project_id)
+    _project = get_object_or_404(Project, id=project_id)
+    logger.debug(
+        f"Project {project_id=} will be using the regular package file management."
+    )
 
-    if project.uses_legacy_storage:
-        logger.debug(
-            f"Project {project_id=} will be using the legacy package file management."
-        )
-
-        return LegacyLatestPackageView.as_view()(request, *args, **kwargs)
-    else:
-        logger.debug(
-            f"Project {project_id=} will be using the regular package file management."
-        )
-
-        return LatestPackageView.as_view()(request, *args, **kwargs)
+    return LatestPackageView.as_view()(request, *args, **kwargs)
 
 
 @csrf_exempt
 def compatibility_package_download_files_view(
     request: Request, *args, **kwargs
 ) -> Response:
-    """
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
     project_id: UUID = kwargs["project_id"]
-    project = get_object_or_404(Project, id=project_id)
+    _project = get_object_or_404(Project, id=project_id)
 
-    if project.uses_legacy_storage:
-        logger.debug(
-            f"Project {project_id=} will be using the legacy package file management."
-        )
+    logger.debug(
+        f"Project {project_id=} will be using the regular package file management."
+    )
 
-        return LegacyLatestPackageDownloadFilesView.as_view()(request, *args, **kwargs)
-    else:
-        logger.debug(
-            f"Project {project_id=} will be using the regular package file management."
-        )
-
-        return LatestPackageDownloadFilesView.as_view()(request, *args, **kwargs)
+    return LatestPackageDownloadFilesView.as_view()(request, *args, **kwargs)
 
 
 @csrf_exempt
 def compatibility_package_upload_files_view(
     request: Request, *args, **kwargs
 ) -> Response:
-    """
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
     project_id: UUID = kwargs["project_id"]
-    project = get_object_or_404(Project, id=project_id)
+    _project = get_object_or_404(Project, id=project_id)
 
-    if project.uses_legacy_storage:
-        logger.debug(
-            f"Project {project_id=} will be using the legacy package file management."
-        )
+    logger.debug(
+        f"Project {project_id=} will be using the regular package file management."
+    )
 
-        return LegacyPackageUploadFilesView.as_view()(request, *args, **kwargs)
-    else:
-        logger.debug(
-            f"Project {project_id=} will be using the regular package file management."
-        )
-
-        return PackageUploadFilesView.as_view()(request, *args, **kwargs)
+    return PackageUploadFilesView.as_view()(request, *args, **kwargs)

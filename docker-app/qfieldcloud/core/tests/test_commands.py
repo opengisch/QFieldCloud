@@ -1,5 +1,4 @@
 import csv
-import io
 import os
 
 from django.core.files.base import ContentFile
@@ -8,7 +7,6 @@ from django.test import TestCase
 
 from qfieldcloud.core.models import Person, Project
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
-from qfieldcloud.core.utils2 import storage
 from qfieldcloud.filestorage.models import File, FileVersion
 
 
@@ -23,20 +21,14 @@ class QfcTestCase(TestCase):
         # Project
         cls.p1 = Project.objects.create(name="test_project", owner=user)
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if cls.p1.uses_legacy_storage:
-            storage.upload_project_file(
-                cls.p1, io.BytesIO(b"Hello world!"), "project.qgs"
-            )
-        else:
-            FileVersion.objects.add_version(
-                project=cls.p1,
-                filename="file.name",
-                # NOTE the dummy name is required when running tests on GitHub CI, but not locally. Spent few hours before I isolated this...
-                content=ContentFile(b"Hello world!", "dummy.name"),
-                file_type=File.FileType.PROJECT_FILE,
-                uploaded_by=user,
-            )
+        FileVersion.objects.add_version(
+            project=cls.p1,
+            filename="file.name",
+            # NOTE the dummy name is required when running tests on GitHub CI, but not locally. Spent few hours before I isolated this...
+            content=ContentFile(b"Hello world!", "dummy.name"),
+            file_type=File.FileType.PROJECT_FILE,
+            uploaded_by=user,
+        )
 
     def test_extracts3data_output_to_file(self):
         output_file = "extracted.csv"
