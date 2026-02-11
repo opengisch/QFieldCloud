@@ -45,9 +45,6 @@ jobs:
           - core
           - filestorage
           - __flaky__
-        storage:
-          - default
-          - legacy_storage
     continue-on-error: true
     steps:
       - name: Checkout repo
@@ -102,7 +99,7 @@ jobs:
           }'
           EOF
 
-          echo "STORAGES_PROJECT_DEFAULT_STORAGE=${{ matrix.storage }}" >> .env
+          echo "STORAGES_PROJECT_DEFAULT_STORAGE=default" >> .env
 
       - name: Pull docker containers
         run: docker compose pull

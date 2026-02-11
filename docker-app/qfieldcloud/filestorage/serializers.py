@@ -46,7 +46,6 @@ class FileVersionSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "display",
             "is_latest",
-            # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
             "sha256",
         )
@@ -58,7 +57,6 @@ class FileVersionSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "display",
             "is_latest",
-            # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
             "sha256",
         )
@@ -97,7 +95,6 @@ class FileSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "is_attachment",
             "md5sum",
-            # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
             "sha256",
         ]
@@ -107,7 +104,6 @@ class FileSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "is_attachment",
             "md5sum",
-            # TODO delete the fields below, they are deprecated and exists only as a compatibility layer for the legacy storage
             "last_modified",
             "sha256",
         ]

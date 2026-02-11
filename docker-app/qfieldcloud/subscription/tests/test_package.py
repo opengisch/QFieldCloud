@@ -639,21 +639,13 @@ class QfcTestCase(APITransactionTestCase):
             storage_free_mb=0.6,
         )
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if p1.uses_legacy_storage:
-            version = p1.legacy_files[0].versions[0]
-        else:
-            version = p1.project_files[0].versions.all().reverse()[0]
+        version = p1.project_files[0].versions.all().reverse()[0]
 
         response = self.client.delete(
             f"/api/v1/files/{p1.id}/file.name/?version={str(version.id)}",
         )
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if p1.uses_legacy_storage:
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-        else:
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         p1.save(recompute_storage=True)
 
@@ -673,11 +665,7 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.client.delete(f"/api/v1/files/{p1.id}/file.name/")
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if p1.uses_legacy_storage:
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-        else:
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         p1.save(recompute_storage=True)
 
