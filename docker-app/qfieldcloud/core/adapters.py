@@ -143,6 +143,17 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
 
         super().send_confirmation_mail(request, email_confirmation, signup)
 
+    def get_user_signed_up_signal(self):
+        """Return the allauth signal for user signup.
+
+        This is required when INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP is True,
+        so django-invitations can connect to the signup signal and mark
+        invitations as accepted after successful registration.
+        """
+        from allauth.account.signals import user_signed_up
+
+        return user_signed_up
+
 
 class AccountAdapterSignUpOpen(AccountAdapter):
     """Account adapter for open signup.
@@ -161,7 +172,19 @@ class AccountAdapterSignUpClosed(AccountAdapter):
     A user can still be added via Django admin.
     """
 
-    def is_open_for_signup(self, request: HttpRequest) -> Literal[False]:
+    def is_open_for_signup(self, request: HttpRequest) -> bool:
+        """
+        Allow signup only if the user has a valid invitation.
+        This keeps signups closed to the general public while allowing invited users to register.
+        """
+        if hasattr(request, "session"):
+            # If there's a verified email in the session, it means they came through
+            # a valid invitation link (set by invitations.views.AcceptInvite)
+            account_verified_email = request.session.get("account_verified_email")
+
+            if account_verified_email:
+                return True
+
         return False
 
 
