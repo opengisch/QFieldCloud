@@ -4,6 +4,7 @@ from typing import Any
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django_stubs_ext import StrOrPromise
+from PIL import Image
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
@@ -198,6 +199,45 @@ class ProjectThumbnailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ("thumbnail",)
+
+    def validate_thumbnail(self, value):
+        """
+        Validate thumbnail:
+        1. File size (max 5MB)
+        2. Actual image format/content
+        """
+        if not value:
+            return value
+
+        # 1. Validate file size (max 5MB)
+        max_size_mb = 5
+        max_size_bytes = max_size_mb * 1024 * 1024  # 5MB in bytes
+        if value.size > max_size_bytes:
+            raise ValidationError(f"Image file size cannot exceed {max_size_mb}MB.")
+
+        # 2. Validate image format/content and dimensions using PIL
+        try:
+            # If the file is not an image, PIL will raise a ValidationError
+            image = Image.open(value)
+
+            # Validate dimensions
+            width, height = image.size
+            max_dimension = 10000
+
+            if width > max_dimension or height > max_dimension:
+                raise ValidationError(
+                    f"Image dimensions cannot exceed {max_dimension}x{max_dimension} pixels."
+                )
+
+            # Reset file pointer after reading
+            value.seek(0)
+
+        except ValidationError:
+            raise
+        except Exception:
+            raise ValidationError("Corrupted image file. Please upload a valid image.")
+
+        return value
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
