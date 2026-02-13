@@ -1,0 +1,3 @@
+# NOTE dependency versions should be defined in the `*.tar.gz` format, not `git+https://` to make `wheel` happy
+libqfieldsync @ git+https://github.com/opengisch/libqfieldsync@6eeff164d28b899b997b0dcee14977781b6a0e7e
+xlsform2qgis @ git+https://github.com/opengisch/xlsform2qgis@ab8f8014ea4465a454f709f733fcd173dd5bdd24
