@@ -1672,9 +1672,35 @@ class Project(models.Model):
             # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
             return True
 
+    def has_active_create_job(self) -> bool:
+        """Check if there's an active create_project job."""
+        if not hasattr(self, "seed") or self.seed is None:
+            return False
+
+        return self.jobs.filter(
+            type=Job.Type.CREATE_PROJECT,
+            status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
+        ).exists()
+
     @property
     def problems(self) -> list[dict[str, Any]]:
         problems = []
+
+        # If there is an active create job, return empty list
+        if self.has_active_create_job():
+            problems.append(
+                {
+                    "layer": None,
+                    "level": "info",
+                    "code": "project_being_created",
+                    "description": _("Project being created."),
+                    "solution": _(
+                        "Your project is currently being set up. This may take a few moments."
+                    ),
+                }
+            )
+
+            return problems
 
         # Check if localized datasets project, then skip the rest of the checks as they are not applicable
         if self.name == SHARED_DATASETS_PROJECT_NAME:
