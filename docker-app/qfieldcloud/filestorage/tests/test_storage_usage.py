@@ -56,10 +56,3 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 2)
         self.assertEqual(self.p1.file_storage_bytes, 13)
         self.assertEqual(self.u1.useraccount.storage_used_bytes, 13)
-
-        # p1 checks
-        self.assertEqual(self.p1.project_files.count(), 1)
-        self.assertEqual(self.p1.get_file("file.name").versions.count(), 2)
-        self.assertEqual(self.p1.file_storage_bytes, 13)
-
-        self.assertEqual(self.u1.useraccount.storage_used_bytes, 20)
