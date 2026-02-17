@@ -1,3 +1,7 @@
+import hashlib
+
+from django.core.files.base import ContentFile
+
 import qfieldcloud.core.models
 
 
@@ -18,3 +22,24 @@ def get_attachment_dir_prefix(
             return attachment_dir
 
     return ""
+
+
+def calculate_checksums(
+    content: ContentFile, alrgorithms: tuple[str, ...], blocksize: int = 65536
+) -> tuple[bytes, ...]:
+    """Calculates checksums on given file for given algorithms."""
+    hashers = []
+    for alrgorithm in alrgorithms:
+        hashers.append(getattr(hashlib, alrgorithm)())
+
+    for chunk in content.chunks(blocksize):
+        for hasher in hashers:
+            hasher.update(chunk)
+
+    content.seek(0)
+
+    checksums = []
+    for hasher in hashers:
+        checksums.append(hasher.digest())
+
+    return tuple(checksums)
