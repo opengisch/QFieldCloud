@@ -46,6 +46,8 @@ class FileVersionSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "display",
             "is_latest",
+            "last_modified",
+            "sha256",
         )
 
         read_only_fields = (
@@ -55,6 +57,8 @@ class FileVersionSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "display",
             "is_latest",
+            "last_modified",
+            "sha256",
         )
 
 
@@ -91,6 +95,8 @@ class FileSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "is_attachment",
             "md5sum",
+            "last_modified",
+            "sha256",
         ]
         read_only_fields = [
             "name",
@@ -98,6 +104,8 @@ class FileSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "is_attachment",
             "md5sum",
+            "last_modified",
+            "sha256",
         ]
         order_by = "name"
 
