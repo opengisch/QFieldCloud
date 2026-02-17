@@ -639,7 +639,6 @@ class ProcessProjectfileJobRun(JobRun):
         project.save(
             update_fields=(
                 "project_details",
-                "legacy_thumbnail_uri",
                 "thumbnail",
             )
         )
