@@ -509,7 +509,7 @@ class UserAccount(models.Model):
         project_files_used_quota = (
             FileVersion.objects.filter(
                 file__file_type=File.FileType.PROJECT_FILE,
-                file__project__in=self.user.projects,
+                file__project__in=self.user.projects.all(),
             ).aggregate(sum_bytes=Sum("size"))["sum_bytes"]
             or 0
         )
