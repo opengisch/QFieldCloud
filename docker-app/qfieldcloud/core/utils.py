@@ -3,9 +3,10 @@ import io
 import json
 import logging
 import os
+import posixpath
 from datetime import datetime
 from pathlib import PurePath
-from typing import IO, NamedTuple
+from typing import IO, Generator, NamedTuple
 
 import boto3
 import jsonschema
@@ -228,6 +229,48 @@ def strip_json_null_bytes(file: IO) -> IO:
     return result
 
 
+def safe_join(base: str, *paths: str) -> str:
+    """
+    A version of django.utils._os.safe_join for S3 paths.
+    Joins one or more path components to the base path component
+    intelligently. Returns a normalized version of the final path.
+    The final path must be located inside of the base path component
+    (otherwise a ValueError is raised).
+    Paths outside the base path indicate a possible security
+    sensitive operation.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    base_path = base
+    base_path = base_path.rstrip("/")
+    paths = tuple(paths)
+
+    final_path = base_path + "/"
+
+    for path in paths:
+        _final_path = posixpath.normpath(posixpath.join(final_path, path))
+
+        # posixpath.normpath() strips the trailing /. Add it back.
+        if path.endswith("/") or _final_path + "/" == final_path:
+            _final_path += "/"
+
+        final_path = _final_path
+
+    if final_path == base_path:
+        final_path += "/"
+
+    # Ensure final_path starts with base_path and that the next character after
+    # the base path is /.
+    base_path_len = len(base_path)
+    if not final_path.startswith(base_path) or final_path[base_path_len] != "/":
+        raise ValueError(
+            "the joined path is located outside of the base path component"
+        )
+
+    return final_path.lstrip("/")
+
+
 def is_the_qgis_file(filename: str) -> bool:
     """Returns whether the filename seems to be a QGIS project file by checking the file extension.
 
@@ -378,6 +421,68 @@ def list_files(
     files.sort(key=lambda f: f.name)
 
     return files
+
+
+def list_versions(
+    bucket: mypy_boto3_s3.service_resource.Bucket,
+    prefix: str,
+    strip_prefix: str = "",
+) -> list[S3ObjectVersion]:
+    """Iterator that lists a bucket's objects under prefix.
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    versions = []
+    for v in bucket.object_versions.filter(Prefix=prefix):
+        if strip_prefix:
+            start_idx = len(prefix)
+            name = v.key[start_idx:]
+        else:
+            name = v.key
+
+        versions.append(S3ObjectVersion(name, v))
+
+    versions.sort(key=lambda v: (v.key, v.last_modified))
+
+    return versions
+
+
+def list_files_with_versions(
+    bucket: mypy_boto3_s3.service_resource.Bucket,
+    prefix: str,
+    strip_prefix: str = "",
+) -> Generator[S3ObjectWithVersions, None, None]:
+    """Yields an object with all it's versions
+    Yields:
+        Generator[S3ObjectWithVersions]: the object with its versions
+
+    Todo:
+        * Delete with QF-4963 Drop support for legacy storage
+    """
+    last_key = None
+    versions: list[S3ObjectVersion] = []
+    latest: S3ObjectVersion | None = None
+
+    for v in list_versions(bucket, prefix, strip_prefix):
+        if last_key != v.key:
+            if last_key:
+                assert latest
+
+                yield S3ObjectWithVersions(latest, versions)
+
+            latest = None
+            versions = []
+            last_key = v.key
+
+        versions.append(v)
+
+        if v.is_latest:
+            latest = v
+
+    if last_key:
+        assert latest
+        yield S3ObjectWithVersions(latest, versions)
 
 
 def get_file_storage_choices() -> list[tuple[str, str]]:
