@@ -665,6 +665,14 @@ class ProcessProjectfileJobRun(JobRun):
             project.save(update_fields=("project_details",))
 
 
+class CreateProjectJobRun(JobRun):
+    job_class = Job
+    command = [
+        "create_project",
+        "%(project__id)s",
+    ]
+
+
 def cancel_orphaned_workers() -> None:
     client: docker.client.DockerClient = docker.from_env()
 

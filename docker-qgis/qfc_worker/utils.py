@@ -22,6 +22,7 @@ from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
     QgsApplication,
+    QgsFieldConstraints,
     QgsLayerTree,
     QgsMapLayer,
     QgsMapSettings,
@@ -417,6 +418,8 @@ def download_project(
     working_dir = destination.joinpath("files")
     working_dir.mkdir(parents=True)
 
+    logging.info(f"Downloading project files to {working_dir}…")
+
     client = sdk.Client()
     files = client.list_remote_files(project_id)
 
@@ -477,7 +480,7 @@ def upload_project(project_id: str, project_dir: Path) -> None:
         show_progress=False,
     )
 
-    logging.info("Uploading packaged project files finished!")
+    logging.info("Uploading project files finished!")
 
 
 def list_local_files(project_id: str, project_dir: Path):
@@ -585,6 +588,28 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
     return details
 
 
+def get_constraint_strength(
+    constraint_strength: QgsFieldConstraints.ConstraintStrength,
+) -> str:
+    if (
+        constraint_strength
+        == QgsFieldConstraints.ConstraintStrength.ConstraintStrengthNotSet
+    ):
+        return "not_set"
+    elif (
+        constraint_strength
+        == QgsFieldConstraints.ConstraintStrength.ConstraintStrengthHard
+    ):
+        return "hard"
+    elif (
+        constraint_strength
+        == QgsFieldConstraints.ConstraintStrength.ConstraintStrengthSoft
+    ):
+        return "soft"
+    else:
+        raise NotImplementedError(f"Unknown constraint strength: {constraint_strength}")
+
+
 def get_layers_data(project: QgsProject) -> dict[str, dict]:
     layers_by_id = {}
 
@@ -626,6 +651,54 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             data_provider_source = layer.dataProvider().uri().uri()
             data_provider_name = layer.dataProvider().name()
 
+        if layer.type() == QgsMapLayer.VectorLayer:
+            fields = []
+
+            for field in layer.fields():
+                constraints = field.constraints()
+
+                fields.append(
+                    {
+                        "name": field.name(),
+                        "alias": field.alias(),
+                        "comment": field.comment(),
+                        "type": field.typeName(),
+                        "length": field.length(),
+                        "precision": field.precision(),
+                        "is_not_null": bool(
+                            constraints.constraints()
+                            & QgsFieldConstraints.Constraint.ConstraintNotNull
+                        ),
+                        "constraint_strength": get_constraint_strength(
+                            constraints.constraintStrength(
+                                QgsFieldConstraints.Constraint.ConstraintNotNull
+                            )
+                        ),
+                        "constraint_expression": constraints.constraintExpression(),
+                        "constraint_expression_description": constraints.constraintDescription(),
+                        "constraint_expression_strength": get_constraint_strength(
+                            constraints.constraintStrength(
+                                QgsFieldConstraints.Constraint.ConstraintExpression
+                            )
+                        ),
+                        "is_unique": bool(
+                            constraints.constraints()
+                            & QgsFieldConstraints.Constraint.ConstraintUnique
+                        ),
+                        "is_unique_strength": get_constraint_strength(
+                            constraints.constraintStrength(
+                                QgsFieldConstraints.Constraint.ConstraintUnique
+                            )
+                        ),
+                        "default_value": field.defaultValueDefinition().expression(),
+                        "set_default_value_on_update": field.defaultValueDefinition().applyOnUpdate(),
+                        "widget_type": field.editorWidgetSetup().type(),
+                        "widget_config": field.editorWidgetSetup().config(),
+                    }
+                )
+        else:
+            fields = None
+
         layers_by_id[layer_id] = {
             "id": layer_id,
             "name": layer.name(),
@@ -653,6 +726,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             "provider_name": data_provider_name,
             "provider_error_summary": None,
             "provider_error_message": None,
+            "fields": fields,
         }
 
         if layers_by_id[layer_id]["is_valid"]:
@@ -743,12 +817,13 @@ def files_list_to_string(files: list[dict[str, Any]]) -> str:
     )
 
 
-def layers_data_to_string(layers_by_id):
+def layers_data_to_string(layers_by_id: dict[str, dict]) -> str:
     # Print layer check results
     table = [
         [
             d["name"],
             f"...{d['id'][-6:]}",
+            d["type_name"],
             d["is_valid"],
             d["error_code"],
             d["error_summary"],
@@ -757,17 +832,64 @@ def layers_data_to_string(layers_by_id):
         for d in layers_by_id.values()
     ]
 
-    return tabulate(
+    output = ""
+    output += tabulate(
         table,
         headers=[
             "Layer Name",
             "Layer Id",
+            "Type",
             "Is Valid",
             "Status",
             "Error Summary",
             "Provider Summary",
         ],
     )
+    output += "\n\nDetailed layers info:"
+
+    for layer_data in layers_by_id.values():
+        output += "\n"
+
+        if not layer_data["is_valid"]:
+            output += f"\nLayer '{layer_data['name']}' ({layer_data['id']}) is invalid."
+
+            continue
+
+        if layer_data["type_name"] != "Vector":
+            output += f"\nLayer '{layer_data['name']}' ({layer_data['id']}) is valid."
+
+            continue
+
+        output += (
+            f"\nLayer '{layer_data['name']}' ({layer_data['id']}) is valid. Fields:\n"
+        )
+
+        fields_data = layer_data.get("fields") or []
+        fields_table = [
+            [
+                f["name"],
+                f["type"],
+                f["length"],
+                f["precision"],
+                f["is_not_null"],
+                f["alias"],
+            ]
+            for f in fields_data
+        ]
+
+        output += tabulate(
+            fields_table,
+            headers=[
+                "Field Name",
+                "Type",
+                "Length",
+                "Precision",
+                "Is Not Null",
+                "Alias",
+            ],
+        )
+
+    return output
 
 
 class RedactingFormatter(logging.Formatter):
