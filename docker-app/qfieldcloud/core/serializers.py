@@ -194,6 +194,12 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
 
 
+class ProjectThumbnailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ("thumbnail",)
+
+
 class CompleteUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 

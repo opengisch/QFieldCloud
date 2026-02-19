@@ -349,6 +349,12 @@ if (
         "Attachments can be unversioned only when using an attachment storage of type WebDAV (qfieldcloud.filestorage.backend.QfcWebDavStorage)"
     )
 
+# 10000px per dimension
+QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_DIMENSION = 10000
+
+# 5MB
+QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024
+
 AUTH_USER_MODEL = "core.User"
 
 # QFieldCloud variables
