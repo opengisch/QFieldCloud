@@ -16,7 +16,6 @@ import requests
 import sentry_sdk
 from constance import config
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
@@ -32,7 +31,7 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.utils import get_qgis_project_file
-from qfieldcloud.core.utils2 import packages, storage
+from qfieldcloud.core.utils2 import packages
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -631,31 +630,7 @@ class ProcessProjectfileJobRun(JobRun):
             "project_details"
         ]
 
-        thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
-
-        with open(thumbnail_filename, "rb") as f:
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            if project.uses_legacy_storage:
-                legacy_thumbnail_uri = storage.upload_project_thumbail(
-                    project, f, "image/png", "thumbnail"
-                )
-                project.legacy_thumbnail_uri = (
-                    project.legacy_thumbnail_uri or legacy_thumbnail_uri
-                )
-            else:
-                project.thumbnail = ContentFile(f.read(), "dummy_thumbnail_name.png")
-
-        project.save(
-            update_fields=(
-                "project_details",
-                "legacy_thumbnail_uri",
-                "thumbnail",
-            )
-        )
-
-        # for non-legacy storage, keep only one thumbnail version if so.
-        if not project.uses_legacy_storage and project.thumbnail:
-            storage.purge_previous_thumbnails_versions(project)
+        project.save(update_fields=("project_details",))
 
     def after_docker_exception(self) -> None:
         project = self.job.project
