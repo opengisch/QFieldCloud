@@ -8,6 +8,7 @@ from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.account.models import EmailConfirmationHMAC
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 from constance import config
 from django.contrib import messages
@@ -235,3 +236,9 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
             provider.styles = SSOProviderStyles(request).get(provider.sub_id)
 
         return providers
+
+    def is_open_for_signup(
+        self, request: HttpRequest, sociallogin: SocialLogin
+    ) -> Literal[True]:
+        """Allow social signup for all users."""
+        return True
