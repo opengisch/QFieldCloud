@@ -25,6 +25,7 @@ from qfc_worker.utils import (
     open_qgis_project_temporarily,
     start_app,
     stop_app,
+    upload_project_thumbnail,
 )
 from qfc_worker.workflow import (
     Step,
@@ -113,7 +114,7 @@ def _generate_thumbnail(
     the_qgis_file_name: str,
     thumbnail_filename: Path,
     thumbnail_timeout_s: int = THUMBNAIL_TIMEOUT_S,
-) -> None:
+) -> Path | None:
     """Create a thumbnail for the project
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
@@ -138,7 +139,7 @@ def _generate_thumbnail(
         # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected.
         del tmp_project
 
-        return
+        return None
 
     img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
     painter = QPainter(img)
@@ -167,6 +168,8 @@ def _generate_thumbnail(
     del tmp_project
 
     logger.info("Project thumbnail image generated!")
+
+    return thumbnail_filename
 
 
 class ProcessProjectfileCommand(QfcBaseCommand):
@@ -231,9 +234,21 @@ class ProcessProjectfileCommand(QfcBaseCommand):
                     name="Generate Thumbnail Image",
                     arguments={
                         "the_qgis_file_name": WorkDirPathAsStr("files", project_file),
-                        "thumbnail_filename": Path("/io/thumbnail.png"),
+                        "thumbnail_filename": WorkDirPath("thumbnail.png"),
                     },
                     method=_generate_thumbnail,
+                    return_names=["thumbnail_filename"],
+                ),
+                Step(
+                    id="upload_thumbnail",
+                    name="Upload Thumbnail Image",
+                    arguments={
+                        "project_id": project_id,
+                        "thumbnail_filename": StepOutput(
+                            "generate_thumbnail_image", "thumbnail_filename"
+                        ),
+                    },
+                    method=upload_project_thumbnail,
                 ),
                 Step(
                     id="stop_qgis_app",
