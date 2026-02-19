@@ -7,21 +7,18 @@ from typing import Literal
 from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.account.models import EmailConfirmationHMAC
-from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
-from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 from constance import config
 from django.contrib import messages
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest
-from django.shortcuts import redirect
 from django.utils import timezone
 from invitations.adapters import BaseInvitationsAdapter
 
 from qfieldcloud.authentication.sso.provider_styles import SSOProviderStyles
-from qfieldcloud.core.models import Person, User
+from qfieldcloud.core.models import Person
 
 logger = logging.getLogger(__name__)
 
@@ -196,47 +193,6 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
 
     Logs stack trace and error details on 3rd party authentication errors.
     """
-
-    def pre_social_login(self, request: HttpRequest, sociallogin: SocialLogin) -> None:
-        """
-        Invoked just after a user successfully authenticates via a
-        social provider, but before the login is actually processed
-        (and before the pre_social_login signal is emitted).
-
-        This is a good hook to check that the user is of type `PERSON`,
-        and not of type `ORGANIZATION` or `TEAM`,
-        as SSO login should only be allowed for user accounts.
-        """
-
-        # check if allauth can find a useraccount with this email,
-        # meaning that the accounts would be linked and a social account created.
-        if sociallogin.is_existing:
-            # here we check that the user trying to login is of type `PERSON`.
-            user = sociallogin.user
-
-            if user.type != User.Type.PERSON:
-                # if the user is not of type `PERSON`,
-                # we try to find a user with the same email that is of type `PERSON`,
-                # and link the social account to that user instead.
-                # Otherwise we block the social account link to an Organization.
-
-                email = sociallogin.account.extra_data.get("email", "")
-
-                if not email:
-                    messages.error(
-                        request, "No email returned by the Identity Provider."
-                    )
-                    raise ImmediateHttpResponse(redirect("account_login"))
-
-                try:
-                    person_user = User.objects.get(email=email, type=User.Type.PERSON)
-                    sociallogin.user = person_user
-                except User.DoesNotExist:
-                    messages.error(
-                        request,
-                        "Can login via SSO only to user accounts, not organizations.",
-                    )
-                    raise ImmediateHttpResponse(redirect("account_login"))
 
     def on_authentication_error(
         self,
