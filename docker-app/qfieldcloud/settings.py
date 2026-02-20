@@ -299,8 +299,6 @@ STORAGES = {
     },
 }
 
-LEGACY_STORAGE_NAME = _storage_config["LEGACY_STORAGE_NAME"]
-
 # Maximum filename length in characters
 # NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 # NOTE the files on Windows cannot be longer than 260 _chars_ by default, see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maximum-path-length-limitation

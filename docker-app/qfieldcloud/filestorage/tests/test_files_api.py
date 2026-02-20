@@ -50,10 +50,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def assertFileUploaded(
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
-        if project.uses_legacy_storage:
-            return self._assertFileUploadedLegacy(user, project, filename, content)
-        else:
-            return self._assertFileUploaded(user, project, filename, content)
+        return self._assertFileUploaded(user, project, filename, content)
 
     def _assertFileUploadedLegacy(
         self, user: User, project: Project, filename: str, content: IO

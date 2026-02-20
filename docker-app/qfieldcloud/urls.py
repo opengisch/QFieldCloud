@@ -17,8 +17,6 @@ Including another URLconf
         'blog/', include('blog.urls'))
 """
 
-from functools import wraps
-
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
@@ -35,28 +33,13 @@ from qfieldcloud.authentication import views as auth_views
 from qfieldcloud.core.admin import qfc_admin_site
 from qfieldcloud.core.views.redirect_views import redirect_to_admin_project_view
 from qfieldcloud.filestorage.views import (
-    compatibility_file_crud_view,
-    compatibility_file_list_view,
+    FileCrudView,
+    FileListView,
 )
 
 admin.site.site_header = _("QFieldCloud Admin")
 admin.site.site_title = _("QFieldCloud Admin")
 admin.site.index_title = _("Welcome to QFieldCloud Admin")
-
-
-def add_view_kwargs(view, **view_kwargs):
-    """Adds kwargs to DRF views in the `.as_view()` call.
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-
-    @wraps(view)
-    def wrapper(request, *args, **kwargs):
-        kwargs["view_kwargs"] = view_kwargs
-        return view(request, *args, **kwargs)
-
-    return wrapper
 
 
 urlpatterns = [
@@ -82,15 +65,11 @@ urlpatterns = [
     ),
     path(
         settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:project_id>/",
-        add_view_kwargs(
-            compatibility_file_list_view, permission_classes=[permissions.IsAdminUser]
-        ),
+        FileListView.as_view(permission_classes=[permissions.IsAdminUser]),
     ),
     path(
         settings.QFIELDCLOUD_ADMIN_URI + "api/files/<uuid:project_id>/<path:filename>/",
-        add_view_kwargs(
-            compatibility_file_crud_view, permission_classes=[permissions.IsAdminUser]
-        ),
+        FileCrudView.as_view(permission_classes=[permissions.IsAdminUser]),
         name="project_file_download",
     ),
     path(settings.QFIELDCLOUD_ADMIN_URI, qfc_admin_site.urls),

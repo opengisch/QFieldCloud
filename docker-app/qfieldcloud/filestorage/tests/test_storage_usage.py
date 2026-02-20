@@ -56,31 +56,3 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(self.p1.get_file("file.name").versions.count(), 2)
         self.assertEqual(self.p1.file_storage_bytes, 13)
         self.assertEqual(self.u1.useraccount.storage_used_bytes, 13)
-
-        # 3) creating a second project with legacy storage backend
-        # TODO: Delete with QF-4963 Drop support for legacy storage
-        p2 = Project.objects.create(
-            owner=self.u1,
-            name="p2",
-            file_storage="legacy_storage",
-        )
-
-        # 4) adding a file in the legacy storage backend
-        response = self._upload_file(self.u1, p2, "file.name", StringIO("Hello3!"))
-
-        self.p1.refresh_from_db()
-        p2.refresh_from_db()
-        self.u1.useraccount.refresh_from_db()
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        # p1 checks
-        self.assertEqual(self.p1.project_files.count(), 1)
-        self.assertEqual(self.p1.get_file("file.name").versions.count(), 2)
-        self.assertEqual(self.p1.file_storage_bytes, 13)
-        # TODO: Change the number of files with QF-4963 Drop support for legacy storage
-        # p2 checks
-        # since the project is in the legacy storage, no `File`` object is created.
-        self.assertEqual(p2.project_files.count(), 0)
-        self.assertEqual(p2.file_storage_bytes, 7)
-
-        self.assertEqual(self.u1.useraccount.storage_used_bytes, 20)

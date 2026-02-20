@@ -169,18 +169,6 @@ def get_s3_client() -> mypy_boto3_s3.Client:
     return s3_client
 
 
-def get_sha256(file: IO) -> str:
-    """Return the sha256 hash of the file
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
-        return _get_sha256_memory_file(file)
-    else:
-        return _get_sha256_file(file)
-
-
 def _get_sha256_memory_file(file: InMemoryUploadedFile | TemporaryUploadedFile) -> str:
     BLOCKSIZE = 65536
     hasher = hashlib.sha256()
@@ -204,18 +192,6 @@ def _get_sha256_file(file: IO) -> str:
     file.seek(0)
 
     return hasher.hexdigest()
-
-
-def get_md5sum(file: IO) -> str:
-    """Return the md5sum hash of the file
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    if type(file) is InMemoryUploadedFile or type(file) is TemporaryUploadedFile:
-        return _get_md5sum_memory_file(file)
-    else:
-        return _get_md5sum_file(file)
 
 
 def _get_md5sum_memory_file(file: InMemoryUploadedFile | TemporaryUploadedFile) -> str:
@@ -329,29 +305,6 @@ def get_qgis_project_file(project_id: str) -> str | None:
     return None
 
 
-def check_legacy_s3_file_exists(key: str, should_raise: bool = True) -> bool:
-    """Check to see if an object exists on S3.
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    client = get_s3_client()
-    try:
-        client.head_object(
-            Bucket=get_legacy_s3_credentials()["OPTIONS"]["bucket_name"],
-            Key=key,
-        )
-        return True
-    except ClientError as e:
-        if e.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 404:
-            return False
-        else:
-            if should_raise:
-                raise e
-            else:
-                return False
-
-
 def check_s3_key(key: str) -> str | None:
     """Check to see if an object exists on S3. It it exists, the function
     returns the sha256 of the file from the metadata
@@ -418,55 +371,6 @@ def get_project_files(project_id: str, path: str = "") -> list[S3Object]:
     return list_files(bucket, prefix, root_prefix)
 
 
-def get_project_files_with_versions(
-    project_id: str,
-) -> Generator[S3ObjectWithVersions, None, None]:
-    """Returns a generator of files and their versions.
-
-    Args:
-        project_id: the project id
-
-    Returns:
-        the list of files
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    bucket = get_s3_bucket()
-    prefix = f"projects/{project_id}/files/"
-
-    return list_files_with_versions(bucket, prefix, prefix)
-
-
-def get_project_file_with_versions(
-    project_id: str, filename: str
-) -> S3ObjectWithVersions | None:
-    """Returns a list of files and their versions.
-
-    Args:
-        project_id: the project id
-
-    Returns:
-        the list of files
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    bucket = get_s3_bucket()
-    root_prefix = f"projects/{project_id}/files/"
-    prefix = f"projects/{project_id}/files/{filename}"
-    files = [
-        f
-        for f in list_files_with_versions(bucket, prefix, root_prefix)
-        if f.latest.key == prefix
-    ]
-
-    if files:
-        return files[0]
-    else:
-        return None
-
-
 def get_project_package_files(project_id: str, package_id: str) -> list[S3Object]:
     """Returns a list of package files.
 
@@ -483,32 +387,6 @@ def get_project_package_files(project_id: str, package_id: str) -> list[S3Object
     prefix = f"projects/{project_id}/packages/{package_id}/"
 
     return list_files(bucket, prefix, prefix)
-
-
-def get_project_files_count(project_id: str) -> int:
-    """Returns the number of files within a project.
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    bucket = get_s3_bucket()
-    prefix = f"projects/{project_id}/files/"
-    files = list(bucket.objects.filter(Prefix=prefix))
-
-    return len(files)
-
-
-def get_project_package_files_count(project_id: str) -> int:
-    """Returns the number of package files within a project.
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    bucket = get_s3_bucket()
-    prefix = f"projects/{project_id}/export/"
-    files = list(bucket.objects.filter(Prefix=prefix))
-
-    return len(files)
 
 
 def list_files(
