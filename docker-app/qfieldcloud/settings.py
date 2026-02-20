@@ -137,12 +137,14 @@ INSTALLED_APPS = [
     "django_extensions",
     "bootstrap4",
     "sri",
+    "corsheaders",
     # To ensure that exceptions inside other apps' signal handlers do not affect the integrity of file deletions within transactions, `django_cleanup` should be placed last in `INSTALLED_APPS`. See https://github.com/un1t/django-cleanup#configuration
     "django_cleanup.apps.CleanupConfig",
 ]
 
 MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -586,6 +588,7 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
     },
 }
 
+###########################
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
 ###########################
@@ -970,3 +973,30 @@ JAZZMIN_SETTINGS = {
 #     "logo_alt": "Your logo description",
 #     "favicon": "path/to/favicon.ico",
 # }
+
+
+###########################
+# CORS settings
+# Managed via django-cors-headers.
+# Origins and credentials are configured through environment variables,
+# so no nginx changes are needed when adding new clients.
+# https://github.com/adamchainz/django-cors-headers
+###########################
+
+# Comma-separated list of origins that are allowed to make cross-origin
+# requests. Do not include trailing slashes.
+# Example: CORS_ALLOWED_ORIGINS=https://app.example.com,http://localhost:5173
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+# Only allow CORS on API endpoints – static files and pages are unaffected.
+CORS_URLS_REGEX = r"^/api/.*$"
+
+# Whether to include credentials (cookies, authorization headers) in
+# cross-origin requests. Required when clients send auth tokens.
+CORS_ALLOW_CREDENTIALS = bool(
+    int(os.environ.get("CORS_ALLOW_CREDENTIALS", 0))
+)
