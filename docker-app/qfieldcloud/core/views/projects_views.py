@@ -10,11 +10,17 @@ from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
 from qfieldcloud.core.models import Project, ProjectQueryset
-from qfieldcloud.core.serializers import ProjectSerializer
+from qfieldcloud.core.serializers import (
+    ProjectSerializer,
+    ProjectThumbnailSerializer,
+)
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
+from rest_framework.response import Response
 
 User = get_user_model()
 
@@ -54,7 +60,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "destroy":
             return permissions_utils.can_delete_project(user, project)
-        elif view.action in ["update", "partial_update"]:
+        elif view.action in ["update", "partial_update", "upload_thumbnail"]:
             return permissions_utils.can_update_project(user, project)
 
         return False
@@ -74,6 +80,11 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         description="""Create a new project owned by the specified
         user or organization"""
     ),
+    upload_thumbnail=extend_schema(
+        description="Update the project thumbnail",
+        responses={204: None},
+        request=ProjectThumbnailSerializer,
+    ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -88,6 +99,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
     search_fields = ["owner__username", "name"]
     filterset_class = ProjectFilterSet
     ordering_fields = ["owner__username::alias=owner", "name", "created_at"]
+
+    @action(
+        detail=True,
+        methods=["post"],
+        parser_classes=[MultiPartParser],
+        serializer_class=ProjectThumbnailSerializer,
+        url_path="thumbnail",
+    )
+    def upload_thumbnail(self, request, projectid):
+        """Update project's thumbnail."""
+        project = self.get_object()
+        serializer = self.get_serializer(project, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
         projects = Project.objects.for_user(self.request.user)

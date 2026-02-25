@@ -1,6 +1,7 @@
 {% extends 'account/base.html' %}
 {% load i18n %}
 {% load bootstrap4 %}
+{% load socialaccount %}
 
 {% block title_contents %}{% trans 'Sign-In' %}{% endblock %}
 
@@ -38,6 +39,19 @@
   </div>
 </div>
 
-{% include "socialaccount/snippets/login.html" %}
+{% get_providers as socialaccount_providers %}
+
+{% if socialaccount_providers %}
+    {% if not SOCIALACCOUNT_ONLY %}
+      <div class="d-flex align-items-center my-3">
+        <hr class="flex-grow-1 m-0">
+        <span class="px-3 text-muted">{% trans 'Or' %}</span>
+        <hr class="flex-grow-1 m-0">
+      </div>
+    {% endif %}
+  {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+  {% include "socialaccount/snippets/login_extra.html" %}
+{% endif %}
+
 
 {% endblock content %}

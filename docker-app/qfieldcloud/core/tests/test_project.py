@@ -944,3 +944,83 @@ class QfcTestCase(APITransactionTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_upload_project_thumbnail(self):
+        """Test that uploading a thumbnail to a project is successful."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create a project
+        project = Project.objects.create(name="test_upload_thumbnail", owner=self.user1)
+
+        self.assertIsNone(project.thumbnail.name)
+
+        # Upload a thumbnail
+        response = self.client.post(
+            f"/api/v1/projects/{project.id}/thumbnail/",
+            {"thumbnail": io.FileIO(testdata_path("DCIM/1.jpg"), "rb")},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Check that the thumbnail is set on the project
+        project.refresh_from_db()
+        self.assertIsNotNone(project.thumbnail)
+
+    def test_upload_project_thumbnail_invalid_file(self):
+        """Test that uploading a thumbnail with an invalid file type is not allowed."""
+        from PIL import Image
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        # Create a project
+        project = Project.objects.create(name="test_upload_thumbnail", owner=self.user1)
+
+        # Test 1: Upload a thumbnail with an invalid file extension
+
+        response = self.client.post(
+            f"/api/v1/projects/{project.id}/thumbnail/",
+            {"thumbnail": io.FileIO(testdata_path("simple_bumblebees.qgs"), "rb")},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Test 2: Upload a fake image file (text file renamed to .png)
+        fake_image = io.BytesIO(
+            b"This is not an image, just text pretending to be one!"
+        )
+        fake_image.name = "fake.png"
+
+        response = self.client.post(
+            f"/api/v1/projects/{project.id}/thumbnail/",
+            {"thumbnail": fake_image},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Test 3: Upload a thumbnail with invalid file size (>5MB)
+        large_image = Image.new("RGB", (3000, 3000), color="red")
+        large_file = io.BytesIO()
+        large_image.save(large_file, format="PNG", compress_level=0)
+        large_file.seek(0)
+        large_file.name = "large.png"
+
+        response = self.client.post(
+            f"/api/v1/projects/{project.id}/thumbnail/",
+            {"thumbnail": large_file},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Test 4: Upload a thumbnail with invalid dimensions (>10000x10000)
+        huge_image = Image.new("RGB", (10001, 10001), color="blue")
+        huge_file = io.BytesIO()
+        huge_image.save(huge_file, format="PNG")
+        huge_file.seek(0)
+        huge_file.name = "huge.png"
+
+        response = self.client.post(
+            f"/api/v1/projects/{project.id}/thumbnail/",
+            {"thumbnail": huge_file},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
