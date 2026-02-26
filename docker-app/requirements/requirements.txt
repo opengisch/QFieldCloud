@@ -75,7 +75,7 @@ django==4.2.28
     #   jsonfield
 django-allauth[socialaccount]==65.14.3
     # via -r /requirements/requirements.in
-django-auditlog==3.4.0
+django-auditlog==3.4.1
     # via -r /requirements/requirements.in
 django-axes==8.0.0
     # via -r /requirements/requirements.in
