@@ -143,7 +143,7 @@ djangorestframework==3.16.1
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
-djangorestframework-stubs==3.16.4
+djangorestframework-stubs==3.16.8
     # via -r /requirements/requirements.in
 drf-spectacular==0.29.0
     # via -r /requirements/requirements.in
@@ -194,7 +194,6 @@ referencing==0.36.2
 requests==2.32.5
     # via
     #   django-allauth
-    #   djangorestframework-stubs
     #   stripe
 rpds-py==0.27.0
     # via
@@ -224,8 +223,6 @@ types-pyyaml==6.0.12.20250822
     # via
     #   django-stubs
     #   djangorestframework-stubs
-types-requests==2.32.4.20250809
-    # via djangorestframework-stubs
 types-s3transfer==0.13.0
     # via boto3-stubs
 typing-extensions==4.14.1
@@ -246,6 +243,5 @@ urllib3==2.6.3
     #   botocore
     #   requests
     #   sentry-sdk
-    #   types-requests
 wrapt==1.17.3
     # via deprecated
