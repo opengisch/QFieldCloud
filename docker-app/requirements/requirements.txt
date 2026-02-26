@@ -77,7 +77,7 @@ django-allauth[socialaccount]==65.14.3
     # via -r /requirements/requirements.in
 django-auditlog==3.4.1
     # via -r /requirements/requirements.in
-django-axes==8.0.0
+django-axes==8.3.1
     # via -r /requirements/requirements.in
 django-bootstrap4==25.2
     # via -r /requirements/requirements.in
