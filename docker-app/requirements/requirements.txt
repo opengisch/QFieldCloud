@@ -87,7 +87,7 @@ django-cleanup==9.0.0
     # via -r /requirements/requirements.in
 django-common-helpers==0.9.2
     # via -r /requirements/requirements.in
-django-constance==4.3.2
+django-constance==4.3.4
     # via -r /requirements/requirements.in
 django-cors-headers==4.9.0
     # via -r /requirements/requirements.in
