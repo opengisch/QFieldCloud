@@ -131,7 +131,7 @@ django-stubs==5.2.9
     # via
     #   -r /requirements/requirements.in
     #   djangorestframework-stubs
-django-stubs-ext==5.2.7
+django-stubs-ext==5.2.9
     # via
     #   -r /requirements/requirements.in
     #   django-stubs
