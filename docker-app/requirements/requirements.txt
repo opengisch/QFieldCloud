@@ -137,7 +137,7 @@ django-stubs-ext==5.2.7
     #   django-stubs
 django-tables2==2.8.0
     # via -r /requirements/requirements.in
-django-timezone-field==7.1
+django-timezone-field==7.2.1
     # via -r /requirements/requirements.in
 djangorestframework==3.16.1
     # via
