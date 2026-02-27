@@ -307,7 +307,7 @@ Now connecting with `curl` should fail with a similar error:
 
 ## Code style
 
-Code style done with [`pre-commit`](https://pre-commit.com):
+This project uses [`pre-commit`](https://pre-commit.com) to automatically run linters and formatters before each commit.
 
     pip install pre-commit
     # install pre-commit hook
