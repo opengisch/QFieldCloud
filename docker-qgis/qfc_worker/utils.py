@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, NamedTuple, TypedDict, cast
+from uuid import UUID
 
 from libqfieldsync.layer import LayerSource
 from libqfieldsync.utils.bad_layer_handler import (
@@ -478,6 +479,19 @@ def upload_project(project_id: str, project_dir: Path) -> None:
     )
 
     logging.info("Uploading packaged project files finished!")
+
+
+def upload_project_thumbnail(project_id: UUID, thumbnail_filename: Path | None) -> None:
+    """Upload the generated thumbnail to QFieldCloud via the SDK."""
+
+    if thumbnail_filename is None:
+        logging.warning("No thumbnail was generated, skipping upload.")
+        return
+
+    client = sdk.Client()
+    client.upload_project_thumbnail(str(project_id), str(thumbnail_filename))
+
+    logging.info("Project thumbnail uploaded!")
 
 
 def list_local_files(project_id: str, project_dir: Path):
