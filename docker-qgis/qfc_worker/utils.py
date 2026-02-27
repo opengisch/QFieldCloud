@@ -33,6 +33,7 @@ from qgis.core import (
     QgsProject,
     QgsProjectArchive,
     QgsProviderRegistry,
+    QgsSettings,
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
@@ -40,6 +41,11 @@ from tabulate import tabulate
 
 # Get environment variables
 JOB_ID = os.environ.get("JOB_ID")
+
+# Network timeout for QGIS. Reduced from default 60 seconds to fail fast 
+# when layers are unreachable (e.g. network outage, blocked external access).
+# This prevents long blocking delays when loading project file.
+QGIS_NETWORK_TIMEOUT_MS = 5000
 
 qgs_stderr_logger = logging.getLogger("QGSSTDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
@@ -173,6 +179,9 @@ def start_app() -> str:
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
         QgsApplication.messageLog().messageReceived.connect(_write_log_message)
+
+        settings = QgsSettings()
+        settings.setValue("network/network-timeout", QGIS_NETWORK_TIMEOUT_MS)
 
         # make sure the app is closed, otherwise the container exists with non-zero
         @atexit.register
