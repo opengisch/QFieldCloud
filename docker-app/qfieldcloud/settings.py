@@ -1000,4 +1000,4 @@ CORS_URLS_REGEX = r"^/api/.*$"
 
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
-CORS_ALLOW_CREDENTIALS = bool(int(os.environ.get("CORS_ALLOW_CREDENTIALS", 0)))
+CORS_ALLOW_CREDENTIALS = bool(int(os.environ.get("CORS_ALLOW_CREDENTIALS") or 0))
