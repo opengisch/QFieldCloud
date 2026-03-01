@@ -8,6 +8,7 @@ from qfieldcloud.core.views import (
     members_views,
     package_views,
     projects_views,
+    server_views,
     status_views,
     teams_views,
     users_views,
@@ -104,4 +105,5 @@ urlpatterns = [
         name="team_member_destroy",
     ),
     path("resend-confirmation/", resend_confirmation_email, name="resend_confirmation"),
+    path("server/info/", server_views.ServerInfoView.as_view(), name="server_info"),
 ]
