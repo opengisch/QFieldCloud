@@ -118,5 +118,16 @@ def get_socialaccount_providers_config() -> dict:
     return providers
 
 
-def parse_string_to_list(input_str: str) -> list[str]:
-    return [item.strip() for item in input_str.split(",") if item.strip()]
+def parse_string_to_list(input_str: str, *, delimiter: str) -> list[str]:
+    assert delimiter
+
+    return [item.strip() for item in input_str.split(delimiter) if item.strip()]
+
+
+def parse_string_to_bool(input_str: str) -> bool:
+    if input_str not in ["0", "1"]:
+        raise ConfigValidationError(
+            f"Expected a string that can be parsed to boolean (i.e. '0' or '1'), but got '{input_str}'!"
+        )
+
+    return bool(int(input_str))
