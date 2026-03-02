@@ -29,40 +29,41 @@ services:
       # Specifies the server hostname. Used in auto-generated TLS certificate if enabled.
       - ServerOptions__HostName=smtp4dev
 
-  minio:
-    image: minio/minio:RELEASE.2025-02-18T16-25-55Z
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.81
     restart: unless-stopped
     volumes:
-      - minio_data1:/data1
-      - minio_data2:/data2
-      - minio_data3:/data3
-      - minio_data4:/data4
+      - rustfs_data:/data
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      MINIO_BROWSER_REDIRECT_URL: http://${QFIELDCLOUD_HOST}:${MINIO_BROWSER_PORT}
-    command: server /data{1...4} --console-address :9001
-    healthcheck:
-        test: [
-          "CMD",
-          "curl",
-          "-A",
-          "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0",
-          "-f",
-          "http://localhost:9001/minio/index.html"
-        ]
-        interval: 5s
-        timeout: 20s
-        retries: 5
+      - RUSTFS_ACCESS_KEY=${OBJECT_STORAGE_ROOT_USER}
+      - RUSTFS_SECRET_KEY=${OBJECT_STORAGE_ROOT_PASSWORD}
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_ADDRESS=0.0.0.0:9000
+      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+      - RUSTFS_EXTERNAL_ADDRESS=:${OBJECT_STORAGE_API_PORT}
     ports:
-      - ${MINIO_BROWSER_PORT}:9001
-      - ${MINIO_API_PORT}:9000
+      # S3 API port
+      - "${OBJECT_STORAGE_API_PORT}:9000"
+      # Console port
+      - "${OBJECT_STORAGE_BROWSER_PORT}:9001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh", "-c",
+          "curl -f http://localhost:9000/health && curl -f http://localhost:9001/rustfs/console/health"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 
   createbuckets:
     build:
       context: ./docker-createbuckets
     depends_on:
-      minio:
+      rustfs:
         condition: service_healthy
     environment:
       STORAGES: ${STORAGES}
@@ -83,8 +84,5 @@ services:
 volumes:
   postgres_data:
   smtp4dev_data:
-  minio_data1:
-  minio_data2:
-  minio_data3:
-  minio_data4:
+  rustfs_data:
   webdav_data:
