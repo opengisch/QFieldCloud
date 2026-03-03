@@ -41,7 +41,7 @@ from tabulate import tabulate
 # Get environment variables
 JOB_ID = os.environ.get("JOB_ID")
 
-# Network timeout for QGIS. Reduced from default 60 seconds to fail fast 
+# Network timeout for QGIS. Reduced from default 60 seconds to fail fast
 # when layers are unreachable (e.g. network outage, blocked external access).
 # This prevents long blocking delays when loading project file.
 QGIS_NETWORK_TIMEOUT_MS = 5000
