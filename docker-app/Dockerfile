@@ -11,12 +11,15 @@ ARG PIP_DISABLE_PIP_VERSION_CHECK=1
 # Do not create and use redundant cache dir in the current user home
 ARG PIP_NO_CACHE_DIR=1
 
-# install psycopg2 requirements
+# install system-wide requirements
 RUN apt-get update \
     && apt-get install -y \
+    # psycopg2 dependencies
     libpq-dev \
     python3-dev \
     gcc \
+    # ability to install modules from git repositories (e.g. `django-cron`)
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # install `pip-compile` (as part of `pip-tools`)
