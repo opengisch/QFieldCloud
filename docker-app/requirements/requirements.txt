@@ -73,13 +73,13 @@ django==4.2.28
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.13.1
+django-allauth[socialaccount]==65.14.3
     # via -r /requirements/requirements.in
-django-auditlog==3.4.0
+django-auditlog==3.4.1
     # via -r /requirements/requirements.in
-django-axes==8.0.0
+django-axes==8.3.1
     # via -r /requirements/requirements.in
-django-bootstrap4==25.2
+django-bootstrap4==26.1
     # via -r /requirements/requirements.in
 django-classy-tags==4.1.0
     # via -r /requirements/requirements.in
@@ -87,7 +87,7 @@ django-cleanup==9.0.0
     # via -r /requirements/requirements.in
 django-common-helpers==0.9.2
     # via -r /requirements/requirements.in
-django-constance==4.3.2
+django-constance==4.3.4
     # via -r /requirements/requirements.in
 django-cors-headers==4.9.0
     # via -r /requirements/requirements.in
@@ -95,13 +95,13 @@ django-countries==8.2.0
     # via -r /requirements/requirements.in
 django-cron==0.6.0
     # via -r /requirements/requirements.in
-django-currentuser==0.9.0
+django-currentuser==0.10.0
     # via -r /requirements/requirements.in
-django-debug-toolbar==6.0.0
+django-debug-toolbar==6.2.0
     # via -r /requirements/requirements.in
 django-extensions==4.1
     # via -r /requirements/requirements.in
-django-fernet-encrypted-fields==0.3.0
+django-fernet-encrypted-fields==0.3.1
     # via -r /requirements/requirements.in
 django-filter==25.1
     # via -r /requirements/requirements.in
@@ -109,7 +109,7 @@ django-invitations==2.1.0
     # via -r /requirements/requirements.in
 django-jazzmin==3.0.1
     # via -r /requirements/requirements.in
-django-log-request-id==2.1.0
+django-log-request-id==2.1.1
     # via -r /requirements/requirements.in
 django-migrate-sql-3==3.0.2
     # via -r /requirements/requirements.in
@@ -121,29 +121,29 @@ django-nonrelated-inlines==0.2
     # via -r /requirements/requirements.in
 django-notifications-hq==1.8.3
     # via -r /requirements/requirements.in
-django-phonenumber-field==8.3.0
+django-phonenumber-field==8.4.0
     # via -r /requirements/requirements.in
 django-sri==0.8.0
     # via -r /requirements/requirements.in
 django-storages==1.14.6
     # via -r /requirements/requirements.in
-django-stubs==5.2.7
+django-stubs==5.2.9
     # via
     #   -r /requirements/requirements.in
     #   djangorestframework-stubs
-django-stubs-ext==5.2.7
+django-stubs-ext==5.2.9
     # via
     #   -r /requirements/requirements.in
     #   django-stubs
 django-tables2==2.8.0
     # via -r /requirements/requirements.in
-django-timezone-field==7.1
+django-timezone-field==7.2.1
     # via -r /requirements/requirements.in
 djangorestframework==3.16.1
     # via
     #   -r /requirements/requirements.in
     #   drf-spectacular
-djangorestframework-stubs==3.16.4
+djangorestframework-stubs==3.16.8
     # via -r /requirements/requirements.in
 drf-spectacular==0.29.0
     # via -r /requirements/requirements.in
@@ -167,9 +167,9 @@ mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.3.1
     # via django-allauth
-phonenumbers==9.0.15
+phonenumbers==9.0.25
     # via -r /requirements/requirements.in
-pillow==11.3.0
+pillow==12.1.1
     # via -r /requirements/requirements.in
 psycopg2==2.9.11
     # via -r /requirements/requirements.in
@@ -194,7 +194,6 @@ referencing==0.36.2
 requests==2.32.5
     # via
     #   django-allauth
-    #   djangorestframework-stubs
     #   stripe
 rpds-py==0.27.0
     # via
@@ -202,7 +201,7 @@ rpds-py==0.27.0
     #   referencing
 s3transfer==0.10.4
     # via boto3
-sentry-sdk==2.47.0
+sentry-sdk==2.53.0
     # via -r /requirements/requirements.in
 six==1.17.0
     # via python-dateutil
@@ -224,8 +223,6 @@ types-pyyaml==6.0.12.20250822
     # via
     #   django-stubs
     #   djangorestframework-stubs
-types-requests==2.32.4.20250809
-    # via djangorestframework-stubs
 types-s3transfer==0.13.0
     # via boto3-stubs
 typing-extensions==4.14.1
@@ -246,6 +243,5 @@ urllib3==2.6.3
     #   botocore
     #   requests
     #   sentry-sdk
-    #   types-requests
 wrapt==1.17.3
     # via deprecated
