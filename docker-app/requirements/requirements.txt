@@ -119,7 +119,7 @@ django-model-utils==5.0.0
     #   django-notifications-hq
 django-nonrelated-inlines==0.2
     # via -r /requirements/requirements.in
-django-notifications-hq==1.8.3
+django-notifications-hq @ git+https://github.com/django-notifications/django-notifications.git@4c44bcea2504d9a3fcd26366b232a13732a08f2a # 1.9.0
     # via -r /requirements/requirements.in
 django-phonenumber-field==8.4.0
     # via -r /requirements/requirements.in

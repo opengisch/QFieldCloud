@@ -24,7 +24,8 @@ django-log-request-id==2.1.1
 django-migrate-sql-3==3.0.2
 django-model-utils==5.0.0
 django-nonrelated-inlines==0.2
-django-notifications-hq==1.8.3
+# Unfortunately the version is not released yet on pypi, so we need to install it from the git repository
+django-notifications-hq @ git+https://github.com/django-notifications/django-notifications.git@4c44bcea2504d9a3fcd26366b232a13732a08f2a # 1.9.0
 django-phonenumber-field==8.4.0
 django-sri==0.8.0
 django-storages==1.14.6
