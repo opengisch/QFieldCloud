@@ -20,6 +20,7 @@ from .settings_utils import (
     ConfigValidationError,
     get_socialaccount_providers_config,
     get_storages_config,
+    parse_string_to_bool,
     parse_string_to_list,
 )
 
@@ -34,15 +35,15 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 # Key used for cryptographic operations on encrypted fields.
 # More infos about usage and rotation can be found here:
 # https://pypi.org/project/django-fernet-encrypted-fields/
-SALT_KEY = [os.environ.get("SALT_KEY")]
+SALT_KEY = [os.environ["SALT_KEY"]]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(int(os.environ.get("DEBUG", 0)))
+DEBUG = parse_string_to_bool(os.environ["DEBUG"])
 
 # if we are in debug, we need to update the internal IPS to make the
 # debug toolbar work within docker
@@ -55,11 +56,11 @@ if DEBUG:
         "10.0.2.2",
     ]
 
-ENVIRONMENT = os.environ.get("ENVIRONMENT")
+ENVIRONMENT = os.environ["ENVIRONMENT"]
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
+ALLOWED_HOSTS = parse_string_to_list(os.environ["DJANGO_ALLOWED_HOSTS"], delimiter=" ")
 
 # A tuple representing an HTTP header/value combination that signifies a request is secure, which is important for Django’s CSRF protection.
 # We need to set it in QFieldCloud as we run behind a proxy.
@@ -208,12 +209,12 @@ WSGI_APPLICATION = "qfieldcloud.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("POSTGRES_DB"),
-        "USER": os.environ.get("POSTGRES_USER"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": os.environ.get("POSTGRES_HOST"),
-        "PORT": os.environ.get("POSTGRES_PORT"),
-        "OPTIONS": {"sslmode": os.environ.get("POSTGRES_SSLMODE")},
+        "NAME": os.environ["POSTGRES_DB"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_HOST"],
+        "PORT": os.environ["POSTGRES_PORT"],
+        "OPTIONS": {"sslmode": os.environ["POSTGRES_SSLMODE"]},
         "TEST": {
             "NAME": os.environ.get("POSTGRES_DB_TEST"),
         },
@@ -249,11 +250,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
-LANGUAGE_CODE = os.environ.get("QFIELDCLOUD_DEFAULT_LANGUAGE") or "en"
+LANGUAGE_CODE = os.environ["QFIELDCLOUD_DEFAULT_LANGUAGE"]
 
-TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
+TIME_ZONE = os.environ["QFIELDCLOUD_DEFAULT_TIME_ZONE"]
 
-USE_I18N = bool(int(os.environ.get("QFIELDCLOUD_USE_I18N", 1)))
+USE_I18N = parse_string_to_bool(os.environ["QFIELDCLOUD_USE_I18N"])
 
 USE_TZ = True
 
@@ -287,11 +288,13 @@ MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
 # S3 Storage
+# TODO Delete with QF-4963 Drop support for legacy storage
 STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
 STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
 STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
 STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
 STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
+# / ENDTODO
 
 _storage_config = get_storages_config()
 
@@ -338,8 +341,8 @@ if STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE not in STORAGES:
         f"Missing {STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE=} from the `STORAGES` configuration, available storages: {STORAGES.keys()}"
     )
 
-STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED = bool(
-    int(os.environ.get("STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED") or 1)
+STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED = parse_string_to_bool(
+    os.environ.get("STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED") or "1"
 )
 
 # Delete with QF-7231 Make S3 backend storage not versionable
@@ -362,9 +365,7 @@ AUTH_USER_MODEL = "core.User"
 
 # QFieldCloud variables
 AUTH_TOKEN_LENGTH = 100
-AUTH_TOKEN_EXPIRATION_HOURS = int(
-    os.environ.get("QFIELDCLOUD_AUTH_TOKEN_EXPIRATION_HOURS") or 24 * 30
-)
+AUTH_TOKEN_EXPIRATION_HOURS = int(os.environ["QFIELDCLOUD_AUTH_TOKEN_EXPIRATION_HOURS"])
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
@@ -390,10 +391,10 @@ LOGIN_REDIRECT_URL = "index"
 #########################
 
 # Sentry configuration
+SENTRY_RELEASE = os.environ["SENTRY_RELEASE"]
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
-SENTRY_RELEASE = os.environ.get("SENTRY_RELEASE", "dev")
 if SENTRY_DSN:
-    SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
+    SENTRY_SAMPLE_RATE = float(os.environ["SENTRY_SAMPLE_RATE"])
 
     def before_send(event, hint):
         from rest_framework.exceptions import MethodNotAllowed, UnsupportedMediaType
@@ -477,9 +478,7 @@ SENTRY_REPORT_FULL_BODY = True
 #########################
 
 # https://docs.allauth.org/en/latest/account/configuration.html#overall
-ACCOUNT_ADAPTER = os.environ.get(
-    "QFIELDCLOUD_ACCOUNT_ADAPTER", "qfieldcloud.core.adapters.AccountAdapterSignUpOpen"
-)
+ACCOUNT_ADAPTER = os.environ["QFIELDCLOUD_ACCOUNT_ADAPTER"]
 
 # https://docs.allauth.org/en/latest/account/configuration.html#signup
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
@@ -493,7 +492,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 # https://docs.allauth.org/en/latest/account/configuration.html#email-verification
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
-ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+ACCOUNT_EMAIL_VERIFICATION = os.environ["ACCOUNT_EMAIL_VERIFICATION"]
 
 # https://docs.allauth.org/en/latest/account/rate_limits.html
 ACCOUNT_RATE_LIMITS = False
@@ -513,19 +512,15 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
 
 # Third-party auth header names configuration
-QFIELDCLOUD_IDP_ID_HEADER_NAME = os.environ.get(
-    "QFIELDCLOUD_IDP_ID_HEADER_NAME", "X-QFC-IDP-ID"
-)
-QFIELDCLOUD_ID_TOKEN_HEADER_NAME = os.environ.get(
-    "QFIELDCLOUD_ID_TOKEN_HEADER_NAME", "X-QFC-ID-Token"
-)
+QFIELDCLOUD_IDP_ID_HEADER_NAME = "X-QFC-IDP-ID"
+QFIELDCLOUD_ID_TOKEN_HEADER_NAME = "X-QFC-ID-Token"
 
 #########################
 # /Django allauth settings
 #########################
 
-QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = bool(
-    int(os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED", 0))
+QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = parse_string_to_bool(
+    os.environ["QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED"]
 )
 
 QFIELDCLOUD_SSO_PROVIDER_STYLES = {
@@ -612,13 +607,13 @@ AXES_RESET_ON_SUCCESS = True
 
 # Django email configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "").lower() == "true"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "").lower() == "true"
-EMAIL_PORT = os.environ.get("EMAIL_PORT")
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+EMAIL_HOST = os.environ["EMAIL_HOST"]
+EMAIL_USE_TLS = os.environ["EMAIL_USE_TLS"].lower() == "true"
+EMAIL_USE_SSL = os.environ["EMAIL_USE_SSL"].lower() == "true"
+EMAIL_PORT = os.environ["EMAIL_PORT"]
+EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
+DEFAULT_FROM_EMAIL = os.environ["DEFAULT_FROM_EMAIL"]
 
 
 # Django invitations configurations
@@ -670,9 +665,7 @@ IN_TEST_SUITE = False
 # The settings and `last_modified` field are deprecated and soon to be removed.
 QFIELDCLOUD_STORAGE_DT_LAST_MODIFIED_FORMAT = "%d.%m.%Y %H:%M:%S %Z"
 
-QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
-    "QFIELDCLOUD_SUBSCRIPTION_MODEL", "subscription.Subscription"
-)
+QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ["QFIELDCLOUD_SUBSCRIPTION_MODEL"]
 
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
@@ -707,14 +700,15 @@ QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
 APPLY_DELTAS_LIMIT = 1000
 
-# the value of the "source" key in each logger entry
-LOGGER_SOURCE = os.environ.get("LOGGER_SOURCE", None)
+# The value of the "source" key in each logger entry.
+# Filters what logs are printed based on in which image we are running ("app" or "worker_wrapper").
+LOGGER_SOURCE = os.environ["LOGGER_SOURCE"]
 
 DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
 }
 
-QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
+QFIELDCLOUD_ADMIN_URI = os.environ["QFIELDCLOUD_ADMIN_URI"]
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
@@ -842,9 +836,9 @@ DEBUG_QGIS_WORKER_HOST_PATH = os.environ.get("DEBUG_QGIS_WORKER_HOST_PATH")
 DEBUG_QGIS_DEBUGPY_PORT = os.environ.get("DEBUG_QGIS_DEBUGPY_PORT")
 
 # Volume name where transformation grids required by `PROJ` are downloaded to
-QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
+QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ[
     "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME"
-)
+]
 
 # Name of the docker compose network to be used by the worker containers
 QFIELDCLOUD_DEFAULT_NETWORK = os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK")
@@ -993,11 +987,13 @@ JAZZMIN_SETTINGS = {
 # Comma-separated list of origins that are allowed to make cross-origin
 # requests. Do not include trailing slashes.
 # Example: CORS_ALLOWED_ORIGINS=https://app.example.com,http://localhost:5173
-CORS_ALLOWED_ORIGINS = parse_string_to_list(os.environ.get("CORS_ALLOWED_ORIGINS", ""))
+CORS_ALLOWED_ORIGINS = parse_string_to_list(
+    os.environ["CORS_ALLOWED_ORIGINS"], delimiter=","
+)
 
 # Only allow CORS on API endpoints – static files and pages are unaffected.
 CORS_URLS_REGEX = r"^/api/.*$"
 
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
-CORS_ALLOW_CREDENTIALS = bool(int(os.environ.get("CORS_ALLOW_CREDENTIALS", 0)))
+CORS_ALLOW_CREDENTIALS = parse_string_to_bool(os.environ["CORS_ALLOW_CREDENTIALS"])
