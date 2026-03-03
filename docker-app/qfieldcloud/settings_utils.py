@@ -121,7 +121,15 @@ def get_socialaccount_providers_config() -> dict:
 def parse_string_to_list(input_str: str, *, delimiter: str) -> list[str]:
     assert delimiter
 
-    return [item.strip() for item in input_str.split(delimiter) if item.strip()]
+    items = []
+
+    for item in input_str.split(delimiter):
+        stripped_item = item.strip()
+
+        if stripped_item:
+            items.append(stripped_item)
+
+    return items
 
 
 def parse_string_to_bool(input_str: str) -> bool:
