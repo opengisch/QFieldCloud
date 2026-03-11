@@ -18,6 +18,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     PackageJob,
+    Person,
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
@@ -218,6 +219,36 @@ class CompleteUserSerializer(serializers.ModelSerializer):
             "last_name",
         )
         read_only_fields = ("full_name", "avatar_url")
+
+
+class CreateUserSerializer(serializers.Serializer):
+    """Serializer for programmatic Person account creation.
+
+    Intentionally does *not* validate username uniqueness here so that the view
+    can return HTTP 409 Conflict (rather than 400) when the username is taken.
+    """
+
+    username = serializers.RegexField(
+        r"^[-a-zA-Z0-9_]+$",
+        max_length=150,
+        min_length=3,
+        error_messages={
+            "invalid": _(
+                "Enter a valid username. This value may contain only letters, "
+                "numbers, and -/_ characters."
+            )
+        },
+    )
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    email = serializers.EmailField(required=True)
+
+    def create(self, validated_data):
+        return Person.objects.create_user(
+            username=validated_data["username"],
+            password=validated_data["password"],
+            email=validated_data["email"],
+            has_accepted_tos=True,
+        )
 
 
 class PublicInfoUserSerializer(serializers.ModelSerializer):

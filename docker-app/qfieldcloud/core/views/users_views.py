@@ -1,30 +1,36 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
 from qfieldcloud.core.models import Organization, Project
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
+    CreateUserSerializer,
     OrganizationSerializer,
     PublicInfoUserSerializer,
 )
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
 User = get_user_model()
 
 
-class ListUsersViewPermissions(permissions.BasePermission):
+class ListCreateUsersViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
+        if request.method == "POST":
+            return permissions_utils.can_create_user(request.user)
+
         return permissions_utils.can_list_users_organizations(request.user)
 
 
 @extend_schema_view(
     get=extend_schema(description="List users and/or organizations"),
+    post=extend_schema(description="Create a new user account (staff only)"),
 )
-class ListUsersView(generics.ListAPIView):
+class ListCreateUsersView(generics.ListCreateAPIView):
     serializer_class = PublicInfoUserSerializer
-    permission_classes = [permissions.IsAuthenticated, ListUsersViewPermissions]
+    permission_classes = [permissions.IsAuthenticated, ListCreateUsersViewPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_queryset(self):
@@ -60,6 +66,22 @@ class ListUsersView(generics.ListAPIView):
             exclude_organizations=exclude_organizations,
             exclude_teams=exclude_teams,
             invert=invert,
+        )
+
+    def post(self, request):
+        serializer = CreateUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = serializer.save()
+        except IntegrityError:
+            return Response(
+                {"username": ["A user with this username already exists."]},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(
+            PublicInfoUserSerializer(user).data,
+            status=status.HTTP_201_CREATED,
         )
 
 

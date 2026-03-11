@@ -326,3 +326,126 @@ class QfcTestCase(APITestCase):
             Person.objects.create_user(
                 username="u2", password="abc123", email="same@example.com"
             )
+
+
+class CreatePersonAPITestCase(APITestCase):
+    """Tests for POST /api/v1/users/ (staff-only)."""
+
+    def setUp(self):
+        setup_subscription_plans()
+
+        self.staff_user = Person.objects.create_user(
+            username="staffuser",
+            password="abc123",
+            email="staff@example.com",
+            is_staff=True,
+        )
+        self.staff_token = AuthToken.objects.get_or_create(
+            user=self.staff_user,
+            client_type=AuthToken.ClientType.QFIELD,
+            user_agent="qfield|dev",
+        )[0]
+
+        self.regular_user = Person.objects.create_user(
+            username="regularuser",
+            password="abc123",
+            email="regular@example.com",
+        )
+        self.regular_token = AuthToken.objects.get_or_create(
+            user=self.regular_user,
+            client_type=AuthToken.ClientType.QFIELD,
+            user_agent="qfield|dev",
+        )[0]
+
+        set_subscription((self.staff_user, self.regular_user), "default_user")
+
+    def _url(self):
+        return "/api/v1/users/"
+
+    def test_staff_can_create_user(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {
+                "username": "newmapper",
+                "password": "securepass123",
+                "email": "newmapper@example.com",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["username"], "newmapper")
+        self.assertTrue(Person.objects.filter(username="newmapper").exists())
+
+    def test_create_person_with_email(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {"username": "newmapper2", "password": "pass", "email": "m@example.com"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            Person.objects.get(username="newmapper2").email, "m@example.com"
+        )
+
+    def test_email_required(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(), {"username": "nomailuser", "password": "pass"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_person_sets_has_accepted_tos(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        self.client.post(
+            self._url(),
+            {"username": "tosuser", "password": "pass", "email": "tos@example.com"},
+        )
+        self.assertTrue(Person.objects.get(username="tosuser").has_accepted_tos)
+
+    def test_duplicate_username_returns_409(self):
+        Person.objects.create_user(username="existing", password="abc123")
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {
+                "username": "existing",
+                "password": "pass",
+                "email": "existing@example.com",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_non_staff_forbidden(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.regular_token.key)
+        response = self.client.post(
+            self._url(), {"username": "shouldfail", "password": "pass"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthenticated_rejected(self):
+        response = self.client.post(
+            self._url(), {"username": "anon", "password": "pass"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invalid_username_rejected(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {"username": "bad username!", "password": "pass", "email": "m@example.com"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_username_too_short_rejected(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {"username": "ab", "password": "pass", "email": "m@example.com"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_still_works_for_staff(self):
+        """GET /api/v1/users/ must still function after adding POST support."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
