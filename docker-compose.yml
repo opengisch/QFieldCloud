@@ -130,6 +130,7 @@ services:
   # Automatically create self-signed certificates for local development and test deployments
   mkcert:
     image: vishnunair/docker-mkcert
+    platform: linux/amd64
     environment:
       domain: ${QFIELDCLOUD_HOST}
     volumes:

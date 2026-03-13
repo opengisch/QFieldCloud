@@ -2,6 +2,7 @@ services:
 
   db:
     image: postgis/postgis:${POSTGIS_IMAGE_VERSION}
+    platform: linux/amd64
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -69,6 +70,7 @@ services:
 
   webdav:
     image: bytemark/webdav:2.4
+    platform: linux/amd64
     restart: unless-stopped
     ports:
       - ${WEBDAV_PUBLIC_PORT}:80
