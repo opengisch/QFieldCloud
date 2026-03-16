@@ -966,7 +966,9 @@ class AbstractSubscription(models.Model):
 
     def __str__(self):
         if hasattr(self, "packages"):
-            active_storage_total_mb = self.active_storage_package_mb
+            active_storage_total_mb = int(
+                self.active_storage_package_bytes / 1000 / 1000
+            )
         else:
             active_storage_total_mb = 0
 
