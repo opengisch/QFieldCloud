@@ -127,7 +127,12 @@ class Plan(models.Model):
     # - django-modeltranslation (tried, works well, but maybe overkill as it creates new database columns for each locale)
     # - something else ? there's probably some json based stuff
     display_name = models.CharField(max_length=100)
+
+    # Included storage for the plan.
+    # For seat based plans, this is an amount *per seat*. For all other plans,
+    # it's a simple fixed amount for the entire plan.
     storage_mb = models.PositiveIntegerField(default=10)
+
     storage_keep_versions = models.PositiveIntegerField(default=10)
     job_minutes = models.PositiveIntegerField(default=10)
     can_add_storage = models.BooleanField(default=False)
@@ -537,12 +542,12 @@ class AbstractSubscription(models.Model):
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
-    def active_storage_total_mb(self) -> int:
-        return self.plan.storage_mb + self.active_storage_package_mb
+    def active_storage_total_mb(self) -> float:
+        return float(self.active_storage_total_bytes / 1000 / 1000)
 
     @property
     def active_storage_total_bytes(self) -> int:
-        return self.plan.storage_bytes + self.active_storage_package_bytes
+        return self.included_storage_bytes + self.active_storage_package_bytes
 
     @property
     def active_storage_package(self) -> Package:
@@ -651,6 +656,20 @@ class AbstractSubscription(models.Model):
 
         # +1 for the organization owner
         return organization.members.count() + 1
+
+    @property
+    def included_storage_bytes(self) -> int:
+        """How much storage is included in the subscription.
+
+        (Before any additional storage packages).
+
+        For seat based plans, this is an amount *per seat*. For all other plans,
+        it's a simple fixed amount for the entire plan.
+        """
+        if self.plan.is_seat_based:
+            return self.purchased_seats * self.plan.storage_bytes
+
+        return self.plan.storage_bytes
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
