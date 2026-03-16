@@ -652,6 +652,11 @@ class AbstractSubscription(models.Model):
         if not self.account.user.is_organization:
             return 1
 
+        # seat based plans
+        if self.plan.is_seat_based:
+            return self.purchased_seats
+
+        # all other plans - either unlimited (-1) or capped
         return self.account.current_subscription.plan.max_organization_members
 
     @property
