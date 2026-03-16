@@ -158,6 +158,9 @@ class Plan(models.Model):
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_storage_modifiable = models.BooleanField(default=True)
 
+    # the plan is based around a number of purchased licenses (seats).
+    is_seat_based = models.BooleanField(default=False)
+
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
     # the maximum amount of money that they are going to pay.
