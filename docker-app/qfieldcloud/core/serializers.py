@@ -80,6 +80,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     private = serializers.BooleanField(allow_null=True, default=None)
     shared_datasets_project_id = serializers.SerializerMethodField(read_only=True)
     needs_repackaging = serializers.SerializerMethodField()
+    seed = serializers.JSONField(required=False, write_only=True)
+    xlsform_file = serializers.FileField(required=False, write_only=True)
 
     def get_shared_datasets_project_id(self, obj: Project) -> str | None:
         if obj.shared_datasets_project:
@@ -143,7 +145,32 @@ class ProjectSerializer(serializers.ModelSerializer):
                         "QGIS project files are not allowed in shared datasets projects."
                     )
 
+        seed = data.get("seed")
+        xlsform_file = data.get("xlsform_file")
+
+        if xlsform_file and not seed:
+            raise ValidationError(
+                {"xlsform_file": ["Cannot upload an XLSForm file without seed data."]}
+            )
+
+        if seed:
+            provider = seed.get("basemap_provider", "none")
+            url = seed.get("basemap_url", "")
+            if provider == "custom" and not url:
+                raise ValidationError(
+                    {
+                        "seed": [
+                            "basemap_url is required when basemap_provider is 'custom'."
+                        ]
+                    }
+                )
+
         return data
+
+    def create(self, validated_data):
+        self._seed_data = validated_data.pop("seed", None)
+        self._xlsform_file = validated_data.pop("xlsform_file", None)
+        return super().create(validated_data)
 
     def get_needs_repackaging(self, obj: Project) -> bool:
         request = self.context.get("request")
@@ -177,6 +204,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "is_featured",
             "is_attachment_download_on_demand",
             "file_storage_bytes",
+            "seed",
+            "xlsform_file",
         )
         read_only_fields = (
             "private",

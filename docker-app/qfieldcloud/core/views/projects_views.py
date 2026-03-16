@@ -14,18 +14,18 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Project, ProjectQueryset, ProjectSeed
+from qfieldcloud.core.models import Job, Project, ProjectQueryset, ProjectSeed
 from qfieldcloud.core.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
-from qfieldcloud.core.utils2 import storage
+from qfieldcloud.core.utils2 import project_seed, storage
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -114,6 +114,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     lookup_url_kwarg = "projectid"
     permission_classes = [permissions.IsAuthenticated, ProjectViewSetPermissions]
+    parser_classes = [JSONParser, MultiPartParser]
     pagination_class = pagination.QfcLimitOffsetPagination()
     filter_backends = [
         drf_filters.SearchFilter,
@@ -166,6 +167,42 @@ class ProjectViewSet(viewsets.ModelViewSet):
         projects = projects.order_by("-is_featured", "owner__username", "name")
 
         return projects
+
+    @transaction.atomic
+    def perform_create(self, serializer: ProjectSerializer) -> None:
+        super().perform_create(serializer)
+
+        seed_data = getattr(serializer, "_seed_data", None)
+        if not seed_data:
+            return
+
+        xlsform_file = getattr(serializer, "_xlsform_file", None)
+        project = serializer.instance
+
+        basemaps, extent, xlsform_config = project_seed.build_seed_data(
+            basemap_provider=seed_data.get("basemap_provider", "none"),
+            basemap_style=seed_data.get("basemap_style", "standard"),
+            basemap_url=seed_data.get("basemap_url", ""),
+            extent_input=seed_data.get("extent"),
+            xlsform_file=xlsform_file,
+        )
+
+        ProjectSeed.objects.create(
+            project=project,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": basemaps,
+                "xlsform": xlsform_config,
+            },
+            extent=extent,
+            xlsform_file=xlsform_file,
+        )
+
+        Job.objects.create(
+            project=project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.request.user,
+        )
 
     @transaction.atomic
     def perform_update(self, serializer: ProjectSerializer) -> None:
