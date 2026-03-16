@@ -832,13 +832,10 @@ class OrganizationMember(models.Model):
 
         subscription = self.organization.useraccount.current_subscription
 
-        max_organization_members = subscription.plan.max_organization_members
+        max_allowed_members = subscription.max_allowed_organization_members
         current_members = subscription.organization_members_count
 
-        if (
-            max_organization_members > -1
-            and current_members >= max_organization_members
-        ):
+        if max_allowed_members > -1 and current_members >= max_allowed_members:
             raise ReachedMaxOrganizationMembersError
 
         return super().clean()
