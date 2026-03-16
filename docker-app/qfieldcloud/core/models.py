@@ -830,10 +830,14 @@ class OrganizationMember(models.Model):
         if self.organization.organization_owner == self.member:
             raise ValidationError(_("Cannot add the organization owner as a member."))
 
-        max_organization_members = self.organization.useraccount.current_subscription.plan.max_organization_members
+        subscription = self.organization.useraccount.current_subscription
+
+        max_organization_members = subscription.plan.max_organization_members
+        current_members = subscription.organization_members_count
+
         if (
             max_organization_members > -1
-            and self.organization.members.count() >= max_organization_members
+            and current_members >= max_organization_members
         ):
             raise ReachedMaxOrganizationMembersError
 
