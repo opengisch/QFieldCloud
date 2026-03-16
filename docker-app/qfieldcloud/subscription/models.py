@@ -470,6 +470,16 @@ class AbstractSubscription(models.Model):
         related_name="+",
     )
 
+    # The number of seats that were purchased with this subscription.
+    # This value is set at subscription creation time, typically based on the quantity selected during checkout (for per-seat pricing).
+    purchased_seats = models.IntegerField(
+        default=-1,
+        help_text=_(
+            "Purchased seats for this subscription. "
+            "Used for enforcing seat limits on a per-subscription basis for specific plans."
+        ),
+    )
+
     is_frontend_user_editable = False
 
     account = models.ForeignKey(
