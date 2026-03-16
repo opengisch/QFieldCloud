@@ -641,6 +641,17 @@ class AbstractSubscription(models.Model):
 
         return self.active_users.count()
 
+    @property
+    def organization_members_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        organization = self.account.user.organization
+
+        # +1 for the organization owner
+        return organization.members.count() + 1
+
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
 
