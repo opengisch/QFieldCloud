@@ -647,6 +647,14 @@ class AbstractSubscription(models.Model):
         return self.active_users.count()
 
     @property
+    def max_allowed_organization_members(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        return self.account.current_subscription.plan.max_organization_members
+
+    @property
     def organization_members_count(self) -> int:
         # if non-organization account, then it is always 1 user
         if not self.account.user.is_organization:
