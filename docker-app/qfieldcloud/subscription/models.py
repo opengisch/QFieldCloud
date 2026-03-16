@@ -647,6 +647,14 @@ class AbstractSubscription(models.Model):
         return self.active_users.count()
 
     @property
+    def organization_members_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        return self.account.user.organization.members.count()
+
+    @property
     def included_storage_bytes(self) -> int:
         """How much storage is included in the subscription.
 
