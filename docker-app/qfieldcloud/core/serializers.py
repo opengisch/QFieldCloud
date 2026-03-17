@@ -672,3 +672,34 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeamMember
         fields = ("member",)
+
+
+class ServerInfoSerializer(serializers.Serializer):
+    class SystemSerializer(serializers.Serializer):
+        site_title = serializers.CharField(help_text="The title of the site.")
+        logo_navbar = serializers.URLField(help_text="The URL of the navbar logo.")
+        logo_main = serializers.URLField(help_text="The URL of the main logo.")
+        favicon = serializers.URLField(help_text="The URL of the favicon.")
+
+    class AuthProviderSerializer(serializers.Serializer):
+        type = serializers.CharField(
+            help_text="Provider type: 'credentials' or 'oauth2'."
+        )
+        id = serializers.CharField(help_text="Provider identifier.")
+        name = serializers.CharField(help_text="Human-readable provider name.")
+        grant_flow = serializers.IntegerField(required=False)
+        scope = serializers.CharField(required=False)
+        pkce_enabled = serializers.BooleanField(required=False)
+        token_url = serializers.CharField(required=False)
+        refresh_token_url = serializers.CharField(required=False)
+        request_url = serializers.CharField(required=False)
+        redirect_host = serializers.CharField(required=False)
+        redirect_port = serializers.IntegerField(required=False)
+        redirect_url = serializers.CharField(required=False, allow_blank=True)
+        client_id = serializers.CharField(required=False)
+        extra_tokens = serializers.DictField(required=False)
+        idp_id_header = serializers.CharField(required=False)
+        styles = serializers.DictField(required=False)
+
+    system = SystemSerializer()
+    auth_providers = AuthProviderSerializer(many=True, required=False, default=list)
