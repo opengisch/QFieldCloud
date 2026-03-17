@@ -672,3 +672,13 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeamMember
         fields = ("member",)
+
+
+class ServerInfoSerializer(serializers.Serializer):
+    class SystemSerializer(serializers.Serializer):
+        site_title = serializers.CharField(help_text="The title of the site.")
+        logo_navbar = serializers.URLField(help_text="The URL of the navbar logo.")
+        logo_main = serializers.URLField(help_text="The URL of the main logo.")
+        favicon = serializers.URLField(help_text="The URL of the favicon.")
+
+    system = SystemSerializer()
