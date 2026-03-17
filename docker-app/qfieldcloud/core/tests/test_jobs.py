@@ -21,6 +21,7 @@ from qfieldcloud.core.tests.utils import (
     testdata_path,
     wait_for_project_ok_status,
 )
+from qfieldcloud.core.utils2 import project_seed
 
 logging.disable(logging.CRITICAL)
 
@@ -241,7 +242,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=self.p1,
-            extent=Polygon.from_bbox((-20000000, 20000000, -20000000, 20000000)),
+            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
             settings={
                 "schemaId": "https://app.qfield.cloud/schemas/project-seed-20251201.json",
                 "basemaps": [

@@ -1,21 +1,25 @@
 import io
+import json
 import logging
 import time
 from io import StringIO
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     SHARED_DATASETS_PROJECT_NAME,
+    Job,
     Organization,
     OrganizationMember,
     Person,
     Project,
     ProjectCollaborator,
+    ProjectSeed,
     Team,
     TeamMember,
 )
@@ -72,6 +76,163 @@ class QfcTestCase(APITransactionTestCase):
             },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_project_with_seed_and_xlsform(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        xlsform = SimpleUploadedFile(
+            "survey.xlsx",
+            b"fake xlsform content",
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        seed = json.dumps(
+            {
+                "basemap_provider": "osm",
+                "basemap_style": "standard",
+                "extent": "800000,5900000,1100000,6100000",
+            }
+        )
+
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "seed_project",
+                "owner": "user1",
+                "is_public": False,
+                "seed": seed,
+                "xlsform_file": xlsform,
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        project = Project.objects.get(name="seed_project")
+        self.assertTrue(ProjectSeed.objects.filter(project=project).exists())
+        self.assertTrue(
+            Job.objects.filter(project=project, type=Job.Type.CREATE_PROJECT).exists()
+        )
+
+        seed_obj = ProjectSeed.objects.get(project=project)
+        self.assertEqual(len(seed_obj.settings["basemaps"]), 1)
+        self.assertEqual(
+            seed_obj.settings["basemaps"][0]["name"], "OpenStreetMap (Standard)"
+        )
+        self.assertIsNotNone(seed_obj.settings["xlsform"])
+        self.assertTrue(seed_obj.xlsform_file)
+
+        self.assertNotIn("seed", response.data)
+        self.assertNotIn("xlsform_file", response.data)
+
+    def test_create_project_with_seed_no_xlsform(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        seed = json.dumps(
+            {
+                "basemap_provider": "osm",
+                "basemap_style": "grayscale_light",
+            }
+        )
+
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "seed_no_xls",
+                "owner": "user1",
+                "is_public": False,
+                "seed": seed,
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        project = Project.objects.get(name="seed_no_xls")
+        seed_obj = ProjectSeed.objects.get(project=project)
+        self.assertEqual(len(seed_obj.settings["basemaps"]), 1)
+        self.assertEqual(
+            seed_obj.settings["basemaps"][0]["name"],
+            "OpenStreetMap (Grayscale Light)",
+        )
+        self.assertIsNone(seed_obj.settings["xlsform"])
+
+    def test_create_project_without_seed(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "empty_project",
+                "owner": "user1",
+                "is_public": False,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        project = Project.objects.get(name="empty_project")
+        self.assertFalse(ProjectSeed.objects.filter(project=project).exists())
+        self.assertFalse(
+            Job.objects.filter(project=project, type=Job.Type.CREATE_PROJECT).exists()
+        )
+
+    def test_create_project_invalid_seed_json(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "bad_json_project",
+                "owner": "user1",
+                "is_public": False,
+                "seed": "{not valid json",
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_project_custom_basemap_no_url(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        seed = json.dumps(
+            {
+                "basemap_provider": "custom",
+                "basemap_style": "standard",
+            }
+        )
+
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "custom_no_url",
+                "owner": "user1",
+                "is_public": False,
+                "seed": seed,
+            },
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_project_seed_rollback_on_bad_extent(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        seed = json.dumps(
+            {
+                "basemap_provider": "osm",
+                "basemap_style": "standard",
+                "extent": "not,valid,extent,data",
+            }
+        )
+
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "rollback_project",
+                "owner": "user1",
+                "is_public": False,
+                "seed": seed,
+            },
+            format="multipart",
+        )
+        self.assertNotEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(Project.objects.filter(name="rollback_project").exists())
 
     def test_list_public_projects(self):
         # Create a public project of user2
