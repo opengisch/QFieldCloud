@@ -40,8 +40,12 @@ class FileQueryset(models.QuerySet):
 
 class File(models.Model):
     class Meta:
-        unique_together = [
-            ("project", "name", "file_type", "package_job"),
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "name", "file_type", "package_job"],
+                name="unique_file_per_project_name_type_packagejob",
+                nulls_distinct=False,
+            ),
         ]
 
     class FileType(models.IntegerChoices):

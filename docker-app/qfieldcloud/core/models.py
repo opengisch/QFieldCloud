@@ -2649,6 +2649,7 @@ class Secret(models.Model):
             models.UniqueConstraint(
                 fields=["project", "type", "name", "assigned_to"],
                 name="secret_project_type_name_assigned_to_uniq",
+                nulls_distinct=True,
             ),
             models.UniqueConstraint(
                 fields=[
@@ -2658,6 +2659,7 @@ class Secret(models.Model):
                     "assigned_to",
                 ],
                 name="secret_organization_type_name_assigned_to_uniq",
+                nulls_distinct=True,
             ),
             models.CheckConstraint(
                 # we want either the project to be set or the organization, but never both set or unset, therefore ^ (XOR)
