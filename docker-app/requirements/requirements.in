@@ -16,8 +16,7 @@ django-currentuser==0.10.0
 django-debug-toolbar==6.2.0
 django-extensions==4.1
 django-fernet-encrypted-fields==0.3.1
-# NOTE `django-filter>=25.2` requires Django>=5.2, so we pin to 25.1 until we upgrade Django
-django-filter==25.1
+django-filter==25.2
 django-invitations==2.1.0
 django-jazzmin==3.0.1
 django-log-request-id==2.1.1
