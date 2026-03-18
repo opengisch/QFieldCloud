@@ -99,8 +99,6 @@ jobs:
           }'
           EOF
 
-          echo "STORAGES_PROJECT_DEFAULT_STORAGE=default" >> .env
-
       - name: Pull docker containers
         run: docker compose pull
 
