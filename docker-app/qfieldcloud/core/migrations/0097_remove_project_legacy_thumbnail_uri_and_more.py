@@ -5,7 +5,10 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0094_alter_project_are_attachments_versioned_and_more"),
+        (
+            "core",
+            "0096_remove_secret_secret_project_type_name_assigned_to_uniq_and_more",
+        ),
     ]
 
     operations = [
