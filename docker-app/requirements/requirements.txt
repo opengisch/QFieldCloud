@@ -73,7 +73,7 @@ django==5.2.11
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.14.3
+django-allauth[socialaccount]==65.15.0
     # via -r /requirements/requirements.in
 django-auditlog==3.4.1
     # via -r /requirements/requirements.in
