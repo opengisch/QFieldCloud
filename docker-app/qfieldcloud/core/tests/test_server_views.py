@@ -3,13 +3,14 @@ from django.templatetags.static import static
 from django.test import override_settings
 from rest_framework.test import APITransactionTestCase
 
-from qfieldcloud.core.whitelabel import DEFAULT_WHITELABEL
+from qfieldcloud.core.whitelabel import get_whitelabel_settings
 
 
 class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         # Clear the cache before each test to prevent cached responses
         cache.clear()
+        self.whitelabel_settings = get_whitelabel_settings()
         super().setUp()
 
     def test_server_info_default_settings(self):
@@ -19,19 +20,29 @@ class QfcTestCase(APITransactionTestCase):
         system_info = data["system"]
 
         # Check title
-        self.assertEqual(system_info["site_title"], DEFAULT_WHITELABEL["site_title"])
+        self.assertEqual(
+            system_info["site_title"], self.whitelabel_settings["site_title"]
+        )
 
         # Check that the URLs have been transformed to absolute URLs properly
         self.assertTrue(system_info["logo_navbar"].startswith("http"))
-        self.assertIn(
-            static(DEFAULT_WHITELABEL["logo_navbar"]), system_info["logo_navbar"]
+        self.assertTrue(
+            system_info["logo_navbar"].endswith(
+                static(self.whitelabel_settings["logo_navbar"])
+            )
         )
 
         self.assertTrue(system_info["logo_main"].startswith("http"))
-        self.assertIn(static(DEFAULT_WHITELABEL["logo_main"]), system_info["logo_main"])
+        self.assertTrue(
+            system_info["logo_main"].endswith(
+                static(self.whitelabel_settings["logo_main"])
+            )
+        )
 
         self.assertTrue(system_info["favicon"].startswith("http"))
-        self.assertIn(static(DEFAULT_WHITELABEL["favicon"]), system_info["favicon"])
+        self.assertTrue(
+            system_info["favicon"].endswith(static(self.whitelabel_settings["favicon"]))
+        )
 
     @override_settings(
         WHITELABEL={
