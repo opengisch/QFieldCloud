@@ -51,7 +51,7 @@ django==5.2.11
     #   django-classy-tags
     #   django-common-helpers
     #   django-cors-headers
-    #   django-cron
+    #   django-cron-django5
     #   django-currentuser
     #   django-debug-toolbar
     #   django-extensions
@@ -167,6 +167,8 @@ mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.3.1
     # via django-allauth
+packaging==26.0
+    # via django-notifications-hq
 phonenumbers==9.0.26
     # via -r /requirements/requirements.in
 pillow==12.1.1
@@ -183,8 +185,6 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   django-auditlog
-pytz==2025.2
-    # via django-notifications-hq
 pyyaml==6.0.2
     # via drf-spectacular
 referencing==0.36.2
@@ -230,6 +230,7 @@ typing-extensions==4.14.1
     #   asgiref
     #   beautifulsoup4
     #   boto3-stubs
+    #   cryptography
     #   django-countries
     #   django-stubs
     #   django-stubs-ext
