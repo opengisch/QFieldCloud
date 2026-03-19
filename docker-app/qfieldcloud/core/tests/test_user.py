@@ -394,13 +394,13 @@ class CreatePersonAPITestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_create_person_sets_has_accepted_tos(self):
+    def test_create_person_has_accepted_tos_false(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
         self.client.post(
             self._url(),
             {"username": "tosuser", "password": "pass", "email": "tos@example.com"},
         )
-        self.assertTrue(Person.objects.get(username="tosuser").has_accepted_tos)
+        self.assertFalse(Person.objects.get(username="tosuser").has_accepted_tos)
 
     def test_duplicate_username_returns_409(self):
         Person.objects.create_user(username="existing", password="abc123")

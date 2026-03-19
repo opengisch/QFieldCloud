@@ -247,7 +247,7 @@ class CreateUserSerializer(serializers.Serializer):
             username=validated_data["username"],
             password=validated_data["password"],
             email=validated_data["email"],
-            has_accepted_tos=True,
+            has_accepted_tos=False,
         )
 
 
