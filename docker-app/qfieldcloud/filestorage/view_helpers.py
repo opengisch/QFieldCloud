@@ -45,6 +45,8 @@ from .helpers import purge_old_file_versions
 
 logger = logging.getLogger(__name__)
 
+NGINX_INTERNAL_TOKEN_HEADER_KEY = "X-Internal-Token"
+
 
 def upload_project_file_version(
     request: Request,
@@ -254,8 +256,14 @@ def download_field_file(
 
     range = get_range(request, field_file.size)
 
-    # Assume that if the request is secure, we are behind a nginx proxy and we can use `X-Accel-Redirect`
-    if request.is_secure() and not settings.IN_TEST_SUITE:
+    # Assume that if the request has the internal token in the headers,
+    # we are behind a nginx proxy and we can use `X-Accel-Redirect`.
+    if (
+        NGINX_INTERNAL_TOKEN_HEADER_KEY in request.headers
+        and request.headers[NGINX_INTERNAL_TOKEN_HEADER_KEY]
+        == settings.NGINX_INTERNAL_TOKEN
+        and not settings.IN_TEST_SUITE
+    ):
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
         storage_filename = field_file.name
