@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import shutil
 import sys
 import tempfile
@@ -132,6 +133,11 @@ class JobRun:
             f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:{TRANSFORMATION_GRIDS_PATH}:ro",
         ]
 
+        custom_ca_path = os.environ.get("QFIELDCLOUD_CUSTOM_CA_PATH")
+        custom_ca_host_path = os.environ.get("QFIELDCLOUD_CUSTOM_CA_HOST_PATH")
+        if custom_ca_path and custom_ca_host_path:
+            volumes.append(f"{custom_ca_host_path}:{custom_ca_path}:ro")
+
         return volumes
 
     def get_ports(self) -> dict[str, int]:
@@ -141,6 +147,12 @@ class JobRun:
 
     def get_environment(self) -> dict[str, str]:
         extra_envvars = {}
+
+        custom_ca_path = os.environ.get("QFIELDCLOUD_CUSTOM_CA_PATH")
+
+        if custom_ca_path:
+            extra_envvars["REQUESTS_CA_BUNDLE"] = custom_ca_path
+            extra_envvars["SSL_CERT_FILE"] = custom_ca_path
 
         pgservice_file_contents = ""
         for secret in Secret.objects.for_user_and_project(  # type:ignore
