@@ -440,7 +440,36 @@ class CreatePersonAPITestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
         response = self.client.post(
             self._url(),
-            {"username": "ab", "password": "pass", "email": "m@example.com"},
+            {"username": "ab", "password": "abc123", "email": "shortuser@example.com"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_person_with_names(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {
+                "username": "nameduser",
+                "password": "abc123",
+                "email": "nameduser@example.com",
+                "first_name": "Jane",
+                "last_name": "Doe",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        person = Person.objects.get(username="nameduser")
+        self.assertEqual(person.first_name, "Jane")
+        self.assertEqual(person.last_name, "Doe")
+
+    def test_username_must_begin_with_letter(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {
+                "username": "1badname",
+                "password": "abc123",
+                "email": "user1@example.com",
+            },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
