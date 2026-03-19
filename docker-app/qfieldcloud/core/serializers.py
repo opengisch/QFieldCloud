@@ -228,25 +228,22 @@ class CreateUserSerializer(serializers.Serializer):
     can return HTTP 409 Conflict (rather than 400) when the username is taken.
     """
 
-    username = serializers.RegexField(
-        r"^[-a-zA-Z0-9_]+$",
+    username = serializers.CharField(
         max_length=150,
-        min_length=3,
-        error_messages={
-            "invalid": _(
-                "Enter a valid username. This value may contain only letters, "
-                "numbers, and -/_ characters."
-            )
-        },
+        validators=User._meta.get_field("username").validators,
     )
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
     email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(max_length=150, required=False, default="")
+    last_name = serializers.CharField(max_length=150, required=False, default="")
 
     def create(self, validated_data):
         return Person.objects.create_user(
             username=validated_data["username"],
             password=validated_data["password"],
             email=validated_data["email"],
+            first_name=validated_data["first_name"],
+            last_name=validated_data["last_name"],
             has_accepted_tos=False,
         )
 
