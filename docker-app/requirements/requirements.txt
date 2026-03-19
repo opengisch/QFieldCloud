@@ -31,11 +31,11 @@ certifi==2025.8.3
     # via
     #   requests
     #   sentry-sdk
-cffi==1.17.1
+cffi==2.0.0
     # via cryptography
 charset-normalizer==3.4.3
     # via requests
-cryptography==45.0.6
+cryptography==46.0.5
     # via
     #   django-fernet-encrypted-fields
     #   pyjwt
@@ -51,7 +51,7 @@ django==5.2.11
     #   django-classy-tags
     #   django-common-helpers
     #   django-cors-headers
-    #   django-cron
+    #   django-cron-django5
     #   django-currentuser
     #   django-debug-toolbar
     #   django-extensions
@@ -73,7 +73,7 @@ django==5.2.11
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.14.3
+django-allauth[socialaccount]==65.15.0
     # via -r /requirements/requirements.in
 django-auditlog==3.4.1
     # via -r /requirements/requirements.in
@@ -103,7 +103,7 @@ django-extensions==4.1
     # via -r /requirements/requirements.in
 django-fernet-encrypted-fields==0.3.1
     # via -r /requirements/requirements.in
-django-filter==25.1
+django-filter==25.2
     # via -r /requirements/requirements.in
 django-invitations==2.1.0
     # via -r /requirements/requirements.in
@@ -167,7 +167,9 @@ mypy-boto3-s3==1.35.81
     # via -r /requirements/requirements.in
 oauthlib==3.3.1
     # via django-allauth
-phonenumbers==9.0.25
+packaging==26.0
+    # via django-notifications-hq
+phonenumbers==9.0.26
     # via -r /requirements/requirements.in
 pillow==12.1.1
     # via -r /requirements/requirements.in
@@ -175,7 +177,7 @@ psycopg2==2.9.11
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi
-pyjwt[crypto]==2.10.1
+pyjwt[crypto]==2.12.1
     # via django-allauth
 pymemcache==4.0.0
     # via -r /requirements/requirements.in
@@ -183,8 +185,6 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   django-auditlog
-pytz==2025.2
-    # via django-notifications-hq
 pyyaml==6.0.2
     # via drf-spectacular
 referencing==0.36.2
@@ -201,13 +201,13 @@ rpds-py==0.27.0
     #   referencing
 s3transfer==0.10.4
     # via boto3
-sentry-sdk==2.53.0
+sentry-sdk==2.55.0
     # via -r /requirements/requirements.in
 six==1.17.0
     # via python-dateutil
 soupsieve==2.7
     # via beautifulsoup4
-sqlparse==0.5.3
+sqlparse==0.5.5
     # via
     #   django
     #   django-debug-toolbar
@@ -230,11 +230,13 @@ typing-extensions==4.14.1
     #   asgiref
     #   beautifulsoup4
     #   boto3-stubs
+    #   cryptography
     #   django-countries
     #   django-stubs
     #   django-stubs-ext
     #   djangorestframework-stubs
     #   mypy-boto3-s3
+    #   pyjwt
     #   referencing
 uritemplate==4.2.0
     # via drf-spectacular
