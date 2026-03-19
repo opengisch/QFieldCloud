@@ -45,6 +45,7 @@ from .helpers import purge_old_file_versions
 
 logger = logging.getLogger(__name__)
 
+NGINX_INTERNAL_TOKEN = "static-nginx-internal-token"
 NGINX_INTERNAL_TOKEN_HEADER_KEY = "X-Internal-Token"
 
 
@@ -260,8 +261,7 @@ def download_field_file(
     # we are behind a nginx proxy and we can use `X-Accel-Redirect`.
     if (
         NGINX_INTERNAL_TOKEN_HEADER_KEY in request.headers
-        and request.headers[NGINX_INTERNAL_TOKEN_HEADER_KEY]
-        == settings.NGINX_INTERNAL_TOKEN
+        and request.headers[NGINX_INTERNAL_TOKEN_HEADER_KEY] == NGINX_INTERNAL_TOKEN
         and not settings.IN_TEST_SUITE
     ):
         # this is the relative path of the file, including the containing directories.

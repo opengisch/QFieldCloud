@@ -999,6 +999,3 @@ CORS_URLS_REGEX = r"^/api/.*$"
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
 CORS_ALLOW_CREDENTIALS = parse_string_to_bool(os.environ["CORS_ALLOW_CREDENTIALS"])
-
-# Internal token used to check if a request comes from nginx.
-NGINX_INTERNAL_TOKEN = os.environ["NGINX_INTERNAL_TOKEN"]
