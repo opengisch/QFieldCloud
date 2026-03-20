@@ -19,7 +19,6 @@ class ServerInfoView(views.APIView):
 
     @method_decorator(cache_page(60))
     def get(self, request: Request) -> Response:
-        system_info = {}
         whitelabel_settings = get_whitelabel_settings()
 
         for key in ["logo_navbar", "logo_main", "favicon"]:
@@ -27,11 +26,9 @@ class ServerInfoView(views.APIView):
             if value:
                 whitelabel_settings[key] = request.build_absolute_uri(static(value))
 
-        system_info.update(whitelabel_settings)
-
         results = self.serializer_class(
             {
-                "system": system_info,
+                "whitelabel": whitelabel_settings,
             }
         )
         return Response(results.data, status=status.HTTP_200_OK)

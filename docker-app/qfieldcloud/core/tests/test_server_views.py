@@ -17,7 +17,7 @@ class QfcTestCase(APITransactionTestCase):
         """Test that the endpoint returns the correct default whitelabel settings"""
         response = self.client.get("/api/v1/server/info/")
         data = response.json()
-        system_info = data["system"]
+        system_info = data["whitelabel"]
 
         # Check title
         self.assertEqual(
@@ -53,6 +53,6 @@ class QfcTestCase(APITransactionTestCase):
         """Test that the endpoint correctly reflects custom WHITELABEL settings from settings.py"""
         response = self.client.get("/api/v1/server/info/")
         data = response.json()
-        system_info = data["system"]
+        system_info = data["whitelabel"]
 
         self.assertEqual(system_info["site_title"], "My Custom Title")
