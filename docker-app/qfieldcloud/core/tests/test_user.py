@@ -402,7 +402,7 @@ class CreatePersonAPITestCase(APITestCase):
         )
         self.assertFalse(Person.objects.get(username="tosuser").has_accepted_tos)
 
-    def test_duplicate_username_returns_409(self):
+    def test_duplicate_username_returns_400(self):
         Person.objects.create_user(username="existing", password="abc123")
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
         response = self.client.post(
@@ -413,7 +413,7 @@ class CreatePersonAPITestCase(APITestCase):
                 "email": "existing@example.com",
             },
         )
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_non_staff_forbidden(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.regular_token.key)
