@@ -507,6 +507,15 @@ def can_list_users_organizations(user: QfcUser) -> bool:
     return True
 
 
+def can_create_user(user: QfcUser) -> bool:
+    """Return True if the user can create new QFieldCloud accounts.
+
+    Restricted to staff so only service accounts and admins can provision
+    users programmatically via the API.
+    """
+    return user.is_staff
+
+
 def can_create_organizations(user: QfcUser) -> bool:
     return user.is_authenticated
 

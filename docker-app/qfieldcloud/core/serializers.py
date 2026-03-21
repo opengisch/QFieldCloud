@@ -18,6 +18,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     PackageJob,
+    Person,
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
@@ -218,6 +219,35 @@ class CompleteUserSerializer(serializers.ModelSerializer):
             "last_name",
         )
         read_only_fields = ("full_name", "avatar_url")
+
+
+class CreateUserSerializer(serializers.ModelSerializer):
+    """Serializer for programmatic Person account creation."""
+
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    class Meta:
+        model = Person
+        fields = ("username", "password", "email", "first_name", "last_name")
+        extra_kwargs = {
+            "email": {"required": True},
+            "first_name": {"required": False, "default": ""},
+            "last_name": {"required": False, "default": ""},
+        }
+
+    def validate_email(self, value):
+        if Person.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                _("This email is already taken by another user!")
+            )
+
+        return value
+
+    def create(self, validated_data):
+        return Person.objects.create_user(
+            has_accepted_tos=False,
+            **validated_data,
+        )
 
 
 class PublicInfoUserSerializer(serializers.ModelSerializer):
