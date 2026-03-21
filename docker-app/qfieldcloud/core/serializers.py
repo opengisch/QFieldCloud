@@ -235,6 +235,14 @@ class CreateUserSerializer(serializers.ModelSerializer):
             "last_name": {"required": False, "default": ""},
         }
 
+    def validate_email(self, value):
+        if Person.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                _("This email is already taken by another user!")
+            )
+
+        return value
+
     def create(self, validated_data):
         return Person.objects.create_user(
             has_accepted_tos=False,
