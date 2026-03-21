@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
 from qfieldcloud.core.models import Organization, Project
@@ -71,13 +70,7 @@ class ListCreateUsersView(generics.ListCreateAPIView):
     def post(self, request):
         serializer = CreateUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        try:
-            user = serializer.save()
-        except IntegrityError:
-            return Response(
-                {"username": ["A user with this username already exists."]},
-                status=status.HTTP_409_CONFLICT,
-            )
+        user = serializer.save()
 
         return Response(
             PublicInfoUserSerializer(user).data,

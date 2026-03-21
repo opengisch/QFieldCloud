@@ -221,30 +221,24 @@ class CompleteUserSerializer(serializers.ModelSerializer):
         read_only_fields = ("full_name", "avatar_url")
 
 
-class CreateUserSerializer(serializers.Serializer):
-    """Serializer for programmatic Person account creation.
+class CreateUserSerializer(serializers.ModelSerializer):
+    """Serializer for programmatic Person account creation."""
 
-    Intentionally does *not* validate username uniqueness here so that the view
-    can return HTTP 409 Conflict (rather than 400) when the username is taken.
-    """
-
-    username = serializers.CharField(
-        max_length=150,
-        validators=User._meta.get_field("username").validators,
-    )
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
-    email = serializers.EmailField(required=True)
-    first_name = serializers.CharField(max_length=150, required=False, default="")
-    last_name = serializers.CharField(max_length=150, required=False, default="")
+
+    class Meta:
+        model = Person
+        fields = ("username", "password", "email", "first_name", "last_name")
+        extra_kwargs = {
+            "email": {"required": True},
+            "first_name": {"required": False, "default": ""},
+            "last_name": {"required": False, "default": ""},
+        }
 
     def create(self, validated_data):
         return Person.objects.create_user(
-            username=validated_data["username"],
-            password=validated_data["password"],
-            email=validated_data["email"],
-            first_name=validated_data["first_name"],
-            last_name=validated_data["last_name"],
             has_accepted_tos=False,
+            **validated_data,
         )
 
 
