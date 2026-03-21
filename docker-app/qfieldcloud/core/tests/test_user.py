@@ -473,6 +473,22 @@ class CreatePersonAPITestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_duplicate_email_returns_400(self):
+        Person.objects.create_user(
+            username="emailowner", password="abc123", email="taken@example.com"
+        )
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
+        response = self.client.post(
+            self._url(),
+            {
+                "username": "newuser",
+                "password": "abc123",
+                "email": "taken@example.com",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+
     def test_list_still_works_for_staff(self):
         """GET /api/v1/users/ must still function after adding POST support."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.staff_token.key)
