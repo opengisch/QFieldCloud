@@ -233,3 +233,29 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertTrue(self.p1.has_online_vector_data)
+
+    def test_cannot_create_job_on_project_without_permissions(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        u2 = Person.objects.create_user(username="u2", password="abc123")
+        p2 = Project.objects.create(is_public=False, owner=u2)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": p2.id,
+                "type": "process_projectfile",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.p1.id,
+                "type": "process_projectfile",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)

@@ -14,7 +14,10 @@ from rest_framework.status import HTTP_201_CREATED
 
 class JobPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        project_id = permissions_utils.get_param_from_request(request, "project_id")
+        if view.action is None or view.action == "list":
+            project_id = request.GET.get("project_id")
+        else:
+            project_id = permissions_utils.get_param_from_request(request, "project_id")
 
         try:
             project = Project.objects.get(id=project_id)
@@ -50,7 +53,7 @@ class JobPermissions(permissions.BasePermission):
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.JobSerializer
     lookup_url_kwarg = "job_id"
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, JobPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_serializer_by_job_type(self, job_type, *args, **kwargs):
@@ -106,7 +109,7 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
         qs = Job.objects.select_subclasses()
 
         if self.action == "list":
-            project_id = self.request.data.get("project_id")
+            project_id = self.request.GET.get("project_id")
             project = generics.get_object_or_404(Project, pk=project_id)
             qs = qs.filter(project=project)
 
