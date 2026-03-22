@@ -36,19 +36,43 @@ class JobPermissions(permissions.BasePermission):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 required=True,
-                description="File to be uploaded",
+                description="Project we are quering against.",
+            ),
+            OpenApiParameter(
+                name="type",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                enum=list(Job.Type),
+                required=False,
+                description="Return project jobs only of this type.",
+            ),
+        ],
+    ),
+    create=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="project_id",
+                type=OpenApiTypes.STR,
+                required=True,
+                description="The job will be created on this project.",
+            ),
+            OpenApiParameter(
+                name="type",
+                type=OpenApiTypes.STR,
+                enum=list(Job.Type),
+                required=True,
+                description="The type of the created job.",
             ),
             OpenApiParameter(
                 name="force",
                 type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
                 required=False,
                 default=0,
                 enum=[1, 0],
                 description="Force creating the job.",
             ),
         ],
-    )
+    ),
 )
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.JobSerializer
