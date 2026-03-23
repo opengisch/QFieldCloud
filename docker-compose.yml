@@ -5,9 +5,6 @@ x-logging: &default-logging
     max-file: "10"
     tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
-x-volume-static: &volume-static static_volume:/usr/src/app/staticfiles
-x-volume-media: &volume-media media_volume:/usr/src/app/mediafiles
-
 services:
   app: &default-django
     build:
@@ -24,8 +21,8 @@ services:
         --workers ${GUNICORN_WORKERS}
         --threads ${GUNICORN_THREADS}
     volumes:
-      - *volume-static
-      - *volume-media
+      - &static_volume static_volume:/usr/src/app/staticfiles
+      - &media_volume media_volume:/usr/src/app/mediafiles
     environment:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST}
@@ -168,8 +165,8 @@ services:
     command: python manage.py dequeue
     user: root # TODO change me to least privileged docker-capable user on the host (/!\ docker users!=hosts users, use UID rather than username)
     volumes:
-      - *volume-static
-      - *volume-media
+      - *static_volume
+      - *media_volume
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
       - ${TMP_DIRECTORY}:/tmp
