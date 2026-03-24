@@ -14,6 +14,7 @@ from qfieldcloud.core.views import (
 )
 from qfieldcloud.core.views.accounts_views import resend_confirmation_email
 from qfieldcloud.filestorage.urls import urlpatterns as filestorage_urlpatterns
+from qfieldcloud.subscription.urls import urlpatterns as subscription_urlpatterns
 
 router = DefaultRouter()
 router.register(r"projects", projects_views.ProjectViewSet, basename="project")
@@ -43,6 +44,7 @@ organizations/<str:organization_name>/teams/<str:team_name>/members/
 
 urlpatterns = [
     *filestorage_urlpatterns,
+    *subscription_urlpatterns,
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
     path("users/", users_views.ListUsersView.as_view()),
