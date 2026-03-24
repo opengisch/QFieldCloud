@@ -660,7 +660,8 @@ class AbstractSubscription(models.Model):
         if not self.account.user.is_organization:
             return 1
 
-        return self.account.user.organization.members.count()
+        # +1 for the organization owner
+        return self.account.user.organization.members.count() + 1
 
     @property
     def included_storage_bytes(self) -> int:
