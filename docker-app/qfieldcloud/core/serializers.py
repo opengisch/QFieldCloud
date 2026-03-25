@@ -168,8 +168,10 @@ class ProjectSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        self._seed_data = validated_data.pop("seed", None)
-        self._xlsform_file = validated_data.pop("xlsform_file", None)
+        # remove seed and xlsform_file from validated_data to avoid errors
+        # since these are not part of the model and will be set in the view
+        validated_data.pop("seed", None)
+        validated_data.pop("xlsform_file", None)
         return super().create(validated_data)
 
     def get_needs_repackaging(self, obj: Project) -> bool:
