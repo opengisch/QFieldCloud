@@ -33,6 +33,7 @@ from rest_framework import permissions
 
 from qfieldcloud.authentication import views as auth_views
 from qfieldcloud.core.admin import qfc_admin_site
+from qfieldcloud.core.utils2.view_utils import blocked_view
 from qfieldcloud.core.views.redirect_views import redirect_to_admin_project_view
 from qfieldcloud.filestorage.views import (
     compatibility_file_crud_view,
@@ -117,6 +118,10 @@ urlpatterns = [
         ),
     ),
     path("auth/", include("rest_framework.urls")),
+    # Block the unstyled pages - must be before the allauth URLs
+    path("accounts/3rdparty/", blocked_view),
+    path("accounts/email/", blocked_view),
+    path("accounts/password/change/", blocked_view),
     path("accounts/", include("allauth.urls")),
     path("invitations/", include("invitations.urls", namespace="invitations")),
     path("__debug__/", include("debug_toolbar.urls")),

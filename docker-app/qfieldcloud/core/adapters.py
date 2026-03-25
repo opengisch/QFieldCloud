@@ -242,3 +242,42 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
     ) -> Literal[True]:
         """Allow social signup for all users."""
         return True
+
+    def pre_social_login(self, request, sociallogin):
+        """Fix user instance mismatch caused by Django multi-table inheritance.
+
+        QFieldCloud's UserManager uses `django-model-utils`
+        `select_subclasses()`, which JOINs the child tables and returns the
+        actual subclass instance (e.g. `Person`). Django's auth middleware
+        loads request.user through this manager, so request.user can be
+        `Person`, `Organization`, `Team` or `User` instance.
+
+        However, when allauth looks up a user by email during social login,
+        it uses `EmailAddress.objects.select_related("user")`, which bypasses
+        the custom UserManager entirely. `select_related` loads the FK target
+        model directly (`core.User`), producing a base `User` instance.
+
+        Django's `Model.__eq__` compares `_meta.label` first. Since
+        `"core.User"` != `"core.Person"`, it returns `NotImplemented`, and Python
+        falls back to identity comparison (is), which is False for
+        different objects. This means `User(pk=3)` != `Person(pk=3)`, even
+        though they represent the same database row.
+
+        allauth's `do_connect()` then checks:
+
+            if sociallogin.user != request.user:
+                raise validation_error("connected_other")
+
+        This incorrectly rejects the connection with "The third-party
+        account is already connected to a different account."
+
+        This fix aligns the two instances by comparing primary keys
+        directly, so allauth's downstream != check works correctly.
+        """
+        if (
+            request.user.is_authenticated
+            and sociallogin.is_existing
+            and sociallogin.user.pk is not None
+            and sociallogin.user.pk == request.user.pk
+        ):
+            sociallogin.user = request.user

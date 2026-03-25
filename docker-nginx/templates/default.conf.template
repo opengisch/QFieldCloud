@@ -150,7 +150,6 @@ server {
   }
 
   location /swagger.yaml {
-    add_header Access-Control-Allow-Origin https://docs.qfield.org;
     proxy_pass http://django;
   }
 

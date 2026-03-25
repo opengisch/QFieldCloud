@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django_stubs_ext import StrOrPromise
@@ -672,3 +673,25 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeamMember
         fields = ("member",)
+
+
+class WhitelabelSerializer(serializers.Serializer):
+    site_title = serializers.CharField(help_text="The title of the site.")
+    logo_navbar = serializers.URLField(help_text="The URL of the navigation bar logo.")
+    logo_main = serializers.URLField(help_text="The URL of the main logo.")
+    favicon = serializers.URLField(help_text="The URL of the favicon.")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if request:
+            for key in ("logo_navbar", "logo_main", "favicon"):
+                value = data.get(key)
+                if value:
+                    data[key] = request.build_absolute_uri(static(value))
+
+        return data
+
+
+class ServerInfoSerializer(serializers.Serializer):
+    whitelabel = WhitelabelSerializer()

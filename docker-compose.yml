@@ -25,6 +25,7 @@ services:
       - media_volume:/usr/src/app/mediafiles/
     environment:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
       SECRET_KEY: ${SECRET_KEY}
       SALT_KEY: ${SALT_KEY}
@@ -62,6 +63,8 @@ services:
       EMAIL_HOST_USER: ${EMAIL_HOST_USER}
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS}
       # Settings below are specific to worker_wrapper
       # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
       TMP_DIRECTORY: ${TMP_DIRECTORY}
@@ -127,6 +130,7 @@ services:
   # Automatically create self-signed certificates for local development and test deployments
   mkcert:
     image: vishnunair/docker-mkcert
+    platform: linux/amd64
     environment:
       domain: ${QFIELDCLOUD_HOST}
     volumes:

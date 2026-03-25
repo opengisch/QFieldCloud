@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, NamedTuple, TypedDict, cast
+from uuid import UUID
 
 from libqfieldsync.layer import LayerSource
 from libqfieldsync.utils.bad_layer_handler import (
@@ -28,6 +29,7 @@ from qgis.core import (
     QgsProject,
     QgsProjectArchive,
     QgsProviderRegistry,
+    QgsSettings,
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
@@ -38,6 +40,11 @@ from tabulate import tabulate
 
 # Get environment variables
 JOB_ID = os.environ.get("JOB_ID")
+
+# Network timeout for QGIS. Reduced from default 60 seconds to fail fast
+# when layers are unreachable (e.g. network outage, blocked external access).
+# This prevents long blocking delays when loading project file.
+QGIS_NETWORK_TIMEOUT_MS = 5000
 
 qgs_stderr_logger = logging.getLogger("QGSSTDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
@@ -152,6 +159,9 @@ def start_app() -> str:
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
         QgsApplication.messageLog().messageReceived.connect(_write_log_message)
+
+        settings = QgsSettings()
+        settings.setValue("network/network-timeout", QGIS_NETWORK_TIMEOUT_MS)
 
         # make sure the app is closed, otherwise the container exists with non-zero
         @atexit.register
@@ -478,6 +488,19 @@ def upload_project(project_id: str, project_dir: Path) -> None:
     )
 
     logging.info("Uploading packaged project files finished!")
+
+
+def upload_project_thumbnail(project_id: UUID, thumbnail_filename: Path | None) -> None:
+    """Upload the generated thumbnail to QFieldCloud via the SDK."""
+
+    if thumbnail_filename is None:
+        logging.warning("No thumbnail was generated, skipping upload.")
+        return
+
+    client = sdk.Client()
+    client.upload_project_thumbnail(str(project_id), str(thumbnail_filename))
+
+    logging.info("Project thumbnail uploaded!")
 
 
 def list_local_files(project_id: str, project_dir: Path):
