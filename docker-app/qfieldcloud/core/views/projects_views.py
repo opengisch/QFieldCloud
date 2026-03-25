@@ -131,11 +131,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: ProjectSerializer) -> None:
         super().perform_create(serializer)
 
-        seed_data = getattr(serializer, "_seed_data", None)
+        seed_data = serializer.validated_data.get("seed", None)
         if not seed_data:
             return
 
-        xlsform_file = getattr(serializer, "_xlsform_file", None)
+        xlsform_file = serializer.validated_data.get("xlsform_file", None)
         project = serializer.instance
 
         basemaps, extent, xlsform_config = project_seed.build_seed_data(
@@ -162,6 +162,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             type=Job.Type.CREATE_PROJECT,
             created_by=self.request.user,
         )
+        print("Job created")
 
     @transaction.atomic
     def perform_update(self, serializer: ProjectSerializer) -> None:
