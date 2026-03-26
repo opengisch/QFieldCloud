@@ -14,14 +14,30 @@ from rest_framework.status import HTTP_201_CREATED
 
 class JobPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        project_id = permissions_utils.get_param_from_request(request, "project_id")
+        should_expect_project_id = False
+        project_id = None
 
-        try:
-            project = Project.objects.get(id=project_id)
-        except ObjectDoesNotExist:
-            return False
+        if view.action is None or view.action == "list":
+            should_expect_project_id = True
+            project_id = request.query_params.get("project_id")
+        elif view.action == "create":
+            should_expect_project_id = True
+            project_id = request.data.get("project_id")
 
-        return permissions_utils.can_read_jobs(request.user, project)
+        if should_expect_project_id:
+            try:
+                project = Project.objects.get(id=project_id)
+            except ObjectDoesNotExist:
+                return False
+        else:
+            job_id = permissions_utils.get_param_from_request(request, "job_id")
+
+            try:
+                project = Job.objects.get(id=job_id).project
+            except ObjectDoesNotExist:
+                return False
+
+        return permissions_utils.can_read_create_jobs(request.user, project)
 
 
 @extend_schema_view(
@@ -33,24 +49,48 @@ class JobPermissions(permissions.BasePermission):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 required=True,
-                description="File to be uploaded",
+                description="Project we are quering against.",
+            ),
+            OpenApiParameter(
+                name="type",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                enum=list(Job.Type),
+                required=False,
+                description="Return project jobs only of this type.",
+            ),
+        ],
+    ),
+    create=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="project_id",
+                type=OpenApiTypes.STR,
+                required=True,
+                description="The job will be created on this project.",
+            ),
+            OpenApiParameter(
+                name="type",
+                type=OpenApiTypes.STR,
+                enum=list(Job.Type),
+                required=True,
+                description="The type of the created job.",
             ),
             OpenApiParameter(
                 name="force",
                 type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
                 required=False,
                 default=0,
                 enum=[1, 0],
                 description="Force creating the job.",
             ),
         ],
-    )
+    ),
 )
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.JobSerializer
     lookup_url_kwarg = "job_id"
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, JobPermissions]
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def get_serializer_by_job_type(self, job_type, *args, **kwargs):
@@ -106,7 +146,7 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
         qs = Job.objects.select_subclasses()
 
         if self.action == "list":
-            project_id = self.request.data.get("project_id")
+            project_id = self.request.GET.get("project_id")
             project = generics.get_object_or_404(Project, pk=project_id)
             qs = qs.filter(project=project)
 

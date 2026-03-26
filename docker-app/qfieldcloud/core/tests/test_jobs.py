@@ -12,6 +12,7 @@ from qfieldcloud.core.models import (
     Project,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
+from qfieldcloud.core.tests.test_packages import ProjectCollaborator
 
 from .utils import (
     set_subscription,
@@ -233,3 +234,76 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertTrue(self.p1.has_online_vector_data)
+
+    def test_cannot_create_job_on_project_without_permissions(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        u2 = Person.objects.create_user(username="u2", password="abc123")
+        p2 = Project.objects.create(is_public=False, owner=u2)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": p2.id,
+                "type": "process_projectfile",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.p1.id,
+                "type": "process_projectfile",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_can_create_and_read_job_created_by_their_own(self):
+        for idx, role in enumerate(ProjectCollaborator.Roles):
+            user = Person.objects.create_user(
+                username=f"collaborator_{idx}", password="abc123"
+            )
+
+            ProjectCollaborator.objects.create(
+                project=self.p1,
+                collaborator=user,
+                role=role,
+            )
+
+            token = AuthToken.objects.get_or_create(user=user)[0]
+
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+
+            resp_post = self.client.post(
+                "/api/v1/jobs/",
+                {
+                    "project_id": self.p1.id,
+                    "type": "process_projectfile",
+                },
+            )
+
+            self.assertTrue(status.is_success(resp_post.status_code))
+            self.assertIn("id", resp_post.data)
+
+            job_id = resp_post.data["id"]
+
+            resp_get = self.client.get(
+                "/api/v1/jobs/",
+                {
+                    "project_id": self.p1.id,
+                },
+            )
+
+            self.assertTrue(status.is_success(resp_get.status_code))
+            self.assertGreaterEqual(len(resp_get.data), 1)
+            self.assertEqual(resp_get.data[-1]["id"], job_id)
+
+            resp_get = self.client.get(
+                f"/api/v1/jobs/{job_id}/",
+            )
+
+            self.assertTrue(status.is_success(resp_get.status_code))
+            self.assertEqual(resp_get.data["id"], job_id)
