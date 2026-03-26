@@ -37,7 +37,7 @@ class JobPermissions(permissions.BasePermission):
             except ObjectDoesNotExist:
                 return False
 
-        return permissions_utils.can_read_jobs(request.user, project)
+        return permissions_utils.can_read_create_jobs(request.user, project)
 
 
 @extend_schema_view(
