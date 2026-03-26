@@ -14,15 +14,28 @@ from rest_framework.status import HTTP_201_CREATED
 
 class JobPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        if view.action is None or view.action == "list":
-            project_id = request.GET.get("project_id")
-        else:
-            project_id = permissions_utils.get_param_from_request(request, "project_id")
+        should_expect_project_id = False
+        project_id = None
 
-        try:
-            project = Project.objects.get(id=project_id)
-        except ObjectDoesNotExist:
-            return False
+        if view.action is None or view.action == "list":
+            should_expect_project_id = True
+            project_id = request.query_params.get("project_id")
+        elif view.action == "create":
+            should_expect_project_id = True
+            project_id = request.data.get("project_id")
+
+        if should_expect_project_id:
+            try:
+                project = Project.objects.get(id=project_id)
+            except ObjectDoesNotExist:
+                return False
+        else:
+            job_id = permissions_utils.get_param_from_request(request, "job_id")
+
+            try:
+                project = Job.objects.get(id=job_id).project
+            except ObjectDoesNotExist:
+                return False
 
         return permissions_utils.can_read_jobs(request.user, project)
 
