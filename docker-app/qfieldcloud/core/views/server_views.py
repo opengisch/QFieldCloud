@@ -1,6 +1,7 @@
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from qfieldcloud.authentication.sso.auth_providers import get_auth_providers
 from qfieldcloud.core.serializers import ServerInfoSerializer
 from qfieldcloud.core.whitelabel import get_whitelabel_settings
 from rest_framework import status, views
@@ -21,6 +22,7 @@ class ServerInfoView(views.APIView):
         results = self.serializer_class(
             {
                 "whitelabel": get_whitelabel_settings(),
+                "auth_providers": get_auth_providers(request),
             },
             context={"request": request},
         )
