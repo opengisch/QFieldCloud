@@ -511,7 +511,7 @@ class UserAccount(models.Model):
         return Subscription.get_upcoming_subscription(self)
 
     @property
-    def storage_used_bytes(self) -> float:
+    def storage_used_bytes(self) -> int:
         """Returns the storage used in bytes"""
         from qfieldcloud.filestorage.models import File, FileVersion
 
