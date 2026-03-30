@@ -125,7 +125,7 @@ def get_project_seed_xlsform(
 
 def _create_project_from_xlsform(
     xlsform_filename: Path | str, project_seed: ProjectSeed, tmp_project_dir: str
-):
+) -> Path | None:
     assert project_seed.settings.xlsform is not None
 
     xlsform_filename = Path(tmp_project_dir).joinpath("files", xlsform_filename)
@@ -254,7 +254,7 @@ def extract_layer_data(the_qgis_file_name: str | Path) -> dict:
     return layers_by_id
 
 
-def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer:
+def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer | None:
     layer = QgsRasterLayer(
         f"type=xyz&tilePixelRatio=1&url={basemap_config['url']}&zmax=19&zmin=0&crs=EPSG3857",
         basemap_config["name"],
