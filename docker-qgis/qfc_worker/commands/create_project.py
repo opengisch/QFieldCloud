@@ -293,7 +293,7 @@ def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer | None
     return layer
 
 
-class CloneProjectCommand(QfcBaseCommand):
+class CreateProjectCommand(QfcBaseCommand):
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("project_id", type=UUID, help="Project ID")
 
@@ -374,7 +374,7 @@ class CloneProjectCommand(QfcBaseCommand):
         return workflow
 
 
-cmd = CloneProjectCommand()
+cmd = CreateProjectCommand()
 
 if __name__ == "__main__":
     cmd.run_from_argv()
