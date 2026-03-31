@@ -85,8 +85,9 @@ def set_subscription(
         )
         subscription = user.useraccount.current_subscription
         subscription.plan = plan
+        subscription.purchased_seats = subscription.plan.max_organization_members
         subscription.active_since = timezone.now() - timedelta(days=1)
-        subscription.save(update_fields=["plan", "active_since"])
+        subscription.save(update_fields=["plan", "active_since", "purchased_seats"])
 
     # It is guaranteed that at least one user was provided.
     assert subscription is not None
