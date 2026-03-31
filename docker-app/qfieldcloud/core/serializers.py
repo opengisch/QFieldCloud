@@ -202,8 +202,8 @@ class ProjectThumbnailSerializer(serializers.ModelSerializer):
         fields = ("thumbnail",)
 
 
-class ProjectSeedSerializer(serializers.Serializer):
-    class Meta:
+class ProjectSeedSerializer(serializers.ModelSerializer):
+    class Meta:  # type: ignore[reportIncompatibleVariableOverride]
         model = ProjectSeed
 
     name = serializers.StringRelatedField(source="project.name")
