@@ -146,6 +146,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
                 )
 
+        if self.action in ("seed", "seed_xlsform"):
+            projects = projects.select_related("seed")
+
         projects = projects.order_by("-is_featured", "owner__username", "name")
 
         return projects
