@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.http import Http404, StreamingHttpResponse
 from django_filters import rest_framework as filters
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -95,6 +96,20 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         responses={204: None},
         request=ProjectThumbnailSerializer,
     ),
+    seed=extend_schema(
+        description="Retrieve the seed of the project",
+        responses={
+            200: ProjectSeedSerializer,
+        },
+    ),
+    seed_xlsform=extend_schema(
+        description="Retrieve the seed xlsform of the project or 404 if no such file exists.",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            404: None,
+        },
+    ),
+    
 )
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
