@@ -2024,6 +2024,11 @@ class ProjectSeed(models.Model):
 
         super().clean(*args, **kwargs)
 
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        return super().save(*args, **kwargs)
+
 
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):
