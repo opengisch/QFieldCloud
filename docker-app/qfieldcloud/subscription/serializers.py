@@ -5,7 +5,7 @@ from qfieldcloud.subscription.models import CurrentSubscription
 
 class CurrentSubscriptionSerializer(serializers.ModelSerializer):
     plan_display_name = serializers.CharField(source="plan.display_name")
-    storage_used_bytes = serializers.FloatField(source="account.storage_used_bytes")
+    storage_used_bytes = serializers.IntegerField(source="account.storage_used_bytes")
 
     def get_storage_used_bytes(self, obj):
         return obj.account.storage_used_bytes
