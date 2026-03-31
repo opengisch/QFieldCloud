@@ -842,18 +842,20 @@ def files_list_to_string(files: list[dict[str, Any]]) -> str:
 
 def layers_data_to_string(layers_by_id: dict[str, dict]) -> str:
     # Print layer check results
-    table = [
-        [
-            d["name"],
-            f"...{d['id'][-6:]}",
-            d["type_name"],
-            d["is_valid"],
-            d["error_code"],
-            d["error_summary"],
-            d["provider_error_summary"],
-        ]
-        for d in layers_by_id.values()
-    ]
+    table = []
+    for d in layers_by_id.values():
+        last_6_layer_id_chars = d["id"][-6:]
+        table.append(
+            [
+                d["name"],
+                f"...{last_6_layer_id_chars}",
+                d["type_name"],
+                d["is_valid"],
+                d["error_code"],
+                d["error_summary"],
+                d["provider_error_summary"],
+            ]
+        )
 
     output = ""
     output += tabulate(
@@ -888,17 +890,18 @@ def layers_data_to_string(layers_by_id: dict[str, dict]) -> str:
         )
 
         fields_data = layer_data.get("fields") or []
-        fields_table = [
-            [
-                f["name"],
-                f["type"],
-                f["length"],
-                f["precision"],
-                f["is_not_null"],
-                f["alias"],
-            ]
-            for f in fields_data
-        ]
+        fields_table = []
+        for f in fields_data:
+            fields_table.append(
+                [
+                    f["name"],
+                    f["type"],
+                    f["length"],
+                    f["precision"],
+                    f["is_not_null"],
+                    f["alias"],
+                ]
+            )
 
         output += tabulate(
             fields_table,
