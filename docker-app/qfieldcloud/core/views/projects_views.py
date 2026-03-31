@@ -14,7 +14,7 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Project, ProjectQueryset, ProjectSeed
+from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
@@ -109,7 +109,6 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             404: None,
         },
     ),
-    
 )
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -202,13 +201,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         return super().destroy(request, projectid)
 
-    @action(detail=True, methods=["get"])
-    def seed(self, _request: Request, projectid: UUID):
-        project = ProjectSeed.objects.select_related("project").get(
-            project_id=projectid
-        )
+    @action(detail=True, methods=["get"], serializer_class=ProjectSeedSerializer)
+    def seed(self, _request: Request, projectid: UUID) -> Response:
+        project = self.get_object()
 
-        return Response(ProjectSeedSerializer(project).data)
+        try:
+            project.seed
+        except Project.seed.RelatedObjectDoesNotExist:
+            raise Http404("Project has no seed.")
+
+        serializer = self.get_serializer(project.seed)
+
+        return Response(serializer.data)
 
     @action(detail=True, methods=["get"], url_path="seed/xlsform")
     def seed_xlsform(self, request: Request, projectid: UUID) -> StreamingHttpResponse:
