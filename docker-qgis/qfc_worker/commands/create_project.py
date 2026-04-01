@@ -75,10 +75,12 @@ class ProjectSeedSettings:
 
 @dataclass
 class ProjectSeed:
+    project: str
     crs: str
     name: str
     extent: list[float]
     copy_from_project: UUID | None
+    xlsform_file: str | None
 
     settings: ProjectSeedSettings  # type: ignore
     _settings: ProjectSeedSettings = field(init=False, repr=False)
