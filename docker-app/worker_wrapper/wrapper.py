@@ -152,7 +152,6 @@ class JobRun:
 
         if custom_ca_path:
             extra_envvars["REQUESTS_CA_BUNDLE"] = custom_ca_path
-            extra_envvars["SSL_CERT_FILE"] = custom_ca_path
 
         pgservice_file_contents = ""
         for secret in Secret.objects.for_user_and_project(  # type:ignore
