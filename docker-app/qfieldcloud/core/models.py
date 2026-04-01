@@ -2010,7 +2010,7 @@ class ProjectSeed(models.Model):
     """XLSForm file used to create the project, if any. It is mutually exclusive with `copy_from_project`."""
 
     settings = models.JSONField()
-    """The settings used during the project creation. There must be a `version` field."""
+    """The settings used during the project creation. There must be a `schemaId` field."""
 
     def clean(self, *args, **kwargs) -> None:
         if self.xlsform_file and self.copy_from_project:
@@ -2020,8 +2020,8 @@ class ProjectSeed(models.Model):
                 )
             )
 
-        if not self.settings.get("version"):
-            raise ValidationError(_("The seed settings version must be present."))
+        if not self.settings.get("schemaId"):
+            raise ValidationError(_("The seed settings schemaId must be present."))
 
         super().clean(*args, **kwargs)
 
