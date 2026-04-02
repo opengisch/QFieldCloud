@@ -46,8 +46,14 @@ upstream django {
 }
 
 # If environment specifies allowing plain http not to be redirected to https.
-map $host $allow_http {
-    default "${NGINX_ALLOW_HTTP}";
+map $host $allow_internal_http {
+    default "${NGINX_ALLOW_INTERNAL_HTTP}";
+}
+
+# detect if request is coming from docker internal network
+geo $is_docker_internal {
+    default        0;
+    172.16.0.0/12  1;
 }
 
 server {
@@ -64,8 +70,15 @@ server {
     return 444;
   }
 
-  # if HTTP is not allowed, redirect to HTTPS.
-  if ($allow_http != "1") {
+  # if HTTP is not allowed AND request is not from docker internal, redirect to HTTPS.
+  set $force_https 0;
+  if ($allow_internal_http != "1") {
+    set $force_https 1;
+  }
+  if ($is_docker_internal != "1") {
+    set $force_https 1;
+  }
+  if ($force_https = "1") {
     return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
   }
 
