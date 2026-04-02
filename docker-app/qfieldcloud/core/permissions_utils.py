@@ -699,7 +699,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             if not user.useraccount.current_subscription.plan.is_premium:
                 raise ExpectedPremiumUserError(
                     _(
-                        "Only premium users can be added as collaborators on private projects."
+                        "Only users who upgraded from free plan can be added as collaborators on private projects."
                     ).format(user.username)
                 )
 
