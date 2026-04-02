@@ -2,14 +2,14 @@ services:
   app:
     environment:
       QFIELDCLOUD_CUSTOM_CA_PATH: /etc/ssl/certs/custom_ca.crt
-      QFIELDCLOUD_CUSTOM_CA_HOST_PATH: ${PWD}/${QFIELDCLOUD_CUSTOM_CA_HOST_PATH}
+      QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME: ${PWD}/${QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME}
       REQUESTS_CA_BUNDLE: /etc/ssl/certs/custom_ca.crt
     volumes:
-      - ${QFIELDCLOUD_CUSTOM_CA_HOST_PATH}:/etc/ssl/certs/custom_ca.crt:ro
+      - ${QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME}:/etc/ssl/certs/custom_ca.crt:ro
 
   worker_wrapper:
     environment:
       QFIELDCLOUD_CUSTOM_CA_PATH: /etc/ssl/certs/custom_ca.crt
-      QFIELDCLOUD_CUSTOM_CA_HOST_PATH: ${PWD}/${QFIELDCLOUD_CUSTOM_CA_HOST_PATH}
+      QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME: ${PWD}/${QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME}
     volumes:
-      - ${QFIELDCLOUD_CUSTOM_CA_HOST_PATH}:/etc/ssl/certs/custom_ca.crt:ro
+      - ${QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME}:/etc/ssl/certs/custom_ca.crt:ro

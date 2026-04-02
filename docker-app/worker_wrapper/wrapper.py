@@ -133,9 +133,9 @@ class JobRun:
         ]
 
         # If the env configuration provides a custom CA, mount it in the worker.
-        if settings.QFIELDCLOUD_CUSTOM_CA_HOST_PATH:
+        if settings.QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME:
             volumes.append(
-                f"{settings.QFIELDCLOUD_CUSTOM_CA_HOST_PATH}:{settings.QFIELDCLOUD_CUSTOM_CA_CONTAINER_PATH}:ro"
+                f"{settings.QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME}:{settings.QFIELDCLOUD_CUSTOM_CA_CONTAINER_FILENAME}:ro"
             )
 
         return volumes
@@ -148,9 +148,9 @@ class JobRun:
     def get_environment(self) -> dict[str, str]:
         extra_envvars = {}
 
-        if settings.QFIELDCLOUD_CUSTOM_CA_HOST_PATH:
+        if settings.QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME:
             extra_envvars["REQUESTS_CA_BUNDLE"] = (
-                settings.QFIELDCLOUD_CUSTOM_CA_CONTAINER_PATH
+                settings.QFIELDCLOUD_CUSTOM_CA_CONTAINER_FILENAME
             )
 
         pgservice_file_contents = ""
