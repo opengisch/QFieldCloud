@@ -999,3 +999,10 @@ CORS_URLS_REGEX = r"^/api/.*$"
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
 CORS_ALLOW_CREDENTIALS = parse_string_to_bool(os.environ["CORS_ALLOW_CREDENTIALS"])
+
+# Path where optional custom CA certificate are stored in the container,
+# if provided with the `QFIELDCLOUD_CUSTOM_CA_HOST_PATH` environment variable.
+QFIELDCLOUD_CUSTOM_CA_CONTAINER_PATH = "/etc/ssl/certs/custom_ca.crt"
+
+# Absolute path on the docker host of optional custom CA certificate, for validating TLS connections to external services.
+QFIELDCLOUD_CUSTOM_CA_HOST_PATH = os.environ.get("QFIELDCLOUD_CUSTOM_CA_HOST_PATH")
