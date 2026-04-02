@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+FILE_TYPE_PROJECT_FILE = 1
+
 
 def fix_duplicating_filenames_as_versions(apps, schema_editor):
     File = apps.get_model("filestorage", "File")
@@ -10,7 +12,10 @@ def fix_duplicating_filenames_as_versions(apps, schema_editor):
     file_summaries_qs = (
         File.objects.values("project_id", "name", "file_type")
         .annotate(count=models.Count("*"))
-        .filter(count__gt=1)
+        .filter(
+            file_type=FILE_TYPE_PROJECT_FILE,
+            count__gt=1,
+        )
     )
 
     print(
@@ -60,7 +65,10 @@ def fix_duplicating_filenames_as_versions(apps, schema_editor):
     file_summaries_count = (
         File.objects.values("project_id", "name", "file_type")
         .annotate(count=models.Count("*"))
-        .filter(count__gt=1)
+        .filter(
+            file_type=FILE_TYPE_PROJECT_FILE,
+            count__gt=1,
+        )
         .count()
     )
 
