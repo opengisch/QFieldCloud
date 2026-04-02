@@ -86,8 +86,7 @@ server {
   include config.d/*.conf;
 
   # include proxy settings and location blocks for the QFieldCloud instance.
-  include conf.d/includes/qfieldcloud_proxy_headers.conf;
-  include conf.d/includes/qfieldcloud_locations.conf;
+  include conf.d/includes/qfieldcloud.conf;
 }
 
 server {
@@ -124,6 +123,5 @@ server {
   include config.d/*.conf;
 
   # include proxy settings and location blocks for the QFieldCloud instance.
-  include conf.d/includes/qfieldcloud_proxy_headers.conf;
-  include conf.d/includes/qfieldcloud_locations.conf;
+  include conf.d/includes/qfieldcloud.conf;
 }
