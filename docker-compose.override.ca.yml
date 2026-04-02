@@ -1,5 +1,7 @@
 services:
   app:
+    # Here we set the environment variables and volumes for the custom CA certificate in the `app` container,
+    # it might be needed in case there is a WebDAV storage configured, using self-signed certificates and requiring the CA.
     environment:
       QFIELDCLOUD_CUSTOM_CA_PATH: /etc/ssl/certs/custom_ca.crt
       QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME: ${PWD}/${QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME}
