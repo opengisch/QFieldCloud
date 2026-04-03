@@ -16,6 +16,7 @@ class JobPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         should_expect_project_id = False
         project_id = None
+        job_type = None
 
         if view.action is None or view.action == "list":
             should_expect_project_id = True
@@ -23,6 +24,7 @@ class JobPermissions(permissions.BasePermission):
         elif view.action == "create":
             should_expect_project_id = True
             project_id = request.data.get("project_id")
+            job_type = request.data.get("type")
 
         if should_expect_project_id:
             try:
@@ -33,10 +35,27 @@ class JobPermissions(permissions.BasePermission):
             job_id = permissions_utils.get_param_from_request(request, "job_id")
 
             try:
-                project = Job.objects.get(id=job_id).project
+                job = Job.objects.get(id=job_id)
+                project = job.project
+                job_type = job.type
             except ObjectDoesNotExist:
                 return False
 
+        # SPECIAL CASE: PACKAGE JOBS
+        # Package jobs (exporting data) are allowed for anyone who can
+        # retrieve/see the project (including Readers and Public users on public projects).
+        if job_type == Job.Type.PACKAGE:
+            return permissions_utils.can_read_create_jobs(request.user, project)
+
+        # TRIGGERING NEW MUTATION JOBS
+        # For jobs that modify metadata or data (PROCESS_PROJECTFILE, DELTA_APPLY),
+        # we only allow users with "Write" access (Reporter and above).
+        if view.action == "create":
+            return permissions_utils.can_read_jobs(request.user, project)
+
+        # LISTING AND VISIBILITY
+        # For 'list' or viewing details/logs of existing non-package jobs,
+        # we use the broader permission so Readers can still see if a project is 'Busy'.
         return permissions_utils.can_read_create_jobs(request.user, project)
 
 
