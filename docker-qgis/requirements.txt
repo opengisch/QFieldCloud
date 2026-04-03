@@ -28,7 +28,7 @@ jsonschema-specifications==2023.12.1
     # via jsonschema
 pathvalidate==3.3.1
     # via qfieldcloud-sdk
-qfieldcloud-sdk==0.13.0
+qfieldcloud-sdk @ git+https://github.com/opengisch/qfieldcloud-sdk-python.git@6e27befcf10c96c4452af036ce55859a7263fdd4
     # via -r requirements.in
 referencing==0.35.1
     # via

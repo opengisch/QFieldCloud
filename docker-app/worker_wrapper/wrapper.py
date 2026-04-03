@@ -132,6 +132,12 @@ class JobRun:
             f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:{TRANSFORMATION_GRIDS_PATH}:ro",
         ]
 
+        # If the env configuration provides a custom CA, mount it in the worker.
+        if settings.QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME:
+            volumes.append(
+                f"{settings.QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME}:{settings.QFIELDCLOUD_CUSTOM_CA_CONTAINER_FILENAME}:ro"
+            )
+
         return volumes
 
     def get_ports(self) -> dict[str, int]:
@@ -141,6 +147,11 @@ class JobRun:
 
     def get_environment(self) -> dict[str, str]:
         extra_envvars = {}
+
+        if settings.QFIELDCLOUD_CUSTOM_CA_HOST_FILENAME:
+            extra_envvars["REQUESTS_CA_BUNDLE"] = (
+                settings.QFIELDCLOUD_CUSTOM_CA_CONTAINER_FILENAME
+            )
 
         pgservice_file_contents = ""
         for secret in Secret.objects.for_user_and_project(  # type:ignore
