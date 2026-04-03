@@ -74,7 +74,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         elif view.action in ["update", "partial_update"]:
             return permissions_utils.can_update_project(user, project)
         elif view.action == "upload_thumbnail":
-            return permissions_utils.can_retrieve_project(user, project)
+            return permissions_utils.can_create_files(user, project)
 
         return False
 
