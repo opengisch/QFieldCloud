@@ -1,6 +1,11 @@
+from pathlib import Path
+from uuid import UUID
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.http import Http404, StreamingHttpResponse
 from django_filters import rest_framework as filters
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -11,6 +16,7 @@ from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
 from qfieldcloud.core.models import Project, ProjectQueryset
 from qfieldcloud.core.serializers import (
+    ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
@@ -20,6 +26,7 @@ from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 User = get_user_model()
@@ -58,6 +65,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
         if view.action == "retrieve":
             return permissions_utils.can_retrieve_project(user, project)
+        elif view.action == "seed":
+            return permissions_utils.can_retrieve_project(user, project)
+        elif view.action == "seed_xlsform":
+            return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "destroy":
             return permissions_utils.can_delete_project(user, project)
         elif view.action in ["update", "partial_update", "upload_thumbnail"]:
@@ -84,6 +95,19 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         description="Update the project thumbnail",
         responses={204: None},
         request=ProjectThumbnailSerializer,
+    ),
+    seed=extend_schema(
+        description="Retrieve the seed of the project",
+        responses={
+            200: ProjectSeedSerializer,
+        },
+    ),
+    seed_xlsform=extend_schema(
+        description="Retrieve the seed xlsform of the project or 404 if no such file exists.",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            404: None,
+        },
     ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -136,6 +160,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
                 )
 
+        if self.action in ("seed", "seed_xlsform"):
+            projects = projects.select_related("seed")
+
         projects = projects.order_by("-is_featured", "owner__username", "name")
 
         return projects
@@ -173,6 +200,37 @@ class ProjectViewSet(viewsets.ModelViewSet):
             storage.delete_all_project_files_permanently(projectid)
 
         return super().destroy(request, projectid)
+
+    @action(detail=True, methods=["get"], serializer_class=ProjectSeedSerializer)
+    def seed(self, _request: Request, projectid: UUID) -> Response:
+        project = self.get_object()
+
+        try:
+            project.seed
+        except Project.seed.RelatedObjectDoesNotExist:
+            raise Http404("Project has no seed.")
+
+        serializer = self.get_serializer(project.seed)
+
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="seed/xlsform")
+    def seed_xlsform(self, request: Request, projectid: UUID) -> StreamingHttpResponse:
+        project = Project.objects.select_related("seed").get(id=projectid)
+
+        if not project.seed.xlsform_file:
+            raise Http404("Project has no XLSForm file.")
+
+        xlsform_file = project.seed.xlsform_file
+        extension = Path(xlsform_file.name).suffix.lower()
+
+        return StreamingHttpResponse(
+            xlsform_file,
+            content_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="xlsform{extension}"',
+            },
+        )
 
 
 @extend_schema_view(get=extend_schema(description="List all public projects"))
