@@ -1024,3 +1024,69 @@ class QfcTestCase(APITransactionTestCase):
             format="multipart",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_upload_project_thumbnail_permissions(self):
+        """Test upload thumbnails permissions."""
+        # Create a private project owned by user1
+        project = Project.objects.create(
+            name="perm_test_project", owner=self.user1, is_public=False
+        )
+
+        # Equivalent to `can_create_files` permissions
+        roles = [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ]
+
+        for role in roles:
+            collaborator_user = Person.objects.create_user(
+                username=f"user_{role}", password="abc123"
+            )
+            collaborator_token = AuthToken.objects.create(user=collaborator_user)
+            ProjectCollaborator.objects.create(
+                project=project, collaborator=collaborator_user, role=role
+            )
+
+            self.client.credentials(
+                HTTP_AUTHORIZATION="Token " + collaborator_token.key
+            )
+
+            with open(testdata_path("DCIM/1.jpg"), "rb") as thumbnail_file:
+                response = self.client.post(
+                    f"/api/v1/projects/{project.id}/thumbnail/",
+                    {"thumbnail": thumbnail_file},
+                    format="multipart",
+                )
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Check that a user with no role on a PRIVATE project is forbidden
+        other_user = Person.objects.create_user(
+            username="no_role_user", password="abc123"
+        )
+        other_token = AuthToken.objects.create(user=other_user)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + other_token.key)
+
+        with open(testdata_path("DCIM/1.jpg"), "rb") as thumbnail_file:
+            response = self.client.post(
+                f"/api/v1/projects/{project.id}/thumbnail/",
+                {"thumbnail": thumbnail_file},
+                format="multipart",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Check that a user with no role on a PUBLIC project is forbidden
+        project.is_public = True
+        project.save()
+
+        with open(testdata_path("DCIM/1.jpg"), "rb") as thumbnail_file:
+            response = self.client.post(
+                f"/api/v1/projects/{project.id}/thumbnail/",
+                {"thumbnail": thumbnail_file},
+                format="multipart",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
