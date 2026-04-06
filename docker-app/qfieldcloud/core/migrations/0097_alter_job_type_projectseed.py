@@ -9,7 +9,10 @@ import qfieldcloud.core.models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0096_remove_secret_secret_project_type_name_assigned_to_uniq_and_more"),
+        (
+            "core",
+            "0096_remove_secret_secret_project_type_name_assigned_to_uniq_and_more",
+        ),
     ]
 
     operations = [
