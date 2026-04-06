@@ -616,6 +616,39 @@ class CreateProjectJobSerializer(JobMixin, serializers.ModelSerializer):
         allow_parallel_jobs = True
 
 
+class CloneProjectJobSerializer(JobMixin, serializers.ModelSerializer):
+    class Meta(JobMixin.Meta):
+        model = Job
+        allow_parallel_jobs = True
+
+
+class ProjectCloneSerializer(serializers.Serializer):
+    name = serializers.CharField(
+        max_length=255,
+        required=True,
+        help_text=_("Name for the cloned project."),
+    )
+    extent = serializers.ListField(
+        child=serializers.FloatField(),
+        min_length=4,
+        max_length=4,
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text=_("Bounding box as [xmin, ymin, xmax, ymax] in EPSG:3857."),
+    )
+    clone_secrets = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text=_("Whether to clone the project secrets."),
+    )
+    # clone_collaborators = serializers.BooleanField(
+    #     required=False,
+    #     default=False,
+    #     help_text=_("Whether to clone the project collaborators."),
+    # )
+
+
 class JobSerializer(serializers.ModelSerializer):
     def get_lastest_not_finished_job(self):
         return None

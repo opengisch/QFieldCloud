@@ -16,11 +16,13 @@ from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
 from qfieldcloud.core.models import Job, Project, ProjectQueryset, ProjectSeed
 from qfieldcloud.core.serializers import (
+    ProjectCloneSerializer,
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
 from qfieldcloud.core.utils2 import project_seed, storage
+from qfieldcloud.core.utils2 import projects as projects_utils
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
@@ -73,6 +75,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_delete_project(user, project)
         elif view.action in ["update", "partial_update", "upload_thumbnail"]:
             return permissions_utils.can_update_project(user, project)
+        elif view.action == "clone":
+            return permissions_utils.can_retrieve_project(
+                user, project
+            ) and permissions_utils.can_create_project(user, owner_obj)
 
         return False
 
@@ -269,6 +275,54 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 "Content-Disposition": f'attachment; filename="xlsform{extension}"',
             },
         )
+
+    @extend_schema(
+        description="Clone an existing project",
+        request=ProjectCloneSerializer,
+    )
+    @action(detail=True, methods=["post"], url_path="clone")
+    @transaction.atomic
+    def clone(self, request: Request, projectid: UUID) -> Response:
+        source_project = Project.objects.get(id=projectid)
+
+        if source_project.is_shared_datasets_project:
+            return Response(
+                {
+                    "detail": "This project is a special shared datasets project and cannot be cloned."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = ProjectCloneSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_name = serializer.validated_data["name"]
+        extent_bbox = serializer.validated_data.get("extent")
+        clone_secrets = serializer.validated_data.get("clone_secrets", False)
+        # clone_collaborators = serializer.validated_data.get("clone_collaborators", False)
+
+        if extent_bbox:
+            extent_tuple = tuple(extent_bbox)
+        else:
+            extent_tuple = None
+
+        new_project, clone_job = projects_utils.clone_project(
+            source_project=source_project,
+            new_name=new_name,
+            owner=request.user,
+            created_by=request.user,
+            extent_bbox=extent_tuple,
+            clone_secrets=clone_secrets,
+            # clone_collaborators=clone_collaborators,
+        )
+
+        project_data = ProjectSerializer(
+            new_project,
+            context={"request": request},
+        ).data
+        project_data["clone_job_id"] = str(clone_job.id)
+
+        return Response(project_data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema_view(get=extend_schema(description="List all public projects"))

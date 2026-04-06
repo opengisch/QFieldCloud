@@ -2323,6 +2323,7 @@ class Job(models.Model):
         DELTA_APPLY = "delta_apply", _("Delta Apply")
         PROCESS_PROJECTFILE = "process_projectfile", _("Process QGIS Project File")
         CREATE_PROJECT = "create_project", _("Create Project")
+        CLONE_PROJECT = "clone_project", _("Clone Project")
 
     class Status(models.TextChoices):
         PENDING = "pending", _("Pending")
