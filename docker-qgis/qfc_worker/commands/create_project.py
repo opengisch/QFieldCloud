@@ -75,10 +75,12 @@ class ProjectSeedSettings:
 
 @dataclass
 class ProjectSeed:
+    project: str
     crs: str
     name: str
     extent: list[float]
     copy_from_project: UUID | None
+    xlsform_file: str | None
 
     settings: ProjectSeedSettings  # type: ignore
     _settings: ProjectSeedSettings = field(init=False, repr=False)
@@ -125,7 +127,7 @@ def get_project_seed_xlsform(
 
 def _create_project_from_xlsform(
     xlsform_filename: Path | str, project_seed: ProjectSeed, tmp_project_dir: str
-):
+) -> Path | None:
     assert project_seed.settings.xlsform is not None
 
     xlsform_filename = Path(tmp_project_dir).joinpath("files", xlsform_filename)
@@ -254,7 +256,7 @@ def extract_layer_data(the_qgis_file_name: str | Path) -> dict:
     return layers_by_id
 
 
-def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer:
+def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer | None:
     layer = QgsRasterLayer(
         f"type=xyz&tilePixelRatio=1&url={basemap_config['url']}&zmax=19&zmin=0&crs=EPSG3857",
         basemap_config["name"],
@@ -293,7 +295,7 @@ def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer:
     return layer
 
 
-class CloneProjectCommand(QfcBaseCommand):
+class CreateProjectCommand(QfcBaseCommand):
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("project_id", type=UUID, help="Project ID")
 
@@ -374,7 +376,7 @@ class CloneProjectCommand(QfcBaseCommand):
         return workflow
 
 
-cmd = CloneProjectCommand()
+cmd = CreateProjectCommand()
 
 if __name__ == "__main__":
     cmd.run_from_argv()

@@ -12,10 +12,10 @@ from qfieldcloud.core.models import (
     PackageJob,
     Person,
     Project,
+    ProjectCollaborator,
     ProjectSeed,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
-from qfieldcloud.core.tests.test_packages import ProjectCollaborator
 from qfieldcloud.core.tests.utils import (
     set_subscription,
     setup_subscription_plans,

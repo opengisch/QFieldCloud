@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.http import Http404, StreamingHttpResponse
 from django_filters import rest_framework as filters
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -95,6 +96,19 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         responses={204: None},
         request=ProjectThumbnailSerializer,
     ),
+    seed=extend_schema(
+        description="Retrieve the seed of the project",
+        responses={
+            200: ProjectSeedSerializer,
+        },
+    ),
+    seed_xlsform=extend_schema(
+        description="Retrieve the seed xlsform of the project or 404 if no such file exists.",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            404: None,
+        },
+    ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
@@ -146,6 +160,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 projects = projects.exclude(
                     user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
                 )
+
+        if self.action in ("seed", "seed_xlsform"):
+            projects = projects.select_related("seed")
 
         projects = projects.order_by("-is_featured", "owner__username", "name")
 
@@ -222,13 +239,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         return super().destroy(request, projectid)
 
-    @action(detail=True, methods=["get"])
-    def seed(self, _request: Request, projectid: UUID):
-        project = ProjectSeed.objects.select_related("project").get(
-            project_id=projectid
-        )
+    @action(detail=True, methods=["get"], serializer_class=ProjectSeedSerializer)
+    def seed(self, _request: Request, projectid: UUID) -> Response:
+        project = self.get_object()
 
-        return Response(ProjectSeedSerializer(project).data)
+        try:
+            project.seed
+        except Project.seed.RelatedObjectDoesNotExist:
+            raise Http404("Project has no seed.")
+
+        serializer = self.get_serializer(project.seed)
+
+        return Response(serializer.data)
 
     @action(detail=True, methods=["get"], url_path="seed/xlsform")
     def seed_xlsform(self, request: Request, projectid: UUID) -> StreamingHttpResponse:

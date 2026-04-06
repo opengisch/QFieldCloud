@@ -1989,6 +1989,7 @@ class ProjectSeed(models.Model):
         on_delete=models.CASCADE,
         null=True,
         related_name="derived_seeds",
+        blank=True,
     )
     """The project to copy from, if any. It is mutually exclusive with `xlsform_file`."""
 
@@ -2003,13 +2004,13 @@ class ProjectSeed(models.Model):
         upload_to=get_seed_xlsform_upload_to,
         # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
         max_length=1024,
-        null=False,
-        blank=False,
+        null=True,
+        blank=True,
     )
     """XLSForm file used to create the project, if any. It is mutually exclusive with `copy_from_project`."""
 
     settings = models.JSONField()
-    """The settings used during the project creation. There must be a `version` field."""
+    """The settings used during the project creation. There must be a `schemaId` field."""
 
     def clean(self, *args, **kwargs) -> None:
         if self.xlsform_file and self.copy_from_project:
@@ -2019,10 +2020,15 @@ class ProjectSeed(models.Model):
                 )
             )
 
-        if not self.settings.get("version"):
-            raise ValidationError(_("The seed settings version must be present."))
+        if not self.settings.get("schemaId"):
+            raise ValidationError(_("The seed settings schemaId must be present."))
 
         super().clean(*args, **kwargs)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        return super().save(*args, **kwargs)
 
 
 class ProjectCollaboratorQueryset(models.QuerySet):
