@@ -1032,15 +1032,12 @@ class QfcTestCase(APITransactionTestCase):
             name="perm_test_project", owner=self.user1, is_public=False
         )
 
-        # Equivalent to `can_create_files` permissions
-        roles = [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
+        # Un authorized roles that are forbidden to upload a thumbnail
+        unauthorized_roles = [
+            ProjectCollaborator.Roles.READER,
         ]
 
-        for role in roles:
+        for role in ProjectCollaborator.Roles:
             collaborator_user = Person.objects.create_user(
                 username=f"user_{role}", password="abc123"
             )
@@ -1059,6 +1056,10 @@ class QfcTestCase(APITransactionTestCase):
                     {"thumbnail": thumbnail_file},
                     format="multipart",
                 )
+
+            if role in unauthorized_roles:
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                continue
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
