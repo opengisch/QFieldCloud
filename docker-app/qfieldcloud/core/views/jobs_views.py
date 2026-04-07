@@ -16,6 +16,7 @@ class JobPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         should_expect_project_id = False
         project_id = None
+        job_type = None
 
         if view.action is None or view.action == "list":
             should_expect_project_id = True
@@ -23,6 +24,7 @@ class JobPermissions(permissions.BasePermission):
         elif view.action == "create":
             should_expect_project_id = True
             project_id = request.data.get("project_id")
+            job_type = request.data.get("type")
 
         if should_expect_project_id:
             try:
@@ -33,11 +35,19 @@ class JobPermissions(permissions.BasePermission):
             job_id = permissions_utils.get_param_from_request(request, "job_id")
 
             try:
-                project = Job.objects.get(id=job_id).project
+                job = Job.objects.select_related("project").get(id=job_id)
+                project = job.project
+                job_type = job.type
             except ObjectDoesNotExist:
                 return False
 
-        return permissions_utils.can_read_create_jobs(request.user, project)
+        if view.action in ("list", "retrieve"):
+            return permissions_utils.can_read_jobs(request.user, project)
+        elif view.action == "create":
+            return permissions_utils.can_create_jobs(request.user, project, job_type)
+
+        # Fallback in case we add a new view action by accident
+        return False
 
 
 @extend_schema_view(
