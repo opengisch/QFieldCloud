@@ -1,5 +1,5 @@
 # NOTE if the ubuntu version is changed, also change it in `Suites:` in apt sources, and in `QGIS_VERSION`
-FROM --platform=linux/amd64 ubuntu:noble
+FROM --platform=linux/amd64 ubuntu:resolute
 
 # Create the expected /io directory that is usually created via the `worker_wrapper`
 RUN mkdir -p /io
@@ -17,8 +17,8 @@ RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org
 
 # Add QGIS repository
 RUN echo "Types: deb deb-src\n\
-URIs: https://qgis.org/ubuntu-ltr\n\
-Suites: noble\n\
+URIs: https://qgis.org/debian\n\
+Suites: resolute\n\
 Architectures: amd64\n\
 Components: main\n\
 Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources
@@ -41,8 +41,8 @@ RUN apt-get update \
 
 
 # Set QGIS version as in the debian repos
-# Choose your version from here: https://debian.qgis.org/ubuntu-ltr/dists/noble/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.44.9+40noble
+# Choose your version from here: https://debian.qgis.org/debian/dists/resolute/main/binary-amd64/Packages
+ARG QGIS_VERSION=1:4.0.1+44resolute
 
 # Install QGIS dependencies
 RUN apt-get update \
