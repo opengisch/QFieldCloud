@@ -60,8 +60,10 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_retrieve_project(user, project)
         elif view.action == "destroy":
             return permissions_utils.can_delete_project(user, project)
-        elif view.action in ["update", "partial_update", "upload_thumbnail"]:
+        elif view.action in ["update", "partial_update"]:
             return permissions_utils.can_update_project(user, project)
+        elif view.action == "upload_thumbnail":
+            return permissions_utils.can_retrieve_project(user, project)
 
         return False
 
