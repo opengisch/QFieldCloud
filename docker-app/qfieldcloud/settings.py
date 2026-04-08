@@ -993,8 +993,8 @@ CORS_ALLOWED_ORIGINS = parse_string_to_list(
     os.environ["CORS_ALLOWED_ORIGINS"], delimiter=","
 )
 
-# Only allow CORS on API endpoints – static files and pages are unaffected.
-CORS_URLS_REGEX = r"^/api/.*$"
+# Only allow CORS on API + swagger endpoints - static files and pages are unaffected.
+CORS_URLS_REGEX = r"^/(api/.*|swagger/)$"
 
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
