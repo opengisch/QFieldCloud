@@ -151,8 +151,25 @@ services:
       network: host
       args:
         DEBUG_BUILD: ${DEBUG}
+        UBUNTU_VERSION: noble
+        QGIS_REPOSITORY: ubuntu-ltr
+        QGIS_VERSION: 1:3.44.10+40noble
     tty: true
-    command: bash -c "echo QGIS built"
+    command: bash -c "echo QGIS3 built"
+    logging: *default-logging
+    stop_grace_period: 15m
+
+  qgis4:
+    build:
+      context: ./docker-qgis
+      network: host
+      args:
+        DEBUG_BUILD: ${DEBUG}
+        UBUNTU_VERSION: resolute
+        QGIS_REPOSITORY: debian
+        QGIS_VERSION: 1:4.0.2+44resolute
+    tty: true
+    command: bash -c "echo QGIS4 built"
     logging: *default-logging
     stop_grace_period: 15m
 
