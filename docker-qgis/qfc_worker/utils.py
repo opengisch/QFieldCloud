@@ -840,7 +840,7 @@ def files_list_to_string(files: list[dict[str, Any]]) -> str:
     )
 
 
-def layers_data_to_string(layers_by_id: dict[str, dict]) -> str:
+def layers_data_to_string(layers_by_id):
     # Print layer check results
     table = []
     for d in layers_by_id.values():
