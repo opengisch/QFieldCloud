@@ -42,5 +42,5 @@ phonenumbers==9.0.27
 Pillow==12.2.0
 psycopg2==2.9.11
 pymemcache==4.0.0
-sentry-sdk==2.55.0
+sentry-sdk==2.57.0
 stripe==4.2.0
