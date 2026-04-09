@@ -80,6 +80,8 @@ ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
 ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
+# Fix for "error: the configured Python interpreter version (3.14) is newer than PyO3's maximum supported version (3.13)"
+ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 
 # QFC specific variables
 # Controls whether libqfiedlsync should log also to the QGIS message log
