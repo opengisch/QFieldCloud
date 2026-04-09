@@ -1,9 +1,22 @@
+import logging
+
+from django.db import transaction
 from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from qfieldcloud.core import invitations_utils as invitation
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core.models import Person, Project, ProjectCollaborator, Team
+from qfieldcloud.core.models import (
+    Job,
+    Person,
+    Project,
+    ProjectCollaborator,
+    ProjectSeed,
+    Team,
+    User,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def create_collaborator(
@@ -93,3 +106,58 @@ def create_collaborator_by_username_or_email(
         success, message = create_collaborator(project, users[0], created_by)
 
     return success, message
+
+
+@transaction.atomic
+def clone_project(
+    source_project: Project,
+    name: str,
+    owner: User,
+    created_by: User,
+    description: str | None = None,
+    is_public: bool | None = None,
+) -> Project:
+    """Clone a project: create a new Project, ProjectSeed, and a CREATE_PROJECT job.
+
+    Args:
+        source_project: the project to clone from
+        name: the name for the new project
+        owner: the owner of the new project
+        created_by: the user initiating the clone
+        description: the description for the new project
+        is_public: whether the new project is public
+
+    Returns:
+        new_project
+    """
+
+    if is_public is None:
+        is_public = source_project.is_public
+
+    if description is None:
+        description = source_project.description
+
+    project = Project.objects.create(
+        name=name,
+        description=description,
+        is_public=is_public,
+        owner=owner,
+    )
+
+    ProjectSeed.objects.create(
+        project=project,
+        clone_from_project=source_project,
+        settings={
+            "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+            "basemaps": [],
+            "xlsform": None,
+        },
+    )
+
+    Job.objects.create(
+        project=project,
+        type=Job.Type.CREATE_PROJECT,
+        created_by=created_by,
+    )
+
+    return project

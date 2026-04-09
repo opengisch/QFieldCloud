@@ -17,6 +17,7 @@ from xlsform2qgis.converter import XLSFormConverter
 
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
+    download_project,
     get_layers_data,
     layers_data_to_string,
     open_qgis_project,
@@ -78,8 +79,8 @@ class ProjectSeed:
     project: str
     crs: str
     name: str
-    extent: list[float]
-    copy_from_project: UUID | None
+    extent: list[float] | None
+    clone_from_project: UUID | None
     xlsform_file: str | None
 
     settings: ProjectSeedSettings  # type: ignore
@@ -99,6 +100,16 @@ class ProjectSeed:
             raise NotImplementedError(
                 f"Project seed settings version '{value['schemaId']}' is not supported."
             )
+
+
+def get_project_qgis_file_name(project_id: str) -> str | None:
+    client = sdk.Client()
+
+    project = client.get_project(project_id)
+
+    project_filename = project.get("the_qgis_file_name")
+
+    return project_filename
 
 
 def get_project_seed(project_id: str) -> ProjectSeed:
@@ -162,17 +173,35 @@ def _create_project_from_xlsform(
     return project_file
 
 
-def create_project_from_seed(
+def prepare_project_files(
     project_seed: ProjectSeed, tmp_project_dir: str, xlsform_filename: str
 ) -> str:
-    crs = QgsCoordinateReferenceSystem(project_seed.crs)
+    """Prepare QGIS project files from seed (clone, XLSForm, or empty).
 
-    if not crs.isValid():
-        logger.warning(
-            "Project extent parameter ignored, a required project CRS parameter is missing."
+    Returns the path to the QGIS project file on disk.
+    """
+    project_filename = None
+
+    if project_seed.clone_from_project:
+        source_id = str(project_seed.clone_from_project)
+
+        download_project(
+            source_id, destination=Path(tmp_project_dir), skip_attachments=False
         )
 
-    project_filename = None
+        project_qgis_file_name = get_project_qgis_file_name(source_id)
+
+        if not project_qgis_file_name:
+            raise FileNotFoundError(
+                f"No QGIS project file name known for source project {source_id}"
+            )
+
+        project_filename = Path(tmp_project_dir).joinpath(
+            "files", project_qgis_file_name
+        )
+
+        return str(project_filename)
+
     if project_seed.settings.xlsform:
         logger.info(f'Creating QGIS project from XLSForm from "{xlsform_filename}"...')
 
@@ -186,17 +215,38 @@ def create_project_from_seed(
             )
         else:
             project_filename = Path(project_filename)
-
     else:
         logger.info("Creating empty QGIS project...")
 
-    if project_filename:
-        project = open_qgis_project(str(project_filename))
-    else:
-        project = QgsProject.instance()
+    if not project_filename:
         project_filename = Path(tmp_project_dir).joinpath("files", "project.qgz")
 
-    if project_seed.settings.basemaps:
+    return str(project_filename)
+
+
+def configure_qgis_project(project_seed: ProjectSeed, project_filename: str) -> str:
+    """Open the QGIS project and apply all seed configuration.
+
+    Sets title, CRS, basemaps.
+    """
+    project_filepath = Path(project_filename)
+
+    if project_filepath.exists():
+        project = open_qgis_project(project_filename)
+    else:
+        project = QgsProject.instance()
+
+    project.setTitle(project_seed.name)
+
+    crs = QgsCoordinateReferenceSystem(project_seed.crs)
+    if crs.isValid():
+        project.setCrs(crs)
+    else:
+        logger.warning("Project CRS parameter is invalid, skipping CRS configuration.")
+
+    # TODO: set the extent of the project
+
+    if project_seed.settings.basemaps and not project_seed.clone_from_project:
         logger.info("Adding basemaps to the project...")
 
         for basemap_config in project_seed.settings.basemaps:
@@ -231,13 +281,9 @@ def create_project_from_seed(
     else:
         logger.info("No basemaps configured for this project seed.")
 
-    project.setTitle(project_seed.name)
-    project.setCrs(crs)
+    project_filepath.parent.mkdir(exist_ok=True, parents=True)
 
     logger.info(f"Saving QGIS project to {project_filename}...")
-
-    project_filename.parent.mkdir(exist_ok=True, parents=True)
-
     project.write(str(project_filename))
 
     return str(project_filename)
@@ -332,8 +378,8 @@ class CreateProjectCommand(QfcBaseCommand):
                     return_names=["xlsform_filename"],
                 ),
                 Step(
-                    id="create_project_from_seed",
-                    name="Create project from seed",
+                    id="prepare_project_files",
+                    name="Prepare project files",
                     arguments={
                         "project_seed": StepOutput("get_project_seed", "project_seed"),
                         "tmp_project_dir": WorkDirPath(),
@@ -341,7 +387,19 @@ class CreateProjectCommand(QfcBaseCommand):
                             "get_project_seed_xlsform", "xlsform_filename"
                         ),
                     },
-                    method=create_project_from_seed,
+                    method=prepare_project_files,
+                    return_names=["project_filename"],
+                ),
+                Step(
+                    id="configure_qgis_project",
+                    name="Configure QGIS project",
+                    arguments={
+                        "project_seed": StepOutput("get_project_seed", "project_seed"),
+                        "project_filename": StepOutput(
+                            "prepare_project_files", "project_filename"
+                        ),
+                    },
+                    method=configure_qgis_project,
                     return_names=["qgis_project_file"],
                 ),
                 Step(
@@ -349,7 +407,7 @@ class CreateProjectCommand(QfcBaseCommand):
                     name="QGIS Layers Data",
                     arguments={
                         "the_qgis_file_name": StepOutput(
-                            "create_project_from_seed", "qgis_project_file"
+                            "configure_qgis_project", "qgis_project_file"
                         ),
                     },
                     method=extract_layer_data,
