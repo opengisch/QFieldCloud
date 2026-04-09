@@ -17,6 +17,7 @@ from xlsform2qgis.converter import XLSFormConverter
 
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
+    download_project,
     get_layers_data,
     layers_data_to_string,
     open_qgis_project,
@@ -80,6 +81,7 @@ class ProjectSeed:
     name: str
     extent: list[float]
     copy_from_project: UUID | None
+    source_qgis_file_name: str | None
     xlsform_file: str | None
 
     settings: ProjectSeedSettings  # type: ignore
@@ -162,9 +164,46 @@ def _create_project_from_xlsform(
     return project_file
 
 
+def clone_project_from_seed(project_seed: ProjectSeed, tmp_project_dir: str) -> str:
+    """Clone a project: download files, set title and CRS from seed."""
+    source_id = str(project_seed.copy_from_project)
+
+    download_project(
+        source_id, destination=Path(tmp_project_dir), skip_attachments=False
+    )
+
+    if project_seed.source_qgis_file_name:
+        project_filename = (
+            Path(tmp_project_dir) / "files" / project_seed.source_qgis_file_name
+        )
+        if not project_filename.exists():
+            raise FileNotFoundError(
+                f"QGIS project file '{project_seed.source_qgis_file_name}' "
+                f"not found in source project {source_id}"
+            )
+    else:
+        raise FileNotFoundError(
+            f"No QGIS project file name known for source project {source_id}"
+        )
+
+    project = open_qgis_project(str(project_filename))
+    project.setTitle(project_seed.name)
+
+    crs = QgsCoordinateReferenceSystem(project_seed.crs)
+    if crs.isValid():
+        project.setCrs(crs)
+
+    project.write(str(project_filename))
+
+    return str(project_filename)
+
+
 def create_project_from_seed(
     project_seed: ProjectSeed, tmp_project_dir: str, xlsform_filename: str
 ) -> str:
+    if project_seed.copy_from_project:
+        return clone_project_from_seed(project_seed, tmp_project_dir)
+
     crs = QgsCoordinateReferenceSystem(project_seed.crs)
 
     if not crs.isValid():
