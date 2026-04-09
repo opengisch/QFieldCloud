@@ -16,6 +16,7 @@ from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
 from qfieldcloud.core.models import Job, Project, ProjectQueryset, ProjectSeed
 from qfieldcloud.core.serializers import (
+    ProjectCloneSerializer,
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
@@ -75,6 +76,11 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_update_project(user, project)
         elif view.action == "upload_thumbnail":
             return permissions_utils.can_create_files(user, project)
+        elif view.action == "clone":
+            if not permissions_utils.can_access_project(user, project):
+                return False
+
+            return permissions_utils.can_create_project(user, owner_obj)
 
         return False
 
@@ -205,7 +211,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             type=Job.Type.CREATE_PROJECT,
             created_by=self.request.user,
         )
-        print("Job created")
 
     @transaction.atomic
     def perform_update(self, serializer: ProjectSerializer) -> None:
@@ -271,6 +276,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 "Content-Disposition": f'attachment; filename="xlsform{extension}"',
             },
         )
+
+    @extend_schema(
+        description="Clone an existing project",
+        request=ProjectCloneSerializer,
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="clone",
+        serializer_class=ProjectCloneSerializer,
+    )
+    def clone(self, request: Request, projectid: UUID) -> Response:
+        source_project = self.get_object()
+        serializer = self.get_serializer(
+            data=request.data,
+            context={"request": request, "source_project": source_project},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema_view(get=extend_schema(description="List all public projects"))
