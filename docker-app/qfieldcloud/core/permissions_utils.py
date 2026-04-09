@@ -261,6 +261,14 @@ def can_access_project(user: QfcUser, project: Project) -> bool:
     )
 
 
+def can_clone_project(user: QfcUser, project: Project, clone_owner: QfcUser) -> bool:
+    """Return True if `user` can clone `project` under `clone_owner`."""
+    if not can_access_project(user, project):
+        return False
+
+    return can_create_project(user, clone_owner)
+
+
 def can_retrieve_project(user: QfcUser, project: Project) -> bool:
     return user_has_project_roles(
         user,

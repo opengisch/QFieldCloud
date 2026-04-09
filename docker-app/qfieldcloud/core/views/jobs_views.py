@@ -102,8 +102,6 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
             return serializers.ProcessProjectfileJobSerializer(*args, **kwargs)
         elif job_type == Job.Type.CREATE_PROJECT:
             return serializers.CreateProjectJobSerializer(*args, **kwargs)
-        elif job_type == Job.Type.CLONE_PROJECT:
-            return serializers.CloneProjectJobSerializer(*args, **kwargs)
         else:
             raise NotImplementedError(f'Unknown job type "{job_type}"')
 

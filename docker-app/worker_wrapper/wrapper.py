@@ -648,14 +648,6 @@ class CreateProjectJobRun(JobRun):
     ]
 
 
-class CloneProjectJobRun(JobRun):
-    job_class = Job
-    command = [
-        "clone_project",
-        "%(project__id)s",
-    ]
-
-
 def cancel_orphaned_workers() -> None:
     client: docker.client.DockerClient = docker.from_env()
 

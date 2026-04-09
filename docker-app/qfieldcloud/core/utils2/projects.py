@@ -13,7 +13,6 @@ from qfieldcloud.core.models import (
     Project,
     ProjectCollaborator,
     ProjectSeed,
-    Secret,
     Team,
     User,
 )
@@ -111,67 +110,55 @@ def create_collaborator_by_username_or_email(
     return success, message
 
 
-def clone_project_secrets(source_project: Project, dest_project: Project) -> None:
-    """Copy project-level secrets from the source project to the destination project.
-
-    Only copies secrets that belong directly to the project (not user-assigned
-    or organization-level secrets).
-    """
-    project_secrets = source_project.secrets.filter(
-        assigned_to__isnull=True,
-        organization__isnull=True,
-    )
-
-    for secret in project_secrets:
-        Secret.objects.create(
-            name=secret.name,
-            type=secret.type,
-            project=dest_project,
-            value=secret.value,
-            created_by=secret.created_by,
-        )
-
-
 @transaction.atomic
 def clone_project(
     source_project: Project,
-    new_name: str,
+    name: str,
     owner: User,
     created_by: User,
-    extent_bbox: tuple[float, float, float, float] | None = None,
-    clone_secrets: bool = False,
-    # clone_collaborators: bool = False,
-) -> tuple[Project, Job]:
-    """Clone a project: create a new Project, ProjectSeed, Secrets, and a CLONE_PROJECT job.
+    description: str | None = None,
+    is_public: bool | None = None,
+    extent: str | None = None,  # EPSG:3857
+) -> Project:
+    """Clone a project: create a new Project, ProjectSeed, and a CREATE_PROJECT job.
 
     Args:
         source_project: the project to clone from
-        new_name: the name for the new project
+        name: the name for the new project
         owner: the owner of the new project
         created_by: the user initiating the clone
-        extent_bbox: optional (xmin, ymin, xmax, ymax) in EPSG:3857; defaults to a global extent
-        clone_secrets: whether to clone the project secrets
-        # clone_collaborators: whether to clone the project collaborators
+        description: the description for the new project
+        is_public: whether the new project is public
+        extent: the extent for the new project as string in the format "minx,miny,maxx,maxy" (EPSG:3857)
 
     Returns:
-        (new_project, clone_job) tuple
+        new_project
     """
-    new_project = Project.objects.create(
-        name=new_name,
+
+    if is_public is None:
+        is_public = source_project.is_public
+
+    if description is None:
+        description = source_project.description
+
+    project = Project.objects.create(
+        name=name,
+        description=description,
+        is_public=is_public,
         owner=owner,
-        description=source_project.description,
-        is_public=source_project.is_public,
-        overwrite_conflicts=source_project.overwrite_conflicts,
-        has_restricted_projectfiles=source_project.has_restricted_projectfiles,
     )
 
-    if extent_bbox is None:
-        extent_bbox = project_seed.DEFAULT_PROJECT_EXTENT
-
-    extent_polygon = Polygon.from_bbox(extent_bbox)
+    if extent:
+        extent_polygon = Polygon.from_bbox(project_seed.parse_extent_coords(extent))
+    else:
+        seed = getattr(source_project, "seed", None)
+        if seed:
+            extent_polygon = seed.extent
+        else:
+            extent_polygon = Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT)
 
     ProjectSeed.objects.create(
-        project=new_project,
+        project=project,
         copy_from_project=source_project,
         extent=extent_polygon,
         settings={
@@ -181,22 +168,10 @@ def clone_project(
         },
     )
 
-    if clone_secrets:
-        clone_project_secrets(source_project, new_project)
-
-    # if clone_collaborators:
-    #     clone_project_collaborators(source_project, new_project)
-
-    clone_job = Job.objects.create(
-        project=new_project,
-        type=Job.Type.CLONE_PROJECT,
+    Job.objects.create(
+        project=project,
+        type=Job.Type.CREATE_PROJECT,
         created_by=created_by,
-        triggered_by=created_by,
     )
 
-    logger.info(
-        f"Clone job {clone_job.id} created for new project {new_project.id} "
-        f"(cloned from {source_project.id})."
-    )
-
-    return new_project, clone_job
+    return project

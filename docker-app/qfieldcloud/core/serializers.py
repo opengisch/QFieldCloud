@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -27,6 +28,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
 
 
@@ -244,9 +246,77 @@ class ProjectSeedSerializer(serializers.ModelSerializer):
     settings = serializers.JSONField()
     # TODO @suricactus: QF-7258 Adding a project extent field on project creation, see https://app.clickup.com/t/2192114/QF-7258
     crs = serializers.CharField(default="EPSG:3857")
+    source_qgis_file_name = serializers.CharField(
+        source="copy_from_project.the_qgis_file_name",
+        read_only=True,
+        allow_null=True,
+    )
 
     def get_extent(self, obj: ProjectSeed) -> dict[str, Any]:
         return obj.extent.extent
+
+
+class ProjectCloneSerializer(serializers.Serializer):
+    name = serializers.CharField(
+        max_length=255,
+        required=True,
+        help_text=_("Name for the cloned project."),
+    )
+    description = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        help_text=_("Description of the cloned project."),
+    )
+    is_public = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text=_("Whether the cloned project is public."),
+    )
+    extent = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        help_text=_("Bounding box as `minx,miny,maxx,maxy` in EPSG:3857."),
+    )
+    owner = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False,
+        help_text=_("Owner of the cloned project."),
+    )
+
+    def validate_extent(self, value):
+        if value:
+            try:
+                project_seed.parse_extent_coords(value)
+            except DjangoValidationError as e:
+                raise serializers.ValidationError(e.message)
+
+        return value
+
+    def validate(self, attrs):
+        source_project = self.context["source_project"]
+        target_owner = attrs.get("owner") or self.context["request"].user
+        name = attrs.get("name")
+
+        # Check if the name is already taken for the target owner
+        if Project.objects.filter(owner=target_owner, name=name).exists():
+            raise serializers.ValidationError(
+                {
+                    "name": f"A project with the name `{name}` already exists for this owner."
+                }
+            )
+
+        # Check if the target owner has enough storage quota
+        if (
+            source_project.file_storage_bytes
+            > target_owner.useraccount.storage_free_bytes
+        ):
+            raise serializers.ValidationError("Insufficient storage quota.")
+
+        attrs["target_owner"] = target_owner
+
+        return attrs
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
@@ -614,39 +684,6 @@ class CreateProjectJobSerializer(JobMixin, serializers.ModelSerializer):
     class Meta(JobMixin.Meta):
         model = Job
         allow_parallel_jobs = True
-
-
-class CloneProjectJobSerializer(JobMixin, serializers.ModelSerializer):
-    class Meta(JobMixin.Meta):
-        model = Job
-        allow_parallel_jobs = True
-
-
-class ProjectCloneSerializer(serializers.Serializer):
-    name = serializers.CharField(
-        max_length=255,
-        required=True,
-        help_text=_("Name for the cloned project."),
-    )
-    extent = serializers.ListField(
-        child=serializers.FloatField(),
-        min_length=4,
-        max_length=4,
-        required=False,
-        default=None,
-        allow_null=True,
-        help_text=_("Bounding box as [xmin, ymin, xmax, ymax] in EPSG:3857."),
-    )
-    clone_secrets = serializers.BooleanField(
-        required=False,
-        default=False,
-        help_text=_("Whether to clone the project secrets."),
-    )
-    # clone_collaborators = serializers.BooleanField(
-    #     required=False,
-    #     default=False,
-    #     help_text=_("Whether to clone the project collaborators."),
-    # )
 
 
 class JobSerializer(serializers.ModelSerializer):

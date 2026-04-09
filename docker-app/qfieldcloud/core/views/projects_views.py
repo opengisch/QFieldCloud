@@ -76,9 +76,21 @@ class ProjectViewSetPermissions(permissions.BasePermission):
         elif view.action in ["update", "partial_update", "upload_thumbnail"]:
             return permissions_utils.can_update_project(user, project)
         elif view.action == "clone":
-            return permissions_utils.can_retrieve_project(
-                user, project
-            ) and permissions_utils.can_create_project(user, owner_obj)
+            # check if the owner is passed in the request data
+            clone_owner_id = None
+            if isinstance(request.data, dict):
+                clone_owner_id = request.data.get("owner")
+
+            if clone_owner_id:
+                try:
+                    clone_owner = User.objects.get(pk=clone_owner_id)
+                except User.DoesNotExist:
+                    return False
+
+            else:
+                clone_owner = user
+
+            return permissions_utils.can_clone_project(user, project, clone_owner)
 
         return False
 
@@ -209,7 +221,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             type=Job.Type.CREATE_PROJECT,
             created_by=self.request.user,
         )
-        print("Job created")
 
     @transaction.atomic
     def perform_update(self, serializer: ProjectSerializer) -> None:
@@ -281,9 +292,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         request=ProjectCloneSerializer,
     )
     @action(detail=True, methods=["post"], url_path="clone")
-    @transaction.atomic
     def clone(self, request: Request, projectid: UUID) -> Response:
-        source_project = Project.objects.get(id=projectid)
+        source_project = self.get_object()
 
         if source_project.is_shared_datasets_project:
             return Response(
@@ -293,36 +303,29 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = ProjectCloneSerializer(data=request.data)
+        serializer = ProjectCloneSerializer(
+            data=request.data,
+            context={
+                "request": request,
+                "source_project": source_project,
+            },
+        )
         serializer.is_valid(raise_exception=True)
 
-        new_name = serializer.validated_data["name"]
-        extent_bbox = serializer.validated_data.get("extent")
-        clone_secrets = serializer.validated_data.get("clone_secrets", False)
-        # clone_collaborators = serializer.validated_data.get("clone_collaborators", False)
-
-        if extent_bbox:
-            extent_tuple = tuple(extent_bbox)
-        else:
-            extent_tuple = None
-
-        new_project, clone_job = projects_utils.clone_project(
+        clone_project = projects_utils.clone_project(
             source_project=source_project,
-            new_name=new_name,
-            owner=request.user,
+            name=serializer.validated_data["name"],
+            owner=serializer.validated_data["target_owner"],
             created_by=request.user,
-            extent_bbox=extent_tuple,
-            clone_secrets=clone_secrets,
-            # clone_collaborators=clone_collaborators,
+            description=serializer.validated_data.get("description"),
+            is_public=serializer.validated_data.get("is_public"),
+            extent=serializer.validated_data.get("extent"),
         )
 
-        project_data = ProjectSerializer(
-            new_project,
-            context={"request": request},
-        ).data
-        project_data["clone_job_id"] = str(clone_job.id)
-
-        return Response(project_data, status=status.HTTP_201_CREATED)
+        return Response(
+            ProjectSerializer(clone_project, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 @extend_schema_view(get=extend_schema(description="List all public projects"))
