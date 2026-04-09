@@ -109,7 +109,7 @@ django-invitations==2.1.0
     # via -r /requirements/requirements.in
 django-jazzmin==3.0.1
     # via -r /requirements/requirements.in
-django-log-request-id==2.1.1
+django-log-request-id==2.1.2
     # via -r /requirements/requirements.in
 django-migrate-sql-3==3.0.2
     # via -r /requirements/requirements.in
