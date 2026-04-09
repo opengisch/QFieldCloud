@@ -34,7 +34,7 @@ django==5.2.13
 django-stubs==5.2.9
 django-stubs-ext==5.2.9
 djangorestframework==3.17.1
-djangorestframework-stubs==3.16.8
+djangorestframework-stubs==3.16.9
 drf-spectacular==0.29.0
 json-log-formatter==1.1.1
 mypy-boto3-s3==1.35.81
