@@ -169,7 +169,7 @@ oauthlib==3.3.1
     # via django-allauth
 packaging==26.0
     # via django-notifications-hq
-phonenumbers==9.0.26
+phonenumbers==9.0.27
     # via -r /requirements/requirements.in
 pillow==12.1.1
     # via -r /requirements/requirements.in
