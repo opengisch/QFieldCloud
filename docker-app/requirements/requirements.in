@@ -28,7 +28,7 @@ django-notifications-hq @ git+https://github.com/django-notifications/django-not
 django-phonenumber-field==8.4.0
 django-sri==0.8.0
 django-storages==1.14.6
-django-tables2==2.8.0
+django-tables2==2.9.0
 django-timezone-field==7.2.1
 django==5.2.12
 django-stubs==5.2.9
