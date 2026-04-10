@@ -1,9 +1,24 @@
+import logging
+
+from django.contrib.gis.geos import Polygon
+from django.db import transaction
 from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from qfieldcloud.core import invitations_utils as invitation
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core.models import Person, Project, ProjectCollaborator, Team
+from qfieldcloud.core.models import (
+    Job,
+    Person,
+    Project,
+    ProjectCollaborator,
+    ProjectSeed,
+    Team,
+    User,
+)
+from qfieldcloud.core.utils2 import project_seed
+
+logger = logging.getLogger(__name__)
 
 
 def create_collaborator(
@@ -93,3 +108,70 @@ def create_collaborator_by_username_or_email(
         success, message = create_collaborator(project, users[0], created_by)
 
     return success, message
+
+
+@transaction.atomic
+def clone_project(
+    source_project: Project,
+    name: str,
+    owner: User,
+    created_by: User,
+    description: str | None = None,
+    is_public: bool | None = None,
+    extent: str | None = None,  # EPSG:3857
+) -> Project:
+    """Clone a project: create a new Project, ProjectSeed, and a CREATE_PROJECT job.
+
+    Args:
+        source_project: the project to clone from
+        name: the name for the new project
+        owner: the owner of the new project
+        created_by: the user initiating the clone
+        description: the description for the new project
+        is_public: whether the new project is public
+        extent: the extent for the new project as string in the format "minx,miny,maxx,maxy" (EPSG:3857)
+
+    Returns:
+        new_project
+    """
+
+    if is_public is None:
+        is_public = source_project.is_public
+
+    if description is None:
+        description = source_project.description
+
+    project = Project.objects.create(
+        name=name,
+        description=description,
+        is_public=is_public,
+        owner=owner,
+    )
+
+    if extent:
+        extent_polygon = Polygon.from_bbox(project_seed.parse_extent_coords(extent))
+    else:
+        seed = getattr(source_project, "seed", None)
+        if seed:
+            extent_polygon = seed.extent
+        else:
+            extent_polygon = Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT)
+
+    ProjectSeed.objects.create(
+        project=project,
+        copy_from_project=source_project,
+        extent=extent_polygon,
+        settings={
+            "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+            "basemaps": [],
+            "xlsform": None,
+        },
+    )
+
+    Job.objects.create(
+        project=project,
+        type=Job.Type.CREATE_PROJECT,
+        created_by=created_by,
+    )
+
+    return project

@@ -16,11 +16,13 @@ from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
 from qfieldcloud.core.models import Job, Project, ProjectQueryset, ProjectSeed
 from qfieldcloud.core.serializers import (
+    ProjectCloneSerializer,
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
 from qfieldcloud.core.utils2 import project_seed, storage
+from qfieldcloud.core.utils2 import projects as projects_utils
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
@@ -75,6 +77,22 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return permissions_utils.can_update_project(user, project)
         elif view.action == "upload_thumbnail":
             return permissions_utils.can_retrieve_project(user, project)
+        elif view.action == "clone":
+            # check if the owner is passed in the request data
+            clone_owner_id = None
+            if isinstance(request.data, dict):
+                clone_owner_id = request.data.get("owner")
+
+            if clone_owner_id:
+                try:
+                    clone_owner = User.objects.get(pk=clone_owner_id)
+                except User.DoesNotExist:
+                    return False
+
+            else:
+                clone_owner = user
+
+            return permissions_utils.can_clone_project(user, project, clone_owner)
 
         return False
 
@@ -205,7 +223,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             type=Job.Type.CREATE_PROJECT,
             created_by=self.request.user,
         )
-        print("Job created")
 
     @transaction.atomic
     def perform_update(self, serializer: ProjectSerializer) -> None:
@@ -270,6 +287,46 @@ class ProjectViewSet(viewsets.ModelViewSet):
             headers={
                 "Content-Disposition": f'attachment; filename="xlsform{extension}"',
             },
+        )
+
+    @extend_schema(
+        description="Clone an existing project",
+        request=ProjectCloneSerializer,
+    )
+    @action(detail=True, methods=["post"], url_path="clone")
+    def clone(self, request: Request, projectid: UUID) -> Response:
+        source_project = self.get_object()
+
+        if source_project.is_shared_datasets_project:
+            return Response(
+                {
+                    "detail": "This project is a special shared datasets project and cannot be cloned."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = ProjectCloneSerializer(
+            data=request.data,
+            context={
+                "request": request,
+                "source_project": source_project,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
+
+        clone_project = projects_utils.clone_project(
+            source_project=source_project,
+            name=serializer.validated_data["name"],
+            owner=serializer.validated_data["target_owner"],
+            created_by=request.user,
+            description=serializer.validated_data.get("description"),
+            is_public=serializer.validated_data.get("is_public"),
+            extent=serializer.validated_data.get("extent"),
+        )
+
+        return Response(
+            ProjectSerializer(clone_project, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
         )
 
 
