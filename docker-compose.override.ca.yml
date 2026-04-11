@@ -1,0 +1,22 @@
+services:
+  app:
+    # Here we set the environment variables and volumes for the custom CA certificate in the `app` container,
+    # it might be needed in case there is a WebDAV storage configured, using self-signed certificates and requiring the CA.
+    environment:
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/custom_ca.crt
+    volumes:
+      - custom_ca_certificates:/etc/ssl/certs/:ro
+
+  worker_wrapper:
+    volumes:
+      - custom_ca_certificates:/etc/ssl/certs/:ro
+
+volumes:
+  custom_ca_certificates:
+    # We use a bind mount to mount the custom CA certificates from the host machine into the Docker volume,
+    # this way we can easily manage the CA certificates on the host and have them available in the containers.
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/conf/ca
+      o: bind, ro

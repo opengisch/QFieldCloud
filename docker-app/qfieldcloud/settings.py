@@ -999,3 +999,12 @@ CORS_URLS_REGEX = r"^/(api/.*|swagger/)$"
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
 CORS_ALLOW_CREDENTIALS = parse_string_to_bool(os.environ["CORS_ALLOW_CREDENTIALS"])
+
+# Optional volume name where custom CA files are mounted
+QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME = (
+    f"{os.environ['COMPOSE_PROJECT_NAME']}_custom_ca_certificates"
+)
+
+# Filename where optional custom CA certificate are stored.
+QFIELDCLOUD_CUSTOM_CA_DIR = "/etc/ssl/certs"
+QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"

@@ -13,6 +13,7 @@ conf/certbot/*
 conf/nginx/certs/*.pem
 conf/nginx/config.d/*.conf
 conf/nginx/dhparams/*.pem
+conf/ca/custom_ca.crt
 Pipfile*
 **/site-packages
 docker-qgis/libqfieldsync
