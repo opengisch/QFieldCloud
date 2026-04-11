@@ -288,6 +288,10 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 },
             )
 
+            if role == ProjectCollaborator.Roles.READER:
+                self.assertEqual(resp_post.status_code, status.HTTP_403_FORBIDDEN)
+                continue
+
             self.assertTrue(status.is_success(resp_post.status_code))
             self.assertIn("id", resp_post.data)
 
