@@ -9,7 +9,7 @@ from qfieldcloud.core.models import BasemapProvider, BasemapStyle
 
 OSM_URL = "https://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png"
 
-DEFAULT_PROJECT_EXTENT = (-20000000, -20000000, 20000000, 20000000)
+DEFAULT_PROJECT_EXTENT = (-180, -90, 180, 90)
 
 
 class BasemapConfig(TypedDict):
@@ -19,31 +19,33 @@ class BasemapConfig(TypedDict):
 
 
 def parse_extent_coords(extent_coords: str) -> tuple[float, float, float, float]:
-    """Parses the extent coordinates from a string.
+    """Parses the extent coordinates from a string and validates them for EPSG:4326.
 
     Args:
-        extent_coords: the extent coordinates to parse in the format "minx,miny,maxx,maxy"
+        extent_coords: the extent coordinates to parse in the format "minX, minY, maxX, maxY"
 
     Returns:
         the extent coordinates as a tuple of floats
     """
-    # Expect format: "minx,miny,maxx,maxy"
+    # Expect format: "minX, minY, maxX, maxY"
     coords: list[float] = []
 
     try:
         for x in extent_coords.split(","):
             coords.append(float(x.strip()))
     except (ValueError, TypeError):
-        raise ValidationError(_("Invalid extent format. Expected: minx,miny,maxx,maxy"))
+        raise ValidationError(
+            _("Invalid extent format. Expected: minX, minY, maxX, maxY")
+        )
 
     if len(coords) != 4:
         raise ValidationError(_("Extent must have 4 coordinates"))
 
     minx, miny, maxx, maxy = coords
 
-    # Validate bounds for EPSG:3857 [https://epsg.io/3857] (Web Mercator valid range)
-    max_x_extent = 20037508.34  # Valid X (easting) range
-    max_y_extent = 20048966.1  # Valid Y (northing) range
+    # Validate bounds for EPSG:4326 [https://epsg.io/4326] (WGS 84 valid range)
+    max_x_extent = 180  # Valid X (longitude) range
+    max_y_extent = 90  # Valid Y (latitude) range
 
     if not (
         -max_x_extent <= minx <= max_x_extent
@@ -51,7 +53,7 @@ def parse_extent_coords(extent_coords: str) -> tuple[float, float, float, float]
         and -max_y_extent <= miny <= max_y_extent
         and -max_y_extent <= maxy <= max_y_extent
     ):
-        raise ValidationError(_("Extent coordinates out of valid range for EPSG:3857"))
+        raise ValidationError(_("Extent coordinates out of valid range for EPSG:4326"))
 
     if minx >= maxx or miny >= maxy:
         raise ValidationError(
@@ -59,6 +61,28 @@ def parse_extent_coords(extent_coords: str) -> tuple[float, float, float, float]
         )
 
     return minx, miny, maxx, maxy
+
+
+def get_extent_polygon(extent_str: str | None) -> Polygon:
+    """Cleans the extent by ensuring it is a valid rectangle and normalizing it.
+
+    Args:
+        extent_str: Expected input is EPSG:4326 coordinates in the format "minX, minY, maxX, maxY".
+
+    Returns:
+        A normalized Polygon representing the extent in EPSG:3426.
+
+    """
+    if extent_str:
+        # Return default extent if not provided
+        polygon = Polygon.from_bbox(parse_extent_coords(extent_str))
+    else:
+        polygon = Polygon.from_bbox(DEFAULT_PROJECT_EXTENT)
+
+    polygon.srid = 4326
+    polygon.transform(3857)
+
+    return polygon
 
 
 def build_basemap_config(
@@ -126,11 +150,7 @@ def build_seed_data(
         ValueError: on invalid basemap or extent inputs.
     """
     basemaps = build_basemap_config(basemap_provider, basemap_style, basemap_url)
-
-    if extent_input:
-        extent = Polygon.from_bbox(parse_extent_coords(extent_input))
-    else:
-        extent = Polygon.from_bbox(DEFAULT_PROJECT_EXTENT)
+    extent = get_extent_polygon(extent_input)
 
     xlsform_config = None
     if xlsform_file:
