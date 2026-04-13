@@ -136,7 +136,7 @@ def upload_project_file_version(
             update_fields = ["data_last_updated_at"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
-                is_qgis_file or project.the_qgis_file_name is not None
+                is_qgis_file or project.has_the_qgis_file
             ):
                 if is_qgis_file:
                     project.the_qgis_file_name = filename
