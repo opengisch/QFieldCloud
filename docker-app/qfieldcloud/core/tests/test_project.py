@@ -89,7 +89,7 @@ class QfcTestCase(APITransactionTestCase):
             {
                 "basemap_provider": "osm",
                 "basemap_style": "standard",
-                "extent": "800000,5900000,1100000,6100000",
+                "extent": "22,41,29,45.67",
             }
         )
 
