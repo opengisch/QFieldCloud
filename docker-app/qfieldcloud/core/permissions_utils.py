@@ -468,8 +468,8 @@ def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     return False
 
 
-def can_read_jobs(user: QfcUser, project: Project) -> bool:
-    """Check if the user has permission to list or retrieve jobs."""
+def can_list_jobs(user: QfcUser, project: Project) -> bool:
+    """Check if the user has permission to list/retrieve jobs via API."""
     return user_has_project_roles(
         user,
         project,
@@ -479,6 +479,20 @@ def can_read_jobs(user: QfcUser, project: Project) -> bool:
             ProjectCollaborator.Roles.EDITOR,
             ProjectCollaborator.Roles.REPORTER,
             ProjectCollaborator.Roles.READER,
+        ],
+    )
+
+
+def can_read_jobs(user: QfcUser, project: Project) -> bool:
+    """Check if the user has permission to see the job details in the Web UI."""
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
         ],
     )
 

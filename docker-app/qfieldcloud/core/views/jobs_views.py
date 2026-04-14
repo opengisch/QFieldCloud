@@ -42,7 +42,7 @@ class JobPermissions(permissions.BasePermission):
                 return False
 
         if view.action in ("list", "retrieve"):
-            return permissions_utils.can_read_jobs(request.user, project)
+            return permissions_utils.can_list_jobs(request.user, project)
         elif view.action == "create":
             return permissions_utils.can_create_jobs(request.user, project, job_type)
 
