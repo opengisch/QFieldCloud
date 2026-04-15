@@ -171,6 +171,7 @@ services:
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
       - custom_ca_certificates:/etc/ssl/certs/:ro
+      - ${TMP_DIRECTORY}:/tmp
     environment:
       <<: *django-env
       TMP_DIRECTORY: ${TMP_DIRECTORY}
