@@ -8,12 +8,14 @@ from qfieldcloud.core.views import (
     members_views,
     package_views,
     projects_views,
+    server_views,
     status_views,
     teams_views,
     users_views,
 )
 from qfieldcloud.core.views.accounts_views import resend_confirmation_email
 from qfieldcloud.filestorage.urls import urlpatterns as filestorage_urlpatterns
+from qfieldcloud.subscription.urls import urlpatterns as subscription_urlpatterns
 
 router = DefaultRouter()
 router.register(r"projects", projects_views.ProjectViewSet, basename="project")
@@ -43,6 +45,7 @@ organizations/<str:organization_name>/teams/<str:team_name>/members/
 
 urlpatterns = [
     *filestorage_urlpatterns,
+    *subscription_urlpatterns,
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
     path("users/", users_views.ListUsersView.as_view()),
@@ -104,4 +107,5 @@ urlpatterns = [
         name="team_member_destroy",
     ),
     path("resend-confirmation/", resend_confirmation_email, name="resend_confirmation"),
+    path("server/info/", server_views.ServerInfoView.as_view(), name="server_info"),
 ]

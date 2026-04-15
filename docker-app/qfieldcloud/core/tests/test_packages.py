@@ -126,6 +126,12 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             response = self.client.get(f"/api/v1/jobs/{job_id}/")
             payload = response.json()
 
+            # NOTE: it's a bit naive, probably we should check for status here, but this is good enough approximation that the server responded with an error
+            if "code" in payload and "message" in payload:
+                self.fail(
+                    f"Getting the job response returned an error: [{payload['code']}] {payload['message']}",
+                )
+
             if payload["status"] == Job.Status.FINISHED:
                 project.refresh_from_db()
                 response = self.client.get(f"/api/v1/packages/{project.id}/latest/")

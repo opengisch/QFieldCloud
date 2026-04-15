@@ -28,13 +28,13 @@ jsonschema-specifications==2023.12.1
     # via jsonschema
 pathvalidate==3.3.1
     # via qfieldcloud-sdk
-qfieldcloud-sdk==0.13.0
+qfieldcloud-sdk==0.14.0
     # via -r requirements.in
 referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.1
     # via
     #   -r requirements.in
     #   qfieldcloud-sdk

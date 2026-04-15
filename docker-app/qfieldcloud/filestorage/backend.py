@@ -260,12 +260,6 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         basic_auth = f"Basic {b64_auth}"
         response["webdav_auth"] = basic_auth
 
-    def is_name_available(self, name, max_length=None):
-        # TODO: Delete with QF-7176 and Django >= 5.1 upgrade.
-        # see https://github.com/django/django/blob/6f35c2e1fd71ff8f349598a59689514e213490e7/django/core/files/storage/base.py#L54
-        exceeds_max_length = max_length and len(name) > max_length
-        return not self.exists(name) and not exceeds_max_length
-
     def get_available_name(self, name: str, max_length: int | None = None) -> str:
         """Returns a filename that is available on the configured webdav storage.
 

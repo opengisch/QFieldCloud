@@ -11,6 +11,7 @@ from django.db.models import Q
 from qfieldcloud.core.models import Job
 from worker_wrapper.wrapper import (
     ApplyDeltaJobRun,
+    CreateProjectJobRun,
     JobRun,
     PackageJobRun,
     ProcessProjectfileJobRun,
@@ -119,6 +120,7 @@ class Command(BaseCommand):
             Job.Type.PACKAGE: PackageJobRun,
             Job.Type.DELTA_APPLY: ApplyDeltaJobRun,
             Job.Type.PROCESS_PROJECTFILE: ProcessProjectfileJobRun,
+            Job.Type.CREATE_PROJECT: CreateProjectJobRun,
         }
 
     def _run(self, job: Job) -> None:

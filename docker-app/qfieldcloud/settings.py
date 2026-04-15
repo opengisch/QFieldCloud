@@ -312,7 +312,7 @@ LEGACY_STORAGE_NAME = _storage_config["LEGACY_STORAGE_NAME"]
 # Maximum filename length in characters
 # NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 # NOTE the files on Windows cannot be longer than 260 _chars_ by default, see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maximum-path-length-limitation
-# NOTE minio limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
+# NOTE `minio` limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
 STORAGE_FILENAME_MAX_CHAR_LENGTH = 255
 
 # Filename validator regex.
@@ -993,9 +993,18 @@ CORS_ALLOWED_ORIGINS = parse_string_to_list(
     os.environ["CORS_ALLOWED_ORIGINS"], delimiter=","
 )
 
-# Only allow CORS on API endpoints – static files and pages are unaffected.
-CORS_URLS_REGEX = r"^/api/.*$"
+# Only allow CORS on API + swagger endpoints - static files and pages are unaffected.
+CORS_URLS_REGEX = r"^/(api/.*|swagger/)$"
 
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
 CORS_ALLOW_CREDENTIALS = parse_string_to_bool(os.environ["CORS_ALLOW_CREDENTIALS"])
+
+# Optional volume name where custom CA files are mounted
+QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME = (
+    f"{os.environ['COMPOSE_PROJECT_NAME']}_custom_ca_certificates"
+)
+
+# Filename where optional custom CA certificate are stored.
+QFIELDCLOUD_CUSTOM_CA_DIR = "/etc/ssl/certs"
+QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"

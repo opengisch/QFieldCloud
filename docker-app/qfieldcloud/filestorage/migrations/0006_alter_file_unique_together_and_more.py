@@ -2,8 +2,84 @@
 
 from django.db import migrations, models
 
+FILE_TYPE_PROJECT_FILE = 1
+
+
+def fix_duplicating_filenames_as_versions(apps, schema_editor):
+    File = apps.get_model("filestorage", "File")
+    FileVersion = apps.get_model("filestorage", "FileVersion")
+
+    file_summaries_qs = (
+        File.objects.values("project_id", "name", "file_type")
+        .annotate(count=models.Count("*"))
+        .filter(
+            file_type=FILE_TYPE_PROJECT_FILE,
+            count__gt=1,
+        )
+    )
+
+    print(
+        f"There are {len(file_summaries_qs)} files with given project, name and type, that are duplicated in the database."
+    )
+
+    for file_summary in file_summaries_qs:
+        print(
+            f"""Checking file "{file_summary["name"]}" in project "{file_summary["project_id"]}" with type {file_summary["file_type"]} has {file_summary["count"]} repetitions."""
+        )
+
+        assert file_summary["count"] >= 2
+
+        files_qs = File.objects.filter(
+            project_id=file_summary["project_id"],
+            name=file_summary["name"],
+            file_type=file_summary["file_type"],
+        ).order_by("created_at")
+
+        # the number of found files should match the summary
+        assert len(files_qs) == file_summary["count"]
+
+        new_parent_file = files_qs[0]
+
+        to_update_version_ids = []
+
+        for file in files_qs[1:]:
+            current_file_version_ids = list(file.versions.values_list("id", flat=True))
+
+            print(
+                f"""Checking file "{file.name}" in project "{file.project_id}" with type {file.file_type} and id {file.id} has {len(current_file_version_ids)} version(s): {current_file_version_ids}"""
+            )
+
+            to_update_version_ids = to_update_version_ids + current_file_version_ids
+
+        print(
+            f"""Changing the parent file for {len(to_update_version_ids)} version to be "{new_parent_file.id}" """
+        )
+
+        FileVersion.objects.filter(id__in=to_update_version_ids).update(
+            file=new_parent_file
+        )
+
+        to_delete_file_ids = [f.id for f in files_qs[1:]]
+        File.objects.filter(id__in=to_delete_file_ids).delete()
+
+    file_summaries_count = (
+        File.objects.values("project_id", "name", "file_type")
+        .annotate(count=models.Count("*"))
+        .filter(
+            file_type=FILE_TYPE_PROJECT_FILE,
+            count__gt=1,
+        )
+        .count()
+    )
+
+    assert file_summaries_count == 0
+
+    print("Done!")
+
 
 class Migration(migrations.Migration):
+    atomic = False
+
     dependencies = [
         (
             "core",
@@ -16,6 +92,11 @@ class Migration(migrations.Migration):
         migrations.AlterUniqueTogether(
             name="file",
             unique_together=set(),
+        ),
+        migrations.RunPython(
+            fix_duplicating_filenames_as_versions,
+            migrations.RunPython.noop,
+            atomic=True,
         ),
         migrations.AddConstraint(
             model_name="file",

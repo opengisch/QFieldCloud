@@ -1,6 +1,8 @@
 import io
 import logging
 
+from django.contrib.gis.geos import Polygon
+from django.core.files.base import ContentFile
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -10,15 +12,17 @@ from qfieldcloud.core.models import (
     PackageJob,
     Person,
     Project,
+    ProjectCollaborator,
+    ProjectSeed,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
-
-from .utils import (
+from qfieldcloud.core.tests.utils import (
     set_subscription,
     setup_subscription_plans,
     testdata_path,
     wait_for_project_ok_status,
 )
+from qfieldcloud.core.utils2 import project_seed
 
 logging.disable(logging.CRITICAL)
 
@@ -233,3 +237,188 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertTrue(self.p1.has_online_vector_data)
+
+    def test_cannot_create_job_on_project_without_permissions(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        u2 = Person.objects.create_user(username="u2", password="abc123")
+        p2 = Project.objects.create(is_public=False, owner=u2)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": p2.id,
+                "type": "process_projectfile",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.post(
+            "/api/v1/jobs/",
+            {
+                "project_id": self.p1.id,
+                "type": "process_projectfile",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_can_create_and_read_job_created_by_their_own(self):
+        for idx, role in enumerate(ProjectCollaborator.Roles):
+            user = Person.objects.create_user(
+                username=f"collaborator_{idx}", password="abc123"
+            )
+
+            ProjectCollaborator.objects.create(
+                project=self.p1,
+                collaborator=user,
+                role=role,
+            )
+
+            token = AuthToken.objects.get_or_create(user=user)[0]
+
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+
+            resp_post = self.client.post(
+                "/api/v1/jobs/",
+                {
+                    "project_id": self.p1.id,
+                    "type": "process_projectfile",
+                },
+            )
+
+            if role == ProjectCollaborator.Roles.READER:
+                self.assertEqual(resp_post.status_code, status.HTTP_403_FORBIDDEN)
+                continue
+
+            self.assertTrue(status.is_success(resp_post.status_code))
+            self.assertIn("id", resp_post.data)
+
+            job_id = resp_post.data["id"]
+
+            resp_get = self.client.get(
+                "/api/v1/jobs/",
+                {
+                    "project_id": self.p1.id,
+                },
+            )
+
+            self.assertTrue(status.is_success(resp_get.status_code))
+            self.assertGreaterEqual(len(resp_get.data), 1)
+            self.assertEqual(resp_get.data[-1]["id"], job_id)
+
+            resp_get = self.client.get(
+                f"/api/v1/jobs/{job_id}/",
+            )
+
+            self.assertTrue(status.is_success(resp_get.status_code))
+            self.assertEqual(resp_get.data["id"], job_id)
+
+    def test_create_project_from_xlsform(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        ProjectSeed.objects.create(
+            project=self.p1,
+            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            settings={
+                "schemaId": "https://app.qfield.cloud/schemas/project-seed-20251201.json",
+                "basemaps": [
+                    {
+                        "name": "OpenStreetMap (Standard)",
+                        "style": "standard",
+                        "url": "https://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png",
+                    }
+                ],
+                "xlsform": {
+                    "show_groups_as_tabs": False,
+                },
+            },
+            xlsform_file=ContentFile(
+                open(testdata_path("xlsforms/service_rating.xlsx"), "rb").read(),
+                "service_rating.xlsx",
+            ),
+        )
+
+        Job.objects.create(
+            project=self.p1,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        self.p1.refresh_from_db()
+
+        pd = self.p1.project_details
+
+        self.assertIsNotNone(pd)
+
+        self.assertEqual(pd["crs"], "EPSG:3857")
+        self.assertEqual(len(pd["layers_by_id"]), 7)
+
+        layers = list(pd["layers_by_id"].values())
+        layers.sort(key=lambda layer: layer["name"])
+
+        self.assertEqual(layers[0]["name"], "OpenStreetMap (Standard)")
+        self.assertEqual(layers[1]["name"], "list_rating")
+        self.assertEqual(layers[1]["wkb_type"], 100)
+        self.assertEqual(layers[2]["name"], "list_role")
+        self.assertEqual(layers[2]["wkb_type"], 100)
+        self.assertEqual(layers[3]["name"], "list_salutation")
+        self.assertEqual(layers[3]["wkb_type"], 100)
+        self.assertEqual(layers[4]["name"], "list_services")
+        self.assertEqual(layers[4]["wkb_type"], 100)
+        self.assertEqual(layers[5]["name"], "list_yes_no")
+        self.assertEqual(layers[5]["wkb_type"], 100)
+        self.assertEqual(layers[6]["name"], "survey")
+        self.assertEqual(layers[6]["crs"], "EPSG:4326")
+        self.assertEqual(layers[6]["wkb_type"], 4)
+
+        fields = layers[6]["fields"]
+
+        self.assertEqual(len(fields), 22)
+        self.assertEqual(fields[0]["name"], "fid")
+        self.assertEqual(fields[0]["type"], "Integer64")
+        self.assertEqual(fields[1]["name"], "uuid")
+        self.assertEqual(fields[1]["type"], "String")
+        self.assertEqual(fields[2]["name"], "recommend")
+        self.assertEqual(fields[2]["type"], "String")
+        self.assertEqual(fields[3]["name"], "services")
+        self.assertEqual(fields[3]["type"], "String")
+        self.assertEqual(fields[4]["name"], "info_portal_rating")
+        self.assertEqual(fields[4]["type"], "String")
+        self.assertEqual(fields[5]["name"], "clinical_trials_rating")
+        self.assertEqual(fields[5]["type"], "String")
+        self.assertEqual(fields[6]["name"], "support_program_rating")
+        self.assertEqual(fields[6]["type"], "String")
+        self.assertEqual(fields[7]["name"], "ordering_rating")
+        self.assertEqual(fields[7]["type"], "String")
+        self.assertEqual(fields[8]["name"], "rep_scheduling_rating")
+        self.assertEqual(fields[8]["type"], "String")
+        self.assertEqual(fields[9]["name"], "cme_rating")
+        self.assertEqual(fields[9]["type"], "String")
+        self.assertEqual(fields[10]["name"], "feature_improve")
+        self.assertEqual(fields[10]["type"], "String")
+        self.assertEqual(fields[11]["name"], "part_employees")
+        self.assertEqual(fields[11]["type"], "Integer64")
+        self.assertEqual(fields[12]["name"], "full_employees")
+        self.assertEqual(fields[12]["type"], "Integer64")
+        self.assertEqual(fields[13]["name"], "employee_total")
+        self.assertEqual(fields[13]["type"], "String")
+        self.assertEqual(fields[14]["name"], "employee_summary")
+        self.assertEqual(fields[14]["type"], "Boolean")
+        self.assertEqual(fields[15]["name"], "salutation")
+        self.assertEqual(fields[15]["type"], "String")
+        self.assertEqual(fields[16]["name"], "name")
+        self.assertEqual(fields[16]["type"], "String")
+        self.assertEqual(fields[17]["name"], "address")
+        self.assertEqual(fields[17]["type"], "String")
+        self.assertEqual(fields[18]["name"], "zip_code")
+        self.assertEqual(fields[18]["type"], "String")
+        self.assertEqual(fields[19]["name"], "city")
+        self.assertEqual(fields[19]["type"], "String")
+        self.assertEqual(fields[20]["name"], "state")
+        self.assertEqual(fields[20]["type"], "String")
+        self.assertEqual(fields[21]["name"], "comment")
+        self.assertEqual(fields[21]["type"], "String")

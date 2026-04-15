@@ -5,6 +5,7 @@ from django.utils.translation import gettext as _
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Delta,
+    Job,
     Organization,
     OrganizationMember,
     OrganizationQueryset,
@@ -467,7 +468,23 @@ def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     return False
 
 
+def can_list_jobs(user: QfcUser, project: Project) -> bool:
+    """Check if the user has permission to list/retrieve jobs via API."""
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaborator.Roles.READER,
+        ],
+    )
+
+
 def can_read_jobs(user: QfcUser, project: Project) -> bool:
+    """Check if the user has permission to see the job details in the Web UI."""
     return user_has_project_roles(
         user,
         project,
@@ -478,6 +495,23 @@ def can_read_jobs(user: QfcUser, project: Project) -> bool:
             ProjectCollaborator.Roles.REPORTER,
         ],
     )
+
+
+def can_create_jobs(user: QfcUser, project: Project, job_type: Job.Type) -> bool:
+    """Check if the user has permission to create a job of the given type."""
+    if job_type == Job.Type.PACKAGE:
+        roles = list(ProjectCollaborator.Roles)
+    elif job_type in (Job.Type.PROCESS_PROJECTFILE, Job.Type.DELTA_APPLY):
+        roles = [
+            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaborator.Roles.REPORTER,
+        ]
+    else:
+        raise NotImplementedError(f'Unknown job type "{job_type}"')
+
+    return user_has_project_roles(user, project, roles)
 
 
 def can_create_project_secrets(user: QfcUser, project: Project) -> bool:
@@ -682,7 +716,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             if not user.useraccount.current_subscription.plan.is_premium:
                 raise ExpectedPremiumUserError(
                     _(
-                        "Only premium users can be added as collaborators on private projects."
+                        "Only users who upgraded from free plan can be added as collaborators on private projects."
                     ).format(user.username)
                 )
 
@@ -733,6 +767,23 @@ def can_read_billing(user: QfcUser, account: QfcUser) -> bool:
             account,
             [
                 OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+            ],
+        )
+    else:
+        return False
+
+
+def can_read_current_subscription(user: QfcUser, account: QfcUser) -> bool:
+    if user_eq(user, account):
+        return True
+
+    if account.is_organization:
+        return user_has_organization_role_origins(
+            user,
+            account,
+            [
+                OrganizationQueryset.RoleOrigins.ORGANIZATIONOWNER,
+                OrganizationQueryset.RoleOrigins.ORGANIZATIONMEMBER,
             ],
         )
     else:
