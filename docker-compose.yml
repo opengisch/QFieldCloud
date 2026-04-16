@@ -24,7 +24,7 @@ services:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
       - custom_ca_certificates:/etc/ssl/certs/:ro
-    environment:
+    environment: &django-env
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
@@ -68,8 +68,6 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS}
       # Settings below are specific to worker_wrapper
-      # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
-      TMP_DIRECTORY: ${TMP_DIRECTORY}
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       QFIELDCLOUD_WORKER_QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
@@ -173,8 +171,11 @@ services:
       - media_volume:/usr/src/app/mediafiles/
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${TMP_DIRECTORY}:/tmp
       - custom_ca_certificates:/etc/ssl/certs/:ro
+      - ${TMP_DIRECTORY}:/tmp
+    environment:
+      <<: *django-env
+      TMP_DIRECTORY: ${TMP_DIRECTORY}
     logging: *default-logging
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
     stop_grace_period: 15m
