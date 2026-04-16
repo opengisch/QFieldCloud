@@ -85,8 +85,9 @@ def set_subscription(
         )
         subscription = user.useraccount.current_subscription
         subscription.plan = plan
+        subscription.purchased_seats = subscription.plan.max_organization_members
         subscription.active_since = timezone.now() - timedelta(days=1)
-        subscription.save(update_fields=["plan", "active_since"])
+        subscription.save(update_fields=["plan", "active_since", "purchased_seats"])
 
     # It is guaranteed that at least one user was provided.
     assert subscription is not None
@@ -152,7 +153,15 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         if project.status == Project.Status.OK:
             return
         elif project.status == Project.Status.FAILED:
+            job = project.jobs.latest("updated_at")
+
+            print("FEEDBACK:", job.feedback)
+            print("type1`", job.type)
+            print("type2", job)
+            print("output:", job.output)
+
             fail("Waited for ok status, but got failed")
+
             return
 
         sleep(1)

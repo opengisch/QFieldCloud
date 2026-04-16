@@ -23,7 +23,8 @@ services:
     volumes:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
-    environment:
+      - custom_ca_certificates:/etc/ssl/certs/:ro
+    environment: &django-env
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
@@ -52,6 +53,7 @@ services:
       STORAGES_PROJECT_DEFAULT_STORAGE: ${STORAGES_PROJECT_DEFAULT_STORAGE:-}
       STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE: ${STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE:-}
       STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED: ${STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED:-}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK:-${COMPOSE_PROJECT_NAME}_default}
       QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED: ${QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED}
       ACCOUNT_EMAIL_VERIFICATION: ${ACCOUNT_EMAIL_VERIFICATION}
@@ -66,8 +68,6 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS}
       # Settings below are specific to worker_wrapper
-      # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
-      TMP_DIRECTORY: ${TMP_DIRECTORY}
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       QFIELDCLOUD_WORKER_QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
@@ -120,6 +120,7 @@ services:
       NGINX_PROXY_CONNECT_TIMEOUT: ${NGINX_PROXY_CONNECT_TIMEOUT:-5s}
       NGINX_PROXY_READ_TIMEOUT: ${NGINX_PROXY_READ_TIMEOUT:-300s}
       NGINX_PROXY_SEND_TIMEOUT: ${NGINX_PROXY_SEND_TIMEOUT:-300s}
+      NGINX_ALLOW_INTERNAL_HTTP: ${NGINX_ALLOW_INTERNAL_HTTP:-0}
     logging:
       driver: "json-file"
       options:
@@ -170,7 +171,11 @@ services:
       - media_volume:/usr/src/app/mediafiles/
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
+      - custom_ca_certificates:/etc/ssl/certs/:ro
       - ${TMP_DIRECTORY}:/tmp
+    environment:
+      <<: *django-env
+      TMP_DIRECTORY: ${TMP_DIRECTORY}
     logging: *default-logging
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
     stop_grace_period: 15m
@@ -205,3 +210,13 @@ volumes:
   media_volume:
   transformation_grids:
   certbot_www:
+  custom_ca_certificates:
+    # We use a bind mount to mount the custom CA bundle from the host machine into the Docker volume,
+    # this way we can easily manage the CA bundle on the host and have them available in the containers.
+    # The docker in docker setup of the workers spawned by the wrapper requires the CA bundle to be available as a volume,
+    # either with absolute host path, either a named one which we prefer here to share it across services.
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD:-.}/conf/ca
+      o: bind, ro

@@ -19,7 +19,7 @@ class RetrieveCurrentSubscriptionViewPermissions(BasePermission):
         except ObjectDoesNotExist:
             return False
 
-        return permissions_utils.can_read_billing(request.user, user)
+        return permissions_utils.can_read_current_subscription(request.user, user)
 
 
 @extend_schema_view(

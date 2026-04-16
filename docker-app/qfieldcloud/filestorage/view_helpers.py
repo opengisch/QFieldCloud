@@ -136,7 +136,7 @@ def upload_project_file_version(
             update_fields = ["data_last_updated_at"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
-                is_qgis_file or project.the_qgis_file_name is not None
+                is_qgis_file or project.has_the_qgis_file
             ):
                 if is_qgis_file:
                     project.the_qgis_file_name = filename
@@ -254,8 +254,9 @@ def download_field_file(
 
     range = get_range(request, field_file.size)
 
-    # Assume that if the request is secure, we are behind a nginx proxy and we can use `X-Accel-Redirect`
-    if request.is_secure() and not settings.IN_TEST_SUITE:
+    # Assume that if the request has the X-Forwarded-For header,
+    # we are behind a nginx proxy and we can use `X-Accel-Redirect`.
+    if "X-Forwarded-For" in request.headers and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
         storage_filename = field_file.name

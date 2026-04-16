@@ -127,7 +127,12 @@ class Plan(models.Model):
     # - django-modeltranslation (tried, works well, but maybe overkill as it creates new database columns for each locale)
     # - something else ? there's probably some json based stuff
     display_name = models.CharField(max_length=100)
+
+    # Included storage for the plan.
+    # For seat based plans, this is an amount *per seat*. For all other plans,
+    # it's a simple fixed amount for the entire plan.
     storage_mb = models.PositiveIntegerField(default=10)
+
     storage_keep_versions = models.PositiveIntegerField(default=10)
     job_minutes = models.PositiveIntegerField(default=10)
     can_add_storage = models.BooleanField(default=False)
@@ -157,6 +162,9 @@ class Plan(models.Model):
 
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_storage_modifiable = models.BooleanField(default=True)
+
+    # the plan is based around a number of purchased licenses (seats).
+    is_seat_based = models.BooleanField(default=False)
 
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
@@ -467,6 +475,16 @@ class AbstractSubscription(models.Model):
         related_name="+",
     )
 
+    # The number of seats that were purchased with this subscription.
+    # This value is set at subscription creation time, typically based on the quantity selected during checkout (for per-seat pricing).
+    purchased_seats = models.IntegerField(
+        default=-1,
+        help_text=_(
+            "Purchased seats for this subscription. "
+            "Used for enforcing seat limits on a per-subscription basis for specific plans."
+        ),
+    )
+
     is_frontend_user_editable = False
 
     account = models.ForeignKey(
@@ -524,12 +542,12 @@ class AbstractSubscription(models.Model):
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
-    def active_storage_total_mb(self) -> int:
-        return self.plan.storage_mb + self.active_storage_package_mb
+    def active_storage_total_mb(self) -> float:
+        return float(self.active_storage_total_bytes / 1000 / 1000)
 
     @property
     def active_storage_total_bytes(self) -> int:
-        return self.plan.storage_bytes + self.active_storage_package_bytes
+        return self.included_storage_bytes + self.active_storage_package_bytes
 
     @property
     def active_storage_package(self) -> Package:
@@ -627,6 +645,42 @@ class AbstractSubscription(models.Model):
             return 0
 
         return self.active_users.count()
+
+    @property
+    def max_allowed_organization_members(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        # seat based plans
+        if self.plan.is_seat_based:
+            return self.purchased_seats
+
+        # all other plans - either unlimited (-1) or capped
+        return self.account.current_subscription.plan.max_organization_members
+
+    @property
+    def organization_members_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        # +1 for the organization owner
+        return self.account.user.organization.members.count() + 1
+
+    @property
+    def included_storage_bytes(self) -> int:
+        """How much storage is included in the subscription.
+
+        (Before any additional storage packages).
+
+        For seat based plans, this is an amount *per seat*. For all other plans,
+        it's a simple fixed amount for the entire plan.
+        """
+        if self.plan.is_seat_based:
+            return self.purchased_seats * self.plan.storage_bytes
+
+        return self.plan.storage_bytes
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
@@ -953,7 +1007,9 @@ class AbstractSubscription(models.Model):
 
     def __str__(self):
         if hasattr(self, "packages"):
-            active_storage_total_mb = self.active_storage_package_mb
+            active_storage_total_mb = int(
+                self.active_storage_package_bytes / 1000 / 1000
+            )
         else:
             active_storage_total_mb = 0
 

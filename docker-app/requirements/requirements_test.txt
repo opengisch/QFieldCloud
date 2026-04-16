@@ -53,7 +53,7 @@ pillow==12.1.1
     # via imageio
 pysocks==1.7.1
     # via urllib3
-requests==2.32.5
+requests==2.33.1
     # via requests-mock
 requests-mock==1.12.1
     # via -r /requirements/requirements_test.in

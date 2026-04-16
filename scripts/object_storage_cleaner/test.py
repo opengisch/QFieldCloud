@@ -8,20 +8,26 @@ import time
 import unittest
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import boto3
 from purge_deleted_objects import parse_retention_period
 
 if TYPE_CHECKING:
+    from mypy_boto3_s3.client import S3Client
     from mypy_boto3_s3.type_defs import (
         DeleteMarkerEntryTypeDef,
         ListObjectVersionsOutputTypeDef,
         ObjectVersionTypeDef,
     )
+else:
+    ObjectVersionTypeDef = dict
 
 
 class TestObjectStorageCleaner(unittest.TestCase):
+    s3_client: S3Client
+    bucket_name: str
+
     @classmethod
     def setUpClass(cls):
         """Creates a boto3 s3 client and ensures bucket exists."""
@@ -50,8 +56,14 @@ class TestObjectStorageCleaner(unittest.TestCase):
                 if versions:
                     objects_to_delete = []
                     for v in versions:
+                        assert "Key" in v
+                        assert "VersionId" in v
+
                         objects_to_delete.append(
-                            {"Key": v["Key"], "VersionId": v["VersionId"]}
+                            {
+                                "Key": v["Key"],
+                                "VersionId": v["VersionId"],
+                            }
                         )
 
                     # Delete in batches of 1000 (S3 limit)
@@ -99,13 +111,14 @@ class TestObjectStorageCleaner(unittest.TestCase):
             self.s3_client.head_object(Bucket=self.bucket_name, Key=key)
         )
 
-        # Check content
-        file = (
-            self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
-            .get("Body")
-            .read()
-            .decode("utf-8")
+        obj_body = self.s3_client.get_object(Bucket=self.bucket_name, Key=key).get(
+            "Body"
         )
+
+        assert obj_body
+
+        # Check content
+        file = obj_body.read().decode("utf-8")
         self.assertEqual(file, content)
 
     def delete_file(self, key: str) -> None:
@@ -123,7 +136,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
             self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
 
     def list_versions(
-        self, prefix: str | None = None
+        self, prefix: str
     ) -> list[DeleteMarkerEntryTypeDef | ObjectVersionTypeDef]:
         versions: ListObjectVersionsOutputTypeDef = self.s3_client.list_object_versions(
             Bucket=self.bucket_name, Prefix=prefix
@@ -312,14 +325,20 @@ class TestObjectStorageCleaner(unittest.TestCase):
         versions = self.list_versions(key)
 
         # Find the data version
-        data_version = None
+        data_version: ObjectVersionTypeDef | None = None
         for v in versions:
-            if not v.get("IsDeleteMarker", False):
-                data_version = v
-                break
+            if v.get("IsDeleteMarker", False):
+                continue
+
+            v = cast(ObjectVersionTypeDef, v)
+            data_version = v
+
+            break
 
         # Delete the data version
         if data_version:
+            assert "VersionId" in data_version
+
             self.s3_client.delete_object(
                 Bucket=self.bucket_name, Key=key, VersionId=data_version["VersionId"]
             )
@@ -629,6 +648,8 @@ class TestObjectStorageCleaner(unittest.TestCase):
 
         # 4. Verify that KeyB is not deleted
         for version in versions:
+            assert "Key" in version
+
             self.assertEqual(version["Key"], keyB)
 
     def test_selective_retention_with_multiple_keys_and_different_prefixes(self):
@@ -679,6 +700,8 @@ class TestObjectStorageCleaner(unittest.TestCase):
 
         # 4. Verify that KeyB is not deleted
         for version in versions:
+            assert "Key" in version
+
             self.assertEqual(version["Key"], keyB)
 
         # 5. Verify that KeyA is deleted

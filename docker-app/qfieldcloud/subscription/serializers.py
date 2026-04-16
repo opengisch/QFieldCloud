@@ -5,7 +5,9 @@ from qfieldcloud.subscription.models import CurrentSubscription
 
 class CurrentSubscriptionSerializer(serializers.ModelSerializer):
     plan_display_name = serializers.CharField(source="plan.display_name")
-    storage_used_bytes = serializers.FloatField(source="account.storage_used_bytes")
+    plan_code = serializers.CharField(source="plan.code")
+    plan_is_premium = serializers.BooleanField(source="plan.is_premium")
+    storage_used_bytes = serializers.IntegerField(source="account.storage_used_bytes")
 
     def get_storage_used_bytes(self, obj):
         return obj.account.storage_used_bytes
@@ -15,6 +17,8 @@ class CurrentSubscriptionSerializer(serializers.ModelSerializer):
         fields = (
             "uuid",
             "plan_display_name",
+            "plan_code",
+            "plan_is_premium",
             "status",
             "active_since",
             "active_until",
@@ -26,6 +30,8 @@ class CurrentSubscriptionSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "uuid",
             "plan_display_name",
+            "plan_code",
+            "plan_is_premium",
             "status",
             "active_since",
             "active_until",
