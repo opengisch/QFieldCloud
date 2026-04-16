@@ -34,14 +34,20 @@ location @proxy_to_app {
     # Initial loading page for upstream issues (502, 503, 504 for timeouts)
     error_page 502 503 504 =503 /pages/loading.html;
 
-    # Redirect 500-level errors to a dedicated handler location
-    error_page 500 501 505 = @handle_500_error;
+    # Redirect 500-level errors to a dedicated handler location while preserving status code
+    error_page 500 501 505 @handle_500_error;
 
     proxy_intercept_errors on;
     proxy_pass http://django;
 }
 
 location @handle_500_error {
+    # Prevent caching on error page
+    add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
+    expires -1;
+    etag off;
+    if_modified_since off;
+
     if ($debug_mode = "on") {
         # If debug mode is on, attempt to pass the original django 500 response (with stacktrace)
         proxy_pass http://django;
