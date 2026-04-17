@@ -208,6 +208,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "file_storage_bytes",
             "seed",
             "xlsform_file",
+            "the_qgis_file_name",
         )
         read_only_fields = (
             "private",
@@ -223,6 +224,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "user_role_origin",
             "is_attachment_download_on_demand",
             "file_storage_bytes",
+            "the_qgis_file_name",
         )
         model = Project
 
@@ -240,13 +242,60 @@ class ProjectSeedSerializer(serializers.ModelSerializer):
 
     name = serializers.StringRelatedField(source="project.name")
     extent = serializers.SerializerMethodField()
-    copy_from_project = serializers.PrimaryKeyRelatedField(read_only=True)
+    clone_from_project = serializers.PrimaryKeyRelatedField(read_only=True)
     settings = serializers.JSONField()
     # TODO @suricactus: QF-7258 Adding a project extent field on project creation, see https://app.clickup.com/t/2192114/QF-7258
     crs = serializers.CharField(default="EPSG:3857")
 
-    def get_extent(self, obj: ProjectSeed) -> dict[str, Any]:
+    def get_extent(self, obj: ProjectSeed) -> dict[str, Any] | None:
+        if obj.extent is None:
+            return None
+
         return obj.extent.extent
+
+
+class ProjectCloneSerializer(serializers.Serializer):
+    name = serializers.CharField(
+        max_length=255,
+        required=True,
+        help_text=_("Name for the cloned project."),
+    )
+    description = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        help_text=_("Description of the cloned project."),
+    )
+    is_public = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text=_("Whether the cloned project is public."),
+    )
+    owner = serializers.StringRelatedField()
+
+    def validate(self, attrs):
+        source_project = self.context["source_project"]
+        target_owner = attrs.get("owner") or self.context["request"].user
+        name = attrs.get("name")
+
+        # Check if the name is already taken for the target owner
+        if Project.objects.filter(owner=target_owner, name=name).exists():
+            raise serializers.ValidationError(
+                {
+                    "name": f"A project with the name `{name}` already exists for this owner."
+                }
+            )
+
+        # Check if the target owner has enough storage quota
+        if (
+            source_project.file_storage_bytes
+            > target_owner.useraccount.storage_free_bytes
+        ):
+            raise serializers.ValidationError("Insufficient storage quota.")
+
+        attrs["target_owner"] = target_owner
+
+        return attrs
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):

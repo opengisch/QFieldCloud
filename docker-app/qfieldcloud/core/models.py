@@ -1985,7 +1985,7 @@ class ProjectSeed(models.Model):
     )
     """The project the seed refers to."""
 
-    copy_from_project = models.ForeignKey(
+    clone_from_project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
         null=True,
@@ -1994,9 +1994,10 @@ class ProjectSeed(models.Model):
     )
     """The project to copy from, if any. It is mutually exclusive with `xlsform_file`."""
 
+    # TODO: revert this to not null and blank False once we create a new extent field in the project model
     extent = models.PolygonField(
-        null=False,
-        blank=False,
+        null=True,
+        blank=True,
         srid=3857,
     )
     """The initial extent of the project as EPSG:3857 polygon."""
@@ -2008,17 +2009,23 @@ class ProjectSeed(models.Model):
         null=True,
         blank=True,
     )
-    """XLSForm file used to create the project, if any. It is mutually exclusive with `copy_from_project`."""
+    """XLSForm file used to create the project, if any. It is mutually exclusive with `clone_from_project`."""
 
     settings = models.JSONField()
     """The settings used during the project creation. There must be a `schemaId` field."""
 
     def clean(self, *args, **kwargs) -> None:
-        if self.xlsform_file and self.copy_from_project:
+        if self.xlsform_file and self.clone_from_project:
             raise ValidationError(
                 _(
-                    "Both `xlsform_file` or `copy_from_project` cannot be set at the same time."
+                    "Both `xlsform_file` or `clone_from_project` cannot be set at the same time."
                 )
+            )
+
+        # TODO: revert this to not null and blank False once we create a new extent field in the project model
+        if not self.extent and not self.clone_from_project:
+            raise ValidationError(
+                _("Either `extent` or `clone_from_project` must be set.")
             )
 
         if not self.settings.get("schemaId"):
