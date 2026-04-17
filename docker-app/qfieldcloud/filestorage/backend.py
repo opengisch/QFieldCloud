@@ -7,7 +7,9 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
+from requests.adapters import HTTPAdapter
 from storages.backends.s3 import S3Storage
+from urllib3.util.retry import Retry
 
 
 class QfcBackendStorageMixin(ABC):
@@ -63,6 +65,16 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     Copyright (c) 2020, Mikhail Porokhovnichenko
     """
 
+    # Should this go into .env?
+    DEFAULT_TIMEOUT = (10, 60)
+    UPLOAD_TIMEOUT = (10, 600)
+    RETRY_TOTAL = 5
+    RETRY_BACKOFF_FACTOR = 1
+    RETRY_STATUS_FORCELIST = (429, 502, 503, 504)
+    RETRY_ALLOWED_METHODS = frozenset(
+        ["HEAD", "GET", "PUT", "DELETE", "MKCOL", "PROPFIND"]
+    )
+
     def __init__(self, **options):
         self.requests = self.get_requests_session(**options)
 
@@ -91,11 +103,30 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
         return True
 
-    def get_requests_session(self, **kwargs) -> requests.Session:
+    def get_requests_session(self, **_kwargs) -> requests.Session:
         """
-        Creates a HTTP session for requesting webdav later.
+        Creates an HTTP session with retry and connection pooling.
         """
-        return requests.Session()
+        session = requests.Session()
+        retries = Retry(
+            total=self.RETRY_TOTAL,
+            backoff_factor=self.RETRY_BACKOFF_FACTOR,
+            status_forcelist=self.RETRY_STATUS_FORCELIST,
+            allowed_methods=self.RETRY_ALLOWED_METHODS,
+            respect_retry_after_header=True,
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retries, pool_connections=10, pool_maxsize=20)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
+
+    def _timeout_for(self, method: str) -> tuple[int, int]:
+        """Returns the (connect, read) timeout to use for a given HTTP method."""
+        if method.lower() == "put":
+            return self.UPLOAD_TIMEOUT
+
+        return self.DEFAULT_TIMEOUT
 
     def perform_webdav_request(
         self, method: str, name: str, *args, **kwargs
@@ -111,6 +142,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         """
         url = self.get_webdav_url(name)
         method = method.lower()
+        kwargs.setdefault("timeout", self._timeout_for(method))
 
         response = getattr(self.requests, method)(url, *args, **kwargs)
         response.raise_for_status()
@@ -139,7 +171,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         """
         return self.public_url.rstrip("/") + "/" + name.lstrip("/")
 
-    def _open(self, name: str, mode: str = "rb") -> ContentFile:
+    def _open(self, name: str, mode: str = "rb") -> ContentFile:  # pylint: disable=unused-argument
         """Reads the content of a file from the configured webdav storage.
 
         Arguments:
@@ -149,8 +181,11 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Returns:
             Content of the requested file.
         """
-        content = self.perform_webdav_request("GET", name).content
-        return ContentFile(content, name)
+        response = self.perform_webdav_request("GET", name, stream=True)
+        return ContentFile(
+            b"".join(response.iter_content(chunk_size=8 * 1024 * 1024)),
+            name,
+        )
 
     def _save(self, name: str, content: ContentFile) -> str:
         """Saves a file on the configured webdav storage.
@@ -174,8 +209,11 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         return name
 
     def make_collection(self, name: str) -> None:
-        """Creates a so-called collection on the configured webdav storage for a file.
-        Typically creates parent folders if not existing.
+        """Creates parent collections (folders) for a file on the webdav server.
+
+        Sends MKCOL for each parent. Treats 405 (URL already mapped) and 409
+        as success, so the loop is idempotent and tolerant of servers that
+        use 409 loosely for "already exists".
 
         Arguments:
             name: relative path of the file on the webdav server.
@@ -184,10 +222,11 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
         for directory in name.split("/")[:-1]:
             col = os.path.join(coll_path, directory, "")
-            resp = self.requests.head(col)
+            resp = self.requests.request(
+                "MKCOL", col, timeout=self._timeout_for("MKCOL")
+            )
 
-            if not resp.ok:
-                resp = self.requests.request("MKCOL", col)
+            if resp.status_code not in (201, 405, 409):
                 resp.raise_for_status()
 
             coll_path = os.path.join(coll_path, directory)
@@ -195,13 +234,18 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     def delete(self, name: str) -> None:
         """Deletes a file from a configured webdav storage.
 
+        Idempotent for 404/410, raises for other errors.
+
         Arguments:
             name: relative path of the file on the webdav server.
         """
         try:
             self.perform_webdav_request("DELETE", name)
-        except requests.HTTPError:
-            pass
+        except requests.HTTPError as exc:
+            if exc.response is not None and exc.response.status_code in (404, 410):
+                return
+
+            raise
 
     def exists(self, name: str) -> bool:
         """Checks if a file exists on a configured webdav storage.
@@ -209,15 +253,28 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Arguments:
             name: relative path of the file on the webdav server.
 
+        Raises:
+            IOError: when the server is unreachable or returns a status that
+                is neither a clear hit (2xx) nor a clear miss (404/410).
+
         Returns:
-            True if exists, False if not.
+            True if the file exists, False if not.
         """
+        url = self.get_webdav_url(name)
         try:
-            self.perform_webdav_request("HEAD", name)
-        except requests.exceptions.HTTPError:
+            resp = self.requests.head(url, timeout=self._timeout_for("HEAD"))
+        except requests.exceptions.RequestException as exc:
+            raise IOError(f"WebDAV exists() network error for {name!r}: {exc}") from exc
+
+        if 200 <= resp.status_code < 300:
+            return True
+
+        if resp.status_code in (404, 410):
             return False
 
-        return True
+        raise IOError(
+            f"WebDAV exists() got unexpected status {resp.status_code} for {name!r}"
+        )
 
     def size(self, name: str) -> int:
         """Returns the size of a file on a configured webdav storage.
@@ -235,10 +292,10 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
             return int(
                 self.perform_webdav_request("HEAD", name).headers["content-length"]
             )
-        except (ValueError, requests.exceptions.HTTPError):
-            raise IOError("Unable get size for %s" % name)
+        except (ValueError, requests.exceptions.HTTPError) as exc:
+            raise IOError(f"Unable to get size for {name}") from exc
 
-    def url(self, name: str, **kwargs) -> str:  # type: ignore
+    def url(self, name: str, **_kwargs) -> str:  # type: ignore
         """Returns the URL of a file from the configured webdav storage.
 
         Arguments:
