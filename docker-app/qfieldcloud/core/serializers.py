@@ -225,6 +225,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
+            "shared_datasets_project_id",
+            "is_shared_datasets_project",
             "is_attachment_download_on_demand",
             "file_storage_bytes",
             "the_qgis_file_name",
