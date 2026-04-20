@@ -1843,7 +1843,9 @@ class Project(models.Model):
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])  # type: ignore
+            self.jobs.filter(
+                status__in=[Job.Status.QUEUED, Job.Status.STARTED, Job.Status.PENDING]
+            )  # type: ignore
         ).exists():
             return Project.Status.BUSY
         else:
