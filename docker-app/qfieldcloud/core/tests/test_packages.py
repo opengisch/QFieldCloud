@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 import time
+import zipfile
 
 from django.http import FileResponse
 from django.test import tag
@@ -207,8 +208,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -252,18 +252,18 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
             tempdir=tempdir,
         )
 
-        local_file = os.path.join(tempdir, "project_qfield.qgs")
-        with open(local_file) as f:
-            self.assertEqual(
-                f.readline().strip(),
-                "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
-            )
+        local_file = os.path.join(tempdir, "project_qfield.qgz")
+        with zipfile.ZipFile(local_file, "r") as qgz:
+            with qgz.open("project_qfield.qgs") as qgs:
+                self.assertEqual(
+                    qgs.readline().strip(),
+                    b"<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
+                )
 
     def test_list_files_for_qfield_broken_file(self):
         self.upload_files(
@@ -341,17 +341,17 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
             tempdir=tempdir,
         )
 
-        local_file = os.path.join(tempdir, "project_qfield.qgs")
-        with open(local_file) as f:
-            for line in f:
-                if 'name="theMapCanvas"' in line:
-                    return
+        local_file = os.path.join(tempdir, "project_qfield.qgz")
+        with zipfile.ZipFile(local_file, "r") as qgz:
+            with qgz.open("project_qfield.qgs") as qgs:
+                for line in qgs:
+                    if 'name="theMapCanvas"' in str(line):
+                        return
 
     def test_download_project_with_broken_layer_datasources(self):
         self.upload_files_and_check_package(
@@ -366,8 +366,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_broken_datasource_qfield.qgs",
-                "project_broken_datasource_qfield_attachments.zip",
+                "project_broken_datasource_qfield.qgz",
             ],
             invalid_layers=["surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16"],
         )
@@ -389,8 +388,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -434,8 +432,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -555,8 +552,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -584,8 +580,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 project=self.project1,
                 expected_files=[
                     "data.gpkg",
-                    "project_qfield.qgs",
-                    "project_qfield_attachments.zip",
+                    "project_qfield.qgz",
                 ],
             )
 
@@ -625,8 +620,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 project=p1,
                 expected_files=[
                     "data.gpkg",
-                    "project_qfield.qgs",
-                    "project_qfield_attachments.zip",
+                    "project_qfield.qgz",
                 ],
             )
 
@@ -659,8 +653,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -686,8 +679,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             self.project1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -725,8 +717,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "simple_bumblebees_qfield.qgs",
-                "simple_bumblebees_qfield_attachments.zip",
+                "simple_bumblebees_qfield.qgz",
                 "DCIM/1.jpg",
                 "DCIM/2.jpg",
             ],
@@ -785,7 +776,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 package_job=package_job_1,
             )
 
-            self.assertEquals(package_files_p1_qs.count(), 3)
+            self.assertEquals(package_files_p1_qs.count(), 2)
 
         # repackage the project for the same user.
         package_job_2 = repackage(self.project1, self.user1)
@@ -818,7 +809,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 package_job=package_job_2,
             )
 
-            self.assertEquals(package_files_p2_qs.count(), 3)
+            self.assertEquals(package_files_p2_qs.count(), 2)
 
             # make sure the other user's package files are there.
             other_user_package_files_qs = File.objects.filter(
@@ -827,7 +818,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 package_job=other_user_package_job,
             )
 
-            self.assertEquals(other_user_package_files_qs.count(), 3)
+            self.assertEquals(other_user_package_files_qs.count(), 2)
 
     def test_needs_repackaging(self):
         # 0. Create two users, where one owns the project and the other is a project collaborator.
@@ -870,8 +861,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)
@@ -889,8 +879,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)
@@ -963,8 +952,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)
@@ -981,8 +969,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)

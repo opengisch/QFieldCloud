@@ -111,7 +111,7 @@ def call_libqfieldsync_packager(
     logger.info("Packaging…")
 
     the_packaged_qgis_filename = package_dir.joinpath(
-        f"{the_qgis_file_name.stem}_qfield.qgs"
+        f"{the_qgis_file_name.stem}_qfield.qgz"
     )
     offline_converter = OfflineConverter(
         project,
