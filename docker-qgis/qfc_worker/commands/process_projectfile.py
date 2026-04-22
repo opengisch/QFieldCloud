@@ -145,18 +145,38 @@ def _generate_thumbnail(
     painter = QPainter(img)
     job = QgsMapRendererCustomPainterJob(map_settings, painter)
 
+    def on_timeout():
+        nonlocal job
+
+        logger.warning(
+            f"Thumbnail generation timeout {thumbnail_timeout_s} seconds reached, cancelling the job..."
+        )
+
+        job.cancel()
+
     timer = QTimer()
     timer.setSingleShot(True)
     timer.setInterval(thumbnail_timeout_s * 1000)
-    timer.timeout.connect(lambda: job.cancel())  # noqa: F821
+    timer.timeout.connect(on_timeout)
 
     job.start()
     timer.start()
-    job.waitForFinishedWithEventLoop()
+
+    if job.isActive():
+        job.waitForFinishedWithEventLoop()
+        is_thumbnail_generated = True
+    else:
+        logger.info("Job is not active, skipping wait for finished with event loop.")
+
+        is_thumbnail_generated = False
+
     timer.stop()
 
-    if not img.save(str(thumbnail_filename)):
-        raise FailedThumbnailGenerationException(reason="Failed to save.")
+    if is_thumbnail_generated:
+        if not img.save(str(thumbnail_filename)):
+            raise FailedThumbnailGenerationException(
+                reason=f"Failed to save thumbnail to {thumbnail_filename}."
+            )
 
     painter.end()
 
@@ -167,9 +187,14 @@ def _generate_thumbnail(
     # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
     del tmp_project
 
-    logger.info("Project thumbnail image generated!")
+    if is_thumbnail_generated:
+        logger.info("Project thumbnail image generated!")
 
-    return thumbnail_filename
+        return thumbnail_filename
+    else:
+        logger.warning("Project thumbnail image could not be generated.")
+
+        return None
 
 
 class ProcessProjectfileCommand(QfcBaseCommand):

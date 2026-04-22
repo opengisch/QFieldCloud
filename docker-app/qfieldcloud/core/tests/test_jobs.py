@@ -422,3 +422,24 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(fields[20]["type"], "String")
         self.assertEqual(fields[21]["name"], "comment")
         self.assertEqual(fields[21]["type"], "String")
+
+    def test_thumbnail_generation_with_wrong_extent_does_not_hang(self):
+        # Test that if the thumbnail generation hangs forever (e.g. due to invalid extent), the job is cancelled after the timeout and the project is still processed successfully.
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        # Push the QGIS project file with invalid extent
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "project.qgs",
+            io.FileIO(testdata_path("project_with_invalid_extent.qgs"), "rb"),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        wait_for_project_ok_status(self.p1)
+
+        self.p1.refresh_from_db()
+
+        self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
+        self.assertEqual(self.p1.thumbnail.name, "")
