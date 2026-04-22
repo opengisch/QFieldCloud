@@ -1997,9 +1997,9 @@ class ProjectSeed(models.Model):
     extent = models.PolygonField(
         null=False,
         blank=False,
-        srid=3857,
+        srid=4326,
     )
-    """The initial extent of the project as EPSG:3857 polygon."""
+    """The initial extent of the project as EPSG:4326 polygon."""
 
     xlsform_file = models.FileField(
         upload_to=get_seed_xlsform_upload_to,

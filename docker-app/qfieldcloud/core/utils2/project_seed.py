@@ -80,7 +80,6 @@ def get_extent_polygon(extent_str: str | None) -> Polygon:
         polygon = Polygon.from_bbox(DEFAULT_PROJECT_EXTENT)
 
     polygon.srid = 4326
-    polygon.transform(3857)
 
     return polygon
 
