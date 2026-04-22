@@ -4,7 +4,6 @@ import logging
 import os
 import tempfile
 import time
-import zipfile
 
 from django.http import FileResponse
 from django.test import tag
@@ -28,6 +27,7 @@ from qfieldcloud.core.models import (
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     get_test_postgis_connection,
+    open_qgis_file,
     setup_subscription_plans,
     testdata_path,
     wait_for_project_ok_status,
@@ -258,12 +258,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         local_file = os.path.join(tempdir, "project_qfield.qgz")
-        with zipfile.ZipFile(local_file, "r") as qgz:
-            with qgz.open("project_qfield.qgs") as qgs:
-                self.assertEqual(
-                    qgs.readline().strip(),
-                    b"<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
-                )
+        with open_qgis_file(local_file) as f:
+            self.assertEqual(
+                f.readline().strip(),
+                b"<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
+            )
 
     def test_list_files_for_qfield_broken_file(self):
         self.upload_files(
@@ -347,11 +346,10 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         local_file = os.path.join(tempdir, "project_qfield.qgz")
-        with zipfile.ZipFile(local_file, "r") as qgz:
-            with qgz.open("project_qfield.qgs") as qgs:
-                for line in qgs:
-                    if 'name="theMapCanvas"' in str(line):
-                        return
+        with open_qgis_file(local_file) as f:
+            for line in f:
+                if 'name="theMapCanvas"' in str(line):
+                    return
 
     def test_download_project_with_broken_layer_datasources(self):
         self.upload_files_and_check_package(
