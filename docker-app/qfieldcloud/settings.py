@@ -1006,5 +1006,5 @@ QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME = (
 )
 
 # Filename where optional custom CA certificate are stored.
-QFIELDCLOUD_CUSTOM_CA_DIR = "/etc/ssl/certs"
+QFIELDCLOUD_CUSTOM_CA_DIR = "/etc/ssl/custom_certs"
 QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"
