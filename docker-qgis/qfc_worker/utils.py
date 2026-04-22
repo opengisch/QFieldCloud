@@ -1035,6 +1035,7 @@ def save_project(
 
     if ref_extent and ref_extent.isFinite():
         safe_source_rect = QgsRectangle(ref_extent)
+        # the CRS bounds are always in WGS 84 CRS, see https://qgis.org/pyqgis/latest/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
         source_bounds = project.crs().bounds()
 
         if not source_bounds.isEmpty():
@@ -1047,7 +1048,7 @@ def save_project(
                 extent = transform.transform(safe_source_rect)
             except QgsCsException as err:
                 logging.warning(
-                    f"Failed to transform {ref_extent.crs().authid()} bbox to {project.crs().authid()}. Error: {err}."
+                    f"Failed to transform {ref_extent.crs().authid()} bbox CRS to {project.crs().authid()} project CRS. Error: {err}."
                 )
                 extent = QgsRectangle()
 
