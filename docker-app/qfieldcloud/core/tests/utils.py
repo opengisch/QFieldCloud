@@ -211,13 +211,13 @@ def get_test_postgis_connection() -> psycopg2.extensions.connection:
     return conn
 
 
-def open_qgis_file(path: str | Path) -> TextIO:
-    path = Path(path)
+def open_qgis_file(filename: str | Path) -> TextIO:
+    filename = Path(filename)
 
-    if path.suffix.lower() == ".qgz":
-        with zipfile.ZipFile(path, "r") as qgz:
-            return qgz.open(f"{path.name[:-4]}.qgs")
-    elif path.suffix.lower() == ".qgs":
-        return open(path)
+    if filename.suffix.lower() == ".qgz":
+        with zipfile.ZipFile(filename, "r") as qgz:
+            return qgz.open(f"{filename.stem}.qgs")
+    elif filename.suffix.lower() == ".qgs":
+        return open(filename)
 
     raise Exception("The QGIS project file could not be opened")
