@@ -37,25 +37,39 @@ for storage_name, storage_config in STORAGES.items():
     bucket_name = storage_config["OPTIONS"]["bucket_name"]
 
     subprocess.run(
-        f"/usr/bin/mc alias set {storage_name} {endpoint_url} {access_key} {secret_key}",
+        [
+            "/usr/bin/mc",
+            "alias",
+            "set",
+            storage_name,
+            endpoint_url,
+            access_key,
+            secret_key,
+        ],
         shell=True,
         check=True,
     )
 
     subprocess.run(
-        f"/usr/bin/mc mb --ignore-existing {storage_name}/{bucket_name}",
+        ["/usr/bin/mc", "mb", "--ignore-existing", f"{storage_name}/{bucket_name}"],
         shell=True,
     )
 
     subprocess.run(
-        f"/usr/bin/mc anonymous set download {storage_name}/{bucket_name}/users",
+        [
+            "/usr/bin/mc",
+            "anonymous",
+            "set",
+            "download",
+            f"{storage_name}/{bucket_name}/users",
+        ],
         shell=True,
         check=True,
     )
 
     # We should always enable versioning even for non-legacy storage, as we want to have soft delete on application level
     subprocess.run(
-        f"/usr/bin/mc version enable {storage_name}/{bucket_name}",
+        ["/usr/bin/mc", "version", "enable", f"{storage_name}/{bucket_name}"],
         shell=True,
         check=True,
     )
