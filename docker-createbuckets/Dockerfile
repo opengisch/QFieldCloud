@@ -6,8 +6,9 @@ RUN apt-get update \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl https://dl.min.io/client/mc/release/linux-amd64/archive/mc.RELEASE.2025-03-12T17-29-24Z -o /usr/bin/mc
-RUN chmod +x /usr/bin/mc
+RUN curl -L https://github.com/rustfs/cli/releases/download/v0.1.12/rustfs-cli-linux-amd64-gnu-v0.1.12.tar.gz \
+    | tar -xz -C /usr/bin rc
+RUN chmod +x /usr/bin/rc
 
 COPY ./createbuckets.py /createbuckets.py
 RUN chmod +x /createbuckets.py
