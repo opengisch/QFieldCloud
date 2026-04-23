@@ -23,7 +23,7 @@ services:
     volumes:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
-      - custom_ca_certificates:/etc/ssl/certs/:ro
+      - custom_ca_certificates:/etc/ssl/custom_certs/:ro
     environment: &django-env
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST}
@@ -171,7 +171,7 @@ services:
       - media_volume:/usr/src/app/mediafiles/
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
-      - custom_ca_certificates:/etc/ssl/certs/:ro
+      - custom_ca_certificates:/etc/ssl/custom_certs/:ro
       - ${TMP_DIRECTORY}:/tmp
     environment:
       <<: *django-env

@@ -12,6 +12,8 @@ from qgis.core import (
     QgsHueSaturationFilter,
     QgsProject,
     QgsRasterLayer,
+    QgsRectangle,
+    QgsReferencedRectangle,
 )
 from xlsform2qgis.converter import XLSFormConverter
 
@@ -20,6 +22,7 @@ from qfc_worker.utils import (
     get_layers_data,
     layers_data_to_string,
     open_qgis_project,
+    save_project,
     start_app,
     stop_app,
     upload_project,
@@ -231,14 +234,29 @@ def create_project_from_seed(
     else:
         logger.info("No basemaps configured for this project seed.")
 
+    project_filename.parent.mkdir(exist_ok=True, parents=True)
+
+    project.setFileName(str(project_filename))
     project.setTitle(project_seed.name)
     project.setCrs(crs)
 
+    project_extent = None
+
+    if project_seed.extent:
+        logger.info(f"Setting project extent to {project_seed.extent} EPSG:4326...")
+
+        assert len(project_seed.extent) == 4
+
+        # The extent is always in EPSG:4326, even if the project CRS is different,
+        # so we need to create a `QgsReferencedRectangle` with the correct CRS.
+        project_extent = QgsReferencedRectangle(
+            QgsRectangle(*project_seed.extent),
+            QgsCoordinateReferenceSystem("EPSG:4326"),
+        )
+
     logger.info(f"Saving QGIS project to {project_filename}...")
 
-    project_filename.parent.mkdir(exist_ok=True, parents=True)
-
-    project.write(str(project_filename))
+    save_project(project, project_extent)
 
     return str(project_filename)
 

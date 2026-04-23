@@ -23,6 +23,8 @@ from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
     QgsApplication,
+    QgsCoordinateTransform,
+    QgsCsException,
     QgsFieldConstraints,
     QgsLayerTree,
     QgsMapLayer,
@@ -30,6 +32,8 @@ from qgis.core import (
     QgsProject,
     QgsProjectArchive,
     QgsProviderRegistry,
+    QgsRectangle,
+    QgsReferencedRectangle,
     QgsSettings,
     QgsZipUtils,
 )
@@ -1018,3 +1022,57 @@ def get_qgis_xml_error_context(
                 return f"Unable to parse character: {repr(faulty_char)}. Replaced by '{substitute}' on line {location.line} that starts with: {clean_safe_slice}"
 
     return None
+
+
+def save_project(
+    project: QgsProject, ref_extent: QgsReferencedRectangle | None
+) -> None:
+    """Saves the project with `theMapCanvas`, and if an extent is provided, sets the extent of the map canvas."""
+
+    assert project.fileName()
+
+    extent = QgsRectangle()
+
+    if ref_extent and ref_extent.isFinite():
+        assert ref_extent.crs().authid() == "EPSG:4326"
+
+        safe_source_rect = QgsRectangle(ref_extent)
+        # the CRS bounds are always in WGS 84 CRS, see https://qgis.org/pyqgis/latest/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
+        source_bounds = project.crs().bounds()
+
+        if not source_bounds.isEmpty():
+            safe_source_rect = safe_source_rect.intersect(source_bounds)
+
+        if not safe_source_rect.isEmpty():
+            transform = QgsCoordinateTransform(ref_extent.crs(), project.crs(), project)
+
+            try:
+                extent = transform.transform(safe_source_rect)
+            except QgsCsException as err:
+                logging.warning(
+                    f"Failed to transform {ref_extent.crs().authid()} bbox CRS to {project.crs().authid()} project CRS. Error: {err}."
+                )
+                extent = QgsRectangle()
+
+    def process_project_write(document: QDomDocument) -> None:
+        nl = document.elementsByTagName("qgis")
+        if nl.count() == 0:
+            return
+
+        qgis_node = nl.item(0)
+
+        mapcanvas_node = document.createElement("mapcanvas")
+        mapcanvas_node.setAttribute("name", "theMapCanvas")
+        qgis_node.appendChild(mapcanvas_node)
+
+        ms = QgsMapSettings()
+        ms.setDestinationCrs(project.crs())
+        ms.setOutputSize(QSize(500, 500))
+
+        if extent.isFinite() and not extent.isEmpty():
+            ms.setExtent(extent)
+
+        ms.writeXml(mapcanvas_node, document)
+
+    project.writeProject.connect(process_project_write)
+    project.write(project.fileName())
