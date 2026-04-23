@@ -1034,14 +1034,23 @@ def save_project(
     extent = QgsRectangle()
 
     if ref_extent and ref_extent.isFinite():
-        transform = QgsCoordinateTransform(ref_extent.crs(), project.crs(), project)
+        safe_source_rect = QgsRectangle(ref_extent)
+        # the CRS bounds are always in WGS 84 CRS, see https://qgis.org/pyqgis/latest/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
+        source_bounds = project.crs().bounds()
 
-        try:
-            extent = transform.transform(ref_extent)
-        except QgsCsException as err:
-            logging.warning(
-                f"Failed to transform project CRS {ref_extent.crs().authid()} bbox to project CRS {project.crs().authid()}. Error: {err}."
-            )
+        if not source_bounds.isEmpty():
+            safe_source_rect = safe_source_rect.intersect(source_bounds)
+
+        if not safe_source_rect.isEmpty():
+            transform = QgsCoordinateTransform(ref_extent.crs(), project.crs(), project)
+
+            try:
+                extent = transform.transform(safe_source_rect)
+            except QgsCsException as err:
+                logging.warning(
+                    f"Failed to transform {ref_extent.crs().authid()} bbox CRS to {project.crs().authid()} project CRS. Error: {err}."
+                )
+                extent = QgsRectangle()
 
     def process_project_write(document: QDomDocument) -> None:
         nl = document.elementsByTagName("qgis")
@@ -1058,7 +1067,7 @@ def save_project(
         ms.setDestinationCrs(project.crs())
         ms.setOutputSize(QSize(500, 500))
 
-        if extent.isFinite():
+        if extent.isFinite() and not extent.isEmpty():
             ms.setExtent(extent)
 
         ms.writeXml(mapcanvas_node, document)
