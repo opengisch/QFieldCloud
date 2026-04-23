@@ -1034,6 +1034,8 @@ def save_project(
     extent = QgsRectangle()
 
     if ref_extent and ref_extent.isFinite():
+        assert ref_extent.crs().authid() == "EPSG:4326"
+
         safe_source_rect = QgsRectangle(ref_extent)
         # the CRS bounds are always in WGS 84 CRS, see https://qgis.org/pyqgis/latest/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
         source_bounds = project.crs().bounds()
