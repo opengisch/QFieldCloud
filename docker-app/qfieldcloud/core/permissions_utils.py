@@ -172,7 +172,10 @@ def get_param_from_request(request, param):
     """Try to get the param from the request data or the request
     context, returns None otherwise"""
 
-    result = request.data.get(param, None)
+    if isinstance(request.data, dict):
+        result = request.data.get(param, None)
+    else:
+        result = None
 
     if not result:
         result = request.parser_context["kwargs"].get(param, None)

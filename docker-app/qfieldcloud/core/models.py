@@ -1843,7 +1843,9 @@ class Project(models.Model):
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])  # type: ignore
+            self.jobs.filter(
+                status__in=[Job.Status.QUEUED, Job.Status.STARTED, Job.Status.PENDING]
+            )  # type: ignore
         ).exists():
             return Project.Status.BUSY
         else:
@@ -1985,7 +1987,7 @@ class ProjectSeed(models.Model):
     )
     """The project the seed refers to."""
 
-    copy_from_project = models.ForeignKey(
+    clone_from_project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
         null=True,
@@ -1994,9 +1996,10 @@ class ProjectSeed(models.Model):
     )
     """The project to copy from, if any. It is mutually exclusive with `xlsform_file`."""
 
+    # TODO @Rakanhf: make the `extent` field not nullable once we add `Project.extent` field.
     extent = models.PolygonField(
-        null=False,
-        blank=False,
+        null=True,
+        blank=True,
         srid=4326,
     )
     """The initial extent of the project as EPSG:4326 polygon."""
@@ -2008,17 +2011,23 @@ class ProjectSeed(models.Model):
         null=True,
         blank=True,
     )
-    """XLSForm file used to create the project, if any. It is mutually exclusive with `copy_from_project`."""
+    """XLSForm file used to create the project, if any. It is mutually exclusive with `clone_from_project`."""
 
     settings = models.JSONField()
     """The settings used during the project creation. There must be a `schemaId` field."""
 
     def clean(self, *args, **kwargs) -> None:
-        if self.xlsform_file and self.copy_from_project:
+        if self.xlsform_file and self.clone_from_project:
             raise ValidationError(
                 _(
-                    "Both `xlsform_file` or `copy_from_project` cannot be set at the same time."
+                    "Both `xlsform_file` or `clone_from_project` cannot be set at the same time."
                 )
+            )
+
+        # TODO @Rakanhf: make the `extent` field not nullable once we add `Project.extent` field.
+        if not self.extent and not self.clone_from_project:
+            raise ValidationError(
+                _("Either `extent` or `clone_from_project` must be set.")
             )
 
         if not self.settings.get("schemaId"):
