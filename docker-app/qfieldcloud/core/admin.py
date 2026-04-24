@@ -69,9 +69,9 @@ from qfieldcloud.core.models import (
     UserAccount,
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
-from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
+from qfieldcloud.core.utils2.storage import format_storage_usage
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
 from qfieldcloud.subscription.models import get_subscription_model
@@ -739,19 +739,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
-        active_storage_total = filesizeformat10(
-            instance.useraccount.current_subscription.active_storage_total_bytes
-        )
-        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-        used_storage_perc = instance.useraccount.storage_used_ratio * 100
-        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
-
-        return _("total: {}; used: {} ({:.2f}%); free: {}").format(
-            active_storage_total,
-            used_storage,
-            used_storage_perc,
-            free_storage,
-        )
+        return format_storage_usage(instance.useraccount)
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -1761,19 +1749,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
-        active_storage_total = filesizeformat10(
-            instance.useraccount.current_subscription.active_storage_total_bytes
-        )
-        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-        used_storage_perc = instance.useraccount.storage_used_ratio * 100
-        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
-
-        return _("total: {}; used: {} ({:.2f}%); free: {}").format(
-            active_storage_total,
-            used_storage,
-            used_storage_perc,
-            free_storage,
-        )
+        return format_storage_usage(instance.useraccount)
 
     def save_formset(self, request, form, formset, change):
         for form_obj in formset:
