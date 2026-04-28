@@ -20,10 +20,12 @@ from django.db import transaction
 from django.http import FileResponse, HttpRequest
 from django.http.response import HttpResponse, HttpResponseBase
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 
 import qfieldcloud.core.models
 import qfieldcloud.core.utils
+from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils2.audit import LogEntry, audit
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.utils import is_admin_restricted_file
@@ -850,3 +852,22 @@ def calculate_checksums(
         checksums.append(hasher.digest())
 
     return tuple(checksums)
+
+
+def format_storage_usage(useraccount: qfieldcloud.core.models.UserAccount) -> str:
+    """
+    Returns a string with the storage usage in a human readable format
+    """
+    active_storage_total = filesizeformat10(
+        useraccount.current_subscription.active_storage_total_bytes
+    )
+    used_storage = filesizeformat10(useraccount.storage_used_bytes)
+    used_storage_perc: float = useraccount.storage_used_ratio * 100
+    free_storage = filesizeformat10(useraccount.storage_free_bytes)
+
+    return _("total: {}; used: {} ({:.2f}%); free: {}").format(
+        active_storage_total,
+        used_storage,
+        used_storage_perc,
+        free_storage,
+    )
