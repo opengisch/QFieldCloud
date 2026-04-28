@@ -20,7 +20,7 @@ from qfieldcloud.core.serializers import (
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
-from qfieldcloud.core.utils2 import project_seed, storage
+from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
