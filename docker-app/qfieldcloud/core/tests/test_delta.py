@@ -282,6 +282,9 @@ class QfcTestCase(APITransactionTestCase):
 
         faulty_deltafile = FaultyDeltaFile.objects.first()
 
+        prefix = f"projects/{project.id}/deltafiles/"
+
+        self.assertTrue(faulty_deltafile.deltafile.name.startswith(prefix))
         self.assertEqual(faulty_deltafile.project, project)
         self.assertEqual(faulty_deltafile.user_agent, "QFieldCloudTestClient/1.0")
         self.assertTrue(isinstance(faulty_deltafile.created_at, datetime))
