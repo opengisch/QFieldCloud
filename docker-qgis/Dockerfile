@@ -49,6 +49,8 @@ RUN apt-get update \
     # NOTE `DEBIAN_FRONTEND=noninteractive` is required to be able to install tzinfo
     && DEBIAN_FRONTEND=noninteractive apt-get install -yf \
         qgis=${QGIS_VERSION} \
+        python3-qgis=${QGIS_VERSION} \
+        python3-qgis-common=${QGIS_VERSION} \
         qgis-dbg=${QGIS_VERSION} \
         qgis-common=${QGIS_VERSION} \
         python3-qgis=${QGIS_VERSION} \
@@ -80,6 +82,8 @@ ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
 ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
+ENV PYTHONPATH=/usr/share/qgis/python:${PYTHONPATH}
+
 # Fix for "error: the configured Python interpreter version (3.14) is newer than PyO3's maximum supported version (3.13)"
 ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 
