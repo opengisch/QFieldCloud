@@ -248,31 +248,6 @@ def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
     return jsonschema.Draft7Validator(schema_dict)
 
 
-def list_versions(
-    bucket: mypy_boto3_s3.service_resource.Bucket,
-    prefix: str,
-    strip_prefix: str = "",
-) -> list[S3ObjectVersion]:
-    """Iterator that lists a bucket's objects under prefix.
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    versions = []
-    for v in bucket.object_versions.filter(Prefix=prefix):
-        if strip_prefix:
-            start_idx = len(prefix)
-            name = v.key[start_idx:]
-        else:
-            name = v.key
-
-        versions.append(S3ObjectVersion(name, v))
-
-    versions.sort(key=lambda v: (v.key, v.last_modified))
-
-    return versions
-
-
 def get_file_storage_choices() -> list[tuple[str, str]]:
     """
     Returns configured storages keys.
