@@ -141,7 +141,7 @@ def _generate_thumbnail(
 
         return None
 
-    img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
+    img = QImage(map_settings.outputSize(), QImage.Format.Format_ARGB32)
     painter = QPainter(img)
     job = QgsMapRendererCustomPainterJob(map_settings, painter)
 
