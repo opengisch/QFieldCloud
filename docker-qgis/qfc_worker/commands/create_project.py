@@ -300,11 +300,11 @@ def create_basemap_layer(basemap_config: BasemapConfig) -> QgsRasterLayer | None
         pass
     elif style == BasemapStyle.GRAYSCALE_LIGHT:
         hue_saturation_filter.setGrayscaleMode(
-            QgsHueSaturationFilter.GrayscaleLightness
+            QgsHueSaturationFilter.GrayscaleMode.GrayscaleLightness
         )
     elif style == BasemapStyle.GRAYSCALE_DARK:
         hue_saturation_filter.setGrayscaleMode(
-            QgsHueSaturationFilter.GrayscaleLightness
+            QgsHueSaturationFilter.GrayscaleMode.GrayscaleLightness
         )
         hue_saturation_filter.setInvertColors(True)
     else:

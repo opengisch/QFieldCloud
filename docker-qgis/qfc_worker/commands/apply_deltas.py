@@ -698,7 +698,7 @@ def cleanup_backups(layer_paths: set[str]) -> bool:
 def get_pk_attr_name(layer: QgsVectorLayer) -> str:
     pk_attr_name: str = ""
 
-    if layer.type() != QgsMapLayer.VectorLayer:
+    if layer.type() != QgsMapLayer.LayerType.VectorLayer:
         raise DeltaException(f"Expected layer {layer.name()} to be a vector layer!")
 
     pk_indexes = layer.primaryKeyAttributes()
@@ -1018,10 +1018,12 @@ def compare_feature(
             if incoming_value is not None:
                 if isinstance(current_value, QDateTime):
                     incoming_value = QDateTime.fromString(
-                        incoming_value, Qt.ISODateWithMs
+                        incoming_value, Qt.DateFormat.ISODateWithMs
                     )
                 elif isinstance(current_value, QDate):
-                    incoming_value = QDate.fromString(incoming_value, Qt.ISODate)
+                    incoming_value = QDate.fromString(
+                        incoming_value, Qt.DateFormat.ISODate
+                    )
                 elif isinstance(current_value, QTime):
                     incoming_value = QTime.fromString(incoming_value)
 
