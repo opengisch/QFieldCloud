@@ -1,5 +1,5 @@
 # This workflow checks for PyQt6 compatibility in the qgis workers, using the pyqt5_to_pyqt6.py script.
-# TODO remove this workflow once QGIS4 / Qt6 is broadly adopted.
+# TODO @gounux: remove QGIS4/Qt6 CI compatibility check once QGIS4 is broadly adopted, see QF-8173
 name: "PyQt6 Check"
 
 on:
