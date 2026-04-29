@@ -2,8 +2,6 @@
 
 from django.db import migrations, models
 
-from qfieldcloud.core.utils import get_qgis_project_file
-
 
 class Migration(migrations.Migration):
     def forwards_job_feedback_func(apps, schema_editor):
@@ -41,13 +39,6 @@ class Migration(migrations.Migration):
             job = Job.objects.get(id=process_projectfile_job.job_ptr_id)
             process_projectfile_job.feedback_old = job.feedback
             process_projectfile_job.save()
-
-    def forwards_find_project_filename_func(apps, schema_editor):
-        Project = apps.get_model("core", "Project")
-
-        for project in Project.objects.all():
-            project.project_filename = get_qgis_project_file(project.id)
-            project.save()
 
     dependencies = [
         ("core", "0040_auto_20210630_1212"),
@@ -140,11 +131,6 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name="processprojectfilejob",
             name="feedback_old",
-        ),
-        # / add feedback field for all jobs
-        # / add feedback field for all jobs
-        migrations.RunPython(
-            forwards_find_project_filename_func, migrations.RunPython.noop
         ),
         # rename project.exports to project.jobs
         migrations.AlterField(

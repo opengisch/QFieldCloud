@@ -209,26 +209,6 @@ def is_the_qgis_file(filename: str) -> bool:
     return False
 
 
-def get_qgis_project_file(project_id: str) -> str | None:
-    """Return the relative path inside the project of the qgs/qgz file or
-    None if no qgs/qgz file is present
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-
-    bucket = get_s3_bucket()
-
-    prefix = f"projects/{project_id}/files/"
-
-    for obj in bucket.objects.filter(Prefix=prefix):
-        if is_the_qgis_file(obj.key):
-            path = PurePath(obj.key)
-            return str(path.relative_to(*path.parts[:3]))
-
-    return None
-
-
 def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
     """Creates a JSON schema validator to check whether the provided delta
     file is valid.
