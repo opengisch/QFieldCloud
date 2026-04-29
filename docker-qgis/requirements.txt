@@ -49,7 +49,7 @@ tabulate==0.9.0
     # via -r requirements.in
 tqdm==4.66.5
     # via qfieldcloud-sdk
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via -r requirements.in
 urllib3==2.6.3
     # via
