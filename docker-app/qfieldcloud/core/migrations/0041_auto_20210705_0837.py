@@ -132,6 +132,8 @@ class Migration(migrations.Migration):
             model_name="processprojectfilejob",
             name="feedback_old",
         ),
+        # / add feedback field for all jobs
+        # NOTE: The Project.project_filename field will be populated once the first .qgs/.qgz file is uploaded after this migration.
         # rename project.exports to project.jobs
         migrations.AlterField(
             model_name="job",
