@@ -6,12 +6,9 @@ from datetime import datetime
 from pathlib import PurePath
 from typing import IO, NamedTuple
 
-import boto3
 import jsonschema
 import mypy_boto3_s3
 from django.conf import settings
-
-from qfieldcloud.settings_utils import DjangoStorages
 
 logger = logging.getLogger(__name__)
 
@@ -77,69 +74,6 @@ class S3ObjectWithVersions(NamedTuple):
         """Total size of all versions"""
         # latest is also in versions
         return sum(v.size for v in self.versions if v.size is not None)
-
-
-def get_legacy_s3_credentials() -> DjangoStorages:
-    """
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    assert settings.LEGACY_STORAGE_NAME
-
-    return settings.STORAGES[settings.LEGACY_STORAGE_NAME]
-
-
-def get_s3_session() -> boto3.Session:
-    """Get a new S3 Session instance using Django settings
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    session = boto3.Session(
-        aws_access_key_id=get_legacy_s3_credentials()["OPTIONS"]["access_key"],
-        aws_secret_access_key=get_legacy_s3_credentials()["OPTIONS"]["secret_key"],
-        region_name=get_legacy_s3_credentials()["OPTIONS"]["region_name"],
-    )
-    return session
-
-
-def get_s3_bucket() -> mypy_boto3_s3.service_resource.Bucket:
-    """
-    Get a new S3 Bucket instance using Django settings.
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    bucket_name = get_legacy_s3_credentials()["OPTIONS"]["bucket_name"]
-
-    assert bucket_name, "Expected `bucket_name` to be non-empty string!"
-
-    session = get_s3_session()
-    s3 = session.resource(
-        "s3",
-        endpoint_url=get_legacy_s3_credentials()["OPTIONS"]["endpoint_url"],
-    )
-
-    # Ensure the bucket exists
-    s3.meta.client.head_bucket(Bucket=bucket_name)
-
-    # Get the bucket resource
-    return s3.Bucket(bucket_name)
-
-
-def get_s3_client() -> mypy_boto3_s3.Client:
-    """Get a new S3 client instance using Django settings
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-
-    s3_session = get_s3_session()
-    s3_client = s3_session.client(
-        "s3",
-        endpoint_url=get_legacy_s3_credentials()["OPTIONS"]["endpoint_url"],
-    )
-    return s3_client
 
 
 def strip_json_null_bytes(file: IO) -> IO:
