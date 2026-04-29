@@ -1,0 +1,41 @@
+# This workflow checks for PyQt6 compatibility in the qgis workers, using the pyqt5_to_pyqt6.py script.
+# TODO remove this workflow once QGIS4 / Qt6 is broadly adopted.
+name: "PyQt6 Check"
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'docker-qgis/**.py'
+
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'docker-qgis/**.py'
+      - .github/workflows/pyqt6_check.yml
+
+jobs:
+
+  qt6-check:
+    name: PyQt6 Compatibility Check
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/qgis/pyqgis4-checker:main-ubuntu
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v6
+
+      - name: Check PyQt5 to PyQt6 compatibility.
+        run: |
+          pyqt5_to_pyqt6.py --dry_run --logfile pyqt6_checker.log docker-qgis
+          pyqt5_to_pyqt6.py docker-qgis
+
+      - name: Upload script report if script fails
+        uses: actions/upload-artifact@v7
+        if: ${{ failure() }}
+        with:
+          name: pyqt6-checker-error-report
+          path: pyqt6_checker.log
+          retention-days: 7
