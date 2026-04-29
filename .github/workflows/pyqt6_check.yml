@@ -10,8 +10,6 @@ on:
       - 'docker-qgis/**.py'
 
   pull_request:
-    branches:
-      - master
     paths:
       - 'docker-qgis/**.py'
       - .github/workflows/pyqt6_check.yml
