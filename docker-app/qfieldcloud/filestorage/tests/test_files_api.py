@@ -236,7 +236,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(self.p1.project_files.count(), 0)
 
     def test_upload_file_with_filename_longer_than_max_chars_fails(self):
-        """Minio has limit of 255 and Windows o 140 characters"""
+        """S3 protocol has limit of 255 and Windows o 140 characters"""
         max_chars_len = settings.STORAGE_FILENAME_MAX_CHAR_LENGTH
 
         filename = "x" * max_chars_len

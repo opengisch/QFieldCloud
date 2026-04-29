@@ -1,6 +1,6 @@
 # Object Storage Cleaner
 
-A utility script to identify and clean "logically deleted" objects in S3-compatible object storage (e.g., AWS S3, MinIO) when bucket versioning is enabled.
+A utility script to identify and clean "logically deleted" objects in S3-compatible object storage (e.g., AWS S3, RustFS) when bucket versioning is enabled.
 
 ## The Problem
 
@@ -78,7 +78,7 @@ python purge_deleted_objects.py my-bucket --retention-period "30 days"
 # You will be prompted to confirm.
 ```
 
-**5. Automated cleanup for MinIO (local/custom endpoint):**
+**5. Automated cleanup for RustFS (local/custom endpoint):**
 
 ```bash
 python purge_deleted_objects.py test-bucket --retention-period "30 days" --force
@@ -86,29 +86,30 @@ python purge_deleted_objects.py test-bucket --retention-period "30 days" --force
 
 ## Running Tests
 
-The repository includes a test suite (`test.py`) that uses `unittest` and requires a running S3-compatible service (like MinIO).
+The repository includes a test suite (`test.py`) that uses `unittest` and requires a running S3-compatible service.
 
 ### Test Requirements
+
 - `boto3`
-- S3 service (e.g., MinIO) running.
+- Object storage service (e.g., RustFS) running.
 
 ### Steps to Run Tests
 
-1.  **Start MinIO** (or ensure a mock S3 is running).
-    Example using Docker:
+1.  **Start Object storage** - example using Docker:
+
     ```bash
-    docker run -d -p 8009:9000 --name minio-test \
-      -e "MINIO_ACCESS_KEY=access_key_xyz" \
-      -e "MINIO_SECRET_KEY=secret_key_xyz" \
-      minio/minio server /data
+    docker run -d -p 9000:9000 -p 9001:9001 --rm --name object-storage-test \
+      -e "OBJECT_STORAGE_ACCESS_KEY=rustfsadmin" \
+      -e "OBJECT_STORAGE_SECRET_KEY=rustfsadmin" \
+      rustfs/rustfs /data
     ```
 
 2.  **Configure Environment Variables**
-    Export the following variables to configure `boto3` to talk to your local MinIO instance (matching the credentials above):
+    Export the following variables to configure `boto3` to talk to your local RustFS instance (matching the credentials above):
 
     ```bash
-    export AWS_ACCESS_KEY_ID=access_key_xyz
-    export AWS_SECRET_ACCESS_KEY=secret_key_xyz
+    export AWS_ACCESS_KEY_ID=rustfsadmin
+    export AWS_SECRET_ACCESS_KEY=rustfsadmin
     export AWS_ENDPOINT_URL=http://localhost:8009
     export AWS_DEFAULT_REGION=us-east-1
     ```
