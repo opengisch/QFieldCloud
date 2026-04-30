@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -27,6 +29,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
 
 
@@ -208,6 +211,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "file_storage_bytes",
             "seed",
             "xlsform_file",
+            "the_qgis_file_name",
         )
         read_only_fields = (
             "private",
@@ -221,8 +225,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
+            "shared_datasets_project_id",
+            "is_shared_datasets_project",
             "is_attachment_download_on_demand",
             "file_storage_bytes",
+            "the_qgis_file_name",
         )
         model = Project
 
@@ -240,13 +247,113 @@ class ProjectSeedSerializer(serializers.ModelSerializer):
 
     name = serializers.StringRelatedField(source="project.name")
     extent = serializers.SerializerMethodField()
-    copy_from_project = serializers.PrimaryKeyRelatedField(read_only=True)
+    clone_from_project = serializers.PrimaryKeyRelatedField(read_only=True)
     settings = serializers.JSONField()
     # TODO @suricactus: QF-7258 Adding a project extent field on project creation, see https://app.clickup.com/t/2192114/QF-7258
     crs = serializers.CharField(default="EPSG:3857")
 
-    def get_extent(self, obj: ProjectSeed) -> dict[str, Any]:
+    def get_extent(self, obj: ProjectSeed) -> dict[str, Any] | None:
+        if obj.extent is None:
+            return None
+
         return obj.extent.extent
+
+
+class ProjectCloneSerializer(ProjectSerializer):
+    def to_internal_value(self, data):
+        source_project = self.context["source_project"]
+        meta = ProjectSerializer.Meta
+        writable_fields = set(meta.fields) - set(meta.read_only_fields)
+
+        exclude = {
+            "id",
+            "name",
+            "owner",
+            "seed",
+            "xlsform_file",
+        }
+        clonable_fields = writable_fields - exclude
+
+        if hasattr(data, "copy"):
+            mutable_data = data.copy()
+        else:
+            mutable_data = dict(data)
+
+        for field in clonable_fields:
+            if field not in mutable_data:
+                mutable_data[field] = getattr(source_project, field)
+
+        return super().to_internal_value(mutable_data)
+
+    def validate(self, attrs):
+        source_project = self.context["source_project"]
+        target_owner = attrs.get("owner") or self.context["request"].user
+        seed = attrs.get("seed", None)
+
+        # check if the source project is a shared datasets project
+        if source_project.is_shared_datasets_project:
+            raise exceptions.NotCloneableProjectError(
+                "The 'shared_datasets' project cannot be cloned."
+            )
+
+        if seed:
+            # check if there is no extent in seed
+            if not seed.get("extent"):
+                raise ValidationError({"seed": "Extent is required in seed."})
+
+            # check if there is there is more than the extent field in seed
+            if len(seed.keys()) > 1:
+                raise ValidationError({"seed": "Only extent field is allowed in seed."})
+
+        if (
+            source_project.file_storage_bytes
+            > target_owner.useraccount.storage_free_bytes
+        ):
+            raise ValidationError({"storage_quota": "Insufficient storage quota."})
+
+        return super().validate(attrs)
+
+    @transaction.atomic
+    def create(self, validated_data):
+        project = super().create(validated_data)
+        seed = validated_data.get("seed", None)
+
+        if seed and seed.get("extent"):
+            try:
+                extent = project_seed.get_extent_polygon(seed.get("extent"))
+            except DjangoValidationError as err:
+                raise ValidationError({"seed": {"extent": err.messages}})
+        else:
+            extent = None
+
+        ProjectSeed.objects.create(
+            project=project,
+            extent=extent,
+            clone_from_project=self.context["source_project"],
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.context["request"].user,
+        )
+
+        return project
+
+    class Meta(ProjectSerializer.Meta):
+        _clonable_fields = []
+
+        # Preserve order of fields
+        for field_name in ProjectSerializer.Meta.fields:
+            if field_name != "xlsform_file":
+                _clonable_fields.append(field_name)
+
+        fields = tuple(_clonable_fields)  # type: ignore[assignment]
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):

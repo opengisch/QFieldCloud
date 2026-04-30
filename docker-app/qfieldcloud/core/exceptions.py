@@ -209,3 +209,11 @@ class QGISProjectFileNotAllowedError(QFieldCloudException):
     code = "qgis_project_file_not_allowed"
     message = "QGIS project files are not allowed in this project."
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class NotCloneableProjectError(QFieldCloudException):
+    """Raised when a project cannot be cloned"""
+
+    code = "not_cloneable_project"
+    message = "This project cannot be cloned."
+    status_code = status.HTTP_400_BAD_REQUEST
