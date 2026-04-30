@@ -3,7 +3,7 @@ description: |
   Create an enhancement proposal for QFieldCloud before opening a pull request.
   This clarifies the problem and proposed solution, and increases the chances of your pull request being accepted.
 labels:
-  - 'Enhancement'
+  - 'enhancement'
 body:
   - type: markdown
     attributes:
