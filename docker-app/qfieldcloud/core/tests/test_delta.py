@@ -15,7 +15,6 @@ from rest_framework.test import APITransactionTestCase
 from shapely.geometry import shape
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core import utils
 from qfieldcloud.core.models import (
     Delta,
     FaultyDeltaFile,
@@ -282,7 +281,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(FaultyDeltaFile.objects.count(), 1)
 
         faulty_deltafile = FaultyDeltaFile.objects.first()
-        prefix = utils.safe_join(f"projects/{project.id}/deltafiles/")
+
+        prefix = f"projects/{project.id}/deltafiles/"
 
         self.assertTrue(faulty_deltafile.deltafile.name.startswith(prefix))
         self.assertEqual(faulty_deltafile.project, project)

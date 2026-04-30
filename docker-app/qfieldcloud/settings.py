@@ -290,13 +290,6 @@ MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
 # S3 Storage
-# TODO Delete with QF-4963 Drop support for legacy storage
-STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
-STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
-STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
-STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
-STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
-# / ENDTODO
 
 _storage_config = get_storages_config()
 
@@ -306,8 +299,6 @@ STORAGES = {
         "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
     },
 }
-
-LEGACY_STORAGE_NAME = _storage_config["LEGACY_STORAGE_NAME"]
 
 # Maximum filename length in characters
 # NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html

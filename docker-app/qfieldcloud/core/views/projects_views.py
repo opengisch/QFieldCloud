@@ -20,7 +20,7 @@ from qfieldcloud.core.serializers import (
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
-from qfieldcloud.core.utils2 import project_seed, storage
+from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
@@ -234,10 +234,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, projectid):
         # Delete files from storage
-        project = Project.objects.get(id=projectid)
-
-        if project.uses_legacy_storage:
-            storage.delete_all_project_files_permanently(projectid)
+        _project = Project.objects.get(id=projectid)
 
         return super().destroy(request, projectid)
 

@@ -30,7 +30,6 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Secret,
 )
-from qfieldcloud.core.utils import get_qgis_project_file
 from qfieldcloud.core.utils2 import packages
 from tenacity import (
     retry,
@@ -628,10 +627,7 @@ class ProcessProjectfileJobRun(JobRun):
     def get_context(self, *args) -> dict[str, Any]:
         context = super().get_context(*args)
 
-        if not context.get("project__the_qgis_file_name"):
-            context["project__the_qgis_file_name"] = get_qgis_project_file(
-                context["project__id"]
-            )
+        assert context.get("project__the_qgis_file_name")
 
         return context
 
