@@ -1,26 +1,26 @@
 name: Enhancement proposal for QFieldCloud
 description: |
   Create an enhancement proposal for QFieldCloud before opening a pull request.
-  This will help us understand the problem you are trying to solve and the solution you are proposing, and will increase the chances of your pull request being accepted.
+  This clarifies the problem and proposed solution, and increases the chances of your pull request being accepted.
 labels:
-  - 'Enhancement'
+  - 'enhancement'
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this enhancement proposal correctly.
+        Thank you for taking the time to complete this enhancement proposal.
 
         Please report only enhancement proposals related to the QFieldCloud application.
         Do not report enhancement proposals related to other QField ecosystem products.
-        Note that enhancement proposals without clear justification or use cases will not be considered.
-        Note that even a well written enhancement proposal may not be accepted if it does not align with our roadmap and priorities.
+        Enhancement proposals without clear justification or use cases will not be considered.
+        Even a well-written enhancement proposal may not be accepted if it does not align with our roadmap and priorities.
 
-        You can go one step back and choose the right place to put your report.
+        You can go back one step and choose the right place to submit your report.
 
   - type: textarea
     id: what
     attributes:
-      label: What is the enhancement proposal? What problem you are trying to solve?
+      label: What is the enhancement proposal? What problem are you trying to solve?
     validations:
       required: true
 
@@ -29,7 +29,7 @@ body:
     attributes:
       label: Description
       description: |
-        Provide a detailed description of the enhancement proposal with the following information:
+        Provide a detailed description of the enhancement proposal, including the following information:
 
         - Use cases and user stories that justify the need for this enhancement proposal.
         - Expected behavior and outcomes of the enhancement proposal.
@@ -46,11 +46,11 @@ body:
     attributes:
       label: Agreements
       description: |
-        Please confirm your commitments related to this enhancement proposal.
+        Please confirm the following commitments related to this enhancement proposal.
       options:
-        - label: I commit to keep my branch up to date with the latest `master` branch until merging a pull request.
+        - label: I commit to keeping my branch up to date with the latest `master` branch until my pull request is merged.
           required: true
-        - label: I commit to write tests for my enhancement proposal if applicable.
+        - label: I commit to writing tests for my enhancement proposal, if applicable.
           required: true
         - label: I am aware that my enhancement proposal and related pull request may not be accepted.
           required: true
