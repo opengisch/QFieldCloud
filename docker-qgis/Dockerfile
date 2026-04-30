@@ -1,5 +1,5 @@
 # NOTE if the ubuntu version is changed, also change it in `Suites:` in apt sources, and in `QGIS_VERSION`
-FROM --platform=linux/amd64 ubuntu:noble
+FROM --platform=linux/amd64 ubuntu:resolute
 
 # Create the expected /io directory that is usually created via the `worker_wrapper`
 RUN mkdir -p /io
@@ -17,8 +17,8 @@ RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org
 
 # Add QGIS repository
 RUN echo "Types: deb deb-src\n\
-URIs: https://qgis.org/ubuntu-ltr\n\
-Suites: noble\n\
+URIs: https://qgis.org/debian\n\
+Suites: resolute\n\
 Architectures: amd64\n\
 Components: main\n\
 Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n" > /etc/apt/sources.list.d/qgis.sources
@@ -41,14 +41,16 @@ RUN apt-get update \
 
 
 # Set QGIS version as in the debian repos
-# Choose your version from here: https://debian.qgis.org/ubuntu-ltr/dists/noble/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.44.9+40noble
+# Choose your version from here: https://debian.qgis.org/debian/dists/resolute/main/binary-amd64/Packages
+ARG QGIS_VERSION=1:4.0.1+44resolute
 
 # Install QGIS dependencies
 RUN apt-get update \
     # NOTE `DEBIAN_FRONTEND=noninteractive` is required to be able to install tzinfo
     && DEBIAN_FRONTEND=noninteractive apt-get install -yf \
         qgis=${QGIS_VERSION} \
+        python3-qgis=${QGIS_VERSION} \
+        python3-qgis-common=${QGIS_VERSION} \
         qgis-dbg=${QGIS_VERSION} \
         qgis-common=${QGIS_VERSION} \
         python3-qgis=${QGIS_VERSION} \
@@ -80,6 +82,10 @@ ENV XDG_RUNTIME_DIR=/root
 # allow local development for `libqfieldsync`, requires `/libqfieldsync` to be a mounted host directory
 ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
+ENV PYTHONPATH=/usr/share/qgis/python:${PYTHONPATH}
+
+# Fix for "error: the configured Python interpreter version (3.14) is newer than PyO3's maximum supported version (3.13)"
+ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 
 # QFC specific variables
 # Controls whether libqfiedlsync should log also to the QGIS message log
