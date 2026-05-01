@@ -32,6 +32,15 @@ jobs:
           SKIP: no-commit-to-branch
         uses: pre-commit/action@v3.0.1
 
+  url_check:
+    name: URLs check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Run URLs Check Test
+        run: ./scripts/urlcheck.sh
+
   test:
     name: Run tests
     runs-on: ubuntu-24.04
