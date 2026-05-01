@@ -68,6 +68,9 @@ class Plan(models.Model):
                 cls.objects.create(
                     code="default_user",
                     display_name="default user (autocreated)",
+                    storage_mb=10,
+                    storage_threshold_warning_bytes=2_000_000,
+                    storage_threshold_critical_bytes=1_000_000,
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.PERSON,
@@ -76,6 +79,9 @@ class Plan(models.Model):
                 cls.objects.create(
                     code="default_org",
                     display_name="default organization (autocreated)",
+                    storage_mb=10,
+                    storage_threshold_warning_bytes=2_000_000,
+                    storage_threshold_critical_bytes=1_000_000,
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.ORGANIZATION,
