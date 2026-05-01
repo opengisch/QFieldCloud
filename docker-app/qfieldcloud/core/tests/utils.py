@@ -85,6 +85,7 @@ def set_subscription(
         defaults={
             "storage_threshold_warning_bytes": int(storage_bytes * 0.20),
             "storage_threshold_critical_bytes": int(storage_bytes * 0.10),
+            "display_name": f"default plan for {code}",
         },
         **kwargs,
     )[0]
