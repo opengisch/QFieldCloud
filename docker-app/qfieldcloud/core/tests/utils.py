@@ -39,6 +39,9 @@ def setup_subscription_plans():
             Plan(
                 code="default_user",
                 display_name="default user (autocreated)",
+                storage_mb=10,
+                storage_threshold_warning_bytes=2_000_000,
+                storage_threshold_critical_bytes=1_000_000,
                 is_default=True,
                 is_public=False,
                 user_type=User.Type.PERSON,
@@ -47,6 +50,9 @@ def setup_subscription_plans():
             Plan(
                 code="default_org",
                 display_name="default organization (autocreated)",
+                storage_mb=10,
+                storage_threshold_warning_bytes=2_000_000,
+                storage_threshold_critical_bytes=1_000_000,
                 is_default=True,
                 is_public=False,
                 user_type=User.Type.ORGANIZATION,
@@ -71,9 +77,16 @@ def set_subscription(
     )
 
     code = code or f"plan_for_{'_and_'.join([u.username for u in users])}"
+    storage_mb = kwargs.get("storage_mb", Plan._meta.get_field("storage_mb").default)
+    storage_bytes = storage_mb * 1000 * 1000
     plan = Plan.objects.get_or_create(
         code=code,
         user_type=users[0].type,
+        defaults={
+            "storage_threshold_warning_bytes": int(storage_bytes * 0.20),
+            "storage_threshold_critical_bytes": int(storage_bytes * 0.10),
+            "display_name": f"default plan for {code}",
+        },
         **kwargs,
     )[0]
 
