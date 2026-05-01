@@ -133,6 +133,16 @@ class Plan(models.Model):
     # it's a simple fixed amount for the entire plan.
     storage_mb = models.PositiveIntegerField(default=10)
 
+    # Remaining bytes thresholds for storage usage warnings.
+    storage_threshold_warning_bytes = models.PositiveBigIntegerField(
+        default=0,
+        help_text=_("Remaining storage threshold warning bytes."),
+    )
+    storage_threshold_critical_bytes = models.PositiveBigIntegerField(
+        default=0,
+        help_text=_("Remaining storage threshold critical bytes."),
+    )
+
     storage_keep_versions = models.PositiveIntegerField(default=10)
     job_minutes = models.PositiveIntegerField(default=10)
     can_add_storage = models.BooleanField(default=False)
@@ -228,11 +238,57 @@ class Plan(models.Model):
     def storage_bytes(self) -> int:
         return self.storage_mb * 1000 * 1000
 
-    def save(self, *args, **kwargs):
+    def clean_storage_threshold_bytes(self):
+        errors = {}
+
+        if self.storage_threshold_warning_bytes == 0:
+            errors.setdefault("storage_threshold_warning_bytes", []).append(
+                _("must be greater than 0.")
+            )
+
+        if self.storage_threshold_critical_bytes == 0:
+            errors.setdefault("storage_threshold_critical_bytes", []).append(
+                _("must be greater than 0.")
+            )
+
+        if (
+            self.storage_threshold_critical_bytes
+            >= self.storage_threshold_warning_bytes
+        ):
+            errors.setdefault("storage_threshold_critical_bytes", []).append(
+                _("must be less than storage_threshold_warning_bytes.")
+            )
+
+        if self.storage_threshold_critical_bytes >= self.storage_bytes:
+            errors.setdefault("storage_threshold_critical_bytes", []).append(
+                _("must be less than storage_mb.")
+            )
+
+        if self.storage_threshold_warning_bytes >= self.storage_bytes:
+            errors.setdefault("storage_threshold_warning_bytes", []).append(
+                _("must be less than storage_mb.")
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def clean(self):
+        # storage_mb must be greater than 0
+        if self.storage_mb == 0:
+            raise ValidationError({"storage_mb": _("must be greater than 0.")})
+
+        # user_type must be PERSON or ORGANIZATION
         if self.user_type not in (User.Type.PERSON, User.Type.ORGANIZATION):
             raise ValidationError(
                 'Only "PERSON" and "ORGANIZATION" user types are allowed.'
             )
+
+        self.clean_storage_threshold_bytes()
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
 
         with transaction.atomic():
             # If default is set to true, we unset default on all other plans
