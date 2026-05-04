@@ -258,6 +258,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "is_shared_datasets_project",
             "is_featured",
             "is_attachment_download_on_demand",
+            "has_restricted_projectfiles",
+            "overwrite_conflicts",
             "file_storage_bytes",
             "seed",
             "xlsform_file",
@@ -276,6 +278,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
+            "shared_datasets_project_id",
+            "is_shared_datasets_project",
             "file_storage_bytes",
             "the_qgis_file_name",
         )
