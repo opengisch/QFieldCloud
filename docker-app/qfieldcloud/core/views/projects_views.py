@@ -2,6 +2,7 @@ from pathlib import Path
 from uuid import UUID
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.http import Http404, StreamingHttpResponse
 from django_filters import rest_framework as filters
@@ -25,6 +26,7 @@ from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DrfValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -54,7 +56,20 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             owner_obj = user
 
         if view.action == "create":
-            return permissions_utils.can_create_project(user, owner_obj)
+            if not permissions_utils.can_create_project(user, owner_obj):
+                return False
+
+            clone_from_id = request.data.get("clone_from_project")
+            if clone_from_id:
+                try:
+                    source_project = Project.objects.get(id=clone_from_id)
+                except Project.DoesNotExist:
+                    return False
+
+                if not permissions_utils.can_access_project(user, source_project):
+                    return False
+
+            return True
 
         projectid = permissions_utils.get_param_from_request(request, "projectid")
 
@@ -173,38 +188,62 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: ProjectSerializer) -> None:
         super().perform_create(serializer)
 
-        seed_data = serializer.validated_data.get("seed", None)
-        if not seed_data:
-            return
-
-        xlsform_file = serializer.validated_data.get("xlsform_file", None)
         project = serializer.instance
+        source_project = serializer.validated_data.get("clone_from_project", None)
+        seed_data = serializer.validated_data.get("seed", None)
 
-        basemaps, extent, xlsform_config = project_seed.build_seed_data(
-            basemap_provider=seed_data.get("basemap_provider", "none"),
-            basemap_style=seed_data.get("basemap_style", "standard"),
-            basemap_url=seed_data.get("basemap_url", ""),
-            extent_input=seed_data.get("extent"),
-            xlsform_file=xlsform_file,
-        )
+        if source_project:
+            if seed_data and seed_data.get("extent"):
+                try:
+                    extent = project_seed.get_extent_polygon(seed_data["extent"])
+                except DjangoValidationError as err:
+                    raise DrfValidationError({"seed": {"extent": err.messages}})
+            else:
+                extent = None
 
-        ProjectSeed.objects.create(
-            project=project,
-            settings={
-                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
-                "basemaps": basemaps,
-                "xlsform": xlsform_config,
-            },
-            extent=extent,
-            xlsform_file=xlsform_file,
-        )
+            ProjectSeed.objects.create(
+                project=project,
+                extent=extent,
+                clone_from_project=source_project,
+                settings={
+                    "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                    "basemaps": [],
+                    "xlsform": None,
+                },
+            )
 
-        Job.objects.create(
-            project=project,
-            type=Job.Type.CREATE_PROJECT,
-            created_by=self.request.user,
-        )
-        print("Job created")
+            Job.objects.create(
+                project=project,
+                type=Job.Type.CREATE_PROJECT,
+                created_by=self.request.user,
+            )
+        elif seed_data:
+            xlsform_file = serializer.validated_data.get("xlsform_file", None)
+
+            basemaps, extent, xlsform_config = project_seed.build_seed_data(
+                basemap_provider=seed_data.get("basemap_provider", "none"),
+                basemap_style=seed_data.get("basemap_style", "standard"),
+                basemap_url=seed_data.get("basemap_url", ""),
+                extent_input=seed_data.get("extent"),
+                xlsform_file=xlsform_file,
+            )
+
+            ProjectSeed.objects.create(
+                project=project,
+                settings={
+                    "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                    "basemaps": basemaps,
+                    "xlsform": xlsform_config,
+                },
+                extent=extent,
+                xlsform_file=xlsform_file,
+            )
+
+            Job.objects.create(
+                project=project,
+                type=Job.Type.CREATE_PROJECT,
+                created_by=self.request.user,
+            )
 
     @transaction.atomic
     def perform_update(self, serializer: ProjectSerializer) -> None:
