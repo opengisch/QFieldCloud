@@ -444,3 +444,91 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertEqual(self.p1.thumbnail.name, "")
+
+    def test_clone_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        ProjectSeed.objects.create(
+            project=self.p1,
+            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=self.p1,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        # Clone the project
+
+        cloned_project = Project.objects.create(
+            name="cloned_project",
+            owner=self.u1,
+            is_public=False,
+            overwrite_conflicts=True,
+            has_restricted_projectfiles=True,
+            is_attachment_download_on_demand=True,
+        )
+
+        ProjectSeed.objects.create(
+            project=cloned_project,
+            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            clone_from_project=self.p1,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=cloned_project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(cloned_project)
+
+        self.p1.refresh_from_db()
+        cloned_project.refresh_from_db()
+
+        # compare project files
+        source_response = self._list_files(self.u1, self.p1)
+        cloned_response = self._list_files(self.u1, cloned_project)
+
+        self.assertEqual(source_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(cloned_response.status_code, status.HTTP_200_OK)
+
+        source_files = {}
+        for file in source_response.json():
+            source_files[file["name"]] = file["sha256"]
+
+        cloned_files = {}
+        for file in cloned_response.json():
+            cloned_files[file["name"]] = file["sha256"]
+
+        self.assertGreater(len(source_files), 0)
+        self.assertEqual(set(source_files.keys()), set(cloned_files.keys()))
+
+        for name in source_files:
+            # The QGIS project file is re-saved during clone configuration
+            if name == self.p1.the_qgis_file_name:
+                continue
+
+            self.assertEqual(source_files[name], cloned_files[name])
+
+        # compare QGIS file name
+        self.assertEqual(cloned_project.the_qgis_file_name, self.p1.the_qgis_file_name)
+
+        self.assertIsNotNone(cloned_project.project_details)
+        self.assertEqual(
+            set(cloned_project.project_details["layers_by_id"].keys()),
+            set(self.p1.project_details["layers_by_id"].keys()),
+        )
