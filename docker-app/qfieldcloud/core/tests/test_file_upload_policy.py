@@ -74,21 +74,16 @@ class QfcTestCase(APITransactionTestCase):
         # Simulate over-quota while keeping plan valid (storage_mb must be > 0).
         self.more_bytes_than_plan = plan.storage_mb * 1000 * 1000 + 1
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if self.project.uses_legacy_storage:
-            self.project.file_storage_bytes = self.more_bytes_than_plan
-            self.project.save(update_fields=["file_storage_bytes"])
-        else:
-            file_version = FileVersion.objects.add_version(
-                project=self.project,
-                filename="bigfile.name",
-                content=ContentFile(b"x", "dummy.name"),
-                file_type=File.FileType.PROJECT_FILE,
-                uploaded_by=self.user,
-            )
-            FileVersion.objects.filter(pk=file_version.pk).update(
-                size=self.more_bytes_than_plan
-            )
+        file_version = FileVersion.objects.add_version(
+            project=self.project,
+            filename="bigfile.name",
+            content=ContentFile(b"x", "dummy.name"),
+            file_type=File.FileType.PROJECT_FILE,
+            uploaded_by=self.user,
+        )
+        FileVersion.objects.filter(pk=file_version.pk).update(
+            size=self.more_bytes_than_plan
+        )
 
         self.conn = get_test_postgis_connection()
 
@@ -116,19 +111,6 @@ class QfcTestCase(APITransactionTestCase):
     def tearDown(self):
         self.conn.close()
 
-    def _re_simulate_legacy_over_quota(self):
-        """
-        For legacy storage, file_storage_bytes is a cached value that gets overwritten
-        by project.save(recompute_storage=True) on every upload. Re-inflate it to keep
-        the over-quota state valid across upload calls.
-
-        TODO Delete with QF-4963 Drop support for legacy storage
-        """
-        if self.project.uses_legacy_storage:
-            self.project.refresh_from_db()
-            self.project.file_storage_bytes = self.more_bytes_than_plan
-            self.project.save(update_fields=["file_storage_bytes"])
-
     def test_always_accept_file_from_qfield(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token_qfield.key)
 
@@ -140,9 +122,6 @@ class QfcTestCase(APITransactionTestCase):
 
         self.project.refresh_from_db()
         self.assertTrue(self.project.has_online_vector_data)
-
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        self._re_simulate_legacy_over_quota()
 
         # Check user has no storage left
         self.assertTrue(self.user.useraccount.storage_free_bytes < 0)
@@ -168,9 +147,6 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(status.is_success(response.status_code))
         wait_for_project_ok_status(self.project)
         self.assertTrue(self.project.has_online_vector_data)
-
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        self._re_simulate_legacy_over_quota()
 
         # Check user has no storage left
         self.assertTrue(self.user.useraccount.storage_free_bytes < 0)
