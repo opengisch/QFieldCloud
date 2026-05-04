@@ -239,12 +239,15 @@ class ProjectSeedSerializer(serializers.ModelSerializer):
 
     name = serializers.StringRelatedField(source="project.name")
     extent = serializers.SerializerMethodField()
-    copy_from_project = serializers.PrimaryKeyRelatedField(read_only=True)
+    clone_from_project = serializers.PrimaryKeyRelatedField(read_only=True)
     settings = serializers.JSONField()
     # TODO @suricactus: QF-7258 Adding a project extent field on project creation, see https://app.clickup.com/t/2192114/QF-7258
     crs = serializers.CharField(default="EPSG:3857")
 
-    def get_extent(self, obj: ProjectSeed) -> dict[str, Any]:
+    def get_extent(self, obj: ProjectSeed) -> dict[str, Any] | None:
+        if obj.extent is None:
+            return None
+
         return obj.extent.extent
 
 
