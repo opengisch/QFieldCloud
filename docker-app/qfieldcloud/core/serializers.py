@@ -208,6 +208,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "file_storage_bytes",
             "seed",
             "xlsform_file",
+            "the_qgis_file_name",
         )
         read_only_fields = (
             "private",
@@ -222,6 +223,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "user_role",
             "user_role_origin",
             "file_storage_bytes",
+            "the_qgis_file_name",
         )
         model = Project
 
