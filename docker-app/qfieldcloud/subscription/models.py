@@ -249,12 +249,12 @@ class Plan(models.Model):
 
         if self.storage_threshold_warning_bytes == 0:
             errors.setdefault("storage_threshold_warning_bytes", []).append(
-                _("must be greater than 0.")
+                _("Must be greater than 0.")
             )
 
         if self.storage_threshold_critical_bytes == 0:
             errors.setdefault("storage_threshold_critical_bytes", []).append(
-                _("must be greater than 0.")
+                _("Must be greater than 0.")
             )
 
         if (
@@ -262,28 +262,26 @@ class Plan(models.Model):
             >= self.storage_threshold_warning_bytes
         ):
             errors.setdefault("storage_threshold_critical_bytes", []).append(
-                _("must be less than storage_threshold_warning_bytes.")
+                _("Must be less than storage_threshold_warning_bytes.")
             )
 
         if self.storage_threshold_critical_bytes >= self.storage_bytes:
             errors.setdefault("storage_threshold_critical_bytes", []).append(
-                _("must be less than storage_mb.")
+                _("Must be less than storage_mb.")
             )
 
         if self.storage_threshold_warning_bytes >= self.storage_bytes:
             errors.setdefault("storage_threshold_warning_bytes", []).append(
-                _("must be less than storage_mb.")
+                _("Must be less than storage_mb.")
             )
 
         if errors:
             raise ValidationError(errors)
 
     def clean(self):
-        # storage_mb must be greater than 0
         if self.storage_mb == 0:
-            raise ValidationError({"storage_mb": _("must be greater than 0.")})
+            raise ValidationError({"storage_mb": _("Must be greater than 0.")})
 
-        # user_type must be PERSON or ORGANIZATION
         if self.user_type not in (User.Type.PERSON, User.Type.ORGANIZATION):
             raise ValidationError(
                 'Only "PERSON" and "ORGANIZATION" user types are allowed.'

@@ -18,19 +18,19 @@ class QfcTestCase(APITransactionTestCase):
         # update storage_threshold_warning_bytes to 0
         plan.storage_threshold_warning_bytes = 0
         plan.storage_threshold_critical_bytes = 0
-        with self.assertRaisesRegex(ValidationError, "must be greater than 0."):
+        with self.assertRaisesRegex(ValidationError, "Must be greater than 0."):
             plan.save()
 
         # update storage_threshold_critical_bytes to be greater than storage_threshold_warning_bytes
         plan.refresh_from_db()
         plan.storage_threshold_critical_bytes = plan.storage_threshold_warning_bytes + 1
         with self.assertRaisesRegex(
-            ValidationError, "must be less than storage_threshold_warning_bytes"
+            ValidationError, "Must be less than storage_threshold_warning_bytes"
         ):
             plan.save()
 
         # update storage_threshold_warning_bytes to be greater than storage_mb
         plan.refresh_from_db()
         plan.storage_threshold_warning_bytes = plan.storage_bytes + 1
-        with self.assertRaisesRegex(ValidationError, "must be less than storage_mb"):
+        with self.assertRaisesRegex(ValidationError, "Must be less than storage_mb"):
             plan.save()
