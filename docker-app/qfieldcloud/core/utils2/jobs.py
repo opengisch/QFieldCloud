@@ -16,9 +16,12 @@ def apply_deltas(
     user: "models.User",
     project_file: str,
     overwrite_conflicts: bool,
-    delta_ids: list[str] = [],
+    delta_ids: list[str] | None = None,
 ) -> list["models.ApplyJob"]:
     """Apply a deltas"""
+
+    if delta_ids is None:
+        delta_ids = []
 
     logger.info(
         f"Requested apply_deltas on {project} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"

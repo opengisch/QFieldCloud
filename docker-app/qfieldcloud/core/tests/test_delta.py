@@ -1221,11 +1221,17 @@ class QfcTestCase(APITransactionTestCase):
         delta_filename,
         final_values,
         token,
-        wait_status=["STATUS_PENDING", "STATUS_BUSY"],
-        failing_status=["STATUS_ERROR"],
+        wait_status=None,
+        failing_status=None,
         immediate_values=None,
         deltafile_id=None,
     ):
+        if failing_status is None:
+            failing_status = ["STATUS_ERROR"]
+
+        if wait_status is None:
+            wait_status = ["STATUS_PENDING", "STATUS_BUSY"]
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
         if delta_filename is not None:
@@ -1254,10 +1260,16 @@ class QfcTestCase(APITransactionTestCase):
         deltafile_id,
         final_values,
         token,
-        wait_status=["STATUS_PENDING", "STATUS_BUSY"],
-        failing_status=["STATUS_ERROR"],
+        wait_status=None,
+        failing_status=None,
         immediate_values=None,
     ):
+        if failing_status is None:
+            failing_status = ["STATUS_ERROR"]
+
+        if wait_status is None:
+            wait_status = ["STATUS_PENDING", "STATUS_BUSY"]
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
         uri = f"/api/v1/deltas/{project.id}/"
