@@ -28,6 +28,7 @@ from qfieldcloud.core.models import (
     User,
 )
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
+from qfieldcloud.subscription.exceptions import QuotaError
 
 
 def get_avatar_url(user: User, request: Request | None = None) -> StrOrPromise | None:
@@ -195,7 +196,7 @@ class ProjectSerializer(serializers.ModelSerializer):
                 source_project.file_storage_bytes
                 > target_owner.useraccount.storage_free_bytes
             ):
-                raise ValidationError({"storage_quota": "Insufficient storage quota."})
+                raise QuotaError("Insufficient storage quota.")
         else:
             if xlsform_file and not seed:
                 raise ValidationError(
@@ -213,7 +214,7 @@ class ProjectSerializer(serializers.ModelSerializer):
                     raise ValidationError(
                         {
                             "seed": [
-                                "basemap_url is required when basemap_provider is 'custom'."
+                                "When configuring basemaps in the project's seed, `basemap_url` is required when `basemap_provider` is set to `custom`."
                             ]
                         }
                     )
@@ -283,15 +284,14 @@ class ProjectSerializer(serializers.ModelSerializer):
             "file_storage_bytes",
             "the_qgis_file_name",
         )
-        _clone_exclude = {
-            "id",
-            "name",
-            "owner",
-            "seed",
-            "xlsform_file",
-            "clone_from_project",
+        clonable_fields = {
+            "description",
+            "is_public",
+            "is_featured",
+            "is_attachment_download_on_demand",
+            "has_restricted_projectfiles",
+            "overwrite_conflicts",
         }
-        clonable_fields = set(fields) - set(read_only_fields) - _clone_exclude
         model = Project
 
 
