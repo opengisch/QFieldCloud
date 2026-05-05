@@ -72,17 +72,14 @@ class QfcTestCase(APITransactionTestCase):
         plan.save()
 
         # Simulate over-quota while keeping plan valid (storage_mb must be > 0).
-        self.more_bytes_than_plan = plan.storage_mb * 1000 * 1000 + 1
+        more_bytes_than_plan = plan.storage_mb * 1000 * 1000 + 1
 
-        file_version = FileVersion.objects.add_version(
+        FileVersion.objects.add_version(
             project=self.project,
             filename="bigfile.name",
-            content=ContentFile(b"x", "dummy.name"),
+            content=ContentFile(b"x" * more_bytes_than_plan, "dummy.name"),
             file_type=File.FileType.PROJECT_FILE,
             uploaded_by=self.user,
-        )
-        FileVersion.objects.filter(pk=file_version.pk).update(
-            size=self.more_bytes_than_plan
         )
 
         self.conn = get_test_postgis_connection()
