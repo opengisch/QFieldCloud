@@ -1,25 +1,28 @@
 import json
 import logging
+import os
 import shutil
 import sys
 import tempfile
+import time
 import traceback
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
-import docker
-import docker.client
-import docker.errors
 import requests
 import sentry_sdk
+import yaml
 from constance import config
 from django.conf import settings
 from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from docker.models.containers import Container
+from kubernetes import client, config as k8s_config
+from kubernetes.client.rest import ApiException
+from kubernetes.stream import stream
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -46,13 +49,19 @@ if settings.DEBUG:
 
 RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
-DOCKER_SIGKILL_EXIT_CODE = 137
-TMP_FILE = Path("/tmp")
+KUBERNETES_SIGKILL_EXIT_CODE = 137
 TRANSFORMATION_GRIDS_PATH = "/transformation_grids"
 """Path inside the worker container where the transformation grids volume `settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME` is mounted."""
 
 TOKEN_EXPIRATION_TIME_BUFFER_S = 60
 """Extra time in seconds for the dedicated worker token to keep the token valid, in addition to `JobRun.container_timeout_secs`. Useful when the worker takes longer to start."""
+
+# Kubernetes configuration
+K8S_JOB_NAMESPACE = getattr(settings, "KUBERNETES_JOB_NAMESPACE", "default")
+K8S_SHARED_VOLUME_CLAIM = getattr(settings, "KUBERNETES_SHARED_VOLUME_CLAIM", "qfieldcloud-shared-pvc")
+K8S_SHARED_VOLUME_MOUNT_PATH = getattr(settings, "KUBERNETES_SHARED_VOLUME_MOUNT_PATH", "/shared")
+K8S_JOB_TTL_SECONDS = getattr(settings, "KUBERNETES_JOB_TTL_SECONDS", 3600)
+K8S_JOB_BACKOFF_LIMIT = getattr(settings, "KUBERNETES_JOB_BACKOFF_LIMIT", 0)
 
 
 class QgisException(Exception):
@@ -68,7 +77,19 @@ class JobRun:
         try:
             self.job_id = job_id
             self.job = self.job_class.objects.select_related().get(id=job_id)
-            self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
+            # Use shared volume path instead of local temp directory
+            self.shared_tempdir = Path(K8S_SHARED_VOLUME_MOUNT_PATH) / f"job-{job_id}"
+            self.shared_tempdir.mkdir(parents=True, exist_ok=True)
+            
+            # Initialize Kubernetes client
+            try:
+                k8s_config.load_incluster_config()
+            except k8s_config.ConfigException:
+                k8s_config.load_kube_config()
+            
+            self.batch_v1 = client.BatchV1Api()
+            self.core_v1 = client.CoreV1Api()
+            
         except Exception as err:
             feedback: dict[str, Any] = {}
             (_type, _value, tb) = sys.exc_info()
@@ -79,7 +100,7 @@ class JobRun:
             msg = "Uncaught exception when constructing a JobRun:\n"
             msg += json.dumps(msg, indent=2, sort_keys=True)
 
-            if self.job:
+            if hasattr(self, 'job') and self.job:
                 self.job.status = Job.Status.FAILED
                 self.job.feedback = feedback
                 self.job.save(update_fields=["status", "feedback"])
@@ -125,24 +146,51 @@ class JobRun:
             for p in ["python3", *debug_flags, "entrypoint.py", *self.command]
         ]
 
-    def get_volumes(self) -> list[str]:
-        volumes = [
-            f"{str(self.shared_tempdir)}:/io/:rw",
-            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:{TRANSFORMATION_GRIDS_PATH}:ro",
-        ]
-
-        # If the env configuration provides a custom CA, mount it in the worker.
-        if Path(settings.QFIELDCLOUD_CUSTOM_CA_FILENAME).exists():
-            volumes.append(
-                f"{settings.QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME}:{settings.QFIELDCLOUD_CUSTOM_CA_DIR}:ro"
+    def get_volumes(self) -> list:
+        """Return Kubernetes volume mounts for the Job"""
+        volumes = []
+        volume_mounts = []
+        
+        # Shared volume for job data exchange
+        volumes.append(client.V1Volume(
+            name="shared-data",
+            persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
+                claim_name=K8S_SHARED_VOLUME_CLAIM
             )
-
-        return volumes
-
-    def get_ports(self) -> dict[str, int]:
-        ports = {}
-
-        return ports
+        ))
+        volume_mounts.append(client.V1VolumeMount(
+            name="shared-data",
+            mount_path=K8S_SHARED_VOLUME_MOUNT_PATH
+        ))
+        
+        # Transformation grids volume (read-only)
+        volumes.append(client.V1Volume(
+            name="transformation-grids",
+            persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
+                claim_name=settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME
+            )
+        ))
+        volume_mounts.append(client.V1VolumeMount(
+            name="transformation-grids",
+            mount_path=TRANSFORMATION_GRIDS_PATH,
+            read_only=True
+        ))
+        
+        # Custom CA volume if exists
+        if Path(settings.QFIELDCLOUD_CUSTOM_CA_FILENAME).exists():
+            volumes.append(client.V1Volume(
+                name="custom-ca",
+                persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
+                    claim_name=settings.QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME
+                )
+            ))
+            volume_mounts.append(client.V1VolumeMount(
+                name="custom-ca",
+                mount_path=settings.QFIELDCLOUD_CUSTOM_CA_DIR,
+                read_only=True
+            ))
+        
+        return volumes, volume_mounts
 
     def get_environment(self) -> dict[str, str]:
         extra_envvars = {}
@@ -235,11 +283,11 @@ class JobRun:
 
             command = self.get_command()
 
-            exit_code, output = self._run_docker(command)
+            exit_code, output = self._run_kubernetes_job(command)
 
-            if exit_code == DOCKER_SIGKILL_EXIT_CODE:
-                feedback["error"] = "Docker engine sigkill."
-                feedback["error_type"] = "DOCKER_ENGINE_SIGKILL"
+            if exit_code == KUBERNETES_SIGKILL_EXIT_CODE:
+                feedback["error"] = "Kubernetes sigkill."
+                feedback["error_type"] = "KUBERNETES_SIGKILL"
                 feedback["error_class"] = ""
                 feedback["error_origin"] = "container"
                 feedback["error_stack"] = ""
@@ -261,11 +309,13 @@ class JobRun:
                 feedback["error_stack"] = ""
             else:
                 try:
-                    with open(self.shared_tempdir.joinpath("feedback.json")) as f:
-                        feedback = json.load(f)
+                    feedback_file = self.shared_tempdir.joinpath("feedback.json")
+                    if feedback_file.exists():
+                        with open(feedback_file) as f:
+                            feedback = json.load(f)
 
-                        if feedback.get("error"):
-                            feedback["error_origin"] = "container"
+                            if feedback.get("error"):
+                                feedback["error_origin"] = "container"
                 except Exception as err:
                     if not isinstance(feedback, dict):
                         feedback = {"error_feedback": feedback}
@@ -300,6 +350,7 @@ class JobRun:
 
             self.after_docker_run()
 
+            # Clean up shared directory
             shutil.rmtree(str(self.shared_tempdir), ignore_errors=True)
 
             self.job.finished_at = timezone.now()
@@ -338,136 +389,220 @@ class JobRun:
                     "Failed to handle exception and update the job status", exc_info=err
                 )
 
-    def _run_docker(self, command: list[str]) -> tuple[int, bytes]:
+    def _run_kubernetes_job(self, command: list[str]) -> tuple[int, bytes]:
+        """Create and run a Kubernetes Job instead of a Docker container"""
         assert settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL
         assert settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME
 
-        client = docker.from_env()
-
-        volumes = self.get_volumes()
-        ports = self.get_ports()
+        job_name = f"qfc-job-{self.job_id[:8]}-{uuid.uuid4().hex[:6]}"
+        
+        volumes, volume_mounts = self.get_volumes()
         environment = self.get_environment()
-
-        if settings.DEBUG:
-            if self.debug_qgis_container_is_enabled:
-                # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
-                # otherwise the vscode debugger won't be able to connect
-                # NOTE the port must be passed here and not in the `docker-compose` file,
-                # because the `qgis` container is started with docker in docker and the `docker-compose`
-                # configuration is valid only for the brief moment when the stack is built and started,
-                # but not when new `qgis` containers are started dynamically by the worker wrapper
-                ports = {
-                    **ports,
-                    f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
-                }
-
-                logger.debug(
-                    f"Exposing ports from the qgis container for debugging: {ports=}"
-                )
-
-            if settings.DEBUG_QGIS_WORKER_HOST_PATH:
-                debug_host_path = Path(settings.DEBUG_QGIS_WORKER_HOST_PATH)
-
-                volumes = [
-                    *volumes,
-                    # allow local development for `docker-qgis`
-                    f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
-                    f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
-                    # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}` within the worker container.
-                    f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync:ro",
-                    # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}` within the worker container.
-                    f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python:ro",
-                ]
-
-                logger.debug(
-                    f"Mounting host path into qgis container for debugging: {volumes=}"
-                )
-
-        logger.info(f"Execute: {' '.join(command)}")
-
-        # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
-        self.job.docker_started_at = timezone.now()
-        self.job.save(update_fields=["docker_started_at"])
-
-        container: Container = client.containers.run(  # type:ignore
-            settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
-            command,
-            environment=environment,
-            ports=ports,
-            volumes=volumes,
-            # TODO stream the logs to something like redis, so they can be streamed back in project jobs page to the user live
-            # auto_remove=True,
-            network=settings.QFIELDCLOUD_DEFAULT_NETWORK,
-            detach=True,
-            mem_limit=config.WORKER_QGIS_MEMORY_LIMIT,
-            cpu_shares=config.WORKER_QGIS_CPU_SHARES,
-            labels={
-                "app": f"{settings.ENVIRONMENT}_worker",
-                "type": self.job.type,
-                "job_id": str(self.job.id),
-                "project_id": str(self.job.project_id),
+        
+        # Convert environment dict to K8s format
+        env_vars = []
+        for key, value in environment.items():
+            env_vars.append(client.V1EnvVar(name=key, value=value))
+        
+        # Resource limits
+        resources = client.V1ResourceRequirements(
+            limits={
+                "memory": f"{config.WORKER_QGIS_MEMORY_LIMIT}",
+                "cpu": f"{config.WORKER_QGIS_CPU_SHARES}m" if config.WORKER_QGIS_CPU_SHARES else None
             },
+            requests={
+                "memory": f"{config.WORKER_QGIS_MEMORY_LIMIT}",
+                "cpu": f"{config.WORKER_QGIS_CPU_SHARES}m" if config.WORKER_QGIS_CPU_SHARES else "100m"
+            }
         )
-
-        self.job.container_id = container.id
+        
+        # Container definition
+        container = client.V1Container(
+            name="qgis-worker",
+            image=settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
+            command=["python3"] if not command[0].startswith("python3") else None,
+            args=command if command[0].startswith("python3") else command,
+            env=env_vars,
+            volume_mounts=volume_mounts,
+            resources=resources,
+        )
+        
+        # Add debug port if enabled
+        if self.debug_qgis_container_is_enabled:
+            container.ports = [
+                client.V1ContainerPort(
+                    container_port=settings.DEBUG_QGIS_DEBUGPY_PORT,
+                    name="debugpy"
+                )
+            ]
+        
+        # Pod template
+        pod_template = client.V1PodTemplateSpec(
+            metadata=client.V1ObjectMeta(
+                labels={
+                    "app": f"{settings.ENVIRONMENT}_worker",
+                    "type": self.job.type,
+                    "job_id": str(self.job.id),
+                    "project_id": str(self.job.project_id),
+                }
+            ),
+            spec=client.V1PodSpec(
+                restart_policy="Never",
+                volumes=volumes,
+                containers=[container],
+            )
+        )
+        
+        # Job definition
+        job = client.V1Job(
+            api_version="batch/v1",
+            kind="Job",
+            metadata=client.V1ObjectMeta(
+                name=job_name,
+                namespace=K8S_JOB_NAMESPACE,
+                labels={
+                    "app": f"{settings.ENVIRONMENT}_worker",
+                    "type": self.job.type,
+                    "job_id": str(self.job.id),
+                    "project_id": str(self.job.project_id),
+                }
+            ),
+            spec=client.V1JobSpec(
+                parallelism=1,
+                completions=1,
+                backoff_limit=K8S_JOB_BACKOFF_LIMIT,
+                ttl_seconds_after_finished=K8S_JOB_TTL_SECONDS,
+                active_deadline_seconds=self.container_timeout_secs,
+                template=pod_template,
+            )
+        )
+        
+        logger.info(f"Creating Kubernetes Job: {job_name} with command: {' '.join(command)}")
+        
+        # Store job name in database
+        self.job.container_id = job_name  # Reusing container_id field for job name
+        self.job.docker_started_at = timezone.now()
         self.job.save(update_fields=["docker_started_at", "container_id"])
-        logger.info(f"Starting worker {container.id} ...")
-
-        response = {"StatusCode": TIMEOUT_ERROR_EXIT_CODE}
-
+        
         try:
-            # will throw an `requests.exceptions.ConnectionError`, but the container is still alive
-            response = container.wait(timeout=self.container_timeout_secs)
-
-            if response["StatusCode"] == DOCKER_SIGKILL_EXIT_CODE:
-                logger.info(
-                    "Job canceled, probably due to deleted Project and Jobs.",
+            # Create the Job
+            self.batch_v1.create_namespaced_job(
+                namespace=K8S_JOB_NAMESPACE,
+                body=job
+            )
+            
+            # Wait for Job completion
+            exit_code, logs = self._wait_for_job_completion(job_name)
+            
+            return exit_code, logs
+            
+        except ApiException as e:
+            logger.error(f"Kubernetes API exception: {e}")
+            return TIMEOUT_ERROR_EXIT_CODE, f"Kubernetes API error: {e}".encode()
+        finally:
+            # Clean up the Job
+            self._delete_job(job_name)
+    
+    def _wait_for_job_completion(self, job_name: str) -> tuple[int, bytes]:
+        """Wait for Kubernetes Job to complete and return exit code and logs"""
+        poll_interval = 2  # seconds
+        start_time = time.time()
+        timeout_seconds = self.container_timeout_secs + 30  # Add buffer
+        
+        job_completed = False
+        exit_code = TIMEOUT_ERROR_EXIT_CODE
+        logs = b""
+        
+        while not job_completed and (time.time() - start_time) < timeout_seconds:
+            try:
+                job = self.batch_v1.read_namespaced_job_status(
+                    name=job_name,
+                    namespace=K8S_JOB_NAMESPACE
                 )
-
-                # No further action required, received by wrapper's autoclean mechanism when the `Project` is deleted
-                return (
-                    response["StatusCode"],
-                    b"Job has been cancelled by parent process!",
-                )
-
-        except Exception as err:
-            logger.exception("Timeout error.", exc_info=err)
-
-        # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
+                
+                if job.status.succeeded is not None and job.status.succeeded > 0:
+                    logger.info(f"Job {job_name} succeeded")
+                    job_completed = True
+                    exit_code = 0
+                    
+                elif job.status.failed is not None and job.status.failed > 0:
+                    logger.info(f"Job {job_name} failed")
+                    job_completed = True
+                    exit_code = 1
+                    
+                elif job.status.active is not None and job.status.active > 0:
+                    # Job still running
+                    pass
+                    
+                else:
+                    # Unknown status
+                    logger.warning(f"Job {job_name} has unknown status: {job.status}")
+                    
+            except ApiException as e:
+                if e.status == 404:
+                    logger.error(f"Job {job_name} not found")
+                    break
+                else:
+                    logger.warning(f"Error reading job status: {e}")
+            
+            if not job_completed:
+                time.sleep(poll_interval)
+        
+        # Get logs from the pod
+        try:
+            pods = self.core_v1.list_namespaced_pod(
+                namespace=K8S_JOB_NAMESPACE,
+                label_selector=f"job-name={job_name}"
+            )
+            
+            if pods.items:
+                # Get logs from the first pod
+                pod_name = pods.items[0].metadata.name
+                logs = self.core_v1.read_namespaced_pod_log(
+                    name=pod_name,
+                    namespace=K8S_JOB_NAMESPACE
+                ).encode('utf-8')
+                
+        except ApiException as e:
+            logger.warning(f"Failed to get logs for job {job_name}: {e}")
+            logs = b"[QFC/Worker] Failed to retrieve job logs"
+        
         self.job.docker_finished_at = timezone.now()
         self.job.save(update_fields=["docker_finished_at"])
-
-        logs = b""
-        # Retry reading the logs, as it may fail
-        # NOTE when reading the logs of a finished container, it might timeout with an ``.
-        # This leads to exception and prevents the container to be removed few lines below.
-        # Therefore try reading the logs, as they are important, and if it fails, just use a
-        # generic "failed to read logs" message.
-        # Similar issue here: https://github.com/docker/docker-py/issues/2266
-
-        retriable = retry(
-            wait=wait_random_exponential(max=10),
-            stop=stop_after_attempt(RETRY_COUNT),
-            retry=retry_if_exception_type(requests.exceptions.ConnectionError),
-            reraise=True,
-        )
-
-        try:
-            logs = retriable(lambda: container.logs())()
-        except requests.exceptions.ConnectionError:
-            logs = b"[QFC/Worker/1001] Failed to read logs."
-
-        retriable(lambda: container.stop())()
-        retriable(lambda: container.remove())()
-
-        logger.info(
-            f"Finished execution with code {response['StatusCode']}, logs:\n{logs.decode()}"
-        )
-
-        if response["StatusCode"] == TIMEOUT_ERROR_EXIT_CODE:
+        
+        if exit_code == TIMEOUT_ERROR_EXIT_CODE:
             logs += f"\nTimeout error! The job failed to finish within {self.container_timeout_secs} seconds!\n".encode()
-
-        return response["StatusCode"], logs
+        
+        return exit_code, logs
+    
+    def _delete_job(self, job_name: str) -> None:
+        """Delete Kubernetes Job and its pods"""
+        try:
+            # Delete the job
+            self.batch_v1.delete_namespaced_job(
+                name=job_name,
+                namespace=K8S_JOB_NAMESPACE,
+                propagation_policy="Background"
+            )
+            logger.info(f"Deleted Kubernetes Job: {job_name}")
+            
+            # Delete associated pods (they should be deleted automatically with propagation_policy="Background")
+            # but we'll explicitly delete them to ensure cleanup
+            try:
+                pods = self.core_v1.list_namespaced_pod(
+                    namespace=K8S_JOB_NAMESPACE,
+                    label_selector=f"job-name={job_name}"
+                )
+                for pod in pods.items:
+                    self.core_v1.delete_namespaced_pod(
+                        name=pod.metadata.name,
+                        namespace=K8S_JOB_NAMESPACE
+                    )
+            except ApiException:
+                pass  # Pods might already be deleted
+                
+        except ApiException as e:
+            logger.warning(f"Failed to delete job {job_name}: {e}")
 
 
 class PackageJobRun(JobRun):
@@ -656,35 +791,42 @@ class CreateProjectJobRun(JobRun):
 
 
 def cancel_orphaned_workers() -> None:
-    client: docker.client.DockerClient = docker.from_env()
-
+    """Cancel orphaned Kubernetes Jobs that don't have corresponding database entries"""
     try:
-        running_workers: list[Container] = client.containers.list(
-            filters={"label": f"app={settings.ENVIRONMENT}_worker"},
+        k8s_config.load_incluster_config()
+    except k8s_config.ConfigException:
+        k8s_config.load_kube_config()
+    
+    batch_v1 = client.BatchV1Api()
+    
+    try:
+        # List all worker jobs
+        jobs = batch_v1.list_namespaced_job(
+            namespace=K8S_JOB_NAMESPACE,
+            label_selector=f"app={settings.ENVIRONMENT}_worker"
         )
-    except docker.errors.NotFound:
-        # We don't mind empty references since they mean there is no
-        # orphan to cancel.
+    except ApiException as e:
+        logger.error(f"Failed to list Kubernetes Jobs: {e}")
         return
-
-    if len(running_workers) == 0:
+    
+    if not jobs.items:
         return
-
-    worker_ids = [c.id for c in running_workers]
-
-    worker_with_job_ids = Job.objects.filter(container_id__in=worker_ids).values_list(
-        "container_id", flat=True
-    )
-
-    # Find all running worker containers where its Project and Job were deleted from the database
-    worker_without_job_ids = set(worker_ids) - set(worker_with_job_ids)
-
-    for worker_id in worker_without_job_ids:
-        container = client.containers.get(worker_id)
+    
+    # Get all running job names from database
+    job_names = [job.metadata.name for job in jobs.items]
+    active_jobs = Job.objects.filter(container_id__in=job_names).values_list("container_id", flat=True)
+    
+    # Find orphaned jobs
+    orphaned_job_names = set(job_names) - set(active_jobs)
+    
+    for job_name in orphaned_job_names:
         try:
-            container.kill()
-            container.remove()
-            logger.info(f"Cancel orphaned worker {worker_id}")
-        except docker.errors.APIError:
-            # Container already removed
-            pass
+            batch_v1.delete_namespaced_job(
+                name=job_name,
+                namespace=K8S_JOB_NAMESPACE,
+                propagation_policy="Background"
+            )
+            logger.info(f"Cancel orphaned Kubernetes Job: {job_name}")
+        except ApiException as e:
+            if e.status != 404:  # Don't log if already deleted
+                logger.warning(f"Failed to delete orphaned job {job_name}: {e}")
