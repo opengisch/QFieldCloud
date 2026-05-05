@@ -11,7 +11,7 @@ DEFAULT_WHITELABEL = {
     "site_title": _("QFieldCloud"),
     # Logos (paths relative to static directory)
     "logo_navbar": "logo_sidetext_white.svg",
-    "logo_main": "logo_undertext.svg",
+    "logo_main": "logo_undertext_with_buffer.svg",
     "favicon": "favicon.ico",
 }
 
