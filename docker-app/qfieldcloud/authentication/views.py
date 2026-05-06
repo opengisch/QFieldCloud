@@ -128,6 +128,7 @@ class UserView(RetrieveAPIView):
 @extend_schema_view(
     get=extend_schema(
         description="Lists the available authentication providers.",
+        summary="This endpoint is deprecated and will be removed in the future. Please use `/server/info/` endpoint instead.",
         deprecated=True,
     ),
 )
