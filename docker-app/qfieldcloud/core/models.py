@@ -2182,7 +2182,10 @@ class Delta(models.Model):
         return str(self.id) + ", project: " + str(self.project.id)
 
     @staticmethod
-    def get_status_summary(filters={}):
+    def get_status_summary(filters=None):
+        if filters is None:
+            filters = {}
+
         rows = (
             Delta.objects.filter(**filters)
             .values("last_status")

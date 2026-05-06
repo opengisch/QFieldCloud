@@ -20,7 +20,10 @@ exclude = [
 target-version = "py310"
 
 [lint]
-extend-select = ["I"]
+extend-select = [
+    "I",        # isort
+    "B006",     # Mutable argument default
+]
 ignore = []
 
 [lint.mccabe]

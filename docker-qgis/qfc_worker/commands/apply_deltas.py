@@ -610,7 +610,7 @@ def apply_deltas_without_transaction(
 
 def rollback_deltas(
     layers_by_id: dict[LayerId, QgsVectorLayer],
-    committed_layer_ids: set[LayerId] = set(),
+    committed_layer_ids: set[LayerId] | None = None,
 ) -> bool:
     """Rollback applied deltas by restoring the layer data source backup files.
 
@@ -623,6 +623,9 @@ def rollback_deltas(
         the project might be broken, but the old data is preserved in the
         backup files.
     """
+    if committed_layer_ids is None:
+        committed_layer_ids = set()
+
     is_success = True
     # we need to keep the backups of `committed_layer_ids` in case something goes wrong
     backups_to_remove_layer_ids = set(layers_by_id.keys()) - committed_layer_ids

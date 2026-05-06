@@ -6,7 +6,12 @@ from django.http.response import HttpResponse, HttpResponseForbidden
 from qfieldcloud.core import permissions_utils
 
 
-def permission_check(perm: str, check_args: list[str | Callable] = []) -> Callable:
+def permission_check(
+    perm: str, check_args: list[str | Callable] | None = None
+) -> Callable:
+    if check_args is None:
+        check_args = []
+
     perm_check = getattr(permissions_utils, perm)
 
     def decorator_wrapper(func: Callable):
