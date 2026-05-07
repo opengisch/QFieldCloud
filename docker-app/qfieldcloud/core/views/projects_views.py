@@ -207,8 +207,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 clone_from_project=source_project,
                 settings={
                     "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
-                    "basemaps": [],
-                    "xlsform": None,
                 },
             )
 
