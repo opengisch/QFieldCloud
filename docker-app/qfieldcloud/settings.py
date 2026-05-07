@@ -985,7 +985,7 @@ CORS_ALLOWED_ORIGINS = parse_string_to_list(
 )
 
 # Only allow CORS on API + swagger endpoints - static files and pages are unaffected.
-CORS_URLS_REGEX = r"^/(api/.*|swagger/)$"
+CORS_URLS_REGEX = r"^/(api/.*|swagger(.yaml|/))$"
 
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
