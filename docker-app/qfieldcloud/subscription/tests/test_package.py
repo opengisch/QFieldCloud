@@ -37,7 +37,10 @@ class QfcTestCase(APITransactionTestCase):
         self.plan_default = Plan.get_or_create_default()
         self.plan_premium = Plan.objects.create(
             code="plan_1mb",
+            display_name="1mb plan",
             storage_mb=1,
+            storage_threshold_warning_bytes=200_000,
+            storage_threshold_critical_bytes=100_000,
             is_premium=True,
         )
 
@@ -704,10 +707,20 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_api_enforces_storage_limit_when_owner_changes(self):
         plan_10mb = Plan.objects.create(
-            code="plan_10mb", storage_mb=10, is_premium=True
+            code="plan_10mb",
+            display_name="10mb plan",
+            storage_mb=10,
+            storage_threshold_warning_bytes=2_000_000,
+            storage_threshold_critical_bytes=1_000_000,
+            is_premium=True,
         )
         plan_20mb = Plan.objects.create(
-            code="plan_20mb", storage_mb=20, is_premium=True
+            code="plan_20mb",
+            display_name="20mb plan",
+            storage_mb=20,
+            storage_threshold_warning_bytes=4_000_000,
+            storage_threshold_critical_bytes=2_000_000,
+            is_premium=True,
         )
 
         u10mb = Person.objects.create(username="u10mb")

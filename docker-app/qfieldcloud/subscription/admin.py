@@ -22,6 +22,8 @@ class PlanAdmin(admin.ModelAdmin):
         "is_public",
         "display_name",
         "storage_mb",
+        "storage_threshold_warning_bytes",
+        "storage_threshold_critical_bytes",
         "job_minutes",
     ]
 
