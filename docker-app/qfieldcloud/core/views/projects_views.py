@@ -59,14 +59,14 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             if not permissions_utils.can_create_project(user, owner_obj):
                 return False
 
-            clone_from_id = request.data.get("clone_from_project")
-            if clone_from_id:
+            clone_from_project_id = request.data.get("clone_from_project")
+            if clone_from_project_id:
                 try:
-                    source_project = Project.objects.get(id=clone_from_id)
+                    clone_from_project = Project.objects.get(id=clone_from_project_id)
                 except Project.DoesNotExist:
                     return False
 
-                if not permissions_utils.can_access_project(user, source_project):
+                if not permissions_utils.can_access_project(user, clone_from_project):
                     return False
 
             return True
@@ -189,10 +189,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         super().perform_create(serializer)
 
         project = serializer.instance
-        source_project = serializer.validated_data.get("clone_from_project", None)
+        clone_from_project = serializer.validated_data.get("clone_from_project", None)
         seed_data = serializer.validated_data.get("seed", None)
 
-        if source_project:
+        if clone_from_project:
             if seed_data and seed_data.get("extent"):
                 try:
                     extent = project_seed.get_extent_polygon(seed_data["extent"])
@@ -204,7 +204,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             ProjectSeed.objects.create(
                 project=project,
                 extent=extent,
-                clone_from_project=source_project,
+                clone_from_project=clone_from_project,
                 settings={
                     "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
                 },
