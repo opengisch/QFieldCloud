@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 from collections import namedtuple
+from collections.abc import Iterable
 from datetime import datetime
 from itertools import chain
 from os.path import basename
@@ -26,10 +27,15 @@ from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import logout_then_login, redirect_to_login
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    PermissionDenied,
+    ValidationError,
+)
 from django.core.files.storage import storages
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
+from django.db import models
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
@@ -343,10 +349,77 @@ class ModelAdminSearchParserMixin:
         return super().get_search_results(request, queryset, search_term)  # type: ignore
 
 
+class ModelAdminListDisplayAutoFkeyFields:
+    """Automatically converts foreign keys to links to their corresponding foreign model. Useful for fields such as `created_by`."""
+
+    model: models.Model
+
+    list_display_auto_fkey_fields: bool | Iterable[str] = True
+    """
+    List of fields to be automatically converted to links to their corresponding foreign model. Useful for fields such as `created_by`.
+
+
+    When set to `True`, all foreign key fields in `list_display` will be automatically converted to links.
+    When set to `False`, no fields will be automatically converted to links.
+    When set to an iterable of field names, only those fields will be converted to links.
+    """
+
+    def get_list_display(self, request):
+        list_display = super().get_list_display(request)  # type: ignore
+        list_display_auto_fkey_fields = self._get_list_display_auto_fkey_fields()
+
+        result = []
+        for name in list_display:
+            if name in list_display_auto_fkey_fields:
+                result.append(self._make_fk_link(name))
+            else:
+                result.append(name)
+
+        return result
+
+    def _get_list_display_auto_fkey_fields(self) -> Iterable[str]:
+        list_display_auto_fkey_fields = []
+
+        if isinstance(self.list_display_auto_fkey_fields, bool):
+            if self.list_display_auto_fkey_fields:
+                for field in self.model._meta.get_fields():
+                    if field.is_relation and field.many_to_one:
+                        list_display_auto_fkey_fields.append(field.name)
+        else:
+            list_display_auto_fkey_fields = list(self.list_display_auto_fkey_fields)
+
+        # Check if the configured field is actually a foreign key
+        # TODO @suricactus: move the check if `list_display_auto_fkey_fields` consists only foreign keys on admin register time, rather than admin rendering time
+        for field_name in list_display_auto_fkey_fields:
+            field = self.model._meta.get_field(field_name)
+            if not (field.is_relation and field.many_to_one):
+                raise ImproperlyConfigured(
+                    "The field '{}' is not a foreign key.".format(field.name)
+                )
+
+        return list_display_auto_fkey_fields
+
+    def _make_fk_link(self, field_name):
+        field = self.model._meta.get_field(field_name)
+
+        def link(obj):
+            related = getattr(obj, field_name)
+            if related is None:
+                return "-"
+
+            return model_admin_url(related, related)
+
+        link.short_description = field.verbose_name  # type: ignore[attributeAccessIssue]
+        link.admin_order_field = field_name  # type: ignore[functionMemberAccess]
+
+        return link
+
+
 class QFieldCloudModelAdmin(  # type: ignore
     ModelAdminNoPkOrderChangeListMixin,
     ModelAdminEstimateCountMixin,
     ModelAdminSearchParserMixin,
+    ModelAdminListDisplayAutoFkeyFields,
     admin.ModelAdmin,
 ):
     def has_delete_permission(self, request, obj=None):
