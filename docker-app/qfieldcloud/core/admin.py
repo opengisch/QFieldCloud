@@ -1000,9 +1000,9 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "name",
         "type",
         "assigned_to",
-        "project__name",
+        "project",
         "organization",
-        "created_by__link",
+        "created_by",
         "created_at",
     )
     autocomplete_fields = ("project",)
@@ -1013,17 +1013,6 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "assigned_to__username__icontains",
         "organization__username__icontains",
     )
-
-    @admin.display(ordering="created_by", description=_("Created by"))
-    def created_by__link(self, instance):
-        return model_admin_url(instance.created_by)
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance):
-        if instance.project:
-            return model_admin_url(instance.project, instance.project.name)
-
-        return None
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -1356,12 +1345,11 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
 class JobAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
-        "project__owner",
-        "project__name",
+        "project",
         "type",
         "status",
         "error_type",
-        "created_by__link",
+        "created_by",
         "created_at",
         "updated_at",
     )
@@ -1450,18 +1438,6 @@ class JobAdmin(QFieldCloudModelAdmin):
             return f"{instance.feedback['error_type']}".strip()
 
         return None
-
-    @admin.display(ordering="project__owner")
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
-
-    @admin.display(ordering="created_by")
-    def created_by__link(self, instance):
-        return model_admin_url(instance.created_by)
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -1560,8 +1536,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "deltafile_id",
-        "project__owner",
-        "project__name",
+        "project",
         "last_status",
         "created_by",
         "created_at",
@@ -1644,14 +1619,6 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     def last_feedback__pre(self, instance):
         return format_pre_json(instance.last_feedback)
-
-    @admin.display(ordering="project__owner")
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
 
     def set_status_pending(self, request, queryset):
         queryset.update(last_status=Delta.Status.PENDING)
@@ -1766,7 +1733,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     list_display = (
         "username",
         "email",
-        "organization_owner__link",
+        "organization_owner",
         "date_joined",
     )
 
@@ -1813,12 +1780,6 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         </p>
         """
         return format_html(f"{userlinks} {help_text}")
-
-    @admin.display(description=_("Owner"))
-    def organization_owner__link(self, instance):
-        return model_admin_url(
-            instance.organization_owner, instance.organization_owner.username
-        )
 
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
@@ -1946,8 +1907,7 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "created_at",
-        "project__owner",
-        "project__name",
+        "project",
         "short_file_link",
         "user_agent",
     )
@@ -1994,20 +1954,6 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
                 obj.deltafile.url,
                 filename,
             )
-
-        return "-"
-
-    @admin.display(ordering="project__owner")
-    def project__owner(self, instance: FaultyDeltaFile) -> str:
-        if instance.project:
-            return model_admin_url(instance.project.owner)
-
-        return "-"
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance: FaultyDeltaFile) -> str:
-        if instance.project:
-            return model_admin_url(instance.project, instance.project.name)
 
         return "-"
 
