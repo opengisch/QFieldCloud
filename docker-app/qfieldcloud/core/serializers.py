@@ -221,7 +221,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             "status",
             "user_role",
             "user_role_origin",
-            "is_attachment_download_on_demand",
             "file_storage_bytes",
         )
         model = Project
