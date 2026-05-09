@@ -266,7 +266,8 @@ def run_workflow(
                 for name, value in zip(step.return_names, return_values):
                     step_returns[step.id][name] = value
 
-    except Exception as err:
+    # Catch all errors to ensure we can return the feedback in a structured way, and log the error properly.
+    except Exception as err:  # noqa: BLE001
         feedback["error"] = str(err)
 
         if isinstance(err, sdk.QfcRequestException):
