@@ -287,7 +287,8 @@ class JobRun:
 
                 try:
                     self.after_docker_exception()
-                except Exception as err:
+                # `after_docker_exception` can raise anything, as it is developed externally
+                except Exception as err:  # noqa: BLE001
                     logger.error(
                         "Failed to run the `after_docker_exception` handler.",
                         exc_info=err,
@@ -326,7 +327,8 @@ class JobRun:
 
                 try:
                     self.after_docker_exception()
-                except Exception as err:
+                # `after_docker_exception` can raise anything, as it is developed externally
+                except Exception as err:  # noqa: BLE001
                     logger.error(
                         "Failed to run the `after_docker_exception` handler.",
                         exc_info=err,
