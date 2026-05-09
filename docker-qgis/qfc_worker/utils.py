@@ -91,7 +91,7 @@ def _write_log_message(message, tag, level):
     # in 3.16 it was Qgis.None, but since None is a reserved keyword, it was inaccessible
     try:
         Qgis.MessageLevel.NoLevel
-    except Exception:
+    except AttributeError:
         Qgis.MessageLevel.NoLevel = 4
 
     if level == Qgis.MessageLevel.NoLevel:
