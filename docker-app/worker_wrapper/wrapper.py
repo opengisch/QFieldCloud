@@ -307,7 +307,8 @@ class JobRun:
             self.job.status = Job.Status.FINISHED
             self.job.save(update_fields=["status", "finished_at"])
 
-        except Exception as err:
+        # Global error handler when handling a job
+        except Exception as err:  # noqa: BLE001
             (_type, _value, tb) = sys.exc_info()
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
