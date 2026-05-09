@@ -266,7 +266,9 @@ class JobRun:
 
                         if feedback.get("error"):
                             feedback["error_origin"] = "container"
-                except Exception as err:
+
+                # Global error handler when handling the feedback from a job
+                except Exception as err:  # noqa: BLE001
                     if not isinstance(feedback, dict):
                         feedback = {"error_feedback": feedback}
 
