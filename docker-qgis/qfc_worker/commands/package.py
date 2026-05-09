@@ -9,7 +9,7 @@ from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
 from libqfieldsync.project import ProjectConfiguration
 from libqfieldsync.utils.file_utils import get_project_in_folder
-from qgis.core import QgsCoordinateTransform, QgsRectangle
+from qgis.core import QgsCoordinateTransform, QgsCsException, QgsRectangle
 
 import qfc_worker.utils
 from qfc_worker.commands_base import QfcBaseCommand
@@ -56,12 +56,13 @@ def call_libqfieldsync_packager(
             if layer_extent.isNull() or not layer_extent.isFinite():
                 continue
 
+            transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
+
             try:
-                transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
                 vl_extent.combineExtentWith(
                     transform.transformBoundingBox(layer_extent)
                 )
-            except Exception as err:
+            except QgsCsException as err:
                 logger.error(
                     "Failed to transform the bbox for layer {} from {} to {} CRS.".format(
                         layer.name(), layer.crs(), project.crs()
