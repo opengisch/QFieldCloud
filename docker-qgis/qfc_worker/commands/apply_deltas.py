@@ -652,7 +652,7 @@ def rollback_deltas(
         # NOTE pathlib operations will raise in case of error
         try:
             layer_backup_path.rename(layer_path)
-        except Exception as err:
+        except (FileExistsError, FileNotFoundError, PermissionError, OSError) as err:
             # TODO nothing better to do here?
             is_success = False
             logger.warning(
@@ -684,9 +684,8 @@ def cleanup_backups(layer_paths: set[str]) -> bool:
         layer_path = Path(layer_path_str)
         layer_backup_path = get_backup_path(layer_path)
         try:
-            if layer_backup_path.exists():
-                layer_backup_path.unlink()
-        except Exception as err:
+            layer_backup_path.unlink(missing_ok=True)
+        except (IsADirectoryError, PermissionError, OSError) as err:
             is_success = False
             logger.warning(
                 f"Unable to remove backup: {layer_backup_path}. Reason: {err}"
