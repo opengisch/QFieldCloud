@@ -547,7 +547,8 @@ def is_localhost(hostname: str, port: int | None = None) -> bool:
                     return True
 
         return False
-    except Exception:
+    # if any error occurs, then just assume it's not localhost
+    except Exception:  # noqa: BLE001
         return False
 
 
