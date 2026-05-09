@@ -16,7 +16,7 @@ import requests
 import sentry_sdk
 from constance import config
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
@@ -333,7 +333,7 @@ class JobRun:
                     )
 
                 self.job.save(update_fields=["status", "feedback", "finished_at"])
-            except Exception as err:
+            except IntegrityError as err:
                 logger.error(
                     "Failed to handle exception and update the job status", exc_info=err
                 )
