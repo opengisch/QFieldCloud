@@ -209,7 +209,10 @@ def json_default(obj):
 
     try:
         obj_str += f" {str(obj)}"
-    except Exception:
+    # Typically, we should only expect `TypeError` if `__str__` or `__repr__` are not present.
+    # Expect any kind of error here, as we are using C++ objects that may be already deleted.
+    # e.g. RuntimeError: wrapped C/C++ object of type QgsProject has been deleted
+    except Exception:  # noqa: BLE001
         obj_str += " <non-representable>"
 
     return f"<non-serializable: {obj_str}>"
