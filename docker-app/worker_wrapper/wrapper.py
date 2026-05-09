@@ -437,7 +437,7 @@ class JobRun:
                     b"Job has been cancelled by parent process!",
                 )
 
-        except Exception as err:
+        except requests.exceptions.ConnectionError as err:
             logger.exception("Timeout error.", exc_info=err)
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
