@@ -17,6 +17,7 @@ jobs:
             dockerfile: docker-app/Dockerfile
             docker_context: docker-app
             docker_target: webserver_runtime
+            enable_ghcr: true
             enable_dockerhub: true
 
           -
@@ -24,6 +25,7 @@ jobs:
             dockerfile: docker-app/Dockerfile
             docker_context: docker-app
             docker_target: webserver_test
+            enable_ghcr: true
             enable_dockerhub: false
 
           -
@@ -31,24 +33,28 @@ jobs:
             dockerfile: docker-app/Dockerfile
             docker_context: docker-app
             docker_target: worker_wrapper_runtime
+            enable_ghcr: true
             enable_dockerhub: true
 
           -
             service_name: qgis
             dockerfile: docker-qgis/Dockerfile
             docker_context: docker-qgis
+            enable_ghcr: true
             enable_dockerhub: true
 
           -
             service_name: nginx
             dockerfile: docker-nginx/Dockerfile
             docker_context: docker-nginx
+            enable_ghcr: true
             enable_dockerhub: true
 
           -
             service_name: createbuckets
             dockerfile: docker-createbuckets/Dockerfile
             docker_context: docker-createbuckets
+            enable_ghcr: true
             enable_dockerhub: true
 
     steps:
@@ -62,7 +68,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            name=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=true
+            name=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_ghcr }}
             name=opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
 
           flavor: |
@@ -78,6 +84,7 @@ jobs:
 
       -
         name: Login to GitHub Container Repository (ghcr.io)
+        if: ${{ matrix.services.enable_ghcr }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -104,7 +111,7 @@ jobs:
         with:
           file: ${{ matrix.services.dockerfile }}
           context: ${{ matrix.services.docker_context }}
-          push: ${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
+          push: ${{ (matrix.services.enable_ghcr || matrix.services.enable_dockerhub) && (github.event_name == 'release' || github.ref_name == 'master') }}
           target: ${{ matrix.services.docker_target }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache
