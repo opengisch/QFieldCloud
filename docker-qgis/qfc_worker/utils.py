@@ -919,6 +919,10 @@ def layers_data_to_string(layers_by_id):
             ],
         )
 
+        # Avoid dumping potentially very long field values which can affect performance
+        # TODO @suricactus: No need to delete fields once the `Layer` and `LayerField` models are implemented as the data will no longer fatten the `Project` model, see https://app.clickup.com/t/2192114/QF-8219
+        del layer_data["fields"]
+
     return output
 
 
