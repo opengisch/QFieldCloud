@@ -18,6 +18,10 @@ RUN apt-get update \
     libpq-dev \
     python3-dev \
     gcc \
+    # fiona dependencies
+    g++ \
+    libgdal-dev \
+    gdal-bin \
     # ability to install modules from git repositories (e.g. `django-cron`)
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -109,11 +113,22 @@ USER app
 # WEBSERVER TEST         #
 ##########################
 
+# a separate builder stage for webserver test environment to compile `fiona` only
+FROM build AS build_webserver_test
+COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
+RUN echo "GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2)"
+RUN export GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2); echo "GDAL_VERSION=$GDAL_VERSION" && pip3 install $(grep ^fiona requirements/requirements_test.txt)
+
 # a separate stage for webserver test environment
 FROM base AS webserver_test
 ENV LOGGER_SOURCE=app
+
+# Copy fiona only
+COPY --from=build_webserver_test /usr/local/lib/python3.14/site-packages/fiona /usr/local/lib/python3.14/site-packages/fiona/
+COPY --from=build_webserver_test /usr/local/lib/python3.14/site-packages/fiona-1.10.1.dist-info /usr/local/lib/python3.14/site-packages/fiona-1.10.1.dist-info
+
 COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
-RUN pip3 install -r requirements/requirements_test.txt
+RUN export GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2); echo "GDAL_VERSION=$GDAL_VERSION" && pip3 install -r requirements/requirements_test.txt
 EXPOSE 8000
 
 COPY . .
