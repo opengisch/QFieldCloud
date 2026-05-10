@@ -52,40 +52,6 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     ) -> HttpResponse | Response:
         return self._assertFileUploaded(user, project, filename, content)
 
-    def _assertFileUploadedLegacy(
-        self, user: User, project: Project, filename: str, content: IO
-    ) -> HttpResponse | Response:
-        files_count = len(
-            list(filter(lambda f: f.latest.name != filename, project.legacy_files))
-        )
-        max_versions = user.useraccount.current_subscription.plan.storage_keep_versions
-
-        try:
-            file = project.legacy_get_file(filename)
-
-            versions_count = len(file.versions)
-            latest_version = file.latest
-        except Exception:
-            versions_count = 0
-            latest_version = None
-
-        response = self._upload_file(user, project, filename, content)
-
-        # clear the cache, as `Project.legacy_files` is `@cached_property`
-        del project.legacy_files
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(project.project_files_count, files_count + 1)
-
-        file = project.legacy_get_file(filename)
-
-        self.assertEqual(file.latest.name, filename)
-        self.assertEqual(len(file.versions), min((versions_count + 1), max_versions))
-        self.assertEqual(file.latest, file.versions[-1])
-        self.assertNotEqual(file.latest, latest_version)
-
-        return response
-
     def _assertFileUploaded(
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
