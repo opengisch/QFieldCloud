@@ -78,7 +78,7 @@ jobs:
 
           tags: |
             type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
-            type=sha,format=short,prefix=commit-,event=pr
+            type=sha,format=short,prefix=commit-
             type=match,pattern=v(.*),group=1
             type=edge,branch=master
 
@@ -111,7 +111,7 @@ jobs:
         with:
           file: ${{ matrix.services.dockerfile }}
           context: ${{ matrix.services.docker_context }}
-          push: ${{ (matrix.services.enable_ghcr || matrix.services.enable_dockerhub) && (github.event_name == 'release' || github.ref_name == 'master') }}
+          push: ${{ matrix.services.enable_ghcr || (matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master')) }}
           target: ${{ matrix.services.docker_target }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache
