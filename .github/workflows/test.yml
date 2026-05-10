@@ -150,3 +150,42 @@ jobs:
       #   timeout-minutes: 30
       #   with:
       #     limit-access-to-actor: true
+
+  django_checks:
+    name: Run Django checks
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Export the env variables file
+        run: |
+          cp .env.example .env
+          sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
+          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
+      - name: Pull docker containers
+        run: docker compose pull
+
+      - name: Build and run docker containers
+        run: |
+          docker compose up -d --build
+
+      - name: Initial manage.py commands
+        run: |
+          docker compose run app python manage.py makemigrations --no-input --check
+          docker compose run app python manage.py migrate
+          docker compose run app python manage.py collectstatic
+
+      - name: Validate templates
+        run: |
+          docker compose run --rm app python manage.py validate_templates
+
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker compose logs
