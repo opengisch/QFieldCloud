@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.contenttypes",
     "django.contrib.gis",
+    "django.contrib.humanize",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -967,6 +968,20 @@ JAZZMIN_SETTINGS = {
 #     "logo_alt": "Your logo description",
 #     "favicon": "path/to/favicon.ico",
 # }
+
+
+###########################
+# List of apps to ignore when ensuring Django templates validity.
+###########################
+
+# Ignore the following apps
+# NOTE Ideally `VALIDATE_TEMPLATES_IGNORES` should be used, but it uses only the basename of the ignored files, see https://github.com/django-extensions/django-extensions/blob/4.1/django_extensions/management/commands/validate_templates.py#L64-L69
+# See https://django-extensions.readthedocs.io/en/latest/validate_templates.html#validate-templates-ignore-apps
+VALIDATE_TEMPLATES_IGNORE_APPS = [
+    "allauth",
+    "django_filters",
+    "jazzmin",
+]
 
 
 ###########################
