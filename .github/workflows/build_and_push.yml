@@ -1,11 +1,14 @@
 name: Build and Push
 on:
-  push:
-  release:
-    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build_and_push:
+    if: false
     runs-on: ubuntu-24.04
     name: "Build and Push (${{ matrix.services.service_name }})"
     strategy:

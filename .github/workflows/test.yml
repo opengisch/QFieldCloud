@@ -1,8 +1,8 @@
-name: Test
+name: CI
 
 permissions:
   contents: read
-  packages: read
+  packages: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,6 +14,9 @@ on:
       - master
       - release
   pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -35,9 +38,118 @@ jobs:
           SKIP: no-commit-to-branch
         uses: pre-commit/action@v3.0.1
 
+  build_images:
+    name: Build image (${{ matrix.services.service_name }})
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        services:
+          -
+            service_name: app
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: webserver_runtime
+            enable_tests: false
+            enable_dockerhub: true
+
+          -
+            service_name: app-test
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: webserver_test
+            enable_tests: true
+            enable_dockerhub: false
+
+          -
+            service_name: worker-wrapper
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: worker_wrapper_runtime
+            enable_tests: true
+            enable_dockerhub: true
+
+          -
+            service_name: qgis
+            dockerfile: docker-qgis/Dockerfile
+            docker_context: docker-qgis
+            enable_tests: true
+            enable_dockerhub: true
+
+          -
+            service_name: nginx
+            dockerfile: docker-nginx/Dockerfile
+            docker_context: docker-nginx
+            enable_tests: true
+            enable_dockerhub: true
+
+          -
+            service_name: createbuckets
+            dockerfile: docker-createbuckets/Dockerfile
+            docker_context: docker-createbuckets
+            enable_tests: true
+            enable_dockerhub: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        if: ${{ matrix.services.enable_tests || github.event_name == 'release' || github.ref_name == 'master' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        if: ${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Metadata
+        id: docker_metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            name=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_tests || github.event_name == 'release' || github.ref_name == 'master' }}
+            name=opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
+
+          flavor: |
+            latest=auto
+            prefix=,onlatest=false
+            suffix=
+
+          tags: |
+            type=raw,value=commit-${{ github.event.pull_request.head.sha || github.sha }},enable=${{ matrix.services.enable_tests }}
+            type=match,pattern=v(.*),group=1
+            type=edge,branch=master
+
+      - name: Docker Build ${{ matrix.services.service_name }}
+        if: ${{ matrix.services.enable_tests || github.event_name == 'release' || github.ref_name == 'master' }}
+        uses: docker/build-push-action@v6
+        with:
+          file: ${{ matrix.services.dockerfile }}
+          context: ${{ matrix.services.docker_context }}
+          push: true
+          target: ${{ matrix.services.docker_target }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache,mode=max
+
   test:
     name: Run tests
     runs-on: ubuntu-24.04
+    needs: build_images
     strategy:
       fail-fast: false
       matrix:
@@ -66,8 +178,8 @@ jobs:
           COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
           sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
           IMAGE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA::7}" >> .env
-          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA::7}" >> .env
+          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA}" >> .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
           cat <<EOF >> .env
@@ -101,16 +213,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull docker containers
-        run: |
-          for attempt in {1..30}; do
-            docker compose pull && break
-
-            if [ "$attempt" -eq 30 ]; then
-              exit 1
-            fi
-
-            sleep 20
-          done
+        run: docker compose pull
 
       - name: Run docker containers
         run: |
@@ -165,6 +268,7 @@ jobs:
   django_checks:
     name: Run Django checks
     runs-on: ubuntu-24.04
+    needs: build_images
     continue-on-error: true
     steps:
       - name: Checkout repo
@@ -179,8 +283,8 @@ jobs:
           COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
           sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
           IMAGE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA::7}" >> .env
-          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA::7}" >> .env
+          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA}" >> .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
       - name: Login to GitHub Container Repository (ghcr.io)
@@ -191,16 +295,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull docker containers
-        run: |
-          for attempt in {1..30}; do
-            docker compose pull && break
-
-            if [ "$attempt" -eq 30 ]; then
-              exit 1
-            fi
-
-            sleep 20
-          done
+        run: docker compose pull
 
       - name: Run docker containers
         run: |
