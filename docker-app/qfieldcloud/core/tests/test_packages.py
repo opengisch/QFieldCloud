@@ -137,7 +137,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 response = self.client.get(f"/api/v1/packages/{project.id}/latest/")
                 package_payload = response.json()
 
-                self.assertNotEquals(package_payload.get("code"), "invalid_job")
+                self.assertNotEqual(package_payload.get("code"), "invalid_job")
                 self.assertLess(
                     package_payload["packaged_at"], timezone.now().isoformat()
                 )
