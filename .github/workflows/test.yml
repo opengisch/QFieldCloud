@@ -1,5 +1,9 @@
 name: Test
 
+permissions:
+  contents: read
+  packages: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -59,7 +63,11 @@ jobs:
         run: |
           cp .env.example .env
           sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
-          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+          COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
+          sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
+          IMAGE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA::7}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA::7}" >> .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
           cat <<EOF >> .env
@@ -85,12 +93,28 @@ jobs:
           }'
           EOF
 
-      - name: Pull docker containers
-        run: docker compose pull
+      - name: Login to GitHub Container Repository (ghcr.io)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and run docker containers
+      - name: Pull docker containers
         run: |
-          docker compose up -d --build
+          for attempt in {1..30}; do
+            docker compose pull && break
+
+            if [ "$attempt" -eq 30 ]; then
+              exit 1
+            fi
+
+            sleep 20
+          done
+
+      - name: Run docker containers
+        run: |
+          docker compose up -d --no-build
 
       - name: Initial manage.py commands
         run: |
@@ -152,15 +176,35 @@ jobs:
         run: |
           cp .env.example .env
           sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
-          sed -ri 's/^COMPOSE_FILE=(.*)/COMPOSE_FILE=\1:docker-compose.override.test.yml/g' .env
+          COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
+          sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
+          IMAGE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA::7}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA::7}" >> .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
-      - name: Pull docker containers
-        run: docker compose pull
+      - name: Login to GitHub Container Repository (ghcr.io)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and run docker containers
+      - name: Pull docker containers
         run: |
-          docker compose up -d --build
+          for attempt in {1..30}; do
+            docker compose pull && break
+
+            if [ "$attempt" -eq 30 ]; then
+              exit 1
+            fi
+
+            sleep 20
+          done
+
+      - name: Run docker containers
+        run: |
+          docker compose up -d --no-build
 
       - name: Initial manage.py commands
         run: |
