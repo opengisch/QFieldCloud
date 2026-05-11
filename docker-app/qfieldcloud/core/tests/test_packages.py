@@ -740,7 +740,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             package_job=package_job_1,
         )
 
-        self.assertEquals(package_files_p1_qs.count(), 2)
+        self.assertEqual(package_files_p1_qs.count(), 2)
 
         # repackage the project for the same user.
         package_job_2 = repackage(self.project1, self.user1)
@@ -754,7 +754,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             package_job=package_job_1,
         )
 
-        self.assertEquals(package_files_p1_qs.count(), 0)
+        self.assertEqual(package_files_p1_qs.count(), 0)
 
         # make sure new package files are there.
         package_files_p2_qs = File.objects.filter(
@@ -763,7 +763,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             package_job=package_job_2,
         )
 
-        self.assertEquals(package_files_p2_qs.count(), 2)
+        self.assertEqual(package_files_p2_qs.count(), 2)
 
         # make sure the other user's package files are there.
         other_user_package_files_qs = File.objects.filter(
@@ -772,7 +772,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             package_job=other_user_package_job,
         )
 
-        self.assertEquals(other_user_package_files_qs.count(), 2)
+        self.assertEqual(other_user_package_files_qs.count(), 2)
 
     def test_needs_repackaging(self):
         # 0. Create two users, where one owns the project and the other is a project collaborator.
