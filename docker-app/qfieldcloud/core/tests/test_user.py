@@ -487,7 +487,7 @@ class CreatePersonAPITestCase(APITestCase):
             },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("email", response.data)
+        self.assertFalse(Person.objects.filter(username="newuser").exists())
 
     def test_list_still_works_for_staff(self):
         """GET /api/v1/users/ must still function after adding POST support."""
