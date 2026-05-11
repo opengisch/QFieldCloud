@@ -41,9 +41,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def assertLayerData(
         self, layer_data: dict, is_valid: bool, is_localized: bool, error_code: str
     ) -> None:
-        self.assertEquals(layer_data["is_valid"], is_valid)
-        self.assertEquals(layer_data["is_localized"], is_localized)
-        self.assertEquals(layer_data["error_code"], error_code)
+        self.assertEqual(layer_data["is_valid"], is_valid)
+        self.assertEqual(layer_data["is_localized"], is_localized)
+        self.assertEqual(layer_data["error_code"], error_code)
 
     def test_bad_layer_handler_values_for_process_projectfile_job(self):
         # Test that BadLayerHandler is parsing data properly during process projectfile jobs

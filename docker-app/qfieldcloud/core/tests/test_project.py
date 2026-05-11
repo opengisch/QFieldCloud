@@ -891,11 +891,11 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.client.get("/api/v1/projects/")
 
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         payload = response.json()
 
-        self.assertEquals(len(payload), 1)
+        self.assertEqual(len(payload), 1)
 
         project_json = payload[0]
 
