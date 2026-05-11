@@ -1232,7 +1232,7 @@ class Project(models.Model):
     storage_keep_versions = models.PositiveIntegerField(
         _("File versions to keep"),
         help_text=_(
-            "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Available to Premium users only."
+            "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Not configurable for free users."
         ),
         null=True,
         blank=True,

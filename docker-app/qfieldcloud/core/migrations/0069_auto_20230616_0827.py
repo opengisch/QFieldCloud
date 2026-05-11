@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             field=models.PositiveIntegerField(
                 verbose_name="File versions to keep",
                 help_text=(
-                    "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Available to Premium users only."
+                    "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Not configurable for free users."
                 ),
                 validators=[
                     django.core.validators.MinValueValidator(1),
