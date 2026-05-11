@@ -109,7 +109,7 @@ jobs:
         run: |
           docker compose run --rm app python manage.py makemigrations --no-input --check
           docker compose run --rm app python manage.py migrate
-          docker compose run --rm app python manage.py collectstatic
+          docker compose run --rm app python manage.py collectstatic --no-input
 
       - name: Run mandatory unit and integration tests
         if: matrix.django_app != '__flaky__'
@@ -179,7 +179,7 @@ jobs:
         run: |
           docker compose run --rm app python manage.py makemigrations --no-input --check
           docker compose run --rm app python manage.py migrate
-          docker compose run --rm app python manage.py collectstatic
+          docker compose run --rm app python manage.py collectstatic --no-input
 
       - name: Django check
         run: |
