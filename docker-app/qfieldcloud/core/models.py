@@ -2691,7 +2691,7 @@ class Secret(models.Model):
             ),
             models.CheckConstraint(
                 # we want either the project to be set or the organization, but never both set or unset, therefore ^ (XOR)
-                check=Q(project__isnull=True) ^ Q(organization__isnull=True),
+                condition=Q(project__isnull=True) ^ Q(organization__isnull=True),
                 name="secret_assigned_to_organization_or_user",
             ),
         ]
