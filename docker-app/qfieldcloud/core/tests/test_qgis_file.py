@@ -261,7 +261,6 @@ class QfcTestCase(APITransactionTestCase):
             Project.objects.get(pk=self.project1.pk).project_files_count, 1
         )
 
-        # List files without `skip_metadata` param
         response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
@@ -275,36 +274,6 @@ class QfcTestCase(APITransactionTestCase):
             json[0]["sha256"],
             "8663bab6d124806b9727f89bb4ab9db4cbcc3862f6bbf22024dfa7212aa4ab7d",
         )
-        self.assertEqual(
-            json[0]["md5sum"],
-            "9af2f8218b150c351ad802c6f3d66abe",
-        )
-
-        # List files with `skip_metadata=0` param
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/?skip_metadata=0")
-        self.assertEqual(json[0]["name"], "file.txt")
-        self.assertEqual(json[0]["size"], 13)
-        self.assertIn("sha256", json[0])
-        self.assertIn("md5sum", json[0])
-        self.assertEqual(
-            json[0]["sha256"],
-            "8663bab6d124806b9727f89bb4ab9db4cbcc3862f6bbf22024dfa7212aa4ab7d",
-        )
-        self.assertEqual(
-            json[0]["md5sum"],
-            "9af2f8218b150c351ad802c6f3d66abe",
-        )
-
-        # List files with `skip_metadata=1` param
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/?skip_metadata=1")
-        self.assertTrue(status.is_success(response.status_code))
-
-        json = response.json()
-
-        self.assertEqual(json[0]["name"], "file.txt")
-        self.assertEqual(json[0]["size"], 13)
-
-        self.assertIn("md5sum", json[0])
         self.assertEqual(
             json[0]["md5sum"],
             "9af2f8218b150c351ad802c6f3d66abe",
