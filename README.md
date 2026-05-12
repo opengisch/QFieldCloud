@@ -102,7 +102,7 @@ To verify the instance is working fine, you can check using the healthcheck endp
 curl https://localhost/api/v1/status/
 ```
 
-If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain the most of the relevant information.
+If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain most of the relevant information.
 
 ```shell
 docker compose logs nginx app
@@ -148,7 +148,7 @@ psql 'service=localhost.qfield.cloud'
 
 ### Dependencies
 
-QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage it's dependencies.
+QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage its dependencies.
 All dependencies are listed in `requirements*.in` files.
 When a `pip` a dependency is changed, the developer should produce the new `requirements*.txt` files.
 
@@ -260,9 +260,9 @@ For local development you use `docker-compose.override.local.yml` with `DEBUG=Tr
 The VSCode debugger will attach to the debugger in the container as configured in `.vscode/launch.json`.
 
 There are two debugger configurations: for `app` and for `worker_wrapper` services.
-The debugger can triggered with `F5`.
+The debugger can be triggered with `F5`.
 
-The default debugger configuration would not pause on boostrapping operations (module imports, class/function definitions etc).
+The default debugger configuration would not pause on bootstrapping operations (module imports, class/function definitions etc).
 
 To make sure the debugger is running before any application code is running, you have several options.
 
@@ -275,7 +275,7 @@ print("debugpy waiting for debugger... 🐛")
 debugpy.wait_for_client()  # optional
 ```
 
-2. Alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`. Note the exposed port here might be different from your local configuration.
+2. Alternatively, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`. Note the exposed port here might be different from your local configuration.
 
 ```shell
     docker compose run --rm -p 5680:5680 app python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
@@ -357,7 +357,7 @@ pre-commit install
 ### Launch a server instance
 
 > [!CAUTION]
-> QFieldCloud is designed to work with externally managed services for it's database (PostgreSQL), Object Storage (S3) and mailing provider.
+> QFieldCloud is designed to work with externally managed services for its database (PostgreSQL), Object Storage (S3) and mailing provider.
 >
 > For small self-hosted environments you may run QFieldCloud on a single server using `docker-compose.override.standalone.yml`, but this is **entirely at your own risk**.
 >
@@ -462,7 +462,7 @@ You can use either the integrated `rustfs` object storage, or use an external pr
 
 ### Database
 
-QFieldCloud requires a PostgreSQL/PostGIS database persisting it's own data.
+QFieldCloud requires a PostgreSQL/PostGIS database persisting its own data.
 The recommended and only supported way is to use an external to the docker-compose stack PostgreSQL/PostGIS database.
 Check the corresponding `POSTGRES_*` environment variables for more info.
 
@@ -487,15 +487,15 @@ For the best chance of having your PR merged, you must first communicate your id
 
 Discussing it first is crucial. Not every idea is accepted, and these steps will save you the time and energy of creating a PR that wouldn't be merged.
 
-Any new, follow-up discussions should be opened in a new issue that references the original.
+Any new follow-up discussions should be opened in a new issue that references the original.
 
 
 ### Before opening a new PR
 
-- Make sure you prepare a small focused branch with your changes, properly referencing the source issue and add a detailed description to the PR opening message.
+- Make sure you prepare a small, focused branch with your changes, properly referencing the source issue and add a detailed description to the PR opening message.
 - If the change addresses a UI/UX change, provide a before and after screenshot.
 - Your branch should be based on the latest `master` branch.
-- In the rare occurances when it is not based on `master`, please base your PR on the respective branch.
+- In the rare occurences when it is not based on `master`, please base your PR on the respective branch.
 
 
 ### Pull requests
