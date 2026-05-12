@@ -678,7 +678,12 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/axes/accesslog/add/",
     "/admin/auditlog/logentry/add/",
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
+    "/admin/filestorage/file/add/",
+    "/admin/filestorage/fileversion/add/",
 )
+
+# Admin sort URLs which will be skipped from checking if they return HTTP 200
+QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
 # Sets the default admin list view per page, the Django default is 100
 QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
@@ -688,9 +693,6 @@ QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 
 # Default limit for paginating data from views using QfcLimitOffsetPagination
 QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT = 50
-
-# Admin sort URLs which will be skipped from checking if they return HTTP 200
-QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
 APPLY_DELTAS_LIMIT = 1000
 
