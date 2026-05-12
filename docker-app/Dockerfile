@@ -112,7 +112,12 @@ USER app
 # a separate stage for webserver test environment
 FROM base AS webserver_test
 ENV LOGGER_SOURCE=app
+
+# we need to install both runtime deps (e.g. `gunicorn`) and test deps (e.g. `pytest`) for the test environment
+COPY ./requirements/requirements_runtime.txt requirements/requirements_runtime.txt
 COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
+
+RUN pip3 install -r requirements/requirements_runtime.txt
 RUN pip3 install -r requirements/requirements_test.txt
 EXPOSE 8000
 
