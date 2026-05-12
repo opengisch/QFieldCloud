@@ -31,13 +31,13 @@ fiona==1.10.1
     # via -r /requirements/requirements_test.in
 h11==0.16.0
     # via wsproto
-idna==3.14
+idna==3.15
     # via
     #   requests
     #   trio
 imageio==2.37.3
     # via -r /requirements/requirements_test.in
-numpy==2.2.6
+numpy==2.4.4
     # via
     #   imageio
     #   shapely
@@ -53,7 +53,7 @@ requests==2.34.0
     # via requests-mock
 requests-mock==1.12.1
     # via -r /requirements/requirements_test.in
-selenium==4.43.0
+selenium==4.44.0
     # via -r /requirements/requirements_test.in
 shapely==2.1.2
     # via -r /requirements/requirements_test.in
