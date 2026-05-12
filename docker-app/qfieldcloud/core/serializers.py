@@ -355,7 +355,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
             "last_name": {"required": False, "default": ""},
         }
 
-    def validate_email(self, value):
+    def validate_email(self, value: str) -> str:
         if Person.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError(
                 _("This email is already taken by another user!")
@@ -363,7 +363,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
         return value
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict[str, Any]) -> Person:
         return Person.objects.create_user(
             has_accepted_tos=False,
             **validated_data,
