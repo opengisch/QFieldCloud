@@ -300,19 +300,6 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
-    def get_absolute_url(self):
-        if self.type == User.Type.TEAM:
-            team = Team.objects.get(pk=self.pk)
-            return reverse_lazy(
-                "settings_teams_edit",
-                kwargs={
-                    "username": team.team_organization.username,
-                    "teamname": team.teamname,
-                },
-            )
-        else:
-            return reverse_lazy("profile_overview", kwargs={"username": self.username})
-
     @property
     def is_person(self):
         return self.type == User.Type.PERSON
@@ -1499,12 +1486,6 @@ class Project(models.Model):
             kwargs={
                 "project_id": self.id,
             },
-        )
-
-    def get_absolute_url(self):
-        return reverse_lazy(
-            "project_overview",
-            kwargs={"username": self.owner.username, "project": self.name},
         )
 
     def __str__(self):
