@@ -4,6 +4,14 @@ services:
     build:
       args:
         - DEBUG_BUILD=1
+
+    # TODO @suricactus: Most probably this needs to be removed once QF-5033 Bump Python to 3.14.1+in the Django image is merged
+    # required to allow `memray` to inspect memory usage of the app container
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+
     ports:
       # allow direct access without nginx
       - ${DJANGO_DEV_PORT}:8000
