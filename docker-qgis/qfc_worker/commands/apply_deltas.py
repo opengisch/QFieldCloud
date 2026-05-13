@@ -652,7 +652,13 @@ def rollback_deltas(
         # NOTE pathlib operations will raise in case of error
         try:
             layer_backup_path.rename(layer_path)
-        except (FileExistsError, FileNotFoundError, PermissionError, OSError) as err:
+        except (
+            FileExistsError,
+            FileNotFoundError,
+            IsADirectoryError,
+            PermissionError,
+            OSError,
+        ) as err:
             # TODO nothing better to do here?
             is_success = False
             logger.warning(
