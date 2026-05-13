@@ -70,8 +70,7 @@ jobs:
                       "webdav_url": "http://qfc_webdav_user:qfc_webdav_pwd@webdav",
                       "public_url": "http://webdav",
                       "basic_auth": "qfc_webdav_user:qfc_webdav_pwd"
-                  },
-                  "QFC_IS_LEGACY": false
+                  }
               },
               "default": {
                   "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
@@ -81,8 +80,7 @@ jobs:
                       "bucket_name": "qfieldcloud-local",
                       "region_name": "",
                       "endpoint_url": "http://172.17.0.1:8009"
-                  },
-                  "QFC_IS_LEGACY": false
+                  }
               }
           }'
           EOF

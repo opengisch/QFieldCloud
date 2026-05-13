@@ -3,7 +3,6 @@ import json
 import logging
 import os
 from datetime import datetime
-from pathlib import PurePath
 from typing import IO, NamedTuple
 
 import jsonschema
@@ -84,20 +83,6 @@ def strip_json_null_bytes(file: IO) -> IO:
     result.seek(0)
 
     return result
-
-
-def is_the_qgis_file(filename: str) -> bool:
-    """Returns whether the filename seems to be a QGIS project file by checking the file extension.
-
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    path = PurePath(filename)
-
-    if path.suffix.lower() in (".qgs", ".qgz"):
-        return True
-
-    return False
 
 
 def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:

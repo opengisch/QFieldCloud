@@ -16,7 +16,6 @@ class S3StorageOptions(TypedDict):
 class DjangoStorages(TypedDict):
     BACKEND: str
     OPTIONS: S3StorageOptions
-    QFC_IS_LEGACY: bool
 
 
 STORAGES: dict[str, DjangoStorages] = json.loads(os.environ["STORAGES"])
