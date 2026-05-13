@@ -3,6 +3,7 @@ from django.views.decorators.cache import cache_page
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.authentication.sso.auth_providers import get_auth_providers
 from qfieldcloud.core.serializers import ServerInfoSerializer
+from qfieldcloud.core.utils2.view_utils import get_signup_url
 from qfieldcloud.core.whitelabel import get_whitelabel_settings
 from rest_framework import status, views
 from rest_framework.permissions import AllowAny
@@ -23,6 +24,7 @@ class ServerInfoView(views.APIView):
             {
                 "whitelabel": get_whitelabel_settings(),
                 "auth_providers": get_auth_providers(request),
+                "signup_url": get_signup_url(request),
             },
             context={"request": request},
         )
