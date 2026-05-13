@@ -6,6 +6,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
@@ -28,7 +29,6 @@ from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
-from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from django_stubs_ext import StrOrPromise
 from encrypted_fields.fields import EncryptedTextField
