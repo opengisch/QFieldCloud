@@ -23,7 +23,6 @@ class WebDavStorageOptions(TypedDict):
 class DjangoStorages(TypedDict):
     BACKEND: str
     OPTIONS: S3StorageOptions | WebDavStorageOptions
-    QFC_IS_LEGACY: bool
 
 
 class StoragesConfig(TypedDict):
