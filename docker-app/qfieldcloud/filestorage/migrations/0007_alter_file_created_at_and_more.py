@@ -9,10 +9,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="fileversion",
-            name="legacy_id",
-        ),
         migrations.AlterField(
             model_name="file",
             name="created_at",

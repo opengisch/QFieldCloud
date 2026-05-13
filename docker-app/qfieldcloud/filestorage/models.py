@@ -337,6 +337,9 @@ class FileVersion(models.Model):
     # Timestamp when the `FileVersion` record was inserted in the database.
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
 
+    # The version id from the legacy object storage. The version id format is provider dependent, e.g. on S3 it is a random string, on others it is a UUID.
+    legacy_id = models.TextField(max_length=255, editable=False, null=True)
+
     @property
     def display(self) -> str:
         return self.uploaded_at.strftime("v%Y%m%d%H%M%S")
