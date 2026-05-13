@@ -88,12 +88,6 @@ QtCore.qInstallMessageHandler(_qt_message_handler)
 def _write_log_message(message, tag, level):
     log_level = logging.DEBUG
 
-    # in 3.16 it was Qgis.None, but since None is a reserved keyword, it was inaccessible
-    try:
-        Qgis.MessageLevel.NoLevel
-    except AttributeError:
-        Qgis.MessageLevel.NoLevel = 4
-
     if level == Qgis.MessageLevel.NoLevel:
         log_level = logging.DEBUG
     elif level == Qgis.MessageLevel.Info:
