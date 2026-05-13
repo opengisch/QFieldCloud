@@ -1820,10 +1820,6 @@ class Project(models.Model):
             )
         )
 
-    def delete(self, *args, **kwargs):
-        """Deletes the project and the thumbnail for the legacy storage."""
-        return super().delete(*args, **kwargs)
-
     @property
     def owner_can_create_job(self):
         # NOTE consider including in status refactoring
