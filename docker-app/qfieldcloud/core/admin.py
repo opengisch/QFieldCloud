@@ -66,6 +66,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
+    ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
     Secret,
@@ -1280,6 +1281,35 @@ class ProjectAdmin(QFieldCloudModelAdmin):
             return ""
 
         return format_pre_json(instance.project_details)
+
+    def get_urls(self) -> list:
+        urls = super().get_urls()
+        return [
+            path(
+                "<path:object_id>/run-process-projectfile-job/",
+                self.admin_site.admin_view(self.run_process_projectfile_job),
+                name="run_process_projectfile_job",
+            ),
+            *urls,
+        ]
+
+    def run_process_projectfile_job(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        project = Project.objects.get(pk=object_id)
+
+        # Here we run the process projectfile job as the project's "owner" user,
+        # i.e. the organization owner if the project owner is an organization,
+        # to ensure that the job has the necessary permissions to access the project files.
+        if project.owner.is_organization:
+            created_by_user = project.owner.organization_owner
+        else:
+            created_by_user = project.owner
+
+        ProcessProjectfileJob.objects.create(
+            project=project, created_by=created_by_user
+        )
+        return HttpResponseRedirect("..")
 
     def save_formset(self, request, form, formset, change):
         for form_obj in formset:

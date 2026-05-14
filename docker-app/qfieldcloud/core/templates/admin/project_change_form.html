@@ -4,6 +4,12 @@
 {% block submit_buttons_bottom %}
   {{ block.super }}
 
+  {% if original %}
+  <div class="form-group">
+    <a href="{% url 'admin:run_process_projectfile_job' original.pk %}" class="btn btn-info form-control">{% trans 'Run process projectfile job' %}</a>
+  </div>
+  {% endif %}
+
   <div class="submit-row">
     <a href="{% url 'admin:core_job_changelist' %}?q={{original.id}}">{% trans 'Project jobs' %}</a>
     |
