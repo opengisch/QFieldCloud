@@ -158,8 +158,11 @@ def queue_job(
     triggered_by: models.Person | None = None,
 ) -> list[models.Job]:
     """
-    Queues a job of the given type for a (some) given project(s), triggered by the given person - if a person is provided.
+    Queues a job of the given type for given project(s), triggered by the given person.
+
     If triggered by person is not provided, the job will appear to be triggered by the project owner or the project's organization owner.
+
+    This function is not running in a transaction by default, it's caller's responsibility to determine this.
     """
 
     assert job_model in TRIGGERABLE_JOBS
