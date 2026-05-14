@@ -88,12 +88,6 @@ QtCore.qInstallMessageHandler(_qt_message_handler)
 def _write_log_message(message, tag, level):
     log_level = logging.DEBUG
 
-    # in 3.16 it was Qgis.None, but since None is a reserved keyword, it was inaccessible
-    try:
-        Qgis.MessageLevel.NoLevel
-    except Exception:
-        Qgis.MessageLevel.NoLevel = 4
-
     if level == Qgis.MessageLevel.NoLevel:
         log_level = logging.DEBUG
     elif level == Qgis.MessageLevel.Info:
@@ -547,7 +541,8 @@ def is_localhost(hostname: str, port: int | None = None) -> bool:
                     return True
 
         return False
-    except Exception:
+    # if any error occurs, then just assume it's not localhost
+    except Exception:  # noqa: BLE001
         return False
 
 

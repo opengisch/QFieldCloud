@@ -1035,12 +1035,12 @@ class SecretAdmin(QFieldCloudModelAdmin):
 
         try:
             project = Project.objects.get(id=project_id)
-        except Exception:
+        except Project.DoesNotExist:
             project = None
 
         try:
             organization = Organization.objects.get(id=organization_id)
-        except Exception:
+        except Organization.DoesNotExist:
             organization = None
 
         return {

@@ -209,7 +209,10 @@ def json_default(obj):
 
     try:
         obj_str += f" {str(obj)}"
-    except Exception:
+    # Typically, we should only expect `TypeError` if `__str__` or `__repr__` are not present.
+    # Expect any kind of error here, as we are using C++ objects that may be already deleted.
+    # e.g. RuntimeError: wrapped C/C++ object of type QgsProject has been deleted
+    except Exception:  # noqa: BLE001
         obj_str += " <non-representable>"
 
     return f"<non-serializable: {obj_str}>"
@@ -263,7 +266,8 @@ def run_workflow(
                 for name, value in zip(step.return_names, return_values):
                     step_returns[step.id][name] = value
 
-    except Exception as err:
+    # Catch all errors to ensure we can return the feedback in a structured way, and log the error properly.
+    except Exception as err:  # noqa: BLE001
         feedback["error"] = str(err)
 
         if isinstance(err, sdk.QfcRequestException):

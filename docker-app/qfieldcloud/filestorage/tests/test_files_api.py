@@ -63,7 +63,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
             versions_count = file.versions.count()
             latest_version = file.latest_version
-        except Exception:
+        except File.DoesNotExist:
             versions_count = 0
             latest_version = None
 

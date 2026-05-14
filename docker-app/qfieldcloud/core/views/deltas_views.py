@@ -173,7 +173,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         try:
             deltafile_json = json.loads(deltafile_data)
             deltafile_id = deltafile_json.get("id")
-        except Exception:
+        except json.JSONDecodeError:
             deltafile_id = None
 
         if deltafile_id:

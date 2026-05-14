@@ -56,7 +56,7 @@ def is_valid_filename(filename: str) -> bool:
     try:
         validate_filename(filename)
         return True
-    except Exception:
+    except ValidationError:
         return False
 
 

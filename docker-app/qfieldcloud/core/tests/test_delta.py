@@ -133,14 +133,10 @@ class QfcTestCase(APITransactionTestCase):
         super().fail(msg)
 
     def assertHttpOk(self, response: response.Response):
-        try:
-            self.assertTrue(
-                rest_framework.status.is_success(response.status_code), response.json()
-            )
-        except Exception:
-            self.assertTrue(
-                rest_framework.status.is_success(response.status_code), response.content
-            )
+        self.assertTrue(
+            status.is_success(response.status_code),
+            f"Response: {response.content}",
+        )
 
     def upload_project_files(self, project) -> Project:
         # Verify the original geojson file

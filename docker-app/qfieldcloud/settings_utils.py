@@ -36,7 +36,7 @@ def get_storages_config() -> StoragesConfig:
     if storages_json:
         try:
             raw_storages = json.loads(storages_json)
-        except Exception:
+        except json.JSONDecodeError:
             raise ConfigValidationError(
                 "Envvar STORAGES should be a parsable JSON string!"
             )
@@ -80,7 +80,7 @@ def get_socialaccount_providers_config() -> dict:
 
     try:
         providers = json.loads(providers_json)
-    except Exception:
+    except json.JSONDecodeError:
         raise ConfigValidationError(
             "Envvar SOCIALACCOUNT_PROVIDERS should be a parsable JSON string!"
         )
