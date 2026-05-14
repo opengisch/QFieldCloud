@@ -66,6 +66,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
+    ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
     Secret,
@@ -1291,6 +1292,24 @@ class ProjectAdmin(QFieldCloudModelAdmin):
                 form_obj.instance.updated_by = request.user
 
         super().save_formset(request, form, formset, change)
+
+    def get_urls(self) -> list:
+        urls = super().get_urls()
+        return [
+            path(
+                "<path:object_id>/run-process-projectfile-job/",
+                self.admin_site.admin_view(self.run_process_projectfile_job),
+                name="run_process_projectfile_job",
+            ),
+            *urls,
+        ]
+
+    def run_process_projectfile_job(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        project = Project.objects.get(pk=object_id)
+        jobs.queue_job(project, ProcessProjectfileJob)
+        return HttpResponseRedirect("..")
 
 
 class DeltaInline(admin.TabularInline):
