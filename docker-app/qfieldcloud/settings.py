@@ -310,10 +310,10 @@ STORAGE_FILENAME_MAX_CHAR_LENGTH = 255
 # Filename validator regex.
 # Should filter out all the names that have reserved characters and words for both Linux and Windows.
 STORAGES_FILENAME_VALIDATION_REGEX = (
-    r'^(?!.*[<>:"/\\|?*])'
+    r'^(?!.*[<>:"/\\|?*\x00-\x1f\x7f])'
     r"(?!(?:COM[0-9]|CON|LPT[0-9]|NUL|PRN|AUX|com[0-9]|con|lpt[0-9]|nul|prn|aux)$)"
     # dynamically set the max char length
-    r'[^\\\/:*"?<>|]{1,' + str(STORAGE_FILENAME_MAX_CHAR_LENGTH) + "}"
+    r'[^\\\/:*"?<>|\x00-\x1f\x7f]{1,' + str(STORAGE_FILENAME_MAX_CHAR_LENGTH) + "}"
     r"(?<![\s\.])$"
 )
 

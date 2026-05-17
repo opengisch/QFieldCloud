@@ -66,6 +66,15 @@ class QfcTestCase(TestCase):
     def test_is_valid_filename_fails_with_null_char(self):
         self.assertFalse(is_valid_filename(r"/path/file\x00name"))
 
+    def test_is_valid_filename_fails_with_carriage_return(self):
+        self.assertFalse(is_valid_filename("file\r.txt"))
+
+    def test_is_valid_filename_fails_with_newline(self):
+        self.assertFalse(is_valid_filename("file\n.txt"))
+
+    def test_is_valid_filename_fails_with_del_character(self):
+        self.assertFalse(is_valid_filename("file\x7f.txt"))
+
     def test_is_qgis_project_file(self):
         self.assertTrue(is_qgis_project_file("test.qgs"))
         self.assertTrue(is_qgis_project_file("test.qgz"))
