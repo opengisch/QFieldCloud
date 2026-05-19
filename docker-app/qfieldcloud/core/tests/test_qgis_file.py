@@ -261,7 +261,6 @@ class QfcTestCase(APITransactionTestCase):
             Project.objects.get(pk=self.project1.pk).project_files_count, 1
         )
 
-        # List files without `skip_metadata` param
         response = self.client.get(f"/api/v1/files/{self.project1.id}/")
         self.assertTrue(status.is_success(response.status_code))
 
@@ -275,42 +274,6 @@ class QfcTestCase(APITransactionTestCase):
             json[0]["sha256"],
             "8663bab6d124806b9727f89bb4ab9db4cbcc3862f6bbf22024dfa7212aa4ab7d",
         )
-        self.assertEqual(
-            json[0]["md5sum"],
-            "9af2f8218b150c351ad802c6f3d66abe",
-        )
-
-        # List files with `skip_metadata=0` param
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/?skip_metadata=0")
-        self.assertEqual(json[0]["name"], "file.txt")
-        self.assertEqual(json[0]["size"], 13)
-        self.assertIn("sha256", json[0])
-        self.assertIn("md5sum", json[0])
-        self.assertEqual(
-            json[0]["sha256"],
-            "8663bab6d124806b9727f89bb4ab9db4cbcc3862f6bbf22024dfa7212aa4ab7d",
-        )
-        self.assertEqual(
-            json[0]["md5sum"],
-            "9af2f8218b150c351ad802c6f3d66abe",
-        )
-
-        # List files with `skip_metadata=1` param
-        response = self.client.get(f"/api/v1/files/{self.project1.id}/?skip_metadata=1")
-        self.assertTrue(status.is_success(response.status_code))
-
-        json = response.json()
-
-        self.assertEqual(json[0]["name"], "file.txt")
-        self.assertEqual(json[0]["size"], 13)
-
-        # The `sha256` key is optional only for the legacy storage, there is no performance penalty for the non-legacy storage if we send it back,
-        # therefore `skip_metadata` is ignored in non-legacy storage
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if self.project1.uses_legacy_storage:
-            self.assertNotIn("sha256", json[0])
-
-        self.assertIn("md5sum", json[0])
         self.assertEqual(
             json[0]["md5sum"],
             "9af2f8218b150c351ad802c6f3d66abe",
@@ -703,28 +666,18 @@ class QfcTestCase(APITransactionTestCase):
             """counts the versions in first file of project1"""
             project = Project.objects.get(pk=self.project1.pk)
 
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            if project.uses_legacy_storage:
-                return len(project.legacy_get_file("file.txt").versions)
-            else:
-                return project.get_file("file.txt").versions.count()
+            return project.get_file("file.txt").versions.count()
 
         def read_version(n):
             """returns the content of version in first file of project1"""
             project = Project.objects.get(pk=self.project1.pk)
 
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            if project.uses_legacy_storage:
-                file = (
-                    project.legacy_get_file("file.txt").versions[n]._data.get()["Body"]
-                )
-            else:
-                file = (
-                    project.get_file("file.txt")
-                    .versions.all()
-                    .order_by("uploaded_at")[n]
-                    .content
-                )
+            file = (
+                project.get_file("file.txt")
+                .versions.all()
+                .order_by("uploaded_at")[n]
+                .content
+            )
 
             return file.read().decode()
 

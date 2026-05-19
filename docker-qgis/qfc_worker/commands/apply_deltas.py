@@ -610,7 +610,7 @@ def apply_deltas_without_transaction(
 
 def rollback_deltas(
     layers_by_id: dict[LayerId, QgsVectorLayer],
-    committed_layer_ids: set[LayerId] = set(),
+    committed_layer_ids: set[LayerId] | None = None,
 ) -> bool:
     """Rollback applied deltas by restoring the layer data source backup files.
 
@@ -623,6 +623,9 @@ def rollback_deltas(
         the project might be broken, but the old data is preserved in the
         backup files.
     """
+    if committed_layer_ids is None:
+        committed_layer_ids = set()
+
     is_success = True
     # we need to keep the backups of `committed_layer_ids` in case something goes wrong
     backups_to_remove_layer_ids = set(layers_by_id.keys()) - committed_layer_ids
@@ -649,7 +652,13 @@ def rollback_deltas(
         # NOTE pathlib operations will raise in case of error
         try:
             layer_backup_path.rename(layer_path)
-        except Exception as err:
+        except (
+            FileExistsError,
+            FileNotFoundError,
+            IsADirectoryError,
+            PermissionError,
+            OSError,
+        ) as err:
             # TODO nothing better to do here?
             is_success = False
             logger.warning(
@@ -681,9 +690,8 @@ def cleanup_backups(layer_paths: set[str]) -> bool:
         layer_path = Path(layer_path_str)
         layer_backup_path = get_backup_path(layer_path)
         try:
-            if layer_backup_path.exists():
-                layer_backup_path.unlink()
-        except Exception as err:
+            layer_backup_path.unlink(missing_ok=True)
+        except (IsADirectoryError, PermissionError, OSError) as err:
             is_success = False
             logger.warning(
                 f"Unable to remove backup: {layer_backup_path}. Reason: {err}"
@@ -698,7 +706,7 @@ def cleanup_backups(layer_paths: set[str]) -> bool:
 def get_pk_attr_name(layer: QgsVectorLayer) -> str:
     pk_attr_name: str = ""
 
-    if layer.type() != QgsMapLayer.VectorLayer:
+    if layer.type() != QgsMapLayer.LayerType.VectorLayer:
         raise DeltaException(f"Expected layer {layer.name()} to be a vector layer!")
 
     pk_indexes = layer.primaryKeyAttributes()
@@ -1018,10 +1026,12 @@ def compare_feature(
             if incoming_value is not None:
                 if isinstance(current_value, QDateTime):
                     incoming_value = QDateTime.fromString(
-                        incoming_value, Qt.ISODateWithMs
+                        incoming_value, Qt.DateFormat.ISODateWithMs
                     )
                 elif isinstance(current_value, QDate):
-                    incoming_value = QDate.fromString(incoming_value, Qt.ISODate)
+                    incoming_value = QDate.fromString(
+                        incoming_value, Qt.DateFormat.ISODate
+                    )
                 elif isinstance(current_value, QTime):
                     incoming_value = QTime.fromString(incoming_value)
 

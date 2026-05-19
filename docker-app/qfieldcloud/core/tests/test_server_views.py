@@ -62,3 +62,28 @@ class QfcTestCase(APITransactionTestCase):
         system_info = data["whitelabel"]
 
         self.assertEqual(system_info["site_title"], "My Custom Title")
+
+    def test_server_info_signup_url_open(self):
+        """
+        Test that signup_url is an absolute URL to the signup page when signup is open.
+        By default, the adapter is open to signup.
+        """
+        response = self.client.get("/api/v1/server/info/")
+        data = response.json()
+
+        self.assertIn("signup_url", data)
+
+        signup_url = data["signup_url"]
+        self.assertIsNotNone(signup_url)
+        self.assertEqual(signup_url, "http://testserver/accounts/signup/")
+
+    @override_settings(
+        ACCOUNT_ADAPTER="qfieldcloud.core.adapters.AccountAdapterSignUpClosed"
+    )
+    def test_server_info_signup_url_closed(self):
+        """Test that signup_url is null when signup is closed"""
+        response = self.client.get("/api/v1/server/info/")
+        data = response.json()
+
+        self.assertIn("signup_url", data)
+        self.assertIsNone(data["signup_url"])

@@ -35,7 +35,8 @@ class ResendFailedInvitationsJob(CronJobBase):
             try:
                 send_invitation(invitation)
                 invitation_emails.append(invitation.email)
-            except Exception as err:
+            # Catch any exception `send_invitation` can raise, as we don't want the CRON to fail because of a single failed email sending.
+            except Exception as err:  # noqa: BLE001
                 logger.error(err)
 
         logger.info(

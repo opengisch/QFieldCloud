@@ -1,5 +1,6 @@
 import logging
 
+from django.core.files.base import ContentFile
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
@@ -11,6 +12,7 @@ from qfieldcloud.core.tests.utils import (
     testdata_path,
     wait_for_project_ok_status,
 )
+from qfieldcloud.filestorage.models import File, FileVersion
 from qfieldcloud.subscription.exceptions import SubscriptionException
 from qfieldcloud.subscription.models import SubscriptionStatus
 
@@ -64,8 +66,21 @@ class QfcTestCase(APITransactionTestCase):
         self.assertFalse(subscription.plan.is_external_db_supported)
 
         plan = subscription.plan
-        plan.storage_mb = 0
+        plan.storage_mb = 1
+        plan.storage_threshold_warning_bytes = 200_000
+        plan.storage_threshold_critical_bytes = 100_000
         plan.save()
+
+        # Simulate over-quota while keeping plan valid (storage_mb must be > 0).
+        more_bytes_than_plan = plan.storage_mb * 1000 * 1000 + 1
+
+        FileVersion.objects.add_version(
+            project=self.project,
+            filename="bigfile.name",
+            content=ContentFile(b"x" * more_bytes_than_plan, "dummy.name"),
+            file_type=File.FileType.PROJECT_FILE,
+            uploaded_by=self.user,
+        )
 
         self.conn = get_test_postgis_connection()
 

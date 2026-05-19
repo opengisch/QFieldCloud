@@ -93,7 +93,6 @@ class QfcTestCase(APITransactionTestCase):
                     "region_name": "",
                     "endpoint_url": "http://wrong.url",
                 },
-                "QFC_IS_LEGACY": False,
             }
         }
     )

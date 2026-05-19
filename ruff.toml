@@ -20,7 +20,12 @@ exclude = [
 target-version = "py310"
 
 [lint]
-extend-select = ["I"]
+extend-select = [
+    "I",        # isort
+    "B006",     # Mutable argument default
+    "BLE001",   # Checks for except clauses that catch all exceptions, see https://docs.astral.sh/ruff/rules/blind-except/
+
+]
 ignore = []
 
 [lint.mccabe]

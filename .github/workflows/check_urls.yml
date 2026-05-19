@@ -1,0 +1,25 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+      - release
+  pull_request:
+
+jobs:
+  url_check:
+    name: URLs check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check QField URLs
+        uses: nirvn/check-urls@main
+        with:
+          search_path: ./docker-app
+          search_regexp: https://[A-Za-z\.]+qfield.(cloud|org)[^ <>\\\"')]+
+          grep_extra_options: --exclude *.po
+          skip_urls: |
+            https://app.qfield.cloud/schemas/project-seed-20251201.json

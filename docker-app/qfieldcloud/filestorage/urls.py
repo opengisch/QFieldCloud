@@ -2,31 +2,31 @@ from django.urls import path
 
 from .views import (
     AvatarFileReadView,
-    compatibility_file_crud_view,
-    compatibility_file_list_view,
-    compatibility_file_metadata_view,
-    compatibility_project_meta_file_read_view,
+    FileCrudView,
+    FileListView,
+    FileMetadataView,
+    ProjectMetaFileReadView,
 )
 
 urlpatterns = [
     path(
         "files/<uuid:project_id>/",
-        compatibility_file_list_view,
+        FileListView.as_view(),
         name="filestorage_list_files",
     ),
     path(
         "files/<uuid:project_id>/<path:filename>/",
-        compatibility_file_crud_view,
+        FileCrudView.as_view(),
         name="filestorage_crud_file",
     ),
     path(
         "files/metadata/<uuid:project_id>/<path:filename>/",
-        compatibility_file_metadata_view,
+        FileMetadataView.as_view(),
         name="filestorage_file_metadata",
     ),
     path(
         "files/thumbnails/<uuid:project_id>/",
-        compatibility_project_meta_file_read_view,
+        ProjectMetaFileReadView.as_view(),
         name="filestorage_project_thumbnails",
     ),
     path(

@@ -41,7 +41,8 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         try:
             bucket_name = self.bucket.name
             self.bucket.meta.client.head_bucket(Bucket=bucket_name)
-        except Exception:
+        # Boto3 can raise any kind of error, so we catch all exceptions here to ensure the method returns False if anything goes wrong during the check.
+        except Exception:  # noqa: BLE001
             return False
 
         return True

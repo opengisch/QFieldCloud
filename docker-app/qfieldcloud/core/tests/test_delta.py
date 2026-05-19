@@ -15,7 +15,6 @@ from rest_framework.test import APITransactionTestCase
 from shapely.geometry import shape
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core import utils
 from qfieldcloud.core.models import (
     Delta,
     FaultyDeltaFile,
@@ -134,14 +133,10 @@ class QfcTestCase(APITransactionTestCase):
         super().fail(msg)
 
     def assertHttpOk(self, response: response.Response):
-        try:
-            self.assertTrue(
-                rest_framework.status.is_success(response.status_code), response.json()
-            )
-        except Exception:
-            self.assertTrue(
-                rest_framework.status.is_success(response.status_code), response.content
-            )
+        self.assertTrue(
+            status.is_success(response.status_code),
+            f"Response: {response.content}",
+        )
 
     def upload_project_files(self, project) -> Project:
         # Verify the original geojson file
@@ -282,7 +277,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(FaultyDeltaFile.objects.count(), 1)
 
         faulty_deltafile = FaultyDeltaFile.objects.first()
-        prefix = utils.safe_join(f"projects/{project.id}/deltafiles/")
+
+        prefix = f"projects/{project.id}/deltafiles/"
 
         self.assertTrue(faulty_deltafile.deltafile.name.startswith(prefix))
         self.assertEqual(faulty_deltafile.project, project)
@@ -1221,11 +1217,17 @@ class QfcTestCase(APITransactionTestCase):
         delta_filename,
         final_values,
         token,
-        wait_status=["STATUS_PENDING", "STATUS_BUSY"],
-        failing_status=["STATUS_ERROR"],
+        wait_status=None,
+        failing_status=None,
         immediate_values=None,
         deltafile_id=None,
     ):
+        if failing_status is None:
+            failing_status = ["STATUS_ERROR"]
+
+        if wait_status is None:
+            wait_status = ["STATUS_PENDING", "STATUS_BUSY"]
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
         if delta_filename is not None:
@@ -1254,10 +1256,16 @@ class QfcTestCase(APITransactionTestCase):
         deltafile_id,
         final_values,
         token,
-        wait_status=["STATUS_PENDING", "STATUS_BUSY"],
-        failing_status=["STATUS_ERROR"],
+        wait_status=None,
+        failing_status=None,
         immediate_values=None,
     ):
+        if failing_status is None:
+            failing_status = ["STATUS_ERROR"]
+
+        if wait_status is None:
+            wait_status = ["STATUS_PENDING", "STATUS_BUSY"]
+
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
 
         uri = f"/api/v1/deltas/{project.id}/"

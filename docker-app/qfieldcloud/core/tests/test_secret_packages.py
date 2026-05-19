@@ -104,13 +104,13 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         latest_package_jobs_qs = self.p1.latest_package_jobs()
 
-        self.assertEquals(latest_package_jobs_qs.count(), 2)
+        self.assertEqual(latest_package_jobs_qs.count(), 2)
 
         u1_latest_package_job = latest_package_jobs_qs.get(triggered_by=self.u1)
         u2_latest_package_job = latest_package_jobs_qs.get(triggered_by=self.u2)
 
-        self.assertEquals(u1_package_job.id, u1_latest_package_job.id)
-        self.assertEquals(u2_package_job.id, u2_latest_package_job.id)
+        self.assertEqual(u1_package_job.id, u1_latest_package_job.id)
+        self.assertEqual(u2_package_job.id, u2_latest_package_job.id)
 
     def test_create_org_level_packages(self):
         # upload data & QGIS project files to the project.
@@ -144,8 +144,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         latest_package_jobs_qs = self.p1.latest_package_jobs()
 
-        self.assertEquals(latest_package_jobs_qs.first(), u1_package_job)
-        self.assertEquals(latest_package_jobs_qs.count(), 1)
+        self.assertEqual(latest_package_jobs_qs.first(), u1_package_job)
+        self.assertEqual(latest_package_jobs_qs.count(), 1)
 
         # create a package for user u2
         u2_package_job = repackage(self.p1, self.u2)
@@ -153,8 +153,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         latest_package_jobs_qs = self.p1.latest_package_jobs()
 
         self.assertNotEqual(u1_package_job, u2_package_job)
-        self.assertEquals(latest_package_jobs_qs.count(), 2)
-        self.assertEquals(latest_package_jobs_qs.last(), u2_package_job)
+        self.assertEqual(latest_package_jobs_qs.count(), 2)
+        self.assertEqual(latest_package_jobs_qs.last(), u2_package_job)
 
     def test_create_secrets_and_packages(self):
         # upload data & QGIS project files to the project.
@@ -199,7 +199,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         latest_package_jobs_qs = self.p1.latest_package_jobs()
 
-        self.assertEquals(latest_package_jobs_qs.count(), 1)
+        self.assertEqual(latest_package_jobs_qs.count(), 1)
         self.assertIn(package_job_2, latest_package_jobs_qs)
         self.assertNotIn(package_job_1, latest_package_jobs_qs)
 
@@ -209,7 +209,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             file_type=File.FileType.PACKAGE_FILE,
         )
 
-        self.assertEquals(package_job_1_files.count(), 0)
+        self.assertEqual(package_job_1_files.count(), 0)
 
     def test_org_secret_retrieved_by_worker(self):
         cur = self.conn.cursor()

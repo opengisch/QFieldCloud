@@ -22,6 +22,8 @@ class PlanAdmin(admin.ModelAdmin):
         "is_public",
         "display_name",
         "storage_mb",
+        "storage_threshold_warning_bytes",
+        "storage_threshold_critical_bytes",
         "job_minutes",
     ]
 
@@ -140,7 +142,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
 
     list_display = (
         "id",
-        "account__link",
+        "account",
         "account__user__email",
         "plan__link",
         "active_since",
@@ -205,12 +207,6 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
 
         return self.readonly_fields
 
-    @admin.display(description=_("Account"))
-    def account__link(self, instance):
-        return model_admin_url(
-            instance.account.user, instance.account.user.username_with_full_name
-        )
-
     # NOTE if the property is computed property, it cannot be `list_display`/`readonly_fields`
     @admin.display(description=_("Active"), boolean=True)
     def is_active(self, instance):
@@ -219,10 +215,6 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Plan"))
     def plan__link(self, instance):
         return model_admin_url(instance.plan, str(instance.plan))
-
-    @admin.display(description=_("Promotion"))
-    def promotion__link(self, instance):
-        return model_admin_url(instance.promotion, str(instance.promotion))
 
     def get_queryset(self, request: HttpRequest):
         return super().get_queryset(request).select_related("account__user", "plan")

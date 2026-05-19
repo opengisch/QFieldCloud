@@ -48,7 +48,7 @@ urlpatterns = [
     *subscription_urlpatterns,
     path("projects/public/", projects_views.PublicProjectsListView.as_view()),
     path("", include(router.urls)),
-    path("users/", users_views.ListUsersView.as_view()),
+    path("users/", users_views.ListCreateUsersView.as_view()),
     path(
         "users/<str:username>/organizations/",
         users_views.ListUserOrganizationsView.as_view(),
@@ -64,15 +64,15 @@ urlpatterns = [
     ),
     path(
         "packages/<uuid:project_id>/latest/",
-        package_views.compatibility_latest_package_view,
+        package_views.LatestPackageView.as_view(),
     ),
     path(
         "packages/<uuid:project_id>/latest/files/<path:filename>/",
-        package_views.compatibility_package_download_files_view,
+        package_views.LatestPackageDownloadFilesView.as_view(),
     ),
     path(
         "packages/<uuid:project_id>/<uuid:job_id>/files/<path:filename>/",
-        package_views.compatibility_package_upload_files_view,
+        package_views.PackageUploadFilesView.as_view(),
     ),
     path("members/<str:organization>/", members_views.ListCreateMembersView.as_view()),
     path(

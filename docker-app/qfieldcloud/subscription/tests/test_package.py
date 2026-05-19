@@ -37,7 +37,10 @@ class QfcTestCase(APITransactionTestCase):
         self.plan_default = Plan.get_or_create_default()
         self.plan_premium = Plan.objects.create(
             code="plan_1mb",
+            display_name="1mb plan",
             storage_mb=1,
+            storage_threshold_warning_bytes=200_000,
+            storage_threshold_critical_bytes=100_000,
             is_premium=True,
         )
 
@@ -639,21 +642,13 @@ class QfcTestCase(APITransactionTestCase):
             storage_free_mb=0.6,
         )
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if p1.uses_legacy_storage:
-            version = p1.legacy_files[0].versions[0]
-        else:
-            version = p1.project_files[0].versions.all().reverse()[0]
+        version = p1.project_files[0].versions.all().reverse()[0]
 
         response = self.client.delete(
             f"/api/v1/files/{p1.id}/file.name/?version={str(version.id)}",
         )
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if p1.uses_legacy_storage:
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-        else:
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         p1.save(recompute_storage=True)
 
@@ -673,11 +668,7 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.client.delete(f"/api/v1/files/{p1.id}/file.name/")
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if p1.uses_legacy_storage:
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-        else:
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         p1.save(recompute_storage=True)
 
@@ -716,10 +707,20 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_api_enforces_storage_limit_when_owner_changes(self):
         plan_10mb = Plan.objects.create(
-            code="plan_10mb", storage_mb=10, is_premium=True
+            code="plan_10mb",
+            display_name="10mb plan",
+            storage_mb=10,
+            storage_threshold_warning_bytes=2_000_000,
+            storage_threshold_critical_bytes=1_000_000,
+            is_premium=True,
         )
         plan_20mb = Plan.objects.create(
-            code="plan_20mb", storage_mb=20, is_premium=True
+            code="plan_20mb",
+            display_name="20mb plan",
+            storage_mb=20,
+            storage_threshold_warning_bytes=4_000_000,
+            storage_threshold_critical_bytes=2_000_000,
+            is_premium=True,
         )
 
         u10mb = Person.objects.create(username="u10mb")

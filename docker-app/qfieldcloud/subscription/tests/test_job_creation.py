@@ -95,19 +95,13 @@ class QfcTestCase(APITestCase):
         plan = self.user1.useraccount.current_subscription.plan
         more_bytes_than_plan = (plan.storage_mb * 1000 * 1000) + 1
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if self.project1.uses_legacy_storage:
-            # Create a project that uses all the storage
-            self.project1.file_storage_bytes = more_bytes_than_plan
-            self.project1.save()
-        else:
-            FileVersion.objects.add_version(
-                project=self.project1,
-                filename="bigfile.name",
-                content=ContentFile(b"x" * more_bytes_than_plan, "dummy.name"),
-                file_type=File.FileType.PROJECT_FILE,
-                uploaded_by=self.user1,
-            )
+        FileVersion.objects.add_version(
+            project=self.project1,
+            filename="bigfile.name",
+            content=ContentFile(b"x" * more_bytes_than_plan, "dummy.name"),
+            file_type=File.FileType.PROJECT_FILE,
+            uploaded_by=self.user1,
+        )
 
         self.check_cannot_create_jobs(QuotaError)
         self.check_can_update_existing_jobs()

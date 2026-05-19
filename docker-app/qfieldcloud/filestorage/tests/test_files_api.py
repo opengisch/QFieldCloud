@@ -50,44 +50,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def assertFileUploaded(
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
-        if project.uses_legacy_storage:
-            return self._assertFileUploadedLegacy(user, project, filename, content)
-        else:
-            return self._assertFileUploaded(user, project, filename, content)
-
-    def _assertFileUploadedLegacy(
-        self, user: User, project: Project, filename: str, content: IO
-    ) -> HttpResponse | Response:
-        files_count = len(
-            list(filter(lambda f: f.latest.name != filename, project.legacy_files))
-        )
-        max_versions = user.useraccount.current_subscription.plan.storage_keep_versions
-
-        try:
-            file = project.legacy_get_file(filename)
-
-            versions_count = len(file.versions)
-            latest_version = file.latest
-        except Exception:
-            versions_count = 0
-            latest_version = None
-
-        response = self._upload_file(user, project, filename, content)
-
-        # clear the cache, as `Project.legacy_files` is `@cached_property`
-        del project.legacy_files
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(project.project_files_count, files_count + 1)
-
-        file = project.legacy_get_file(filename)
-
-        self.assertEqual(file.latest.name, filename)
-        self.assertEqual(len(file.versions), min((versions_count + 1), max_versions))
-        self.assertEqual(file.latest, file.versions[-1])
-        self.assertNotEqual(file.latest, latest_version)
-
-        return response
+        return self._assertFileUploaded(user, project, filename, content)
 
     def _assertFileUploaded(
         self, user: User, project: Project, filename: str, content: IO
@@ -100,7 +63,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
             versions_count = file.versions.count()
             latest_version = file.latest_version
-        except Exception:
+        except File.DoesNotExist:
             versions_count = 0
             latest_version = None
 
@@ -236,7 +199,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(self.p1.project_files.count(), 0)
 
     def test_upload_file_with_filename_longer_than_max_chars_fails(self):
-        """Minio has limit of 255 and Windows o 140 characters"""
+        """S3 protocol has limit of 255 and Windows o 140 characters"""
         max_chars_len = settings.STORAGE_FILENAME_MAX_CHAR_LENGTH
 
         filename = "x" * max_chars_len

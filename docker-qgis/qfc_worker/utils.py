@@ -38,7 +38,7 @@ from qgis.core import (
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
-from qgis.PyQt.QtCore import QSize
+from qgis.PyQt.QtCore import QSize, QtMsgType
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from tabulate import tabulate
@@ -59,15 +59,15 @@ qgs_msglog_logger.setLevel(logging.DEBUG)
 
 def _qt_message_handler(mode, context, message):
     log_level = logging.DEBUG
-    if mode == QtCore.QtDebugMsg:
+    if mode == QtMsgType.QtDebugMsg:
         log_level = logging.DEBUG
-    elif mode == QtCore.QtInfoMsg:
+    elif mode == QtMsgType.QtInfoMsg:
         log_level = logging.INFO
-    elif mode == QtCore.QtWarningMsg:
+    elif mode == QtMsgType.QtWarningMsg:
         log_level = logging.WARNING
-    elif mode == QtCore.QtCriticalMsg:
+    elif mode == QtMsgType.QtCriticalMsg:
         log_level = logging.CRITICAL
-    elif mode == QtCore.QtFatalMsg:
+    elif mode == QtMsgType.QtFatalMsg:
         log_level = logging.FATAL
 
     qgs_stderr_logger.log(
@@ -88,21 +88,15 @@ QtCore.qInstallMessageHandler(_qt_message_handler)
 def _write_log_message(message, tag, level):
     log_level = logging.DEBUG
 
-    # in 3.16 it was Qgis.None, but since None is a reserved keyword, it was inaccessible
-    try:
-        Qgis.NoLevel
-    except Exception:
-        Qgis.NoLevel = 4
-
-    if level == Qgis.NoLevel:
+    if level == Qgis.MessageLevel.NoLevel:
         log_level = logging.DEBUG
-    elif level == Qgis.Info:
+    elif level == Qgis.MessageLevel.Info:
         log_level = logging.INFO
-    elif level == Qgis.Success:
+    elif level == Qgis.MessageLevel.Success:
         log_level = logging.INFO
-    elif level == Qgis.Warning:
+    elif level == Qgis.MessageLevel.Warning:
         log_level = logging.WARNING
-    elif level == Qgis.Critical:
+    elif level == Qgis.MessageLevel.Critical:
         log_level = logging.CRITICAL
 
     qgs_msglog_logger.log(
@@ -547,7 +541,8 @@ def is_localhost(hostname: str, port: int | None = None) -> bool:
                     return True
 
         return False
-    except Exception:
+    # if any error occurs, then just assume it's not localhost
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -654,7 +649,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             layer_error_summary = error.summary()
 
         wkb_type = None
-        if layer.type() == QgsMapLayer.VectorLayer:
+        if layer.type() == QgsMapLayer.LayerType.VectorLayer:
             wkb_type = layer.wkbType()
 
         crs = None
@@ -678,7 +673,7 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             data_provider_source = layer.dataProvider().uri().uri()
             data_provider_name = layer.dataProvider().name()
 
-        if layer.type() == QgsMapLayer.VectorLayer:
+        if layer.type() == QgsMapLayer.LayerType.VectorLayer:
             fields = []
 
             for field in layer.fields():

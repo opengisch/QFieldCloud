@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-from deprecated import deprecated
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
@@ -39,9 +38,8 @@ from model_utils.managers import (
 )
 from timezone_field import TimeZoneField
 
-from qfieldcloud.core import utils, validators
+from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
-from qfieldcloud.core.utils2 import storage
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
 if TYPE_CHECKING:
@@ -302,19 +300,6 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
-    def get_absolute_url(self):
-        if self.type == User.Type.TEAM:
-            team = Team.objects.get(pk=self.pk)
-            return reverse_lazy(
-                "settings_teams_edit",
-                kwargs={
-                    "username": team.team_organization.username,
-                    "teamname": team.teamname,
-                },
-            )
-        else:
-            return reverse_lazy("profile_overview", kwargs={"username": self.username})
-
     @property
     def is_person(self):
         return self.type == User.Type.PERSON
@@ -479,13 +464,6 @@ class UserAccount(models.Model):
     twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
 
-    # TODO Delete with QF-4963 Drop support for legacy storage
-    legacy_avatar_uri = models.CharField(
-        _("Legacy Profile Picture URI"),
-        max_length=255,
-        blank=True,
-    )
-
     avatar = QfcImageField(
         _("Avatar Picture"),
         upload_to=get_user_account_avatar_upload_to,
@@ -530,23 +508,12 @@ class UserAccount(models.Model):
         project_files_used_quota = (
             FileVersion.objects.filter(
                 file__file_type=File.FileType.PROJECT_FILE,
-                file__project__in=self.user.projects.exclude(
-                    file_storage=settings.LEGACY_STORAGE_NAME
-                ),
+                file__project__in=self.user.projects.all(),
             ).aggregate(sum_bytes=Sum("size"))["sum_bytes"]
             or 0
         )
 
-        # TODO: Delete with QF-4963 Drop support for legacy storage
-        legacy_used_quota = (
-            self.user.projects.filter(
-                file_storage=settings.LEGACY_STORAGE_NAME
-            ).aggregate(sum_bytes=Sum("file_storage_bytes"))["sum_bytes"]
-            # if there are no projects, the value will be `None`
-            or 0
-        )
-
-        used_quota = project_files_used_quota + legacy_used_quota
+        used_quota = project_files_used_quota
 
         return used_quota
 
@@ -1227,11 +1194,6 @@ class Project(models.Model):
         ),
     )
 
-    # TODO: Delete with QF-4963 Drop support for legacy storage
-    legacy_thumbnail_uri = models.CharField(
-        _("Legacy Thumbnail Picture URI"), max_length=255, blank=True
-    )
-
     thumbnail = DynamicStorageFileField(
         _("Thumbnail Picture"),
         upload_to=get_project_thumbnail_upload_to,
@@ -1257,7 +1219,7 @@ class Project(models.Model):
     storage_keep_versions = models.PositiveIntegerField(
         _("File versions to keep"),
         help_text=_(
-            "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Available to Premium users only."
+            "Use this value to limit the maximum number of file versions. If empty, your current plan's default will be used. Not configurable for free users."
         ),
         null=True,
         blank=True,
@@ -1515,29 +1477,15 @@ class Project(models.Model):
 
     @property
     def thumbnail_url(self) -> StrOrPromise:
-        """Returns the url to the project's thumbnail or empty string if no URL provided.
-
-        Todo:
-            * Delete with QF-4963 Drop support for legacy storage
-        """
-        if self.uses_legacy_storage:
-            if not self.legacy_thumbnail_uri:
-                return ""
-        else:
-            if not self.thumbnail:
-                return ""
+        """Returns the url to the project's thumbnail or empty string if no URL provided."""
+        if not self.thumbnail:
+            return ""
 
         return reverse_lazy(
             "filestorage_project_thumbnails",
             kwargs={
                 "project_id": self.id,
             },
-        )
-
-    def get_absolute_url(self):
-        return reverse_lazy(
-            "project_overview",
-            kwargs={"username": self.owner.username, "project": self.name},
         )
 
     def __str__(self):
@@ -1600,44 +1548,13 @@ class Project(models.Model):
         return not self.is_public
 
     @property
-    def uses_legacy_storage(self) -> bool:
-        """Whether the storage of the project is legacy.
-
-        Todo:
-            * Delete with QF-4963 Drop support for legacy storage
-        """
-        return self.file_storage == settings.LEGACY_STORAGE_NAME
-
-    @cached_property
-    @deprecated
-    def legacy_files(self) -> list[utils.S3ObjectWithVersions]:
-        """Gets all the files from S3 storage. This is potentially slow. Results are cached on the instance.
-
-        Todo:
-            * Delete with QF-4963 Drop support for legacy storage
-        """
-        if self.uses_legacy_storage:
-            return list(utils.get_project_files_with_versions(str(self.id)))
-        else:
-            raise NotImplementedError(
-                "The `Project.legacy_files` method is not implemented for projects stored in non-legacy storage"
-            )
-
-    @property
     def project_files(self) -> "FileQueryset":
         """Returns the files of type PROJECT related to the project."""
         return self.all_files.with_type_project()
 
     @property
     def project_files_count(self) -> int:
-        """
-        Todo:
-            * Delete with QF-4963 Drop support for legacy storage
-        """
-        if self.uses_legacy_storage:
-            return len(self.legacy_files)
-        else:
-            return self.project_files.count()
+        return self.project_files.count()
 
     @property
     def users(self):
@@ -1843,7 +1760,9 @@ class Project(models.Model):
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            self.jobs.filter(status__in=[Job.Status.QUEUED, Job.Status.STARTED])  # type: ignore
+            self.jobs.filter(
+                status__in=[Job.Status.QUEUED, Job.Status.STARTED, Job.Status.PENDING]
+            )  # type: ignore
         ).exists():
             return Project.Status.BUSY
         else:
@@ -1901,17 +1820,6 @@ class Project(models.Model):
             )
         )
 
-    def delete(self, *args, **kwargs):
-        """Deletes the project and the thumbnail for the legacy storage.
-
-        Todo:
-            * Delete with QF-4963 Drop support for legacy storage
-        """
-        if self.uses_legacy_storage:
-            storage.delete_project_thumbnail(self)
-
-        return super().delete(*args, **kwargs)
-
     @property
     def owner_can_create_job(self):
         # NOTE consider including in status refactoring
@@ -1928,15 +1836,9 @@ class Project(models.Model):
         additional_update_fields = set()
 
         if recompute_storage:
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            if self.uses_legacy_storage:
-                self.file_storage_bytes = storage.get_project_file_storage_in_bytes(
-                    self
-                )
-            else:
-                self.file_storage_bytes = self.project_files.aggregate(
-                    file_storage_bytes=Sum("versions__size", default=0)
-                )["file_storage_bytes"]
+            self.file_storage_bytes = self.project_files.aggregate(
+                file_storage_bytes=Sum("versions__size", default=0)
+            )["file_storage_bytes"]
 
             additional_update_fields.add("file_storage_bytes")
 
@@ -1962,11 +1864,6 @@ class Project(models.Model):
     def get_file(self, filename: str) -> File:
         return self.project_files.get_by_name(filename)  # type: ignore
 
-    def legacy_get_file(self, filename: str) -> utils.S3ObjectWithVersions:
-        files = filter(lambda f: f.latest.name == filename, self.legacy_files)
-
-        return next(files)
-
 
 def get_seed_xlsform_upload_to(instance: "ProjectSeed", filename: str) -> str:
     file_extension = Path(filename).suffix.lower()
@@ -1985,7 +1882,7 @@ class ProjectSeed(models.Model):
     )
     """The project the seed refers to."""
 
-    copy_from_project = models.ForeignKey(
+    clone_from_project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
         null=True,
@@ -1994,9 +1891,10 @@ class ProjectSeed(models.Model):
     )
     """The project to copy from, if any. It is mutually exclusive with `xlsform_file`."""
 
+    # TODO @Rakanhf: make the `extent` field not nullable once we add `Project.extent` field.
     extent = models.PolygonField(
-        null=False,
-        blank=False,
+        null=True,
+        blank=True,
         srid=4326,
     )
     """The initial extent of the project as EPSG:4326 polygon."""
@@ -2008,17 +1906,23 @@ class ProjectSeed(models.Model):
         null=True,
         blank=True,
     )
-    """XLSForm file used to create the project, if any. It is mutually exclusive with `copy_from_project`."""
+    """XLSForm file used to create the project, if any. It is mutually exclusive with `clone_from_project`."""
 
     settings = models.JSONField()
     """The settings used during the project creation. There must be a `schemaId` field."""
 
     def clean(self, *args, **kwargs) -> None:
-        if self.xlsform_file and self.copy_from_project:
+        if self.xlsform_file and self.clone_from_project:
             raise ValidationError(
                 _(
-                    "Both `xlsform_file` or `copy_from_project` cannot be set at the same time."
+                    "Both `xlsform_file` or `clone_from_project` cannot be set at the same time."
                 )
+            )
+
+        # TODO @Rakanhf: make the `extent` field not nullable once we add `Project.extent` field.
+        if not self.extent and not self.clone_from_project:
+            raise ValidationError(
+                _("Either `extent` or `clone_from_project` must be set.")
             )
 
         if not self.settings.get("schemaId"):
@@ -2264,7 +2168,10 @@ class Delta(models.Model):
         return str(self.id) + ", project: " + str(self.project.id)
 
     @staticmethod
-    def get_status_summary(filters={}):
+    def get_status_summary(filters=None):
+        if filters is None:
+            filters = {}
+
         rows = (
             Delta.objects.filter(**filters)
             .values("last_status")
@@ -2770,7 +2677,7 @@ class Secret(models.Model):
             ),
             models.CheckConstraint(
                 # we want either the project to be set or the organization, but never both set or unset, therefore ^ (XOR)
-                check=Q(project__isnull=True) ^ Q(organization__isnull=True),
+                condition=Q(project__isnull=True) ^ Q(organization__isnull=True),
                 name="secret_assigned_to_organization_or_user",
             ),
         ]
@@ -2827,10 +2734,5 @@ class FaultyDeltaFile(models.Model):
     )
 
     def _get_file_storage_name(self) -> str:
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        # Legacy storage - use default storage
-        if self.project.uses_legacy_storage:
-            return "default"
-
-        # Non-legacy storage - use same storage as project
+        # Use same storage as project
         return self.project.file_storage

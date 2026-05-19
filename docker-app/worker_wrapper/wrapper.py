@@ -16,7 +16,7 @@ import requests
 import sentry_sdk
 from constance import config
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
@@ -30,7 +30,6 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Secret,
 )
-from qfieldcloud.core.utils import get_qgis_project_file
 from qfieldcloud.core.utils2 import packages
 from tenacity import (
     retry,
@@ -247,13 +246,15 @@ class JobRun:
 
                 try:
                     self.job.refresh_from_db()
-                except Exception as err:
+                except Job.DoesNotExist as err:
                     logger.error(
                         "Failed to update job status, probably does not exist in the database.",
                         exc_info=err,
                     )
+
                     # No further action required, probably received by wrapper's autoclean mechanism when the `Project` is deleted
                     return
+
             elif exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
                 feedback["error_type"] = "TIMEOUT"
@@ -267,7 +268,9 @@ class JobRun:
 
                         if feedback.get("error"):
                             feedback["error_origin"] = "container"
-                except Exception as err:
+
+                # Global error handler when handling the feedback from a job
+                except Exception as err:  # noqa: BLE001
                     if not isinstance(feedback, dict):
                         feedback = {"error_feedback": feedback}
 
@@ -288,7 +291,8 @@ class JobRun:
 
                 try:
                     self.after_docker_exception()
-                except Exception as err:
+                # `after_docker_exception` can raise anything, as it is developed externally
+                except Exception as err:  # noqa: BLE001
                     logger.error(
                         "Failed to run the `after_docker_exception` handler.",
                         exc_info=err,
@@ -307,7 +311,8 @@ class JobRun:
             self.job.status = Job.Status.FINISHED
             self.job.save(update_fields=["status", "finished_at"])
 
-        except Exception as err:
+        # Global error handler when handling a job
+        except Exception as err:  # noqa: BLE001
             (_type, _value, tb) = sys.exc_info()
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
@@ -327,14 +332,15 @@ class JobRun:
 
                 try:
                     self.after_docker_exception()
-                except Exception as err:
+                # `after_docker_exception` can raise anything, as it is developed externally
+                except Exception as err:  # noqa: BLE001
                     logger.error(
                         "Failed to run the `after_docker_exception` handler.",
                         exc_info=err,
                     )
 
                 self.job.save(update_fields=["status", "feedback", "finished_at"])
-            except Exception as err:
+            except IntegrityError as err:
                 logger.error(
                     "Failed to handle exception and update the job status", exc_info=err
                 )
@@ -431,7 +437,7 @@ class JobRun:
                     b"Job has been cancelled by parent process!",
                 )
 
-        except Exception as err:
+        except requests.exceptions.ConnectionError as err:
             logger.exception("Timeout error.", exc_info=err)
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
@@ -628,10 +634,7 @@ class ProcessProjectfileJobRun(JobRun):
     def get_context(self, *args) -> dict[str, Any]:
         context = super().get_context(*args)
 
-        if not context.get("project__the_qgis_file_name"):
-            context["project__the_qgis_file_name"] = get_qgis_project_file(
-                context["project__id"]
-            )
+        assert context.get("project__the_qgis_file_name")
 
         return context
 

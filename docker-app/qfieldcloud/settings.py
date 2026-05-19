@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.contenttypes",
     "django.contrib.gis",
+    "django.contrib.humanize",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -290,13 +291,6 @@ MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
 # S3 Storage
-# TODO Delete with QF-4963 Drop support for legacy storage
-STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
-STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
-STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
-STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
-STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
-# / ENDTODO
 
 _storage_config = get_storages_config()
 
@@ -307,21 +301,19 @@ STORAGES = {
     },
 }
 
-LEGACY_STORAGE_NAME = _storage_config["LEGACY_STORAGE_NAME"]
-
 # Maximum filename length in characters
 # NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 # NOTE the files on Windows cannot be longer than 260 _chars_ by default, see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maximum-path-length-limitation
-# NOTE `minio` limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
+# NOTE S3 protocol limit is 255 _chars_ per filename segment, read https://docs.rustfs.com/concepts/limit.html#_1-s3-api-limits
 STORAGE_FILENAME_MAX_CHAR_LENGTH = 255
 
 # Filename validator regex.
 # Should filter out all the names that have reserved characters and words for both Linux and Windows.
 STORAGES_FILENAME_VALIDATION_REGEX = (
-    r'^(?!.*[<>:"/\\|?*])'
+    r'^(?!.*[<>:"/\\|?*\x00-\x1f\x7f])'
     r"(?!(?:COM[0-9]|CON|LPT[0-9]|NUL|PRN|AUX|com[0-9]|con|lpt[0-9]|nul|prn|aux)$)"
     # dynamically set the max char length
-    r'[^\\\/:*"?<>|]{1,' + str(STORAGE_FILENAME_MAX_CHAR_LENGTH) + "}"
+    r'[^\\\/:*"?<>|\x00-\x1f\x7f]{1,' + str(STORAGE_FILENAME_MAX_CHAR_LENGTH) + "}"
     r"(?<![\s\.])$"
 )
 
@@ -600,8 +592,8 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
 AXES_LOCKOUT_TEMPLATE = "axes/lockedout.html"
 # The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
 AXES_FAILURE_LIMIT = 5
-# Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)
-AXES_LOCKOUT_PARAMETERS = ["username"]
+# Configures the limiter to handle a combo of username and IP, see https://django-axes.readthedocs.io/en/latest/5_customization.html#customizing-lockout-parameters
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 # If set, defines a period of inactivity after which old failed login attempts will be cleared. If an integer, will be interpreted as a number of hours. Default: None
 AXES_COOLOFF_TIME = lambda _request: timedelta(minutes=30)  # noqa: E731
 # If True, a successful login will reset the number of failed logins. Default: False
@@ -686,7 +678,12 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/axes/accesslog/add/",
     "/admin/auditlog/logentry/add/",
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
+    "/admin/filestorage/file/add/",
+    "/admin/filestorage/fileversion/add/",
 )
+
+# Admin sort URLs which will be skipped from checking if they return HTTP 200
+QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
 # Sets the default admin list view per page, the Django default is 100
 QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
@@ -696,9 +693,6 @@ QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 
 # Default limit for paginating data from views using QfcLimitOffsetPagination
 QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT = 50
-
-# Admin sort URLs which will be skipped from checking if they return HTTP 200
-QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
 APPLY_DELTAS_LIMIT = 1000
 
@@ -979,6 +973,20 @@ JAZZMIN_SETTINGS = {
 
 
 ###########################
+# List of apps to ignore when ensuring Django templates validity.
+###########################
+
+# Ignore the following apps
+# NOTE Ideally `VALIDATE_TEMPLATES_IGNORES` should be used, but it uses only the basename of the ignored files, see https://github.com/django-extensions/django-extensions/blob/4.1/django_extensions/management/commands/validate_templates.py#L64-L69
+# See https://django-extensions.readthedocs.io/en/latest/validate_templates.html#validate-templates-ignore-apps
+VALIDATE_TEMPLATES_IGNORE_APPS = [
+    "allauth",
+    "django_filters",
+    "jazzmin",
+]
+
+
+###########################
 # CORS settings
 # Managed via django-cors-headers.
 # Origins and credentials are configured through environment variables,
@@ -994,7 +1002,7 @@ CORS_ALLOWED_ORIGINS = parse_string_to_list(
 )
 
 # Only allow CORS on API + swagger endpoints - static files and pages are unaffected.
-CORS_URLS_REGEX = r"^/(api/.*|swagger/)$"
+CORS_URLS_REGEX = r"^/(api/.*|swagger(.yaml|/))$"
 
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.

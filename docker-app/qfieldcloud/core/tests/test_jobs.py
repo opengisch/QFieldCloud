@@ -9,8 +9,10 @@ from rest_framework.test import APITransactionTestCase
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Job,
+    Organization,
     PackageJob,
     Person,
+    ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
     ProjectSeed,
@@ -23,6 +25,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2 import project_seed
+from qfieldcloud.core.utils2.jobs import queue_job
 
 logging.disable(logging.CRITICAL)
 
@@ -41,9 +44,9 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def assertLayerData(
         self, layer_data: dict, is_valid: bool, is_localized: bool, error_code: str
     ) -> None:
-        self.assertEquals(layer_data["is_valid"], is_valid)
-        self.assertEquals(layer_data["is_localized"], is_localized)
-        self.assertEquals(layer_data["error_code"], error_code)
+        self.assertEqual(layer_data["is_valid"], is_valid)
+        self.assertEqual(layer_data["is_localized"], is_localized)
+        self.assertEqual(layer_data["error_code"], error_code)
 
     def test_bad_layer_handler_values_for_process_projectfile_job(self):
         # Test that BadLayerHandler is parsing data properly during process projectfile jobs
@@ -444,3 +447,220 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertEqual(self.p1.thumbnail.name, "")
+
+    def test_clone_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        ProjectSeed.objects.create(
+            project=self.p1,
+            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=self.p1,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        # Clone the project
+
+        cloned_project = Project.objects.create(
+            name="cloned_project",
+            owner=self.u1,
+            is_public=False,
+            overwrite_conflicts=True,
+            has_restricted_projectfiles=True,
+            is_attachment_download_on_demand=True,
+        )
+
+        ProjectSeed.objects.create(
+            project=cloned_project,
+            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            clone_from_project=self.p1,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=cloned_project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(cloned_project)
+
+        self.p1.refresh_from_db()
+        cloned_project.refresh_from_db()
+
+        # compare project files
+        source_response = self._list_files(self.u1, self.p1)
+        cloned_response = self._list_files(self.u1, cloned_project)
+
+        self.assertEqual(source_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(cloned_response.status_code, status.HTTP_200_OK)
+
+        source_files = {}
+        for file in source_response.json():
+            source_files[file["name"]] = file["sha256"]
+
+        cloned_files = {}
+        for file in cloned_response.json():
+            cloned_files[file["name"]] = file["sha256"]
+
+        self.assertGreater(len(source_files), 0)
+        self.assertEqual(set(source_files.keys()), set(cloned_files.keys()))
+
+        for name in source_files:
+            # The QGIS project file is re-saved during clone configuration
+            if name == self.p1.the_qgis_file_name:
+                continue
+
+            self.assertEqual(source_files[name], cloned_files[name])
+
+        # compare QGIS file name
+        self.assertEqual(cloned_project.the_qgis_file_name, self.p1.the_qgis_file_name)
+
+        self.assertIsNotNone(cloned_project.project_details)
+        self.assertEqual(
+            set(cloned_project.project_details["layers_by_id"].keys()),
+            set(self.p1.project_details["layers_by_id"].keys()),
+        )
+
+    def test_queue_job_single_project_person_owner_no_triggered_by(self):
+        jobs = queue_job(self.p1, ProcessProjectfileJob)
+
+        self.assertEqual(len(jobs), 1)
+
+        job = jobs[0]
+
+        self.assertEqual(job.created_by_id, self.u1.id)
+        self.assertEqual(job.triggered_by_id, self.u1.id)
+        self.assertEqual(job.project_id, self.p1.id)
+
+    def test_queue_job_single_project_with_explicit_triggered_by(self):
+        u2 = Person.objects.create_user(username="u2", password="abc123")
+        jobs = queue_job(self.p1, ProcessProjectfileJob, triggered_by=u2)
+
+        self.assertEqual(len(jobs), 1)
+
+        job = jobs[0]
+
+        self.assertEqual(job.created_by_id, u2.id)
+        self.assertEqual(job.triggered_by_id, u2.id)
+
+    def test_queue_job_multiple_projects_as_list(self):
+        p2 = Project.objects.create(name="p2", is_public=False, owner=self.u1)
+
+        jobs = queue_job([self.p1, p2], ProcessProjectfileJob)
+
+        self.assertEqual(len(jobs), 2)
+
+        for job in jobs:
+            self.assertIn(job.project_id, [self.p1.id, p2.id])
+            self.assertEqual(job.created_by_id, self.u1.id)
+            self.assertEqual(job.triggered_by_id, self.u1.id)
+
+    def test_queue_job_multiple_projects_as_queryset(self):
+        p2 = Project.objects.create(name="p2", is_public=False, owner=self.u1)
+        project_qs = Project.objects.filter(owner=self.u1)
+
+        jobs = queue_job(project_qs, ProcessProjectfileJob)
+
+        self.assertEqual(len(jobs), 2)
+        self.assertEqual(len(jobs), project_qs.count())
+
+        for job in jobs:
+            self.assertIn(job.project_id, [self.p1.id, p2.id])
+            self.assertEqual(job.created_by_id, self.u1.id)
+            self.assertEqual(job.triggered_by_id, self.u1.id)
+
+    def test_queue_job_organization_owner_no_triggered_by(self):
+        org_owner = Person.objects.create_user(username="org_owner", password="abc123")
+        org = Organization.objects.create(username="org1", organization_owner=org_owner)
+        project_org = Project.objects.create(
+            name="org_project", is_public=False, owner=org
+        )
+
+        jobs = queue_job(project_org, ProcessProjectfileJob)
+
+        self.assertEqual(len(jobs), 1)
+
+        job = jobs[0]
+
+        self.assertEqual(job.created_by_id, org_owner.id)
+        self.assertEqual(job.triggered_by_id, org_owner.id)
+
+    def test_queue_job_organization_owner_with_explicit_triggered_by(self):
+        org_owner = Person.objects.create_user(username="org_owner", password="abc123")
+        org = Organization.objects.create(username="org1", organization_owner=org_owner)
+        project_org = Project.objects.create(
+            name="org_project", is_public=False, owner=org
+        )
+
+        jobs = queue_job(project_org, ProcessProjectfileJob, triggered_by=self.u1)
+
+        self.assertEqual(len(jobs), 1)
+
+        job = jobs[0]
+
+        self.assertNotEqual(job.created_by_id, org_owner.id)
+        self.assertEqual(job.created_by_id, self.u1.id)
+        self.assertNotEqual(job.triggered_by_id, org_owner.id)
+        self.assertEqual(job.triggered_by_id, self.u1.id)
+
+    def test_queue_job_invalid_job_model_raises(self):
+        with self.assertRaises(AssertionError):
+            queue_job(self.p1, PackageJob)
+
+    def test_queue_job_processed_by_worker(self):
+        self._upload_files(
+            self.u1,
+            self.p1,
+            files=[("project.qgs", "delta/project_with_virtual.qgs")],
+        )
+        wait_for_project_ok_status(self.p1)
+
+        jobs = queue_job(self.p1, ProcessProjectfileJob)
+
+        self.assertEqual(len(jobs), 1)
+
+        job = jobs[0]
+
+        wait_for_project_ok_status(self.p1)
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, Job.Status.FINISHED)
+
+    def test_queue_job_queryset_all_jobs_complete(self):
+        p2 = Project.objects.create(name="p2", is_public=False, owner=self.u1)
+
+        for project in [self.p1, p2]:
+            self._upload_files(
+                self.u1,
+                project,
+                files=[("project.qgs", "delta/project_with_virtual.qgs")],
+            )
+            wait_for_project_ok_status(project)
+
+        project_qs = Project.objects.filter(owner=self.u1)
+        jobs = queue_job(project_qs, ProcessProjectfileJob)
+
+        self.assertEqual(len(jobs), 2)
+
+        for project in [self.p1, p2]:
+            wait_for_project_ok_status(project)
+
+        for job in jobs:
+            job.refresh_from_db()
+
+            self.assertEqual(job.status, Job.Status.FINISHED)

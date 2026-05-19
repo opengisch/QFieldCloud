@@ -100,7 +100,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="secret",
             constraint=models.CheckConstraint(
-                check=models.Q(
+                condition=models.Q(
                     ("project__isnull", True),
                     ("organization__isnull", True),
                     _connector="XOR",

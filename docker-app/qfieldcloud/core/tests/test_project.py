@@ -5,6 +5,7 @@ import time
 from io import StringIO
 from unittest.mock import patch
 
+from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
@@ -23,6 +24,8 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
+from qfieldcloud.core.tests.utils import wait_for_project_ok_status
+from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.subscription.models import Subscription
 
 from .utils import set_subscription, setup_subscription_plans, testdata_path
@@ -45,6 +48,36 @@ class QfcTestCase(APITransactionTestCase):
         # Create a user
         self.user3 = Person.objects.create_user(username="user3", password="abc123")
         self.token3 = AuthToken.objects.get_or_create(user=self.user3)[0]
+
+    def _create_clonable_project(self):
+        project = Project.objects.create(
+            name="project_to_clone",
+            owner=self.user1,
+            is_public=False,
+            overwrite_conflicts=True,
+            has_restricted_projectfiles=True,
+            is_attachment_download_on_demand=True,
+        )
+
+        ProjectSeed.objects.create(
+            project=project,
+            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.user1,
+        )
+
+        wait_for_project_ok_status(project)
+
+        return project
 
     def test_create_project(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -891,11 +924,11 @@ class QfcTestCase(APITransactionTestCase):
 
         response = self.client.get("/api/v1/projects/")
 
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         payload = response.json()
 
-        self.assertEquals(len(payload), 1)
+        self.assertEqual(len(payload), 1)
 
         project_json = payload[0]
 
@@ -1251,4 +1284,138 @@ class QfcTestCase(APITransactionTestCase):
                 format="multipart",
             )
 
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_clone_project(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self._create_clonable_project()
+
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "cloned_project",
+                "owner": self.user1.username,
+                "clone_from_project": str(project.id),
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNotNone(response.json().get("id"))
+
+        cloned_project = Project.objects.get(pk=response.json().get("id"))
+        clone_seed = ProjectSeed.objects.get(project=cloned_project)
+        self.assertEqual(cloned_project.owner, self.user1)
+        self.assertEqual(cloned_project.is_public, project.is_public)
+        self.assertEqual(
+            cloned_project.overwrite_conflicts, project.overwrite_conflicts
+        )
+        self.assertEqual(
+            cloned_project.has_restricted_projectfiles,
+            project.has_restricted_projectfiles,
+        )
+        self.assertEqual(
+            cloned_project.is_attachment_download_on_demand,
+            project.is_attachment_download_on_demand,
+        )
+        self.assertEqual(clone_seed.clone_from_project, project)
+        self.assertIsNone(clone_seed.extent)
+
+        self.assertTrue(
+            Job.objects.filter(
+                project=cloned_project, type=Job.Type.CREATE_PROJECT
+            ).exists()
+        )
+
+    def test_clone_project_seed_extent(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self._create_clonable_project()
+
+        # Clone with a seed extent
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "cloned_project_with_extent",
+                "owner": self.user1.username,
+                "clone_from_project": str(project.id),
+                "seed": {"extent": "22,41,29,45.67"},
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNotNone(response.json().get("id"))
+
+        cloned_project_with_extent = Project.objects.get(pk=response.json().get("id"))
+        seed_with_extent = ProjectSeed.objects.get(project=cloned_project_with_extent)
+        self.assertEqual(seed_with_extent.clone_from_project, project)
+        self.assertIsNotNone(seed_with_extent.extent)
+
+        # Providing seed with extra fields beyond "extent" is not allowed when cloning
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "invalid_seed_clone",
+                "owner": self.user1.username,
+                "clone_from_project": str(project.id),
+                "seed": {"extent": "22,41,29,45.67", "basemap_provider": "osm"},
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Providing seed without an extent is not allowed when cloning
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "no_extent_clone",
+                "owner": self.user1.username,
+                "clone_from_project": str(project.id),
+                "seed": {"basemap_provider": "osm"},
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_clone_project_invalid_requests(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        project = self._create_clonable_project()
+
+        # Cloning with the same name as an existing project is not allowed
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": project.name,
+                "owner": project.owner.username,
+                "clone_from_project": str(project.id),
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("already owns a project with the same name", str(response.json()))
+
+        # Cloning a shared datasets project is not allowed
+        shared_project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME,
+            owner=self.user1,
+        )
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "cloned_shared_datasets",
+                "owner": self.user1.username,
+                "clone_from_project": str(shared_project.id),
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Cloning a non-existent project returns 403
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "clone_of_nonexistent",
+                "owner": self.user1.username,
+                "clone_from_project": "00000000-0000-0000-0000-000000000000",
+            },
+            format="json",
+        )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 from collections import namedtuple
+from collections.abc import Iterable
 from datetime import datetime
 from itertools import chain
 from os.path import basename
@@ -26,10 +27,15 @@ from django.contrib.admin.templatetags.admin_urls import admin_urlname
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import logout_then_login, redirect_to_login
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    PermissionDenied,
+    ValidationError,
+)
 from django.core.files.storage import storages
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
+from django.db import models
 from django.db.models import Q, QuerySet
 from django.db.models.fields.json import JSONField
 from django.db.models.functions import Lower
@@ -60,6 +66,7 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
+    ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
     Secret,
@@ -69,9 +76,9 @@ from qfieldcloud.core.models import (
     UserAccount,
 )
 from qfieldcloud.core.paginators import LargeTablePaginator
-from qfieldcloud.core.templatetags.filters import filesizeformat10
 from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
+from qfieldcloud.core.utils2.storage import format_storage_usage
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
 from qfieldcloud.subscription.models import get_subscription_model
@@ -343,10 +350,77 @@ class ModelAdminSearchParserMixin:
         return super().get_search_results(request, queryset, search_term)  # type: ignore
 
 
+class ModelAdminListDisplayAutoFkeyFields:
+    """Automatically converts foreign keys to links to their corresponding foreign model. Useful for fields such as `created_by`."""
+
+    model: models.Model
+
+    list_display_auto_fkey_fields: bool | Iterable[str] = True
+    """
+    List of fields to be automatically converted to links to their corresponding foreign model. Useful for fields such as `created_by`.
+
+
+    When set to `True`, all foreign key fields in `list_display` will be automatically converted to links.
+    When set to `False`, no fields will be automatically converted to links.
+    When set to an iterable of field names, only those fields will be converted to links.
+    """
+
+    def get_list_display(self, request):
+        list_display = super().get_list_display(request)  # type: ignore
+        list_display_auto_fkey_fields = self._get_list_display_auto_fkey_fields()
+
+        result = []
+        for name in list_display:
+            if name in list_display_auto_fkey_fields:
+                result.append(self._make_fk_link(name))
+            else:
+                result.append(name)
+
+        return result
+
+    def _get_list_display_auto_fkey_fields(self) -> Iterable[str]:
+        list_display_auto_fkey_fields = []
+
+        if isinstance(self.list_display_auto_fkey_fields, bool):
+            if self.list_display_auto_fkey_fields:
+                for field in self.model._meta.get_fields():
+                    if field.is_relation and field.many_to_one:
+                        list_display_auto_fkey_fields.append(field.name)
+        else:
+            list_display_auto_fkey_fields = list(self.list_display_auto_fkey_fields)
+
+        # Check if the configured field is actually a foreign key
+        # TODO @suricactus: move the check if `list_display_auto_fkey_fields` consists only foreign keys on admin register time, rather than admin rendering time
+        for field_name in list_display_auto_fkey_fields:
+            field = self.model._meta.get_field(field_name)
+            if not (field.is_relation and field.many_to_one):
+                raise ImproperlyConfigured(
+                    "The field '{}' is not a foreign key.".format(field.name)
+                )
+
+        return list_display_auto_fkey_fields
+
+    def _make_fk_link(self, field_name):
+        field = self.model._meta.get_field(field_name)
+
+        def link(obj):
+            related = getattr(obj, field_name)
+            if related is None:
+                return "-"
+
+            return model_admin_url(related, related)
+
+        link.short_description = field.verbose_name  # type: ignore[attributeAccessIssue]
+        link.admin_order_field = field_name  # type: ignore[functionMemberAccess]
+
+        return link
+
+
 class QFieldCloudModelAdmin(  # type: ignore
     ModelAdminNoPkOrderChangeListMixin,
     ModelAdminEstimateCountMixin,
     ModelAdminSearchParserMixin,
+    ModelAdminListDisplayAutoFkeyFields,
     admin.ModelAdmin,
 ):
     def has_delete_permission(self, request, obj=None):
@@ -739,19 +813,7 @@ class PersonAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
-        active_storage_total = filesizeformat10(
-            instance.useraccount.current_subscription.active_storage_total_bytes
-        )
-        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-        used_storage_perc = instance.useraccount.storage_used_ratio * 100
-        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
-
-        return _("total: {}; used: {} ({:.2f}%); free: {}").format(
-            active_storage_total,
-            used_storage,
-            used_storage_perc,
-            free_storage,
-        )
+        return format_storage_usage(instance.useraccount)
 
     def save_model(self, request, obj, form, change):
         # Set the password to the value in the field if it's changed.
@@ -939,9 +1001,9 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "name",
         "type",
         "assigned_to",
-        "project__name",
+        "project",
         "organization",
-        "created_by__link",
+        "created_by",
         "created_at",
     )
     autocomplete_fields = ("project",)
@@ -952,17 +1014,6 @@ class SecretAdmin(QFieldCloudModelAdmin):
         "assigned_to__username__icontains",
         "organization__username__icontains",
     )
-
-    @admin.display(ordering="created_by", description=_("Created by"))
-    def created_by__link(self, instance):
-        return model_admin_url(instance.created_by)
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance):
-        if instance.project:
-            return model_admin_url(instance.project, instance.project.name)
-
-        return None
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -985,12 +1036,12 @@ class SecretAdmin(QFieldCloudModelAdmin):
 
         try:
             project = Project.objects.get(id=project_id)
-        except Exception:
+        except Project.DoesNotExist:
             project = None
 
         try:
             organization = Organization.objects.get(id=organization_id)
-        except Exception:
+        except Organization.DoesNotExist:
             organization = None
 
         return {
@@ -1242,6 +1293,24 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
         super().save_formset(request, form, formset, change)
 
+    def get_urls(self) -> list:
+        urls = super().get_urls()
+        return [
+            path(
+                "<path:object_id>/run-process-projectfile-job/",
+                self.admin_site.admin_view(self.run_process_projectfile_job),
+                name="run_process_projectfile_job",
+            ),
+            *urls,
+        ]
+
+    def run_process_projectfile_job(
+        self, request: HttpRequest, object_id: str
+    ) -> HttpResponse:
+        project = Project.objects.get(pk=object_id)
+        jobs.queue_job(project, ProcessProjectfileJob)
+        return HttpResponseRedirect("..")
+
 
 class DeltaInline(admin.TabularInline):
     model = ApplyJob.deltas_to_apply.through
@@ -1295,12 +1364,11 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
 class JobAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
-        "project__owner",
-        "project__name",
+        "project",
         "type",
         "status",
         "error_type",
-        "created_by__link",
+        "created_by",
         "created_at",
         "updated_at",
     )
@@ -1389,18 +1457,6 @@ class JobAdmin(QFieldCloudModelAdmin):
             return f"{instance.feedback['error_type']}".strip()
 
         return None
-
-    @admin.display(ordering="project__owner")
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
-
-    @admin.display(ordering="created_by")
-    def created_by__link(self, instance):
-        return model_admin_url(instance.created_by)
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -1499,8 +1555,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "deltafile_id",
-        "project__owner",
-        "project__name",
+        "project",
         "last_status",
         "created_by",
         "created_at",
@@ -1583,14 +1638,6 @@ class DeltaAdmin(QFieldCloudModelAdmin):
 
     def last_feedback__pre(self, instance):
         return format_pre_json(instance.last_feedback)
-
-    @admin.display(ordering="project__owner")
-    def project__owner(self, instance):
-        return model_admin_url(instance.project.owner)
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance):
-        return model_admin_url(instance.project, instance.project.name)
 
     def set_status_pending(self, request, queryset):
         queryset.update(last_status=Delta.Status.PENDING)
@@ -1705,7 +1752,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
     list_display = (
         "username",
         "email",
-        "organization_owner__link",
+        "organization_owner",
         "date_joined",
     )
 
@@ -1753,18 +1800,9 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         """
         return format_html(f"{userlinks} {help_text}")
 
-    @admin.display(description=_("Owner"))
-    def organization_owner__link(self, instance):
-        return model_admin_url(
-            instance.organization_owner, instance.organization_owner.username
-        )
-
     @admin.display(description=_("Storage"))
     def storage_usage__field(self, instance) -> str:
-        used_storage = filesizeformat10(instance.useraccount.storage_used_bytes)
-        free_storage = filesizeformat10(instance.useraccount.storage_free_bytes)
-        used_storage_perc = instance.useraccount.storage_used_ratio * 100
-        return f"{used_storage} {free_storage} ({used_storage_perc:.2f}%)"
+        return format_storage_usage(instance.useraccount)
 
     def save_formset(self, request, form, formset, change):
         for form_obj in formset:
@@ -1888,8 +1926,7 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     list_display = (
         "id",
         "created_at",
-        "project__owner",
-        "project__name",
+        "project",
         "short_file_link",
         "user_agent",
     )
@@ -1936,20 +1973,6 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
                 obj.deltafile.url,
                 filename,
             )
-
-        return "-"
-
-    @admin.display(ordering="project__owner")
-    def project__owner(self, instance: FaultyDeltaFile) -> str:
-        if instance.project:
-            return model_admin_url(instance.project.owner)
-
-        return "-"
-
-    @admin.display(ordering="project__name")
-    def project__name(self, instance: FaultyDeltaFile) -> str:
-        if instance.project:
-            return model_admin_url(instance.project, instance.project.name)
 
         return "-"
 
