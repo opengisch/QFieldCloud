@@ -4,6 +4,9 @@ permissions:
   contents: read
   packages: write
 
+env:
+  DOCKER_IMAGE_TAG: commit-${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -130,7 +133,7 @@ jobs:
             suffix=
 
           tags: |
-            type=raw,value=commit-${{ github.event.pull_request.head.sha || github.sha }},enable=${{ matrix.services.enable_tests }}
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ matrix.services.enable_tests }}
             type=match,pattern=v(.*),group=1
             type=edge,branch=master
 
@@ -177,9 +180,8 @@ jobs:
           sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
           COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
           sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
-          IMAGE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA}" >> .env
-          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA}" >> .env
+          echo "QFIELDCLOUD_IMAGE_TAG=${DOCKER_IMAGE_TAG}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:${DOCKER_IMAGE_TAG}" >> .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
           cat <<EOF >> .env
@@ -282,9 +284,8 @@ jobs:
           sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
           COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
           sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
-          IMAGE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "QFIELDCLOUD_IMAGE_TAG=commit-${IMAGE_SHA}" >> .env
-          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:commit-${IMAGE_SHA}" >> .env
+          echo "QFIELDCLOUD_IMAGE_TAG=${DOCKER_IMAGE_TAG}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:${DOCKER_IMAGE_TAG}" >> .env
           eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
 
       - name: Login to GitHub Container Repository (ghcr.io)
