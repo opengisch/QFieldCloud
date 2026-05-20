@@ -6,7 +6,7 @@ from typing import Literal
 
 from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
-from allauth.account.models import EmailConfirmationHMAC
+from allauth.account.models import EmailAddress, EmailConfirmationHMAC
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
@@ -19,7 +19,7 @@ from django.utils import timezone
 from invitations.adapters import BaseInvitationsAdapter
 
 from qfieldcloud.authentication.sso.provider_styles import SSOProviderStyles
-from qfieldcloud.core.models import Person
+from qfieldcloud.core.models import Person, User
 
 logger = logging.getLogger(__name__)
 
@@ -281,3 +281,49 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
             and sociallogin.user.pk == request.user.pk
         ):
             sociallogin.user = request.user
+
+    def authenticate_by_email(
+        self, sociallogin: SocialLogin
+    ) -> tuple[AbstractUser, str] | None:
+        """Authenticate user and find User matching by email.
+        This hook happens the first time an email is submitted for 3rd party authentication.
+
+        Only matches Person type users with a verified email address,
+        since Organization cannot login using a 3rd party IDP.
+        """
+
+        emails = sociallogin.email_addresses
+        if not emails:
+            return None
+
+        matching_users = []
+
+        for email_address in emails:
+            email = email_address.email
+
+            verified_users_ids = EmailAddress.objects.filter(
+                email__iexact=email,
+                primary=True,
+                verified=True,
+            ).values_list("user_id", flat=True)
+
+            users = User.objects.filter(
+                type=User.Type.PERSON,
+                email__iexact=email,
+                is_active=True,
+                pk__in=verified_users_ids,
+            )
+
+            matching_users.extend(users.all())
+
+        for user in matching_users:
+            if not self.can_authenticate_by_email(sociallogin, user.email):
+                continue
+
+            logger.info(
+                f"Authenticated user '{user.username}' with email '{user.email}' for social login."
+            )
+
+            return user, user.email
+
+        return None
