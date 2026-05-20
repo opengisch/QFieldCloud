@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import TypedDict
 from uuid import UUID
 
+from convert2qgis.xlsform2qgis.xlsform2qgis import (
+    convert_xlsform_to_qgis_project,
+)
 from qfieldcloud_sdk import sdk
 from qgis.core import (
     QgsCoordinateReferenceSystem,
@@ -15,7 +18,6 @@ from qgis.core import (
     QgsRectangle,
     QgsReferencedRectangle,
 )
-from xlsform2qgis.converter import XLSFormConverter
 
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.utils import (
@@ -157,23 +159,25 @@ def _create_project_from_xlsform(
 
         return None
 
-    converter = XLSFormConverter(str(xlsform_filename))
+    output_dir = Path(tmp_project_dir).joinpath("files")
+    converter_settings = {
+        "title": project_seed.name,
+        "show_groups_as_tabs": project_seed.settings.xlsform["show_groups_as_tabs"],
+        "basemap_url": "",
+    }
 
-    if not converter.is_valid():
-        logger.error("The provided XLSForm is invalid, aborting.")
+    project = convert_xlsform_to_qgis_project(
+        xlsform_filename,
+        output_dir=output_dir,
+        settings=converter_settings,
+        skip_failed_expressions=True,
+        # NOTE: set to a temporary file so one can inspect and debug the generated JSON
+        json_filename="/tmp/xlsform.json",
+    )
 
-        return None
+    full_filename = Path(output_dir).joinpath(project.fileName())
 
-    converter.info.connect(lambda message: logger.info(message))
-    converter.warning.connect(lambda message: logger.warning(message))
-    converter.error.connect(lambda message: logger.error(message))
-
-    converter.set_groups_as_tabs(project_seed.settings.xlsform["show_groups_as_tabs"])
-    converter.set_custom_title(project_seed.name)
-
-    project_file = converter.convert(Path(tmp_project_dir).joinpath("files"))
-
-    return project_file
+    return full_filename
 
 
 def prepare_project_files(
