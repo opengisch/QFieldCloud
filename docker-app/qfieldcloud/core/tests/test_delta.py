@@ -118,11 +118,8 @@ class QfcTestCase(APITransactionTestCase):
 
             if job.feedback:
                 if "error_stack" in job.feedback:
-                    msg += "\n\nError:\n================"
-                    for single_error_stack in job.feedback["error_stack"]:
-                        msg += "\n"
-                        msg += single_error_stack
-
+                    msg += "\n\nError stack:\n================"
+                    msg += job.feedback["error_stack"]
                     msg += f"  {job.feedback['error']}\n================"
 
                 feedback = json.dumps(job.feedback, indent=2, sort_keys=True)
