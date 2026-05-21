@@ -1,0 +1,322 @@
+name: CI
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  DOCKER_IMAGE_TAG: commit-${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+      - release
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint code base
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Pre-commit
+        env:
+          # set the `no-commit-to-branch` to be skipped, otherwise the check fails when we merge to `master` branch
+          SKIP: no-commit-to-branch
+        uses: pre-commit/action@v3.0.1
+
+  build_images:
+    name: Build image (${{ matrix.services.service_name }})
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        services:
+          -
+            service_name: app
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: webserver_runtime
+            enable_tests: false
+            enable_dockerhub: true
+
+          -
+            service_name: app-test
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: webserver_test
+            enable_tests: true
+            enable_dockerhub: false
+
+          -
+            service_name: worker-wrapper
+            dockerfile: docker-app/Dockerfile
+            docker_context: docker-app
+            docker_target: worker_wrapper_runtime
+            enable_tests: true
+            enable_dockerhub: true
+
+          -
+            service_name: qgis
+            dockerfile: docker-qgis/Dockerfile
+            docker_context: docker-qgis
+            enable_tests: true
+            enable_dockerhub: true
+
+          -
+            service_name: nginx
+            dockerfile: docker-nginx/Dockerfile
+            docker_context: docker-nginx
+            enable_tests: true
+            enable_dockerhub: true
+
+          -
+            service_name: createbuckets
+            dockerfile: docker-createbuckets/Dockerfile
+            docker_context: docker-createbuckets
+            enable_tests: true
+            enable_dockerhub: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        if: ${{ matrix.services.enable_tests || github.event_name == 'release' || github.ref_name == 'master' }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        if: ${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v5
+
+      - name: Docker Metadata
+        id: docker_metadata
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            name=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_tests || github.event_name == 'release' || github.ref_name == 'master' }}
+            name=opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
+
+          flavor: |
+            latest=auto
+            prefix=,onlatest=false
+            suffix=
+
+          tags: |
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }},enable=${{ matrix.services.enable_tests }}
+            type=match,pattern=v(.*),group=1
+            type=edge,branch=master
+
+      - name: Docker Build ${{ matrix.services.service_name }}
+        if: ${{ matrix.services.enable_tests || github.event_name == 'release' || github.ref_name == 'master' }}
+        uses: docker/build-push-action@v7
+        with:
+          file: ${{ matrix.services.dockerfile }}
+          context: ${{ matrix.services.docker_context }}
+          push: true
+          target: ${{ matrix.services.docker_target }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
+          cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache,mode=max
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-26.04
+    needs: build_images
+    strategy:
+      fail-fast: false
+      matrix:
+        django_app:
+          - authentication
+          - notifs
+          - subscription
+          - core
+          - filestorage
+          - __flaky__
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Check env vars configuration
+        run: |
+          scripts/check_envvars.sh
+
+      - name: Export the env variables file
+        run: |
+          cp .env.example .env
+          sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
+          COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
+          sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
+          echo "QFIELDCLOUD_IMAGE_TAG=${DOCKER_IMAGE_TAG}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:${DOCKER_IMAGE_TAG}" >> .env
+          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
+          cat <<EOF >> .env
+          STORAGES='{
+              "webdav": {
+                  "BACKEND": "qfieldcloud.filestorage.backend.QfcWebDavStorage",
+                  "OPTIONS": {
+                      "webdav_url": "http://qfc_webdav_user:qfc_webdav_pwd@webdav",
+                      "public_url": "http://webdav",
+                      "basic_auth": "qfc_webdav_user:qfc_webdav_pwd"
+                  }
+              },
+              "default": {
+                  "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
+                  "OPTIONS": {
+                      "access_key": "rustfsadmin",
+                      "secret_key": "rustfsadmin",
+                      "bucket_name": "qfieldcloud-local",
+                      "region_name": "",
+                      "endpoint_url": "http://172.17.0.1:8009"
+                  }
+              }
+          }'
+          EOF
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull docker containers
+        run: docker compose pull
+
+      - name: Run docker containers
+        run: |
+          docker compose up -d --no-build
+
+      - name: Initial manage.py commands
+        run: |
+          docker compose run --rm app python manage.py makemigrations --no-input --check
+          docker compose run --rm app python manage.py migrate
+          docker compose run --rm app python manage.py collectstatic --no-input
+
+      - name: Run mandatory unit and integration tests
+        if: matrix.django_app != '__flaky__'
+        run: |
+          docker compose run --rm app python manage.py test --keepdb -v2 --exclude-tag="flaky" qfieldcloud.${{ matrix.django_app }}
+
+      - name: Run flaky unit and integration tests
+        if: matrix.django_app == '__flaky__'
+        run: |
+          docker compose run --rm app python manage.py test --keepdb -v2 --tag="flaky" qfieldcloud
+
+      - name: Run Object Storage Cleaner tests
+        if: matrix.django_app == 'filestorage'
+        run: |
+          docker compose run --rm \
+            -e AWS_ACCESS_KEY_ID=rustfsadmin \
+            -e AWS_SECRET_ACCESS_KEY=rustfsadmin \
+            -e AWS_ENDPOINT_URL=http://172.17.0.1:8009 \
+            -v ${{ github.workspace }}/scripts:/usr/src/scripts \
+            app python /usr/src/scripts/object_storage_cleaner/test.py
+
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker compose logs
+
+      - name: Post Google Chat message on failure
+        if: failure() && matrix.django_app != '__flaky__'
+        uses: julb/action-post-googlechat-message@v1
+        with:
+          message: |
+            Failed job run for branch `${{ github.head_ref || github.ref_name }}`, check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} .
+          gchat_webhook_url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
+      #   timeout-minutes: 30
+      #   with:
+      #     limit-access-to-actor: true
+
+  django_checks:
+    name: Run Django checks
+    runs-on: ubuntu-26.04
+    needs: build_images
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Export the env variables file
+        run: |
+          cp .env.example .env
+          sed -ri 's/^ENVIRONMENT=(.*)/ENVIRONMENT=test/g' .env
+          COMPOSE_FILE="docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml:docker-compose.override.ci.yml"
+          sed -ri "s|^COMPOSE_FILE=(.*)|COMPOSE_FILE=${COMPOSE_FILE}|g" .env
+          echo "QFIELDCLOUD_IMAGE_TAG=${DOCKER_IMAGE_TAG}" >> .env
+          echo "QFIELDCLOUD_QGIS_IMAGE_NAME=ghcr.io/opengisch/qfieldcloud-qgis:${DOCKER_IMAGE_TAG}" >> .env
+          eval $(egrep "^[^#;]" .env | xargs -d'\n' -n1 | sed -E 's/(\w+)=(.*)/export \1='"'"'\2'"'"'/g')
+
+      - name: Login to GitHub Container Repository (ghcr.io)
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull docker containers
+        run: docker compose pull
+
+      - name: Run docker containers
+        run: |
+          docker compose up -d --no-build
+
+      - name: Initial manage.py commands
+        run: |
+          docker compose run --rm app python manage.py makemigrations --no-input --check
+          docker compose run --rm app python manage.py migrate
+          docker compose run --rm app python manage.py collectstatic --no-input
+
+      - name: Django check
+        run: |
+          docker compose run --rm app python manage.py check --deploy --fail-level=ERROR
+
+      - name: Validate templates
+        run: |
+          docker compose run --rm app python manage.py validate_templates
+
+      - name: "failure logs"
+        if: failure()
+        run: |
+          docker compose logs

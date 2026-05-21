@@ -1,0 +1,21 @@
+services:
+
+  app:
+    image: ghcr.io/opengisch/qfieldcloud-app-test:${QFIELDCLOUD_IMAGE_TAG}
+    build: !reset null
+
+  nginx:
+    image: ghcr.io/opengisch/qfieldcloud-nginx:${QFIELDCLOUD_IMAGE_TAG}
+    build: !reset null
+
+  qgis:
+    image: ghcr.io/opengisch/qfieldcloud-qgis:${QFIELDCLOUD_IMAGE_TAG}
+    build: !reset null
+
+  worker_wrapper:
+    image: ghcr.io/opengisch/qfieldcloud-worker-wrapper:${QFIELDCLOUD_IMAGE_TAG}
+    build: !reset null
+
+  createbuckets:
+    image: ghcr.io/opengisch/qfieldcloud-createbuckets:${QFIELDCLOUD_IMAGE_TAG}
+    build: !reset null
