@@ -950,7 +950,7 @@ JAZZMIN_SETTINGS = {
     # Copyright on the footer.
     "copyright": "OPENGIS.ch",
     # Additional custom CSS file for the Django Admin pages.
-    "custom_css": "css/admin.css",
+    "custom_css": "css/qfc_admin.css",
     # Top menu links
     "topmenu_links": [
         {
