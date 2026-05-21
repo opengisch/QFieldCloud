@@ -3,9 +3,11 @@ import enum
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, cast
 from uuid import UUID
 
+from convert2qgis.errors import Convert2QgisBaseError
+from convert2qgis.xlsform2qgis.type_defs import ConverterSettings
 from convert2qgis.xlsform2qgis.xlsform2qgis import (
     convert_xlsform_to_qgis_project,
 )
@@ -20,6 +22,7 @@ from qgis.core import (
 )
 
 from qfc_worker.commands_base import QfcBaseCommand
+from qfc_worker.exceptions import humanize_error
 from qfc_worker.utils import (
     download_project,
     get_layers_data,
@@ -33,6 +36,7 @@ from qfc_worker.utils import (
 from qfc_worker.workflow import (
     Step,
     StepOutput,
+    UnableToContinueException,
     WorkDirPath,
     Workflow,
 )
@@ -148,9 +152,7 @@ def _create_project_from_xlsform(
 
     xlsform_filename = Path(tmp_project_dir).joinpath("files", xlsform_filename)
 
-    logger.info(
-        f"Checking provided XLSForm file '{xlsform_filename}' {Path(xlsform_filename).exists()} ..."
-    )
+    logger.info(f"Checking provided XLSForm file '{xlsform_filename}'...")
 
     if not Path(xlsform_filename).exists():
         logger.error(
@@ -160,20 +162,32 @@ def _create_project_from_xlsform(
         return None
 
     output_dir = Path(tmp_project_dir).joinpath("files")
-    converter_settings = {
-        "title": project_seed.name,
-        "show_groups_as_tabs": project_seed.settings.xlsform["show_groups_as_tabs"],
-        "basemap_url": "",
-    }
-
-    project = convert_xlsform_to_qgis_project(
-        xlsform_filename,
-        output_dir=output_dir,
-        settings=converter_settings,
-        skip_failed_expressions=True,
-        # NOTE: set to a temporary file so one can inspect and debug the generated JSON
-        json_filename="/tmp/xlsform.json",
+    converter_settings = cast(
+        ConverterSettings,
+        {
+            "title": project_seed.name,
+            "show_groups_as_tabs": project_seed.settings.xlsform["show_groups_as_tabs"],
+            "basemap_url": "",
+        },
     )
+
+    try:
+        project = convert_xlsform_to_qgis_project(
+            xlsform_filename,
+            output_dir=output_dir,
+            settings=converter_settings,
+            skip_failed_expressions=True,
+            # NOTE: set to a temporary file so one can inspect and debug the generated JSON
+            json_filename="/tmp/xlsform.json",
+        )
+    except Convert2QgisBaseError as err:
+        logger.error(
+            "Failed to convert XLSForm to QGIS project: %s", humanize_error(err)
+        )
+
+        raise UnableToContinueException(
+            reason="Unable to continue project creation, this job will be cancelled and have failed status!",
+        ) from err
 
     full_filename = Path(output_dir).joinpath(project.fileName())
 
