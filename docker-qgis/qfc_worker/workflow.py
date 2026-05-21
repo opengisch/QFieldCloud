@@ -292,9 +292,9 @@ def run_workflow(
         else:
             feedback["error_type"] = "UNKNOWN"
 
-        _type, _value, tb = sys.exc_info()
+        tb = traceback.TracebackException.from_exception(err)
         feedback["error_class"] = type(err).__name__
-        feedback["error_stack"] = traceback.format_tb(tb)
+        feedback["error_stack"] = "".join(tb.format())
     finally:
         feedback["steps"] = []
         feedback["outputs"] = {}

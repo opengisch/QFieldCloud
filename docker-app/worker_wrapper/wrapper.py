@@ -1,12 +1,11 @@
 import json
 import logging
 import shutil
-import sys
 import tempfile
-import traceback
 import uuid
 from datetime import timedelta
 from pathlib import Path
+from traceback import TracebackException
 from typing import Any, Iterable
 
 import docker
@@ -71,10 +70,11 @@ class JobRun:
             self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
         except Exception as err:
             feedback: dict[str, Any] = {}
-            (_type, _value, tb) = sys.exc_info()
+            tb = TracebackException.from_exception(err)
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
-            feedback["error_stack"] = traceback.format_tb(tb)
+            feedback["error_class"] = type(err).__name__
+            feedback["error_stack"] = "".join(tb.format())
 
             msg = "Uncaught exception when constructing a JobRun:\n"
             msg += json.dumps(msg, indent=2, sort_keys=True)
@@ -274,10 +274,11 @@ class JobRun:
                     if not isinstance(feedback, dict):
                         feedback = {"error_feedback": feedback}
 
-                    (_type, _value, tb) = sys.exc_info()
+                    tb = TracebackException.from_exception(err)
                     feedback["error"] = str(err)
                     feedback["error_origin"] = "worker_wrapper"
-                    feedback["error_stack"] = traceback.format_tb(tb)
+                    feedback["error_class"] = type(err).__name__
+                    feedback["error_stack"] = "".join(tb.format())
 
             feedback["container_exit_code"] = exit_code
 
@@ -313,10 +314,11 @@ class JobRun:
 
         # Global error handler when handling a job
         except Exception as err:  # noqa: BLE001
-            (_type, _value, tb) = sys.exc_info()
+            tb = TracebackException.from_exception(err)
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
-            feedback["error_stack"] = traceback.format_tb(tb)
+            feedback["error_class"] = type(err).__name__
+            feedback["error_stack"] = "".join(tb.format())
 
             if isinstance(err, requests.exceptions.ReadTimeout):
                 feedback["error_timeout"] = True
