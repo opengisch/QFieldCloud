@@ -59,7 +59,7 @@ jobs:
       -
         name: Docker Metadata
         id: docker_metadata
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             name=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }},enable=true
