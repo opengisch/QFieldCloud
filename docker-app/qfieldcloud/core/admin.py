@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from itertools import chain
 from os.path import basename
-from typing import Any, Generator
+from typing import Any, Generator, Literal
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator
@@ -651,16 +651,25 @@ def model_admin_url(obj, name: str | None = None) -> str:
     return format_html('<a href="{}">{}</a>', url, name or str(obj))
 
 
-def format_pre(value):
-    return format_html("<pre>{}</pre>", escape(value))
-
-
-def format_pre_json(value):
-    if value:
+def format_text(value, syntax: Literal["text", "json"]) -> SafeText:
+    if syntax == "json":
         text_value = json.dumps(value, indent=2, sort_keys=True)
-        return format_pre(text_value)
     else:
-        return format_pre(value)
+        text_value = str(value)
+
+    if value is None:
+        text_value = "<none>"
+
+    return format_html(
+        """
+        <div
+            class="qfc-pretty-field"
+            data-type="{}"
+        >{}</div>
+        """,
+        syntax,
+        escape(text_value),
+    )
 
 
 class MemberOrganizationInline(admin.TabularInline):
@@ -1280,7 +1289,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         if instance.project_details is None:
             return ""
 
-        return format_pre_json(instance.project_details)
+        return format_text(instance.project_details, "json")
 
     def save_formset(self, request, form, formset, change):
         for form_obj in formset:
@@ -1327,7 +1336,7 @@ class DeltaInline(admin.TabularInline):
         return False
 
     # def feedback__pre(self, instance):
-    #     return format_pre_json(instance.feedback)
+    #     return format_text(instance.feedback, "json")
 
 
 class IsFinalizedJobFilter(admin.SimpleListFilter):
@@ -1465,10 +1474,10 @@ class JobAdmin(QFieldCloudModelAdmin):
         return False
 
     def output__pre(self, instance):
-        return format_pre(instance.output)
+        return format_text(instance.output, "text")
 
     def feedback__pre(self, instance):
-        return format_pre_json(instance.feedback)
+        return format_text(instance.feedback, "json")
 
     def export_applyjob_deltafile(
         self, request: HttpRequest, apply_job_id: uuid.UUID
@@ -1515,7 +1524,7 @@ class ApplyJobDeltaInline(admin.TabularInline):
         return model_admin_url(instance.apply_job)
 
     def output__pre(self, instance):
-        return format_pre_json(instance.output)
+        return format_text(instance.output, "json")
 
     def has_add_permission(self, request, obj):
         return False
@@ -1637,7 +1646,7 @@ class DeltaAdmin(QFieldCloudModelAdmin):
         return False
 
     def last_feedback__pre(self, instance):
-        return format_pre_json(instance.last_feedback)
+        return format_text(instance.last_feedback, "json")
 
     def set_status_pending(self, request, queryset):
         queryset.update(last_status=Delta.Status.PENDING)
@@ -1960,7 +1969,7 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     }
 
     def traceback__pre(self, instance) -> str:
-        return format_pre(instance.traceback)
+        return format_text(instance.traceback, "text")
 
     @admin.display(description=_("Faulty deltafile"))
     def short_file_link(self, obj: FaultyDeltaFile) -> str:
