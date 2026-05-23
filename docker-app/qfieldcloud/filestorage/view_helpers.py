@@ -35,6 +35,7 @@ from qfieldcloud.filestorage.models import (
     FileVersion,
 )
 from qfieldcloud.filestorage.utils import (
+    get_qgis_version_from_project_file,
     get_range,
     is_admin_restricted_file,
     is_qgis_project_file,
@@ -107,6 +108,17 @@ def upload_project_file_version(
 
         raise MultipleProjectsError("Only one QGIS project per project allowed")
 
+    qgis_version: str | None = None
+    if file_type == File.FileType.PROJECT_FILE and is_qgis_file:
+        try:
+            qgis_version = get_qgis_version_from_project_file(filename, uploaded_file)
+        except ValueError as err:
+            logger.exception(
+                f"Failed to get QGIS version from project file {filename}: {err}"
+            )
+
+            raise exceptions.ValidationError(f"Invalid QGIS project file: {err}")
+
     # check if the user has enough storage to upload the file
     if hasattr(request, "auth") and hasattr(request.auth, "client_type"):
         client_type = request.auth.client_type
@@ -163,6 +175,11 @@ def upload_project_file_version(
             if is_admin_restricted_file(filename, project.the_qgis_file_name):
                 update_fields.append("restricted_data_last_updated_at")
                 project.restricted_data_last_updated_at = now
+
+            if qgis_version:
+                update_fields.append("qgis_version")
+
+                project.qgis_version = qgis_version
 
             project.save(update_fields=update_fields, recompute_storage=True)
         elif file_type == File.FileType.PACKAGE_FILE:
@@ -414,6 +431,9 @@ def delete_project_file_version(
             ).exists()
         ):
             project.the_qgis_file_name = None
+            project.qgis_version = None
+
             update_fields.append("the_qgis_file_name")
+            update_fields.append("qgis_version")
 
         project.save(update_fields=update_fields, recompute_storage=True)
