@@ -34,10 +34,10 @@ from qfieldcloud.filestorage.models import File, FileVersion
 logging.disable(logging.CRITICAL)
 
 
-def qgis_contents(seconds: int = 0) -> StringIO:
+def qgis_contents(seconds: int = 0, version: str = "3.44.7-Solothurn") -> StringIO:
     return StringIO(
         f"""
-        <qgis projectname="" saveDateTime="2026-05-26T00:00:{seconds:02d}" saveUser="suricactus" saveUserFull="Ivan Ivanov" version="3.44.7-Solothurn">
+        <qgis projectname="" saveDateTime="2026-05-26T00:00:{seconds:02d}" saveUser="suricactus" saveUserFull="Ivan Ivanov" version="{version}">
         </qgis>
         """
     )
@@ -77,6 +77,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             latest_version = None
 
         response = self._upload_file(user, project, filename, content)
+
+        project.refresh_from_db()
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(project.project_files.count(), files_count + 1)
@@ -277,6 +279,33 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             self.u1, self.p1, "file.name", StringIO("Здравей, свят!")
         )
         self.assertEqual(self.p1.get_file("file.name").latest_version.size, 25)
+
+    def test_upload_broken_qgis_file(self):
+        response = self._upload_file(self.u1, self.p1, "broken.qgs", StringIO("Hello!"))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["code"], "invalid_qgis_project_file")
+        self.assertEqual(self.p1.project_files.count(), 0)
+
+    def test_upload_project_files_sets_qgis_version(self):
+        self.assertIsNone(self.p1.qgis_version)
+        self.assertFileUploaded(
+            self.u1, self.p1, "project1.qgs", qgis_contents(version="3.44.7-Solothurn")
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.7")
+
+    def test_upload_project_files_with_multiple_versions_sets_qgis_version(self):
+        self.assertIsNone(self.p1.qgis_version)
+
+        self.assertFileUploaded(
+            self.u1, self.p1, "project1.qgs", qgis_contents(version="3.44.7-Solothurn")
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.7")
+
+        self.assertFileUploaded(
+            self.u1, self.p1, "project1.qgs", qgis_contents(version="3.44.9-Solothurn")
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.9")
 
     def test_upload_file_by_unauthorized_user_fails(self):
         response = self.client.post(
@@ -565,6 +594,38 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_project_files_sets_qgis_version_to_none(self):
+        self.assertIsNone(self.p1.qgis_version)
+
+        self.assertFileUploaded(
+            self.u1, self.p1, "project1.qgs", qgis_contents(version="3.44.7-Solothurn")
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.7")
+
+        self.assertFileDeleted(self.u1, self.p1, "project1.qgs")
+        self.assertEqual(self.p1.project_files.count(), 0)
+        self.assertIsNone(self.p1.qgis_version)
+
+    def test_delete_project_file_version_sets_qgis_version_to_correct(self):
+        self.assertIsNone(self.p1.qgis_version)
+
+        self.assertFileUploaded(
+            self.u1, self.p1, "project1.qgs", qgis_contents(version="3.44.7-Solothurn")
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.7")
+
+        self.assertFileUploaded(
+            self.u1, self.p1, "project1.qgs", qgis_contents(version="3.44.9-Solothurn")
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.9")
+
+        version = self.p1.get_file("project1.qgs").versions.all()[0]
+
+        self.assertFileDeleted(
+            self.u1, self.p1, "project1.qgs", params={"version": str(version.id)}
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.7")
 
     def test_delete_existing_file_succeeds(self):
         self.assertFileUploaded(self.u1, self.p1, "file.name", StringIO("Hello1!"))
