@@ -9,10 +9,12 @@ import socket
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
+import zipfile
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, NamedTuple, TypedDict, cast
+from typing import Any, NamedTuple, TextIO, TypedDict, cast
 from uuid import UUID
 
 from libqfieldsync.layer import LayerSource
@@ -1076,3 +1078,52 @@ def save_project(
 
     project.writeProject.connect(process_project_write)
     project.write(project.fileName())
+
+
+@contextmanager
+def open_qgis_file(filename: str | Path) -> Iterator[TextIO]:
+    path = Path(filename)
+    suffix = path.suffix.lower()
+
+    with open(filename, "rb") as fh:
+        if suffix == ".qgz":
+            with zipfile.ZipFile(fh) as qgz:
+                with qgz.open(f"{path.stem}.qgs") as qgs:
+                    with io.TextIOWrapper(qgs, encoding="utf-8") as text_fh:
+                        yield text_fh
+
+            return
+
+        if suffix == ".qgs":
+            with io.TextIOWrapper(fh, encoding="utf-8") as text_fh:
+                yield text_fh
+
+            return
+
+    raise ValueError(f"Unsupported QGIS project file: {filename}")
+
+
+def get_qgis_version_from_project_file(filename: str | Path) -> str:
+    try:
+        with open_qgis_file(filename) as qgis_fh:
+            parser = ET.iterparse(qgis_fh, events=["start"])
+
+            # We assume that the first element is the root `<qgis>`` element,
+            # which should contain the `version` attribute
+            _event, el = next(parser)
+
+            if el.tag != "qgis":
+                raise ValueError(f'Expected root tag "qgis", got "{el.tag}"')
+
+            qgis_version = el.attrib.get("version")
+
+            if not qgis_version:
+                raise ValueError('Missing "version" attribute in QGIS project file')
+
+            version_match = re.match(r"^(\d+\.\d+\.\d+)", qgis_version)
+            if version_match is None:
+                raise ValueError(f'Invalid QGIS version "{qgis_version}"')
+
+            return version_match.group(1)
+    except (zipfile.BadZipFile, ET.ParseError) as err:
+        raise ValueError(str(err)) from err

@@ -536,6 +536,46 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             set(self.p1.project_details["layers_by_id"].keys()),
         )
 
+    def test_process_projectfile_job_sets_the_qgis_version(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        self.assertIsNone(self.p1.qgis_version)
+
+        # Push the QGIS project file
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "project.qgs",
+            io.FileIO(testdata_path("self_contained.qgs"), "rb"),
+        )
+
+        self.p1.refresh_from_db()
+
+        self.assertEqual(self.p1.qgis_version, "3.44.7")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.p1.qgis_version = None
+        self.p1.save(update_fields=["qgis_version"])
+
+        job = ProcessProjectfileJob.objects.create(
+            type=Job.Type.PROCESS_PROJECTFILE,
+            project=self.p1,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        self.p1.refresh_from_db()
+        job.refresh_from_db()
+
+        self.assertEqual(
+            job.feedback["outputs"]["project_details"]["project_details"][
+                "qgis_version"
+            ],
+            "3.44.7",
+        )
+        self.assertEqual(self.p1.qgis_version, "3.44.7")
+
     def test_queue_job_single_project_person_owner_no_triggered_by(self):
         jobs = queue_job(self.p1, ProcessProjectfileJob)
 
