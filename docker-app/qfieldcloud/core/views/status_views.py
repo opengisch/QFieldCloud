@@ -1,4 +1,5 @@
 import logging
+from datetime import timezone
 from enum import Enum
 from typing import TypedDict
 
@@ -69,17 +70,17 @@ class APIStatusView(views.APIView):
         if config.MAINTENANCE_IS_PLANNED:
             logger.info(
                 "Maintenance is planned, reporting maintenance details in status API from %s to %s with message: %s",
-                config.MAINTENANCE_START_TIMESTAMP_UTC,
-                config.MAINTENANCE_END_TIMESTAMP_UTC,
+                config.MAINTENANCE_START_TIMESTAMP_UTC.replace(tzinfo=timezone.utc),
+                config.MAINTENANCE_END_TIMESTAMP_UTC.replace(tzinfo=timezone.utc),
                 config.MAINTENANCE_MESSAGE,
             )
 
             results["maintenance_message"] = config.MAINTENANCE_MESSAGE
             results["maintenance_start_timestamp_utc"] = (
-                config.MAINTENANCE_START_TIMESTAMP_UTC
+                config.MAINTENANCE_START_TIMESTAMP_UTC.replace(tzinfo=timezone.utc)
             )
             results["maintenance_end_timestamp_utc"] = (
-                config.MAINTENANCE_END_TIMESTAMP_UTC
+                config.MAINTENANCE_END_TIMESTAMP_UTC.replace(tzinfo=timezone.utc)
             )
 
         return Response(results, status=status.HTTP_200_OK)
