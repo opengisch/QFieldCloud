@@ -60,12 +60,14 @@ class APIStatusView(views.APIView):
         if config.INCIDENT_IS_ACTIVE:
             logger.warning(
                 "Incident is active, reporting incident details in status API since %s with message: %s",
-                config.INCIDENT_TIMESTAMP_UTC,
+                config.INCIDENT_TIMESTAMP_UTC.replace(tzinfo=timezone.utc),
                 config.INCIDENT_MESSAGE,
             )
 
             results["incident_message"] = config.INCIDENT_MESSAGE
-            results["incident_timestamp_utc"] = config.INCIDENT_TIMESTAMP_UTC
+            results["incident_timestamp_utc"] = config.INCIDENT_TIMESTAMP_UTC.replace(
+                tzinfo=timezone.utc
+            )
 
         if config.MAINTENANCE_IS_PLANNED:
             logger.info(
