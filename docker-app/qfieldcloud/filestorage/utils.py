@@ -256,40 +256,52 @@ def get_range(request: HttpRequest, total_size: int) -> RangeForFile | None:
 
 @contextmanager
 def open_qgis_file(
-    filename: str | Path, fh: BinaryIO | None = None
+    filename: str | Path,
+    fh: BinaryIO | None = None,
 ) -> Iterator[TextIO]:
     path = Path(filename)
     suffix = path.suffix.lower()
 
-    if not fh:
-        fh = open(filename, "rb")
+    if fh is None:
+        fh = open(path, "rb")
+        owns_fh = True
+    else:
+        owns_fh = False
 
-    if suffix == ".qgz":
-        with zipfile.ZipFile(fh) as qgz:
-            with qgz.open(f"{path.stem}.qgs") as qgs:
-                with io.TextIOWrapper(qgs, encoding="utf-8") as text_fh:
-                    yield text_fh
+    try:
+        if suffix == ".qgz":
+            with zipfile.ZipFile(fh) as qgz:
+                with qgz.open(f"{path.stem}.qgs") as qgs:
+                    with io.TextIOWrapper(qgs, encoding="utf-8") as text_fh:
+                        yield text_fh
 
-        return
+            return
 
-    if suffix == ".qgs":
-        with io.TextIOWrapper(fh, encoding="utf-8") as text_fh:
-            yield text_fh
+        if suffix == ".qgs":
+            text_fh = io.TextIOWrapper(fh, encoding="utf-8")
 
-        return
+            try:
+                yield text_fh
+            finally:
+                text_fh.detach()
 
-    raise ValueError(f"Unsupported QGIS project file: {filename}")
+            return
+
+        raise ValueError(f"Unsupported QGIS project file: {filename}")
+
+    finally:
+        if owns_fh:
+            fh.close()
 
 
 def get_qgis_version_from_project_file(
-    filename: str | Path, fh: BinaryIO | None = None
+    filename: str | Path,
+    fh: BinaryIO | None = None,
 ) -> str:
     try:
         with open_qgis_file(filename, fh) as qgis_fh:
             parser = ET.iterparse(qgis_fh, events=["start"])
 
-            # We assume that the first element is the root `<qgis>`` element,
-            # which should contain the `version` attribute
             _event, el = next(parser)
 
             if el.tag != "qgis":
@@ -301,9 +313,15 @@ def get_qgis_version_from_project_file(
                 raise ValueError('Missing "version" attribute in QGIS project file')
 
             version_match = re.match(r"^(\d+\.\d+\.\d+)", qgis_version)
+
             if version_match is None:
                 raise ValueError(f'Invalid QGIS version "{qgis_version}"')
 
             return version_match.group(1)
-    except (zipfile.BadZipFile, ET.ParseError) as err:
-        raise ValueError(str(err)) from err
+
+    except (
+        zipfile.BadZipFile,
+        ET.ParseError,
+        UnicodeDecodeError,
+    ) as err:
+        raise ValueError(f"Invalid QGIS project file: {filename}") from err
