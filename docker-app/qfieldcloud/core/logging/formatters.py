@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import json_log_formatter
 from django.conf import settings
@@ -25,7 +25,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
 
         """
         if "ts" not in extra:
-            extra["ts"] = datetime.utcnow()
+            extra["ts"] = datetime.now(timezone.utc)
 
         # Include builtins
         extra["level"] = record.levelname
