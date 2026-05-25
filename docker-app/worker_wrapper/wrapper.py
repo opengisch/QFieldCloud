@@ -3,10 +3,11 @@ import logging
 import shutil
 import tempfile
 import uuid
+from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path
 from traceback import TracebackException
-from typing import Any, Iterable
+from typing import Any
 
 import docker
 import docker.client

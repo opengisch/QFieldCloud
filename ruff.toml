@@ -24,7 +24,7 @@ extend-select = [
     "I",        # isort
     "B006",     # Mutable argument default
     "BLE001",   # Checks for except clauses that catch all exceptions, see https://docs.astral.sh/ruff/rules/blind-except/
-
+    "UP035",    # Checks for uses of deprecated imports based on the minimum supported Python version, see https://docs.astral.sh/ruff/rules/deprecated-import/
 ]
 ignore = []
 

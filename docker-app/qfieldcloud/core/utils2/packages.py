@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 from qfieldcloud.core import models
 from qfieldcloud.filestorage.models import File

@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from datetime import timedelta
-from typing import Iterable
 
 from django import forms
 from django.contrib import admin

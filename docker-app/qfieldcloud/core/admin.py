@@ -3,11 +3,11 @@ import json
 import time
 import uuid
 from collections import namedtuple
-from collections.abc import Iterable
+from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
 from itertools import chain
 from os.path import basename
-from typing import Any, Generator, Literal
+from typing import Any, Literal
 
 from allauth.account.admin import EmailAddressAdmin as EmailAddressAdminBase
 from allauth.account.forms import EmailAwarePasswordResetTokenGenerator

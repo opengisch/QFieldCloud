@@ -5,9 +5,10 @@ import sys
 import tempfile
 import traceback
 import uuid
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Callable
+from typing import IO, Any
 
 from qfieldcloud_sdk import sdk
 

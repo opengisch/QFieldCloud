@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Type, TypedDict, cast
+from typing import TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -946,7 +946,7 @@ class AbstractSubscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: datetime | None = None,
-    ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
+    ) -> tuple[type["AbstractSubscription"] | None, "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
