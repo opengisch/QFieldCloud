@@ -66,6 +66,8 @@ RUN apt-get update \
     graphviz \
 # timezone data used by python to determine the user's timezone
     tzdata \
+# needed to support the `US/Pacific` etc timezones, which were dropped from the regular `tzdata`, see https://bugs-devel.debian.org/cgi-bin/bugreport.cgi?bug=1051973
+    tzdata-legacy \
     && rm -rf /var/lib/apt/lists/*
 
 # copy the dependencies
