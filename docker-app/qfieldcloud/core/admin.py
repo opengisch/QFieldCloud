@@ -4,7 +4,7 @@ import time
 import uuid
 from collections import namedtuple
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import datetime, timezone
 from itertools import chain
 from os.path import basename
 from typing import Any, Generator, Literal
@@ -595,7 +595,7 @@ class EmailAddressAdmin(EmailAddressAdminBase):
                 return value
 
         def human_readable_timestamp() -> str:
-            d, h = str(datetime.utcnow()).split(" ")
+            d, h = str(datetime.now(timezone.utc)).split(" ")
             d = d.replace("-", "")
             h = h[:-7].replace(":", "")
             return "_".join([d, h])

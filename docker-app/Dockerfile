@@ -3,7 +3,7 @@
 ##########################
 
 # pull a builder image, the same as the base
-FROM python:3.10-slim-bookworm AS build
+FROM python:3.14-slim-trixie AS build
 
 # Disable annoying pip version check, we don't care if pip is slightly older
 ARG PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -18,6 +18,10 @@ RUN apt-get update \
     libpq-dev \
     python3-dev \
     gcc \
+    # fiona dependencies
+    g++ \
+    libgdal-dev \
+    gdal-bin \
     # ability to install modules from git repositories (e.g. `django-cron`)
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -31,14 +35,14 @@ RUN pip3 install -r requirements/requirements.txt \
     && rm requirements/requirements.txt
 
 # save 60 MB of data... Safe to delete according to botocore contributor https://github.com/boto/botocore/issues/1629#issuecomment-451309885
-RUN ls -Q /usr/local/lib/python3.10/site-packages/botocore/data | grep -xv "endpoints.json" | xargs rm -rf
+RUN ls -Q /usr/local/lib/python3.14/site-packages/botocore/data | grep -xv "endpoints.json" | xargs rm -rf
 
 ##########################
 # BASE                   #
 ##########################
 
 # pull official base image
-FROM python:3.10-slim-bookworm AS base
+FROM python:3.14-slim-trixie AS base
 
 # set work directory
 WORKDIR /usr/src/app
@@ -65,7 +69,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # copy the dependencies
-COPY --from=build /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/
+COPY --from=build /usr/local/lib/python3.14/site-packages/ /usr/local/lib/python3.14/site-packages/
 
 # install debug dependencies
 ARG DEBUG_BUILD
@@ -109,11 +113,22 @@ USER app
 # WEBSERVER TEST         #
 ##########################
 
+# a separate builder stage for webserver test environment to compile `fiona` only
+FROM build AS build_webserver_test
+COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
+RUN echo "GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2)"
+RUN export GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2); echo "GDAL_VERSION=$GDAL_VERSION" && pip3 install $(grep ^fiona requirements/requirements_test.txt)
+
 # a separate stage for webserver test environment
 FROM base AS webserver_test
 ENV LOGGER_SOURCE=app
+
+# Copy fiona only
+COPY --from=build_webserver_test /usr/local/lib/python3.14/site-packages/fiona /usr/local/lib/python3.14/site-packages/fiona/
+COPY --from=build_webserver_test /usr/local/lib/python3.14/site-packages/fiona-1.10.1.dist-info /usr/local/lib/python3.14/site-packages/fiona-1.10.1.dist-info
+
 COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
-RUN pip3 install -r requirements/requirements_test.txt
+RUN export GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2); echo "GDAL_VERSION=$GDAL_VERSION" && pip3 install -r requirements/requirements_test.txt
 EXPOSE 8000
 
 COPY . .
