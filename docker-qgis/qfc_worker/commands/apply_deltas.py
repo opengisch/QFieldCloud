@@ -5,10 +5,11 @@ import json
 import logging
 import os
 import re
+from collections.abc import Callable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable, TypedDict, cast
+from typing import Any, TypedDict, cast
 from uuid import UUID
 
 import jsonschema

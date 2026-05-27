@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from django.db.models import QuerySet
 from rest_framework import filters, views
