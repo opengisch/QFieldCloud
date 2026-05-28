@@ -56,6 +56,17 @@ geo $is_docker_internal {
     172.16.0.0/12  1;
 }
 
+map $uri $is_acme {
+    ~^/.well-known/acme-challenge/  1;
+    default                         0;
+}
+
+map "$is_acme$allow_internal_http$is_docker_internal" $allow_http {
+    ~^1     1; # ACME challenge: always allowed
+    "011"   1; # docker internal with HTTP allowed
+    default 0;
+}
+
 server {
   listen 80;
   server_name ${QFIELDCLOUD_HOST};
@@ -70,11 +81,7 @@ server {
     return 444;
   }
 
-  # if HTTP is not allowed AND request is not from docker internal, redirect to HTTPS.
-  if ($allow_internal_http != "1") {
-    return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
-  }
-  if ($is_docker_internal != "1") {
+  if ($allow_http != "1") {
     return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
   }
 
