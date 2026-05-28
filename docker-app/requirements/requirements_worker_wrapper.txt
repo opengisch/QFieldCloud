@@ -16,7 +16,7 @@ requests==2.33.1
     # via docker
 tenacity==9.1.4
     # via -r /requirements/requirements_worker_wrapper.in
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   docker
     #   requests
