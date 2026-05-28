@@ -18,7 +18,7 @@ charset-normalizer==3.3.2
     #   requests
 click==8.1.7
     # via qfieldcloud-sdk
-idna==3.8
+idna==3.16
     # via
     #   qfieldcloud-sdk
     #   requests

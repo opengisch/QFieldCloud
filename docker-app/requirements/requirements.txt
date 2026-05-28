@@ -147,7 +147,7 @@ djangorestframework-stubs==3.16.9
     # via -r /requirements/requirements.in
 drf-spectacular==0.29.0
     # via -r /requirements/requirements.in
-idna==3.10
+idna==3.16
     # via requests
 inflection==0.5.1
     # via drf-spectacular

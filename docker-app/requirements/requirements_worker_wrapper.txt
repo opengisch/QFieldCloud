@@ -10,7 +10,7 @@ charset-normalizer==3.4.3
     # via requests
 docker==7.1.0
     # via -r /requirements/requirements_worker_wrapper.in
-idna==3.10
+idna==3.16
     # via requests
 requests==2.33.1
     # via docker
