@@ -56,15 +56,16 @@ geo $is_docker_internal {
     172.16.0.0/12  1;
 }
 
-map $uri $is_acme {
-    ~^/.well-known/acme-challenge/  1;
-    default                         0;
+# Determine if we should redirect to https
+map "$allow_internal_http:$is_docker_internal" $base_redirect_to_https {
+    "1:1"   0; # If we explicitly allow plain http and the request is coming from docker internal network, don't redirect to https.
+    default 1; # Default is to redirect to https.
 }
 
-map "$is_acme$allow_internal_http$is_docker_internal" $allow_http {
-    ~^1     1; # ACME challenge: always allowed
-    "011"   1; # docker internal with HTTP allowed
-    default 0;
+# Exclude https redirect for the following URIs
+map $request_uri $redirect_to_https {
+    "~^/.well-known/acme-challenge/" 0; # Letsencrypt Challenge
+    default $base_redirect_to_https;
 }
 
 server {
@@ -81,7 +82,7 @@ server {
     return 444;
   }
 
-  if ($allow_http != "1") {
+  if ($redirect_to_https = "1") {
     return 302 https://$host:${WEB_HTTPS_PORT}$request_uri;
   }
 
