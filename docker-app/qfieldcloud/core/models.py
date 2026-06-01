@@ -1388,6 +1388,13 @@ class Project(models.Model):
         Returns:
             QuerySet of all the last package jobs.
         """
+        if self.is_public:
+            return (
+                PackageJob.objects.filter(project_id=self.id)
+                .order_by("triggered_by", "-created_at")
+                .distinct("triggered_by")
+            )
+
         if self.owner.is_organization:
             # all the users including the organization owner
             triggered_by_qs = Person.objects.for_organization(self.owner)
