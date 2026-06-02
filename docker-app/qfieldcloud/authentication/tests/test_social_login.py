@@ -1,6 +1,7 @@
 import logging
 from unittest.mock import MagicMock
 
+from allauth.account import app_settings
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.providers.dummy.provider import DummyProvider
@@ -39,9 +40,12 @@ class QfcTestCase(TestCase):
         self.assertIsNone(match_result)
 
     @override_settings(
-        SOCIALACCOUNT_PROVIDERS={"dummy": {"EMAIL_AUTHENTICATION": True}}
+        ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
+        SOCIALACCOUNT_PROVIDERS={"dummy": {"EMAIL_AUTHENTICATION": True}},
     )
-    def test_3rd_party_auth_does_not_link_to_unverified_email(self):
+    def test_3rd_party_auth_does_not_link_to_unverified_email_when_verification_mandatory(
+        self,
+    ):
         Person.objects.create(
             username="the_person",
             email="the_email@qfield.cloud",
@@ -58,7 +62,36 @@ class QfcTestCase(TestCase):
         self.assertIsNone(match_result)
 
     @override_settings(
-        SOCIALACCOUNT_PROVIDERS={"dummy": {"EMAIL_AUTHENTICATION": True}}
+        ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.OPTIONAL,
+        SOCIALACCOUNT_PROVIDERS={"dummy": {"EMAIL_AUTHENTICATION": True}},
+    )
+    def test_3rd_party_auth_links_to_user_with_unverified_email_when_verification_optional(
+        self,
+    ):
+        person = Person.objects.create(
+            username="the_person",
+            email="the_email@qfield.cloud",
+        )
+
+        email_address = EmailAddress(email="the_email@qfield.cloud")
+        sociallogin = SocialLogin(
+            provider=self.dummy_provider, email_addresses=[email_address]
+        )
+
+        adapter = SocialAccountAdapter()
+        match_result = adapter.authenticate_by_email(sociallogin)
+
+        self.assertIsNotNone(match_result)
+
+        matched_user, matched_email = match_result
+
+        self.assertEqual(matched_user.pk, person.pk)
+        self.assertEqual(matched_email, "the_email@qfield.cloud")
+        self.assertEqual(matched_user.email, "the_email@qfield.cloud")
+
+    @override_settings(
+        ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
+        SOCIALACCOUNT_PROVIDERS={"dummy": {"EMAIL_AUTHENTICATION": True}},
     )
     def test_3rd_party_auth_links_to_user_and_not_organization(self):
         # an organization and a person user share the same email address.
@@ -127,6 +160,10 @@ class QfcTestCase(TestCase):
 
         self.assertIsNone(match_result)
 
+    @override_settings(
+        ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
+        SOCIALACCOUNT_PROVIDERS={"dummy": {"EMAIL_AUTHENTICATION": True}},
+    )
     def test_3rd_party_auth_links_mail_case_insensitive(self):
         person = Person.objects.create(
             username="the_person",
