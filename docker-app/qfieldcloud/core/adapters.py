@@ -11,6 +11,7 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 from constance import config
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -301,18 +302,25 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         for email_address in emails:
             email = email_address.email
 
-            verified_users_ids = EmailAddress.objects.filter(
-                email__iexact=email,
-                primary=True,
-                verified=True,
-            ).values_list("user_id", flat=True)
-
             users = User.objects.filter(
                 type=User.Type.PERSON,
                 email__iexact=email,
                 is_active=True,
-                pk__in=verified_users_ids,
             )
+
+            # here we check if the email address is verified, but only if the email verification is mandatory,
+            # otherwise we allow unverified emails to authenticate as well.
+            if (
+                settings.ACCOUNT_EMAIL_VERIFICATION
+                == app_settings.EmailVerificationMethod.MANDATORY
+            ):
+                verified_users_ids = EmailAddress.objects.filter(
+                    email__iexact=email,
+                    primary=True,
+                    verified=True,
+                ).values_list("user_id", flat=True)
+
+                users = users.filter(pk__in=verified_users_ids)
 
             matching_users.extend(users.all())
 
