@@ -6,6 +6,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
@@ -28,7 +29,6 @@ from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
 from django.db.models.fields.json import JSONField
 from django.urls import reverse, reverse_lazy
-from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from django_stubs_ext import StrOrPromise
 from encrypted_fields.fields import EncryptedTextField
@@ -1388,6 +1388,17 @@ class Project(models.Model):
         Returns:
             QuerySet of all the last package jobs.
         """
+        jobs_qs = (
+            PackageJob.objects.filter(
+                project_id=self.id,
+            )
+            .order_by("triggered_by", "-created_at")
+            .distinct("triggered_by")
+        )
+
+        if self.is_public:
+            return jobs_qs
+
         if self.owner.is_organization:
             # all the users including the organization owner
             triggered_by_qs = Person.objects.for_organization(self.owner)
@@ -1399,14 +1410,7 @@ class Project(models.Model):
         )
         triggered_by_ids_qs = triggered_by_qs.distinct().values_list("id", flat=True)
 
-        jobs_qs = (
-            PackageJob.objects.filter(
-                project_id=self.id,
-                triggered_by__in=triggered_by_ids_qs,
-            )
-            .order_by("triggered_by", "-created_at")
-            .distinct("triggered_by")
-        )
+        jobs_qs = jobs_qs.filter(triggered_by__in=triggered_by_ids_qs)
 
         return jobs_qs
 

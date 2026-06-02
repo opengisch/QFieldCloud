@@ -9,9 +9,10 @@ import socket
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, NamedTuple, TypedDict, cast
+from typing import Any, NamedTuple, TypedDict, cast
 from uuid import UUID
 
 from libqfieldsync.layer import LayerSource

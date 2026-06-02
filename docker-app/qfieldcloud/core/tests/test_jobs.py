@@ -364,19 +364,19 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         layers.sort(key=lambda layer: layer["name"])
 
         self.assertEqual(layers[0]["name"], "OpenStreetMap (Standard)")
-        self.assertEqual(layers[1]["name"], "list_rating")
-        self.assertEqual(layers[1]["wkb_type"], 100)
-        self.assertEqual(layers[2]["name"], "list_role")
+        self.assertEqual(layers[1]["name"], "Survey")
+        self.assertEqual(layers[1]["crs"], "EPSG:3857")
+        self.assertEqual(layers[1]["wkb_type"], 4)
+        self.assertEqual(layers[2]["name"], "list_rating")
         self.assertEqual(layers[2]["wkb_type"], 100)
-        self.assertEqual(layers[3]["name"], "list_salutation")
+        self.assertEqual(layers[3]["name"], "list_role")
         self.assertEqual(layers[3]["wkb_type"], 100)
-        self.assertEqual(layers[4]["name"], "list_services")
+        self.assertEqual(layers[4]["name"], "list_salutation")
         self.assertEqual(layers[4]["wkb_type"], 100)
-        self.assertEqual(layers[5]["name"], "list_yes_no")
+        self.assertEqual(layers[5]["name"], "list_services")
         self.assertEqual(layers[5]["wkb_type"], 100)
-        self.assertEqual(layers[6]["name"], "survey")
-        self.assertEqual(layers[6]["crs"], "EPSG:4326")
-        self.assertEqual(layers[6]["wkb_type"], 4)
+        self.assertEqual(layers[6]["name"], "list_yes_no")
+        self.assertEqual(layers[6]["wkb_type"], 100)
 
         # TODO @suricactus: The fields will be present again once `Layer` and `LayerField` models are implemented as the data will no longer fatten the `Project` model, see https://app.clickup.com/t/2192114/QF-8219
         # fields = layers[6]["fields"]

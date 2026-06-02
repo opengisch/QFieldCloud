@@ -2,10 +2,11 @@ import io
 import os
 import tempfile
 import zipfile
+from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path
 from time import sleep
-from typing import IO, Iterable, TextIO
+from typing import IO, TextIO
 
 import psycopg2
 from django.conf import settings

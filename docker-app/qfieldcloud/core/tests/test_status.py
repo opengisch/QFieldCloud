@@ -156,13 +156,15 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(data["incident_message"], "Sample incident message.")
 
         self.assertIn("incident_timestamp_utc", data)
-        self.assertEqual(data["incident_timestamp_utc"], "2002-10-18T12:00:00")
+        self.assertEqual(data["incident_timestamp_utc"], "2002-10-18T12:00:00Z")
 
         self.assertIn("maintenance_start_timestamp_utc", data)
-        self.assertEqual(data["maintenance_start_timestamp_utc"], "2002-10-18T12:00:00")
+        self.assertEqual(
+            data["maintenance_start_timestamp_utc"], "2002-10-18T12:00:00Z"
+        )
 
         self.assertIn("maintenance_end_timestamp_utc", data)
-        self.assertEqual(data["maintenance_end_timestamp_utc"], "2002-10-18T14:00:00")
+        self.assertEqual(data["maintenance_end_timestamp_utc"], "2002-10-18T14:00:00Z")
 
         self.assertIn("maintenance_message", data)
         self.assertEqual(data["maintenance_message"], "Sample maintenance message.")

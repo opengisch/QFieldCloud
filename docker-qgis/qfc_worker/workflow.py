@@ -5,14 +5,16 @@ import sys
 import tempfile
 import traceback
 import uuid
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Callable
+from typing import IO, Any
 
 from qfieldcloud_sdk import sdk
 
 from qfc_worker.exceptions import (
     InvalidXmlFileException,
+    UnableToContinueException,
     WorkflowModificationException,
     WorkflowValidationException,
 )
@@ -289,12 +291,14 @@ def run_workflow(
             feedback["error_type"] = "FILE_NOT_FOUND"
         elif isinstance(err, InvalidXmlFileException):
             feedback["error_type"] = "INVALID_PROJECT_FILE"
+        elif isinstance(err, UnableToContinueException):
+            feedback["error_type"] = "UNABLE_TO_CONTINUE"
         else:
             feedback["error_type"] = "UNKNOWN"
 
-        _type, _value, tb = sys.exc_info()
+        tb = traceback.TracebackException.from_exception(err)
         feedback["error_class"] = type(err).__name__
-        feedback["error_stack"] = traceback.format_tb(tb)
+        feedback["error_stack"] = "".join(tb.format())
     finally:
         feedback["steps"] = []
         feedback["outputs"] = {}

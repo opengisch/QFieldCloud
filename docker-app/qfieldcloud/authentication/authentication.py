@@ -1,5 +1,3 @@
-from typing import Type
-
 from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -21,7 +19,7 @@ def invalidate_all_tokens(user: User) -> int:
 
 
 def create_token(
-    token_model: Type[AuthToken],
+    token_model: type[AuthToken],
     user: User,
     _serializer=None,
     request: HttpRequest | None = None,

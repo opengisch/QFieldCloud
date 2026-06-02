@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Type, TypedDict, cast
+from typing import TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -946,7 +946,8 @@ class AbstractSubscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: datetime | None = None,
-    ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
+        regular_plan: Plan | None = None,
+    ) -> tuple[type["AbstractSubscription"] | None, "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
@@ -954,6 +955,7 @@ class AbstractSubscription(models.Model):
             plan: the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
             created_by: created by.
             active_since: active since for the subscription.
+            regular_plan: For trials only: The follow up plan that should be used to create the subscription after the trial period.
 
         Returns:
             the created trial subscription if the given plan was a trial and the regular subscription.
@@ -994,11 +996,13 @@ class AbstractSubscription(models.Model):
                     update_fields=["remaining_trial_organizations"]
                 )
 
-            # the trial plan should be the default plan
-            regular_plan = Plan.objects.get(
-                user_type=account.user.type,
-                is_default=True,
-            )
+            if not regular_plan:
+                # If no particular regular follow up plan was specified, choose
+                # the default plan for the given user type.
+                regular_plan = Plan.objects.get(
+                    user_type=account.user.type,
+                    is_default=True,
+                )
 
             # the end date of the trial is the start date of the regular
             regular_active_since = active_until

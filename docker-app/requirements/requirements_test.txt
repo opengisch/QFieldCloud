@@ -31,7 +31,7 @@ fiona==1.10.1
     # via -r /requirements/requirements_test.in
 h11==0.16.0
     # via wsproto
-idna==3.15
+idna==3.16
     # via
     #   requests
     #   trio

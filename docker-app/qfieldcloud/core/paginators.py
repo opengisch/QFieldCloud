@@ -1,9 +1,9 @@
 import inspect
+from functools import cached_property
 
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.db import connection
-from django.utils.functional import cached_property
 from django.utils.inspect import method_has_no_args
 
 

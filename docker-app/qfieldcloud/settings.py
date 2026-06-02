@@ -928,6 +928,9 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "v1",
     "CONTACT": {"email": "info@opengis.ch"},
     "LICENSE": {"name": "License"},
+    "PREPROCESSING_HOOKS": [
+        "qfieldcloud.core.utils2.spectacular_utils.expose_spectacular_endpoints"
+    ],
 }
 
 JAZZMIN_SETTINGS = {
@@ -950,7 +953,8 @@ JAZZMIN_SETTINGS = {
     # Copyright on the footer.
     "copyright": "OPENGIS.ch",
     # Additional custom CSS file for the Django Admin pages.
-    "custom_css": "css/admin.css",
+    "custom_css": "css/qfc_admin.css",
+    "custom_js": "js/qfc_admin.js",
     # Top menu links
     "topmenu_links": [
         {
