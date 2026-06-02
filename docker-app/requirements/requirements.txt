@@ -41,7 +41,7 @@ cryptography==46.0.7
     #   pyjwt
 deprecated==1.3.1
     # via -r /requirements/requirements.in
-django==5.2.13
+django==5.2.14
     # via
     #   -r /requirements/requirements.in
     #   django-allauth
@@ -101,7 +101,7 @@ django-debug-toolbar==6.3.0
     # via -r /requirements/requirements.in
 django-extensions==4.1
     # via -r /requirements/requirements.in
-django-fernet-encrypted-fields==0.3.1
+django-fernet-encrypted-fields==0.4.0
     # via -r /requirements/requirements.in
 django-filter==25.2
     # via -r /requirements/requirements.in
@@ -147,7 +147,7 @@ djangorestframework-stubs==3.16.9
     # via -r /requirements/requirements.in
 drf-spectacular==0.29.0
     # via -r /requirements/requirements.in
-idna==3.10
+idna==3.16
     # via requests
 inflection==0.5.1
     # via drf-spectacular
@@ -201,7 +201,7 @@ rpds-py==0.27.0
     #   referencing
 s3transfer==0.10.4
     # via boto3
-sentry-sdk==2.57.0
+sentry-sdk==2.60.0
     # via -r /requirements/requirements.in
 six==1.17.0
     # via python-dateutil
@@ -232,7 +232,7 @@ typing-extensions==4.14.1
     #   djangorestframework-stubs
 uritemplate==4.2.0
     # via drf-spectacular
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   botocore
     #   requests
