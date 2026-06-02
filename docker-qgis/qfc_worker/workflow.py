@@ -14,6 +14,7 @@ from qfieldcloud_sdk import sdk
 
 from qfc_worker.exceptions import (
     InvalidXmlFileException,
+    UnableToContinueException,
     WorkflowModificationException,
     WorkflowValidationException,
 )
@@ -290,6 +291,8 @@ def run_workflow(
             feedback["error_type"] = "FILE_NOT_FOUND"
         elif isinstance(err, InvalidXmlFileException):
             feedback["error_type"] = "INVALID_PROJECT_FILE"
+        elif isinstance(err, UnableToContinueException):
+            feedback["error_type"] = "UNABLE_TO_CONTINUE"
         else:
             feedback["error_type"] = "UNKNOWN"
 
