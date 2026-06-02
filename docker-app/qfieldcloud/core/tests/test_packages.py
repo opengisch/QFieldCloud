@@ -998,3 +998,34 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertIn(package_job_owner, latest_package_jobs_qs)
         self.assertIn(package_job_admin, latest_package_jobs_qs)
         self.assertIn(package_job_member, latest_package_jobs_qs)
+
+    def test_public_project_non_member_latest_package_jobs(self):
+        """Non-members who trigger package jobs on public projects must be
+        included in latest_package_jobs so their files are not deleted by cleanup."""
+
+        owner = Person.objects.create_user(username="project_owner")
+
+        project = Project.objects.create(
+            name="public_project",
+            owner=owner,
+            is_public=True,
+        )
+
+        non_member = Person.objects.create_user(username="non_member")
+
+        owner_package_job = PackageJob.objects.create(
+            project=project,
+            created_by=owner,
+            triggered_by=owner,
+        )
+
+        non_member_package_job = PackageJob.objects.create(
+            project=project,
+            created_by=non_member,
+            triggered_by=non_member,
+        )
+
+        latest_package_jobs_qs = project.latest_package_jobs()
+
+        self.assertIn(owner_package_job, latest_package_jobs_qs)
+        self.assertIn(non_member_package_job, latest_package_jobs_qs)
