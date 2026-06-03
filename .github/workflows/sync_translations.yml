@@ -47,7 +47,7 @@ jobs:
         run: ./tx pull --all --minimum-perc 0 --force
 
       - name: Add and commit new translations
-        uses: EndBug/add-and-commit@v9
+        uses: EndBug/add-and-commit@v10
         with:
           message: Synchronize translations
           author_name: Translation update 💬
