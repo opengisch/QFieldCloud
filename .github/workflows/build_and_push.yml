@@ -100,7 +100,7 @@ jobs:
       -
         name: Docker Build ${{ matrix.services.service_name }}
         id: docker_test_application
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: ${{ matrix.services.dockerfile }}
           context: ${{ matrix.services.docker_context }}
