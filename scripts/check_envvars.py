@@ -23,7 +23,11 @@ def get_env_varnames_from_envfile(filename: str) -> set[str]:
             variable_name = line.strip().split("=")[0]
 
             # not settings
-            if variable_name in ["COMPOSE_FILE", "COMPOSE_PATH_SEPARATOR"]:
+            if variable_name in [
+                "COMPOSE_FILE",
+                "COMPOSE_PATH_SEPARATOR",
+                "DOCKER_DEFAULT_PLATFORM",
+            ]:
                 continue
 
             result.add(variable_name)
