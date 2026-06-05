@@ -81,7 +81,9 @@ def create_collaborator_by_username_or_email(
 
     if len(users) == 0:
         # No user found, if string is an email address, we try to send a link
-        if invitation.is_valid_email(username):
+        if not username:
+            message = _("Please enter a username or email address.")
+        elif invitation.is_valid_email(username):
             success, message = invitation.invite_user_by_email(username, created_by)
         else:
             message = _('User "{}" does not exist.').format(username)
