@@ -1278,7 +1278,7 @@ class QfcTestCase(APITransactionTestCase):
         ).latest("updated_at")
 
         for _ in range(10):
-            time.sleep(2)
+            time.sleep(3)
             response = self.client.get(uri)
 
             self.assertHttpOk(response)
