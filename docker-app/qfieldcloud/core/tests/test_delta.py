@@ -616,7 +616,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xy_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -639,7 +639,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyz_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -662,7 +662,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyz_nan_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -685,7 +685,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyzm_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -708,7 +708,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyzm_nan_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -731,7 +731,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when Shapely supports M dimension in WKT output")
     def test_delta_with_xyzm_nannan_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
