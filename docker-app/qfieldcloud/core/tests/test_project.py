@@ -663,6 +663,56 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertEqual(len(p1.direct_collaborators), 0)
 
+    def test_collaborators_count_no_collaborators(self):
+        # baseline: owner-only project counts 0
+        project = Project.objects.create(name="p", is_public=False, owner=self.user1)
+        self.assertEqual(project.collaborators_count, 0)
+
+    def test_collaborators_count_team_members_only(self):
+        o1 = Organization.objects.create(username="o1", organization_owner=self.user1)
+        t1 = Team.objects.create(username="@o1/t1", team_organization=o1)
+        OrganizationMember.objects.create(organization=o1, member=self.user2)
+        OrganizationMember.objects.create(organization=o1, member=self.user3)
+        TeamMember.objects.create(team=t1, member=self.user2)
+        TeamMember.objects.create(team=t1, member=self.user3)
+        project = Project.objects.create(name="p", is_public=False, owner=o1)
+        ProjectCollaborator.objects.create(
+            project=project, collaborator=t1, role=ProjectCollaborator.Roles.REPORTER
+        )
+        self.assertEqual(project.collaborators_count, 2)
+
+    def test_collaborators_count_deduplicates_person_in_both(self):
+        # user2 is both a direct collaborator AND a team member
+        o1 = Organization.objects.create(username="o1", organization_owner=self.user1)
+        t1 = Team.objects.create(username="@o1/t1", team_organization=o1)
+        OrganizationMember.objects.create(organization=o1, member=self.user2)
+        OrganizationMember.objects.create(organization=o1, member=self.user3)
+        TeamMember.objects.create(team=t1, member=self.user2)
+        TeamMember.objects.create(team=t1, member=self.user3)
+        project = Project.objects.create(name="p", is_public=False, owner=o1)
+        ProjectCollaborator.objects.create(
+            project=project,
+            collaborator=self.user2,
+            role=ProjectCollaborator.Roles.MANAGER,
+        )
+        ProjectCollaborator.objects.create(
+            project=project, collaborator=t1, role=ProjectCollaborator.Roles.REPORTER
+        )
+        self.assertEqual(project.collaborators_count, 2)  # user2, user3
+
+    def test_collaborators_count_excludes_org_owner_in_team(self):
+        # org owner (user1) is a team member and must NOT be counted
+        o1 = Organization.objects.create(username="o1", organization_owner=self.user1)
+        t1 = Team.objects.create(username="@o1/t1", team_organization=o1)
+        TeamMember.objects.create(team=t1, member=self.user1)
+        OrganizationMember.objects.create(organization=o1, member=self.user2)
+        TeamMember.objects.create(team=t1, member=self.user2)
+        project = Project.objects.create(name="p", is_public=False, owner=o1)
+        ProjectCollaborator.objects.create(
+            project=project, collaborator=t1, role=ProjectCollaborator.Roles.REPORTER
+        )
+        self.assertEqual(project.collaborators_count, 1)  # only user2, not user1
+
     def test_add_project_collaborator_and_being_org_member(self):
         u1 = Person.objects.create(username="u1")
         u2 = Person.objects.create(username="u2")
