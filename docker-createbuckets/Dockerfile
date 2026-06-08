@@ -1,4 +1,4 @@
-FROM ubuntu:noble
+FROM ubuntu:resolute
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
