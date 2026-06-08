@@ -1,0 +1,12 @@
+# The following rules are ignored to keep dockerfile simple and readable, unless stated otherwise.
+ignored:
+  # ignore: Pin versions in apt get install. Instead of `apt-get install <package>` use `apt-get install <package>=<version>`
+  - DL3008
+  # ignore: Pin versions in pip. Instead of `pip install <package>` use `pip install <package>==<version>` or `pip install --requirement <requirements file>`
+  - DL3013
+  # ignore: Multiple consecutive `RUN` instructions. Consider consolidation.
+  - DL3059
+  # ignore: echo may not expand escape sequences. Use printf.
+  - SC2028
+  # ignore: Don't use ls | grep. Use a glob or a for loop with a condition to allow non-alphanumeric filenames.
+  - SC2010
