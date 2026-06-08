@@ -1825,6 +1825,35 @@ class Project(models.Model):
         )
 
     @property
+    def total_collaborators(self) -> PersonQueryset:
+        if self.owner.is_organization:
+            exclude_pks = [self.owner.organization.organization_owner_id]
+        else:
+            exclude_pks = [self.owner_id]
+
+        team_collaborators_ids = (
+            self.collaborators.skip_incognito()  # type: ignore[attr-defined]
+            .filter(collaborator__type=User.Type.TEAM)
+            .values_list("collaborator_id", flat=True)
+        )
+        direct_ids = self.direct_collaborators.values_list("collaborator_id", flat=True)
+        team_member_ids = (
+            TeamMember.objects.filter(team_id__in=team_collaborators_ids)
+            .exclude(member_id__in=exclude_pks)
+            .values_list("member_id", flat=True)
+        )
+        return cast(
+            PersonQueryset,
+            Person.objects.filter(
+                Q(pk__in=direct_ids) | Q(pk__in=team_member_ids)
+            ).distinct(),
+        )
+
+    @property
+    def total_collaborators_count(self) -> int:
+        return self.total_collaborators.count()
+
+    @property
     def owner_can_create_job(self):
         # NOTE consider including in status refactoring
 
