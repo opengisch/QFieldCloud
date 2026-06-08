@@ -642,12 +642,21 @@ class ProcessProjectfileJobRun(JobRun):
         return context
 
     def after_docker_run(self) -> None:
+        update_fields = ["project_details"]
         project = self.job.project
         project.project_details = self.job.feedback["outputs"]["project_details"][
             "project_details"
         ]
 
-        project.save(update_fields=("project_details",))
+        # Since the `Project.qgis_version` field is newly added, we want to backfill it for old projects that didn't have it set,
+        # but the `process_projectfile` job can detect the QGIS version from the project file and return it in the feedback, we can set it here.
+        if self.job.project.qgis_version is None and project.project_details.get(
+            "qgis_version"
+        ):
+            project.qgis_version = project.project_details["qgis_version"]
+            update_fields.append("qgis_version")
+
+        project.save(update_fields=update_fields)
 
     def after_docker_exception(self) -> None:
         project = self.job.project

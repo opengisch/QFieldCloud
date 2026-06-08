@@ -19,6 +19,7 @@ from qfc_worker.exceptions import (
 from qfc_worker.utils import (
     download_project,
     get_layers_data,
+    get_qgis_version_from_project_file,
     get_qgis_xml_error_context,
     layers_data_to_string,
     open_qgis_project_as_readonly,
@@ -75,6 +76,7 @@ class ProjectDetails(TypedDict):
     ordered_layer_ids: list[str]
     attachment_dirs: list[str]
     data_dirs: list[str]
+    qgis_version: str
 
 
 def _extract_project_details(project: QgsProject) -> ProjectDetails:
@@ -102,6 +104,9 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
         "QFieldSync", "attachmentDirs", ["DCIM"]
     )
     details["data_dirs"], _ = project.readListEntry("QFieldSync", "dataDirs", [])
+    # NOTE we are at quite far in the process of working with the QGIS project file, so we can safely assume that
+    # if the project file was broken, we would have already thrown an error before, so no need to try/except for `ValueError` here.
+    details["qgis_version"] = get_qgis_version_from_project_file(project.fileName())
 
     logger.info(
         f"QGIS project layer checks\n{layers_data_to_string(details['layers_by_id'])}",
