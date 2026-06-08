@@ -262,6 +262,9 @@ def open_qgis_file(
     path = Path(filename)
     suffix = path.suffix.lower()
 
+    if path.is_absolute() or any(part == ".." for part in path.parts):
+        raise ValueError(f"Invalid QGIS project file path: {filename}")
+
     if fh is None:
         fh = open(path, "rb")
         owns_fh = True
