@@ -33,6 +33,14 @@ services:
       POSTGRES_USER: test_postgis_db_user
       POSTGRES_PASSWORD: test_postgis_db_password
 
+  test_mssql_db:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+    ports:
+      - "1433:1433"
+
 networks:
   default:
     # Use a custom driver
