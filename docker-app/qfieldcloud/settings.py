@@ -156,6 +156,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "qfieldcloud.core.middleware.fields_limit.DynamicMaxNumberFieldsLimitMiddleware",
     "qfieldcloud.core.middleware.requests.attach_keys",  # QF-2540: Inspecting request after Django middlewares
     "log_request_id.middleware.RequestIDMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -782,6 +783,11 @@ CONSTANCE_CONFIG = {
         "User inactivity threshold in days. Set to 0 to disable the inactivity threshold.",
         int,
     ),
+    "WEB_DATA_UPLOAD_MAX_NUMBER_FIELDS": (
+        1000,
+        "Max number of GET/POST parameters, dynamically overrides the DATA_UPLOAD_MAX_NUMBER_FIELDS setting.",
+        int,
+    ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -813,6 +819,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Web": (
         "STATUS_PAGE_URL",
         "WEB_USER_INACTIVITY_THRESHOLD_DAYS",
+        "WEB_DATA_UPLOAD_MAX_NUMBER_FIELDS",
     ),
 }
 
