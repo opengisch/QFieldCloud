@@ -7,7 +7,7 @@ from uuid import UUID
 
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
-from libqfieldsync.project import ProjectConfiguration
+from libqfieldsync.project import ProjectConfig
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from qgis.core import QgsCoordinateTransform, QgsCsException, QgsRectangle
 
@@ -38,7 +38,7 @@ def call_libqfieldsync_packager(
     project = open_qgis_project(str(the_qgis_file_name))
 
     layers = project.mapLayers()
-    project_config = ProjectConfiguration(project)
+    project_config = ProjectConfig(project)
     vl_extent_wkt = ""
     vl_extent = QgsRectangle()
     vl_extent_crs = project.crs()
