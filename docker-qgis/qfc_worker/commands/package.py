@@ -121,7 +121,7 @@ def call_libqfieldsync_packager(
 
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
-    offline_converter.project_configuration.create_base_map = False
+    offline_converter._project_config.create_base_map = False
     offline_converter.convert(reload_original_project=False)
 
     logger.info("Packaging finished!")
