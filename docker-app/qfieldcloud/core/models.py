@@ -695,7 +695,11 @@ class Organization(User):
 
         return Person.objects.filter(
             is_staff=False,
-        ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
+        ).filter(
+            Q(id__in=users_with_delta)
+            | Q(id__in=users_with_jobs)
+            | Q(id=self.organization_owner_id)  # type: ignore[attr-defined]
+        )
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
