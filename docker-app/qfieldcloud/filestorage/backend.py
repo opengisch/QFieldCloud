@@ -7,6 +7,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
+import mimetypes
+
 from storages.backends.s3 import S3Storage
 
 
@@ -55,6 +57,28 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
             response: HTTP redirect response to patch.
         """
         pass
+
+    def _get_write_parameters(self, name, content=None):
+        params = super()._get_write_parameters(name, content)
+
+        # Detect Content-Type from the original filename embedded in the
+        # versioned S3 path.  Versioned paths look like:
+        #   projects/<uuid>/files/DCIM/photo.jpg/v20260610-a1b2c3d4
+        # The trailing version UUID has no file extension, so the parent
+        # class's mimetypes.guess_type(name) always returns None.
+        parts = name.rsplit("/", 1)
+        if len(parts) == 2 and parts[1].startswith("v2"):
+            original_name = parts[0].rsplit("/", 1)[-1]
+        else:
+            original_name = parts[-1]
+
+        mime_type, encoding = mimetypes.guess_type(original_name)
+        if mime_type:
+            params["ContentType"] = mime_type
+            if encoding:
+                params["ContentEncoding"] = encoding
+
+        return params
 
 
 class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
