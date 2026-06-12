@@ -6,14 +6,14 @@ RUN mkdir -p /io
 
 # Install dependencies needed to add QGIS repository
 RUN apt-get update \
-    && apt-get install -y \
+    && apt-get install -y --no-install-recommends \
     gnupg \
     software-properties-common \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Add QGIS GPG key
-RUN wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
+RUN wget -q -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
 
 # Add QGIS repository
 RUN echo "Types: deb deb-src\n\
@@ -31,7 +31,7 @@ ARG PIP_NO_CACHE_DIR=1
 
 # Install non-QGIS dependencies
 RUN apt-get update \
-    && apt-get install -y \
+    && apt-get install -y --no-install-recommends \
     python3-pip \
     xvfb \
     iputils-ping \
@@ -47,7 +47,7 @@ ARG QGIS_VERSION=1:3.44.10+40noble
 # Install QGIS dependencies
 RUN apt-get update \
     # NOTE `DEBIAN_FRONTEND=noninteractive` is required to be able to install tzinfo
-    && DEBIAN_FRONTEND=noninteractive apt-get install -yf \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -yf --no-install-recommends \
         qgis=${QGIS_VERSION} \
         qgis-dbg=${QGIS_VERSION} \
         qgis-common=${QGIS_VERSION} \
@@ -61,7 +61,7 @@ RUN apt-get update \
 ARG DEBUG_BUILD
 RUN if [ "$DEBUG_BUILD" = "1" ]; then \
     apt-get update \
-    && apt-get install -y \
+    && apt-get install -y --no-install-recommends \
     gdbserver \
     valgrind \
     && rm -rf /var/lib/apt/lists/* \
@@ -87,15 +87,15 @@ ENV IS_WITHIN_QFC_WORKER=1
 
 # Install debugpy for local development and debuggability
 ARG DEBUG_BUILD
-RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --break-system-packages debugpy; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --no-cache-dir --break-system-packages debugpy; fi
 
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/
-RUN pip3 install --break-system-packages --ignore-installed -r /tmp/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed -r /tmp/requirements.txt
 
 # Install `libqfieldsync` dependecy since it changes more frequently compared to regular dependencies
 COPY requirements_internal.txt /tmp/
-RUN pip3 install --break-system-packages --use-deprecated=legacy-resolver -r /tmp/requirements_internal.txt
+RUN pip3 install --no-cache-dir --break-system-packages --use-deprecated=legacy-resolver -r /tmp/requirements_internal.txt
 
 COPY schemas schemas
 COPY qfc_worker qfc_worker
