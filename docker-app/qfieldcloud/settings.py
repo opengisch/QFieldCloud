@@ -489,7 +489,9 @@ ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 ACCOUNT_EMAIL_VERIFICATION = os.environ["ACCOUNT_EMAIL_VERIFICATION"]
 
 # https://docs.allauth.org/en/latest/account/rate_limits.html
-ACCOUNT_RATE_LIMITS = False
+ACCOUNT_RATE_LIMITS = {
+    "reset_password": "5/m/ip,5/m/key",
+}
 
 # https://docs.allauth.org/en/latest/account/configuration.html#user-model
 # NOTE when casing is preserved, potentially expensive `__iexact`` lookups are performed when filter on username.
