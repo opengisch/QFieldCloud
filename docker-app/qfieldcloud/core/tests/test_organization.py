@@ -16,6 +16,7 @@ from qfieldcloud.core.models import (
     Person,
     Project,
 )
+from qfieldcloud.subscription.models import Subscription
 
 from .utils import set_subscription, setup_subscription_plans
 
@@ -322,3 +323,48 @@ class QfcTestCase(APITestCase):
         self.assertEqual(self.organization1.organization_owner, self.user2)
         self.assertIn(self.user1.id, members_ids)
         self.assertNotIn(self.user2.id, members_ids)
+
+    def test_transfer_ownership_preserves_subscription(self):
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        subscription = self.organization1.useraccount.current_subscription
+        status_before = subscription.status
+        active_until_before = subscription.active_until
+
+        self.organization1.organization_owner = self.user2
+        self.organization1.save()
+
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.status, status_before)
+        self.assertEqual(subscription.active_until, active_until_before)
+
+    def test_subscription_management_transfers_to_new_owner(self):
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        org_subscription_pk = self.organization1.useraccount.current_subscription.pk
+
+        def manages(user):
+            return (
+                Subscription.objects.managed_by(user.pk)
+                .filter(pk=org_subscription_pk)
+                .exists()
+            )
+
+        # before transfer: user1 manages the org subscription, user2 doesn't
+        self.assertTrue(manages(self.user1))
+        self.assertFalse(manages(self.user2))
+
+        self.organization1.organization_owner = self.user2
+        self.organization1.save()
+
+        # after transfer: user2 manages the org subscription, user1 doesn't
+        self.assertFalse(manages(self.user1))
+        self.assertTrue(manages(self.user2))
