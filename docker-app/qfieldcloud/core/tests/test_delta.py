@@ -74,6 +74,13 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.project1.save()
 
+        self.project3 = Project.objects.create(
+            name="project3",
+            is_public=False,
+            owner=self.org1,
+        )
+        self.project3.save()
+
         OrganizationMember.objects.create(
             organization=self.org1,
             member=self.user2,
@@ -169,6 +176,57 @@ class QfcTestCase(APITransactionTestCase):
             time.sleep(1)
 
         raise Exception("Projectfile never set on project")
+
+    def upload_project3_files(self, project) -> Project:
+        for project_file in [
+            "testdata.gpkg",
+            "project3.qgs",
+        ]:
+            file_path = testdata_path(f"delta/{project_file}")
+            response = self.client.post(
+                f"/api/v1/files/{project.id}/{project_file}/",
+                {"file": open(file_path, "rb")},
+                format="multipart",
+            )
+            self.assertTrue(
+                status.is_success(response.status_code),
+                f"Failed to upload file '{project_file}'",
+            )
+
+        # wait until the project file check are ready
+        for i in range(30):
+            updated_project = Project.objects.get(id=project.id)
+            if updated_project.has_the_qgis_file:
+                return updated_project
+
+            time.sleep(1)
+
+        raise Exception("Projectfile never set on project")
+
+    def test_push_apply_delta_file_add_feature_default_value(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        project = self.upload_project3_files(self.project3)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta_add_feature_default_value.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "c8c421cd-e39c-40a0-97d8-a319c245ba14",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+        )
+
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "polygons")
+
+        f = gdf.iloc[2]
+        self.assertEqual(1, f["int"])
+        self.assertEqual(1.0, f["dbl"])
+        self.assertEqual("correct!", f["str"])
 
     def test_push_apply_delta_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)

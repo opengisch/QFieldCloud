@@ -827,7 +827,8 @@ def create_feature(
         raise DeltaException("Unable to create a valid feature")
 
     # Restore values that were overwritten in QgsVectorLayerUtils.createFeature for
-    # attributes having a valid default value set to apply on update
+    # attributes having a valid default value set to apply on update,
+    # see https://github.com/opengisch/QFieldCloud/issues/1660
     if new_feat_attrs:
         for field in fields:
             attr_name = field.name()
