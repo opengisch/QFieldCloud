@@ -813,18 +813,13 @@ def create_feature(
     feat_attrs = {}
 
     if new_feat_attrs:
-        # `fid` is an extra field created during conversion to gpkg and makes this assert to fail.
-        # if fields.size() < len(new_feat_attrs):
-        #     raise DeltaException('The layer has less attributes than the provided by the delta')
+        for field in fields:
+            attr_name = field.name()
 
-        if new_feat_attrs:
-            for field in fields:
-                attr_name = field.name()
-
-                if attr_name in new_feat_attrs:
-                    attr_value = new_feat_attrs[attr_name]
-                    attr_index = fields.indexFromName(attr_name)
-                    feat_attrs[attr_index] = attr_value
+            if attr_name in new_feat_attrs:
+                attr_value = new_feat_attrs[attr_name]
+                attr_index = fields.indexFromName(attr_name)
+                feat_attrs[attr_index] = attr_value
 
     new_feat = QgsVectorLayerUtils.createFeature(layer, geometry, feat_attrs)
 
