@@ -173,7 +173,7 @@ phonenumbers==9.0.27
     # via -r /requirements/requirements.in
 pillow==12.2.0
     # via -r /requirements/requirements.in
-psycopg2==2.9.11
+psycopg2==2.9.12
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi
