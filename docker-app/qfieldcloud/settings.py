@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     "auditlog",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.project",
     # listed after core because we overwrite createsuperuser command
     "django.contrib.auth",
     "qfieldcloud.subscription",
