@@ -3,6 +3,7 @@ import mimetypes
 import os
 import re
 from abc import ABC
+from typing import Any
 
 import requests
 from django.core.exceptions import ImproperlyConfigured
@@ -58,7 +59,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         """
         pass
 
-    def _get_write_parameters(self, name: str, content: ContentFile | None = None) -> dict:
+    def _get_write_parameters(self, name: str, content: ContentFile | None = None) -> dict[str, Any]:
         params = super()._get_write_parameters(name, content)
 
         # Detect content type from the original filename embedded in the
@@ -70,7 +71,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         # Note the last part of the versioned name has the version timestamp
         # and a random UUID fragment, which prevents `mimetypes.guess_type`
         # from guessing a proper content type, as it uses the file extension
-        # to do so.  Without this fix, the parent class's
+        # to do so. Without this fix, the parent class's
         # `_get_write_parameters` would set `ContentType` to `None`.
         parts = name.rsplit("/", 1)
         base_name = parts[-1]
