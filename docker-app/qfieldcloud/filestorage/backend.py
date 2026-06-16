@@ -59,7 +59,9 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         """
         pass
 
-    def _get_write_parameters(self, name: str, content: ContentFile | None = None) -> dict[str, Any]:
+    def _get_write_parameters(
+        self, name: str, content: ContentFile | None = None
+    ) -> dict[str, Any]:
         params = super()._get_write_parameters(name, content)
 
         # Detect content type from the original filename embedded in the
@@ -76,10 +78,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         parts = name.rsplit("/", 1)
         base_name = parts[-1]
 
-        if (
-            len(parts) == 2
-            and re.fullmatch(r"v20[0-9]{12}-[a-f0-9]{8}$", parts[-1])
-        ):
+        if len(parts) == 2 and re.fullmatch(r"v20[0-9]{12}-[a-f0-9]{8}$", parts[-1]):
             base_name = parts[0].rsplit("/", 1)[-1]
 
         mime_type, encoding = mimetypes.guess_type(base_name)

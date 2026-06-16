@@ -37,6 +37,7 @@ class QfcS3Boto3StorageTestCase(TestCase):
     def _call(self, name, parent_params=None):
         if parent_params is None:
             parent_params = {}
+
         with patch(
             "storages.backends.s3.S3Storage._get_write_parameters",
             return_value=parent_params,
@@ -95,8 +96,7 @@ class QfcS3Boto3StorageTestCase(TestCase):
         version_id = uuid.uuid4()
 
         s3_key = (
-            f"projects/{project_id}/files/{filename}/"
-            f"{display}-{str(version_id)[:8]}"
+            f"projects/{project_id}/files/{filename}/{display}-{str(version_id)[:8]}"
         )
 
         params = self._call(s3_key)
@@ -119,9 +119,7 @@ class QfcS3Boto3StorageTestCase(TestCase):
         self.assertEqual(params["ContentType"], "image/png")
 
     def test_versioned_pdf(self):
-        params = self._call(
-            "projects/abc123/files/report.pdf/v20261231235959-abcdef01"
-        )
+        params = self._call("projects/abc123/files/report.pdf/v20261231235959-abcdef01")
         self.assertEqual(params["ContentType"], "application/pdf")
 
     # ==================================================================
@@ -143,9 +141,7 @@ class QfcS3Boto3StorageTestCase(TestCase):
     def test_no_extension_versioned(self):
         """Versioned path where the original filename has no extension
         — no Content-Type should be set."""
-        params = self._call(
-            "projects/abc123/files/README/v20260317162354-512bd29b"
-        )
+        params = self._call("projects/abc123/files/README/v20260317162354-512bd29b")
         self.assertNotIn("ContentType", params)
 
     def test_preserves_existing_parent_params(self):
@@ -160,7 +156,5 @@ class QfcS3Boto3StorageTestCase(TestCase):
     def test_old_year_format_not_matched(self):
         """v1999… does not match the regex — falls through safely
         to guess_type on the last path component (no extension)."""
-        params = self._call(
-            "projects/abc123/files/photo.jpg/v19991231235959-abcdef01"
-        )
+        params = self._call("projects/abc123/files/photo.jpg/v19991231235959-abcdef01")
         self.assertNotIn("ContentType", params)
