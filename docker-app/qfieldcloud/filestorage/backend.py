@@ -9,7 +9,6 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
-
 from storages.backends.s3 import S3Storage
 
 
