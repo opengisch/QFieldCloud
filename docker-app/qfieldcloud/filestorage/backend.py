@@ -59,7 +59,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         """
         pass
 
-    def _get_write_parameters(self, name: str, content=None) -> dict:
+    def _get_write_parameters(self, name: str, content: ContentFile | None = None) -> dict:
         params = super()._get_write_parameters(name, content)
 
         # Detect content type from the original filename embedded in the
