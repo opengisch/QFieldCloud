@@ -1331,7 +1331,7 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
         job = Job.objects.filter(
-            project=self.project1,
+            project=project,
             type=Job.Type.DELTA_APPLY,
         ).latest("updated_at")
 
