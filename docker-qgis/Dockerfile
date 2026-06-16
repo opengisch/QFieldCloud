@@ -82,7 +82,7 @@ ENV PYTHONPATH=/libqfieldsync
 ENV PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}
 
 # QFC specific variables
-# Controls whether libqfiedlsync should log also to the QGIS message log
+# Controls whether libqfieldsync should log also to the QGIS message log
 ENV IS_WITHIN_QFC_WORKER=1
 
 # Install debugpy for local development and debuggability
@@ -93,7 +93,7 @@ RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --no-cache-dir --break-system
 COPY requirements.txt /tmp/
 RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed -r /tmp/requirements.txt
 
-# Install `libqfieldsync` dependecy since it changes more frequently compared to regular dependencies
+# Install `libqfieldsync` dependency since it changes more frequently compared to regular dependencies
 COPY requirements_internal.txt /tmp/
 RUN pip3 install --no-cache-dir --break-system-packages --use-deprecated=legacy-resolver -r /tmp/requirements_internal.txt
 
