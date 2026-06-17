@@ -69,6 +69,7 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Project,
     ProjectCollaborator,
+    ProjectSeed,
     Secret,
     Team,
     TeamMember,
@@ -1120,6 +1121,44 @@ class OrganizationSecretInline(SecretInlineBase):
         }
 
 
+class ProjectSeedInline(admin.StackedInline):
+    model = ProjectSeed
+    extra = 1
+    has_direct_delete_permission = False
+    fk_name = "project"
+
+    autocomplete_fields = ("clone_from_project",)
+
+    fields = (
+        "extent",
+        "clone_from_project",
+        "xlsform_file",
+        "settings__pre",
+    )
+
+    readonly_fields = (
+        "extent",
+        "clone_from_project",
+        "settings__pre",
+    )
+
+    def settings__pre(self, instance: ProjectSeed) -> SafeText:
+        return format_text(instance.settings, "json")
+
+    def has_add_permission(self, request: HttpRequest, obj: Any | None = ...) -> bool:
+        return False
+
+    def has_delete_permission(
+        self, request: HttpRequest, obj: Any | None = ...
+    ) -> bool:
+        return False
+
+    def has_change_permission(
+        self, request: HttpRequest, obj: Any | None = ...
+    ) -> bool:
+        return False
+
+
 class ProjectForm(ModelForm):
     project_files = fields.CharField(
         disabled=True, required=False, widget=ProjectFilesWidget
@@ -1247,6 +1286,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "file_storage_migrated_at",
     )
     inlines = (
+        ProjectSeedInline,
         ProjectSecretInline,
         ProjectCollaboratorInline,
     )
