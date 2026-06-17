@@ -15,6 +15,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Person,
     Project,
+    ProjectCollaborator,
 )
 
 from .utils import set_subscription, setup_subscription_plans
@@ -147,6 +148,32 @@ class QfcTestCase(APITestCase):
 
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 0)
+
+    def test_delete_member_removes_project_collaborators(self):
+        # user2 is a member of organization1
+        org_member = OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+
+        project = Project.objects.create(
+            name="the_project",
+            owner=self.organization1,
+            is_public=False,
+        )
+        # user2 is a collaborator on the project
+        ProjectCollaborator.objects.create(
+            project=project,
+            collaborator=self.user2,
+            role=ProjectCollaborator.Roles.EDITOR,
+        )
+
+        self.assertEqual(ProjectCollaborator.objects.filter(project=project).count(), 1)
+
+        org_member.delete()
+
+        self.assertEqual(ProjectCollaborator.objects.filter(project=project).count(), 0)
 
     def test_created_by_set_to_none_on_user_deletion(self):
         creator = Person.objects.create(username="creator")
