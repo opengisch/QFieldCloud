@@ -919,9 +919,9 @@ class AbstractSubscription(models.Model):
             .last()
         )
 
-        # Use plan from the user's most recent subscription, if possible.
+        # For organization users, use plan from the user's most recent subscription.
         # Otherwise fall back to default plan for the given user type.
-        if most_recent_subscription:
+        if most_recent_subscription and account.user.is_organization:
             plan = most_recent_subscription.plan
         else:
             plan = Plan.objects.get(
