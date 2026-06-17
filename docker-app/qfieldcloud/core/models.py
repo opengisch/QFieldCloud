@@ -823,6 +823,13 @@ class OrganizationMember(models.Model):
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         super().delete(*args, **kwargs)
 
+        # delete the project colloborations of this deleted org member,
+        # as they are no longer part of the organization.
+        ProjectCollaborator.objects.filter(
+            project__owner=self.organization,
+            collaborator=self.member,
+        ).delete()
+
         return TeamMember.objects.filter(
             team__team_organization=self.organization,
             member=self.member,
