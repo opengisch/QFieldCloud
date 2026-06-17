@@ -5,6 +5,8 @@
 # pull a builder image, the same as the base
 FROM python:3.14-slim-trixie AS build
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Disable annoying pip version check, we don't care if pip is slightly older
 ARG PIP_DISABLE_PIP_VERSION_CHECK=1
 
@@ -13,25 +15,21 @@ ARG PIP_NO_CACHE_DIR=1
 
 # install system-wide requirements
 RUN apt-get update \
-    && apt-get install -y \
+    && apt-get install -y --no-install-recommends \
     # psycopg2 dependencies
     libpq-dev \
     python3-dev \
     gcc \
-    # fiona dependencies
-    g++ \
-    libgdal-dev \
-    gdal-bin \
     # ability to install modules from git repositories (e.g. `django-cron`)
     git \
     && rm -rf /var/lib/apt/lists/*
 
 # install `pip-compile` (as part of `pip-tools`)
-RUN pip3 install pip-tools
+RUN pip3 install --no-cache-dir pip-tools
 
 # install pip dependencies
 COPY ./requirements/requirements.txt /requirements/requirements.txt
-RUN pip3 install -r requirements/requirements.txt \
+RUN pip3 install --no-cache-dir -r requirements/requirements.txt \
     && rm requirements/requirements.txt
 
 # save 60 MB of data... Safe to delete according to botocore contributor https://github.com/boto/botocore/issues/1629#issuecomment-451309885
@@ -57,7 +55,7 @@ ENV PIP_NO_CACHE_DIR=1
 
 # install dependencies
 RUN apt-get update \
-    && apt-get install -y \
+    && apt-get install -y --no-install-recommends \
 # GeoDjango as recommended at https://docs.djangoproject.com/en/4.1/ref/contrib/gis/install/geolibs/#installing-geospatial-libraries
     binutils libproj-dev gdal-bin \
 # needed for Django's `manage.py makemessages`
@@ -76,8 +74,8 @@ COPY --from=build /usr/local/lib/python3.14/site-packages/ /usr/local/lib/python
 # install debug dependencies
 ARG DEBUG_BUILD
 
-RUN if [ "$DEBUG_BUILD" = "1" ]; then apt update && apt install -y gdb procps; fi
-RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install debugpy ipython memray py-spy; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then apt-get update && apt-get install -y --no-install-recommends gdb procps && rm -rf /var/lib/apt/lists/*; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --no-cache-dir debugpy ipython memray py-spy; fi
 
 # add app group
 RUN addgroup --system app && adduser --system app --ingroup app
@@ -104,7 +102,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 FROM base AS webserver_runtime
 ENV LOGGER_SOURCE=app
 COPY ./requirements/requirements_runtime.txt requirements/requirements_runtime.txt
-RUN pip3 install -r requirements/requirements_runtime.txt
+RUN pip3 install --no-cache-dir -r requirements/requirements_runtime.txt
 EXPOSE 8000
 
 COPY . .
@@ -115,22 +113,11 @@ USER app
 # WEBSERVER TEST         #
 ##########################
 
-# a separate builder stage for webserver test environment to compile `fiona` only
-FROM build AS build_webserver_test
-COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
-RUN echo "GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2)"
-RUN export GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2); echo "GDAL_VERSION=$GDAL_VERSION" && pip3 install $(grep ^fiona requirements/requirements_test.txt)
-
 # a separate stage for webserver test environment
 FROM base AS webserver_test
 ENV LOGGER_SOURCE=app
-
-# Copy fiona only
-COPY --from=build_webserver_test /usr/local/lib/python3.14/site-packages/fiona /usr/local/lib/python3.14/site-packages/fiona/
-COPY --from=build_webserver_test /usr/local/lib/python3.14/site-packages/fiona-1.10.1.dist-info /usr/local/lib/python3.14/site-packages/fiona-1.10.1.dist-info
-
 COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
-RUN export GDAL_VERSION=$(gdalinfo --version | cut -d, -f1 | cut -d' ' -f2); echo "GDAL_VERSION=$GDAL_VERSION" && pip3 install -r requirements/requirements_test.txt
+RUN pip3 install -r requirements/requirements_test.txt
 EXPOSE 8000
 
 COPY . .
@@ -145,7 +132,7 @@ USER app
 FROM base AS worker_wrapper_runtime
 ENV LOGGER_SOURCE=worker_wrapper
 COPY ./requirements/requirements_worker_wrapper.txt requirements/requirements_worker_wrapper.txt
-RUN pip3 install -r requirements/requirements_worker_wrapper.txt
+RUN pip3 install --no-cache-dir -r requirements/requirements_worker_wrapper.txt
 
 COPY . .
 RUN chown -R app:app .

@@ -1,18 +1,18 @@
 import io
 import json
 import logging
+import tempfile
 import time
 from datetime import datetime
 from typing import NoReturn
 from unittest import mock, skip
 from uuid import UUID
 
-import fiona
+import geopandas as gpd
 import rest_framework
 from django.http.response import FileResponse
 from rest_framework import response, status
 from rest_framework.test import APITransactionTestCase
-from shapely.geometry import shape
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
@@ -73,6 +73,13 @@ class QfcTestCase(APITransactionTestCase):
             owner=self.user2,
         )
         self.project1.save()
+
+        self.project3 = Project.objects.create(
+            name="project3",
+            is_public=False,
+            owner=self.org1,
+        )
+        self.project3.save()
 
         OrganizationMember.objects.create(
             organization=self.org1,
@@ -170,6 +177,57 @@ class QfcTestCase(APITransactionTestCase):
 
         raise Exception("Projectfile never set on project")
 
+    def upload_project3_files(self, project) -> Project:
+        for project_file in [
+            "testdata.gpkg",
+            "project3.qgs",
+        ]:
+            file_path = testdata_path(f"delta/{project_file}")
+            response = self.client.post(
+                f"/api/v1/files/{project.id}/{project_file}/",
+                {"file": open(file_path, "rb")},
+                format="multipart",
+            )
+            self.assertTrue(
+                status.is_success(response.status_code),
+                f"Failed to upload file '{project_file}'",
+            )
+
+        # wait until the project file check are ready
+        for i in range(30):
+            updated_project = Project.objects.get(id=project.id)
+            if updated_project.has_the_qgis_file:
+                return updated_project
+
+            time.sleep(1)
+
+        raise Exception("Projectfile never set on project")
+
+    def test_push_apply_delta_file_add_feature_default_value(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        project = self.upload_project3_files(self.project3)
+
+        self.upload_and_check_deltas(
+            project=project,
+            delta_filename="singlelayer_singledelta_add_feature_default_value.json",
+            token=self.token1.key,
+            final_values=[
+                [
+                    "c8c421cd-e39c-40a0-97d8-a319c245ba14",
+                    "STATUS_APPLIED",
+                    self.user1.username,
+                ]
+            ],
+        )
+
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "polygons")
+
+        f = gdf.iloc[2]
+        self.assertEqual(1, f["int"])
+        self.assertEqual(1.0, f["dbl"])
+        self.assertEqual("correct!", f["str"])
+
     def test_push_apply_delta_file(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -187,10 +245,9 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points_xy") as layer:
-            features = list(layer)
-            self.assertEqual(666, features[0]["properties"]["int"])
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
+
+        self.assertEqual(666, gdf.iloc[0]["int"])
 
     def test_push_apply_delta_file_empty_source_layer_id(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -209,10 +266,9 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points_xy") as layer:
-            features = list(layer)
-            self.assertEqual(666, features[0]["properties"]["int"])
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
+
+        self.assertEqual(666, gdf.iloc[0]["int"])
 
     def test_push_apply_delta_file_with_null_char(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -231,10 +287,9 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points_xy") as layer:
-            features = list(layer)
-            self.assertEqual("", features[0]["properties"]["str"])
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
+
+        self.assertEqual("", gdf.iloc[0]["str"])
 
     def test_push_apply_delta_file_with_error(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -343,10 +398,9 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, layer="points_xy") as layer:
-            features = list(layer)
-            self.assertEqual(666, features[0]["properties"]["int"])
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
+
+        self.assertEqual(666, gdf.iloc[0]["int"])
 
         self.upload_and_check_deltas(
             project=project,
@@ -620,7 +674,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xy_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -643,7 +697,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyz_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -666,7 +720,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyz_nan_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -689,7 +743,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyzm_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -712,7 +766,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when pyogrio supports Measured (M) geometry types")
     def test_delta_with_xyzm_nan_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -735,7 +789,7 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-    @skip("Enable when Fiona and Shapely support Z and M dimensions")
+    @skip("Enable when Shapely supports M dimension in WKT output")
     def test_delta_with_xyzm_nannan_for_xyzm_layer(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
         project = self.upload_project_files(self.project1)
@@ -945,15 +999,13 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points_xy") as layer:
-            features = list(layer)
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
 
-            self.assertEqual(len(features), 4)
-            self.assertEqual(features[0]["properties"]["int"], 1)
-            self.assertEqual(features[1]["properties"]["int"], 2)
-            self.assertEqual(features[2]["properties"]["int"], 3)
-            self.assertEqual(features[3]["properties"]["int"], 1000)
+        self.assertEqual(len(gdf), 4)
+        self.assertEqual(gdf.iloc[0]["int"], 1)
+        self.assertEqual(gdf.iloc[1]["int"], 2)
+        self.assertEqual(gdf.iloc[2]["int"], 3)
+        self.assertEqual(gdf.iloc[3]["int"], 1000)
 
         # 2) client 2 creates a feature
         self.upload_and_check_deltas(
@@ -969,16 +1021,14 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points_xy") as layer:
-            features = list(layer)
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
 
-            self.assertEqual(len(features), 5)
-            self.assertEqual(features[0]["properties"]["int"], 1)
-            self.assertEqual(features[1]["properties"]["int"], 2)
-            self.assertEqual(features[2]["properties"]["int"], 3)
-            self.assertEqual(features[3]["properties"]["int"], 1000)
-            self.assertEqual(features[4]["properties"]["int"], 2000)
+        self.assertEqual(len(gdf), 5)
+        self.assertEqual(gdf.iloc[0]["int"], 1)
+        self.assertEqual(gdf.iloc[1]["int"], 2)
+        self.assertEqual(gdf.iloc[2]["int"], 3)
+        self.assertEqual(gdf.iloc[3]["int"], 1000)
+        self.assertEqual(gdf.iloc[4]["int"], 2000)
 
         # 3) client 1 updates their created feature
         self.upload_and_check_deltas(
@@ -994,16 +1044,14 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points_xy") as layer:
-            features = list(layer)
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
 
-            self.assertEqual(len(features), 5)
-            self.assertEqual(features[0]["properties"]["int"], 1)
-            self.assertEqual(features[1]["properties"]["int"], 2)
-            self.assertEqual(features[2]["properties"]["int"], 3)
-            self.assertEqual(features[3]["properties"]["int"], 1001)
-            self.assertEqual(features[4]["properties"]["int"], 2000)
+        self.assertEqual(len(gdf), 5)
+        self.assertEqual(gdf.iloc[0]["int"], 1)
+        self.assertEqual(gdf.iloc[1]["int"], 2)
+        self.assertEqual(gdf.iloc[2]["int"], 3)
+        self.assertEqual(gdf.iloc[3]["int"], 1001)
+        self.assertEqual(gdf.iloc[4]["int"], 2000)
 
         # 4) client 2 updates their created feature
         self.upload_and_check_deltas(
@@ -1019,16 +1067,14 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points_xy") as layer:
-            features = list(layer)
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
 
-            self.assertEqual(len(features), 5)
-            self.assertEqual(features[0]["properties"]["int"], 1)
-            self.assertEqual(features[1]["properties"]["int"], 2)
-            self.assertEqual(features[2]["properties"]["int"], 3)
-            self.assertEqual(features[3]["properties"]["int"], 1001)
-            self.assertEqual(features[4]["properties"]["int"], 2002)
+        self.assertEqual(len(gdf), 5)
+        self.assertEqual(gdf.iloc[0]["int"], 1)
+        self.assertEqual(gdf.iloc[1]["int"], 2)
+        self.assertEqual(gdf.iloc[2]["int"], 3)
+        self.assertEqual(gdf.iloc[3]["int"], 1001)
+        self.assertEqual(gdf.iloc[4]["int"], 2002)
 
         # 5) client 1 deletes their created feature
         self.upload_and_check_deltas(
@@ -1044,15 +1090,13 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points_xy") as layer:
-            features = list(layer)
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
 
-            self.assertEqual(len(features), 4)
-            self.assertEqual(features[0]["properties"]["int"], 1)
-            self.assertEqual(features[1]["properties"]["int"], 2)
-            self.assertEqual(features[2]["properties"]["int"], 3)
-            self.assertEqual(features[3]["properties"]["int"], 2002)
+        self.assertEqual(len(gdf), 4)
+        self.assertEqual(gdf.iloc[0]["int"], 1)
+        self.assertEqual(gdf.iloc[1]["int"], 2)
+        self.assertEqual(gdf.iloc[2]["int"], 3)
+        self.assertEqual(gdf.iloc[3]["int"], 2002)
 
         # 6) client 2 deletes their created feature
         self.upload_and_check_deltas(
@@ -1068,14 +1112,12 @@ class QfcTestCase(APITransactionTestCase):
             ],
         )
 
-        gpkg = io.BytesIO(self.get_file_contents(project, "testdata.gpkg"))
-        with fiona.open(gpkg, "r", layer="points_xy") as layer:
-            features = list(layer)
+        gdf = self.read_gpkg_layer(project, "testdata.gpkg", "points_xy")
 
-            self.assertEqual(len(features), 3)
-            self.assertEqual(features[0]["properties"]["int"], 1)
-            self.assertEqual(features[1]["properties"]["int"], 2)
-            self.assertEqual(features[2]["properties"]["int"], 3)
+        self.assertEqual(len(gdf), 3)
+        self.assertEqual(gdf.iloc[0]["int"], 1)
+        self.assertEqual(gdf.iloc[1]["int"], 2)
+        self.assertEqual(gdf.iloc[2]["int"], 3)
 
     def test_push_list_multilayer_multidelta(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -1289,12 +1331,12 @@ class QfcTestCase(APITransactionTestCase):
                 self.assertEqual(payload[idx]["created_by"], created_by)
 
         job = Job.objects.filter(
-            project=self.project1,
+            project=project,
             type=Job.Type.DELTA_APPLY,
         ).latest("updated_at")
 
         for _ in range(10):
-            time.sleep(2)
+            time.sleep(3)
             response = self.client.get(uri)
 
             self.assertHttpOk(response)
@@ -1358,14 +1400,14 @@ class QfcTestCase(APITransactionTestCase):
                     if layer_name is None:
                         continue
 
-                    layer = fiona.open(
-                        io.BytesIO(self.get_file_contents(project, "testdata.gpkg")),
-                        layer=layer_name,
-                    )
-
                     if delta.content["method"] in ("create", "patch"):
                         fid = delta.last_modified_pk
-                        matched_features = list(filter(lambda f: f.id == fid, layer))
+                        with tempfile.NamedTemporaryFile(suffix=".gpkg") as tmp:
+                            tmp.write(self.get_file_contents(project, "testdata.gpkg"))
+                            tmp.flush()
+                            matched_features = gpd.read_file(
+                                tmp.name, layer=layer_name, fids=[int(fid)]
+                            )
 
                         if len(matched_features) == 0:
                             self.fail(
@@ -1376,17 +1418,23 @@ class QfcTestCase(APITransactionTestCase):
                                 f"More than one feature found in the resulting gpkg: {fid=} {layer_name=} {layer_id=} "
                             )
 
-                        f = matched_features[0]
+                        f = matched_features.iloc[0]
                         new = delta.content["new"]
 
                         if "geometry" in new:
                             new_geometry_wkt = new["geometry"].replace("nan", "0")
                             # shapely's WKT is `POINT Z` instead of QGIS "POINTZ"
-                            shapely_wkt = shape(f.geometry).wkt.replace(
-                                "POINT Z", "POINTZ"
-                            )
+                            shapely_wkt = f.geometry.wkt.replace("POINT Z", "POINTZ")
                             self.assertEqual(shapely_wkt, new_geometry_wkt)
 
                 return
 
         self.fail("Worker didn't finish", job=job)
+
+    def read_gpkg_layer(
+        self, project: Project, filename: str, layer: str
+    ) -> gpd.GeoDataFrame:
+        with tempfile.NamedTemporaryFile(suffix=".gpkg") as tmp:
+            tmp.write(self.get_file_contents(project, filename))
+            tmp.flush()
+            return gpd.read_file(tmp.name, layer=layer)

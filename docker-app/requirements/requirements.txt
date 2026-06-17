@@ -35,7 +35,7 @@ cffi==2.0.0
     # via cryptography
 charset-normalizer==3.4.3
     # via requests
-cryptography==46.0.7
+cryptography==49.0.0
     # via
     #   django-fernet-encrypted-fields
     #   pyjwt
@@ -91,7 +91,7 @@ django-constance==4.3.5
     # via -r /requirements/requirements.in
 django-cors-headers==4.9.0
     # via -r /requirements/requirements.in
-django-countries==8.2.0
+django-countries==9.0.0
     # via -r /requirements/requirements.in
 django-cron-django5==0.6.2
     # via -r /requirements/requirements.in
@@ -135,7 +135,7 @@ django-stubs-ext==5.2.9
     # via
     #   -r /requirements/requirements.in
     #   django-stubs
-django-tables2==2.9.0
+django-tables2==3.0.0
     # via -r /requirements/requirements.in
 django-timezone-field==7.2.1
     # via -r /requirements/requirements.in
@@ -155,7 +155,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-json-log-formatter==1.1.1
+json-log-formatter==1.2.1
     # via -r /requirements/requirements.in
 jsonfield==3.2.0
     # via django-notifications-hq
@@ -173,11 +173,11 @@ phonenumbers==9.0.27
     # via -r /requirements/requirements.in
 pillow==12.2.0
     # via -r /requirements/requirements.in
-psycopg2==2.9.11
+psycopg2==2.9.12
     # via -r /requirements/requirements.in
 pycparser==2.22
     # via cffi
-pyjwt[crypto]==2.12.1
+pyjwt[crypto]==2.13.0
     # via django-allauth
 pymemcache==4.0.0
     # via -r /requirements/requirements.in
@@ -201,7 +201,7 @@ rpds-py==0.27.0
     #   referencing
 s3transfer==0.10.4
     # via boto3
-sentry-sdk==2.60.0
+sentry-sdk==2.62.0
     # via -r /requirements/requirements.in
 six==1.17.0
     # via python-dateutil

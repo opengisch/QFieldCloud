@@ -912,10 +912,22 @@ class AbstractSubscription(models.Model):
 
         TODO Python 3.11 the actual return type is Self
         """
-        plan = Plan.objects.get(
-            user_type=account.user.type,
-            is_default=True,
+        most_recent_subscription = (
+            cls.objects.filter(account=account)
+            .exclude(active_until__isnull=True)
+            .order_by("active_until")
+            .last()
         )
+
+        # For organization users, use plan from the user's most recent subscription.
+        # Otherwise fall back to default plan for the given user type.
+        if most_recent_subscription and account.user.is_organization:
+            plan = most_recent_subscription.plan
+        else:
+            plan = Plan.objects.get(
+                user_type=account.user.type,
+                is_default=True,
+            )
 
         if account.user.is_organization:
             # NOTE sometimes `account.user` is not an organization, e.g. when setting

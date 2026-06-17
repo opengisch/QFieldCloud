@@ -813,23 +813,32 @@ def create_feature(
     feat_attrs = {}
 
     if new_feat_attrs:
-        # `fid` is an extra field created during conversion to gpkg and makes this assert to fail.
-        # if fields.size() < len(new_feat_attrs):
-        #     raise DeltaException('The layer has less attributes than the provided by the delta')
+        for field in fields:
+            attr_name = field.name()
 
-        if new_feat_attrs:
-            for field in fields:
-                attr_name = field.name()
-
-                if attr_name in new_feat_attrs:
-                    attr_value = new_feat_attrs[attr_name]
-                    attr_index = fields.indexFromName(attr_name)
-                    feat_attrs[attr_index] = attr_value
+            if attr_name in new_feat_attrs:
+                attr_value = new_feat_attrs[attr_name]
+                attr_index = fields.indexFromName(attr_name)
+                feat_attrs[attr_index] = attr_value
 
     new_feat = QgsVectorLayerUtils.createFeature(layer, geometry, feat_attrs)
 
     if not new_feat.isValid():
         raise DeltaException("Unable to create a valid feature")
+
+    # Restore values that were overwritten in QgsVectorLayerUtils.createFeature for
+    # attributes having a valid default value set to apply on update,
+    # see https://github.com/opengisch/QFieldCloud/issues/1660
+    if new_feat_attrs:
+        for field in fields:
+            attr_name = field.name()
+
+            if attr_name in new_feat_attrs:
+                attr_index = fields.indexFromName(attr_name)
+                attr_default_value = layer.defaultValueDefinition(attr_index)
+                if attr_default_value.isValid() and attr_default_value.applyOnUpdate():
+                    attr_value = new_feat_attrs[attr_name]
+                    new_feat.setAttribute(attr_index, attr_value)
 
     if not layer.addFeature(new_feat):
         raise DeltaException(

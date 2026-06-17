@@ -7,7 +7,7 @@ from uuid import UUID
 
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
-from libqfieldsync.project import ProjectConfiguration
+from libqfieldsync.project import ProjectConfig
 from libqfieldsync.utils.file_utils import get_project_in_folder
 from qgis.core import QgsCoordinateTransform, QgsCsException, QgsRectangle
 
@@ -38,7 +38,7 @@ def call_libqfieldsync_packager(
     project = open_qgis_project(str(the_qgis_file_name))
 
     layers = project.mapLayers()
-    project_config = ProjectConfiguration(project)
+    project_config = ProjectConfig(project)
     vl_extent_wkt = ""
     vl_extent = QgsRectangle()
     vl_extent_crs = project.crs()
@@ -121,7 +121,7 @@ def call_libqfieldsync_packager(
 
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
-    offline_converter.project_configuration.create_base_map = False
+    offline_converter._project_config.create_base_map = False
     offline_converter.convert(reload_original_project=False)
 
     logger.info("Packaging finished!")
