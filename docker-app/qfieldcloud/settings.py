@@ -822,6 +822,9 @@ QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
 # Name of the QGIS 3 docker image used as a worker by `worker_wrapper`
 QFIELDCLOUD_QGIS3_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS3_IMAGE_NAME"]
 
+# Name of the QGIS 4 docker image used as a worker by `worker_wrapper`
+QFIELDCLOUD_QGIS4_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS4_IMAGE_NAME"]
+
 # URL the qgis worker will use to access the running API endpoint on the app service
 QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ["QFIELDCLOUD_WORKER_QFIELDCLOUD_URL"]
 

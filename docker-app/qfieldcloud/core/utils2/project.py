@@ -70,3 +70,22 @@ def has_online_vector_data(project: Project) -> bool:
         break
 
     return has_online_vector_layers
+
+
+def get_qgis_major_version(version: str) -> int:
+    """Extract the major version number from a QGIS version string.
+
+    The version string is expected to be in the format "X.Y.Z" or "X.Y.Z-rcN", where X is the major version number.
+
+    Example:
+    - "3.30.0" -> 3
+    - "3.30.0-rc1" -> 3
+    - "4.0.0" -> 4
+    """
+
+    try:
+        major_version_str = version.split(".")[0]
+        major_version = int(major_version_str)
+        return major_version
+    except (IndexError, ValueError):
+        raise ValueError(f"Invalid QGIS version string: {version}")

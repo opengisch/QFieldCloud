@@ -31,6 +31,7 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.utils2 import packages
+from qfieldcloud.core.utils2.project import get_qgis_major_version
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -55,7 +56,7 @@ TOKEN_EXPIRATION_TIME_BUFFER_S = 60
 """Extra time in seconds for the dedicated worker token to keep the token valid, in addition to `JobRun.container_timeout_secs`. Useful when the worker takes longer to start."""
 
 
-class QgisException(Exception):
+class JobException(Exception):
     pass
 
 
@@ -399,8 +400,28 @@ class JobRun:
         self.job.docker_started_at = timezone.now()
         self.job.save(update_fields=["docker_started_at"])
 
+        qgis_images = {
+            "qgis3": settings.QFIELDCLOUD_QGIS3_IMAGE_NAME,
+            "qgis4": settings.QFIELDCLOUD_QGIS4_IMAGE_NAME,
+        }
+
+        if self.job.project.qgis_version:
+            qgis_major_project_version = get_qgis_major_version(
+                self.job.project.qgis_version
+            )
+            qgis_images_key = f"qgis{qgis_major_project_version}"
+
+            if qgis_images_key not in qgis_images:
+                raise JobException(
+                    f"Unsupported QGIS major version {qgis_major_project_version} ({self.job.project.qgis_version}) for project {self.job.project.id}."
+                )
+
+            qgis_image = qgis_images[qgis_images_key]
+        else:
+            qgis_image = qgis_images["qgis3"]
+
         container: Container = client.containers.run(  # type:ignore
-            settings.QFIELDCLOUD_QGIS3_IMAGE_NAME,
+            qgis_image,
             command,
             environment=environment,
             ports=ports,
