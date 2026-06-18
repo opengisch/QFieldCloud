@@ -734,15 +734,24 @@ class Organization(User):
 class OrganizationMemberQueryset(models.QuerySet):
     @transaction.atomic
     def delete(self, *args, **kwargs):
+        # delete the team memberships of this deleted org member,
+        # as it is no longer part of the organization.
         team_total, team_summary = TeamMember.objects.filter(
             team__team_organization__in=self.values_list("organization"),
             member__in=self.values_list("member"),
         ).delete()
 
+        # delete the project collaborations of this deleted org member,
+        # as it is no longer part of the organization.
+        collab_total, collab_summary = ProjectCollaborator.objects.filter(
+            project__owner__in=self.values_list("organization"),
+            collaborator__in=self.values_list("member"),
+        ).delete()
+
         org_total, org_summary = super().delete(*args, **kwargs)
 
-        total = org_total + team_total
-        summary = {**org_summary, **team_summary}
+        total = org_total + team_total + collab_total
+        summary = {**org_summary, **team_summary, **collab_summary}
 
         return total, summary
 
@@ -823,8 +832,8 @@ class OrganizationMember(models.Model):
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         super().delete(*args, **kwargs)
 
-        # delete the project colloborations of this deleted org member,
-        # as they are no longer part of the organization.
+        # delete the project collaborations of this deleted org member,
+        # as it is no longer part of the organization.
         ProjectCollaborator.objects.filter(
             project__owner=self.organization,
             collaborator=self.member,
