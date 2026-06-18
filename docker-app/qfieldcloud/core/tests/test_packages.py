@@ -27,13 +27,13 @@ from qfieldcloud.core.models import (
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     get_test_postgis_connection,
-    open_qgis_file,
     setup_subscription_plans,
     testdata_path,
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2.jobs import repackage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.filestorage.utils import open_qgis_file
 
 logging.disable(logging.CRITICAL)
 
@@ -257,10 +257,10 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         local_file = os.path.join(tempdir, "project_qfield.qgz")
-        with open_qgis_file(local_file) as f:
+        with open_qgis_file(local_file, open(local_file, "rb")) as f:
             self.assertEqual(
                 f.readline().strip(),
-                b"<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
+                "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
             )
 
     def test_list_files_for_qfield_broken_file(self):
@@ -345,7 +345,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         local_file = os.path.join(tempdir, "project_qfield.qgz")
-        with open_qgis_file(local_file) as f:
+        with open_qgis_file(local_file, open(local_file, "rb")) as f:
             for line in f:
                 if 'name="theMapCanvas"' in str(line):
                     return
