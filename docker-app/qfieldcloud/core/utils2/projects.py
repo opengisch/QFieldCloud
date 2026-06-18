@@ -75,15 +75,17 @@ def create_collaborator_by_username_or_email(
         success, message - whether the collaborator creation was success and explanation message of the outcome
     """
     success, message = False, ""
+
+    if not username.strip():
+        return False, _("Please enter a username or email address.")
+
     users = list(
         Person.objects.filter(Q(username=username) | Q(email=username))
     ) + list(Team.objects.filter(username=username, team_organization=project.owner))
 
     if len(users) == 0:
         # No user found, if string is an email address, we try to send a link
-        if not username:
-            message = _("Please enter a username or email address.")
-        elif invitation.is_valid_email(username):
+        if invitation.is_valid_email(username):
             success, message = invitation.invite_user_by_email(username, created_by)
         else:
             message = _('User "{}" does not exist.').format(username)
