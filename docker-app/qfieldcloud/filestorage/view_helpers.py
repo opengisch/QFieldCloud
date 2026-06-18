@@ -408,10 +408,12 @@ def delete_project_file_version(
 
         if (
             is_qgis_project_file(filename)
-            and not File.objects.filter(
+            and not File.objects.with_type_project()
+            .filter(
                 name=filename,
                 project_id=project_id,
-            ).exists()
+            )
+            .exists()
         ):
             project.the_qgis_file_name = None
             update_fields.append("the_qgis_file_name")

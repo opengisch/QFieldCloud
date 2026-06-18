@@ -1455,9 +1455,11 @@ class Project(models.Model):
             # Return all layers if the project is missing
             return self.localized_layers
 
-        available_filenames = File.objects.filter(
-            project=self.shared_datasets_project
-        ).values_list("name", flat=True)
+        available_filenames = (
+            File.objects.with_type_project()
+            .filter(project=self.shared_datasets_project)
+            .values_list("name", flat=True)
+        )
 
         missing_localized_layers = []
         for layer in self.localized_layers:
