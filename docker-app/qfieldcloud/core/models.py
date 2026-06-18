@@ -438,6 +438,11 @@ def get_user_account_avatar_download_from(
     )
 
 
+class UserAccountQuerySet(models.QuerySet):
+    def get_by_natural_key(self, username: str) -> UserAccount:
+        return self.get(user__username=username)
+
+
 class UserAccount(models.Model):
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
@@ -451,6 +456,8 @@ class UserAccount(models.Model):
         (NOTIFS_WEEKLY, _("Weekly")),
         (NOTIFS_DISABLED, _("Disabled")),
     )
+
+    objects = UserAccountQuerySet.as_manager()
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
@@ -485,6 +492,11 @@ class UserAccount(models.Model):
         null=True,
         blank=True,
     )
+
+    def natural_key(self) -> tuple:
+        return self.user.natural_key()
+
+    natural_key.dependencies = ["core.user"]  # type: ignore[attr-defined]
 
     @property
     def current_subscription(self):
@@ -737,6 +749,14 @@ class Organization(User):
 
 
 class OrganizationMemberQueryset(models.QuerySet):
+    def get_by_natural_key(
+        self, organization_username: str, member_username: str
+    ) -> "OrganizationMember":
+        return self.get(
+            organization__username=organization_username,
+            member__username=member_username,
+        )
+
     @transaction.atomic
     def delete(self, *args, **kwargs):
         # delete the team memberships of this deleted org member,
@@ -818,6 +838,11 @@ class OrganizationMember(models.Model):
 
     def __str__(self):
         return self.organization.username + ": " + self.member.username
+
+    def natural_key(self) -> tuple:
+        return self.organization.natural_key() + self.member.natural_key()
+
+    natural_key.dependencies = ["core.organization", "core.user"]  # type: ignore[attr-defined]
 
     def clean(self) -> None:
         if self.organization.organization_owner == self.member:
@@ -904,7 +929,19 @@ class Team(User):
         return f"@{organization_name}/{team_name}"
 
 
+class TeamMemberQuerySet(models.QuerySet):
+    def get_by_natural_key(
+        self, team_username: str, member_username: str
+    ) -> "TeamMember":
+        return self.get(
+            team__username=team_username,
+            member__username=member_username,
+        )
+
+
 class TeamMember(models.Model):
+    objects = TeamMemberQuerySet.as_manager()
+
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
         MEMBER = "member", _("Member")
@@ -928,6 +965,11 @@ class TeamMember(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(type=User.Type.PERSON),
     )
+
+    def natural_key(self) -> tuple:
+        return self.team.natural_key() + self.member.natural_key()
+
+    natural_key.dependencies = ["core.team", "core.user"]  # type: ignore[attr-defined]
 
     def clean(self) -> None:
         if (
