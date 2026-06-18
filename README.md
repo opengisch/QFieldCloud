@@ -10,10 +10,18 @@ QFieldCloud allows seamless synchronization of your field data with your spatial
 If you're interested in quickly getting up and running, we suggest subscribing to the version hosted by OPENGIS.ch at https://qfield.cloud. This is also the instance that is integrated by default into QField.
 <a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal_embedded_font.svg" width="100%"/></a>
 
+That hosted service runs on the same open-source backend, but adds a polished web frontend and account, subscription, and payment management for the hosted offering. The hosted service helps fund ongoing development of QField and QFieldCloud.
+
+## Self-hosting
+
+The full QFieldCloud backend — this repo — is open source and production-ready. You can self-host it and get everything needed to work with QField. QFieldCloud also exposes a complete REST API, so you can build your own frontend or integrate it into existing systems. Contributions are welcome via the [contributor guide](CONTRIBUTING.md).
+
+Self-hosting gives you full control over data residency, user management, and configuration.
+
 
 ## Documentation
 
-QField and QFieldCloud documentation is deployed [here](https://docs.qfield.org).
+QField and QFieldCloud documentation is at [docs.qfield.org](https://docs.qfield.org), with self-hosting specifics at [docs.qfield.org/reference/qfieldcloud/self_hosted](https://docs.qfield.org/reference/qfieldcloud/self_hosted/).
 
 
 ## Feature requests and issue reports
