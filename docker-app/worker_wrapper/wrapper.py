@@ -400,7 +400,7 @@ class JobRun:
         self.job.save(update_fields=["docker_started_at"])
 
         container: Container = client.containers.run(  # type:ignore
-            settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
+            settings.QFIELDCLOUD_QGIS3_IMAGE_NAME,
             command,
             environment=environment,
             ports=ports,
