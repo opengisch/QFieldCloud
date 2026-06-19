@@ -7,13 +7,14 @@ from django.dispatch import receiver
 from django_currentuser.middleware import get_current_authenticated_user
 from notifications.signals import notify
 
+from qfieldcloud.project.enums import ProjectRoleOrigins
+
 from ..core.models import (
     Organization,
     OrganizationMember,
     Person,
     Project,
     ProjectCollaborator,
-    ProjectQueryset,
     Team,
     TeamMember,
     User,
@@ -69,7 +70,7 @@ def _concerned_users_in_project(project: Project):
     """Returns a list of users concerned by updates to a project"""
 
     return Person.objects.for_project(project).exclude(  # type: ignore
-        project_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
+        project_role_origin=ProjectRoleOrigins.PUBLIC
     )
 
 

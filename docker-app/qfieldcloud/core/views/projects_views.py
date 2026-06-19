@@ -15,13 +15,14 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Job, Project, ProjectQueryset, ProjectSeed
+from qfieldcloud.core.models import Job, Project, ProjectSeed
 from qfieldcloud.core.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
 from qfieldcloud.core.utils2 import project_seed
+from qfieldcloud.project.enums import ProjectRoleOrigins
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
@@ -173,9 +174,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 force_exclude_public = False
 
             if force_exclude_public:
-                projects = projects.exclude(
-                    user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
-                )
+                projects = projects.exclude(user_role_origin=ProjectRoleOrigins.PUBLIC)
 
         if self.action in ("seed", "seed_xlsform"):
             projects = projects.select_related("seed")

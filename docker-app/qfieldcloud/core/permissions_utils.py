@@ -11,11 +11,11 @@ from qfieldcloud.core.models import (
     OrganizationQueryset,
     Project,
     ProjectCollaborator,
-    ProjectQueryset,
     Secret,
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
+from qfieldcloud.project.enums import ProjectRoleOrigins
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
     PlanInsufficientError,
@@ -101,7 +101,7 @@ def check_user_has_project_roles(
 
 
 def check_user_has_project_role_origins(
-    user: QfcUser, project: Project, origins: list[ProjectQueryset.RoleOrigins]
+    user: QfcUser, project: Project, origins: list[ProjectRoleOrigins]
 ) -> Literal[True]:
     if (
         _project_for_owner(user, project, skip_invalid=False)
@@ -120,7 +120,7 @@ def check_user_has_project_role_origins(
 
 
 def user_has_project_role_origins(
-    user: QfcUser, project: Project, origins: list[ProjectQueryset.RoleOrigins]
+    user: QfcUser, project: Project, origins: list[ProjectRoleOrigins]
 ) -> bool:
     try:
         return check_user_has_project_role_origins(user, project, origins)

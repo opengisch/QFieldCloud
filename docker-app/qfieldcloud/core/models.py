@@ -40,6 +40,7 @@ from timezone_field import TimeZoneField
 
 from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
+from qfieldcloud.project.enums import ProjectRoleOrigins
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
 if TYPE_CHECKING:
@@ -1007,14 +1008,6 @@ class ProjectQueryset(models.QuerySet):
     Note:
     This query is very similar to `PersonQueryset.for_project`, don't forget to update it too.
     """
-
-    class RoleOrigins(models.TextChoices):
-        PROJECTOWNER = "project_owner", _("Project owner")
-        ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
-        ORGANIZATIONADMIN = "organization_admin", _("Organization admin")
-        COLLABORATOR = "collaborator", _("Collaborator")
-        TEAMMEMBER = "team_member", _("Team member")
-        PUBLIC = "public", _("Public")
 
     def for_user(self, user: "User", skip_invalid: bool = False):
         count = Count(
@@ -2209,9 +2202,7 @@ class ProjectRolesView(models.Model):
         related_name="user_roles",
     )
     name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
-    origin = models.CharField(
-        max_length=100, choices=ProjectQueryset.RoleOrigins.choices
-    )
+    origin = models.CharField(max_length=100, choices=ProjectRoleOrigins.choices)
     is_incognito = models.BooleanField()
 
     class Meta:
