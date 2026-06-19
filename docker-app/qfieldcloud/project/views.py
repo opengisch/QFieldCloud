@@ -11,6 +11,14 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
+from rest_framework import filters as drf_filters
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DrfValidationError
+from rest_framework.parsers import MultiPartParser
+from rest_framework.request import Request
+from rest_framework.response import Response
+
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
@@ -25,13 +33,6 @@ from qfieldcloud.project.serializers import (
 )
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.exceptions import QuotaError
-from rest_framework import filters as drf_filters
-from rest_framework import generics, permissions, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError as DrfValidationError
-from rest_framework.parsers import MultiPartParser
-from rest_framework.request import Request
-from rest_framework.response import Response
 
 User = get_user_model()
 
