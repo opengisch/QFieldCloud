@@ -14,9 +14,9 @@ from drf_spectacular.utils import (
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
-from qfieldcloud.core.filters import ProjectFilterSet
 from qfieldcloud.core.models import Job
 from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.filters import ProjectFilterSet
 from qfieldcloud.project.models import Project, ProjectSeed
 from qfieldcloud.project.serializers import (
     ProjectSeedSerializer,
