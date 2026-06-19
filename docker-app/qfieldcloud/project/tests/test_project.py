@@ -8,9 +8,6 @@ from unittest.mock import patch
 from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework import status
-from rest_framework.test import APITransactionTestCase
-
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Job,
@@ -21,7 +18,12 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
-from qfieldcloud.core.tests.utils import wait_for_project_ok_status
+from qfieldcloud.core.tests.utils import (
+    set_subscription,
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_project_ok_status,
+)
 from qfieldcloud.project.models import (
     SHARED_DATASETS_PROJECT_NAME,
     Project,
@@ -29,8 +31,8 @@ from qfieldcloud.project.models import (
 )
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.models import Subscription
-
-from .utils import set_subscription, setup_subscription_plans, testdata_path
+from rest_framework import status
+from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
 
