@@ -13,7 +13,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Add QGIS GPG key
-RUN wget -q -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
+RUN wget -q -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://qgis.org/downloads/qgis-archive-keyring.gpg
 
 # Add QGIS repository
 RUN echo "Types: deb deb-src\n\
