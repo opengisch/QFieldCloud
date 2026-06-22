@@ -1,12 +1,10 @@
 import io
 import os
 import tempfile
-import zipfile
 from collections.abc import Iterable
 from datetime import timedelta
-from pathlib import Path
 from time import sleep
-from typing import IO, TextIO
+from typing import IO
 
 import psycopg2
 from django.conf import settings
@@ -223,15 +221,3 @@ def get_test_postgis_connection() -> psycopg2.extensions.connection:
     cursor.close()
 
     return conn
-
-
-def open_qgis_file(filename: str | Path) -> TextIO:
-    filename = Path(filename)
-
-    if filename.suffix.lower() == ".qgz":
-        with zipfile.ZipFile(filename, "r") as qgz:
-            return qgz.open(f"{filename.stem}.qgs")
-    elif filename.suffix.lower() == ".qgs":
-        return open(filename)
-
-    raise Exception("The QGIS project file could not be opened")

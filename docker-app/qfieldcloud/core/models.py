@@ -1268,6 +1268,17 @@ class Project(models.Model):
         default=get_project_file_storage_default,
     )
 
+    qgis_version = models.CharField(
+        _("QGIS project version"),
+        help_text=_(
+            "The QGIS project version as detected from the uploaded project file."
+        ),
+        max_length=100,
+        null=True,
+        blank=True,
+        editable=False,
+    )
+
     file_storage_migrated_at = models.DateTimeField(
         _("File Storage Migrated At"),
         blank=True,

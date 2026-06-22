@@ -35,6 +35,7 @@ from qfieldcloud.filestorage.models import (
     FileVersion,
 )
 from qfieldcloud.filestorage.utils import (
+    get_qgis_version_from_project_file,
     get_range,
     is_admin_restricted_file,
     is_qgis_project_file,
@@ -107,6 +108,19 @@ def upload_project_file_version(
 
         raise MultipleProjectsError("Only one QGIS project per project allowed")
 
+    qgis_version: str | None = None
+    if file_type == File.FileType.PROJECT_FILE and is_qgis_file:
+        try:
+            qgis_version = get_qgis_version_from_project_file(filename, uploaded_file)
+        except ValueError as err:
+            logger.exception(
+                f"Failed to get QGIS version from project file {filename}: {err}"
+            )
+
+            raise exceptions.InvalidQgisProjectFileError(
+                f"Invalid QGIS project file: {err}"
+            )
+
     # check if the user has enough storage to upload the file
     if hasattr(request, "auth") and hasattr(request.auth, "client_type"):
         client_type = request.auth.client_type
@@ -163,6 +177,11 @@ def upload_project_file_version(
             if is_admin_restricted_file(filename, project.the_qgis_file_name):
                 update_fields.append("restricted_data_last_updated_at")
                 project.restricted_data_last_updated_at = now
+
+            if qgis_version:
+                update_fields.append("qgis_version")
+
+                project.qgis_version = qgis_version
 
             project.save(update_fields=update_fields, recompute_storage=True)
         elif file_type == File.FileType.PACKAGE_FILE:
@@ -406,16 +425,28 @@ def delete_project_file_version(
             update_fields.append("restricted_data_last_updated_at")
             project.restricted_data_last_updated_at = now
 
-        if (
-            is_qgis_project_file(filename)
-            and not File.objects.with_type_project()
-            .filter(
+        if is_qgis_project_file(filename):
+            file_qs = File.objects.with_type_project().filter(
                 name=filename,
                 project_id=project_id,
             )
-            .exists()
-        ):
-            project.the_qgis_file_name = None
-            update_fields.append("the_qgis_file_name")
+            qgis_version = None
+
+            if file_qs.exists():
+                assert file_qs.count() == 1
+
+                # Recalculate the QGIS version based on the remaining file.
+                # Let's say we have `p.qgs` which has file version 1 (QGIS 4.0) and file version 2 (QGIS 4.2), and we delete file version 2,
+                # then we should recalculate the QGIS version based on file version 1 (QGIS 4.0),
+                # rather than keeping the QGIS version from the deleted file version 2 (QGIS 4.2).
+                with file_qs.first().latest_version.content.open() as fh:
+                    qgis_version = get_qgis_version_from_project_file(filename, fh)
+            else:
+                project.the_qgis_file_name = None
+
+                update_fields.append("the_qgis_file_name")
+
+            project.qgis_version = qgis_version
+            update_fields.append("qgis_version")
 
         project.save(update_fields=update_fields, recompute_storage=True)
