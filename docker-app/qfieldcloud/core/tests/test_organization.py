@@ -238,16 +238,16 @@ class QfcTestCase(APITestCase):
             )
             return self.organization1.active_users(start_date, end_date).count()
 
-        # Initially, there is no billable user
-        self.assertEqual(_active_users_count(), 0)
+        # Initially, there is 1 billable user (organization owner)
+        self.assertEqual(_active_users_count(), 1)
 
         # user2 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user2,
         )
-        # There is now 1 billable user
-        self.assertEqual(_active_users_count(), 1)
+        # There are 2 billable users (organization owner, user2)
+        self.assertEqual(_active_users_count(), 2)
 
         # user2 creates a delta
         Delta.objects.create(
@@ -257,33 +257,33 @@ class QfcTestCase(APITestCase):
             client_id=uuid.uuid4(),
             created_by=self.user2,
         )
-        # There is still 1 billable user
-        self.assertEqual(_active_users_count(), 1)
+        # There are 2 billable users (organization owner, user2)
+        self.assertEqual(_active_users_count(), 2)
 
         # user3 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user3,
         )
-        # There are 2 billable users
-        self.assertEqual(_active_users_count(), 2)
+        # There are 3 billable users (organization owner, user2, user3)
+        self.assertEqual(_active_users_count(), 3)
 
         # user3 leaves the organization
         OrganizationMember.objects.filter(member=self.user3).delete()
 
-        # There are still 2 billable users
-        self.assertEqual(_active_users_count(), 2)
+        # There are still 3 billable users (organization owner, user2, user3)
+        self.assertEqual(_active_users_count(), 3)
 
-        # Report at a different time is empty
-        self.assertEqual(_active_users_count(now() + timedelta(days=365)), 0)
+        # Report at a different time is empty (only organization owner is billable)
+        self.assertEqual(_active_users_count(now() + timedelta(days=365)), 1)
 
         # user4 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user4,
         )
-        # There are still 2 billable users, because user4 is staff
-        self.assertEqual(_active_users_count(), 2)
+        # There are still 3 billable users (organization owner, user2, user4)
+        self.assertEqual(_active_users_count(), 3)
 
     def test_memberships_when_owner_changes(self):
         # Set user2 as admin of organization1
