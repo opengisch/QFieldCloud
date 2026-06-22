@@ -631,6 +631,7 @@ class OrganizationManager(UserManager):
 
 class Organization(User):
     members: models.QuerySet["OrganizationMember"]
+    organization_owner_id: int
 
     class Meta(User.Meta):
         verbose_name = "organization"
@@ -695,7 +696,11 @@ class Organization(User):
 
         return Person.objects.filter(
             is_staff=False,
-        ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
+        ).filter(
+            Q(id__in=users_with_delta)
+            | Q(id__in=users_with_jobs)
+            | Q(id=self.organization_owner_id)
+        )
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
