@@ -439,9 +439,8 @@ def delete_project_file_version(
                 # Let's say we have `p.qgs` which has file version 1 (QGIS 4.0) and file version 2 (QGIS 4.2), and we delete file version 2,
                 # then we should recalculate the QGIS version based on file version 1 (QGIS 4.0),
                 # rather than keeping the QGIS version from the deleted file version 2 (QGIS 4.2).
-                qgis_version = get_qgis_version_from_project_file(
-                    filename, file_qs.first().latest_version.content.open()
-                )
+                with file_qs.first().latest_version.content.open() as fh:
+                    qgis_version = get_qgis_version_from_project_file(filename, fh)
             else:
                 project.the_qgis_file_name = None
 
