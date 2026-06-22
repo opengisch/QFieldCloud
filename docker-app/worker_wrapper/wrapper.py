@@ -65,6 +65,9 @@ class JobRun:
     job_class = Job
     command = []
 
+    debug_qgis_container_is_enabled = False
+    """Whether the QGIS container is started with `debugpy` enabled, so that a debugger can attach to it."""
+
     def __init__(self, job_id: str) -> None:
         try:
             self.job_id = job_id
