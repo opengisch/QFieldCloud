@@ -51,7 +51,7 @@ services:
       - ./docker-app/worker_wrapper:/usr/src/app/worker_wrapper
     command: python3 -m debugpy --listen 0.0.0.0:5679 manage.py dequeue
 
-  qgis:
+  qgis3:
     build:
       args:
         - DEBUG_BUILD=1
