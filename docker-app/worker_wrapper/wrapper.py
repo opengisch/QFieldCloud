@@ -68,6 +68,9 @@ class JobRun:
     debug_qgis_container_is_enabled = False
     """Whether the QGIS container is started with `debugpy` enabled, so that a debugger can attach to it."""
 
+    qgis_images: dict[int, str] = {}
+    """Mapping of QGIS major version to the corresponding QGIS Docker image name, e.g. `{"qgis3": "qfieldcloud-qgis3"}`."""
+
     def __init__(self, job_id: str) -> None:
         try:
             self.job_id = job_id
@@ -95,6 +98,11 @@ class JobRun:
         self.debug_qgis_container_is_enabled = (
             settings.DEBUG and settings.DEBUG_QGIS_DEBUGPY_PORT
         )
+
+        self.qgis_images = {
+            3: settings.QFIELDCLOUD_QGIS3_IMAGE_NAME,
+            4: settings.QFIELDCLOUD_QGIS4_IMAGE_NAME,
+        }
 
         if self.debug_qgis_container_is_enabled:
             logger.warning(
@@ -190,6 +198,22 @@ class JobRun:
         }
 
         return environment
+
+    def get_qgis_image(self) -> str:
+        if self.job.project.qgis_version:
+            qgis_major_project_version = get_qgis_major_version(
+                self.job.project.qgis_version
+            )
+        else:
+            # The safe fallback is to use QGIS 3 until 4.2.x get's widely adopted
+            qgis_major_project_version = 3
+
+        if qgis_major_project_version not in self.qgis_images:
+            raise JobException(
+                f"Unsupported QGIS major version {qgis_major_project_version} for project {self.job.project.id} stored with {self.job.project.qgis_version}."
+            )
+
+        return self.qgis_images[qgis_major_project_version]
 
     def before_docker_run(self) -> None:
         pass
@@ -403,28 +427,8 @@ class JobRun:
         self.job.docker_started_at = timezone.now()
         self.job.save(update_fields=["docker_started_at"])
 
-        qgis_images = {
-            "qgis3": settings.QFIELDCLOUD_QGIS3_IMAGE_NAME,
-            "qgis4": settings.QFIELDCLOUD_QGIS4_IMAGE_NAME,
-        }
-
-        if self.job.project.qgis_version:
-            qgis_major_project_version = get_qgis_major_version(
-                self.job.project.qgis_version
-            )
-            qgis_images_key = f"qgis{qgis_major_project_version}"
-
-            if qgis_images_key not in qgis_images:
-                raise JobException(
-                    f"Unsupported QGIS major version {qgis_major_project_version} ({self.job.project.qgis_version}) for project {self.job.project.id}."
-                )
-
-            qgis_image = qgis_images[qgis_images_key]
-        else:
-            qgis_image = qgis_images["qgis3"]
-
         container: Container = client.containers.run(  # type:ignore
-            qgis_image,
+            self.get_qgis_image(),
             command,
             environment=environment,
             ports=ports,
