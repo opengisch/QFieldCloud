@@ -259,6 +259,10 @@ def open_qgis_file(
     filename: str | Path,
     fh: BinaryIO,
 ) -> Iterator[TextIO]:
+    """Open a QGIS project file from a file handle, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
+
+    NOTE there is a very similar sister function with the same name in `docker-qgis/qfc_worker/utils.py`.
+    """
     path = Path(filename)
     suffix = path.suffix.lower()
 

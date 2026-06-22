@@ -1082,6 +1082,10 @@ def save_project(
 
 @contextmanager
 def open_qgis_file(filename: str | Path) -> Iterator[TextIO]:
+    """Open a QGIS project file by filename, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
+
+    NOTE there is a very similar sister function with the same name in `docker-app/filestorage/utils.py`
+    """
     path = Path(filename)
     suffix = path.suffix.lower()
 
