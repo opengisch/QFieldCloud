@@ -1,7 +1,6 @@
 import base64
 import mimetypes
 import os
-import re
 from abc import ABC
 from typing import Any
 
@@ -11,6 +10,8 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
 from storages.backends.s3 import S3Storage
+
+from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 
 
 class QfcBackendStorageMixin(ABC):
@@ -78,7 +79,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         parts = name.rsplit("/", 1)
         base_name = parts[-1]
 
-        if len(parts) == 2 and re.fullmatch(r"v20[0-9]{12}-[a-f0-9]{8}$", parts[-1]):
+        if len(parts) == 2 and VERSION_SUFFIX_REGEX.fullmatch(parts[-1]):
             base_name = parts[0].rsplit("/", 1)[-1]
 
         mime_type, encoding = mimetypes.guess_type(base_name)
