@@ -1297,7 +1297,7 @@ class Project(models.Model):
     )
 
     is_featured = models.BooleanField(
-        _("Is sticky"),
+        _("Is featured"),
         help_text=_(
             "If set to true, the project will always appear on top of the project list, no matter the sorting. If multiple projects are featured, they will be sorted by the user defined sorting."
         ),
