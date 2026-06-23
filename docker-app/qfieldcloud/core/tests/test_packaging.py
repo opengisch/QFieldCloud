@@ -54,7 +54,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def tearDown(self):
         self.conn.close()
 
-    def test_a_package_has_correct_amount_of_gpkg_features(self):
+    def test_packaged_gpkg_features(self):
         # check the number of features in the bumblebees geopackage
         apiaries_local = gpd.read_file(testdata_path("bumblebees.gpkg"), layer="apiary")
         areas_local = gpd.read_file(testdata_path("bumblebees.gpkg"), layer="area")
@@ -117,7 +117,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             self.assertEqual(len(areas_package), 14)
             self.assertEqual(len(areas_package), len(areas_local))
 
-    def test_a_package_has_correct_amount_of_postgis_features(self):
+    def test_packaged_postgis_features(self):
         cur = self.conn.cursor()
         cur.execute(
             "CREATE TABLE point (id integer primary key, geometry geometry(multipoint, 2056))"
@@ -194,7 +194,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             for _, row in packaged_gdf.iterrows():
                 self.assertEqual(row.geometry.geom_type, "Point")
 
-    def test_package_promotes_polygon_to_multipolygon(self):
+    def test_packaging_promotes_polygon_to_multipolygon(self):
         # `multipolygons.gpkg` declares the layer as MULTIPOLYGON but has no features.
         # We append a Polygon to create the type mismatch that the PythonMiniOffliner will resolve by promoting the geometry to MultiPolygon.
         gdf = gpd.GeoDataFrame(
