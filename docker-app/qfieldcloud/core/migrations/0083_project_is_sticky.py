@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 default=False,
                 help_text="If set to true, the project will always appear on top of the project list, no matter the sorting. If multiple projects are featured, they will be sorted by the user defined sorting.",
-                verbose_name="Is sticky",
+                verbose_name="Is featured",
             ),
         ),
         migrations.AlterModelOptions(
