@@ -33,6 +33,9 @@
   </div>
 </div>
 
+{% endblock content %}
+
+
 {% block additional_js %}
 <script type="application/javascript">
   try {
@@ -42,7 +45,27 @@
   } catch(err) {
     console.error("Failed to automatically select timezone: ", err);
   }
+
+  (() => {
+    const elCaptchaImage = document.querySelector('.qfc-captcha-image');
+    const elCaptchaBtn = document.querySelector('.qfc-captcha-btn');
+    const elCaptchaHidden = document.querySelector('input[name="captcha_0"]');
+
+    if (elCaptchaImage && elCaptchaBtn && elCaptchaHidden) {
+      elCaptchaBtn.addEventListener('click', () => {
+        fetch("/captcha/refresh/", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+          .then(response => response.json())
+          .then(result => {
+            elCaptchaHidden.value = result['key'];
+            elCaptchaImage.src = result['image_url'];
+          })
+          .catch(err => {
+            console.error("Failed to refresh CAPTCHA: ", err);
+          });
+      });
+    } else {
+      console.error("Captcha elements not found in the DOM. Automatic refresh will not work.");
+    }
+  })();
 </script>
 {% endblock additional_js %}
-
-{% endblock content %}
