@@ -1,5 +1,9 @@
+import logging
+
 from django.core.management.base import BaseCommand
 from qfieldcloud.core.models import Person
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -37,7 +41,7 @@ class Command(BaseCommand):
             else:
                 print(f"User {username} already exists\n")
 
-        # Catch any other unknown error and print it
-        except Exception as err:  # noqa: BLE001
-            print("ERROR: Unable to create user\n%s\n" % err)
+        except Exception:  # noqa: BLE001
+            logger.exception("ERROR: Unable to create user")
+            print("ERROR: Unable to create user\n")
             exit(1)
