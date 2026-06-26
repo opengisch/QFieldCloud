@@ -38,6 +38,11 @@ class FileQueryset(models.QuerySet):
         """Returns all files of type `PROJECT_FILE`."""
         return self.filter(file_type=File.FileType.PROJECT_FILE)
 
+    def get_by_natural_key(
+        self, project_id: UUID, filename: str, file_type: int
+    ) -> File:
+        return self.get(project_id=project_id, name=filename, file_type=file_type)
+
 
 class File(models.Model):
     class Meta:
@@ -156,6 +161,11 @@ class File(models.Model):
 
     def __str__(self) -> str:
         return self.__repr__()
+
+    def natural_key(self) -> tuple:
+        return (self.project.id, self.name, self.file_type)
+
+    natural_key.dependencies = ["core.project"]  # type: ignore[attr-defined]
 
 
 class FileVersionQueryset(models.QuerySet):
