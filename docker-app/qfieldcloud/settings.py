@@ -748,6 +748,11 @@ CONSTANCE_CONFIG = {
         If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
         "textarea",
     ),
+    "JOBS_LOGS_RETENTION_PERIOD_DAYS": (
+        90,
+        "Number of days to retain job logs before they are automatically deleted.",
+        int,
+    ),
     "WORKER_TIMEOUT_S": (
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
@@ -804,6 +809,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "MAINTENANCE_END_TIMESTAMP_UTC",
         "MAINTENANCE_MESSAGE",
     ),
+    "Jobs": ("JOBS_LOGS_RETENTION_PERIOD_DAYS",),
     "Worker": (
         "WORKER_TIMEOUT_S",
         "WORKER_QGIS_MEMORY_LIMIT",
