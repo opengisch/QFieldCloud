@@ -731,10 +731,17 @@ class UserAccountInline(admin.StackedInline):
 class ProjectInline(admin.TabularInline):
     model = Project
     extra = 0
+    absolute_max = 5000
 
     fields = ("owned_project", "is_public", "overwrite_conflicts")
     readonly_fields = ("owned_project",)
     has_direct_delete_permission = False
+
+    # Override django.forms.formsets.DEFAULT_MAX_NUM for organizations with a large number of projects
+    # to a higher value (>1000) to prevent saving of large formsets from throwing an error
+    def get_formset(self, request, obj=None, **kwargs):
+        kwargs.setdefault("absolute_max", self.absolute_max)
+        return super().get_formset(request, obj, **kwargs)
 
     def owned_project(self, obj):
         return model_admin_url(obj, obj.name)
