@@ -104,5 +104,6 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("invitations/", include("invitations.urls", namespace="invitations")),
     path("__debug__/", include("debug_toolbar.urls")),
+    path("captcha/", include("captcha.urls")),
     path("a/<str:username>/<str:project_name>/", redirect_to_admin_project_view),
 ]

@@ -137,6 +137,15 @@ class ValidationError(QFieldCloudException):
     log_as_error = False
 
 
+class InvalidQgisProjectFileError(QFieldCloudException):
+    """Raised when the user is trying to upload an invalid QGIS project file
+    into a QFieldCloud project"""
+
+    code = "invalid_qgis_project_file"
+    message = "Invalid QGIS project file"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
 class MultipleProjectsError(QFieldCloudException):
     """Raised when the user is trying to upload more than one QGIS project
     into a QFieldCloud project"""

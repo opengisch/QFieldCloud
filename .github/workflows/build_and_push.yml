@@ -34,7 +34,24 @@ jobs:
             enable_dockerhub: true
 
           -
+            # Keep the existing QGIS image for backwards compatibility,
+            # using the qgis3 build definition from docker-compose.yml.
             service_name: qgis
+            compose_service: qgis3
+            dockerfile: docker-qgis/Dockerfile
+            docker_context: docker-qgis
+            enable_dockerhub: true
+
+          -
+            service_name: qgis3
+            compose_service: qgis3
+            dockerfile: docker-qgis/Dockerfile
+            docker_context: docker-qgis
+            enable_dockerhub: true
+
+          -
+            service_name: qgis4
+            compose_service: qgis4
             dockerfile: docker-qgis/Dockerfile
             docker_context: docker-qgis
             enable_dockerhub: true
@@ -98,6 +115,21 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       -
+        name: Resolve docker-compose.yml build args
+        id: compose_build
+        if: ${{ matrix.services.compose_service }}
+        env:
+          COMPOSE_SERVICE: ${{ matrix.services.compose_service }}
+          DEBUG: "0"
+        run: |
+          {
+            echo 'build_args<<EOF'
+            docker compose -f docker-compose.yml config --format json \
+              | jq -r --arg service "$COMPOSE_SERVICE" '.services[$service].build.args // {} | to_entries[] | "\(.key)=\(.value)"'
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      -
         name: Docker Build ${{ matrix.services.service_name }}
         id: docker_test_application
         uses: docker/build-push-action@v7
@@ -106,6 +138,7 @@ jobs:
           context: ${{ matrix.services.docker_context }}
           push: ${{ matrix.services.enable_dockerhub && (github.event_name == 'release' || github.ref_name == 'master') }}
           target: ${{ matrix.services.docker_target }}
+          build-args: ${{ steps.compose_build.outputs.build_args }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
           cache-from: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache
           cache-to: type=registry,ref=ghcr.io/opengisch/qfieldcloud-${{ matrix.services.service_name }}:buildcache,mode=max

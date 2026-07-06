@@ -26,6 +26,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.core.validators import MaxBytesLengthValidator
+from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 from qfieldcloud.filestorage.utils import calc_etag, filename_validator
 
 
@@ -36,6 +37,11 @@ class FileQueryset(models.QuerySet):
     def with_type_project(self) -> FileQueryset:
         """Returns all files of type `PROJECT_FILE`."""
         return self.filter(file_type=File.FileType.PROJECT_FILE)
+
+    def get_by_natural_key(
+        self, project_id: UUID, filename: str, file_type: int
+    ) -> File:
+        return self.get(project_id=project_id, name=filename, file_type=file_type)
 
 
 class File(models.Model):
@@ -156,6 +162,11 @@ class File(models.Model):
     def __str__(self) -> str:
         return self.__repr__()
 
+    def natural_key(self) -> tuple:
+        return (self.project.id, self.name, self.file_type)
+
+    natural_key.dependencies = ["core.project"]  # type: ignore[attr-defined]
+
 
 class FileVersionQueryset(models.QuerySet):
     @transaction.atomic()
@@ -262,7 +273,14 @@ def get_file_version_upload_to(instance: "FileVersion", _filename: str) -> str:
         ):
             return f"projects/{instance.file.project.id}/files/{instance.file.name}"
 
-        return f"projects/{instance.file.project.id}/files/{instance.file.name}/{instance.display}-{str(instance.id)[0:8]}"
+        version_suffix = f"{instance.display}-{str(instance.id)[0:8]}"
+
+        if not VERSION_SUFFIX_REGEX.match(version_suffix):
+            raise AssertionError(
+                f"Version suffix {version_suffix} does not match the expected format!"
+            )
+
+        return f"projects/{instance.file.project.id}/files/{instance.file.name}/{version_suffix}"
 
     elif instance.file.file_type == File.FileType.PACKAGE_FILE:
         # TODO decide whether we need to add the version id in there?

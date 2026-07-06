@@ -287,7 +287,7 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
-        file_path = testdata_path("file.txt")
+        file_path = testdata_path("self_contained.qgs")
         # Push a file
         project_file = "aaa bbb/project qgis 1.2.qgs"
         response = self.client.post(
@@ -512,7 +512,7 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
-        file_path = testdata_path("file.txt")
+        file_path = testdata_path("self_contained.qgs")
         qgis_project_file = "foo/bar/file.qgs"
         # Push a QGIS project file
         response = self.client.post(
@@ -720,7 +720,7 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertFalse(Project.objects.get(pk=self.project1.pk).has_the_qgis_file)
 
-        file_path = testdata_path("file.txt")
+        file_path = testdata_path("self_contained.qgs")
         qgis_project_file = "foo/bar/file.qgs"
 
         for i in range(10):

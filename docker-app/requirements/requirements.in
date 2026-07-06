@@ -26,6 +26,7 @@ django-nonrelated-inlines==0.2
 # Unfortunately the version is not released yet on pypi, so we need to install it from the git repository, currently # 1.9.0
 django-notifications-hq @ git+https://github.com/django-notifications/django-notifications.git@4c44bcea2504d9a3fcd26366b232a13732a08f2a
 django-phonenumber-field==8.4.0
+django-simple-captcha==0.6.3
 django-sri==0.8.0
 django-storages==1.14.6
 django-tables2==3.0.0

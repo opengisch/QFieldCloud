@@ -143,6 +143,7 @@ INSTALLED_APPS = [
     "bootstrap4",
     "sri",
     "corsheaders",
+    "captcha",
     # To ensure that exceptions inside other apps' signal handlers do not affect the integrity of file deletions within transactions, `django_cleanup` should be placed last in `INSTALLED_APPS`. See https://github.com/un1t/django-cleanup#configuration
     "django_cleanup.apps.CleanupConfig",
 ]
@@ -747,6 +748,11 @@ CONSTANCE_CONFIG = {
         If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
         "textarea",
     ),
+    "JOBS_LOGS_RETENTION_PERIOD_DAYS": (
+        90,
+        "Number of days to retain job logs before they are automatically deleted.",
+        int,
+    ),
     "WORKER_TIMEOUT_S": (
         600,
         "Timeout of the workers before being terminated by the wrapper in seconds.",
@@ -803,6 +809,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "MAINTENANCE_END_TIMESTAMP_UTC",
         "MAINTENANCE_MESSAGE",
     ),
+    "Jobs": ("JOBS_LOGS_RETENTION_PERIOD_DAYS",),
     "Worker": (
         "WORKER_TIMEOUT_S",
         "WORKER_QGIS_MEMORY_LIMIT",
@@ -819,8 +826,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
 QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
 
-# Name of the qgis docker image used as a worker by worker_wrapper
-QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
+# Name of the QGIS 3 docker image used as a worker by `worker_wrapper`
+QFIELDCLOUD_QGIS3_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS3_IMAGE_NAME"]
+
+# Name of the QGIS 4 docker image used as a worker by `worker_wrapper`
+QFIELDCLOUD_QGIS4_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS4_IMAGE_NAME"]
 
 # URL the qgis worker will use to access the running API endpoint on the app service
 QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ["QFIELDCLOUD_WORKER_QFIELDCLOUD_URL"]
@@ -1011,6 +1021,41 @@ CORS_URLS_REGEX = r"^/(api/.*|swagger(.yaml|/))$"
 # Whether to include credentials (cookies, authorization headers) in
 # cross-origin requests. Required when clients send auth tokens.
 CORS_ALLOW_CREDENTIALS = parse_string_to_bool(os.environ["CORS_ALLOW_CREDENTIALS"])
+
+
+###########################
+# Captcha settings
+# Managed via `django-simple-captcha`, see https://django-simple-captcha.readthedocs.io/en/latest/advanced.html for all available options and defaults.
+###########################
+
+# Image size in pixels of generated captcha, specified as a tuple (width, height)
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-image-size
+CAPTCHA_IMAGE_SIZE = (200, 50)
+
+# A random rotation in this interval is applied to each letter in the challenge text.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-letter-rotation
+CAPTCHA_LETTER_ROTATION = (-45, 45)
+
+# Background-color of the captcha. Can be expressed as html-style #rrggbb, rgb(red, green, blue), or common html names (e.g. “red”).
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-background-color
+CAPTCHA_BACKGROUND_COLOR = "transparent"
+
+# A string representing a Python callable (i.e., a function) to determine the color of each letter in the CAPTCHA.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-letter-color-funct
+CAPTCHA_LETTER_COLOR_FUNCT = "captcha.helpers.random_letter_color_challenge"
+
+# Integer. Lifespan, in minutes, of the generated captcha.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-timeout
+CAPTCHA_TIMEOUT = 5
+
+# Sets the length, in chars, of the generated captcha. (for the 'captcha.helpers.random_char_challenge' challenge)
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-length
+CAPTCHA_LENGTH = 6
+
+# When set to True, the string “PASSED” (any case) will be accepted as a valid response to any CAPTCHA. Use this for testing purposes.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-test-mode
+CAPTCHA_TEST_MODE = DEBUG or ENVIRONMENT == "test"
+
 
 # Optional volume name where custom CA files are mounted
 QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME = (

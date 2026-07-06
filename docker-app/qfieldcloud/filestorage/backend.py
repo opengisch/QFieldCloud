@@ -1,6 +1,8 @@
 import base64
+import mimetypes
 import os
 from abc import ABC
+from typing import Any
 
 import requests
 from django.core.exceptions import ImproperlyConfigured
@@ -8,6 +10,8 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
 from storages.backends.s3 import S3Storage
+
+from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 
 
 class QfcBackendStorageMixin(ABC):
@@ -55,6 +59,36 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
             response: HTTP redirect response to patch.
         """
         pass
+
+    def _get_write_parameters(
+        self, name: str, content: ContentFile | None = None
+    ) -> dict[str, Any]:
+        params = super()._get_write_parameters(name, content)
+
+        # Detect content type from the original filename embedded in the
+        # versioned S3 path, so it can be properly set in the object storage
+        # metadata and later returned as a `Content-Type` header when
+        # downloading the object.
+        # Versioned paths look like:
+        #   `projects/<uuid>/files/DCIM/photo.jpg/v20260317162354-512bd29b`
+        # Note the last part of the versioned name has the version timestamp
+        # and a random UUID fragment, which prevents `mimetypes.guess_type`
+        # from guessing a proper content type, as it uses the file extension
+        # to do so. Without this fix, the parent class's
+        # `_get_write_parameters` would set `ContentType` to `None`.
+        parts = name.rsplit("/", 1)
+        base_name = parts[-1]
+
+        if len(parts) == 2 and VERSION_SUFFIX_REGEX.fullmatch(parts[-1]):
+            base_name = parts[0].rsplit("/", 1)[-1]
+
+        mime_type, encoding = mimetypes.guess_type(base_name)
+        if mime_type:
+            params["ContentType"] = mime_type
+            if encoding:
+                params["ContentEncoding"] = encoding
+
+        return params
 
 
 class QfcWebDavStorage(QfcBackendStorageMixin, Storage):

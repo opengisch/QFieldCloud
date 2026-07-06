@@ -438,6 +438,11 @@ def get_user_account_avatar_download_from(
     )
 
 
+class UserAccountQuerySet(models.QuerySet):
+    def get_by_natural_key(self, username: str) -> UserAccount:
+        return self.get(user__username=username)
+
+
 class UserAccount(models.Model):
     NOTIFS_IMMEDIATELY = timedelta(minutes=0)
     NOTIFS_HOURLY = timedelta(hours=1)
@@ -451,6 +456,8 @@ class UserAccount(models.Model):
         (NOTIFS_WEEKLY, _("Weekly")),
         (NOTIFS_DISABLED, _("Disabled")),
     )
+
+    objects = UserAccountQuerySet.as_manager()
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
 
@@ -485,6 +492,11 @@ class UserAccount(models.Model):
         null=True,
         blank=True,
     )
+
+    def natural_key(self) -> tuple:
+        return self.user.natural_key()
+
+    natural_key.dependencies = ["core.user"]  # type: ignore[attr-defined]
 
     @property
     def current_subscription(self):
@@ -631,6 +643,7 @@ class OrganizationManager(UserManager):
 
 class Organization(User):
     members: models.QuerySet["OrganizationMember"]
+    organization_owner_id: int
 
     class Meta(User.Meta):
         verbose_name = "organization"
@@ -695,7 +708,11 @@ class Organization(User):
 
         return Person.objects.filter(
             is_staff=False,
-        ).filter(Q(id__in=users_with_delta) | Q(id__in=users_with_jobs))
+        ).filter(
+            Q(id__in=users_with_delta)
+            | Q(id__in=users_with_jobs)
+            | Q(id=self.organization_owner_id)
+        )
 
     def save(self, *args, **kwargs):
         self.type = User.Type.ORGANIZATION
@@ -732,6 +749,14 @@ class Organization(User):
 
 
 class OrganizationMemberQueryset(models.QuerySet):
+    def get_by_natural_key(
+        self, organization_username: str, member_username: str
+    ) -> "OrganizationMember":
+        return self.get(
+            organization__username=organization_username,
+            member__username=member_username,
+        )
+
     @transaction.atomic
     def delete(self, *args, **kwargs):
         # delete the team memberships of this deleted org member,
@@ -813,6 +838,11 @@ class OrganizationMember(models.Model):
 
     def __str__(self):
         return self.organization.username + ": " + self.member.username
+
+    def natural_key(self) -> tuple:
+        return self.organization.natural_key() + self.member.natural_key()
+
+    natural_key.dependencies = ["core.organization", "core.user"]  # type: ignore[attr-defined]
 
     def clean(self) -> None:
         if self.organization.organization_owner == self.member:
@@ -899,7 +929,19 @@ class Team(User):
         return f"@{organization_name}/{team_name}"
 
 
+class TeamMemberQuerySet(models.QuerySet):
+    def get_by_natural_key(
+        self, team_username: str, member_username: str
+    ) -> "TeamMember":
+        return self.get(
+            team__username=team_username,
+            member__username=member_username,
+        )
+
+
 class TeamMember(models.Model):
+    objects = TeamMemberQuerySet.as_manager()
+
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
         MEMBER = "member", _("Member")
@@ -923,6 +965,11 @@ class TeamMember(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(type=User.Type.PERSON),
     )
+
+    def natural_key(self) -> tuple:
+        return self.team.natural_key() + self.member.natural_key()
+
+    natural_key.dependencies = ["core.team", "core.user"]  # type: ignore[attr-defined]
 
     def clean(self) -> None:
         if (
@@ -1263,6 +1310,17 @@ class Project(models.Model):
         default=get_project_file_storage_default,
     )
 
+    qgis_version = models.CharField(
+        _("QGIS project version"),
+        help_text=_(
+            "The QGIS project version as detected from the uploaded project file."
+        ),
+        max_length=100,
+        null=True,
+        blank=True,
+        editable=False,
+    )
+
     file_storage_migrated_at = models.DateTimeField(
         _("File Storage Migrated At"),
         blank=True,
@@ -1281,7 +1339,7 @@ class Project(models.Model):
     )
 
     is_featured = models.BooleanField(
-        _("Is sticky"),
+        _("Is featured"),
         help_text=_(
             "If set to true, the project will always appear on top of the project list, no matter the sorting. If multiple projects are featured, they will be sorted by the user defined sorting."
         ),
@@ -1455,9 +1513,11 @@ class Project(models.Model):
             # Return all layers if the project is missing
             return self.localized_layers
 
-        available_filenames = File.objects.filter(
-            project=self.shared_datasets_project
-        ).values_list("name", flat=True)
+        available_filenames = (
+            File.objects.with_type_project()
+            .filter(project=self.shared_datasets_project)
+            .values_list("name", flat=True)
+        )
 
         missing_localized_layers = []
         for layer in self.localized_layers:
