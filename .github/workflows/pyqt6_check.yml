@@ -23,7 +23,7 @@ jobs:
       image: ghcr.io/qgis/pyqgis4-checker:main-ubuntu
     steps:
       - name: Get source code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check PyQt5 to PyQt6 compatibility.
         run: |
