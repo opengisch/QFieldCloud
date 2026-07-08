@@ -1473,3 +1473,40 @@ class QfcTestCase(APITransactionTestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_project_type_defaults_to_regular(self):
+        """Test that a normally named project gets a project type of REGULAR"""
+        project = Project.objects.create(name="project", owner=self.user1)
+
+        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+
+    def test_project_type_set_to_shared_datasets_on_create(self):
+        """Test that creating a project named as the constant SHARED_DATASETS_PROJECT_NAME sets project type of SHARED_DATASETS."""
+        project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+        )
+
+        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
+
+    def test_project_type_updates_when_renamed_to_shared_datasets(self):
+        """Test that renaming an existing empty project (no QGIS project file) as the constant SHARED_DATASETS_PROJECT_NAME flips project_type"""
+        project = Project.objects.create(name="project", owner=self.user1)
+        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+
+        project.name = SHARED_DATASETS_PROJECT_NAME
+        project.save()
+        project.refresh_from_db()
+
+        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
+
+    def test_project_type_updates_when_renamed_away_from_shared_datasets(self):
+        """Test that renaming the shared_datasets project away reverts project_type to default value."""
+        project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+        )
+
+        project.name = "no_longer_shared"
+        project.save()
+        project.refresh_from_db()
+
+        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)

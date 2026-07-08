@@ -185,6 +185,10 @@ class Project(models.Model):
         QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
         PYTHONMINI = "pythonmini", _("Optimized Packager")
 
+    class ProjectType(models.IntegerChoices):
+        REGULAR = 1, _("Regular")
+        SHARED_DATASETS = 2, _("Shared Datasets")
+
     @property
     def localized_layers(self) -> list[dict[str, Any]]:
         """
@@ -256,6 +260,10 @@ class Project(models.Model):
         help_text=_(
             "Projects marked as public are visible to (but not editable by) anyone."
         ),
+    )
+
+    project_type = models.IntegerField(
+        choices=ProjectType.choices, default=ProjectType.REGULAR
     )
 
     # the Person or Organization id that owns the project
@@ -444,7 +452,7 @@ class Project(models.Model):
         """
         try:
             project = Project.objects.get(
-                name=SHARED_DATASETS_PROJECT_NAME,
+                project_type=self.ProjectType.SHARED_DATASETS,
                 owner=self.owner,
             )
             return project
@@ -547,7 +555,7 @@ class Project(models.Model):
         """
         Returns `True` if the project is the shared datasets project, otherwise `False`.
         """
-        return self.name == SHARED_DATASETS_PROJECT_NAME
+        return self.project_type == self.ProjectType.SHARED_DATASETS
 
     def get_missing_localized_layers(self) -> list[dict[str, Any]]:
         """
@@ -763,7 +771,7 @@ class Project(models.Model):
             return problems
 
         # Check if localized datasets project, then skip the rest of the checks as they are not applicable
-        if self.name == SHARED_DATASETS_PROJECT_NAME:
+        if self.is_shared_datasets_project:
             if self.has_the_qgis_file:
                 problems.append(
                     {
@@ -1021,6 +1029,11 @@ class Project(models.Model):
             kwargs["update_fields"] = list(
                 set(kwargs["update_fields"]) | additional_update_fields
             )
+
+        self.project_type = self.ProjectType.REGULAR
+
+        if self.name == SHARED_DATASETS_PROJECT_NAME:
+            self.project_type = self.ProjectType.SHARED_DATASETS
 
         super().save(*args, **kwargs)
 
