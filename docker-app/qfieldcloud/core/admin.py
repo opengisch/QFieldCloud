@@ -1175,7 +1175,6 @@ class ProjectForm(ModelForm):
 
     class Meta:
         model = Project
-        widgets = {"the_qgis_file_name": widgets.TextInput()}
         fields = "__all__"  # required for Django 3.x
 
     def __init__(self, *args, **kwargs):
@@ -1295,6 +1294,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "project_details__pre",
         "locked_at",
         "file_storage_migrated_at",
+        "the_qgis_file_name",
     )
     inlines = (
         ProjectSeedInline,
@@ -1335,6 +1335,10 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     def project_files(self, instance):
         return instance.pk
+
+    @admin.display(description=_("QGIS project file"))
+    def the_qgis_file_name(self, obj: Project) -> str | None:
+        return obj.the_qgis_file_name
 
     def project_details__pre(self, instance):
         if instance.project_details is None:
