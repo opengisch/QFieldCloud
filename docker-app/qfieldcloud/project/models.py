@@ -4,11 +4,13 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import cached_property
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
     MaxValueValidator,
@@ -40,7 +42,6 @@ if TYPE_CHECKING:
     from qfieldcloud.core.models import (
         JobQuerySet,
         ProjectCollaboratorQueryset,
-        ProjectSeed,
         SecretQueryset,
     )
     from qfieldcloud.filestorage.models import File, FileQueryset
@@ -1025,3 +1026,74 @@ class Project(models.Model):
 
     def get_file(self, filename: str) -> File:
         return self.project_files.get_by_name(filename)  # type: ignore
+
+
+def get_seed_xlsform_upload_to(instance: "ProjectSeed", filename: str) -> str:
+    file_extension = Path(filename).suffix.lower()
+    return f"projects/{instance.project.id}/seeds/xlsforms/xlsform{file_extension}"
+
+
+class ProjectSeed(models.Model):
+    SETTINGS_SCHEMA_ID = "https://app.qfield.cloud/schemas/project-seed-20251201.json"
+    """Represents the seed data version used to create a project."""
+
+    project = models.OneToOneField(
+        "project.Project",
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="seed",
+    )
+    """The project the seed refers to."""
+
+    clone_from_project = models.ForeignKey(
+        "project.Project",
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="derived_seeds",
+        blank=True,
+    )
+    """The project to copy from, if any. It is mutually exclusive with `xlsform_file`."""
+
+    # TODO @Rakanhf: make the `extent` field not nullable once we add `Project.extent` field.
+    extent = models.PolygonField(
+        null=True,
+        blank=True,
+        srid=4326,
+    )
+    """The initial extent of the project as EPSG:4326 polygon."""
+
+    xlsform_file = models.FileField(
+        upload_to=get_seed_xlsform_upload_to,
+        # the s3 storage has 1024 bytes (not chars!) limit: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+        max_length=1024,
+        null=True,
+        blank=True,
+    )
+    """XLSForm file used to create the project, if any. It is mutually exclusive with `clone_from_project`."""
+
+    settings = models.JSONField()
+    """The settings used during the project creation. There must be a `schemaId` field."""
+
+    def clean(self, *args, **kwargs) -> None:
+        if self.xlsform_file and self.clone_from_project:
+            raise ValidationError(
+                _(
+                    "Both `xlsform_file` or `clone_from_project` cannot be set at the same time."
+                )
+            )
+
+        # TODO @Rakanhf: make the `extent` field not nullable once we add `Project.extent` field.
+        if not self.extent and not self.clone_from_project:
+            raise ValidationError(
+                _("Either `extent` or `clone_from_project` must be set.")
+            )
+
+        if not self.settings.get("schemaId"):
+            raise ValidationError(_("The seed settings schemaId must be present."))
+
+        super().clean(*args, **kwargs)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        return super().save(*args, **kwargs)

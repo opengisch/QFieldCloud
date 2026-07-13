@@ -21,13 +21,16 @@ from qfieldcloud.core.models import (
     Person,
     ProcessProjectfileJob,
     ProjectCollaborator,
-    ProjectSeed,
     Team,
     TeamMember,
     User,
 )
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
-from qfieldcloud.project.models import SHARED_DATASETS_PROJECT_NAME, Project
+from qfieldcloud.project.models import (
+    SHARED_DATASETS_PROJECT_NAME,
+    Project,
+    ProjectSeed,
+)
 from qfieldcloud.subscription.exceptions import QuotaError
 
 

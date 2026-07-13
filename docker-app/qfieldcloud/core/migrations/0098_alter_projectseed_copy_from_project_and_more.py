@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 max_length=1024,
                 null=True,
-                upload_to=qfieldcloud.core.models.get_seed_xlsform_upload_to,
+                upload_to=qfieldcloud.project.models.get_seed_xlsform_upload_to,
             ),
         ),
     ]

@@ -18,13 +18,16 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Person,
     ProjectCollaborator,
-    ProjectSeed,
     Team,
     TeamMember,
 )
 from qfieldcloud.core.tests.utils import wait_for_project_ok_status
 from qfieldcloud.core.utils2 import project_seed
-from qfieldcloud.project.models import SHARED_DATASETS_PROJECT_NAME, Project
+from qfieldcloud.project.models import (
+    SHARED_DATASETS_PROJECT_NAME,
+    Project,
+    ProjectSeed,
+)
 from qfieldcloud.subscription.models import Subscription
 
 from .utils import set_subscription, setup_subscription_plans, testdata_path

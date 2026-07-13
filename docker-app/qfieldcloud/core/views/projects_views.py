@@ -15,7 +15,7 @@ from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Job, ProjectSeed
+from qfieldcloud.core.models import Job
 from qfieldcloud.core.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
@@ -23,7 +23,7 @@ from qfieldcloud.core.serializers import (
 )
 from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.project.enums import ProjectRoleOrigins
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, ProjectSeed
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets

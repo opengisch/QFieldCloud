@@ -14,7 +14,6 @@ from qfieldcloud.core.models import (
     Person,
     ProcessProjectfileJob,
     ProjectCollaborator,
-    ProjectSeed,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
@@ -25,7 +24,7 @@ from qfieldcloud.core.tests.utils import (
 )
 from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.core.utils2.jobs import queue_job
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, ProjectSeed
 
 logging.disable(logging.CRITICAL)
 
