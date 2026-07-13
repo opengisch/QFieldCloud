@@ -20,7 +20,6 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     User,
 )
@@ -30,6 +29,7 @@ from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
 from qfieldcloud.filestorage.models import File, FileVersion
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

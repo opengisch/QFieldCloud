@@ -12,7 +12,6 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Organization,
     Person,
-    Project,
     Secret,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
@@ -24,6 +23,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2.jobs import repackage
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             model_name="project",
             name="are_attachments_versioned",
             field=models.BooleanField(
-                default=qfieldcloud.core.models.get_project_are_attachments_versioned_default,
+                default=qfieldcloud.project.models.get_project_are_attachments_versioned_default,
                 help_text="If enabled, attachment files will make use of the file versioning system. If disabled, only the latest version of each attachment file will be kept, and stored with the extension in the filename.",
                 verbose_name="Versioned attachment files",
             ),
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
             model_name="project",
             name="attachments_file_storage",
             field=models.CharField(
-                default=qfieldcloud.core.models.get_project_attachments_file_storage_default,
+                default=qfieldcloud.project.models.get_project_attachments_file_storage_default,
                 help_text="Which file storage provider should be used for storing the project attachments files.",
                 max_length=100,
                 validators=[qfieldcloud.core.validators.file_storage_name_validator],

@@ -8,12 +8,12 @@ from django_currentuser.middleware import get_current_authenticated_user
 from notifications.signals import notify
 
 from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 
 from ..core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Team,
     TeamMember,

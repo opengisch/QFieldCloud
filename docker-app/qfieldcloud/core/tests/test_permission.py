@@ -9,11 +9,11 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Team,
     User,
 )
+from qfieldcloud.project.models import Project
 
 from .utils import set_subscription, setup_subscription_plans, testdata_path
 

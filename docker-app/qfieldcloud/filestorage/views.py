@@ -22,12 +22,12 @@ from qfieldcloud.core import (
     permissions_utils,
 )
 from qfieldcloud.core.models import (
-    Project,
     UserAccount,
 )
 from qfieldcloud.filestorage.models import (
     File,
 )
+from qfieldcloud.project.models import Project
 
 from .serializers import FileWithVersionsSerializer
 from .view_helpers import (

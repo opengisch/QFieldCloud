@@ -2,7 +2,8 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Person, Project, ProjectCollaborator
+from qfieldcloud.core.models import Person, ProjectCollaborator
+from qfieldcloud.project.models import Project
 
 from .utils import setup_subscription_plans
 

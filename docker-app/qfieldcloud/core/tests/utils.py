@@ -10,7 +10,8 @@ import psycopg2
 from django.conf import settings
 from django.utils import timezone
 
-from qfieldcloud.core.models import Job, Project, User
+from qfieldcloud.core.models import Job, User
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import Plan, Subscription
 
 

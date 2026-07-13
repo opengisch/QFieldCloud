@@ -2,13 +2,14 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
-from qfieldcloud.core.models import Organization, Project
+from qfieldcloud.core.models import Organization
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     CreateUserSerializer,
     OrganizationSerializer,
     PublicInfoUserSerializer,
 )
+from qfieldcloud.project.models import Project
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 

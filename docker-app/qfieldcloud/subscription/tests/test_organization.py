@@ -7,12 +7,12 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Team,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from qfieldcloud.subscription.models import Subscription
 

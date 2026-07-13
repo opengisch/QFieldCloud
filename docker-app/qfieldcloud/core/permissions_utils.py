@@ -9,13 +9,13 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     OrganizationQueryset,
-    Project,
     ProjectCollaborator,
     Secret,
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
 from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
     PlanInsufficientError,

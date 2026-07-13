@@ -4,7 +4,6 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Secret,
 )
@@ -12,6 +11,7 @@ from qfieldcloud.core.permissions_utils import (
     UserProjectRoleError,
 )
 from qfieldcloud.core.tests.utils import setup_subscription_plans
+from qfieldcloud.project.models import Project
 
 
 class QfcTestCase(APITestCase):

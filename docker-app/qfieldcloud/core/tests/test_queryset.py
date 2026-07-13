@@ -8,13 +8,13 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Team,
     TeamMember,
     User,
 )
 from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 
 from .utils import set_subscription, setup_subscription_plans
 

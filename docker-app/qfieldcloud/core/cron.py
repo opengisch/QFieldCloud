@@ -8,8 +8,9 @@ from invitations.utils import get_invitation_model
 from sentry_sdk import capture_message
 
 from qfieldcloud.core.invitations_utils import send_invitation
-from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta, Job, Project
+from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta, Job
 from qfieldcloud.core.utils2 import packages
+from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
 

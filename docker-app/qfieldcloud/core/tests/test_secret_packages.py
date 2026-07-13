@@ -7,7 +7,6 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Secret,
 )
@@ -21,6 +20,7 @@ from qfieldcloud.core.tests.utils import (
 )
 from qfieldcloud.core.utils2.jobs import repackage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.project.models import Project
 
 
 class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):

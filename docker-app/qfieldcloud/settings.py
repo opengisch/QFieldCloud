@@ -873,7 +873,7 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
         "exclude_fields": ["last_login", "updated_at"],
     },
     {
-        "model": "core.project",
+        "model": "project.project",
         # these fields are updated by scripts and will produce a lot of audit noise
         "exclude_fields": [
             "updated_at",

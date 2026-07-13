@@ -12,7 +12,6 @@ from rest_framework.request import Request
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
-    SHARED_DATASETS_PROJECT_NAME,
     ApplyJob,
     Delta,
     Job,
@@ -21,7 +20,6 @@ from qfieldcloud.core.models import (
     PackageJob,
     Person,
     ProcessProjectfileJob,
-    Project,
     ProjectCollaborator,
     ProjectSeed,
     Team,
@@ -29,6 +27,7 @@ from qfieldcloud.core.models import (
     User,
 )
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
+from qfieldcloud.project.models import SHARED_DATASETS_PROJECT_NAME, Project
 from qfieldcloud.subscription.exceptions import QuotaError
 
 

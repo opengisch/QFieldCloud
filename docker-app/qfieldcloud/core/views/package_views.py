@@ -13,7 +13,7 @@ from drf_spectacular.utils import (
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core import exceptions
 from qfieldcloud.core import permissions_utils as perms
-from qfieldcloud.core.models import PackageJob, Project
+from qfieldcloud.core.models import PackageJob
 from qfieldcloud.core.serializers import LatestPackageSerializer
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.filestorage.models import (
@@ -24,6 +24,7 @@ from qfieldcloud.filestorage.view_helpers import (
     download_project_file_version,
     upload_project_file_version,
 )
+from qfieldcloud.project.models import Project
 from rest_framework import permissions, status, views
 from rest_framework.request import Request
 from rest_framework.response import Response

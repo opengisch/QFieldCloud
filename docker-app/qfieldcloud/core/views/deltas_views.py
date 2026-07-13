@@ -15,9 +15,10 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
-from qfieldcloud.core.models import Delta, FaultyDeltaFile, Project
+from qfieldcloud.core.models import Delta, FaultyDeltaFile
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
+from qfieldcloud.project.models import Project
 from rest_framework import generics, permissions, views
 from rest_framework.response import Response
 

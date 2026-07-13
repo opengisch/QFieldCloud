@@ -22,9 +22,9 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
 )
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import Subscription
 
 from .utils import get_filename, setup_subscription_plans, testdata_path

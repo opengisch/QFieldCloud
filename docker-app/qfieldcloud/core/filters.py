@@ -1,8 +1,8 @@
 import django_filters
 from django.db import models
 
-from qfieldcloud.core.models import Project
 from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 
 
 class IncludePublicChoices(models.IntegerChoices):

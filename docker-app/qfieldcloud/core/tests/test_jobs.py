@@ -13,7 +13,6 @@ from qfieldcloud.core.models import (
     PackageJob,
     Person,
     ProcessProjectfileJob,
-    Project,
     ProjectCollaborator,
     ProjectSeed,
 )
@@ -26,6 +25,7 @@ from qfieldcloud.core.tests.utils import (
 )
 from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.core.utils2.jobs import queue_job
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 
