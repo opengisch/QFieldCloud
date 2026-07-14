@@ -16,13 +16,13 @@ from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.filters import ProjectFilterSet
 from qfieldcloud.core.models import Job
-from qfieldcloud.core.serializers import (
+from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project, ProjectSeed
+from qfieldcloud.project.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
-from qfieldcloud.project.enums import ProjectRoleOrigins
-from qfieldcloud.project.models import Project, ProjectSeed
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
