@@ -3,7 +3,7 @@ import logging
 
 from django.test import TestCase
 
-from qfieldcloud.core.utils2.project import (
+from qfieldcloud.project.utils.project_utils import (
     is_virtual_layer_with_embedded_layers,
 )
 

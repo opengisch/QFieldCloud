@@ -701,7 +701,7 @@ class Project(models.Model):
         if not self.project_details or not self.project_details.get("layers_by_id"):
             return None
 
-        from qfieldcloud.core.utils2.project import has_online_vector_data
+        from qfieldcloud.project.utils.project_utils import has_online_vector_data
 
         return has_online_vector_data(self)
 

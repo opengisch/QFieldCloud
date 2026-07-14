@@ -21,9 +21,9 @@ from qfieldcloud.core.serializers import (
     ProjectSerializer,
     ProjectThumbnailSerializer,
 )
-from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.project.enums import ProjectRoleOrigins
 from qfieldcloud.project.models import Project, ProjectSeed
+from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
@@ -195,7 +195,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if clone_from_project:
             if seed_data and seed_data.get("extent"):
                 try:
-                    extent = project_seed.get_extent_polygon(seed_data["extent"])
+                    extent = projectseed_utils.get_extent_polygon(seed_data["extent"])
                 except DjangoValidationError as err:
                     raise DrfValidationError({"seed": {"extent": err.messages}})
             else:
@@ -218,7 +218,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         elif seed_data:
             xlsform_file = serializer.validated_data.get("xlsform_file", None)
 
-            basemaps, extent, xlsform_config = project_seed.build_seed_data(
+            basemaps, extent, xlsform_config = projectseed_utils.build_seed_data(
                 basemap_provider=seed_data.get("basemap_provider", "none"),
                 basemap_style=seed_data.get("basemap_style", "standard"),
                 basemap_url=seed_data.get("basemap_url", ""),

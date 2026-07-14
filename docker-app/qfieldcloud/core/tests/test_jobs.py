@@ -22,9 +22,9 @@ from qfieldcloud.core.tests.utils import (
     testdata_path,
     wait_for_project_ok_status,
 )
-from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.core.utils2.jobs import queue_job
 from qfieldcloud.project.models import Project, ProjectSeed
+from qfieldcloud.project.utils import projectseed_utils
 
 logging.disable(logging.CRITICAL)
 
@@ -322,7 +322,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=self.p1,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             settings={
                 "schemaId": "https://app.qfield.cloud/schemas/project-seed-20251201.json",
                 "basemaps": [
@@ -452,7 +452,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=self.p1,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             settings={
                 "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
                 "basemaps": [],
@@ -481,7 +481,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=cloned_project,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             clone_from_project=self.p1,
             settings={
                 "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
