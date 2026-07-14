@@ -147,3 +147,13 @@ class QfcTestCase(TestCase):
                     self.assertIsNotNone(text_fh)
                     first_line = text_fh.readline()
                     self.assertIn("<qgis", first_line)
+
+    def test_open_qgis_file_with_qgz_and_unexpected_qgs_name(self):
+        qgs_path = Path(testdata_path("delta/project.qgs"))
+
+        with qgz_from_qgs(qgs_path, "project.123.qgz") as qgz_path:
+            with open(qgz_path, "rb") as fh:
+                with open_qgis_file(qgz_path, fh) as text_fh:
+                    self.assertIsNotNone(text_fh)
+                    first_line = text_fh.readline()
+                    self.assertIn("<qgis", first_line)
