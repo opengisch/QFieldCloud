@@ -1092,7 +1092,32 @@ def open_qgis_file(filename: str | Path) -> Iterator[TextIO]:
     with open(filename, "rb") as fh:
         if suffix == ".qgz":
             with zipfile.ZipFile(fh) as qgz:
-                with qgz.open(f"{path.stem}.qgs") as qgs:
+                expected_qgs_name = f"{path.stem}.qgs"
+                archive_names = qgz.namelist()
+
+                if expected_qgs_name in archive_names:
+                    qgs_filename = expected_qgs_name
+
+                else:
+                    qgs_filename = None
+                    for archive_file in sorted(archive_names):
+                        if Path(archive_file).suffix == ".qgs":
+                            qgs_filename = archive_file
+                            break
+
+                    if not qgs_filename:
+                        raise KeyError(
+                            f"No '.qgs' file found in the '.qgz' archive {filename}"
+                        )
+
+                    logging.info(
+                        f"Expected '.qgs' file '{expected_qgs_name}' not found in '.qgz' archive '{filename}', "
+                        f"found and fallback to '{qgs_filename}' instead!"
+                    )
+
+                assert qgs_filename
+
+                with qgz.open(qgs_filename) as qgs:
                     with io.TextIOWrapper(qgs, encoding="utf-8") as text_fh:
                         yield text_fh
 
