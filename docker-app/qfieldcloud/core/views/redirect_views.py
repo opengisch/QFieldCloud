@@ -6,7 +6,7 @@ from django.http.response import (
 )
 from django.shortcuts import redirect
 from django.urls import reverse
-from qfieldcloud.core.models import Project
+from qfieldcloud.project.models import Project
 
 
 def redirect_to_admin_project_view(

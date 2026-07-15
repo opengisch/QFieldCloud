@@ -1,7 +1,8 @@
 import django_filters
 from django.db import models
 
-from qfieldcloud.core.models import Project, ProjectQueryset
+from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 
 
 class IncludePublicChoices(models.IntegerChoices):
@@ -28,9 +29,7 @@ class ProjectFilterSet(django_filters.FilterSet):
         self, queryset: models.QuerySet[Project], name: str, value: str
     ) -> models.QuerySet[Project]:
         if value != "1":
-            queryset = queryset.exclude(
-                user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
-            )
+            queryset = queryset.exclude(user_role_origin=ProjectRoleOrigins.PUBLIC)
 
         return queryset
 

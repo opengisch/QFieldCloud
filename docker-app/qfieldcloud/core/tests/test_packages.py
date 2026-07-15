@@ -18,7 +18,6 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     PackageJob,
     Person,
-    Project,
     ProjectCollaborator,
     Secret,
     Team,
@@ -34,6 +33,7 @@ from qfieldcloud.core.tests.utils import (
 from qfieldcloud.core.utils2.jobs import repackage
 from qfieldcloud.filestorage.models import File
 from qfieldcloud.filestorage.utils import open_qgis_file
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

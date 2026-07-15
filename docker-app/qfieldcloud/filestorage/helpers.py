@@ -2,7 +2,7 @@ import logging
 
 from django.db import transaction
 
-from qfieldcloud.core.models import Project
+from qfieldcloud.project.models import Project
 
 from .models import FileVersion
 

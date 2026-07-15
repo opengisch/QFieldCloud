@@ -6,8 +6,9 @@ from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Organization, Person, Project
+from qfieldcloud.core.models import Organization, Person
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.project.models import Project
 
 from ..exceptions import NotPremiumPlanException
 from ..models import Package, PackageType, Plan, get_subscription_model

@@ -8,27 +8,31 @@ from unittest.mock import patch
 from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework import status
-from rest_framework.test import APITransactionTestCase
-
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
-    SHARED_DATASETS_PROJECT_NAME,
     Job,
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
-    ProjectSeed,
     Team,
     TeamMember,
 )
-from qfieldcloud.core.tests.utils import wait_for_project_ok_status
-from qfieldcloud.core.utils2 import project_seed
+from qfieldcloud.core.tests.utils import (
+    set_subscription,
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_project_ok_status,
+)
+from qfieldcloud.project.models import (
+    SHARED_DATASETS_PROJECT_NAME,
+    Project,
+    ProjectSeed,
+)
+from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.models import Subscription
-
-from .utils import set_subscription, setup_subscription_plans, testdata_path
+from rest_framework import status
+from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
 
@@ -61,7 +65,7 @@ class QfcTestCase(APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=project,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             settings={
                 "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
                 "basemaps": [],
@@ -824,7 +828,7 @@ class QfcTestCase(APITransactionTestCase):
         project._localized_layers = [{"filename": "localized:layer1.tif"}]
 
         with patch(
-            "qfieldcloud.core.models.Project.localized_layers",
+            "qfieldcloud.project.models.Project.localized_layers",
             new_callable=lambda: property(lambda self: self._localized_layers),
         ):
             layers = project.localized_layers

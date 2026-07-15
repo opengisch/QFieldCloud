@@ -11,10 +11,10 @@ from qfieldcloud.core.models import (
     PackageJob,
     Person,
     ProcessProjectfileJob,
-    Project,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
 from qfieldcloud.filestorage.models import File, FileVersion
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
     PlanInsufficientError,

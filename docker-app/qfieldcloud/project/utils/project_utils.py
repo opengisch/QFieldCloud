@@ -1,7 +1,7 @@
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from qfieldcloud.core.models import Project
+from qfieldcloud.project.models import Project
 
 
 def is_virtual_layer_with_embedded_layers(datasource: str) -> bool:

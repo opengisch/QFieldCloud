@@ -57,7 +57,6 @@ from rest_framework.authtoken.models import TokenProxy
 
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
-    SHARED_DATASETS_PROJECT_NAME,
     ApplyJob,
     ApplyJobDelta,
     Delta,
@@ -67,9 +66,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Person,
     ProcessProjectfileJob,
-    Project,
     ProjectCollaborator,
-    ProjectSeed,
     Secret,
     Team,
     TeamMember,
@@ -82,6 +79,11 @@ from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 from qfieldcloud.core.utils2.storage import format_storage_usage
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.project.models import (
+    SHARED_DATASETS_PROJECT_NAME,
+    Project,
+    ProjectSeed,
+)
 from qfieldcloud.subscription.models import get_subscription_model
 
 

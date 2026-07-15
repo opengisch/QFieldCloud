@@ -8,12 +8,12 @@ from rest_framework.test import APITransactionTestCase
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Person,
-    Project,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

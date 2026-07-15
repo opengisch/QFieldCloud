@@ -25,7 +25,6 @@ from qfieldcloud.core.exceptions import (
 from qfieldcloud.core.models import (
     Job,
     ProcessProjectfileJob,
-    Project,
 )
 from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
@@ -41,6 +40,7 @@ from qfieldcloud.filestorage.utils import (
     is_qgis_project_file,
     validate_filename,
 )
+from qfieldcloud.project.models import Project
 
 from .helpers import purge_old_file_versions
 

@@ -4,7 +4,8 @@ from django.conf import settings
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Person, Project
+from qfieldcloud.core.models import Person
+from qfieldcloud.project.models import Project
 
 from .utils import setup_subscription_plans
 

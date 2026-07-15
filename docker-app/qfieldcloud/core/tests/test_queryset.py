@@ -8,13 +8,13 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
-    ProjectQueryset,
     Team,
     TeamMember,
     User,
 )
+from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 
 from .utils import set_subscription, setup_subscription_plans
 
@@ -157,7 +157,7 @@ class QfcTestCase(APITransactionTestCase):
         project,
         user,
         role: ProjectCollaborator.Roles | None = None,
-        origin: ProjectQueryset.RoleOrigins | None = None,
+        origin: ProjectRoleOrigins | None = None,
         is_valid: bool = True,
     ):
         """Asserts that user has give role/origin on project"""
@@ -176,7 +176,7 @@ class QfcTestCase(APITransactionTestCase):
             return
 
         # Test on Users
-        if origin != ProjectQueryset.RoleOrigins.PUBLIC:
+        if origin != ProjectRoleOrigins.PUBLIC:
             # The Person.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
             u = Person.objects.for_project(project).get(pk=user.pk)
@@ -278,7 +278,7 @@ class QfcTestCase(APITransactionTestCase):
         """
 
         roles = ProjectCollaborator.Roles
-        role_origins = ProjectQueryset.RoleOrigins
+        role_origins = ProjectRoleOrigins
 
         # fmt: off
         self.assertProjectRole(self.project1, self.user1, roles.ADMIN, role_origins.PROJECTOWNER, True)
@@ -316,7 +316,7 @@ class QfcTestCase(APITransactionTestCase):
         """Tests for QF-1553 - limit collaboration on private projects"""
         # Shorthands
         roles = ProjectCollaborator.Roles
-        role_origins = ProjectQueryset.RoleOrigins
+        role_origins = ProjectRoleOrigins
 
         # Initial user setup
         u = Person.objects.create(username="u")

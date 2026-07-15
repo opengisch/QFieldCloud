@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
             model_name="project",
             name="attachments_file_storage",
             field=models.CharField(
-                default=qfieldcloud.core.models.get_project_file_storage_default,
+                default=qfieldcloud.project.models.get_project_file_storage_default,
                 help_text="Which file storage provider should be used for storing the project attachments files.",
                 max_length=100,
                 validators=[qfieldcloud.core.validators.file_storage_name_validator],

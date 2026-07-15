@@ -1,7 +1,7 @@
 import uuid
 
 from django.core.management.base import BaseCommand
-from qfieldcloud.core.models import Project
+from qfieldcloud.project.models import Project
 
 
 class Command(BaseCommand):
