@@ -13,8 +13,7 @@ from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
 from qfieldcloud.project.models import Project
-
-from ..models import Plan
+from qfieldcloud.subscription.models import Plan
 
 DATA_FOLDER = Path(__file__).parent / "data"
 

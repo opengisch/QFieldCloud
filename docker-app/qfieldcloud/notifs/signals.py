@@ -7,10 +7,7 @@ from django.dispatch import receiver
 from django_currentuser.middleware import get_current_authenticated_user
 from notifications.signals import notify
 
-from qfieldcloud.project.enums import ProjectRoleOrigins
-from qfieldcloud.project.models import Project
-
-from ..core.models import (
+from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
@@ -19,6 +16,8 @@ from ..core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 
 
 def _send_notif(verb, action_object, recipient, target=None):

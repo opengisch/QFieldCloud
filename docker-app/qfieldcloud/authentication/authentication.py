@@ -5,10 +5,9 @@ from rest_framework.authentication import (
     TokenAuthentication as DjangoRestFrameworkTokenAuthentication,
 )
 
+from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.exceptions import AuthenticationViaTokenFailedError
 from qfieldcloud.core.models import User
-
-from ..core.exceptions import AuthenticationViaTokenFailedError
-from .models import AuthToken
 
 
 def invalidate_all_tokens(user: User) -> int:

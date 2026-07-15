@@ -2,9 +2,8 @@ import logging
 
 from django.db import transaction
 
+from qfieldcloud.filestorage.models import FileVersion
 from qfieldcloud.project.models import Project
-
-from .models import FileVersion
 
 logger = logging.getLogger(__name__)
 

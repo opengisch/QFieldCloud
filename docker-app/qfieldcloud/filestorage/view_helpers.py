@@ -29,6 +29,7 @@ from qfieldcloud.core.models import (
 from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
 )
+from qfieldcloud.filestorage.helpers import purge_old_file_versions
 from qfieldcloud.filestorage.models import (
     File,
     FileVersion,
@@ -41,8 +42,6 @@ from qfieldcloud.filestorage.utils import (
     validate_filename,
 )
 from qfieldcloud.project.models import Project
-
-from .helpers import purge_old_file_versions
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import (
+from qfieldcloud.filestorage.views import (
     AvatarFileReadView,
     FileCrudView,
     FileListView,
