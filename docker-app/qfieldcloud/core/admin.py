@@ -1253,6 +1253,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     fields = (
         "id",
+        "project_type",
         "name",
         "description",
         "is_public",
@@ -1282,6 +1283,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     readonly_fields = (
         "id",
+        "project_type",
         "status",
         "status_code",
         "file_storage_bytes",

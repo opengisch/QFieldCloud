@@ -181,6 +181,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "project_type",
             "owner",
             "description",
             # remove "private" field one day
@@ -209,6 +210,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "the_qgis_file_name",
         )
         read_only_fields = (
+            "project_type",
             "private",
             "created_at",
             "updated_at",
