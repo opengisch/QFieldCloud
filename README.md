@@ -210,7 +210,6 @@ Create an <code>.env.test</code> file with the following variables that override
 ENVIRONMENT=test
 QFIELDCLOUD_HOST=nginx
 DJANGO_SETTINGS_MODULE=qfieldcloud.settings
-STORAGE_ENDPOINT_URL=http://172.17.0.1:8109
 OBJECT_STORAGE_API_PORT=8109
 OBJECT_STORAGE_BROWSER_PORT=8110
 WEB_HTTP_PORT=8101
