@@ -18,8 +18,7 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
-
-from .exceptions import NotPremiumPlanException
+from qfieldcloud.subscription.exceptions import NotPremiumPlanException
 
 logger = logging.getLogger(__name__)
 

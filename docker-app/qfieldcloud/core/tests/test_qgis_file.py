@@ -10,14 +10,13 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob
-from qfieldcloud.project.models import Project
-
-from .utils import (
+from qfieldcloud.core.tests.utils import (
     get_filename,
     set_subscription,
     setup_subscription_plans,
     testdata_path,
 )
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

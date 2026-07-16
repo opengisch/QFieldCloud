@@ -5,9 +5,8 @@ from django.db.models import Q, QuerySet
 from django.http import HttpRequest
 from django.utils import timezone
 
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.admin import QFieldCloudModelAdmin, qfc_admin_site
-
-from .models import AuthToken
 
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise

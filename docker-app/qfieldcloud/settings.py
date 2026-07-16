@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
-from .settings_utils import (
+from qfieldcloud.settings_utils import (
     ConfigValidationError,
     get_socialaccount_providers_config,
     get_storages_config,

@@ -11,9 +11,8 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person
 from qfieldcloud.core.tests.utils import get_random_file, setup_subscription_plans
 from qfieldcloud.project.models import Project
-
-from ..exceptions import NotPremiumPlanException
-from ..models import Package, PackageType, Plan
+from qfieldcloud.subscription.exceptions import NotPremiumPlanException
+from qfieldcloud.subscription.models import Package, PackageType, Plan
 
 logging.disable(logging.CRITICAL)
 
