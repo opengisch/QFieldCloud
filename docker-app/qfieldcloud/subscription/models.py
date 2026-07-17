@@ -110,6 +110,8 @@ class Plan(models.Model):
 
         return cls.objects.filter(**filters)
 
+    trial_plan_id: int | None
+
     # unique identifier of the subscription plan
     code = models.CharField(max_length=100, unique=True)
 
@@ -239,6 +241,23 @@ class Plan(models.Model):
         ),
     )
 
+    trial_plan = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"is_trial": True},
+        help_text=_(
+            "Plan used as the trial version of this plan. "
+            "If set, users can start this plan with a trial period."
+        ),
+    )
+
+    @property
+    def is_trialable(self) -> bool:
+        return self.trial_plan_id is not None
+
     @property
     def storage_bytes(self) -> int:
         return self.storage_mb * 1000 * 1000
@@ -277,6 +296,29 @@ class Plan(models.Model):
         if errors:
             raise ValidationError(errors)
 
+    def clean_trial_plan(self):
+        if self.trial_plan_id is None:
+            return
+
+        if self.is_trial:
+            raise ValidationError(
+                {"trial_plan": _("Trial plans cannot have their own trial plan.")}
+            )
+
+        if not self.trial_plan.is_trial:
+            raise ValidationError(
+                {"trial_plan": _("The selected trial plan must be marked as a trial.")}
+            )
+
+        if self.trial_plan.user_type != self.user_type:
+            raise ValidationError(
+                {
+                    "trial_plan": _(
+                        "Trial plan must have the same user type as this plan."
+                    )
+                }
+            )
+
     def clean(self):
         if self.storage_mb == 0:
             raise ValidationError({"storage_mb": _("Must be greater than 0.")})
@@ -287,6 +329,7 @@ class Plan(models.Model):
             )
 
         self.clean_storage_threshold_bytes()
+        self.clean_trial_plan()
 
         return super().clean()
 
