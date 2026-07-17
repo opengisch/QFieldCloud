@@ -110,8 +110,10 @@ class QfcTestCase(APITransactionTestCase):
             self.assertEqual(
                 Project.objects.get(pk=self.project1.pk).project_files_count, 0
             )
-            self.assertEqual(
-                Project.objects.get(pk=self.project1.pk).the_qgis_file_name, None
+            self.assertIsNone(
+                Project.objects.select_related("the_qgis_file")
+                .get(pk=self.project1.pk)
+                .the_qgis_file_name,
             )
 
         with self.subTest():
@@ -300,7 +302,10 @@ class QfcTestCase(APITransactionTestCase):
             Project.objects.get(pk=self.project1.pk).project_files_count, 1
         )
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).the_qgis_file_name, project_file
+            Project.objects.select_related("the_qgis_file")
+            .get(pk=self.project1.pk)
+            .the_qgis_file_name,
+            project_file,
         )
 
         # List files
@@ -527,7 +532,9 @@ class QfcTestCase(APITransactionTestCase):
             Project.objects.get(pk=self.project1.pk).project_files_count, 1
         )
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
+            Project.objects.select_related("the_qgis_file")
+            .get(pk=self.project1.pk)
+            .the_qgis_file_name,
             qgis_project_file,
         )
 
@@ -544,7 +551,9 @@ class QfcTestCase(APITransactionTestCase):
             Project.objects.get(pk=self.project1.pk).project_files_count, 1
         )
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
+            Project.objects.select_related("the_qgis_file")
+            .get(pk=self.project1.pk)
+            .the_qgis_file_name,
             qgis_project_file,
         )
 
@@ -562,7 +571,9 @@ class QfcTestCase(APITransactionTestCase):
             Project.objects.get(pk=self.project1.pk).project_files_count, 1
         )
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
+            Project.objects.select_related("the_qgis_file")
+            .get(pk=self.project1.pk)
+            .the_qgis_file_name,
             qgis_project_file,
         )
 
@@ -579,7 +590,9 @@ class QfcTestCase(APITransactionTestCase):
             Project.objects.get(pk=self.project1.pk).project_files_count, 1
         )
         self.assertEqual(
-            Project.objects.get(pk=self.project1.pk).the_qgis_file_name,
+            Project.objects.select_related("the_qgis_file")
+            .get(pk=self.project1.pk)
+            .the_qgis_file_name,
             qgis_project_file,
         )
 

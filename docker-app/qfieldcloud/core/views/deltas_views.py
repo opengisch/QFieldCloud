@@ -66,7 +66,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def post(self, request, projectid):
-        project_obj = Project.objects.get(id=projectid)
+        project_obj = Project.objects.select_related("the_qgis_file").get(id=projectid)
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
@@ -228,7 +228,7 @@ class ApplyView(views.APIView):
     serializer_class = DeltaSerializer
 
     def post(self, request, projectid):
-        project_obj = Project.objects.get(id=projectid)
+        project_obj = Project.objects.select_related("the_qgis_file").get(id=projectid)
         project_file = project_obj.the_qgis_file_name
 
         if project_file is None:

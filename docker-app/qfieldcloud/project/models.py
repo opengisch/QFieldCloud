@@ -253,7 +253,15 @@ class Project(models.Model):
     )
 
     description = models.TextField(blank=True)
-    the_qgis_file_name = models.TextField(blank=True, null=True)
+
+    the_qgis_file_id: int | None
+    the_qgis_file = models.ForeignKey(
+        "filestorage.File",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
     project_details = models.JSONField(blank=True, null=True)
     is_public = models.BooleanField(
         default=False,
@@ -595,7 +603,14 @@ class Project(models.Model):
 
     @property
     def has_the_qgis_file(self) -> bool:
-        return bool(self.the_qgis_file_name)
+        return self.the_qgis_file_id is not None
+
+    @property
+    def the_qgis_file_name(self) -> str | None:
+        if not self.the_qgis_file_id:
+            return None
+
+        return self.the_qgis_file.name
 
     @property
     def owner_aware_storage_keep_versions(self) -> int:
