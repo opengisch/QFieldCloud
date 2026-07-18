@@ -407,11 +407,13 @@ def apply_deltas_without_transaction(
     overwrite_conflicts: bool = False,
 ) -> bool:
     has_applied_all_deltas = True
+    layer_ids_to_commit = []
 
     # apply deltas on each individual layer
     for idx, delta in enumerate(delta_file.deltas):
         delta_status = DeltaStatus.Applied
         layer_id: str = delta.get("sourceLayerId", "")
+        layer_ids_to_commit.append(layer_id)
         layer: QgsVectorLayer = project.mapLayer(layer_id)
         feature = QgsFeature()
 
@@ -495,7 +497,7 @@ def apply_deltas_without_transaction(
                 # in QGIS the only way to get the real features that have been added after commit, if edit buffer is present, is to use this signal.
                 layer.committedFeaturesAdded.connect(committed_features_added_cb)
 
-            if not layer.commitChanges():
+            if not layer.commitChanges(False):
                 raise DeltaException(
                     "Failed to commit changes",
                     provider_errors=layer.dataProvider().errors(),
@@ -605,6 +607,10 @@ def apply_deltas_without_transaction(
             )
 
             raise err
+
+    for layer_id in layer_ids_to_commit:
+        layer = project.mapLayer(layer_id)
+        layer.commitChanges()
 
     return has_applied_all_deltas
 
