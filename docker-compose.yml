@@ -16,6 +16,7 @@ services:
       gunicorn
         qfieldcloud.wsgi:application
         --bind 0.0.0.0:8000
+        --no-control-socket
         --timeout ${GUNICORN_TIMEOUT_S}
         --max-requests ${GUNICORN_MAX_REQUESTS}
         --workers ${GUNICORN_WORKERS}

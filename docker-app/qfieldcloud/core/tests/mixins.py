@@ -7,8 +7,9 @@ from django.urls import reverse
 from rest_framework.response import Response
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.models import User
 from qfieldcloud.core.tests.utils import testdata_path
+from qfieldcloud.project.models import Project
 
 
 class QfcFilesTestCaseMixin:

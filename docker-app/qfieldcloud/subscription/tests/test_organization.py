@@ -7,12 +7,12 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
-    ProjectQueryset,
     Team,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from qfieldcloud.subscription.models import Subscription
 
@@ -32,7 +32,7 @@ class QfcTestCase(APITransactionTestCase):
         project,
         user,
         role: ProjectCollaborator.Roles | None = None,
-        origin: ProjectQueryset.RoleOrigins | None = None,
+        origin: ProjectRoleOrigins | None = None,
         is_valid: bool = True,
     ):
         """Asserts that user has give role/origin on project"""
@@ -51,7 +51,7 @@ class QfcTestCase(APITransactionTestCase):
             return
 
         # Test on Users
-        if origin != ProjectQueryset.RoleOrigins.PUBLIC:
+        if origin != ProjectRoleOrigins.PUBLIC:
             # The Person.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
             u = Person.objects.for_project(project).get(pk=user.pk)
@@ -67,7 +67,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_max_premium_collaborators_per_private_project(self):
         Roles = ProjectCollaborator.Roles
-        RoleOrigins = ProjectQueryset.RoleOrigins
+        RoleOrigins = ProjectRoleOrigins
 
         u1 = Person.objects.create(username="u1")
         u2 = Person.objects.create(username="u2")

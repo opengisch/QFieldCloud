@@ -6,7 +6,8 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import pagination, permissions_utils, serializers
-from qfieldcloud.core.models import Job, Project
+from qfieldcloud.core.models import Job
+from qfieldcloud.project.models import Project
 from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED

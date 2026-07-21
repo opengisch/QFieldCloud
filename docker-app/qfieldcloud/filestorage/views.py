@@ -22,20 +22,19 @@ from qfieldcloud.core import (
     permissions_utils,
 )
 from qfieldcloud.core.models import (
-    Project,
     UserAccount,
 )
 from qfieldcloud.filestorage.models import (
     File,
 )
-
-from .serializers import FileWithVersionsSerializer
-from .view_helpers import (
+from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
+from qfieldcloud.filestorage.view_helpers import (
     delete_project_file_version,
     download_field_file,
     download_project_file_version,
     upload_project_file_version,
 )
+from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
 

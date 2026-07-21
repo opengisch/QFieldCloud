@@ -20,14 +20,13 @@ from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField
 from qfieldcloud.core.models import (
     Job,
-    Project,
     User,
-    get_project_file_storage_default,
 )
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.core.validators import MaxBytesLengthValidator
 from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 from qfieldcloud.filestorage.utils import calc_etag, filename_validator
+from qfieldcloud.project.models import Project, get_project_file_storage_default
 
 
 class FileQueryset(models.QuerySet):

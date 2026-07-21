@@ -9,13 +9,16 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Team,
     User,
 )
-
-from .utils import set_subscription, setup_subscription_plans, testdata_path
+from qfieldcloud.core.tests.utils import (
+    set_subscription,
+    setup_subscription_plans,
+    testdata_path,
+)
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

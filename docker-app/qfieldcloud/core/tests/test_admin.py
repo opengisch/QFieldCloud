@@ -5,8 +5,15 @@ from django.conf import settings
 from django.test.testcases import TransactionTestCase
 from django.urls.resolvers import URLPattern, URLResolver
 
-from ..models import Delta, Organization, Person, ProcessProjectfileJob, Project, Team
-from .utils import setup_subscription_plans
+from qfieldcloud.core.models import (
+    Delta,
+    Organization,
+    Person,
+    ProcessProjectfileJob,
+    Team,
+)
+from qfieldcloud.core.tests.utils import setup_subscription_plans
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

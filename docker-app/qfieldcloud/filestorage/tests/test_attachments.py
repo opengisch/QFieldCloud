@@ -11,7 +11,6 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     PackageJob,
     Person,
-    Project,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
@@ -21,6 +20,7 @@ from qfieldcloud.core.tests.utils import (
 )
 from qfieldcloud.core.utils2.jobs import repackage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

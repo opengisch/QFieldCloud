@@ -1,7 +1,7 @@
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-from .models import File, FileVersion
+from qfieldcloud.filestorage.models import File, FileVersion
 
 
 @receiver(pre_delete, sender=FileVersion)

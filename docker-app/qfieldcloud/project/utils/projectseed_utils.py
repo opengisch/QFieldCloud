@@ -4,7 +4,6 @@ from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.utils.translation import gettext as _
-
 from qfieldcloud.core.models import BasemapProvider, BasemapStyle
 
 OSM_URL = "https://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png"

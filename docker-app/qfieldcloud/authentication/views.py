@@ -14,11 +14,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from qfieldcloud.authentication.authentication import create_token
+from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.authentication.sso.auth_providers import get_auth_providers
-
-from .authentication import create_token
-from .models import AuthToken
-from .utils import load_module
+from qfieldcloud.authentication.utils import load_module
 
 LoginSerializer = load_module(settings.QFIELDCLOUD_LOGIN_SERIALIZER)
 TokenSerializer = load_module(settings.QFIELDCLOUD_TOKEN_SERIALIZER)

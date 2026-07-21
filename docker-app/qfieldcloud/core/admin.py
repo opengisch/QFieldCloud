@@ -57,7 +57,6 @@ from rest_framework.authtoken.models import TokenProxy
 
 from qfieldcloud.core import exceptions
 from qfieldcloud.core.models import (
-    SHARED_DATASETS_PROJECT_NAME,
     ApplyJob,
     ApplyJobDelta,
     Delta,
@@ -67,9 +66,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Person,
     ProcessProjectfileJob,
-    Project,
     ProjectCollaborator,
-    ProjectSeed,
     Secret,
     Team,
     TeamMember,
@@ -82,6 +79,11 @@ from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 from qfieldcloud.core.utils2.storage import format_storage_usage
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.project.models import (
+    SHARED_DATASETS_PROJECT_NAME,
+    Project,
+    ProjectSeed,
+)
 from qfieldcloud.subscription.models import get_subscription_model
 
 
@@ -1173,7 +1175,6 @@ class ProjectForm(ModelForm):
 
     class Meta:
         model = Project
-        widgets = {"the_qgis_file_name": widgets.TextInput()}
         fields = "__all__"  # required for Django 3.x
 
     def __init__(self, *args, **kwargs):
@@ -1251,6 +1252,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     fields = (
         "id",
+        "project_type",
         "name",
         "description",
         "is_public",
@@ -1280,6 +1282,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     readonly_fields = (
         "id",
+        "project_type",
         "status",
         "status_code",
         "file_storage_bytes",
@@ -1291,6 +1294,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "project_details__pre",
         "locked_at",
         "file_storage_migrated_at",
+        "the_qgis_file_name",
     )
     inlines = (
         ProjectSeedInline,
@@ -1331,6 +1335,10 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     def project_files(self, instance):
         return instance.pk
+
+    @admin.display(description=_("QGIS project file"))
+    def the_qgis_file_name(self, obj: Project) -> str | None:
+        return obj.the_qgis_file_name
 
     def project_details__pre(self, instance):
         if instance.project_details is None:

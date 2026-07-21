@@ -13,9 +13,7 @@ from qfieldcloud.core.models import (
     PackageJob,
     Person,
     ProcessProjectfileJob,
-    Project,
     ProjectCollaborator,
-    ProjectSeed,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
@@ -24,8 +22,9 @@ from qfieldcloud.core.tests.utils import (
     testdata_path,
     wait_for_project_ok_status,
 )
-from qfieldcloud.core.utils2 import project_seed
 from qfieldcloud.core.utils2.jobs import queue_job
+from qfieldcloud.project.models import Project, ProjectSeed
+from qfieldcloud.project.utils import projectseed_utils
 
 logging.disable(logging.CRITICAL)
 
@@ -40,6 +39,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         # Create a project
         self.p1 = Project.objects.create(name="p1", is_public=False, owner=self.u1)
+
+    def refresh_project(self, project: Project) -> None:
+        project.refresh_from_db(
+            from_queryset=Project.objects.select_related("the_qgis_file")
+        )
 
     def assertLayerData(
         self, layer_data: dict, is_valid: bool, is_localized: bool, error_code: str
@@ -220,7 +224,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         wait_for_project_ok_status(self.p1)
 
-        self.p1.refresh_from_db()
+        self.refresh_project(self.p1)
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertFalse(self.p1.has_online_vector_data)
@@ -236,7 +240,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         wait_for_project_ok_status(self.p1)
 
-        self.p1.refresh_from_db()
+        self.refresh_project(self.p1)
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertTrue(self.p1.has_online_vector_data)
@@ -323,7 +327,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=self.p1,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             settings={
                 "schemaId": "https://app.qfield.cloud/schemas/project-seed-20251201.json",
                 "basemaps": [
@@ -443,7 +447,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         wait_for_project_ok_status(self.p1)
 
-        self.p1.refresh_from_db()
+        self.refresh_project(self.p1)
 
         self.assertEqual(self.p1.the_qgis_file_name, "project.qgs")
         self.assertEqual(self.p1.thumbnail.name, "")
@@ -453,7 +457,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=self.p1,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             settings={
                 "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
                 "basemaps": [],
@@ -482,7 +486,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=cloned_project,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             clone_from_project=self.p1,
             settings={
                 "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
@@ -499,8 +503,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         wait_for_project_ok_status(cloned_project)
 
-        self.p1.refresh_from_db()
-        cloned_project.refresh_from_db()
+        self.refresh_project(self.p1)
+        self.refresh_project(cloned_project)
 
         # compare project files
         source_response = self._list_files(self.u1, self.p1)

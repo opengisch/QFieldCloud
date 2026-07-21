@@ -31,7 +31,7 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.utils2 import packages
-from qfieldcloud.core.utils2.project import get_qgis_major_version
+from qfieldcloud.project.utils.project_utils import get_qgis_major_version
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -116,6 +116,7 @@ class JobRun:
             context[f"project__{key}"] = value
 
         context["project__id"] = self.job.project.id
+        context["project__the_qgis_file_name"] = self.job.project.the_qgis_file_name
 
         return context
 

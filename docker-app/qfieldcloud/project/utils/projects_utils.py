@@ -1,14 +1,13 @@
 from django.db.models import Q
 from django.utils.translation import gettext as _
-
 from qfieldcloud.core import invitations_utils as invitation
 from qfieldcloud.core import permissions_utils as perms
 from qfieldcloud.core.models import (
     Person,
-    Project,
     ProjectCollaborator,
     Team,
 )
+from qfieldcloud.project.models import Project
 
 
 def create_collaborator(

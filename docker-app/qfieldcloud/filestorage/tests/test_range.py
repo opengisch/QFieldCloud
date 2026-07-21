@@ -9,13 +9,13 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import InvalidRangeError
 from qfieldcloud.core.models import (
     Person,
-    Project,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
 from qfieldcloud.filestorage.utils import get_range, parse_range_header
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 

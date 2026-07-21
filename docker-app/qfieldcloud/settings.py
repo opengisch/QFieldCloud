@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
-from .settings_utils import (
+from qfieldcloud.settings_utils import (
     ConfigValidationError,
     get_socialaccount_providers_config,
     get_storages_config,
@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     "auditlog",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.project",
     # listed after core because we overwrite createsuperuser command
     "django.contrib.auth",
     "qfieldcloud.subscription",
@@ -872,7 +873,7 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
         "exclude_fields": ["last_login", "updated_at"],
     },
     {
-        "model": "core.project",
+        "model": "project.project",
         # these fields are updated by scripts and will produce a lot of audit noise
         "exclude_fields": [
             "updated_at",
@@ -1034,7 +1035,7 @@ CAPTCHA_IMAGE_SIZE = (200, 50)
 
 # A random rotation in this interval is applied to each letter in the challenge text.
 # See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-letter-rotation
-CAPTCHA_LETTER_ROTATION = (-45, 45)
+CAPTCHA_LETTER_ROTATION = (-35, 35)
 
 # Background-color of the captcha. Can be expressed as html-style #rrggbb, rgb(red, green, blue), or common html names (e.g. “red”).
 # See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-background-color
@@ -1050,12 +1051,17 @@ CAPTCHA_TIMEOUT = 5
 
 # Sets the length, in chars, of the generated captcha. (for the 'captcha.helpers.random_char_challenge' challenge)
 # See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-length
-CAPTCHA_LENGTH = 6
+CAPTCHA_LENGTH = 4
 
 # When set to True, the string “PASSED” (any case) will be accepted as a valid response to any CAPTCHA. Use this for testing purposes.
 # See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-test-mode
 CAPTCHA_TEST_MODE = DEBUG or ENVIRONMENT == "test"
 
+# List of strings of python callables that take a Pillow DrawImage object and an Image image as input, modify the DrawImage, then return it.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-noise-functions
+CAPTCHA_NOISE_FUNCTIONS = [
+    "captcha.helpers.noise_dots",
+]
 
 # Optional volume name where custom CA files are mounted
 QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME = (

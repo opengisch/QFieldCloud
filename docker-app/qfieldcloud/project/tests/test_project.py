@@ -13,22 +13,27 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
-    SHARED_DATASETS_PROJECT_NAME,
     Job,
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
-    ProjectSeed,
     Team,
     TeamMember,
 )
-from qfieldcloud.core.tests.utils import wait_for_project_ok_status
-from qfieldcloud.core.utils2 import project_seed
+from qfieldcloud.core.tests.utils import (
+    set_subscription,
+    setup_subscription_plans,
+    testdata_path,
+    wait_for_project_ok_status,
+)
+from qfieldcloud.project.models import (
+    SHARED_DATASETS_PROJECT_NAME,
+    Project,
+    ProjectSeed,
+)
+from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.models import Subscription
-
-from .utils import set_subscription, setup_subscription_plans, testdata_path
 
 logging.disable(logging.CRITICAL)
 
@@ -61,7 +66,7 @@ class QfcTestCase(APITransactionTestCase):
 
         ProjectSeed.objects.create(
             project=project,
-            extent=Polygon.from_bbox(project_seed.DEFAULT_PROJECT_EXTENT),
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
             settings={
                 "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
                 "basemaps": [],
@@ -824,7 +829,7 @@ class QfcTestCase(APITransactionTestCase):
         project._localized_layers = [{"filename": "localized:layer1.tif"}]
 
         with patch(
-            "qfieldcloud.core.models.Project.localized_layers",
+            "qfieldcloud.project.models.Project.localized_layers",
             new_callable=lambda: property(lambda self: self._localized_layers),
         ):
             layers = project.localized_layers
@@ -1469,3 +1474,40 @@ class QfcTestCase(APITransactionTestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_project_type_defaults_to_regular(self):
+        """Test that a normally named project gets a project type of REGULAR"""
+        project = Project.objects.create(name="project", owner=self.user1)
+
+        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+
+    def test_project_type_set_to_shared_datasets_on_create(self):
+        """Test that creating a project named as the constant SHARED_DATASETS_PROJECT_NAME sets project type of SHARED_DATASETS."""
+        project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+        )
+
+        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
+
+    def test_project_type_updates_when_renamed_to_shared_datasets(self):
+        """Test that renaming an existing empty project (no QGIS project file) as the constant SHARED_DATASETS_PROJECT_NAME flips project_type"""
+        project = Project.objects.create(name="project", owner=self.user1)
+        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+
+        project.name = SHARED_DATASETS_PROJECT_NAME
+        project.save()
+        project.refresh_from_db()
+
+        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
+
+    def test_project_type_updates_when_renamed_away_from_shared_datasets(self):
+        """Test that renaming the shared_datasets project away reverts project_type to default value."""
+        project = Project.objects.create(
+            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+        )
+
+        project.name = "no_longer_shared"
+        project.save()
+        project.refresh_from_db()
+
+        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)

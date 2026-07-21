@@ -1,8 +1,11 @@
 import io
 import os
 import tempfile
-from collections.abc import Iterable
+import zipfile
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from datetime import timedelta
+from pathlib import Path
 from time import sleep
 from typing import IO
 
@@ -10,7 +13,8 @@ import psycopg2
 from django.conf import settings
 from django.utils import timezone
 
-from qfieldcloud.core.models import Job, Project, User
+from qfieldcloud.core.models import Job, User
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import Plan, Subscription
 
 
@@ -107,6 +111,31 @@ def set_subscription(
     assert subscription is not None
 
     return subscription
+
+
+@contextmanager
+def qgz_from_qgs(qgs_path: str | Path, qgz_name: str | None = None) -> Iterator[Path]:
+    """Context manager that creates a temporary .qgz file from a .qgs file.
+
+    The .qgz file is placed in a temporary directory that is removed together
+    with all its contents when the context exits.
+
+    Args:
+        qgs_path: path to the source .qgs file.
+        qgz_name: name to use for the .qgz archive (optional).
+    """
+    qgs_path = Path(qgs_path)
+
+    # Unless a specific `qgz_name` was requested, default to basename of qgs file
+    if qgz_name is None:
+        qgz_name = qgs_path.with_suffix(".qgz").name
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        qgz_path = Path(tmpdir) / qgz_name
+        with zipfile.ZipFile(qgz_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.write(qgs_path, arcname=qgs_path.name)
+
+        yield qgz_path
 
 
 def get_random_file(mb: float) -> IO:

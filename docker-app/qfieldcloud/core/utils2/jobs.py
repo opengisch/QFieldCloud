@@ -7,6 +7,7 @@ from django.db.models import Q
 
 import qfieldcloud.core.models as models
 from qfieldcloud.core import exceptions
+from qfieldcloud.project.models import Project, ProjectQueryset
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ TRIGGERABLE_JOBS = [models.ProcessProjectfileJob]
 
 @transaction.atomic
 def apply_deltas(
-    project: "models.Project",
+    project: "Project",
     user: "models.User",
     project_file: str,
     overwrite_conflicts: bool,
@@ -103,7 +104,7 @@ def apply_deltas(
     return apply_jobs
 
 
-def repackage(project: "models.Project", user: "models.User") -> "models.PackageJob":
+def repackage(project: "Project", user: "models.User") -> "models.PackageJob":
     """Returns an unfinished or freshly created package job.
 
     Checks if there is already an unfinished package job and returns it,
@@ -131,9 +132,7 @@ def repackage(project: "models.Project", user: "models.User") -> "models.Package
     return package_job
 
 
-def repackage_if_needed(
-    project: "models.Project", user: "models.User"
-) -> "models.PackageJob":
+def repackage_if_needed(project: "Project", user: "models.User") -> "models.PackageJob":
     if not project.has_the_qgis_file:
         raise exceptions.NoQGISProjectError()
 
@@ -153,7 +152,7 @@ def repackage_if_needed(
 
 
 def queue_job(
-    projects: models.Project | Iterable[models.Project],
+    projects: Project | Iterable[Project],
     job_model: type[models.Job],
     triggered_by: models.Person | None = None,
 ) -> list[models.Job]:
@@ -167,10 +166,10 @@ def queue_job(
 
     assert job_model in TRIGGERABLE_JOBS
 
-    if isinstance(projects, models.Project):
+    if isinstance(projects, Project):
         projects = [projects]
 
-    if isinstance(projects, models.ProjectQueryset):
+    if isinstance(projects, ProjectQueryset):
         projects = projects.select_related("owner")
 
     jobs: list[models.Job] = []

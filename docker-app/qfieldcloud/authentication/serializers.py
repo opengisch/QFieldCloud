@@ -4,7 +4,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 
-from .models import AuthToken
+from qfieldcloud.authentication.models import AuthToken
 
 User = get_user_model()
 

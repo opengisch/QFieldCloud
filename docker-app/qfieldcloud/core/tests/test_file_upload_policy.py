@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import ApplyJob, Job, PackageJob, Person, Project
+from qfieldcloud.core.models import ApplyJob, Job, PackageJob, Person
 from qfieldcloud.core.tests.utils import (
     get_test_postgis_connection,
     setup_subscription_plans,
@@ -13,6 +13,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.filestorage.models import File, FileVersion
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import SubscriptionException
 from qfieldcloud.subscription.models import SubscriptionStatus
 

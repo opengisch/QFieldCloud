@@ -25,11 +25,11 @@ from qfieldcloud.core.exceptions import (
 from qfieldcloud.core.models import (
     Job,
     ProcessProjectfileJob,
-    Project,
 )
 from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
 )
+from qfieldcloud.filestorage.helpers import purge_old_file_versions
 from qfieldcloud.filestorage.models import (
     File,
     FileVersion,
@@ -41,8 +41,7 @@ from qfieldcloud.filestorage.utils import (
     is_qgis_project_file,
     validate_filename,
 )
-
-from .helpers import purge_old_file_versions
+from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +64,9 @@ def upload_project_file_version(
             f'Missing file contents for "{filename}" from the request!'
         )
 
-    project = get_object_or_404(Project, id=project_id)
+    project = get_object_or_404(
+        Project.objects.select_related("the_qgis_file"), id=project_id
+    )
 
     try:
         validate_filename(filename)
@@ -146,15 +147,19 @@ def upload_project_file_version(
         if file_type == File.FileType.PROJECT_FILE:
             # Select for update the project so we can update it.
             # It guarantees there will be no other file upload editing the same project row.
-            project = Project.objects.select_for_update().get(id=project.id)
+            project = (
+                Project.objects.select_related("the_qgis_file")
+                .select_for_update(of=("self",))
+                .get(id=project.id)
+            )
             update_fields = ["data_last_updated_at"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
                 is_qgis_file or project.has_the_qgis_file
             ):
                 if is_qgis_file:
-                    project.the_qgis_file_name = filename
-                    update_fields.append("the_qgis_file_name")
+                    project.the_qgis_file = file_version.file
+                    update_fields.append("the_qgis_file")
 
                 running_jobs = ProcessProjectfileJob.objects.filter(
                     project=project,
@@ -412,16 +417,26 @@ def delete_project_file_version(
             detail=f"The requested {version_id=} of {filename=} for {project_id=} does not exist!"
         )
 
+    # Capture the QGIS project filename before deleting, since deleting the
+    # QGIS project file itself nulls `Project.the_qgis_file`,
+    # which would make the restricted-file check below always miss the file
+    # actually being deleted.
+    qgis_file_name_before_delete = Project.objects.get(id=project_id).the_qgis_file_name
+
     object_to_delete.delete()
 
     with transaction.atomic():
-        project = Project.objects.select_for_update().get(id=project_id)
+        project = (
+            Project.objects.select_related("the_qgis_file")
+            .select_for_update(of=("self",))
+            .get(id=project_id)
+        )
         update_fields = ["data_last_updated_at"]
 
         now = timezone.now()
         project.data_last_updated_at = now
 
-        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+        if is_admin_restricted_file(filename, qgis_file_name_before_delete):
             update_fields.append("restricted_data_last_updated_at")
             project.restricted_data_last_updated_at = now
 
@@ -441,12 +456,15 @@ def delete_project_file_version(
                 # rather than keeping the QGIS version from the deleted file version 2 (QGIS 4.2).
                 with file_qs.first().latest_version.content.open() as fh:
                     qgis_version = get_qgis_version_from_project_file(filename, fh)
-            else:
-                project.the_qgis_file_name = None
 
-                update_fields.append("the_qgis_file_name")
+                # Repoint the FK to the remaining file, since the file it
+                # previously pointed to was just deleted above.
+                project.the_qgis_file = file_qs.first()
+            else:
+                project.the_qgis_file = None
 
             project.qgis_version = qgis_version
             update_fields.append("qgis_version")
+            update_fields.append("the_qgis_file")
 
         project.save(update_fields=update_fields, recompute_storage=True)

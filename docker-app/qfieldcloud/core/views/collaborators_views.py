@@ -2,8 +2,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
-from qfieldcloud.core.models import Project, ProjectCollaborator
+from qfieldcloud.core.models import ProjectCollaborator
 from qfieldcloud.core.serializers import ProjectCollaboratorSerializer
+from qfieldcloud.project.models import Project
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings

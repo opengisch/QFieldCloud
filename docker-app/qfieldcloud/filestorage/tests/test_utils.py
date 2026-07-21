@@ -1,13 +1,16 @@
 # from unittest import TestCase
 import logging
+from pathlib import Path
 
 from django.conf import settings
 from django.test import TestCase
 
+from qfieldcloud.core.tests.utils import qgz_from_qgs, testdata_path
 from qfieldcloud.filestorage.utils import (
     is_admin_restricted_file,
     is_qgis_project_file,
     is_valid_filename,
+    open_qgis_file,
 )
 
 logging.disable(logging.CRITICAL)
@@ -125,3 +128,32 @@ class QfcTestCase(TestCase):
 
     def test_calc_etag_on_large_files(self):
         pass
+
+    def test_open_qgis_file_with_qgs(self):
+        qgs_path = Path(testdata_path("delta/project.qgs"))
+
+        with open(qgs_path, "rb") as fh:
+            with open_qgis_file(qgs_path, fh) as text_fh:
+                self.assertIsNotNone(text_fh)
+                first_line = text_fh.readline()
+                self.assertIn("<qgis", first_line)
+
+    def test_open_qgis_file_with_qgz(self):
+        qgs_path = Path(testdata_path("delta/project.qgs"))
+
+        with qgz_from_qgs(qgs_path) as qgz_path:
+            with open(qgz_path, "rb") as fh:
+                with open_qgis_file(qgz_path, fh) as text_fh:
+                    self.assertIsNotNone(text_fh)
+                    first_line = text_fh.readline()
+                    self.assertIn("<qgis", first_line)
+
+    def test_open_qgis_file_with_qgz_and_unexpected_qgs_name(self):
+        qgs_path = Path(testdata_path("delta/project.qgs"))
+
+        with qgz_from_qgs(qgs_path, "project.123.qgz") as qgz_path:
+            with open(qgz_path, "rb") as fh:
+                with open_qgis_file(qgz_path, fh) as text_fh:
+                    self.assertIsNotNone(text_fh)
+                    first_line = text_fh.readline()
+                    self.assertIn("<qgis", first_line)

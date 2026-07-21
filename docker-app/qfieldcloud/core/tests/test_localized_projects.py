@@ -6,10 +6,8 @@ from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
-    SHARED_DATASETS_PROJECT_NAME,
     Job,
     Person,
-    Project,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
@@ -18,6 +16,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.project.models import SHARED_DATASETS_PROJECT_NAME, Project
 
 logging.disable(logging.CRITICAL)
 

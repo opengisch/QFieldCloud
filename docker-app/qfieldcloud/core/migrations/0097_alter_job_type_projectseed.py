@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                     "xlsform_file",
                     models.FileField(
                         max_length=1024,
-                        upload_to=qfieldcloud.core.models.get_seed_xlsform_upload_to,
+                        upload_to=qfieldcloud.project.models.get_seed_xlsform_upload_to,
                     ),
                 ),
                 ("settings", models.JSONField()),

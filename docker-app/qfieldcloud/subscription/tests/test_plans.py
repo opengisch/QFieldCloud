@@ -2,8 +2,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.core.tests.utils import setup_subscription_plans
-
-from ..models import Plan
+from qfieldcloud.subscription.models import Plan
 
 
 class QfcTestCase(APITransactionTestCase):

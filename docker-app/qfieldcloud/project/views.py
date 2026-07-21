@@ -11,18 +11,6 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
-from qfieldcloud.core import pagination, permissions_utils
-from qfieldcloud.core.drf_utils import QfcOrderingFilter
-from qfieldcloud.core.exceptions import ObjectNotFoundError
-from qfieldcloud.core.filters import ProjectFilterSet
-from qfieldcloud.core.models import Job, Project, ProjectQueryset, ProjectSeed
-from qfieldcloud.core.serializers import (
-    ProjectSeedSerializer,
-    ProjectSerializer,
-    ProjectThumbnailSerializer,
-)
-from qfieldcloud.core.utils2 import project_seed
-from qfieldcloud.subscription.exceptions import QuotaError
 from rest_framework import filters as drf_filters
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -30,6 +18,21 @@ from rest_framework.exceptions import ValidationError as DrfValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+from qfieldcloud.core import pagination, permissions_utils
+from qfieldcloud.core.drf_utils import QfcOrderingFilter
+from qfieldcloud.core.exceptions import ObjectNotFoundError
+from qfieldcloud.core.models import Job
+from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.filters import ProjectFilterSet
+from qfieldcloud.project.models import Project, ProjectSeed
+from qfieldcloud.project.serializers import (
+    ProjectSeedSerializer,
+    ProjectSerializer,
+    ProjectThumbnailSerializer,
+)
+from qfieldcloud.project.utils import projectseed_utils
+from qfieldcloud.subscription.exceptions import QuotaError
 
 User = get_user_model()
 
@@ -173,9 +176,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 force_exclude_public = False
 
             if force_exclude_public:
-                projects = projects.exclude(
-                    user_role_origin=ProjectQueryset.RoleOrigins.PUBLIC
-                )
+                projects = projects.exclude(user_role_origin=ProjectRoleOrigins.PUBLIC)
 
         if self.action in ("seed", "seed_xlsform"):
             projects = projects.select_related("seed")
@@ -195,7 +196,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if clone_from_project:
             if seed_data and seed_data.get("extent"):
                 try:
-                    extent = project_seed.get_extent_polygon(seed_data["extent"])
+                    extent = projectseed_utils.get_extent_polygon(seed_data["extent"])
                 except DjangoValidationError as err:
                     raise DrfValidationError({"seed": {"extent": err.messages}})
             else:
@@ -218,7 +219,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         elif seed_data:
             xlsform_file = serializer.validated_data.get("xlsform_file", None)
 
-            basemaps, extent, xlsform_config = project_seed.build_seed_data(
+            basemaps, extent, xlsform_config = projectseed_utils.build_seed_data(
                 basemap_provider=seed_data.get("basemap_provider", "none"),
                 basemap_style=seed_data.get("basemap_style", "standard"),
                 basemap_url=seed_data.get("basemap_url", ""),

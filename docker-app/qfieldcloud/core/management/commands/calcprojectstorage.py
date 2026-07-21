@@ -1,7 +1,7 @@
 import uuid
 
 from django.core.management.base import BaseCommand
-from qfieldcloud.core.models import Project
+from qfieldcloud.project.models import Project
 
 
 class Command(BaseCommand):
@@ -25,7 +25,7 @@ class Command(BaseCommand):
             extra_filters["file_storage_bytes"] = 0
 
         projects_qs = Project.objects.filter(
-            the_qgis_file_name__isnull=False,
+            the_qgis_file__isnull=False,
             **extra_filters,
         ).order_by("-updated_at")
         total_count = projects_qs.count()

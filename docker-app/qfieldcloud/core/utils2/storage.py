@@ -6,13 +6,12 @@ from django.utils.translation import gettext as _
 
 import qfieldcloud.core.models
 from qfieldcloud.core.templatetags.filters import filesizeformat10
+from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
 
 
-def get_attachment_dir_prefix(
-    project: qfieldcloud.core.models.Project, filename: str
-) -> str:  # noqa: F821
+def get_attachment_dir_prefix(project: Project, filename: str) -> str:  # noqa: F821
     """Returns the attachment dir where the file belongs to or empty string if it does not.
 
     Args:

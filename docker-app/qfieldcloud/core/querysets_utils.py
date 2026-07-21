@@ -9,12 +9,12 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
     Team,
     TeamMember,
     User,
 )
+from qfieldcloud.project.models import Project
 
 
 def get_organization_teams(organization):

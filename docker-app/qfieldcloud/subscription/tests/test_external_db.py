@@ -7,13 +7,13 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Delta, Job, Person, Project
+from qfieldcloud.core.models import Delta, Job, Person
 from qfieldcloud.core.tests.utils import (
     get_test_postgis_connection,
     setup_subscription_plans,
 )
-
-from ..models import Plan
+from qfieldcloud.project.models import Project
+from qfieldcloud.subscription.models import Plan
 
 DATA_FOLDER = Path(__file__).parent / "data"
 
