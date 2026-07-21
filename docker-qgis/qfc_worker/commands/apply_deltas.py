@@ -413,7 +413,6 @@ def apply_deltas_without_transaction(
     for idx, delta in enumerate(delta_file.deltas):
         delta_status = DeltaStatus.Applied
         layer_id: str = delta.get("sourceLayerId", "")
-        layer_ids_to_commit.append(layer_id)
         layer: QgsVectorLayer = project.mapLayer(layer_id)
         feature = QgsFeature()
 
@@ -429,6 +428,9 @@ def apply_deltas_without_transaction(
                     f'Cannot start editing layer "{layer_id}"',
                     provider_errors=layer.dataProvider().errors(),
                 )
+
+            if layer_id not in layer_ids_to_commit:
+                layer_ids_to_commit.append(layer_id)
 
             # check if a PostGIS layer's session_role override is requested.
             if layer.providerType() == "postgres" and QFC_PG_EFFECTIVE_USER:
