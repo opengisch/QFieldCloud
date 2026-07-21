@@ -417,6 +417,12 @@ def delete_project_file_version(
             detail=f"The requested {version_id=} of {filename=} for {project_id=} does not exist!"
         )
 
+    # Capture the QGIS project filename before deleting, since deleting the
+    # QGIS project file itself nulls `Project.the_qgis_file`,
+    # which would make the restricted-file check below always miss the file
+    # actually being deleted.
+    qgis_file_name_before_delete = Project.objects.get(id=project_id).the_qgis_file_name
+
     object_to_delete.delete()
 
     with transaction.atomic():
@@ -430,7 +436,7 @@ def delete_project_file_version(
         now = timezone.now()
         project.data_last_updated_at = now
 
-        if is_admin_restricted_file(filename, project.the_qgis_file_name):
+        if is_admin_restricted_file(filename, qgis_file_name_before_delete):
             update_fields.append("restricted_data_last_updated_at")
             project.restricted_data_last_updated_at = now
 
