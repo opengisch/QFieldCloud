@@ -8,6 +8,9 @@ from unittest.mock import patch
 from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework import status
+from rest_framework.test import APITransactionTestCase
+
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     Job,
@@ -31,8 +34,6 @@ from qfieldcloud.project.models import (
 )
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.models import Subscription
-from rest_framework import status
-from rest_framework.test import APITransactionTestCase
 
 logging.disable(logging.CRITICAL)
 
