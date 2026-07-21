@@ -42,6 +42,7 @@ jobs:
           - notifs
           - subscription
           - core
+          - project
           - filestorage
           - __flaky__
     continue-on-error: true
