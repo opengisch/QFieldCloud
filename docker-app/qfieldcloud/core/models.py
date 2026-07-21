@@ -462,7 +462,6 @@ class UserAccount(models.Model):
     bio = models.CharField(max_length=255, default="", blank=True)
     company = models.CharField(max_length=255, default="", blank=True)
     location = models.CharField(max_length=255, default="", blank=True)
-    twitter = models.CharField(max_length=255, default="", blank=True)
     is_email_public = models.BooleanField(default=False)
 
     avatar = QfcImageField(
