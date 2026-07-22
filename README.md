@@ -156,18 +156,18 @@ psql 'service=localhost.qfield.cloud'
 
 ### Dependencies
 
-QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage its dependencies.
+QFieldCloud uses [`uv`](https://docs.astral.sh/uv/) to manage its dependencies inside the application container.
 All dependencies are listed in `requirements*.in` files.
-When a `pip` a dependency is changed, the developer should produce the new `requirements*.txt` files.
+When a dependency is changed, the developer should produce the new `requirements*.txt` files.
 
 ```shell
-docker compose run --rm pipcompile
+docker compose run --rm uvcompile
 ```
 
 Alternatively, one can create only a `requirements.txt` file for a single `requirements.in`:
 
 ```shell
-    docker compose run --rm pipcompile pip-compile --no-strip-extras -o requirements/requirements_worker_wrapper.txt requirements/requirements_worker_wrapper.in
+    docker compose run --rm uvcompile uv pip compile --no-strip-extras -o /requirements/requirements_worker_wrapper.txt /requirements/requirements_worker_wrapper.in
 ```
 
 ### Tests
