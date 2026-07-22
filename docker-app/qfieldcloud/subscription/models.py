@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import TypedDict, cast
+from typing import Self, TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -59,7 +59,7 @@ class SubscriptionStatus(models.TextChoices):
 
 class Plan(models.Model):
     @classmethod
-    def get_or_create_default(cls) -> "Plan":
+    def get_or_create_default(cls) -> Self:
         """Returns the default plan, creating one if none exists.
         To be used as a default value for UserAccount.type"""
         if not cls.objects.exists():
@@ -89,10 +89,12 @@ class Plan(models.Model):
 
         result = cls.objects.order_by("-is_default").first()
 
-        return cast(Plan, result)
+        assert result is not None
+
+        return result
 
     @classmethod
-    def get_plans_for_user(cls, user: User, user_type: User.Type) -> QuerySet["Plan"]:
+    def get_plans_for_user(cls, user: User, user_type: User.Type) -> QuerySet[Self]:
         """
         Return all public plans of the given `user_type`, filtering out
         trial plans for organizations when no trials remain.
@@ -368,7 +370,7 @@ class PackageType(models.Model):
 
     @classmethod
     @lru_cache
-    def get_storage_package_type(cls) -> "PackageType":
+    def get_storage_package_type(cls) -> Self:
         # NOTE if the cache is still returning the old result, please restart the whole `app` container
         try:
             return cls.objects.get(type=cls.Type.STORAGE)
@@ -822,7 +824,7 @@ class AbstractSubscription(models.Model):
         return old_package, new_package
 
     @classmethod
-    def get_or_create_current_subscription(cls, account: UserAccount) -> "Subscription":
+    def get_or_create_current_subscription(cls, account: UserAccount) -> Self:
         """Returns the current subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
@@ -830,32 +832,30 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the current subscription
-
-        TODO Python 3.11 the actual return type is Self
         """
         try:
             subscription = cls.objects.current().get(account_id=account.pk)  # type: ignore
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
-        return cast(Subscription, subscription)
+        return cast(Self, subscription)
 
     @classmethod
-    def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
+    def get_upcoming_subscription(cls, account: UserAccount) -> Self | None:
         result = (
             cls.objects.filter(account_id=account.pk, active_since__gt=timezone.now())
             .exclude(status__in=[Subscription.Status.INACTIVE_CANCELLED])
             .order_by("active_since")
             .first()
         )
-        return cast(Subscription, result)
+        return result
 
     @classmethod
     def update_subscription(
         cls,
-        subscription: "Subscription",
+        subscription: Self,
         **kwargs: UpdateSubscriptionKwargs,
-    ) -> "Subscription":
+    ) -> Self:
         """Updates the subscription properties.
 
         Args:
@@ -863,8 +863,6 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the same as the subscription argument
-
-        TODO Python 3.11 the actual return type is Self
         """
         if not kwargs:
             return subscription
@@ -899,7 +897,7 @@ class AbstractSubscription(models.Model):
     @classmethod
     def create_default_plan_subscription(
         cls, account: UserAccount, active_since: datetime | None = None
-    ) -> "AbstractSubscription":
+    ) -> Self:
         """Creates the default subscription for a given account.
 
         Args:
@@ -908,8 +906,6 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the created subscription.
-
-        TODO Python 3.11 the actual return type is Self
         """
         most_recent_subscription = (
             cls.objects.filter(account=account)
@@ -958,7 +954,7 @@ class AbstractSubscription(models.Model):
         created_by: Person,
         active_since: datetime | None = None,
         regular_plan: Plan | None = None,
-    ) -> tuple[type["AbstractSubscription"] | None, "AbstractSubscription"]:
+    ) -> tuple[Self | None, Self]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
@@ -970,8 +966,6 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the created trial subscription if the given plan was a trial and the regular subscription.
-
-        TODO Python 3.11 the actual return type is Self
         """
         if active_since:
             # remove microseconds as there will be slight shift with the remote system data
