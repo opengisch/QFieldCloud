@@ -1,4 +1,5 @@
 import uuid
+from enum import StrEnum
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -6,23 +7,37 @@ from django.db import transaction
 from qfieldcloud.project.models import Project, QgisProject
 
 
-def backfill_qgis_project(project: Project) -> bool:
-    """Create the `QgisProject` for `project` if it doesn't already exist."""
-    if hasattr(project, "qgis_project"):
-        return False
+class BackfillResult(StrEnum):
+    # `project` has no QGIS file, so nothing was done.
+    SKIPPED = "SKIPPED"
+    # A new `QgisProject` was created.
+    CREATED = "CREATED"
+    # An existing `QgisProject` was re-synced.
+    SYNCED = "SYNCED"
 
+
+def backfill_qgis_project(project: Project) -> BackfillResult:
+    """Create/update the `QgisProject` and its `Layer` rows for `project` from `Project.project_details`.
+
+    Runs even if the `QgisProject` already exists.
+    """
     if project.the_qgis_file_id is None:
-        return False
+        return BackfillResult.SKIPPED
+
+    is_new = not hasattr(project, "qgis_project")
 
     QgisProject.objects.update_from_details(
         project, project.the_qgis_file.latest_version, project.project_details
     )
-    return True
+    if is_new:
+        return BackfillResult.CREATED
+    else:
+        return BackfillResult.SYNCED
 
 
 class Command(BaseCommand):
     """
-    Backfill `QgisProject` (and related) rows from the `Project.project_details` JSON blob.
+    Backfill `QgisProject` and `Layer` rows from the `Project.project_details` JSON blob.
     """
 
     def add_arguments(self, parser):
@@ -43,8 +58,7 @@ class Command(BaseCommand):
         ).order_by("created_at")
         total_count = projects_qs.count()
 
-        created_count = 0
-        skipped_count = 0
+        counts = dict.fromkeys(BackfillResult, 0)
 
         for idx, project in enumerate(projects_qs, start=1):
             print(f'Backfilling project "{project.id}" {idx}/{total_count}...')
@@ -53,12 +67,9 @@ class Command(BaseCommand):
                 continue
 
             with transaction.atomic():
-                created = backfill_qgis_project(project)
+                result = backfill_qgis_project(project)
 
-            if created:
-                created_count += 1
-            else:
-                skipped_count += 1
+            counts[result] += 1
 
         if dry_run:
             print(
@@ -66,5 +77,7 @@ class Command(BaseCommand):
             )
         else:
             print(
-                f"Done. Created {created_count}, skipped {skipped_count} out of {total_count} projects."
+                f"Done. Created {counts[BackfillResult.CREATED]}, "
+                f"re-synced {counts[BackfillResult.SYNCED]}, "
+                f"skipped {counts[BackfillResult.SKIPPED]} out of {total_count} projects."
             )

@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -27,10 +28,14 @@ from qfieldcloud.core.tests.utils import (
     testdata_path,
     wait_for_project_ok_status,
 )
+from qfieldcloud.filestorage.models import File, FileVersion
+from qfieldcloud.project.enums import QgsGeometryType, QgsLayerType
 from qfieldcloud.project.models import (
     SHARED_DATASETS_PROJECT_NAME,
     Project,
     ProjectSeed,
+    QgisLayer,
+    QgisProject,
 )
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.models import Subscription
@@ -892,18 +897,58 @@ class QfcTestCase(APITransactionTestCase):
         """Test get_missing_localized_layers returns all localized layers if no shared datasets project exists."""
         project = Project.objects.create(name="project", owner=self.user1)
 
-        project.project_details = {
-            "layers_by_id": {
-                "layer1": {"is_localized": True, "filename": "localized:layer1.gpkg"},
-                "layer2": {"is_localized": False, "filename": "normal_layer.gpkg"},
-                "layer3": {"is_localized": True, "filename": "localized:layer3.gpkg"},
-            }
-        }
+        file_version = FileVersion.objects.add_version(
+            project=project,
+            filename="project.qgs",
+            content=ContentFile(b"", "project.qgs"),
+            file_type=File.FileType.PROJECT_FILE,
+            uploaded_by=self.user1,
+        )
 
-        project.save()
+        qgis_project = QgisProject.objects.create(
+            project=project, file_version=file_version, crs="EPSG:3857"
+        )
+        QgisLayer.objects.create(
+            qgis_project=qgis_project,
+            qgis_layer_id="layer1",
+            name="layer1",
+            crs="EPSG:3857",
+            geom_type=QgsGeometryType.Point,
+            layer_type=QgsLayerType.Vector,
+            datasource="",
+            is_localized=True,
+            file_name="localized:layer1.gpkg",
+            ordering=0,
+        )
+        QgisLayer.objects.create(
+            qgis_project=qgis_project,
+            qgis_layer_id="layer2",
+            name="layer2",
+            crs="EPSG:3857",
+            geom_type=QgsGeometryType.Point,
+            layer_type=QgsLayerType.Vector,
+            datasource="",
+            is_localized=False,
+            file_name="normal_layer.gpkg",
+            ordering=1,
+        )
+        QgisLayer.objects.create(
+            qgis_project=qgis_project,
+            qgis_layer_id="layer3",
+            name="layer3",
+            crs="EPSG:3857",
+            geom_type=QgsGeometryType.Point,
+            layer_type=QgsLayerType.Vector,
+            datasource="",
+            is_localized=True,
+            file_name="localized:layer3.gpkg",
+            ordering=2,
+        )
 
         missing_layers = project.get_missing_localized_layers()
-        missing_filenames = [layer["filename"] for layer in missing_layers]
+        missing_filenames = []
+        for layer in missing_layers:
+            missing_filenames.append(layer.file_name)
 
         self.assertEqual(len(missing_filenames), 2)
         self.assertIn("localized:layer1.gpkg", missing_filenames)

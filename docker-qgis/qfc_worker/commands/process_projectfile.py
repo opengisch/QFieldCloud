@@ -68,6 +68,14 @@ def _check_valid_project_file(the_qgis_file_name: Path) -> None:
 
 
 class ProjectDetails(TypedDict):
+    """
+    The data structure built by `_extract_project_details` and returned as the `process_projectfile` job's `project_details` output.
+
+    Must be kept in sync with `QgisProjectDetails` in `qfieldcloud/project/type_defs.py`, which consumes this data structure.
+
+    WARNING: this shape has evolved over time, so feedback stored by older jobs is not guaranteed to match it.
+    """
+
     background_color: str
     extent: str
     crs: str

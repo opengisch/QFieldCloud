@@ -38,6 +38,7 @@ from qgis.core import (
     QgsRectangle,
     QgsReferencedRectangle,
     QgsSettings,
+    QgsWkbTypes,
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
@@ -655,6 +656,17 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         if layer.type() == QgsMapLayer.LayerType.VectorLayer:
             wkb_type = layer.wkbType()
 
+        if wkb_type is None:
+            wkb_type_name = ""
+            # non-vector layers have no geometry
+            geom_type = None
+            geom_type_name = ""
+        else:
+            wkb_type_name = QgsWkbTypes.displayString(wkb_type)
+            # match `qfieldcloud.project.models.Layer.QgsGeometryType` choices
+            geom_type = QgsWkbTypes.geometryType(wkb_type)
+            geom_type_name = geom_type.name
+
         crs = None
         if layer.crs():
             crs = layer.crs().authid()
@@ -724,11 +736,16 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         else:
             fields = None
 
+        # Must be kept in sync with `LayerDetails` in `qfieldcloud/project/type_defs.py`, which consumes this data structure.
+        # WARNING: this shape has evolved over time, so feedback stored by older jobs is not guaranteed to match it.
         layers_by_id[layer_id] = {
             "id": layer_id,
             "name": layer.name(),
             "crs": crs,
             "wkb_type": wkb_type,
+            "wkb_type_name": wkb_type_name,
+            "geom_type": geom_type,
+            "geom_type_name": geom_type_name,
             "qfs_action": layer.customProperty("QFieldSync/action"),
             "qfs_cloud_action": layer.customProperty("QFieldSync/cloud_action"),
             "qfs_is_geometry_locked": layer.customProperty(
