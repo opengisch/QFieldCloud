@@ -834,7 +834,11 @@ class AbstractSubscription(models.Model):
         TODO Python 3.11 the actual return type is Self
         """
         try:
-            subscription = cls.objects.current().get(account_id=account.pk)  # type: ignore
+            subscription = (
+                cls.objects.current()  # type: ignore
+                .select_related("plan")
+                .get(account_id=account.pk)
+            )
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
