@@ -55,6 +55,8 @@ class SubscriptionStatus(models.TextChoices):
     ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
     # successfully cancelled
     INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
+    # subscription is in trial
+    ACTIVE_TRIAL = "active_trial", _("Active Trial")
 
 
 class Plan(models.Model):
@@ -532,10 +534,15 @@ class SubscriptionQuerySet(models.QuerySet):
                 Subscription.Status.ACTIVE_PAST_DUE,
             )
         )
+        is_trial_condition = Q(status=Subscription.Status.ACTIVE_TRIAL) & Q(
+            trial_expires_at__gt=V("now")
+        )
         return self.annotate(
             is_active=Case(
                 When(
-                    is_period_active_condition & is_status_active_condition, then=True
+                    is_period_active_condition
+                    & (is_status_active_condition | is_trial_condition),
+                    then=True,
                 ),
                 default=False,
             ),
@@ -555,6 +562,7 @@ class SubscriptionManager(models.Manager):
 
 class AbstractSubscription(models.Model):
     id: int
+    trial_plan_id: int | None
 
     class Meta:
         abstract = True
@@ -642,6 +650,29 @@ class AbstractSubscription(models.Model):
         ),
     )
 
+    trial_plan = models.ForeignKey(
+        Plan,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+
+    trial_expires_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_trialing(self) -> bool:
+        return (
+            self.trial_expires_at is not None and self.trial_expires_at > timezone.now()
+        )
+
+    @property
+    def effective_plan(self) -> Plan:
+        if self.is_trialing and self.trial_plan_id is not None:
+            return self.trial_plan
+
+        return self.plan
+
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
     def active_storage_total_mb(self) -> float:
@@ -680,7 +711,7 @@ class AbstractSubscription(models.Model):
 
     @property
     def future_storage_total_mb(self) -> int:
-        return self.plan.storage_mb + self.future_storage_package_mb
+        return self.effective_plan.storage_mb + self.future_storage_package_mb
 
     @property
     def future_storage_package(self) -> Package:
@@ -755,11 +786,11 @@ class AbstractSubscription(models.Model):
             return 1
 
         # seat based plans
-        if self.plan.is_seat_based:
+        if self.effective_plan.is_seat_based:
             return self.purchased_seats
 
         # all other plans - either unlimited (-1) or capped
-        return self.account.current_subscription.plan.max_organization_members
+        return self.effective_plan.max_organization_members
 
     @property
     def organization_members_count(self) -> int:
@@ -779,10 +810,10 @@ class AbstractSubscription(models.Model):
         For seat based plans, this is an amount *per seat*. For all other plans,
         it's a simple fixed amount for the entire plan.
         """
-        if self.plan.is_seat_based:
-            return self.purchased_seats * self.plan.storage_bytes
+        if self.effective_plan.is_seat_based:
+            return self.purchased_seats * self.effective_plan.storage_bytes
 
-        return self.plan.storage_bytes
+        return self.effective_plan.storage_bytes
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
@@ -820,7 +851,7 @@ class AbstractSubscription(models.Model):
         quantity: int,
         active_since: datetime | None = None,
     ):
-        if not self.plan.is_premium:
+        if not self.effective_plan.is_premium:
             raise NotPremiumPlanException(
                 "Only premium accounts can have additional packages!"
             )
