@@ -45,7 +45,7 @@ packaging==26.2
     #   pyogrio
 pandas==3.0.3
     # via geopandas
-pillow==12.2.0
+pillow==12.3.0
     # via imageio
 pyogrio==0.12.1
     # via geopandas
