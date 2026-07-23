@@ -177,7 +177,7 @@ packaging==26.0
     # via django-notifications-hq
 phonenumbers==9.0.27
     # via -r /requirements/requirements.in
-pillow==12.2.0
+pillow==12.3.0
     # via
     #   -r /requirements/requirements.in
     #   django-simple-captcha
