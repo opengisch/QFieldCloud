@@ -41,7 +41,7 @@ drf-spectacular==0.29.0
 json-log-formatter==1.2.1
 mypy-boto3-s3==1.43.31
 phonenumbers==9.0.27
-Pillow==12.2.0
+Pillow==12.3.0
 psycopg2==2.9.12
 pymemcache==4.0.0
 sentry-sdk==2.62.0
