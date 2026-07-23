@@ -1,15 +1,20 @@
 import io
 import os
 import tempfile
+import zipfile
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from datetime import timedelta
+from pathlib import Path
 from time import sleep
-from typing import IO, Iterable
+from typing import IO
 
 import psycopg2
 from django.conf import settings
 from django.utils import timezone
 
-from qfieldcloud.core.models import Job, Project, User
+from qfieldcloud.core.models import Job, User
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import Plan, Subscription
 
 
@@ -37,6 +42,9 @@ def setup_subscription_plans():
             Plan(
                 code="default_user",
                 display_name="default user (autocreated)",
+                storage_mb=10,
+                storage_threshold_warning_bytes=2_000_000,
+                storage_threshold_critical_bytes=1_000_000,
                 is_default=True,
                 is_public=False,
                 user_type=User.Type.PERSON,
@@ -45,6 +53,9 @@ def setup_subscription_plans():
             Plan(
                 code="default_org",
                 display_name="default organization (autocreated)",
+                storage_mb=10,
+                storage_threshold_warning_bytes=2_000_000,
+                storage_threshold_critical_bytes=1_000_000,
                 is_default=True,
                 is_public=False,
                 user_type=User.Type.ORGANIZATION,
@@ -59,27 +70,72 @@ def set_subscription(
     code: str | None = None,
     **kwargs,
 ):
-    users: list[User] = [users] if isinstance(users, User) else users
+    if isinstance(users, User):
+        users = [users]
+    else:
+        users = list(users)
+
     assert len(users), (
         "When iterable, the first argument must contain at least 1 element."
     )
 
     code = code or f"plan_for_{'_and_'.join([u.username for u in users])}"
+    storage_mb = kwargs.get("storage_mb", Plan._meta.get_field("storage_mb").default)
+    storage_bytes = storage_mb * 1000 * 1000
     plan = Plan.objects.get_or_create(
         code=code,
         user_type=users[0].type,
+        defaults={
+            "storage_threshold_warning_bytes": int(storage_bytes * 0.20),
+            "storage_threshold_critical_bytes": int(storage_bytes * 0.10),
+            "display_name": f"default plan for {code}",
+        },
         **kwargs,
     )[0]
+
+    # While technically the `users` could be empty on this line,
+    # the earlier assertion guarantees it is not, therefore the
+    # following `for` loop will always assign a subscription.
+    subscription: Subscription | None = None
     for user in users:
         assert user.type == plan.user_type, (
-            'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
+            f'All users must have the same type "{plan.user_type.value}", but "{user.username}" has "{user.type.value}"'
         )
-        subscription: Subscription = user.useraccount.current_subscription
+        subscription = user.useraccount.current_subscription
         subscription.plan = plan
+        subscription.purchased_seats = subscription.plan.max_organization_members
         subscription.active_since = timezone.now() - timedelta(days=1)
-        subscription.save(update_fields=["plan", "active_since"])
+        subscription.save(update_fields=["plan", "active_since", "purchased_seats"])
+
+    # It is guaranteed that at least one user was provided.
+    assert subscription is not None
 
     return subscription
+
+
+@contextmanager
+def qgz_from_qgs(qgs_path: str | Path, qgz_name: str | None = None) -> Iterator[Path]:
+    """Context manager that creates a temporary .qgz file from a .qgs file.
+
+    The .qgz file is placed in a temporary directory that is removed together
+    with all its contents when the context exits.
+
+    Args:
+        qgs_path: path to the source .qgs file.
+        qgz_name: name to use for the .qgz archive (optional).
+    """
+    qgs_path = Path(qgs_path)
+
+    # Unless a specific `qgz_name` was requested, default to basename of qgs file
+    if qgz_name is None:
+        qgz_name = qgs_path.with_suffix(".qgz").name
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        qgz_path = Path(tmpdir) / qgz_name
+        with zipfile.ZipFile(qgz_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.write(qgs_path, arcname=qgs_path.name)
+
+        yield qgz_path
 
 
 def get_random_file(mb: float) -> IO:
@@ -140,7 +196,15 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
         if project.status == Project.Status.OK:
             return
         elif project.status == Project.Status.FAILED:
+            job = project.jobs.latest("updated_at")
+
+            print("FEEDBACK:", job.feedback)
+            print("type1`", job.type)
+            print("type2", job)
+            print("output:", job.output)
+
             fail("Waited for ok status, but got failed")
+
             return
 
         sleep(1)

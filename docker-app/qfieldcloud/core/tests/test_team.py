@@ -11,8 +11,7 @@ from qfieldcloud.core.models import (
     Team,
     TeamMember,
 )
-
-from .utils import setup_subscription_plans
+from qfieldcloud.core.tests.utils import setup_subscription_plans
 
 logging.disable(logging.CRITICAL)
 

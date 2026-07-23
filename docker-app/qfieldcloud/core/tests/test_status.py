@@ -41,6 +41,15 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIn("incident_message", data)
         self.assertIsNone(data["incident_message"])
 
+        self.assertIn("maintenance_start_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_start_timestamp_utc"])
+
+        self.assertIn("maintenance_end_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_end_timestamp_utc"])
+
+        self.assertIn("maintenance_message", data)
+        self.assertIsNone(data["maintenance_message"])
+
     @override_settings(STORAGES={})
     def test_status_storage_fails_with_no_storages(self):
         response = self.client.get("/api/v1/status/")
@@ -64,18 +73,26 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIn("incident_message", data)
         self.assertIsNone(data["incident_message"])
 
+        self.assertIn("maintenance_start_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_start_timestamp_utc"])
+
+        self.assertIn("maintenance_end_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_end_timestamp_utc"])
+
+        self.assertIn("maintenance_message", data)
+        self.assertIsNone(data["maintenance_message"])
+
     @override_settings(
         STORAGES={
             "default": {
                 "BACKEND": "qfieldcloud.filestorage.backend.QfcS3Boto3Storage",
                 "OPTIONS": {
-                    "access_key": "minioadmin",
-                    "secret_key": "minioadmin",
+                    "access_key": "rustfsadmin",
+                    "secret_key": "rustfsadmin",
                     "bucket_name": "nonexistent-bucket",
                     "region_name": "",
                     "endpoint_url": "http://wrong.url",
                 },
-                "QFC_IS_LEGACY": False,
             }
         }
     )
@@ -101,10 +118,23 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIn("incident_message", data)
         self.assertIsNone(data["incident_message"])
 
+        self.assertIn("maintenance_start_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_start_timestamp_utc"])
+
+        self.assertIn("maintenance_end_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_end_timestamp_utc"])
+
+        self.assertIn("maintenance_message", data)
+        self.assertIsNone(data["maintenance_message"])
+
     @override_config(
         INCIDENT_IS_ACTIVE=True,
         INCIDENT_MESSAGE="Sample incident message.",
         INCIDENT_TIMESTAMP_UTC=datetime(2002, 10, 18, 12, 0, 0),
+        MAINTENANCE_IS_PLANNED=True,
+        MAINTENANCE_START_TIMESTAMP_UTC=datetime(2002, 10, 18, 12, 0, 0),
+        MAINTENANCE_END_TIMESTAMP_UTC=datetime(2002, 10, 18, 14, 0, 0),
+        MAINTENANCE_MESSAGE="Sample maintenance message.",
     )
     def test_status_with_active_incident(self):
         response = self.client.get("/api/v1/status/")
@@ -126,12 +156,27 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(data["incident_message"], "Sample incident message.")
 
         self.assertIn("incident_timestamp_utc", data)
-        self.assertEqual(data["incident_timestamp_utc"], "2002-10-18T12:00:00")
+        self.assertEqual(data["incident_timestamp_utc"], "2002-10-18T12:00:00Z")
+
+        self.assertIn("maintenance_start_timestamp_utc", data)
+        self.assertEqual(
+            data["maintenance_start_timestamp_utc"], "2002-10-18T12:00:00Z"
+        )
+
+        self.assertIn("maintenance_end_timestamp_utc", data)
+        self.assertEqual(data["maintenance_end_timestamp_utc"], "2002-10-18T14:00:00Z")
+
+        self.assertIn("maintenance_message", data)
+        self.assertEqual(data["maintenance_message"], "Sample maintenance message.")
 
     @override_config(
         INCIDENT_IS_ACTIVE=False,
         INCIDENT_MESSAGE="Sample incident message.",
         INCIDENT_TIMESTAMP_UTC=datetime(2002, 10, 18, 12, 0, 0),
+        MAINTENANCE_IS_PLANNED=False,
+        MAINTENANCE_START_TIMESTAMP_UTC=datetime(2002, 10, 18, 12, 0, 0),
+        MAINTENANCE_END_TIMESTAMP_UTC=datetime(2002, 10, 18, 14, 0, 0),
+        MAINTENANCE_MESSAGE="Sample maintenance message.",
     )
     def test_status_with_inactive_incident(self):
         response = self.client.get("/api/v1/status/")
@@ -154,6 +199,15 @@ class QfcTestCase(APITransactionTestCase):
 
         self.assertIn("incident_timestamp_utc", data)
         self.assertIsNone(data["incident_timestamp_utc"])
+
+        self.assertIn("maintenance_start_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_start_timestamp_utc"])
+
+        self.assertIn("maintenance_end_timestamp_utc", data)
+        self.assertIsNone(data["maintenance_end_timestamp_utc"])
+
+        self.assertIn("maintenance_message", data)
+        self.assertIsNone(data["maintenance_message"])
 
     def test_status_cache(self):
         tic = time.perf_counter()

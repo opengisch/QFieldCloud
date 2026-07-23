@@ -30,7 +30,7 @@ class QfcTestCase(unittest.TestCase):
 
         files = os.listdir(output_directory)
 
-        self.assertIn("project_qfield.qgs", files)
+        self.assertIn("project_qfield.qgz", files)
         self.assertIn("france_parts_shape.shp", files)
         self.assertIn("france_parts_shape.dbf", files)
         self.assertIn("curved_polys.gpkg", files)

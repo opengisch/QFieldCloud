@@ -1,0 +1,17 @@
+{% load i18n %}
+{% spaceless %}
+<div class="form-group">
+  <div class="mb-3">
+    {% if audio %}
+        <a title="{% trans "Play CAPTCHA as audio file" %}" href="{{ audio }}">
+    {% endif %}
+    <img src="{{ image }}" alt="captcha" class="qfc-captcha-image" />
+    <button type="button" class="btn btn-outline-secondary qfc-captcha-btn ml-3" title="{% trans "Refresh CAPTCHA" %}">
+      <i class="fa fa-refresh"></i>
+    </button>
+  </div>
+
+  {% include "django/forms/widgets/multiwidget.html" %}
+
+</div>
+{% endspaceless %}

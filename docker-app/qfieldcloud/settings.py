@@ -16,10 +16,12 @@ from datetime import datetime, timedelta
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
-from .settings_utils import (
+from qfieldcloud.settings_utils import (
     ConfigValidationError,
     get_socialaccount_providers_config,
     get_storages_config,
+    parse_string_to_bool,
+    parse_string_to_list,
 )
 
 # QFieldCloud specific configuration
@@ -33,15 +35,15 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 # Key used for cryptographic operations on encrypted fields.
 # More infos about usage and rotation can be found here:
 # https://pypi.org/project/django-fernet-encrypted-fields/
-SALT_KEY = [os.environ.get("SALT_KEY")]
+SALT_KEY = [os.environ["SALT_KEY"]]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(int(os.environ.get("DEBUG", 0)))
+DEBUG = parse_string_to_bool(os.environ["DEBUG"])
 
 # if we are in debug, we need to update the internal IPS to make the
 # debug toolbar work within docker
@@ -54,16 +56,18 @@ if DEBUG:
         "10.0.2.2",
     ]
 
-ENVIRONMENT = os.environ.get("ENVIRONMENT")
+ENVIRONMENT = os.environ["ENVIRONMENT"]
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
+ALLOWED_HOSTS = parse_string_to_list(os.environ["DJANGO_ALLOWED_HOSTS"], delimiter=" ")
 
 # A tuple representing an HTTP header/value combination that signifies a request is secure, which is important for Django’s CSRF protection.
 # We need to set it in QFieldCloud as we run behind a proxy.
 # Read more: https://docs.djangoproject.com/en/4.2/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+USE_X_FORWARDED_HOST = parse_string_to_bool(os.environ["DJANGO_USE_X_FORWARDED_HOST"])
 
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
@@ -94,6 +98,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.contenttypes",
     "django.contrib.gis",
+    "django.contrib.humanize",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -123,6 +128,7 @@ INSTALLED_APPS = [
     "auditlog",
     # Local
     "qfieldcloud.core",
+    "qfieldcloud.project",
     # listed after core because we overwrite createsuperuser command
     "django.contrib.auth",
     "qfieldcloud.subscription",
@@ -137,12 +143,15 @@ INSTALLED_APPS = [
     "django_extensions",
     "bootstrap4",
     "sri",
+    "corsheaders",
+    "captcha",
     # To ensure that exceptions inside other apps' signal handlers do not affect the integrity of file deletions within transactions, `django_cleanup` should be placed last in `INSTALLED_APPS`. See https://github.com/un1t/django-cleanup#configuration
     "django_cleanup.apps.CleanupConfig",
 ]
 
 MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -190,6 +199,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "qfieldcloud.core.context_processors.signup_open",
+                "qfieldcloud.core.whitelabel.whitelabel",
             ],
         },
     },
@@ -204,12 +214,12 @@ WSGI_APPLICATION = "qfieldcloud.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("POSTGRES_DB"),
-        "USER": os.environ.get("POSTGRES_USER"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": os.environ.get("POSTGRES_HOST"),
-        "PORT": os.environ.get("POSTGRES_PORT"),
-        "OPTIONS": {"sslmode": os.environ.get("POSTGRES_SSLMODE")},
+        "NAME": os.environ["POSTGRES_DB"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_HOST"],
+        "PORT": os.environ["POSTGRES_PORT"],
+        "OPTIONS": {"sslmode": os.environ["POSTGRES_SSLMODE"]},
         "TEST": {
             "NAME": os.environ.get("POSTGRES_DB_TEST"),
         },
@@ -245,18 +255,23 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
-LANGUAGE_CODE = os.environ.get("QFIELDCLOUD_DEFAULT_LANGUAGE") or "en"
+LANGUAGE_CODE = os.environ["QFIELDCLOUD_DEFAULT_LANGUAGE"]
 
-TIME_ZONE = os.environ.get("QFIELDCLOUD_DEFAULT_TIME_ZONE") or "Europe/Zurich"
+TIME_ZONE = os.environ["QFIELDCLOUD_DEFAULT_TIME_ZONE"]
 
-USE_I18N = bool(int(os.environ.get("QFIELDCLOUD_USE_I18N", 1)))
+USE_I18N = parse_string_to_bool(os.environ["QFIELDCLOUD_USE_I18N"])
 
 USE_TZ = True
 
 
 LANGUAGES = [
+    ("bg", "Bulgarian"),
+    ("de", "German"),
     ("en", "English"),
     ("es", "Spanish"),
+    ("fr", "French"),
+    ("it", "Italian"),
+    ("km", "Khmer"),
 ]
 
 # Static files (CSS, JavaScript, Images)
@@ -278,11 +293,6 @@ MEDIA_URL = "/mediafiles/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
 # S3 Storage
-STORAGE_ACCESS_KEY_ID = os.environ.get("STORAGE_ACCESS_KEY_ID")
-STORAGE_SECRET_ACCESS_KEY = os.environ.get("STORAGE_SECRET_ACCESS_KEY")
-STORAGE_BUCKET_NAME = os.environ.get("STORAGE_BUCKET_NAME")
-STORAGE_REGION_NAME = os.environ.get("STORAGE_REGION_NAME")
-STORAGE_ENDPOINT_URL = os.environ.get("STORAGE_ENDPOINT_URL")
 
 _storage_config = get_storages_config()
 
@@ -293,21 +303,19 @@ STORAGES = {
     },
 }
 
-LEGACY_STORAGE_NAME = _storage_config["LEGACY_STORAGE_NAME"]
-
 # Maximum filename length in characters
 # NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 # NOTE the files on Windows cannot be longer than 260 _chars_ by default, see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maximum-path-length-limitation
-# NOTE minio limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
+# NOTE S3 protocol limit is 255 _chars_ per filename segment, read https://docs.rustfs.com/concepts/limit.html#_1-s3-api-limits
 STORAGE_FILENAME_MAX_CHAR_LENGTH = 255
 
 # Filename validator regex.
 # Should filter out all the names that have reserved characters and words for both Linux and Windows.
 STORAGES_FILENAME_VALIDATION_REGEX = (
-    r'^(?!.*[<>:"/\\|?*])'
+    r'^(?!.*[<>:"/\\|?*\x00-\x1f\x7f])'
     r"(?!(?:COM[0-9]|CON|LPT[0-9]|NUL|PRN|AUX|com[0-9]|con|lpt[0-9]|nul|prn|aux)$)"
     # dynamically set the max char length
-    r'[^\\\/:*"?<>|]{1,' + str(STORAGE_FILENAME_MAX_CHAR_LENGTH) + "}"
+    r'[^\\\/:*"?<>|\x00-\x1f\x7f]{1,' + str(STORAGE_FILENAME_MAX_CHAR_LENGTH) + "}"
     r"(?<![\s\.])$"
 )
 
@@ -320,13 +328,40 @@ if STORAGES_PROJECT_DEFAULT_STORAGE not in STORAGES:
         f"Missing {STORAGES_PROJECT_DEFAULT_STORAGE=} from the `STORAGES` configuration, available storages: {STORAGES.keys()}"
     )
 
+STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE = (
+    os.environ.get("STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE") or "default"
+)
+
+if STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE not in STORAGES:
+    raise ConfigValidationError(
+        f"Missing {STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE=} from the `STORAGES` configuration, available storages: {STORAGES.keys()}"
+    )
+
+STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED = parse_string_to_bool(
+    os.environ.get("STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED") or "1"
+)
+
+# Delete with QF-7231 Make S3 backend storage not versionable
+if (
+    not STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED
+    and STORAGES[STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE]["BACKEND"]
+    != "qfieldcloud.filestorage.backend.QfcWebDavStorage"
+):
+    raise ConfigValidationError(
+        "Attachments can be unversioned only when using an attachment storage of type WebDAV (qfieldcloud.filestorage.backend.QfcWebDavStorage)"
+    )
+
+# 10000px per dimension
+QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_DIMENSION = 10000
+
+# 5MB
+QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024
+
 AUTH_USER_MODEL = "core.User"
 
 # QFieldCloud variables
 AUTH_TOKEN_LENGTH = 100
-AUTH_TOKEN_EXPIRATION_HOURS = int(
-    os.environ.get("QFIELDCLOUD_AUTH_TOKEN_EXPIRATION_HOURS") or 24 * 30
-)
+AUTH_TOKEN_EXPIRATION_HOURS = int(os.environ["QFIELDCLOUD_AUTH_TOKEN_EXPIRATION_HOURS"])
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
@@ -352,9 +387,10 @@ LOGIN_REDIRECT_URL = "index"
 #########################
 
 # Sentry configuration
+SENTRY_RELEASE = os.environ["SENTRY_RELEASE"]
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 if SENTRY_DSN:
-    SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", 1))
+    SENTRY_SAMPLE_RATE = float(os.environ["SENTRY_SAMPLE_RATE"])
 
     def before_send(event, hint):
         from rest_framework.exceptions import MethodNotAllowed, UnsupportedMediaType
@@ -438,9 +474,7 @@ SENTRY_REPORT_FULL_BODY = True
 #########################
 
 # https://docs.allauth.org/en/latest/account/configuration.html#overall
-ACCOUNT_ADAPTER = os.environ.get(
-    "QFIELDCLOUD_ACCOUNT_ADAPTER", "qfieldcloud.core.adapters.AccountAdapterSignUpOpen"
-)
+ACCOUNT_ADAPTER = os.environ["QFIELDCLOUD_ACCOUNT_ADAPTER"]
 
 # https://docs.allauth.org/en/latest/account/configuration.html#signup
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
@@ -454,7 +488,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 # https://docs.allauth.org/en/latest/account/configuration.html#email-verification
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
-ACCOUNT_EMAIL_VERIFICATION = os.environ.get("ACCOUNT_EMAIL_VERIFICATION")
+ACCOUNT_EMAIL_VERIFICATION = os.environ["ACCOUNT_EMAIL_VERIFICATION"]
 
 # https://docs.allauth.org/en/latest/account/rate_limits.html
 ACCOUNT_RATE_LIMITS = False
@@ -474,19 +508,15 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_PROVIDERS = get_socialaccount_providers_config()
 
 # Third-party auth header names configuration
-QFIELDCLOUD_IDP_ID_HEADER_NAME = os.environ.get(
-    "QFIELDCLOUD_IDP_ID_HEADER_NAME", "X-QFC-IDP-ID"
-)
-QFIELDCLOUD_ID_TOKEN_HEADER_NAME = os.environ.get(
-    "QFIELDCLOUD_ID_TOKEN_HEADER_NAME", "X-QFC-ID-Token"
-)
+QFIELDCLOUD_IDP_ID_HEADER_NAME = "X-QFC-IDP-ID"
+QFIELDCLOUD_ID_TOKEN_HEADER_NAME = "X-QFC-ID-Token"
 
 #########################
 # /Django allauth settings
 #########################
 
-QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = bool(
-    int(os.environ.get("QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED", 0))
+QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED = parse_string_to_bool(
+    os.environ["QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED"]
 )
 
 QFIELDCLOUD_SSO_PROVIDER_STYLES = {
@@ -538,8 +568,25 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
             "color_text": "#E3E3E3",
         },
     },
+    "entra": {
+        # https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps
+        "required": True,
+        "light": {
+            "logo": "sso/microsoft.svg",
+            "color_fill": "#FFFFFF",
+            "color_stroke": "#8C8C8C",
+            "color_text": "#5E5E5E",
+        },
+        "dark": {
+            "logo": "sso/microsoft.svg",
+            "color_fill": "#2F2F2F",
+            "color_stroke": "#2F2F2F",
+            "color_text": "#FFFFFF",
+        },
+    },
 }
 
+###########################
 # Django axes configuration
 # https://django-axes.readthedocs.io/en/latest/4_configuration.html
 ###########################
@@ -547,8 +594,8 @@ QFIELDCLOUD_SSO_PROVIDER_STYLES = {
 AXES_LOCKOUT_TEMPLATE = "axes/lockedout.html"
 # The integer number of login attempts allowed before a record is created for the failed logins. Default: 3
 AXES_FAILURE_LIMIT = 5
-# Configures the limiter to handle username only (see https://django-axes.readthedocs.io/en/latest/2_installation.html#version-7-breaking-changes-and-upgrading-from-django-axes-version-6)
-AXES_LOCKOUT_PARAMETERS = ["username"]
+# Configures the limiter to handle a combo of username and IP, see https://django-axes.readthedocs.io/en/latest/5_customization.html#customizing-lockout-parameters
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 # If set, defines a period of inactivity after which old failed login attempts will be cleared. If an integer, will be interpreted as a number of hours. Default: None
 AXES_COOLOFF_TIME = lambda _request: timedelta(minutes=30)  # noqa: E731
 # If True, a successful login will reset the number of failed logins. Default: False
@@ -556,20 +603,21 @@ AXES_RESET_ON_SUCCESS = True
 
 # Django email configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "").lower() == "true"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "").lower() == "true"
-EMAIL_PORT = os.environ.get("EMAIL_PORT")
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+EMAIL_HOST = os.environ["EMAIL_HOST"]
+EMAIL_USE_TLS = os.environ["EMAIL_USE_TLS"].lower() == "true"
+EMAIL_USE_SSL = os.environ["EMAIL_USE_SSL"].lower() == "true"
+EMAIL_PORT = os.environ["EMAIL_PORT"]
+EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
+DEFAULT_FROM_EMAIL = os.environ["DEFAULT_FROM_EMAIL"]
 
 
 # Django invitations configurations
 # https://github.com/bee-keeper/django-invitations#additional-configuration
 INVITATIONS_INVITATION_EXPIRY = 365  # integer in days, 0 disables invitations
 INVITATIONS_INVITATION_ONLY = False
-# INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True
+INVITATIONS_ADAPTER = ACCOUNT_ADAPTER  # set if accepting an invite after signup
 INVITATIONS_GONE_ON_ACCEPT_ERROR = False
 
 TEST_RUNNER = "qfieldcloud.testing.QfcTestSuiteRunner"
@@ -613,9 +661,7 @@ IN_TEST_SUITE = False
 # The settings and `last_modified` field are deprecated and soon to be removed.
 QFIELDCLOUD_STORAGE_DT_LAST_MODIFIED_FORMAT = "%d.%m.%Y %H:%M:%S %Z"
 
-QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ.get(
-    "QFIELDCLOUD_SUBSCRIPTION_MODEL", "subscription.Subscription"
-)
+QFIELDCLOUD_SUBSCRIPTION_MODEL = os.environ["QFIELDCLOUD_SUBSCRIPTION_MODEL"]
 
 QFIELDCLOUD_TOKEN_SERIALIZER = "qfieldcloud.core.serializers.TokenSerializer"
 QFIELDCLOUD_USER_SERIALIZER = "qfieldcloud.core.serializers.CompleteUserSerializer"
@@ -634,7 +680,12 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/axes/accesslog/add/",
     "/admin/auditlog/logentry/add/",
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
+    "/admin/filestorage/file/add/",
+    "/admin/filestorage/fileversion/add/",
 )
+
+# Admin sort URLs which will be skipped from checking if they return HTTP 200
+QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
 
 # Sets the default admin list view per page, the Django default is 100
 QFIELDCLOUD_ADMIN_LIST_PER_PAGE = 20
@@ -645,19 +696,17 @@ QFIELDCLOUD_ADMIN_EXACT_COUNT_LIMIT = 10000
 # Default limit for paginating data from views using QfcLimitOffsetPagination
 QFIELDCLOUD_API_DEFAULT_PAGE_LIMIT = 50
 
-# Admin sort URLs which will be skipped from checking if they return HTTP 200
-QFIELDCLOUD_TEST_SKIP_SORT_ADMIN_URLS = ("/admin/django_cron/cronjoblog/?o=4",)
-
 APPLY_DELTAS_LIMIT = 1000
 
-# the value of the "source" key in each logger entry
-LOGGER_SOURCE = os.environ.get("LOGGER_SOURCE", None)
+# The value of the "source" key in each logger entry.
+# Filters what logs are printed based on in which image we are running ("app" or "worker_wrapper").
+LOGGER_SOURCE = os.environ["LOGGER_SOURCE"]
 
 DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
 }
 
-QFIELDCLOUD_ADMIN_URI = os.environ.get("QFIELDCLOUD_ADMIN_URI", "admin/")
+QFIELDCLOUD_ADMIN_URI = os.environ["QFIELDCLOUD_ADMIN_URI"]
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
@@ -678,6 +727,32 @@ CONSTANCE_CONFIG = {
         """The banner content to be shown on top of every page if `INCIDENT_IS_ACTIVE` is checked.
         If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
         "textarea",
+    ),
+    "MAINTENANCE_IS_PLANNED": (
+        False,
+        "Is there a planned maintenance? If checked, a banner will be shown on top of every page with the content of `MAINTENANCE_MESSAGE`.",
+        bool,
+    ),
+    "MAINTENANCE_START_TIMESTAMP_UTC": (
+        datetime(2026, 1, 1, 18, 0, 0),
+        "When the maintenance is planned to start. Put time in UTC!",
+        datetime,
+    ),
+    "MAINTENANCE_END_TIMESTAMP_UTC": (
+        datetime(2026, 1, 1, 20, 0, 0),
+        "When the maintenance is planned to end. Put time in UTC!",
+        datetime,
+    ),
+    "MAINTENANCE_MESSAGE": (
+        "QFieldCloud will be undergoing maintenance. During this time, the service might be unavailable.",
+        """The banner content to be shown on top of every page if `MAINTENANCE_IS_PLANNED` is checked.
+        If the `STATUS_PAGE_URL` is set, a link to the status page will be appended automatically.""",
+        "textarea",
+    ),
+    "JOBS_LOGS_RETENTION_PERIOD_DAYS": (
+        90,
+        "Number of days to retain job logs before they are automatically deleted.",
+        int,
     ),
     "WORKER_TIMEOUT_S": (
         600,
@@ -709,6 +784,11 @@ CONSTANCE_CONFIG = {
         "Status page URL",
         str,
     ),
+    "WEB_USER_INACTIVITY_THRESHOLD_DAYS": (
+        30,
+        "User inactivity threshold in days. Set to 0 to disable the inactivity threshold.",
+        int,
+    ),
 }
 CONSTANCE_ADDITIONAL_FIELDS = {
     "textarea": [
@@ -724,6 +804,13 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "INCIDENT_TIMESTAMP_UTC",
         "INCIDENT_MESSAGE",
     ),
+    "Maintenance": (
+        "MAINTENANCE_IS_PLANNED",
+        "MAINTENANCE_START_TIMESTAMP_UTC",
+        "MAINTENANCE_END_TIMESTAMP_UTC",
+        "MAINTENANCE_MESSAGE",
+    ),
+    "Jobs": ("JOBS_LOGS_RETENTION_PERIOD_DAYS",),
     "Worker": (
         "WORKER_TIMEOUT_S",
         "WORKER_QGIS_MEMORY_LIMIT",
@@ -731,33 +818,40 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Debug": ("SENTRY_REQUEST_MAX_SIZE_TO_SEND",),
     "Subscription": ("TRIAL_PERIOD_DAYS",),
-    "Web": ("STATUS_PAGE_URL",),
+    "Web": (
+        "STATUS_PAGE_URL",
+        "WEB_USER_INACTIVITY_THRESHOLD_DAYS",
+    ),
 }
 
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
 QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
 
-# Name of the qgis docker image used as a worker by worker_wrapper
-QFIELDCLOUD_QGIS_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS_IMAGE_NAME"]
+# Name of the QGIS 3 docker image used as a worker by `worker_wrapper`
+QFIELDCLOUD_QGIS3_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS3_IMAGE_NAME"]
+
+# Name of the QGIS 4 docker image used as a worker by `worker_wrapper`
+QFIELDCLOUD_QGIS4_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS4_IMAGE_NAME"]
 
 # URL the qgis worker will use to access the running API endpoint on the app service
 QFIELDCLOUD_WORKER_QFIELDCLOUD_URL = os.environ["QFIELDCLOUD_WORKER_QFIELDCLOUD_URL"]
 
-# Host path which will be mounted by the `worker_wrapper` into the `worker` containers to facilitate development and debugging pythons files.
+# Host path which will be mounted by the `worker_wrapper` into the `worker` containers to facilitate development and debugging python files.
 DEBUG_QGIS_WORKER_HOST_PATH = os.environ.get("DEBUG_QGIS_WORKER_HOST_PATH")
 
 # Port to be used by `debugpy` to connect to the QGIS process inside the `qgis` container
 DEBUG_QGIS_DEBUGPY_PORT = os.environ.get("DEBUG_QGIS_DEBUGPY_PORT")
 
 # Volume name where transformation grids required by `PROJ` are downloaded to
-QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ.get(
+QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME = os.environ[
     "QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME"
-)
+]
 
 # Name of the docker compose network to be used by the worker containers
 QFIELDCLOUD_DEFAULT_NETWORK = os.environ.get("QFIELDCLOUD_DEFAULT_NETWORK")
 
 # `django-auditlog` configurations, read more on https://django-auditlog.readthedocs.io/en/latest/usage.html
+AUDITLOG_LOGENTRY_MODEL = "auditlog.LogEntry"
 AUDITLOG_INCLUDE_TRACKING_MODELS = [
     # NOTE `Delta` and `Job` models are not being automatically audited, because their data changes very often and timestamps are available in their models.
     {
@@ -779,7 +873,7 @@ AUDITLOG_INCLUDE_TRACKING_MODELS = [
         "exclude_fields": ["last_login", "updated_at"],
     },
     {
-        "model": "core.project",
+        "model": "project.project",
         # these fields are updated by scripts and will produce a lot of audit noise
         "exclude_fields": [
             "updated_at",
@@ -845,6 +939,9 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "v1",
     "CONTACT": {"email": "info@opengis.ch"},
     "LICENSE": {"name": "License"},
+    "PREPROCESSING_HOOKS": [
+        "qfieldcloud.core.utils2.spectacular_utils.expose_spectacular_endpoints"
+    ],
 }
 
 JAZZMIN_SETTINGS = {
@@ -867,5 +964,113 @@ JAZZMIN_SETTINGS = {
     # Copyright on the footer.
     "copyright": "OPENGIS.ch",
     # Additional custom CSS file for the Django Admin pages.
-    "custom_css": "css/admin.css",
+    "custom_css": "css/qfc_admin.css",
+    "custom_js": "js/qfc_admin.js",
+    # Top menu links
+    "topmenu_links": [
+        {
+            "name": "Global Search",
+            "url": "admin:global_search",
+        },
+    ],
 }
+
+# Whitelabel configuration
+# Uncomment and customize to override default branding
+# See qfieldcloud/core/whitelabel.py for all available options and defaults
+# WHITELABEL = {
+#     "site_title": "Your Custom Title",
+#     "logo_navbar": "path/to/logo_navbar.svg",
+#     "logo_main": "path/to/logo_main.svg",
+#     "logo_alt": "Your logo description",
+#     "favicon": "path/to/favicon.ico",
+# }
+
+
+###########################
+# List of apps to ignore when ensuring Django templates validity.
+###########################
+
+# Ignore the following apps
+# NOTE Ideally `VALIDATE_TEMPLATES_IGNORES` should be used, but it uses only the basename of the ignored files, see https://github.com/django-extensions/django-extensions/blob/4.1/django_extensions/management/commands/validate_templates.py#L64-L69
+# See https://django-extensions.readthedocs.io/en/latest/validate_templates.html#validate-templates-ignore-apps
+VALIDATE_TEMPLATES_IGNORE_APPS = [
+    "allauth",
+    "django_filters",
+    "jazzmin",
+]
+
+
+###########################
+# CORS settings
+# Managed via django-cors-headers.
+# Origins and credentials are configured through environment variables,
+# so no nginx changes are needed when adding new clients.
+# https://github.com/adamchainz/django-cors-headers
+###########################
+
+# Comma-separated list of origins that are allowed to make cross-origin
+# requests. Do not include trailing slashes.
+# Example: CORS_ALLOWED_ORIGINS=https://app.example.com,http://localhost:5173
+CORS_ALLOWED_ORIGINS = parse_string_to_list(
+    os.environ["CORS_ALLOWED_ORIGINS"], delimiter=","
+)
+
+# Only allow CORS on API + swagger endpoints - static files and pages are unaffected.
+CORS_URLS_REGEX = r"^/(api/.*|swagger(.yaml|/))$"
+
+# Whether to include credentials (cookies, authorization headers) in
+# cross-origin requests. Required when clients send auth tokens.
+CORS_ALLOW_CREDENTIALS = parse_string_to_bool(os.environ["CORS_ALLOW_CREDENTIALS"])
+
+
+###########################
+# Captcha settings
+# Managed via `django-simple-captcha`, see https://django-simple-captcha.readthedocs.io/en/latest/advanced.html for all available options and defaults.
+###########################
+
+# Image size in pixels of generated captcha, specified as a tuple (width, height)
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-image-size
+CAPTCHA_IMAGE_SIZE = (200, 50)
+
+# A random rotation in this interval is applied to each letter in the challenge text.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-letter-rotation
+CAPTCHA_LETTER_ROTATION = (-35, 35)
+
+# Background-color of the captcha. Can be expressed as html-style #rrggbb, rgb(red, green, blue), or common html names (e.g. “red”).
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-background-color
+CAPTCHA_BACKGROUND_COLOR = "transparent"
+
+# A string representing a Python callable (i.e., a function) to determine the color of each letter in the CAPTCHA.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-letter-color-funct
+CAPTCHA_LETTER_COLOR_FUNCT = "captcha.helpers.random_letter_color_challenge"
+
+# Integer. Lifespan, in minutes, of the generated captcha.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-timeout
+CAPTCHA_TIMEOUT = 5
+
+# Sets the length, in chars, of the generated captcha. (for the 'captcha.helpers.random_char_challenge' challenge)
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-length
+CAPTCHA_LENGTH = 4
+
+# When set to True, the string “PASSED” (any case) will be accepted as a valid response to any CAPTCHA. Use this for testing purposes.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-test-mode
+CAPTCHA_TEST_MODE = DEBUG or ENVIRONMENT == "test"
+
+# List of strings of python callables that take a Pillow DrawImage object and an Image image as input, modify the DrawImage, then return it.
+# See https://django-simple-captcha.readthedocs.io/en/latest/advanced.html#captcha-noise-functions
+CAPTCHA_NOISE_FUNCTIONS = [
+    "captcha.helpers.noise_dots",
+]
+
+# Optional volume name where custom CA files are mounted
+QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME = (
+    f"{os.environ['COMPOSE_PROJECT_NAME']}_custom_ca_certificates"
+)
+
+# Filename where optional custom CA certificate are stored.
+QFIELDCLOUD_CUSTOM_CA_DIR = "/etc/ssl/custom_certs"
+QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"
+
+# Maximum number of GET/POST parameters, avoids `TooManyFieldsSent` error.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000

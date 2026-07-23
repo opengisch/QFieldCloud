@@ -9,9 +9,13 @@ import socket
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+import zipfile
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, NamedTuple, TypedDict, cast
+from typing import Any, NamedTuple, TextIO, TypedDict, cast
+from uuid import UUID
 
 from libqfieldsync.layer import LayerSource
 from libqfieldsync.utils.bad_layer_handler import (
@@ -22,22 +26,33 @@ from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
     QgsApplication,
+    QgsCoordinateTransform,
+    QgsCsException,
+    QgsFieldConstraints,
     QgsLayerTree,
     QgsMapLayer,
     QgsMapSettings,
     QgsProject,
     QgsProjectArchive,
     QgsProviderRegistry,
+    QgsRectangle,
+    QgsReferencedRectangle,
+    QgsSettings,
     QgsZipUtils,
 )
 from qgis.PyQt import QtCore, QtGui
-from qgis.PyQt.QtCore import QSize
+from qgis.PyQt.QtCore import QSize, QtMsgType
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from tabulate import tabulate
 
 # Get environment variables
 JOB_ID = os.environ.get("JOB_ID")
+
+# Network timeout for QGIS. Reduced from default 60 seconds to fail fast
+# when layers are unreachable (e.g. network outage, blocked external access).
+# This prevents long blocking delays when loading project file.
+QGIS_NETWORK_TIMEOUT_MS = 5000
 
 qgs_stderr_logger = logging.getLogger("QGSSTDERR")
 qgs_stderr_logger.setLevel(logging.DEBUG)
@@ -47,15 +62,15 @@ qgs_msglog_logger.setLevel(logging.DEBUG)
 
 def _qt_message_handler(mode, context, message):
     log_level = logging.DEBUG
-    if mode == QtCore.QtDebugMsg:
+    if mode == QtMsgType.QtDebugMsg:
         log_level = logging.DEBUG
-    elif mode == QtCore.QtInfoMsg:
+    elif mode == QtMsgType.QtInfoMsg:
         log_level = logging.INFO
-    elif mode == QtCore.QtWarningMsg:
+    elif mode == QtMsgType.QtWarningMsg:
         log_level = logging.WARNING
-    elif mode == QtCore.QtCriticalMsg:
+    elif mode == QtMsgType.QtCriticalMsg:
         log_level = logging.CRITICAL
-    elif mode == QtCore.QtFatalMsg:
+    elif mode == QtMsgType.QtFatalMsg:
         log_level = logging.FATAL
 
     qgs_stderr_logger.log(
@@ -76,21 +91,15 @@ QtCore.qInstallMessageHandler(_qt_message_handler)
 def _write_log_message(message, tag, level):
     log_level = logging.DEBUG
 
-    # in 3.16 it was Qgis.None, but since None is a reserved keyword, it was inaccessible
-    try:
-        Qgis.NoLevel
-    except Exception:
-        Qgis.NoLevel = 4
-
-    if level == Qgis.NoLevel:
+    if level == Qgis.MessageLevel.NoLevel:
         log_level = logging.DEBUG
-    elif level == Qgis.Info:
+    elif level == Qgis.MessageLevel.Info:
         log_level = logging.INFO
-    elif level == Qgis.Success:
+    elif level == Qgis.MessageLevel.Success:
         log_level = logging.INFO
-    elif level == Qgis.Warning:
+    elif level == Qgis.MessageLevel.Warning:
         log_level = logging.WARNING
-    elif level == Qgis.Critical:
+    elif level == Qgis.MessageLevel.Critical:
         log_level = logging.CRITICAL
 
     qgs_msglog_logger.log(
@@ -152,6 +161,9 @@ def start_app() -> str:
 
         QtCore.qInstallMessageHandler(_qt_message_handler)
         QgsApplication.messageLog().messageReceived.connect(_write_log_message)
+
+        settings = QgsSettings()
+        settings.setValue("network/network-timeout", QGIS_NETWORK_TIMEOUT_MS)
 
         # make sure the app is closed, otherwise the container exists with non-zero
         @atexit.register
@@ -306,6 +318,10 @@ def open_qgis_project_temporarily(
             if layer_tree:
                 map_settings.setLayers(reversed(list(layer_tree.customLayerOrder())))
 
+            if map_settings.extent().isEmpty():
+                # set to full extent if empty
+                map_settings.setExtent(map_settings.fullExtent())
+
             details["background_color"] = background_color.name()
             details["extent"] = map_settings.extent().asWktPolygon()
             details["map_settings"] = map_settings
@@ -413,6 +429,8 @@ def download_project(
     working_dir = destination.joinpath("files")
     working_dir.mkdir(parents=True)
 
+    logging.info(f"Downloading project files to {working_dir}…")
+
     client = sdk.Client()
     files = client.list_remote_files(project_id)
 
@@ -473,7 +491,20 @@ def upload_project(project_id: str, project_dir: Path) -> None:
         show_progress=False,
     )
 
-    logging.info("Uploading packaged project files finished!")
+    logging.info("Uploading project files finished!")
+
+
+def upload_project_thumbnail(project_id: UUID, thumbnail_filename: Path | None) -> None:
+    """Upload the generated thumbnail to QFieldCloud via the SDK."""
+
+    if thumbnail_filename is None:
+        logging.warning("No thumbnail was generated, skipping upload.")
+        return
+
+    client = sdk.Client()
+    client.upload_project_thumbnail(str(project_id), str(thumbnail_filename))
+
+    logging.info("Project thumbnail uploaded!")
 
 
 def list_local_files(project_id: str, project_dir: Path):
@@ -513,7 +544,8 @@ def is_localhost(hostname: str, port: int | None = None) -> bool:
                     return True
 
         return False
-    except Exception:
+    # if any error occurs, then just assume it's not localhost
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -581,6 +613,28 @@ def extract_project_details(project: QgsProject) -> dict[str, str]:
     return details
 
 
+def get_constraint_strength(
+    constraint_strength: QgsFieldConstraints.ConstraintStrength,
+) -> str:
+    if (
+        constraint_strength
+        == QgsFieldConstraints.ConstraintStrength.ConstraintStrengthNotSet
+    ):
+        return "not_set"
+    elif (
+        constraint_strength
+        == QgsFieldConstraints.ConstraintStrength.ConstraintStrengthHard
+    ):
+        return "hard"
+    elif (
+        constraint_strength
+        == QgsFieldConstraints.ConstraintStrength.ConstraintStrengthSoft
+    ):
+        return "soft"
+    else:
+        raise NotImplementedError(f"Unknown constraint strength: {constraint_strength}")
+
+
 def get_layers_data(project: QgsProject) -> dict[str, dict]:
     layers_by_id = {}
 
@@ -592,6 +646,18 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
         data_provider = layer.dataProvider()
         data_provider_source: str | None = None
         data_provider_name: str | None = None
+
+        layer_error_summary = ""
+        if error.messageList():
+            layer_error_summary = error.summary()
+
+        wkb_type = None
+        if layer.type() == QgsMapLayer.LayerType.VectorLayer:
+            wkb_type = layer.wkbType()
+
+        crs = None
+        if layer.crs():
+            crs = layer.crs().authid()
 
         # TODO: Move localized layer handling functionality inside libqfieldsync (ClickUp: QF-5875)
         if layer_source.is_localized_path:
@@ -610,13 +676,59 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             data_provider_source = layer.dataProvider().uri().uri()
             data_provider_name = layer.dataProvider().name()
 
+        if layer.type() == QgsMapLayer.LayerType.VectorLayer:
+            fields = []
+
+            for field in layer.fields():
+                constraints = field.constraints()
+
+                fields.append(
+                    {
+                        "name": field.name(),
+                        "alias": field.alias(),
+                        "comment": field.comment(),
+                        "type": field.typeName(),
+                        "length": field.length(),
+                        "precision": field.precision(),
+                        "is_not_null": bool(
+                            constraints.constraints()
+                            & QgsFieldConstraints.Constraint.ConstraintNotNull
+                        ),
+                        "constraint_strength": get_constraint_strength(
+                            constraints.constraintStrength(
+                                QgsFieldConstraints.Constraint.ConstraintNotNull
+                            )
+                        ),
+                        "constraint_expression": constraints.constraintExpression(),
+                        "constraint_expression_description": constraints.constraintDescription(),
+                        "constraint_expression_strength": get_constraint_strength(
+                            constraints.constraintStrength(
+                                QgsFieldConstraints.Constraint.ConstraintExpression
+                            )
+                        ),
+                        "is_unique": bool(
+                            constraints.constraints()
+                            & QgsFieldConstraints.Constraint.ConstraintUnique
+                        ),
+                        "is_unique_strength": get_constraint_strength(
+                            constraints.constraintStrength(
+                                QgsFieldConstraints.Constraint.ConstraintUnique
+                            )
+                        ),
+                        "default_value": field.defaultValueDefinition().expression(),
+                        "set_default_value_on_update": field.defaultValueDefinition().applyOnUpdate(),
+                        "widget_type": field.editorWidgetSetup().type(),
+                        "widget_config": field.editorWidgetSetup().config(),
+                    }
+                )
+        else:
+            fields = None
+
         layers_by_id[layer_id] = {
             "id": layer_id,
             "name": layer.name(),
-            "crs": layer.crs().authid() if layer.crs() else None,
-            "wkb_type": layer.wkbType()
-            if layer.type() == QgsMapLayer.VectorLayer
-            else None,
+            "crs": crs,
+            "wkb_type": wkb_type,
             "qfs_action": layer.customProperty("QFieldSync/action"),
             "qfs_cloud_action": layer.customProperty("QFieldSync/cloud_action"),
             "qfs_is_geometry_locked": layer.customProperty(
@@ -633,12 +745,13 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
             "type": layer.type(),
             "type_name": layer.type().name,
             "error_code": "no_error",
-            "error_summary": error.summary() if error.messageList() else "",
+            "error_summary": layer_error_summary,
             "error_message": layer.error().message(),
             "filename": filename,
             "provider_name": data_provider_name,
             "provider_error_summary": None,
             "provider_error_message": None,
+            "fields": fields,
         }
 
         if layers_by_id[layer_id]["is_valid"]:
@@ -656,11 +769,12 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                 else:
                     layers_by_id[layer_id]["error_code"] = "invalid_dataprovider"
 
-            layers_by_id[layer_id]["provider_error_summary"] = (
-                data_provider_error.summary()
-                if data_provider_error.messageList()
-                else ""
-            )
+            layers_by_id[layer_id]["provider_error_summary"] = ""
+            if data_provider_error.messageList():
+                layers_by_id[layer_id]["provider_error_summary"] = (
+                    data_provider_error.summary()
+                )
+
             layers_by_id[layer_id]["provider_error_message"] = (
                 data_provider_error.message()
             )
@@ -673,11 +787,11 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                     )
 
                 host = data_provider.uri().host()
-                port = (
-                    int(data_provider.uri().port())
-                    if data_provider.uri().port()
-                    else None
-                )
+
+                port = None
+                if data_provider.uri().port():
+                    port = int(data_provider.uri().port())
+
                 if host and (is_localhost(host, port) or has_ping(host)):
                     layers_by_id[layer_id]["provider_error_summary"] = (
                         f'Unable to connect to host "{host}".'
@@ -730,29 +844,84 @@ def files_list_to_string(files: list[dict[str, Any]]) -> str:
 
 def layers_data_to_string(layers_by_id):
     # Print layer check results
-    table = [
-        [
-            d["name"],
-            f"...{d['id'][-6:]}",
-            d["is_valid"],
-            d["error_code"],
-            d["error_summary"],
-            d["provider_error_summary"],
-        ]
-        for d in layers_by_id.values()
-    ]
+    table = []
+    for d in layers_by_id.values():
+        last_6_layer_id_chars = d["id"][-6:]
+        table.append(
+            [
+                d["name"],
+                f"...{last_6_layer_id_chars}",
+                d["type_name"],
+                d["is_valid"],
+                d["error_code"],
+                d["error_summary"],
+                d["provider_error_summary"],
+            ]
+        )
 
-    return tabulate(
+    output = ""
+    output += tabulate(
         table,
         headers=[
             "Layer Name",
             "Layer Id",
+            "Type",
             "Is Valid",
             "Status",
             "Error Summary",
             "Provider Summary",
         ],
     )
+    output += "\n\nDetailed layers info:"
+
+    for layer_data in layers_by_id.values():
+        output += "\n"
+
+        if not layer_data["is_valid"]:
+            output += f"\nLayer '{layer_data['name']}' ({layer_data['id']}) is invalid."
+
+            continue
+
+        if layer_data["type_name"] != "Vector":
+            output += f"\nLayer '{layer_data['name']}' ({layer_data['id']}) is valid."
+
+            continue
+
+        output += (
+            f"\nLayer '{layer_data['name']}' ({layer_data['id']}) is valid. Fields:\n"
+        )
+
+        fields_data = layer_data.get("fields") or []
+        fields_table = []
+        for f in fields_data:
+            fields_table.append(
+                [
+                    f["name"],
+                    f["type"],
+                    f["length"],
+                    f["precision"],
+                    f["is_not_null"],
+                    f["alias"],
+                ]
+            )
+
+        output += tabulate(
+            fields_table,
+            headers=[
+                "Field Name",
+                "Type",
+                "Length",
+                "Precision",
+                "Is Not Null",
+                "Alias",
+            ],
+        )
+
+        # Avoid dumping potentially very long field values which can affect performance
+        # TODO @suricactus: No need to delete fields once the `Layer` and `LayerField` models are implemented as the data will no longer fatten the `Project` model, see https://app.clickup.com/t/2192114/QF-8219
+        del layer_data["fields"]
+
+    return output
 
 
 class RedactingFormatter(logging.Formatter):
@@ -855,3 +1024,135 @@ def get_qgis_xml_error_context(
                 return f"Unable to parse character: {repr(faulty_char)}. Replaced by '{substitute}' on line {location.line} that starts with: {clean_safe_slice}"
 
     return None
+
+
+def save_project(
+    project: QgsProject, ref_extent: QgsReferencedRectangle | None
+) -> None:
+    """Saves the project with `theMapCanvas`, and if an extent is provided, sets the extent of the map canvas."""
+
+    assert project.fileName()
+
+    extent = QgsRectangle()
+
+    if ref_extent and ref_extent.isFinite():
+        assert ref_extent.crs().authid() == "EPSG:4326"
+
+        safe_source_rect = QgsRectangle(ref_extent)
+        # the CRS bounds are always in WGS 84 CRS, see https://qgis.org/pyqgis/latest/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
+        source_bounds = project.crs().bounds()
+
+        if not source_bounds.isEmpty():
+            safe_source_rect = safe_source_rect.intersect(source_bounds)
+
+        if not safe_source_rect.isEmpty():
+            transform = QgsCoordinateTransform(ref_extent.crs(), project.crs(), project)
+
+            try:
+                extent = transform.transform(safe_source_rect)
+            except QgsCsException as err:
+                logging.warning(
+                    f"Failed to transform {ref_extent.crs().authid()} bbox CRS to {project.crs().authid()} project CRS. Error: {err}."
+                )
+                extent = QgsRectangle()
+
+    def process_project_write(document: QDomDocument) -> None:
+        nl = document.elementsByTagName("qgis")
+        if nl.count() == 0:
+            return
+
+        qgis_node = nl.item(0)
+
+        mapcanvas_node = document.createElement("mapcanvas")
+        mapcanvas_node.setAttribute("name", "theMapCanvas")
+        qgis_node.appendChild(mapcanvas_node)
+
+        ms = QgsMapSettings()
+        ms.setDestinationCrs(project.crs())
+        ms.setOutputSize(QSize(500, 500))
+
+        if extent.isFinite() and not extent.isEmpty():
+            ms.setExtent(extent)
+
+        ms.writeXml(mapcanvas_node, document)
+
+    project.writeProject.connect(process_project_write)
+    project.write(project.fileName())
+
+
+@contextmanager
+def open_qgis_file(filename: str | Path) -> Iterator[TextIO]:
+    """Open a QGIS project file by filename, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
+
+    NOTE there is a very similar sister function with the same name in `docker-app/filestorage/utils.py`
+    """
+    path = Path(filename)
+    suffix = path.suffix.lower()
+
+    with open(filename, "rb") as fh:
+        if suffix == ".qgz":
+            with zipfile.ZipFile(fh) as qgz:
+                expected_qgs_name = f"{path.stem}.qgs"
+                archive_names = qgz.namelist()
+
+                if expected_qgs_name in archive_names:
+                    qgs_filename = expected_qgs_name
+
+                else:
+                    qgs_filename = None
+                    for archive_file in sorted(archive_names):
+                        if Path(archive_file).suffix == ".qgs":
+                            qgs_filename = archive_file
+                            break
+
+                    if not qgs_filename:
+                        raise KeyError(
+                            f"No '.qgs' file found in the '.qgz' archive {filename}"
+                        )
+
+                    logging.info(
+                        f"Expected '.qgs' file '{expected_qgs_name}' not found in '.qgz' archive '{filename}', "
+                        f"found and fallback to '{qgs_filename}' instead!"
+                    )
+
+                assert qgs_filename
+
+                with qgz.open(qgs_filename) as qgs:
+                    with io.TextIOWrapper(qgs, encoding="utf-8") as text_fh:
+                        yield text_fh
+
+            return
+
+        if suffix == ".qgs":
+            with io.TextIOWrapper(fh, encoding="utf-8") as text_fh:
+                yield text_fh
+
+            return
+
+    raise ValueError(f"Unsupported QGIS project file: {filename}")
+
+
+def get_qgis_version_from_project_file(filename: str | Path) -> str:
+    try:
+        with open_qgis_file(filename) as qgis_fh:
+            parser = ET.iterparse(qgis_fh, events=["start"])
+
+            # We assume that the first element is the root `<qgis>`` element,
+            # which should contain the `version` attribute
+            _event, el = next(parser)
+
+            if el.tag != "qgis":
+                raise ValueError(f'Expected root tag "qgis", got "{el.tag}"')
+
+            qgis_version = el.attrib.get("version")
+
+            if not qgis_version:
+                raise ValueError('Missing "version" attribute in QGIS project file')
+
+            version_match = re.match(r"^(\d+\.\d+\.\d+)", qgis_version)
+            if version_match is None:
+                raise ValueError(f'Invalid QGIS version "{qgis_version}"')
+
+            return version_match.group(1)
+    except (zipfile.BadZipFile, ET.ParseError) as err:
+        raise ValueError(str(err)) from err

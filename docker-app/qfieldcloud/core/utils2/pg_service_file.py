@@ -20,5 +20,9 @@ def validate_pg_service_conf(value: str) -> None:
             )
     except ValidationError as err:
         raise err
-    except Exception:
-        raise ValidationError(_("Failed to parse the `.pg_service.conf` file."))
+
+    # Convert any other error to a `ValidationError` to ensure the caller can handle it properly.
+    except Exception as err:  # noqa: BLE001
+        raise ValidationError(
+            _("Failed to parse the `.pg_service.conf` file.")
+        ) from err

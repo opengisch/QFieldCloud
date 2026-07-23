@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Type, TypedDict, cast
+from typing import TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
@@ -20,9 +20,9 @@ from django.utils.translation import gettext as _
 from model_utils.managers import InheritanceManagerMixin
 
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
+from qfieldcloud.subscription.exceptions import NotPremiumPlanException
+from qfieldcloud.subscription.exceptions import TsTzRange
 
-from .exceptions import NotPremiumPlanException
-from .functions import TsTzRange
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,9 @@ class Plan(models.Model):
                 cls.objects.create(
                     code="default_user",
                     display_name="default user (autocreated)",
+                    storage_mb=10,
+                    storage_threshold_warning_bytes=2_000_000,
+                    storage_threshold_critical_bytes=1_000_000,
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.PERSON,
@@ -79,6 +82,9 @@ class Plan(models.Model):
                 cls.objects.create(
                     code="default_org",
                     display_name="default organization (autocreated)",
+                    storage_mb=10,
+                    storage_threshold_warning_bytes=2_000_000,
+                    storage_threshold_critical_bytes=1_000_000,
                     is_default=True,
                     is_public=False,
                     user_type=User.Type.ORGANIZATION,
@@ -130,7 +136,22 @@ class Plan(models.Model):
     # - django-modeltranslation (tried, works well, but maybe overkill as it creates new database columns for each locale)
     # - something else ? there's probably some json based stuff
     display_name = models.CharField(max_length=100)
+
+    # Included storage for the plan.
+    # For seat based plans, this is an amount *per seat*. For all other plans,
+    # it's a simple fixed amount for the entire plan.
     storage_mb = models.PositiveIntegerField(default=10)
+
+    # Remaining bytes thresholds for storage usage warnings.
+    storage_threshold_warning_bytes = models.PositiveBigIntegerField(
+        default=0,
+        help_text=_("Remaining storage threshold warning bytes."),
+    )
+    storage_threshold_critical_bytes = models.PositiveBigIntegerField(
+        default=0,
+        help_text=_("Remaining storage threshold critical bytes."),
+    )
+
     storage_keep_versions = models.PositiveIntegerField(default=10)
     job_minutes = models.PositiveIntegerField(default=10)
     can_add_storage = models.BooleanField(default=False)
@@ -155,14 +176,14 @@ class Plan(models.Model):
     # the plan is set as trial
     is_trial = models.BooleanField(default=False)
 
-    # the plan is metered or licensed. If it metered, it is automatically post-paid.
-    is_metered = models.BooleanField(default=False)
-
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_cancellable = models.BooleanField(default=True)
 
     # the plan is cancellable. If it True, the plan cannot be cancelled.
     is_storage_modifiable = models.BooleanField(default=True)
+
+    # the plan is based around a number of purchased licenses (seats).
+    is_seat_based = models.BooleanField(default=False)
 
     # The maximum number of organizations members that are allowed to be added per organization
     # This constraint is useful for public administrations with limited resources who want to cap
@@ -226,11 +247,55 @@ class Plan(models.Model):
     def storage_bytes(self) -> int:
         return self.storage_mb * 1000 * 1000
 
-    def save(self, *args, **kwargs):
+    def clean_storage_threshold_bytes(self):
+        errors = {}
+
+        if self.storage_threshold_warning_bytes == 0:
+            errors.setdefault("storage_threshold_warning_bytes", []).append(
+                _("Must be greater than 0.")
+            )
+
+        if self.storage_threshold_critical_bytes == 0:
+            errors.setdefault("storage_threshold_critical_bytes", []).append(
+                _("Must be greater than 0.")
+            )
+
+        if (
+            self.storage_threshold_critical_bytes
+            >= self.storage_threshold_warning_bytes
+        ):
+            errors.setdefault("storage_threshold_critical_bytes", []).append(
+                _("Must be less than storage_threshold_warning_bytes.")
+            )
+
+        if self.storage_threshold_critical_bytes >= self.storage_bytes:
+            errors.setdefault("storage_threshold_critical_bytes", []).append(
+                _("Must be less than storage_mb.")
+            )
+
+        if self.storage_threshold_warning_bytes >= self.storage_bytes:
+            errors.setdefault("storage_threshold_warning_bytes", []).append(
+                _("Must be less than storage_mb.")
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def clean(self):
+        if self.storage_mb == 0:
+            raise ValidationError({"storage_mb": _("Must be greater than 0.")})
+
         if self.user_type not in (User.Type.PERSON, User.Type.ORGANIZATION):
             raise ValidationError(
                 'Only "PERSON" and "ORGANIZATION" user types are allowed.'
             )
+
+        self.clean_storage_threshold_bytes()
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
 
         with transaction.atomic():
             # If default is set to true, we unset default on all other plans
@@ -466,6 +531,8 @@ class SubscriptionManager(models.Manager):
 
 
 class AbstractSubscription(models.Model):
+    id: int
+
     class Meta:
         abstract = True
 
@@ -485,6 +552,16 @@ class AbstractSubscription(models.Model):
         Plan,
         on_delete=models.DO_NOTHING,
         related_name="+",
+    )
+
+    # The number of seats that were purchased with this subscription.
+    # This value is set at subscription creation time, typically based on the quantity selected during checkout (for per-seat pricing).
+    purchased_seats = models.IntegerField(
+        default=-1,
+        help_text=_(
+            "Purchased seats for this subscription. "
+            "Used for enforcing seat limits on a per-subscription basis for specific plans."
+        ),
     )
 
     is_frontend_user_editable = False
@@ -544,12 +621,12 @@ class AbstractSubscription(models.Model):
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
-    def active_storage_total_mb(self) -> int:
-        return self.plan.storage_mb + self.active_storage_package_mb
+    def active_storage_total_mb(self) -> float:
+        return float(self.active_storage_total_bytes / 1000 / 1000)
 
     @property
     def active_storage_total_bytes(self) -> int:
-        return self.plan.storage_bytes + self.active_storage_package_bytes
+        return self.included_storage_bytes + self.active_storage_package_bytes
 
     @property
     def active_storage_package(self) -> Package:
@@ -648,6 +725,42 @@ class AbstractSubscription(models.Model):
 
         return self.active_users.count()
 
+    @property
+    def max_allowed_organization_members(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        # seat based plans
+        if self.plan.is_seat_based:
+            return self.purchased_seats
+
+        # all other plans - either unlimited (-1) or capped
+        return self.account.current_subscription.plan.max_organization_members
+
+    @property
+    def organization_members_count(self) -> int:
+        # if non-organization account, then it is always 1 user
+        if not self.account.user.is_organization:
+            return 1
+
+        # +1 for the organization owner
+        return self.account.user.organization.members.count() + 1
+
+    @property
+    def included_storage_bytes(self) -> int:
+        """How much storage is included in the subscription.
+
+        (Before any additional storage packages).
+
+        For seat based plans, this is an amount *per seat*. For all other plans,
+        it's a simple fixed amount for the entire plan.
+        """
+        if self.plan.is_seat_based:
+            return self.purchased_seats * self.plan.storage_bytes
+
+        return self.plan.storage_bytes
+
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
 
@@ -655,7 +768,11 @@ class AbstractSubscription(models.Model):
 
     def get_active_package_quantity(self, package_type: PackageType) -> int:
         package = self.get_active_package(package_type)
-        return package.quantity if package else 0
+
+        if package:
+            return package.quantity
+        else:
+            return 0
 
     def get_future_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.future().filter(type=package_type)  # type: ignore
@@ -814,10 +931,22 @@ class AbstractSubscription(models.Model):
 
         TODO Python 3.11 the actual return type is Self
         """
-        plan = Plan.objects.get(
-            user_type=account.user.type,
-            is_default=True,
+        most_recent_subscription = (
+            cls.objects.filter(account=account)
+            .exclude(active_until__isnull=True)
+            .order_by("active_until")
+            .last()
         )
+
+        # For organization users, use plan from the user's most recent subscription.
+        # Otherwise fall back to default plan for the given user type.
+        if most_recent_subscription and account.user.is_organization:
+            plan = most_recent_subscription.plan
+        else:
+            plan = Plan.objects.get(
+                user_type=account.user.type,
+                is_default=True,
+            )
 
         if account.user.is_organization:
             # NOTE sometimes `account.user` is not an organization, e.g. when setting
@@ -848,7 +977,8 @@ class AbstractSubscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: datetime | None = None,
-    ) -> tuple[Type["AbstractSubscription"] | None, "AbstractSubscription"]:
+        regular_plan: Plan | None = None,
+    ) -> tuple[type["AbstractSubscription"] | None, "AbstractSubscription"]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
@@ -856,6 +986,7 @@ class AbstractSubscription(models.Model):
             plan: the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
             created_by: created by.
             active_since: active since for the subscription.
+            regular_plan: For trials only: The follow up plan that should be used to create the subscription after the trial period.
 
         Returns:
             the created trial subscription if the given plan was a trial and the regular subscription.
@@ -896,11 +1027,13 @@ class AbstractSubscription(models.Model):
                     update_fields=["remaining_trial_organizations"]
                 )
 
-            # the trial plan should be the default plan
-            regular_plan = Plan.objects.get(
-                user_type=account.user.type,
-                is_default=True,
-            )
+            if not regular_plan:
+                # If no particular regular follow up plan was specified, choose
+                # the default plan for the given user type.
+                regular_plan = Plan.objects.get(
+                    user_type=account.user.type,
+                    is_default=True,
+                )
 
             # the end date of the trial is the start date of the regular
             regular_active_since = active_until
@@ -964,10 +1097,17 @@ class AbstractSubscription(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
+    def get_admin_url_prefix(self) -> str:
+        return f"admin:{self._meta.app_label}_{self._meta.model_name}"
+
     def __str__(self):
-        active_storage_total_mb = (
-            self.active_storage_package_mb if hasattr(self, "packages") else 0
-        )
+        if hasattr(self, "packages"):
+            active_storage_total_mb = int(
+                self.active_storage_package_bytes / 1000 / 1000
+            )
+        else:
+            active_storage_total_mb = 0
+
         return f"{self.__class__.__name__} #{self.id} user:{self.account.user.username} plan:{self.plan.code} total:{active_storage_total_mb}MB"
 
 

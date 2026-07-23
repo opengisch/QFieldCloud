@@ -18,7 +18,6 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     PackageJob,
     Person,
-    Project,
     ProjectCollaborator,
     Secret,
     Team,
@@ -32,8 +31,9 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2.jobs import repackage
-from qfieldcloud.core.utils2.storage import get_stored_package_ids
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.filestorage.utils import open_qgis_file
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 
@@ -126,12 +126,18 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             response = self.client.get(f"/api/v1/jobs/{job_id}/")
             payload = response.json()
 
+            # NOTE: it's a bit naive, probably we should check for status here, but this is good enough approximation that the server responded with an error
+            if "code" in payload and "message" in payload:
+                self.fail(
+                    f"Getting the job response returned an error: [{payload['code']}] {payload['message']}",
+                )
+
             if payload["status"] == Job.Status.FINISHED:
                 project.refresh_from_db()
                 response = self.client.get(f"/api/v1/packages/{project.id}/latest/")
                 package_payload = response.json()
 
-                self.assertNotEquals(package_payload.get("code"), "invalid_job")
+                self.assertNotEqual(package_payload.get("code"), "invalid_job")
                 self.assertLess(
                     package_payload["packaged_at"], timezone.now().isoformat()
                 )
@@ -201,8 +207,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -246,14 +251,13 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
             tempdir=tempdir,
         )
 
-        local_file = os.path.join(tempdir, "project_qfield.qgs")
-        with open(local_file) as f:
+        local_file = os.path.join(tempdir, "project_qfield.qgz")
+        with open_qgis_file(local_file, open(local_file, "rb")) as f:
             self.assertEqual(
                 f.readline().strip(),
                 "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>",
@@ -335,16 +339,15 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
             tempdir=tempdir,
         )
 
-        local_file = os.path.join(tempdir, "project_qfield.qgs")
-        with open(local_file) as f:
+        local_file = os.path.join(tempdir, "project_qfield.qgz")
+        with open_qgis_file(local_file, open(local_file, "rb")) as f:
             for line in f:
-                if 'name="theMapCanvas"' in line:
+                if 'name="theMapCanvas"' in str(line):
                     return
 
     def test_download_project_with_broken_layer_datasources(self):
@@ -360,8 +363,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_broken_datasource_qfield.qgs",
-                "project_broken_datasource_qfield_attachments.zip",
+                "project_broken_datasource_qfield.qgz",
             ],
             invalid_layers=["surfacestructure_35131bca_337c_483b_b09e_1cf77b1dfb16"],
         )
@@ -383,8 +385,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -428,8 +429,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -446,7 +446,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.conn.commit()
 
         Secret.objects.create(
-            name="PG_SERVICE_GEODB1",
+            name="PG_SERVICE_TESTDB1",
             type=Secret.Type.PGSERVICE,
             project=self.project1,
             created_by=self.project1.owner,
@@ -462,7 +462,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
         Secret.objects.create(
-            name="PG_SERVICE_GEODB2",
+            name="PG_SERVICE_TESTDB2",
             type=Secret.Type.PGSERVICE,
             project=self.project1,
             created_by=self.project1.owner,
@@ -549,8 +549,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -578,8 +577,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 project=self.project1,
                 expected_files=[
                     "data.gpkg",
-                    "project_qfield.qgs",
-                    "project_qfield_attachments.zip",
+                    "project_qfield.qgz",
                 ],
             )
 
@@ -619,8 +617,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 project=p1,
                 expected_files=[
                     "data.gpkg",
-                    "project_qfield.qgs",
-                    "project_qfield_attachments.zip",
+                    "project_qfield.qgz",
                 ],
             )
 
@@ -639,11 +636,6 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
         self.conn.commit()
 
-        if not self.project1.uses_legacy_storage:
-            self.assertEqual(
-                File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 0
-            )
-
         self.upload_files_and_check_package(
             token=self.token1.key,
             project=self.project1,
@@ -653,8 +645,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -662,26 +653,17 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             "created_at"
         )
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if self.project1.uses_legacy_storage:
-            stored_package_ids = get_stored_package_ids(self.project1)
-            self.assertIn(str(old_package.id), stored_package_ids)
-            self.assertEqual(len(stored_package_ids), 1)
-        else:
-            self.assertGreaterEqual(
-                File.objects.filter(package_job=old_package).count(), 1
-            )
-            self.assertGreaterEqual(
-                File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 1
-            )
+        self.assertGreaterEqual(File.objects.filter(package_job=old_package).count(), 1)
+        self.assertGreaterEqual(
+            File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 1
+        )
 
         self.check_package(
             self.token1.key,
             self.project1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
 
@@ -689,22 +671,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             "created_at"
         )
 
-        # TODO Delete with QF-4963 Drop support for legacy storage
-        if self.project1.uses_legacy_storage:
-            stored_package_ids = get_stored_package_ids(self.project1)
-
-            self.assertNotEqual(old_package.id, new_package.id)
-            self.assertNotIn(str(old_package.id), stored_package_ids)
-            self.assertIn(str(new_package.id), stored_package_ids)
-            self.assertEqual(len(stored_package_ids), 1)
-        else:
-            self.assertEqual(File.objects.filter(package_job=old_package).count(), 0)
-            self.assertGreaterEqual(
-                File.objects.filter(package_job=new_package).count(), 1
-            )
-            self.assertGreaterEqual(
-                File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 1
-            )
+        self.assertEqual(File.objects.filter(package_job=old_package).count(), 0)
+        self.assertGreaterEqual(File.objects.filter(package_job=new_package).count(), 1)
+        self.assertGreaterEqual(
+            File.objects.filter(file_type=File.FileType.PACKAGE_FILE).count(), 1
+        )
 
     def test_package_and_project_file_attachments(self):
         # upload attachments to the project
@@ -719,8 +690,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
             expected_files=[
                 "data.gpkg",
-                "simple_bumblebees_qfield.qgs",
-                "simple_bumblebees_qfield_attachments.zip",
+                "simple_bumblebees_qfield.qgz",
                 "DCIM/1.jpg",
                 "DCIM/2.jpg",
             ],
@@ -764,64 +734,45 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         wait_for_project_ok_status(self.project1)
         self.project1.refresh_from_db()
 
-        if self.project1.uses_legacy_storage:
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            stored_package_ids = get_stored_package_ids(self.project1)
+        package_files_p1_qs = File.objects.filter(
+            project=self.project1,
+            file_type=File.FileType.PACKAGE_FILE,
+            package_job=package_job_1,
+        )
 
-            self.assertIn(str(package_job_1.id), stored_package_ids)
-            self.assertIn(str(other_user_package_job.id), stored_package_ids)
-            self.assertEquals(len(stored_package_ids), 2)
-
-        else:
-            package_files_p1_qs = File.objects.filter(
-                project=self.project1,
-                file_type=File.FileType.PACKAGE_FILE,
-                package_job=package_job_1,
-            )
-
-            self.assertEquals(package_files_p1_qs.count(), 3)
+        self.assertEqual(package_files_p1_qs.count(), 2)
 
         # repackage the project for the same user.
         package_job_2 = repackage(self.project1, self.user1)
         wait_for_project_ok_status(self.project1)
         self.project1.refresh_from_db()
 
-        if self.project1.uses_legacy_storage:
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            stored_package_ids = get_stored_package_ids(self.project1)
+        # make sure old package files are deleted.
+        package_files_p1_qs = File.objects.filter(
+            project=self.project1,
+            file_type=File.FileType.PACKAGE_FILE,
+            package_job=package_job_1,
+        )
 
-            self.assertNotIn(str(package_job_1.id), stored_package_ids)
-            self.assertIn(str(package_job_2.id), stored_package_ids)
-            self.assertIn(str(other_user_package_job.id), stored_package_ids)
-            self.assertEquals(len(stored_package_ids), 2)
+        self.assertEqual(package_files_p1_qs.count(), 0)
 
-        else:
-            # make sure old package files are deleted.
-            package_files_p1_qs = File.objects.filter(
-                project=self.project1,
-                file_type=File.FileType.PACKAGE_FILE,
-                package_job=package_job_1,
-            )
+        # make sure new package files are there.
+        package_files_p2_qs = File.objects.filter(
+            project=self.project1,
+            file_type=File.FileType.PACKAGE_FILE,
+            package_job=package_job_2,
+        )
 
-            self.assertEquals(package_files_p1_qs.count(), 0)
+        self.assertEqual(package_files_p2_qs.count(), 2)
 
-            # make sure new package files are there.
-            package_files_p2_qs = File.objects.filter(
-                project=self.project1,
-                file_type=File.FileType.PACKAGE_FILE,
-                package_job=package_job_2,
-            )
+        # make sure the other user's package files are there.
+        other_user_package_files_qs = File.objects.filter(
+            project=self.project1,
+            file_type=File.FileType.PACKAGE_FILE,
+            package_job=other_user_package_job,
+        )
 
-            self.assertEquals(package_files_p2_qs.count(), 3)
-
-            # make sure the other user's package files are there.
-            other_user_package_files_qs = File.objects.filter(
-                project=self.project1,
-                file_type=File.FileType.PACKAGE_FILE,
-                package_job=other_user_package_job,
-            )
-
-            self.assertEquals(other_user_package_files_qs.count(), 3)
+        self.assertEqual(other_user_package_files_qs.count(), 2)
 
     def test_needs_repackaging(self):
         # 0. Create two users, where one owns the project and the other is a project collaborator.
@@ -864,8 +815,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)
@@ -883,8 +833,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)
@@ -957,8 +906,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)
@@ -975,8 +923,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             p1,
             [
                 "data.gpkg",
-                "project_qfield.qgs",
-                "project_qfield_attachments.zip",
+                "project_qfield.qgz",
             ],
         )
         wait_for_project_ok_status(p1)
@@ -1051,3 +998,34 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertIn(package_job_owner, latest_package_jobs_qs)
         self.assertIn(package_job_admin, latest_package_jobs_qs)
         self.assertIn(package_job_member, latest_package_jobs_qs)
+
+    def test_public_project_non_member_latest_package_jobs(self):
+        """Non-members who trigger package jobs on public projects must be
+        included in latest_package_jobs so their files are not deleted by cleanup."""
+
+        owner = Person.objects.create_user(username="project_owner")
+
+        project = Project.objects.create(
+            name="public_project",
+            owner=owner,
+            is_public=True,
+        )
+
+        non_member = Person.objects.create_user(username="non_member")
+
+        owner_package_job = PackageJob.objects.create(
+            project=project,
+            created_by=owner,
+            triggered_by=owner,
+        )
+
+        non_member_package_job = PackageJob.objects.create(
+            project=project,
+            created_by=non_member,
+            triggered_by=non_member,
+        )
+
+        latest_package_jobs_qs = project.latest_package_jobs()
+
+        self.assertIn(owner_package_job, latest_package_jobs_qs)
+        self.assertIn(non_member_package_job, latest_package_jobs_qs)

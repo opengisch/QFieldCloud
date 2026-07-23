@@ -1,13 +1,17 @@
 import base64
+import mimetypes
 import os
 from abc import ABC
+from typing import Any
 
 import requests
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
-from storages.backends.s3boto3 import S3Boto3Storage
+from storages.backends.s3 import S3Storage
+
+from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 
 
 class QfcBackendStorageMixin(ABC):
@@ -31,7 +35,7 @@ class QfcBackendStorageMixin(ABC):
         pass
 
 
-class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Boto3Storage):
+class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
     def check_status(self) -> bool:
         """Checks if the S3 bucket is reachable.
 
@@ -41,7 +45,8 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Boto3Storage):
         try:
             bucket_name = self.bucket.name
             self.bucket.meta.client.head_bucket(Bucket=bucket_name)
-        except Exception:
+        # Boto3 can raise any kind of error, so we catch all exceptions here to ensure the method returns False if anything goes wrong during the check.
+        except Exception:  # noqa: BLE001
             return False
 
         return True
@@ -54,6 +59,36 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Boto3Storage):
             response: HTTP redirect response to patch.
         """
         pass
+
+    def _get_write_parameters(
+        self, name: str, content: ContentFile | None = None
+    ) -> dict[str, Any]:
+        params = super()._get_write_parameters(name, content)
+
+        # Detect content type from the original filename embedded in the
+        # versioned S3 path, so it can be properly set in the object storage
+        # metadata and later returned as a `Content-Type` header when
+        # downloading the object.
+        # Versioned paths look like:
+        #   `projects/<uuid>/files/DCIM/photo.jpg/v20260317162354-512bd29b`
+        # Note the last part of the versioned name has the version timestamp
+        # and a random UUID fragment, which prevents `mimetypes.guess_type`
+        # from guessing a proper content type, as it uses the file extension
+        # to do so. Without this fix, the parent class's
+        # `_get_write_parameters` would set `ContentType` to `None`.
+        parts = name.rsplit("/", 1)
+        base_name = parts[-1]
+
+        if len(parts) == 2 and VERSION_SUFFIX_REGEX.fullmatch(parts[-1]):
+            base_name = parts[0].rsplit("/", 1)[-1]
+
+        mime_type, encoding = mimetypes.guess_type(base_name)
+        if mime_type:
+            params["ContentType"] = mime_type
+            if encoding:
+                params["ContentEncoding"] = encoding
+
+        return params
 
 
 class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
@@ -259,3 +294,15 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         b64_auth = base64.b64encode(self.basic_auth.encode()).decode()
         basic_auth = f"Basic {b64_auth}"
         response["webdav_auth"] = basic_auth
+
+    def get_available_name(self, name: str, max_length: int | None = None) -> str:
+        """Returns a filename that is available on the configured webdav storage.
+
+        Arguments:
+            name: desired relative path of the file on the webdav server.
+            max_length: maximum length of the filename (not used)."""
+
+        if self.is_name_available(name, max_length):
+            return super().get_available_name(name, max_length)
+
+        return name

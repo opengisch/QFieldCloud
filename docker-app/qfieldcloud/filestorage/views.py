@@ -2,13 +2,13 @@ import logging
 from uuid import UUID
 
 from django.contrib.staticfiles.storage import staticfiles_storage
+from django.core import signing
 from django.db.models import Q, QuerySet
-from django.http.response import HttpResponse, HttpResponseBase
+from django.http import Http404
+from django.http.response import HttpResponseBase
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import (
-    OpenApiParameter,
     OpenApiTypes,
     extend_schema,
     extend_schema_view,
@@ -20,32 +20,21 @@ from rest_framework.response import Response
 from qfieldcloud.core import (
     pagination,
     permissions_utils,
-    utils2,
 )
 from qfieldcloud.core.models import (
-    Project,
     UserAccount,
-)
-from qfieldcloud.core.views.files_views import (
-    DownloadPushDeleteFileView as LegacyFileCrudView,
-)
-from qfieldcloud.core.views.files_views import (
-    ListFilesView as LegacyFileListView,
-)
-from qfieldcloud.core.views.files_views import (
-    ProjectMetafilesView as LegacyProjectMetaFileReadView,
 )
 from qfieldcloud.filestorage.models import (
     File,
 )
-
-from .serializers import FileWithVersionsSerializer
-from .view_helpers import (
+from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
+from qfieldcloud.filestorage.view_helpers import (
     delete_project_file_version,
     download_field_file,
     download_project_file_version,
     upload_project_file_version,
 )
+from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -84,16 +73,6 @@ class FileCrudViewPermissions(permissions.BasePermission):
     get=extend_schema(
         description="Get all the project's file versions",
         responses={200: serializers.ListSerializer(child=FileWithVersionsSerializer())},
-        parameters=[
-            OpenApiParameter(
-                name="skip_metadata",
-                type=OpenApiTypes.INT,
-                required=False,
-                default=0,
-                enum=[1, 0],
-                description="Skip obtaining file metadata (e.g. `sha256`). Makes responses much faster. In the future `skip_metadata=1` might be default behaviour.",
-            ),
-        ],
     ),
 )
 class FileListView(generics.ListAPIView):
@@ -122,6 +101,28 @@ class FileListView(generics.ListAPIView):
         )
 
         return qs
+
+
+@extend_schema_view(
+    get=extend_schema(
+        description="Get the project's file metadata",
+        responses={200: FileWithVersionsSerializer()},
+    ),
+)
+class FileMetadataView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated, FileListViewPermissions]
+    serializer_class = FileWithVersionsSerializer
+    lookup_field = "name"
+    lookup_url_kwarg = "filename"
+
+    def get_queryset(self):
+        project_id = self.kwargs["project_id"]
+
+        return (
+            File.objects.select_related("project", "latest_version")
+            .prefetch_related("versions")
+            .filter(project_id=project_id, file_type=File.FileType.PROJECT_FILE)
+        )
 
 
 class FileCrudView(views.APIView):
@@ -206,7 +207,7 @@ class AvatarFileReadView(views.APIView):
     permission_classes = []
 
     def get(
-        self, request: Request, username: str, filename: str = ""
+        self, request: Request, public_id: str, filename: str = ""
     ) -> HttpResponseBase:
         """Returns an internal redirect within nginx to serve the `avatar` file directly from the Object Storage.
 
@@ -219,7 +220,14 @@ class AvatarFileReadView(views.APIView):
         Returns:
             internal redirect to the Object Storage
         """
-        useraccount = get_object_or_404(UserAccount, user__username=username)
+
+        try:
+            data = signing.loads(public_id)
+            user_id = data["id"]
+        except signing.BadSignature:
+            raise Http404("Invalid avatar ID.")
+
+        useraccount = get_object_or_404(UserAccount, user__id=user_id)
 
         if useraccount.avatar:
             return download_field_file(
@@ -228,115 +236,4 @@ class AvatarFileReadView(views.APIView):
                 str(useraccount.avatar),
             )
         else:
-            if useraccount.legacy_avatar_uri:
-                return utils2.storage.file_response(
-                    request._request,
-                    useraccount.legacy_avatar_uri,
-                )
-            else:
-                return redirect(staticfiles_storage.url("logo.svg"))
-
-
-@csrf_exempt
-def compatibility_file_list_view(
-    request: Request, *args, **kwargs
-) -> Response | HttpResponse:
-    """
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
-    project_id: UUID = kwargs["project_id"]
-    view_kwargs = kwargs.pop("view_kwargs", {})
-
-    try:
-        project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
-        return FileListView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-    if project.uses_legacy_storage:
-        # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
-        kwargs["projectid"] = kwargs.pop("project_id")
-
-        logger.debug(f"Project {project_id=} will be using the legacy file management.")
-
-        return LegacyFileListView.as_view(**view_kwargs)(request, *args, **kwargs)
-    else:
-        logger.debug(
-            f"Project {project_id=} will be using the regular file management."
-        )
-
-        return FileListView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-
-@csrf_exempt
-def compatibility_file_crud_view(
-    request: Request, *args, **kwargs
-) -> Response | HttpResponse:
-    """
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
-    project_id: UUID = kwargs["project_id"]
-    view_kwargs = kwargs.pop("view_kwargs", {})
-
-    try:
-        project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
-        return FileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-    if project.uses_legacy_storage:
-        # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
-        kwargs["projectid"] = kwargs.pop("project_id")
-
-        logger.debug(f"Project {project_id=} will be using the legacy file management.")
-
-        return LegacyFileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
-    else:
-        logger.debug(
-            f"Project {project_id=} will be using the regular file management."
-        )
-
-        return FileCrudView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-
-@csrf_exempt
-def compatibility_project_meta_file_read_view(
-    request: Request, *args, **kwargs
-) -> Response | HttpResponse:
-    """
-    Todo:
-        * Delete with QF-4963 Drop support for legacy storage
-    """
-    # let's assume that `kwargs["project_id"]` will no throw a `KeyError`
-    project_id: UUID = kwargs["project_id"]
-    view_kwargs = kwargs.pop("view_kwargs", {})
-
-    try:
-        project = Project.objects.get(id=project_id)
-    except Project.DoesNotExist:
-        # if the project does not exist, we just fallback to the new view, which will return JSON formatted 404 later
-        return ProjectMetaFileReadView.as_view(**view_kwargs)(request, *args, **kwargs)
-
-    if project.uses_legacy_storage:
-        # rename the `project_id` to previously used `projectid`, so we don't change anything in the legacy code
-        kwargs["projectid"] = kwargs.pop("project_id")
-        # hardcode the thumbnail file name
-        kwargs["filename"] = "thumbnail.png"
-
-        logger.debug(
-            f"Project {project_id=} will be using the legacy file management for meta files."
-        )
-
-        return LegacyProjectMetaFileReadView.as_view(**view_kwargs)(
-            request, *args, **kwargs
-        )
-    else:
-        logger.debug(
-            f"Project {project_id=} will be using the regular file management for meta files."
-        )
-
-        return ProjectMetaFileReadView.as_view(**view_kwargs)(request, *args, **kwargs)
+            return redirect(staticfiles_storage.url("logo.svg"))

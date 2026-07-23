@@ -9,49 +9,43 @@ attrs==24.2.0
     #   jsonschema
     #   referencing
 certifi==2024.8.30
-    # via
-    #   qfieldcloud-sdk
-    #   requests
+    # via requests
 charset-normalizer==3.3.2
-    # via
-    #   qfieldcloud-sdk
-    #   requests
+    # via requests
 click==8.1.7
     # via qfieldcloud-sdk
-idna==3.8
-    # via
-    #   qfieldcloud-sdk
-    #   requests
-jsonschema==4.25.1
+idna==3.16
+    # via requests
+jsonschema==4.26.0
     # via -r requirements.in
 jsonschema-specifications==2023.12.1
     # via jsonschema
 pathvalidate==3.3.1
     # via qfieldcloud-sdk
-qfieldcloud-sdk==0.11.0
+qfieldcloud-sdk==0.16.0
     # via -r requirements.in
 referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.1
     # via
     #   -r requirements.in
     #   qfieldcloud-sdk
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via qfieldcloud-sdk
-rpds-py==0.20.0
+rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-tabulate==0.9.0
+tabulate==0.10.0
     # via -r requirements.in
 tqdm==4.66.5
     # via qfieldcloud-sdk
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via -r requirements.in
-urllib3==2.5.0
+urllib3==2.7.0
     # via
     #   qfieldcloud-sdk
     #   requests

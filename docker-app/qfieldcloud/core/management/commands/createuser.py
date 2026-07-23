@@ -36,6 +36,8 @@ class Command(BaseCommand):
                 print(f"User {username} has been successfully created\n")
             else:
                 print(f"User {username} already exists\n")
-        except Exception as e:
-            print("ERROR: Unable to create user\n%s\n" % e)
+
+        # Catch any other unknown error and print it
+        except Exception as err:  # noqa: BLE001
+            print("ERROR: Unable to create user\n%s\n" % err)
             exit(1)

@@ -1,22 +1,22 @@
 import json
 import logging
 import shutil
-import sys
 import tempfile
-import traceback
 import uuid
+from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Iterable
+from traceback import TracebackException
+from typing import Any
 
 import docker
+import docker.client
 import docker.errors
 import requests
 import sentry_sdk
 from constance import config
 from django.conf import settings
-from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from docker.models.containers import Container
@@ -30,8 +30,8 @@ from qfieldcloud.core.models import (
     ProcessProjectfileJob,
     Secret,
 )
-from qfieldcloud.core.utils import get_qgis_project_file
-from qfieldcloud.core.utils2 import packages, storage
+from qfieldcloud.core.utils2 import packages
+from qfieldcloud.project.utils.project_utils import get_qgis_major_version
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -49,9 +49,14 @@ RETRY_COUNT = 5
 TIMEOUT_ERROR_EXIT_CODE = -1
 DOCKER_SIGKILL_EXIT_CODE = 137
 TMP_FILE = Path("/tmp")
+TRANSFORMATION_GRIDS_PATH = "/transformation_grids"
+"""Path inside the worker container where the transformation grids volume `settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME` is mounted."""
+
+TOKEN_EXPIRATION_TIME_BUFFER_S = 60
+"""Extra time in seconds for the dedicated worker token to keep the token valid, in addition to `JobRun.container_timeout_secs`. Useful when the worker takes longer to start."""
 
 
-class QgisException(Exception):
+class JobException(Exception):
     pass
 
 
@@ -60,6 +65,12 @@ class JobRun:
     job_class = Job
     command = []
 
+    debug_qgis_container_is_enabled = False
+    """Whether the QGIS container is started with `debugpy` enabled, so that a debugger can attach to it."""
+
+    qgis_images: dict[int, str] = {}
+    """Mapping of QGIS major version to the corresponding QGIS Docker image name, e.g. `{"qgis3": "qfieldcloud-qgis3"}`."""
+
     def __init__(self, job_id: str) -> None:
         try:
             self.job_id = job_id
@@ -67,10 +78,11 @@ class JobRun:
             self.shared_tempdir = Path(tempfile.mkdtemp(dir=TMP_FILE))
         except Exception as err:
             feedback: dict[str, Any] = {}
-            (_type, _value, tb) = sys.exc_info()
+            tb = TracebackException.from_exception(err)
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
-            feedback["error_stack"] = traceback.format_tb(tb)
+            feedback["error_class"] = type(err).__name__
+            feedback["error_stack"] = "".join(tb.format())
 
             msg = "Uncaught exception when constructing a JobRun:\n"
             msg += json.dumps(msg, indent=2, sort_keys=True)
@@ -87,6 +99,11 @@ class JobRun:
             settings.DEBUG and settings.DEBUG_QGIS_DEBUGPY_PORT
         )
 
+        self.qgis_images = {
+            3: settings.QFIELDCLOUD_QGIS3_IMAGE_NAME,
+            4: settings.QFIELDCLOUD_QGIS4_IMAGE_NAME,
+        }
+
         if self.debug_qgis_container_is_enabled:
             logger.warning(
                 f"Debugging is enabled for job {self.job.id}. The worker will wait for debugger to attach on port {settings.DEBUG_QGIS_DEBUGPY_PORT}."
@@ -99,6 +116,7 @@ class JobRun:
             context[f"project__{key}"] = value
 
         context["project__id"] = self.job.project.id
+        context["project__the_qgis_file_name"] = self.job.project.the_qgis_file_name
 
         return context
 
@@ -124,8 +142,14 @@ class JobRun:
     def get_volumes(self) -> list[str]:
         volumes = [
             f"{str(self.shared_tempdir)}:/io/:rw",
-            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:/transformation_grids:ro",
+            f"{settings.QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME}:{TRANSFORMATION_GRIDS_PATH}:ro",
         ]
+
+        # If the env configuration provides a custom CA, mount it in the worker.
+        if Path(settings.QFIELDCLOUD_CUSTOM_CA_FILENAME).exists():
+            volumes.append(
+                f"{settings.QFIELDCLOUD_CUSTOM_CA_VOLUME_NAME}:{settings.QFIELDCLOUD_CUSTOM_CA_DIR}:ro"
+            )
 
         return volumes
 
@@ -135,8 +159,12 @@ class JobRun:
         return ports
 
     def get_environment(self) -> dict[str, str]:
-        environment = {}
         extra_envvars = {}
+
+        if Path(settings.QFIELDCLOUD_CUSTOM_CA_FILENAME).exists():
+            extra_envvars["REQUESTS_CA_BUNDLE"] = (
+                settings.QFIELDCLOUD_CUSTOM_CA_FILENAME
+            )
 
         pgservice_file_contents = ""
         for secret in Secret.objects.for_user_and_project(  # type:ignore
@@ -149,10 +177,14 @@ class JobRun:
             else:
                 raise NotImplementedError(f"Unknown secret type: {secret.type}")
 
+        # expire the token a bit after the container timeout to avoid edge cases
+        token_expires_at = timezone.now() + timedelta(
+            seconds=self.container_timeout_secs + TOKEN_EXPIRATION_TIME_BUFFER_S
+        )
         token = AuthToken.objects.create(
             user=self.job.created_by,
             client_type=AuthToken.ClientType.WORKER,
-            expires_at=timezone.now() + timedelta(seconds=self.container_timeout_secs),
+            expires_at=token_expires_at,
         )
 
         environment = {
@@ -162,11 +194,27 @@ class JobRun:
             "QFIELDCLOUD_TOKEN": token.key,
             "QFIELDCLOUD_URL": settings.QFIELDCLOUD_WORKER_QFIELDCLOUD_URL,
             "JOB_ID": self.job_id,
-            "PROJ_DOWNLOAD_DIR": "/transformation_grids",
+            "PROJ_DOWNLOAD_DIR": TRANSFORMATION_GRIDS_PATH,
             "QT_QPA_PLATFORM": "offscreen",
         }
 
         return environment
+
+    def get_qgis_image(self) -> str:
+        if self.job.project.qgis_version:
+            qgis_major_project_version = get_qgis_major_version(
+                self.job.project.qgis_version
+            )
+        else:
+            # The safe fallback is to use QGIS 3 until 4.2.x get's widely adopted
+            qgis_major_project_version = 3
+
+        if qgis_major_project_version not in self.qgis_images:
+            raise JobException(
+                f"Unsupported QGIS major version {qgis_major_project_version} for project {self.job.project.id} stored with {self.job.project.qgis_version}."
+            )
+
+        return self.qgis_images[qgis_major_project_version]
 
     def before_docker_run(self) -> None:
         pass
@@ -228,13 +276,15 @@ class JobRun:
 
                 try:
                     self.job.refresh_from_db()
-                except Exception as err:
+                except Job.DoesNotExist as err:
                     logger.error(
                         "Failed to update job status, probably does not exist in the database.",
                         exc_info=err,
                     )
+
                     # No further action required, probably received by wrapper's autoclean mechanism when the `Project` is deleted
                     return
+
             elif exit_code == TIMEOUT_ERROR_EXIT_CODE:
                 feedback["error"] = "Worker timeout error."
                 feedback["error_type"] = "TIMEOUT"
@@ -248,14 +298,17 @@ class JobRun:
 
                         if feedback.get("error"):
                             feedback["error_origin"] = "container"
-                except Exception as err:
+
+                # Global error handler when handling the feedback from a job
+                except Exception as err:  # noqa: BLE001
                     if not isinstance(feedback, dict):
                         feedback = {"error_feedback": feedback}
 
-                    (_type, _value, tb) = sys.exc_info()
+                    tb = TracebackException.from_exception(err)
                     feedback["error"] = str(err)
                     feedback["error_origin"] = "worker_wrapper"
-                    feedback["error_stack"] = traceback.format_tb(tb)
+                    feedback["error_class"] = type(err).__name__
+                    feedback["error_stack"] = "".join(tb.format())
 
             feedback["container_exit_code"] = exit_code
 
@@ -269,7 +322,8 @@ class JobRun:
 
                 try:
                     self.after_docker_exception()
-                except Exception as err:
+                # `after_docker_exception` can raise anything, as it is developed externally
+                except Exception as err:  # noqa: BLE001
                     logger.error(
                         "Failed to run the `after_docker_exception` handler.",
                         exc_info=err,
@@ -288,11 +342,13 @@ class JobRun:
             self.job.status = Job.Status.FINISHED
             self.job.save(update_fields=["status", "finished_at"])
 
-        except Exception as err:
-            (_type, _value, tb) = sys.exc_info()
+        # Global error handler when handling a job
+        except Exception as err:  # noqa: BLE001
+            tb = TracebackException.from_exception(err)
             feedback["error"] = str(err)
             feedback["error_origin"] = "worker_wrapper"
-            feedback["error_stack"] = traceback.format_tb(tb)
+            feedback["error_class"] = type(err).__name__
+            feedback["error_stack"] = "".join(tb.format())
 
             if isinstance(err, requests.exceptions.ReadTimeout):
                 feedback["error_timeout"] = True
@@ -308,14 +364,15 @@ class JobRun:
 
                 try:
                     self.after_docker_exception()
-                except Exception as err:
+                # `after_docker_exception` can raise anything, as it is developed externally
+                except Exception as err:  # noqa: BLE001
                     logger.error(
                         "Failed to run the `after_docker_exception` handler.",
                         exc_info=err,
                     )
 
                 self.job.save(update_fields=["status", "feedback", "finished_at"])
-            except Exception as err:
+            except IntegrityError as err:
                 logger.error(
                     "Failed to handle exception and update the job status", exc_info=err
                 )
@@ -333,16 +390,15 @@ class JobRun:
         if settings.DEBUG:
             if self.debug_qgis_container_is_enabled:
                 # NOTE the `qgis` container must expose the same port as the one used by `debugpy`,
-                # otherwise the vscode deubgger won't be able to connect
+                # otherwise the vscode debugger won't be able to connect
                 # NOTE the port must be passed here and not in the `docker-compose` file,
                 # because the `qgis` container is started with docker in docker and the `docker-compose`
                 # configuration is valid only for the brief moment when the stack is built and started,
                 # but not when new `qgis` containers are started dynamically by the worker wrapper
-                ports.update(
-                    {
-                        f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
-                    }
-                )
+                ports = {
+                    **ports,
+                    f"{settings.DEBUG_QGIS_DEBUGPY_PORT}/tcp": settings.DEBUG_QGIS_DEBUGPY_PORT,
+                }
 
                 logger.debug(
                     f"Exposing ports from the qgis container for debugging: {ports=}"
@@ -351,17 +407,16 @@ class JobRun:
             if settings.DEBUG_QGIS_WORKER_HOST_PATH:
                 debug_host_path = Path(settings.DEBUG_QGIS_WORKER_HOST_PATH)
 
-                volumes.extend(
-                    [
-                        # allow local development for `docker-qgis`
-                        f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
-                        f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
-                        # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}`
-                        f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync.py:ro",
-                        # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}`"
-                        f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python.py:ro",
-                    ]
-                )
+                volumes = [
+                    *volumes,
+                    # allow local development for `docker-qgis`
+                    f"{debug_host_path.joinpath('qfc_worker')}:/usr/src/app/qfc_worker:ro",
+                    f"{debug_host_path.joinpath('entrypoint.py')}:/usr/src/app/entrypoint.py:ro",
+                    # allow local development for `libqfieldsync` if host directory present; requires `PYTHONPATH=/libqfieldsync:${PYTHONPATH}` within the worker container.
+                    f"{debug_host_path.joinpath('libqfieldsync')}:/libqfieldsync:ro",
+                    # allow local development for `qfieldcloud-sdk-python` if host directory present; requires `PYTHONPATH=/qfieldcloud-sdk-python:${PYTHONPATH}` within the worker container.
+                    f"{debug_host_path.joinpath('qfieldcloud-sdk-python')}:/qfieldcloud-sdk-python:ro",
+                ]
 
                 logger.debug(
                     f"Mounting host path into qgis container for debugging: {volumes=}"
@@ -374,7 +429,7 @@ class JobRun:
         self.job.save(update_fields=["docker_started_at"])
 
         container: Container = client.containers.run(  # type:ignore
-            settings.QFIELDCLOUD_QGIS_IMAGE_NAME,
+            self.get_qgis_image(),
             command,
             environment=environment,
             ports=ports,
@@ -414,7 +469,7 @@ class JobRun:
                     b"Job has been cancelled by parent process!",
                 )
 
-        except Exception as err:
+        except requests.exceptions.ConnectionError as err:
             logger.exception("Timeout error.", exc_info=err)
 
         # `docker_started_at`/`docker_finished_at` tracks the time spent on docker only
@@ -611,44 +666,26 @@ class ProcessProjectfileJobRun(JobRun):
     def get_context(self, *args) -> dict[str, Any]:
         context = super().get_context(*args)
 
-        if not context.get("project__the_qgis_file_name"):
-            context["project__the_qgis_file_name"] = get_qgis_project_file(
-                context["project__id"]
-            )
+        assert context.get("project__the_qgis_file_name")
 
         return context
 
     def after_docker_run(self) -> None:
+        update_fields = ["project_details"]
         project = self.job.project
         project.project_details = self.job.feedback["outputs"]["project_details"][
             "project_details"
         ]
 
-        thumbnail_filename = self.shared_tempdir.joinpath("thumbnail.png")
+        # Since the `Project.qgis_version` field is newly added, we want to backfill it for old projects that didn't have it set,
+        # but the `process_projectfile` job can detect the QGIS version from the project file and return it in the feedback, we can set it here.
+        if self.job.project.qgis_version is None and project.project_details.get(
+            "qgis_version"
+        ):
+            project.qgis_version = project.project_details["qgis_version"]
+            update_fields.append("qgis_version")
 
-        with open(thumbnail_filename, "rb") as f:
-            # TODO Delete with QF-4963 Drop support for legacy storage
-            if project.uses_legacy_storage:
-                legacy_thumbnail_uri = storage.upload_project_thumbail(
-                    project, f, "image/png", "thumbnail"
-                )
-                project.legacy_thumbnail_uri = (
-                    project.legacy_thumbnail_uri or legacy_thumbnail_uri
-                )
-            else:
-                project.thumbnail = ContentFile(f.read(), "dummy_thumbnail_name.png")
-
-        project.save(
-            update_fields=(
-                "project_details",
-                "legacy_thumbnail_uri",
-                "thumbnail",
-            )
-        )
-
-        # for non-legacy storage, keep only one thumbnail version if so.
-        if not project.uses_legacy_storage and project.thumbnail:
-            storage.purge_previous_thumbnails_versions(project)
+        project.save(update_fields=update_fields)
 
     def after_docker_exception(self) -> None:
         project = self.job.project
@@ -656,6 +693,14 @@ class ProcessProjectfileJobRun(JobRun):
         if project.project_details is not None:
             project.project_details = None
             project.save(update_fields=("project_details",))
+
+
+class CreateProjectJobRun(JobRun):
+    job_class = Job
+    command = [
+        "create_project",
+        "%(project__id)s",
+    ]
 
 
 def cancel_orphaned_workers() -> None:

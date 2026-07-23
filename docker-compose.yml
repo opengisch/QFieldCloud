@@ -16,6 +16,7 @@ services:
       gunicorn
         qfieldcloud.wsgi:application
         --bind 0.0.0.0:8000
+        --no-control-socket
         --timeout ${GUNICORN_TIMEOUT_S}
         --max-requests ${GUNICORN_MAX_REQUESTS}
         --workers ${GUNICORN_WORKERS}
@@ -23,8 +24,10 @@ services:
     volumes:
       - static_volume:/usr/src/app/staticfiles
       - media_volume:/usr/src/app/mediafiles/
-    environment:
+      - custom_ca_certificates:/etc/ssl/custom_certs/:ro
+    environment: &django-env
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
       SECRET_KEY: ${SECRET_KEY}
       SALT_KEY: ${SALT_KEY}
@@ -49,6 +52,9 @@ services:
       STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL:-}
       STORAGES: ${STORAGES}
       STORAGES_PROJECT_DEFAULT_STORAGE: ${STORAGES_PROJECT_DEFAULT_STORAGE:-}
+      STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE: ${STORAGES_PROJECT_DEFAULT_ATTACHMENTS_STORAGE:-}
+      STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED: ${STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED:-}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
       QFIELDCLOUD_DEFAULT_NETWORK: ${QFIELDCLOUD_DEFAULT_NETWORK:-${COMPOSE_PROJECT_NAME}_default}
       QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED: ${QFIELDCLOUD_PASSWORD_LOGIN_IS_ENABLED}
       ACCOUNT_EMAIL_VERIFICATION: ${ACCOUNT_EMAIL_VERIFICATION}
@@ -60,9 +66,9 @@ services:
       EMAIL_HOST_USER: ${EMAIL_HOST_USER}
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS}
       # Settings below are specific to worker_wrapper
-      # TODO : move this to the worker_wrapper service and keep things DRY (yaml syntax expert needed)
-      TMP_DIRECTORY: ${TMP_DIRECTORY}
       QFIELDCLOUD_HOST: ${QFIELDCLOUD_HOST}
       QFIELDCLOUD_ADMIN_URI: ${QFIELDCLOUD_ADMIN_URI}
       QFIELDCLOUD_WORKER_QFIELDCLOUD_URL: ${QFIELDCLOUD_WORKER_QFIELDCLOUD_URL}
@@ -72,7 +78,8 @@ services:
       QFIELDCLOUD_USE_I18N: ${QFIELDCLOUD_USE_I18N}
       QFIELDCLOUD_DEFAULT_LANGUAGE: ${QFIELDCLOUD_DEFAULT_LANGUAGE}
       QFIELDCLOUD_DEFAULT_TIME_ZONE: ${QFIELDCLOUD_DEFAULT_TIME_ZONE}
-      QFIELDCLOUD_QGIS_IMAGE_NAME: ${QFIELDCLOUD_QGIS_IMAGE_NAME:-${COMPOSE_PROJECT_NAME}-qgis}
+      QFIELDCLOUD_QGIS3_IMAGE_NAME: ${QFIELDCLOUD_QGIS3_IMAGE_NAME:-${COMPOSE_PROJECT_NAME}-qgis3}
+      QFIELDCLOUD_QGIS4_IMAGE_NAME: ${QFIELDCLOUD_QGIS4_IMAGE_NAME:-${COMPOSE_PROJECT_NAME}-qgis4}
       QFIELDCLOUD_TRANSFORMATION_GRIDS_VOLUME_NAME: ${COMPOSE_PROJECT_NAME}_transformation_grids
     logging:
       driver: "json-file"
@@ -111,6 +118,11 @@ services:
       LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING}
       LETSENCRYPT_RSA_KEY_SIZE: ${LETSENCRYPT_RSA_KEY_SIZE}
       NGINX_ERROR_LOG_LEVEL: ${NGINX_ERROR_LOG_LEVEL:-error}
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-10g}
+      NGINX_PROXY_CONNECT_TIMEOUT: ${NGINX_PROXY_CONNECT_TIMEOUT:-5s}
+      NGINX_PROXY_READ_TIMEOUT: ${NGINX_PROXY_READ_TIMEOUT:-300s}
+      NGINX_PROXY_SEND_TIMEOUT: ${NGINX_PROXY_SEND_TIMEOUT:-300s}
+      NGINX_ALLOW_INTERNAL_HTTP: ${NGINX_ALLOW_INTERNAL_HTTP:-0}
     logging:
       driver: "json-file"
       options:
@@ -135,14 +147,31 @@ services:
       - certbot_www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
-  qgis:
+  qgis3:
     build:
       context: ./docker-qgis
       network: host
       args:
         DEBUG_BUILD: ${DEBUG}
+        UBUNTU_VERSION: noble
+        QGIS_REPOSITORY: ubuntu-ltr
+        QGIS_VERSION: 1:3.44.10+40noble
     tty: true
-    command: bash -c "echo QGIS built"
+    command: bash -c "echo QGIS3 built"
+    logging: *default-logging
+    stop_grace_period: 15m
+
+  qgis4:
+    build:
+      context: ./docker-qgis
+      network: host
+      args:
+        DEBUG_BUILD: ${DEBUG}
+        UBUNTU_VERSION: resolute
+        QGIS_REPOSITORY: debian
+        QGIS_VERSION: 1:4.0.2+44resolute
+    tty: true
+    command: bash -c "echo QGIS4 built"
     logging: *default-logging
     stop_grace_period: 15m
 
@@ -160,7 +189,11 @@ services:
       - media_volume:/usr/src/app/mediafiles/
       - transformation_grids:/transformation_grids
       - /var/run/docker.sock:/var/run/docker.sock
+      - custom_ca_certificates:/etc/ssl/custom_certs/:ro
       - ${TMP_DIRECTORY}:/tmp
+    environment:
+      <<: *django-env
+      TMP_DIRECTORY: ${TMP_DIRECTORY}
     logging: *default-logging
     scale: ${QFIELDCLOUD_WORKER_REPLICAS}
     stop_grace_period: 15m
@@ -195,3 +228,13 @@ volumes:
   media_volume:
   transformation_grids:
   certbot_www:
+  custom_ca_certificates:
+    # We use a bind mount to mount the custom CA bundle from the host machine into the Docker volume,
+    # this way we can easily manage the CA bundle on the host and have them available in the containers.
+    # The docker in docker setup of the workers spawned by the wrapper requires the CA bundle to be available as a volume,
+    # either with absolute host path, either a named one which we prefer here to share it across services.
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD:-.}/conf/ca
+      o: bind, ro

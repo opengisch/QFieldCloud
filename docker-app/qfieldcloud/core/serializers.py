@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Any
 
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django_stubs_ext import StrOrPromise
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 
 from qfieldcloud.authentication.models import AuthToken
@@ -17,14 +17,17 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     PackageJob,
+    Person,
     ProcessProjectfileJob,
-    Project,
     ProjectCollaborator,
     Team,
     TeamMember,
     User,
 )
 from qfieldcloud.filestorage.serializers import FileWithVersionsSerializer
+from qfieldcloud.project.models import (
+    Project,
+)
 
 
 def get_avatar_url(user: User, request: Request | None = None) -> StrOrPromise | None:
@@ -40,7 +43,7 @@ def get_avatar_url(user: User, request: Request | None = None) -> StrOrPromise |
     reversed_uri = reverse(
         "filestorage_named_avatars",
         kwargs={
-            "username": user.username,
+            "public_id": user.public_id,
             "filename": f"avatar.{file_extension}",
         },
     )
@@ -70,109 +73,6 @@ class LayerSerializer(serializers.Serializer):
     error_summary = serializers.CharField(required=False)
 
 
-class ProjectSerializer(serializers.ModelSerializer):
-    owner = serializers.StringRelatedField()
-    user_role = serializers.CharField(read_only=True)
-    user_role_origin = serializers.CharField(read_only=True)
-    private = serializers.BooleanField(allow_null=True, default=None)
-    shared_datasets_project_id = serializers.SerializerMethodField(read_only=True)
-    needs_repackaging = serializers.SerializerMethodField()
-
-    def get_shared_datasets_project_id(self, obj: Project) -> str | None:
-        if obj.shared_datasets_project:
-            return str(obj.shared_datasets_project.id)
-        else:
-            return None
-
-    def to_internal_value(self, data):
-        internal_data = super().to_internal_value(data)
-        owner_username = data.get("owner")
-
-        if owner_username:
-            try:
-                internal_data["owner"] = User.objects.get(username=owner_username)
-            except User.DoesNotExist:
-                raise ValidationError(
-                    {"owner": ["Invalid owner username"]},
-                    code="invalid",
-                )
-        else:
-            if not self.instance or not self.instance.owner:
-                internal_data["owner"] = self.context["request"].user
-
-        if "private" in internal_data:
-            if internal_data["private"] is not None:
-                internal_data["is_public"] = not internal_data["private"]
-
-            del internal_data["private"]
-
-        return internal_data
-
-    def validate(self, data):
-        if data.get("name") is not None:
-            owner = self.instance.owner if self.instance else data["owner"]
-            projects_qs = Project.objects.filter(
-                owner=owner,
-                name=data["name"],
-            )
-
-            if self.instance:
-                projects_qs = projects_qs.exclude(id=self.instance.id)
-
-            matching_projects = projects_qs.count()
-
-            if matching_projects != 0:
-                raise exceptions.ProjectAlreadyExistsError()
-
-        return data
-
-    def get_needs_repackaging(self, obj: Project) -> bool:
-        request = self.context.get("request")
-
-        if request:
-            return obj.needs_repackaging(request.user)  # type: ignore[attr-defined]
-
-        return False
-
-    class Meta:
-        fields = (
-            "id",
-            "name",
-            "owner",
-            "description",
-            # remove "private" field one day
-            "private",
-            "is_public",
-            "created_at",
-            "updated_at",
-            "data_last_packaged_at",
-            "data_last_updated_at",
-            "can_repackage",
-            "needs_repackaging",
-            "status",
-            "user_role",
-            "user_role_origin",
-            "shared_datasets_project_id",
-            "is_shared_datasets_project",
-            "is_featured",
-            "is_attachment_download_on_demand",
-        )
-        read_only_fields = (
-            "private",
-            "created_at",
-            "updated_at",
-            "data_last_packaged_at",
-            "data_last_updated_at",
-            "can_repackage",
-            "needs_repackaging",
-            "status",
-            "user_role",
-            "user_role_origin",
-            "is_attachment_download_on_demand",
-        )
-        model = Project
-
-
 class CompleteUserSerializer(serializers.ModelSerializer):
     avatar_url = serializers.SerializerMethodField()
 
@@ -191,6 +91,35 @@ class CompleteUserSerializer(serializers.ModelSerializer):
             "last_name",
         )
         read_only_fields = ("full_name", "avatar_url")
+
+
+class CreateUserSerializer(serializers.ModelSerializer):
+    """Serializer for programmatic Person account creation."""
+
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    class Meta:
+        model = Person
+        fields = ("username", "password", "email", "first_name", "last_name")
+        extra_kwargs = {
+            "email": {"required": True},
+            "first_name": {"required": False, "default": ""},
+            "last_name": {"required": False, "default": ""},
+        }
+
+    def validate_email(self, value: str) -> str:
+        if Person.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                _("This email is already taken by another user!")
+            )
+
+        return value
+
+    def create(self, validated_data: dict[str, Any]) -> Person:
+        return Person.objects.create_user(
+            has_accepted_tos=False,
+            **validated_data,
+        )
 
 
 class PublicInfoUserSerializer(serializers.ModelSerializer):
@@ -534,6 +463,12 @@ class ProcessProjectfileJobSerializer(JobMixin, serializers.ModelSerializer):
         allow_parallel_jobs = True
 
 
+class CreateProjectJobSerializer(JobMixin, serializers.ModelSerializer):
+    class Meta(JobMixin.Meta):
+        model = Job
+        allow_parallel_jobs = True
+
+
 class JobSerializer(serializers.ModelSerializer):
     def get_lastest_not_finished_job(self):
         return None
@@ -645,3 +580,46 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeamMember
         fields = ("member",)
+
+
+class WhitelabelSerializer(serializers.Serializer):
+    site_title = serializers.CharField(help_text="The title of the site.")
+    logo_navbar = serializers.URLField(help_text="The URL of the navigation bar logo.")
+    logo_main = serializers.URLField(help_text="The URL of the main logo.")
+    favicon = serializers.URLField(help_text="The URL of the favicon.")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if request:
+            for key in ("logo_navbar", "logo_main", "favicon"):
+                value = data.get(key)
+                if value:
+                    data[key] = request.build_absolute_uri(static(value))
+
+        return data
+
+
+class AuthProviderSerializer(serializers.Serializer):
+    type = serializers.CharField(help_text="Provider type: 'credentials' or 'oauth2'.")
+    id = serializers.CharField(help_text="Provider identifier.")
+    name = serializers.CharField(help_text="Human-readable provider name.")
+    grant_flow = serializers.IntegerField(required=False)
+    scope = serializers.CharField(required=False)
+    pkce_enabled = serializers.BooleanField(required=False)
+    token_url = serializers.CharField(required=False)
+    refresh_token_url = serializers.CharField(required=False)
+    request_url = serializers.CharField(required=False)
+    redirect_host = serializers.CharField(required=False)
+    redirect_port = serializers.IntegerField(required=False)
+    redirect_url = serializers.CharField(required=False, allow_blank=True)
+    client_id = serializers.CharField(required=False)
+    extra_tokens = serializers.DictField(required=False)
+    idp_id_header = serializers.CharField(required=False)
+    styles = serializers.DictField(required=False)
+
+
+class ServerInfoSerializer(serializers.Serializer):
+    whitelabel = WhitelabelSerializer()
+    auth_providers = AuthProviderSerializer(many=True, required=False, default=list)
+    signup_url = serializers.URLField(allow_null=True, required=False)

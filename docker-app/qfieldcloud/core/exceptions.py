@@ -137,6 +137,15 @@ class ValidationError(QFieldCloudException):
     log_as_error = False
 
 
+class InvalidQgisProjectFileError(QFieldCloudException):
+    """Raised when the user is trying to upload an invalid QGIS project file
+    into a QFieldCloud project"""
+
+    code = "invalid_qgis_project_file"
+    message = "Invalid QGIS project file"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
 class MultipleProjectsError(QFieldCloudException):
     """Raised when the user is trying to upload more than one QGIS project
     into a QFieldCloud project"""
@@ -200,3 +209,20 @@ class InvalidRangeError(QFieldCloudException):
     code = "invalid_http_range"
     message = "The provided HTTP range header is invalid."
     status_code = status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
+
+
+class QGISProjectFileNotAllowedError(QFieldCloudException):
+    """Raised when a QGIS project file is uploaded to a project that does not allow it
+    (e.g. shared datasets project)"""
+
+    code = "qgis_project_file_not_allowed"
+    message = "QGIS project files are not allowed in this project."
+    status_code = status.HTTP_400_BAD_REQUEST
+
+
+class NotCloneableProjectError(QFieldCloudException):
+    """Raised when a project cannot be cloned"""
+
+    code = "not_cloneable_project"
+    message = "This project cannot be cloned."
+    status_code = status.HTTP_400_BAD_REQUEST

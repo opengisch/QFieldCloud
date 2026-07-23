@@ -14,10 +14,10 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
+    ProjectCollaborator,
 )
-
-from .utils import set_subscription, setup_subscription_plans
+from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 
@@ -148,6 +148,32 @@ class QfcTestCase(APITestCase):
         members = OrganizationMember.objects.all()
         self.assertEqual(len(members), 0)
 
+    def test_delete_member_removes_project_collaborators(self):
+        # user2 is a member of organization1
+        org_member = OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.MEMBER,
+        )
+
+        project = Project.objects.create(
+            name="the_project",
+            owner=self.organization1,
+            is_public=False,
+        )
+        # user2 is a collaborator on the project
+        ProjectCollaborator.objects.create(
+            project=project,
+            collaborator=self.user2,
+            role=ProjectCollaborator.Roles.EDITOR,
+        )
+
+        self.assertEqual(ProjectCollaborator.objects.filter(project=project).count(), 1)
+
+        org_member.delete()
+
+        self.assertEqual(ProjectCollaborator.objects.filter(project=project).count(), 0)
+
     def test_created_by_set_to_none_on_user_deletion(self):
         creator = Person.objects.create(username="creator")
         member = Person.objects.create(username="member")
@@ -238,16 +264,16 @@ class QfcTestCase(APITestCase):
             )
             return self.organization1.active_users(start_date, end_date).count()
 
-        # Initially, there is no billable user
-        self.assertEqual(_active_users_count(), 0)
+        # Initially, there is 1 billable user (organization owner)
+        self.assertEqual(_active_users_count(), 1)
 
         # user2 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user2,
         )
-        # There is now 1 billable user
-        self.assertEqual(_active_users_count(), 1)
+        # There are 2 billable users (organization owner, user2)
+        self.assertEqual(_active_users_count(), 2)
 
         # user2 creates a delta
         Delta.objects.create(
@@ -257,30 +283,68 @@ class QfcTestCase(APITestCase):
             client_id=uuid.uuid4(),
             created_by=self.user2,
         )
-        # There is still 1 billable user
-        self.assertEqual(_active_users_count(), 1)
+        # There are 2 billable users (organization owner, user2)
+        self.assertEqual(_active_users_count(), 2)
 
         # user3 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user3,
         )
-        # There are 2 billable users
-        self.assertEqual(_active_users_count(), 2)
+        # There are 3 billable users (organization owner, user2, user3)
+        self.assertEqual(_active_users_count(), 3)
 
         # user3 leaves the organization
         OrganizationMember.objects.filter(member=self.user3).delete()
 
-        # There are still 2 billable users
-        self.assertEqual(_active_users_count(), 2)
+        # There are still 3 billable users (organization owner, user2, user3)
+        self.assertEqual(_active_users_count(), 3)
 
-        # Report at a different time is empty
-        self.assertEqual(_active_users_count(now() + timedelta(days=365)), 0)
+        # Report at a different time is empty (only organization owner is billable)
+        self.assertEqual(_active_users_count(now() + timedelta(days=365)), 1)
 
         # user4 creates a job
         Job.objects.create(
             project=project1,
             created_by=self.user4,
         )
-        # There are still 2 billable users, because user4 is staff
-        self.assertEqual(_active_users_count(), 2)
+        # There are still 3 billable users (organization owner, user2, user4)
+        self.assertEqual(_active_users_count(), 3)
+
+    def test_memberships_when_owner_changes(self):
+        # Set user2 as admin of organization1
+        OrganizationMember.objects.create(
+            organization=self.organization1,
+            member=self.user2,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        self.organization1.refresh_from_db()
+        members_ids = []
+        for member in OrganizationMember.objects.filter(
+            organization=self.organization1
+        ):
+            members_ids.append(member.member.id)
+
+        # Check that owner user1 is not a member
+        self.assertEqual(len(members_ids), 1)
+        self.assertEqual(self.organization1.organization_owner, self.user1)
+        self.assertNotIn(self.user1.id, members_ids)
+        self.assertIn(self.user2.id, members_ids)
+
+        # Change organization owner to user2
+        self.organization1.organization_owner = self.user2
+        self.organization1.save()
+
+        self.organization1.refresh_from_db()
+        members_ids = []
+        for member in OrganizationMember.objects.filter(
+            organization=self.organization1
+        ):
+            members_ids.append(member.member.id)
+
+        # Check that user1 is now a member
+        self.assertEqual(len(members_ids), 1)
+        self.assertEqual(self.organization1.organization_owner, self.user2)
+        self.assertIn(self.user1.id, members_ids)
+        self.assertNotIn(self.user2.id, members_ids)

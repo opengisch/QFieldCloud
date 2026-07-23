@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
             model_name="fileversion",
             name="file_storage",
             field=models.CharField(
-                default=qfieldcloud.core.models.get_project_file_storage_default,
+                default=qfieldcloud.project.models.get_project_file_storage_default,
                 editable=False,
                 help_text="Which file storage provider should be used for storing the file.",
                 max_length=100,
@@ -48,7 +48,7 @@ class Migration(migrations.Migration):
             model_name="file",
             name="file_storage",
             field=models.CharField(
-                default=qfieldcloud.core.models.get_project_file_storage_default,
+                default=qfieldcloud.project.models.get_project_file_storage_default,
                 editable=False,
                 help_text="Which file storage provider should be used for storing the file.",
                 max_length=100,
@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
             model_name="fileversion",
             name="file_storage",
             field=models.CharField(
-                default=qfieldcloud.core.models.get_project_file_storage_default,
+                default=qfieldcloud.project.models.get_project_file_storage_default,
                 editable=False,
                 help_text="Which file storage provider should be used for storing the file.",
                 max_length=100,

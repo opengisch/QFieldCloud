@@ -5,14 +5,16 @@ import sys
 import tempfile
 import traceback
 import uuid
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Callable
+from typing import IO, Any
 
 from qfieldcloud_sdk import sdk
 
 from qfc_worker.exceptions import (
     InvalidXmlFileException,
+    UnableToContinueException,
     WorkflowModificationException,
     WorkflowValidationException,
 )
@@ -144,23 +146,24 @@ class Step:
         id: str,
         name: str,
         method: Callable,
-        arguments: dict[str, Any] = {},
-        return_names: list[str] = [],
-        outputs: list[str] = [],
-    ):
+        arguments: dict[str, Any] | None = None,
+        return_names: list[str] | None = None,
+        outputs: list[str] | None = None,
+    ) -> None:
         self.id = id
         self.name = name
         self.method = method
-        self.arguments = arguments
+        self.arguments = arguments or {}
         # names of method return values
-        self.return_names = return_names
+        self.return_names = return_names or []
         # names of method return values that will be part of the outputs. They are assumed to be safe to be shown to the user.
-        self.outputs = outputs
+        self.outputs = outputs or []
+        # stage of the step execution: 0 = not started, 1 = in progress, 2 = completed
         self.stage = 0
 
 
 class StepOutput:
-    def __init__(self, step_id: str, return_name: str):
+    def __init__(self, step_id: str, return_name: str) -> None:
         self.step_id = step_id
         self.return_name = return_name
 
@@ -208,7 +211,10 @@ def json_default(obj):
 
     try:
         obj_str += f" {str(obj)}"
-    except Exception:
+    # Typically, we should only expect `TypeError` if `__str__` or `__repr__` are not present.
+    # Expect any kind of error here, as we are using C++ objects that may be already deleted.
+    # e.g. RuntimeError: wrapped C/C++ object of type QgsProject has been deleted
+    except Exception:  # noqa: BLE001
         obj_str += " <non-representable>"
 
     return f"<non-serializable: {obj_str}>"
@@ -253,15 +259,17 @@ def run_workflow(
                         arguments[name] = value.eval(root_workdir)
 
                 return_values = step.method(**arguments)
-                return_values = (
-                    return_values if len(step.return_names) > 1 else (return_values,)
-                )
+
+                # ensure the return values are always a tuple
+                if len(step.return_names) <= 1:
+                    return_values = (return_values,)
 
                 step_returns[step.id] = {}
                 for name, value in zip(step.return_names, return_values):
                     step_returns[step.id][name] = value
 
-    except Exception as err:
+    # Catch all errors to ensure we can return the feedback in a structured way, and log the error properly.
+    except Exception as err:  # noqa: BLE001
         feedback["error"] = str(err)
 
         if isinstance(err, sdk.QfcRequestException):
@@ -283,12 +291,14 @@ def run_workflow(
             feedback["error_type"] = "FILE_NOT_FOUND"
         elif isinstance(err, InvalidXmlFileException):
             feedback["error_type"] = "INVALID_PROJECT_FILE"
+        elif isinstance(err, UnableToContinueException):
+            feedback["error_type"] = "UNABLE_TO_CONTINUE"
         else:
             feedback["error_type"] = "UNKNOWN"
 
-        _type, _value, tb = sys.exc_info()
+        tb = traceback.TracebackException.from_exception(err)
         feedback["error_class"] = type(err).__name__
-        feedback["error_stack"] = traceback.format_tb(tb)
+        feedback["error_stack"] = "".join(tb.format())
     finally:
         feedback["steps"] = []
         feedback["outputs"] = {}

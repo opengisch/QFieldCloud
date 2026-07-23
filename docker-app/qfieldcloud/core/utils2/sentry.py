@@ -52,7 +52,7 @@ def report_serialization_diff_to_sentry(
 
         return True
 
-    except Exception as error:
-        logger.error(f"Unable to send file to Sentry: failed on {error}")
-        sentry_sdk.capture_exception(error)
+    except Exception as err:  # noqa: BLE001
+        logger.error(f"Unable to send file to Sentry: failed on {err}")
+        sentry_sdk.capture_exception(err)
         return False

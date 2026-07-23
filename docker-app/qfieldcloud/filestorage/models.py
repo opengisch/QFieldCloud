@@ -20,13 +20,13 @@ from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField
 from qfieldcloud.core.models import (
     Job,
-    Project,
     User,
-    get_project_file_storage_default,
 )
 from qfieldcloud.core.utils2 import storage
 from qfieldcloud.core.validators import MaxBytesLengthValidator
-from qfieldcloud.filestorage.utils import calc_etag, filename_validator, to_uuid
+from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
+from qfieldcloud.filestorage.utils import calc_etag, filename_validator
+from qfieldcloud.project.models import Project, get_project_file_storage_default
 
 
 class FileQueryset(models.QuerySet):
@@ -37,11 +37,20 @@ class FileQueryset(models.QuerySet):
         """Returns all files of type `PROJECT_FILE`."""
         return self.filter(file_type=File.FileType.PROJECT_FILE)
 
+    def get_by_natural_key(
+        self, project_id: UUID, filename: str, file_type: int
+    ) -> File:
+        return self.get(project_id=project_id, name=filename, file_type=file_type)
+
 
 class File(models.Model):
     class Meta:
-        unique_together = [
-            ("project", "name", "file_type", "package_job"),
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "name", "file_type", "package_job"],
+                name="unique_file_per_project_name_type_packagejob",
+                nulls_distinct=False,
+            ),
         ]
 
     class FileType(models.IntegerChoices):
@@ -90,7 +99,7 @@ class File(models.Model):
             # Require at least 1 character filenames
             MinLengthValidator(1),
             # NOTE the files on Windows cannot be longer than 260 _chars_ by default, see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN#maximum-path-length-limitation
-            # NOTE minio limit is 255 _chars_ per filename segment, read https://min.io/docs/minio/linux/operations/concepts/thresholds.html#id1
+            # NOTE S3 protocol limit is 255 _chars_ per filename segment, read https://docs.rustfs.com/concepts/limit.html#_1-s3-api-limits
             MaxLengthValidator(settings.STORAGE_FILENAME_MAX_CHAR_LENGTH),
             # NOTE the keys on S3 cannot be longer than 1024 _bytes_, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
             MaxBytesLengthValidator(1024),
@@ -135,8 +144,7 @@ class File(models.Model):
     )
 
     # Timestamp when the `FileVersion` record was inserted in the database.
-    # TODO We do not `auto_now_add=True` to be able to set this when migrating files from legacy to the regular storage. Switch to `auto_now_add=True` when the legacy storage is no longer supported.
-    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    created_at = models.DateTimeField(editable=False, auto_now_add=True)
 
     def is_attachment(self):
         return storage.get_attachment_dir_prefix(self.project, self.name) != ""
@@ -153,6 +161,11 @@ class File(models.Model):
     def __str__(self) -> str:
         return self.__repr__()
 
+    def natural_key(self) -> tuple:
+        return (self.project.id, self.name, self.file_type)
+
+    natural_key.dependencies = ["core.project"]  # type: ignore[attr-defined]
+
 
 class FileVersionQueryset(models.QuerySet):
     @transaction.atomic()
@@ -167,7 +180,6 @@ class FileVersionQueryset(models.QuerySet):
         created_at: datetime | None = None,
         version_id: UUID | None = None,
         package_job_id: UUID | None = None,
-        legacy_version_id: str | None = None,
     ) -> FileVersion:
         """Adds a new file version with specific filename.
 
@@ -183,9 +195,8 @@ class FileVersionQueryset(models.QuerySet):
             uploaded_by: the `User` that uploaded the file
             uploaded_at: the timestamp when the file has been uploaded. When `None`, the value is set to the current timestamp. Defaults to None.
             created_at: the timestamp when the file has been created. When `None`, the value is set to the current timestamp. Defaults to None.
-            version_id: The uuid to be used assigned to that version. When `None`, the value is a new random UUID4. This argument is used to move from legacy versioned object storage to the new `django-storages` version. Defaults to None.
+            version_id: The uuid to be used assigned to that version. When `None`, the value is a new random UUID4. Defaults to None.
             package_job_id: The package job the file belongs to. Defaults to None.
-            legacy_version_id: The object storage version ID from the legacy storage. Defaults to None.
 
         Returns:
             the file version that has been created
@@ -199,13 +210,7 @@ class FileVersionQueryset(models.QuerySet):
             created_at = now
 
         if not version_id:
-            legacy_version_id_as_uuid = to_uuid(legacy_version_id)
-
-            # if the `legacy_version_id` is already a UUID, use that value also as a `version_id` to make debugging easier.
-            if legacy_version_id_as_uuid:
-                version_id = legacy_version_id_as_uuid
-            else:
-                version_id = uuid4()
+            version_id = uuid4()
 
         # if the new file is an attachment (i.e. in an attachment dir),
         # it should be stored on the project's configured attachments storage.
@@ -248,7 +253,6 @@ class FileVersionQueryset(models.QuerySet):
             uploaded_by=uploaded_by,
             uploaded_at=uploaded_at,
             created_at=created_at,
-            legacy_id=legacy_version_id,
         )
 
         # TODO most probably we need to select_for_update the `file` object?
@@ -261,12 +265,28 @@ class FileVersionQueryset(models.QuerySet):
 
 def get_file_version_upload_to(instance: "FileVersion", _filename: str) -> str:
     if instance.file.file_type == File.FileType.PROJECT_FILE:
-        return f"projects/{instance.file.project.id}/files/{instance.file.name}/{instance.display}-{str(instance.id)[0:8]}"
+        # if the project is configured to not version attachments, store them without version id.
+        if (
+            instance.file.is_attachment()
+            and not instance.file.project.are_attachments_versioned
+        ):
+            return f"projects/{instance.file.project.id}/files/{instance.file.name}"
+
+        version_suffix = f"{instance.display}-{str(instance.id)[0:8]}"
+
+        if not VERSION_SUFFIX_REGEX.match(version_suffix):
+            raise AssertionError(
+                f"Version suffix {version_suffix} does not match the expected format!"
+            )
+
+        return f"projects/{instance.file.project.id}/files/{instance.file.name}/{version_suffix}"
+
     elif instance.file.file_type == File.FileType.PACKAGE_FILE:
         # TODO decide whether we need to add the version id in there?
         # Currently we don't add it, since there is no situation to have multiple versions of the same file in a packaged file.
         # On the other hand, having this differing from regular files will make it harder to manage.
         return f"projects/{instance.file.project.id}/packages/{instance.file.package_job_id}/{instance.file.name}"
+
     else:
         raise NotImplementedError()
 
@@ -332,10 +352,9 @@ class FileVersion(models.Model):
     )
 
     # Timestamp when the `FileVersion` record was inserted in the database.
-    # TODO We do not `auto_now_add=True` to be able to set this when migrating files from legacy to the regular storage. Switch to `auto_now_add=True` when the legacy storage is no longer supported.
-    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    created_at = models.DateTimeField(editable=False, auto_now_add=True)
 
-    # The version id from the legacy object storage. On minio it is a UUID, on other providers it might be a random string.
+    # The version id from the legacy object storage. The version id format is provider dependent, e.g. on S3 it is a random string, on others it is a UUID.
     legacy_id = models.TextField(max_length=255, editable=False, null=True)
 
     @property

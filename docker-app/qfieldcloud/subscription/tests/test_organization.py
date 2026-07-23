@@ -7,13 +7,14 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    Project,
     ProjectCollaborator,
-    ProjectQueryset,
     Team,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
+from qfieldcloud.subscription.models import Subscription
 
 logging.disable(logging.CRITICAL)
 
@@ -31,7 +32,7 @@ class QfcTestCase(APITransactionTestCase):
         project,
         user,
         role: ProjectCollaborator.Roles | None = None,
-        origin: ProjectQueryset.RoleOrigins | None = None,
+        origin: ProjectRoleOrigins | None = None,
         is_valid: bool = True,
     ):
         """Asserts that user has give role/origin on project"""
@@ -50,7 +51,7 @@ class QfcTestCase(APITransactionTestCase):
             return
 
         # Test on Users
-        if origin != ProjectQueryset.RoleOrigins.PUBLIC:
+        if origin != ProjectRoleOrigins.PUBLIC:
             # The Person.objects.for_project queryset is not symetric to Project.objects.for_user
             # because it does not include users that have a role because the project is public.
             u = Person.objects.for_project(project).get(pk=user.pk)
@@ -66,7 +67,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_max_premium_collaborators_per_private_project(self):
         Roles = ProjectCollaborator.Roles
-        RoleOrigins = ProjectQueryset.RoleOrigins
+        RoleOrigins = ProjectRoleOrigins
 
         u1 = Person.objects.create(username="u1")
         u2 = Person.objects.create(username="u2")
@@ -232,7 +233,7 @@ class QfcTestCase(APITransactionTestCase):
         OrganizationMember.objects.create(member=u2, organization=o)
         OrganizationMember.objects.create(member=u3, organization=o)
 
-        # the limited plan allows maximum of 1 member, but there are 2 already
+        # the limited plan allows maximum of 1 member, but there are 3 already
         set_subscription(o, "plus1", max_organization_members=1)
 
         # cannot add a new member
@@ -245,9 +246,73 @@ class QfcTestCase(APITransactionTestCase):
         u3 = Person.objects.create(username="u3")
         o = Organization.objects.create(username="o2", organization_owner=u1)
 
-        set_subscription(o, max_organization_members=1)
+        set_subscription(o, max_organization_members=2)
 
         OrganizationMember.objects.create(member=u2, organization=o)
 
         with self.assertRaises(ReachedMaxOrganizationMembersError):
+            # Org has already reached member limit of 2:
+            # Owner (u1) + one regular member (u2)
             OrganizationMember.objects.create(member=u3, organization=o)
+
+    def test_transfer_ownership_of_organization_preserves_subscription(self):
+        user1 = Person.objects.create_user(username="user1")
+        user2 = Person.objects.create_user(username="user2")
+        organization = Organization.objects.create(
+            username="organization1",
+            password="abc123",
+            type=2,
+            organization_owner=user1,
+        )
+
+        OrganizationMember.objects.create(
+            organization=organization,
+            member=user2,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        subscription = organization.useraccount.current_subscription
+        status_before = subscription.status
+        active_until_before = subscription.active_until
+
+        organization.organization_owner = user2
+        organization.save()
+
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.status, status_before)
+        self.assertEqual(subscription.active_until, active_until_before)
+
+    def test_subscription_management_transfers_to_new_owner_of_organization(self):
+        user1 = Person.objects.create_user(username="user1")
+        user2 = Person.objects.create_user(username="user2")
+        organization = Organization.objects.create(
+            username="organization1",
+            password="abc123",
+            type=2,
+            organization_owner=user1,
+        )
+        OrganizationMember.objects.create(
+            organization=organization,
+            member=user2,
+            role=OrganizationMember.Roles.ADMIN,
+        )
+
+        org_subscription_pk = organization.useraccount.current_subscription.pk
+
+        def manages(user):
+            return (
+                Subscription.objects.managed_by(user.pk)
+                .filter(pk=org_subscription_pk)
+                .exists()
+            )
+
+        # before transfer: user1 manages the org subscription, user2 doesn't
+        self.assertTrue(manages(user1))
+        self.assertFalse(manages(user2))
+
+        organization.organization_owner = user2
+        organization.save()
+
+        # after transfer: user2 manages the org subscription, user1 doesn't
+        self.assertFalse(manages(user1))
+        self.assertTrue(manages(user2))

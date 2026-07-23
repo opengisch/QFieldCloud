@@ -19,12 +19,14 @@ from qfc_worker.exceptions import (
 from qfc_worker.utils import (
     download_project,
     get_layers_data,
+    get_qgis_version_from_project_file,
     get_qgis_xml_error_context,
     layers_data_to_string,
     open_qgis_project_as_readonly,
     open_qgis_project_temporarily,
     start_app,
     stop_app,
+    upload_project_thumbnail,
 )
 from qfc_worker.workflow import (
     Step,
@@ -74,6 +76,7 @@ class ProjectDetails(TypedDict):
     ordered_layer_ids: list[str]
     attachment_dirs: list[str]
     data_dirs: list[str]
+    qgis_version: str
 
 
 def _extract_project_details(project: QgsProject) -> ProjectDetails:
@@ -101,6 +104,9 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
         "QFieldSync", "attachmentDirs", ["DCIM"]
     )
     details["data_dirs"], _ = project.readListEntry("QFieldSync", "dataDirs", [])
+    # NOTE we are at quite far in the process of working with the QGIS project file, so we can safely assume that
+    # if the project file was broken, we would have already thrown an error before, so no need to try/except for `ValueError` here.
+    details["qgis_version"] = get_qgis_version_from_project_file(project.fileName())
 
     logger.info(
         f"QGIS project layer checks\n{layers_data_to_string(details['layers_by_id'])}",
@@ -113,7 +119,7 @@ def _generate_thumbnail(
     the_qgis_file_name: str,
     thumbnail_filename: Path,
     thumbnail_timeout_s: int = THUMBNAIL_TIMEOUT_S,
-) -> None:
+) -> Path | None:
     """Create a thumbnail for the project
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
@@ -124,22 +130,58 @@ def _generate_thumbnail(
     tmp_project = tmp_project_details["project"]
     map_settings = tmp_project_details["map_settings"]
 
-    img = QImage(map_settings.outputSize(), QImage.Format_ARGB32)
+    if map_settings.extent().isEmpty():
+        logger.warning(
+            "Project has empty extent, using the full extent for the thumbnail."
+        )
+
+        map_settings.setExtent(map_settings.fullExtent())
+
+    # NOTE when the extent is still empty, QGIS hangs forever, so we just skip thumbnail generation.
+    if map_settings.extent().isEmpty():
+        logger.warning("Project has empty extent, no thumbnail can be generated.")
+
+        # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected.
+        del tmp_project
+
+        return None
+
+    img = QImage(map_settings.outputSize(), QImage.Format.Format_ARGB32)
     painter = QPainter(img)
     job = QgsMapRendererCustomPainterJob(map_settings, painter)
+
+    def on_timeout():
+        nonlocal job
+
+        logger.warning(
+            f"Thumbnail generation timeout {thumbnail_timeout_s} seconds reached, cancelling the job..."
+        )
+
+        job.cancel()
 
     timer = QTimer()
     timer.setSingleShot(True)
     timer.setInterval(thumbnail_timeout_s * 1000)
-    timer.timeout.connect(lambda: job.cancel())  # noqa: F821
+    timer.timeout.connect(on_timeout)
 
     job.start()
     timer.start()
-    job.waitForFinishedWithEventLoop()
+
+    if job.isActive():
+        job.waitForFinishedWithEventLoop()
+        is_thumbnail_generated = True
+    else:
+        logger.info("Job is not active, skipping wait for finished with event loop.")
+
+        is_thumbnail_generated = False
+
     timer.stop()
 
-    if not img.save(str(thumbnail_filename)):
-        raise FailedThumbnailGenerationException(reason="Failed to save.")
+    if is_thumbnail_generated:
+        if not img.save(str(thumbnail_filename)):
+            raise FailedThumbnailGenerationException(
+                reason=f"Failed to save thumbnail to {thumbnail_filename}."
+            )
 
     painter.end()
 
@@ -150,7 +192,14 @@ def _generate_thumbnail(
     # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
     del tmp_project
 
-    logger.info("Project thumbnail image generated!")
+    if is_thumbnail_generated:
+        logger.info("Project thumbnail image generated!")
+
+        return thumbnail_filename
+    else:
+        logger.warning("Project thumbnail image could not be generated.")
+
+        return None
 
 
 class ProcessProjectfileCommand(QfcBaseCommand):
@@ -215,9 +264,21 @@ class ProcessProjectfileCommand(QfcBaseCommand):
                     name="Generate Thumbnail Image",
                     arguments={
                         "the_qgis_file_name": WorkDirPathAsStr("files", project_file),
-                        "thumbnail_filename": Path("/io/thumbnail.png"),
+                        "thumbnail_filename": WorkDirPath("thumbnail.png"),
                     },
                     method=_generate_thumbnail,
+                    return_names=["thumbnail_filename"],
+                ),
+                Step(
+                    id="upload_thumbnail",
+                    name="Upload Thumbnail Image",
+                    arguments={
+                        "project_id": project_id,
+                        "thumbnail_filename": StepOutput(
+                            "generate_thumbnail_image", "thumbnail_filename"
+                        ),
+                    },
+                    method=upload_project_thumbnail,
                 ),
                 Step(
                     id="stop_qgis_app",

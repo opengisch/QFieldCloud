@@ -9,7 +9,11 @@ from django.http import HttpRequest
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
-from qfieldcloud.authentication.views import ListProvidersView
+from qfieldcloud.authentication.sso.auth_providers import (
+    FLOW_AUTHORIZATION_CODE,
+    FLOW_AUTHORIZATION_CODE_PKCE,
+    get_oauth2_provider,
+)
 
 logging.disable(logging.CRITICAL)
 
@@ -162,62 +166,58 @@ class QfcTestCase(APITestCase):
     def test_always_adds_openid_scope(self):
         provider, request = self.fake_provider()
 
-        provider_data = ListProvidersView().get_provider_data(provider, request)
+        provider_data = get_oauth2_provider(provider, request)
         self.assertEqual(provider_data["scope"], "openid scopeA scopeB")
 
     def test_supports_subproviders(self):
         provider, request = self.fake_provider()
 
         # Generic provider
-        provider_data = ListProvidersView().get_provider_data(provider, request)
+        provider_data = get_oauth2_provider(provider, request)
         self.assertEqual(provider_data["id"], "fake")
 
         # Subprovider
         provider.uses_apps = True
         provider.app.provider_id = "fake_subprovider"
 
-        provider_data = ListProvidersView().get_provider_data(provider, request)
+        provider_data = get_oauth2_provider(provider, request)
         self.assertEqual(provider_data["id"], "fake_subprovider")
 
     def test_correctly_determines_grant_flow(self):
         provider, request = self.fake_provider()
 
         # PKCE disabled -> Authorization Code
-        provider_data = ListProvidersView().get_provider_data(provider, request)
-        self.assertEqual(
-            provider_data["grant_flow"], ListProvidersView.FLOW_AUTHORIZATION_CODE
-        )
+        provider_data = get_oauth2_provider(provider, request)
+        self.assertEqual(provider_data["grant_flow"], FLOW_AUTHORIZATION_CODE)
 
         # PKCE enabled -> Authorization Code with PKCE
         provider.pkce_enabled_default = True
-        provider_data = ListProvidersView().get_provider_data(provider, request)
-        self.assertEqual(
-            provider_data["grant_flow"], ListProvidersView.FLOW_AUTHORIZATION_CODE_PKCE
-        )
+        provider_data = get_oauth2_provider(provider, request)
+        self.assertEqual(provider_data["grant_flow"], FLOW_AUTHORIZATION_CODE_PKCE)
 
     def test_correctly_detects_all_methods_to_enable_pkce(self):
         provider, request = self.fake_provider()
 
         # PKCE disabled (default)
-        provider_data = ListProvidersView().get_provider_data(provider, request)
+        provider_data = get_oauth2_provider(provider, request)
         self.assertEqual(provider_data["pkce_enabled"], False)
 
         # Provider wide setting
         conf = {"fake": {"OAUTH_PKCE_ENABLED": True}}
         with self.settings(SOCIALACCOUNT_PROVIDERS=conf):
-            provider_data = ListProvidersView().get_provider_data(provider, request)
+            provider_data = get_oauth2_provider(provider, request)
 
         self.assertEqual(provider_data["pkce_enabled"], True)
 
         # App setting
         provider.app.settings["oauth_pkce_enabled"] = True
-        provider_data = ListProvidersView().get_provider_data(provider, request)
+        provider_data = get_oauth2_provider(provider, request)
         self.assertEqual(provider_data["pkce_enabled"], True)
         provider.app.settings.pop("oauth_pkce_enabled")
 
         # Provider default
         provider.pkce_enabled_default = True
-        provider_data = ListProvidersView().get_provider_data(provider, request)
+        provider_data = get_oauth2_provider(provider, request)
         self.assertEqual(provider_data["pkce_enabled"], True)
 
     @override_settings(SOCIALACCOUNT_PROVIDERS=TESTING_PROVIDERS)

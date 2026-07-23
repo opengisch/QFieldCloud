@@ -7,8 +7,9 @@ from django.urls import reverse
 from rest_framework.response import Response
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Project, User
+from qfieldcloud.core.models import User
 from qfieldcloud.core.tests.utils import testdata_path
+from qfieldcloud.project.models import Project
 
 
 class QfcFilesTestCaseMixin:
@@ -157,6 +158,30 @@ class QfcFilesTestCaseMixin:
                     "project_id": project.id,
                 },
             ),
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="")
+
+        return response
+
+    def _get_file_metadata(
+        self,
+        user: User,
+        project: Project,
+        filename: str,
+    ) -> HttpResponse | Response:
+        token = self._get_token_for_user(user)
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+
+        response = self.client.get(
+            reverse(
+                "filestorage_file_metadata",
+                kwargs={
+                    "project_id": project.id,
+                    "filename": filename,
+                },
+            )
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="")

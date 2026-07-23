@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from itertools import islice
-from typing import Any, Callable
+from typing import Any
 
 from django.conf import settings
 from rest_framework import pagination, response

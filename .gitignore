@@ -4,8 +4,8 @@ __pycache__/
 .htmlcov/
 .coverage
 .vscode
-.env
-.env.test
+.env*
+!.env.example
 docker-compose.override.yml
 client/projects
 conf/mkcert/*
@@ -13,10 +13,12 @@ conf/certbot/*
 conf/nginx/certs/*.pem
 conf/nginx/config.d/*.conf
 conf/nginx/dhparams/*.pem
+conf/ca/custom_ca.crt
 Pipfile*
 **/site-packages
 docker-qgis/libqfieldsync
 docker-qgis/qfieldcloud-sdk-python
+docker-qgis/convert2qgis
 .venv
 
 # compiled translations

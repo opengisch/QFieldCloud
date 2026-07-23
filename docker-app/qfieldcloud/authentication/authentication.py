@@ -1,5 +1,3 @@
-from typing import Type
-
 from django.http.request import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -7,10 +5,9 @@ from rest_framework.authentication import (
     TokenAuthentication as DjangoRestFrameworkTokenAuthentication,
 )
 
+from qfieldcloud.authentication.models import AuthToken
+from qfieldcloud.core.exceptions import AuthenticationViaTokenFailedError
 from qfieldcloud.core.models import User
-
-from ..core.exceptions import AuthenticationViaTokenFailedError
-from .models import AuthToken
 
 
 def invalidate_all_tokens(user: User) -> int:
@@ -21,7 +18,7 @@ def invalidate_all_tokens(user: User) -> int:
 
 
 def create_token(
-    token_model: Type[AuthToken],
+    token_model: type[AuthToken],
     user: User,
     _serializer=None,
     request: HttpRequest | None = None,

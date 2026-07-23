@@ -25,23 +25,23 @@ from qfieldcloud.core.exceptions import (
 from qfieldcloud.core.models import (
     Job,
     ProcessProjectfileJob,
-    Project,
 )
 from qfieldcloud.core.utils2.storage import (
     get_attachment_dir_prefix,
 )
+from qfieldcloud.filestorage.helpers import purge_old_file_versions
 from qfieldcloud.filestorage.models import (
     File,
     FileVersion,
 )
 from qfieldcloud.filestorage.utils import (
+    get_qgis_version_from_project_file,
     get_range,
     is_admin_restricted_file,
     is_qgis_project_file,
     validate_filename,
 )
-
-from .helpers import purge_old_file_versions
+from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,9 @@ def upload_project_file_version(
             f'Missing file contents for "{filename}" from the request!'
         )
 
-    project = get_object_or_404(Project, id=project_id)
+    project = get_object_or_404(
+        Project.objects.select_related("the_qgis_file"), id=project_id
+    )
 
     try:
         validate_filename(filename)
@@ -91,6 +93,11 @@ def upload_project_file_version(
 
     is_qgis_file = is_qgis_project_file(filename)
 
+    if is_qgis_file and project.is_shared_datasets_project:
+        raise exceptions.ValidationError(
+            "QGIS project files are not allowed in shared datasets projects."
+        )
+
     # check only one qgs/qgz file per project for project files
     if (
         file_type == File.FileType.PROJECT_FILE
@@ -101,6 +108,19 @@ def upload_project_file_version(
         logger.info(f"Only one QGIS project per project allowed for {filename=}!")
 
         raise MultipleProjectsError("Only one QGIS project per project allowed")
+
+    qgis_version: str | None = None
+    if file_type == File.FileType.PROJECT_FILE and is_qgis_file:
+        try:
+            qgis_version = get_qgis_version_from_project_file(filename, uploaded_file)
+        except ValueError as err:
+            logger.exception(
+                f"Failed to get QGIS version from project file {filename}: {err}"
+            )
+
+            raise exceptions.InvalidQgisProjectFileError(
+                f"Invalid QGIS project file: {err}"
+            )
 
     # check if the user has enough storage to upload the file
     if hasattr(request, "auth") and hasattr(request.auth, "client_type"):
@@ -125,17 +145,21 @@ def upload_project_file_version(
         )
 
         if file_type == File.FileType.PROJECT_FILE:
-            # Select for update the project so we can update it, especially the `file_storage_bytes` bit.
+            # Select for update the project so we can update it.
             # It guarantees there will be no other file upload editing the same project row.
-            project = Project.objects.select_for_update().get(id=project.id)
-            update_fields = ["data_last_updated_at", "file_storage_bytes"]
+            project = (
+                Project.objects.select_related("the_qgis_file")
+                .select_for_update(of=("self",))
+                .get(id=project.id)
+            )
+            update_fields = ["data_last_updated_at"]
 
             if get_attachment_dir_prefix(project, filename) == "" and (
-                is_qgis_file or project.the_qgis_file_name is not None
+                is_qgis_file or project.has_the_qgis_file
             ):
                 if is_qgis_file:
-                    project.the_qgis_file_name = filename
-                    update_fields.append("the_qgis_file_name")
+                    project.the_qgis_file = file_version.file
+                    update_fields.append("the_qgis_file")
 
                 running_jobs = ProcessProjectfileJob.objects.filter(
                     project=project,
@@ -152,9 +176,19 @@ def upload_project_file_version(
                         project=project, created_by=request.user
                     )
 
-            project.data_last_updated_at = timezone.now()
-            project.file_storage_bytes += file_version.size
-            project.save(update_fields=update_fields)
+            now = timezone.now()
+            project.data_last_updated_at = now
+
+            if is_admin_restricted_file(filename, project.the_qgis_file_name):
+                update_fields.append("restricted_data_last_updated_at")
+                project.restricted_data_last_updated_at = now
+
+            if qgis_version:
+                update_fields.append("qgis_version")
+
+                project.qgis_version = qgis_version
+
+            project.save(update_fields=update_fields, recompute_storage=True)
         elif file_type == File.FileType.PACKAGE_FILE:
             # nothing to do when we upload a package file
             pass
@@ -244,8 +278,9 @@ def download_field_file(
 
     range = get_range(request, field_file.size)
 
-    # Assume that if the request is secure, we are behind a nginx proxy and we can use `X-Accel-Redirect`
-    if request.is_secure() and not settings.IN_TEST_SUITE:
+    # Assume that if the request has the X-Forwarded-For header,
+    # we are behind a nginx proxy and we can use `X-Accel-Redirect`.
+    if "X-Forwarded-For" in request.headers and not settings.IN_TEST_SUITE:
         # this is the relative path of the file, including the containing directories.
         # We cannot use `ContentFile.path` with object storage, as there is no concept for "absolute path".
         storage_filename = field_file.name
@@ -352,7 +387,6 @@ def delete_project_file_version(
         NotFound: Raised when the requested file version is not found.
     """
     version_id = request.GET.get("version", request.headers.get("x-file-version"))
-    bytes_to_delete = 0
 
     try:
         if version_id:
@@ -368,14 +402,12 @@ def delete_project_file_version(
                 )
 
             object_to_delete = file_versions_qs.get(id=version_id)
-            bytes_to_delete = object_to_delete.size
         else:
             object_to_delete = File.objects.get(
                 project_id=project_id,
                 name=filename,
                 file_type=File.FileType.PROJECT_FILE,
             )
-            bytes_to_delete = object_to_delete.get_total_versions_size()
     except File.DoesNotExist:
         raise NotFound(
             detail=f"The requested {filename=} for {project_id=} does not exist!"
@@ -385,22 +417,54 @@ def delete_project_file_version(
             detail=f"The requested {version_id=} of {filename=} for {project_id=} does not exist!"
         )
 
+    # Capture the QGIS project filename before deleting, since deleting the
+    # QGIS project file itself nulls `Project.the_qgis_file`,
+    # which would make the restricted-file check below always miss the file
+    # actually being deleted.
+    qgis_file_name_before_delete = Project.objects.get(id=project_id).the_qgis_file_name
+
     object_to_delete.delete()
 
     with transaction.atomic():
-        project = Project.objects.select_for_update().get(id=project_id)
-        update_fields = ["file_storage_bytes"]
+        project = (
+            Project.objects.select_related("the_qgis_file")
+            .select_for_update(of=("self",))
+            .get(id=project_id)
+        )
+        update_fields = ["data_last_updated_at"]
 
-        if (
-            is_qgis_project_file(filename)
-            and not File.objects.filter(
+        now = timezone.now()
+        project.data_last_updated_at = now
+
+        if is_admin_restricted_file(filename, qgis_file_name_before_delete):
+            update_fields.append("restricted_data_last_updated_at")
+            project.restricted_data_last_updated_at = now
+
+        if is_qgis_project_file(filename):
+            file_qs = File.objects.with_type_project().filter(
                 name=filename,
                 project_id=project_id,
-            ).exists()
-        ):
-            project.the_qgis_file_name = None
-            update_fields.append("the_qgis_file_name")
+            )
+            qgis_version = None
 
-        project.file_storage_bytes -= bytes_to_delete
+            if file_qs.exists():
+                assert file_qs.count() == 1
 
-        project.save(update_fields=update_fields)
+                # Recalculate the QGIS version based on the remaining file.
+                # Let's say we have `p.qgs` which has file version 1 (QGIS 4.0) and file version 2 (QGIS 4.2), and we delete file version 2,
+                # then we should recalculate the QGIS version based on file version 1 (QGIS 4.0),
+                # rather than keeping the QGIS version from the deleted file version 2 (QGIS 4.2).
+                with file_qs.first().latest_version.content.open() as fh:
+                    qgis_version = get_qgis_version_from_project_file(filename, fh)
+
+                # Repoint the FK to the remaining file, since the file it
+                # previously pointed to was just deleted above.
+                project.the_qgis_file = file_qs.first()
+            else:
+                project.the_qgis_file = None
+
+            project.qgis_version = qgis_version
+            update_fields.append("qgis_version")
+            update_fields.append("the_qgis_file")
+
+        project.save(update_fields=update_fields, recompute_storage=True)

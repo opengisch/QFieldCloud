@@ -8,8 +8,9 @@ from invitations.utils import get_invitation_model
 from sentry_sdk import capture_message
 
 from qfieldcloud.core.invitations_utils import send_invitation
-from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta, Job, Project
+from qfieldcloud.core.models import ApplyJob, ApplyJobDelta, Delta, Job
 from qfieldcloud.core.utils2 import packages
+from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,8 @@ class ResendFailedInvitationsJob(CronJobBase):
             try:
                 send_invitation(invitation)
                 invitation_emails.append(invitation.email)
-            except Exception as err:
+            # Catch any exception `send_invitation` can raise, as we don't want the CRON to fail because of a single failed email sending.
+            except Exception as err:  # noqa: BLE001
                 logger.error(err)
 
         logger.info(
@@ -106,3 +108,18 @@ class DeleteObsoleteProjectPackagesJob(CronJobBase):
         )
 
         packages.delete_obsolete_packages(projects)
+
+
+class ClearJobOutputsAfterRetentionPeriodJob(CronJobBase):
+    # runs every night at 02:00
+    schedule = Schedule(run_every_mins=1440, run_at_times=["02:00"])
+    code = "qfieldcloud.clear_jobs_outputs_after_retention_period"
+
+    def do(self):
+        jobs = Job.objects.filter(
+            created_at__lt=timezone.now()
+            - timedelta(days=config.JOB_OUTPUT_RETENTION_DAYS),
+            output__isnull=False,
+        )
+
+        jobs.update(output=None)

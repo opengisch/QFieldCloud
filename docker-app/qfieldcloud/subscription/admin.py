@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from datetime import timedelta
-from typing import Iterable
 
 from django import forms
 from django.contrib import admin
@@ -22,6 +22,8 @@ class PlanAdmin(admin.ModelAdmin):
         "is_public",
         "display_name",
         "storage_mb",
+        "storage_threshold_warning_bytes",
+        "storage_threshold_critical_bytes",
         "job_minutes",
     ]
 
@@ -104,7 +106,8 @@ class SubscriptionModelForm(forms.ModelForm):
         )
 
         if (
-            not hasattr(self.instance, "active_storage_package_quantity")
+            not self.instance.pk
+            or not hasattr(self.instance, "active_storage_package_quantity")
             or additional_storage_quantity
             == self.instance.active_storage_package_quantity
         ):
@@ -125,6 +128,7 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "account",
         "status",
         "active_since",
+        "additional_storage_quantity",
         "active_until",
         "billing_cycle_anchor_at",
         "current_period_since",
@@ -169,6 +173,12 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
         "account__user__username__iexact",
     )
 
+    search_parser_config = {
+        "account": {
+            "filter": "account__user__username__iexact",
+        },
+    }
+
     def get_fields(
         self, request: HttpRequest, obj: Subscription | None = None
     ) -> Iterable[str]:
@@ -211,10 +221,6 @@ class SubscriptionAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Plan"))
     def plan__link(self, instance):
         return model_admin_url(instance.plan, str(instance.plan))
-
-    @admin.display(description=_("Promotion"))
-    def promotion__link(self, instance):
-        return model_admin_url(instance.promotion, str(instance.promotion))
 
     def get_queryset(self, request: HttpRequest):
         return super().get_queryset(request).select_related("account__user", "plan")

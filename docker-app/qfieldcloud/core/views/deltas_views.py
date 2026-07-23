@@ -15,9 +15,10 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
-from qfieldcloud.core.models import Delta, FaultyDeltaFile, Project
+from qfieldcloud.core.models import Delta, FaultyDeltaFile
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
+from qfieldcloud.project.models import Project
 from rest_framework import generics, permissions, views
 from rest_framework.response import Response
 
@@ -65,7 +66,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     pagination_class = pagination.QfcLimitOffsetPagination()
 
     def post(self, request, projectid):
-        project_obj = Project.objects.get(id=projectid)
+        project_obj = Project.objects.select_related("the_qgis_file").get(id=projectid)
 
         if "file" not in request.data:
             raise exceptions.EmptyContentError()
@@ -173,11 +174,13 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         try:
             deltafile_json = json.loads(deltafile_data)
             deltafile_id = deltafile_json.get("id")
-        except Exception:
+        except json.JSONDecodeError:
             deltafile_id = None
 
-        name = deltafile_id if deltafile_id else "unkown"
-        filename = f"{name}.json"
+        if deltafile_id:
+            filename = f"{deltafile_id}.json"
+        else:
+            filename = "unknown.json"
 
         user_agent = request.headers.get("user-agent")
 
@@ -190,11 +193,13 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         )
 
         logger.info(f'Faulty deltafile saved as "{faulty_deltafile.deltafile.name}"')
+
         return faulty_deltafile
 
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
+
         return Delta.objects.filter(project=project_obj)
 
 
@@ -223,7 +228,7 @@ class ApplyView(views.APIView):
     serializer_class = DeltaSerializer
 
     def post(self, request, projectid):
-        project_obj = Project.objects.get(id=projectid)
+        project_obj = Project.objects.select_related("the_qgis_file").get(id=projectid)
         project_file = project_obj.the_qgis_file_name
 
         if project_file is None:

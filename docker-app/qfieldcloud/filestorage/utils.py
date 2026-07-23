@@ -1,8 +1,14 @@
 import hashlib
+import io
+import logging
 import re
 import uuid
+import xml.etree.ElementTree as ET
+import zipfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path, PurePath
-from typing import Any
+from typing import Any, BinaryIO, TextIO
 
 from attr import dataclass
 from django.conf import settings
@@ -13,6 +19,8 @@ from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from qfieldcloud.core.exceptions import InvalidRangeError
+
+logger = logging.getLogger(__name__)
 
 filename_validator = RegexValidator(
     settings.STORAGES_FILENAME_VALIDATION_REGEX,
@@ -56,7 +64,7 @@ def is_valid_filename(filename: str) -> bool:
     try:
         validate_filename(filename)
         return True
-    except Exception:
+    except ValidationError:
         return False
 
 
@@ -247,3 +255,91 @@ def get_range(request: HttpRequest, total_size: int) -> RangeForFile | None:
         total_size=total_size,
         header=range_header,
     )
+
+
+@contextmanager
+def open_qgis_file(
+    filename: str | Path,
+    fh: BinaryIO,
+) -> Iterator[TextIO]:
+    """Open a QGIS project file from a file handle, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
+
+    NOTE there is a very similar sister function with the same name in `docker-qgis/qfc_worker/utils.py`.
+    """
+    path = Path(filename)
+    suffix = path.suffix.lower()
+
+    if suffix == ".qgz":
+        with zipfile.ZipFile(fh) as qgz:
+            expected_qgs_name = f"{path.stem}.qgs"
+            archive_names = qgz.namelist()
+
+            if expected_qgs_name in archive_names:
+                qgs_filename = expected_qgs_name
+
+            else:
+                qgs_filename = None
+                for archive_file in sorted(archive_names):
+                    if Path(archive_file).suffix == ".qgs":
+                        qgs_filename = archive_file
+                        break
+
+                if not qgs_filename:
+                    raise KeyError(
+                        f"No '.qgs' file found in the '.qgz' archive {filename}"
+                    )
+
+                logger.info(
+                    f"Expected '.qgs' file '{expected_qgs_name}' not found in '.qgz' archive '{filename}', "
+                    f"found and fallback to '{qgs_filename}' instead!"
+                )
+
+            assert qgs_filename
+
+            with qgz.open(qgs_filename) as qgs:
+                with io.TextIOWrapper(qgs, encoding="utf-8") as text_fh:
+                    yield text_fh
+
+        return
+
+    if suffix == ".qgs":
+        text_fh = io.TextIOWrapper(fh, encoding="utf-8")
+
+        try:
+            yield text_fh
+        finally:
+            text_fh.detach()
+
+        return
+
+    raise ValueError(f"Unsupported QGIS project file: {filename}")
+
+
+def get_qgis_version_from_project_file(filename: str | Path, fh: BinaryIO) -> str:
+    try:
+        with open_qgis_file(filename, fh) as qgis_fh:
+            parser = ET.iterparse(qgis_fh, events=["start"])
+
+            _event, el = next(parser)
+
+            if el.tag != "qgis":
+                raise ValueError(f'Expected root tag "qgis", got "{el.tag}"')
+
+            qgis_version = el.attrib.get("version")
+
+            if not qgis_version:
+                raise ValueError('Missing "version" attribute in QGIS project file')
+
+            version_match = re.match(r"^(\d+\.\d+\.\d+)", qgis_version)
+
+            if version_match is None:
+                raise ValueError(f'Invalid QGIS version "{qgis_version}"')
+
+            return version_match.group(1)
+
+    except (
+        zipfile.BadZipFile,
+        ET.ParseError,
+        UnicodeDecodeError,
+    ) as err:
+        raise ValueError(f"Invalid QGIS project file: {filename}") from err

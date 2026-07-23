@@ -4,7 +4,7 @@ from unittest import skipIf
 from django.conf import settings
 from django.test import Client, TestCase
 
-from ..utils2.sentry import report_serialization_diff_to_sentry
+from qfieldcloud.core.utils2.sentry import report_serialization_diff_to_sentry
 
 
 class QfcTestCase(TestCase):

@@ -9,13 +9,13 @@ from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.exceptions import InvalidRangeError
 from qfieldcloud.core.models import (
     Person,
-    Project,
 )
 from qfieldcloud.core.tests.mixins import QfcFilesTestCaseMixin
 from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
 from qfieldcloud.filestorage.utils import get_range, parse_range_header
+from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
 
@@ -40,11 +40,11 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         )
 
     def test_parsing_range_function_succeeds(self):
-        self.assertEquals(parse_range_header("bytes=4-8", 10), (4, 8))
+        self.assertEqual(parse_range_header("bytes=4-8", 10), (4, 8))
 
         start_byte, end_byte = parse_range_header("bytes=2-", 10)
 
-        self.assertEquals(start_byte, 2)
+        self.assertEqual(start_byte, 2)
         self.assertIsNone(end_byte)
 
     def test_parsing_wrong_invalid_range_function_succeeds(self):
@@ -148,29 +148,29 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                     self.u1, project, "file.name", headers={"Range": "bytes=0-2"}
                 )
 
-                self.assertEquals(r1.status_code, status.HTTP_206_PARTIAL_CONTENT)
-                self.assertEquals(r1.content, b"abc")
+                self.assertEqual(r1.status_code, status.HTTP_206_PARTIAL_CONTENT)
+                self.assertEqual(r1.content, b"abc")
 
                 r2 = self._download_file(
                     self.u1, project, "file.name", headers={"Range": "bytes=5-8"}
                 )
 
-                self.assertEquals(r2.status_code, status.HTTP_206_PARTIAL_CONTENT)
-                self.assertEquals(r2.content, b"fghi")
+                self.assertEqual(r2.status_code, status.HTTP_206_PARTIAL_CONTENT)
+                self.assertEqual(r2.content, b"fghi")
 
                 r3 = self._download_file(
                     self.u1, project, "file.name", headers={"Range": "bytes=7-"}
                 )
 
-                self.assertEquals(r3.status_code, status.HTTP_206_PARTIAL_CONTENT)
-                self.assertEquals(r3.content, b"hijkl")
+                self.assertEqual(r3.status_code, status.HTTP_206_PARTIAL_CONTENT)
+                self.assertEqual(r3.content, b"hijkl")
 
                 r4 = self._download_file(
                     self.u1, project, "file.name", headers={"Range": "bytes=0-"}
                 )
 
-                self.assertEquals(r4.status_code, status.HTTP_206_PARTIAL_CONTENT)
-                self.assertEquals(r4.content, b"abcdefghijkl")
+                self.assertEqual(r4.status_code, status.HTTP_206_PARTIAL_CONTENT)
+                self.assertEqual(r4.content, b"abcdefghijkl")
 
     @override_settings(QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH=3)
     def test_minimum_range_header_length(self):
@@ -190,15 +190,15 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                     self.u1, project, "file.name", headers={"Range": "bytes=0-2"}
                 )
 
-                self.assertEquals(r1.status_code, status.HTTP_206_PARTIAL_CONTENT)
-                self.assertEquals(r1.content, b"abc")
+                self.assertEqual(r1.status_code, status.HTTP_206_PARTIAL_CONTENT)
+                self.assertEqual(r1.content, b"abc")
 
                 # download parts of the file, with specific ranges
                 r1 = self._download_file(
                     self.u1, project, "file.name", headers={"Range": "bytes=0-1"}
                 )
 
-                self.assertEquals(
+                self.assertEqual(
                     r1.status_code, status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
                 )
 
@@ -212,7 +212,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                     self.u1, project, "file.name", headers={"Range": "bytes=abc-"}
                 )
 
-                self.assertEquals(
+                self.assertEqual(
                     r1.status_code, status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
                 )
 
@@ -220,7 +220,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                     self.u1, project, "file.name", headers={"Range": "bytes=-def"}
                 )
 
-                self.assertEquals(
+                self.assertEqual(
                     r2.status_code, status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
                 )
 
@@ -228,7 +228,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                     self.u1, project, "file.name", headers={"Range": "bytes=-1-"}
                 )
 
-                self.assertEquals(
+                self.assertEqual(
                     r3.status_code, status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
                 )
 
@@ -236,6 +236,6 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                     self.u1, project, "file.name", headers={"Range": "bytes=1-55"}
                 )
 
-                self.assertEquals(
+                self.assertEqual(
                     r4.status_code, status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
                 )

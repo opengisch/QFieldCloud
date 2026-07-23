@@ -1,20 +1,26 @@
 import logging
 import traceback
+from datetime import timedelta
 from random import randint
 from typing import Literal
 
 from allauth.account import app_settings
 from allauth.account.adapter import DefaultAccountAdapter
-from allauth.account.models import EmailConfirmationHMAC
+from allauth.account.models import EmailAddress, EmailConfirmationHMAC
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
+from constance import config
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest
+from django.utils import timezone
 from invitations.adapters import BaseInvitationsAdapter
 
 from qfieldcloud.authentication.sso.provider_styles import SSOProviderStyles
-from qfieldcloud.core.models import Person
+from qfieldcloud.core.models import Person, User
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +32,26 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
     except changing it globally for everyone. Therefore this adapter tries
     to overcome this limitation by providing custom `new_user` method.
     """
+
+    def login(self, request, user):
+        # last_login here is the *previous* login time
+        previous_last_login = user.last_login
+
+        response = super().login(request, user)
+
+        threshold = getattr(config, "WEB_USER_INACTIVITY_THRESHOLD_DAYS", 0)
+
+        if previous_last_login and threshold > 0:
+            delta = timezone.now() - previous_last_login
+            if delta > timedelta(days=threshold):
+                messages.add_message(
+                    request,
+                    messages.INFO,
+                    "You have been inactive for a while, welcome back!",
+                    extra_tags="inactive-user-modal",
+                )
+
+        return response
 
     def new_user(self, request):
         """
@@ -119,6 +145,17 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
 
         super().send_confirmation_mail(request, email_confirmation, signup)
 
+    def get_user_signed_up_signal(self):
+        """Return the allauth signal for user signup.
+
+        This is required when INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP is True,
+        so django-invitations can connect to the signup signal and mark
+        invitations as accepted after successful registration.
+        """
+        from allauth.account.signals import user_signed_up
+
+        return user_signed_up
+
 
 class AccountAdapterSignUpOpen(AccountAdapter):
     """Account adapter for open signup.
@@ -137,7 +174,19 @@ class AccountAdapterSignUpClosed(AccountAdapter):
     A user can still be added via Django admin.
     """
 
-    def is_open_for_signup(self, request: HttpRequest) -> Literal[False]:
+    def is_open_for_signup(self, request: HttpRequest) -> bool:
+        """
+        Allow signup only if the user has a valid invitation.
+        This keeps signups closed to the general public while allowing invited users to register.
+        """
+        if hasattr(request, "session"):
+            # If there's a verified email in the session, it means they came through
+            # a valid invitation link (set by invitations.views.AcceptInvite)
+            account_verified_email = request.session.get("account_verified_email")
+
+            if account_verified_email:
+                return True
+
         return False
 
 
@@ -188,3 +237,101 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
             provider.styles = SSOProviderStyles(request).get(provider.sub_id)
 
         return providers
+
+    def is_open_for_signup(
+        self, request: HttpRequest, sociallogin: SocialLogin
+    ) -> Literal[True]:
+        """Allow social signup for all users."""
+        return True
+
+    def pre_social_login(self, request, sociallogin):
+        """Fix user instance mismatch caused by Django multi-table inheritance.
+
+        QFieldCloud's UserManager uses `django-model-utils`
+        `select_subclasses()`, which JOINs the child tables and returns the
+        actual subclass instance (e.g. `Person`). Django's auth middleware
+        loads request.user through this manager, so request.user can be
+        `Person`, `Organization`, `Team` or `User` instance.
+
+        However, when allauth looks up a user by email during social login,
+        it uses `EmailAddress.objects.select_related("user")`, which bypasses
+        the custom UserManager entirely. `select_related` loads the FK target
+        model directly (`core.User`), producing a base `User` instance.
+
+        Django's `Model.__eq__` compares `_meta.label` first. Since
+        `"core.User"` != `"core.Person"`, it returns `NotImplemented`, and Python
+        falls back to identity comparison (is), which is False for
+        different objects. This means `User(pk=3)` != `Person(pk=3)`, even
+        though they represent the same database row.
+
+        allauth's `do_connect()` then checks:
+
+            if sociallogin.user != request.user:
+                raise validation_error("connected_other")
+
+        This incorrectly rejects the connection with "The third-party
+        account is already connected to a different account."
+
+        This fix aligns the two instances by comparing primary keys
+        directly, so allauth's downstream != check works correctly.
+        """
+        if (
+            request.user.is_authenticated
+            and sociallogin.is_existing
+            and sociallogin.user.pk is not None
+            and sociallogin.user.pk == request.user.pk
+        ):
+            sociallogin.user = request.user
+
+    def authenticate_by_email(
+        self, sociallogin: SocialLogin
+    ) -> tuple[AbstractUser, str] | None:
+        """Authenticate user and find User matching by email.
+        This hook happens the first time an email is submitted for 3rd party authentication.
+
+        Only matches Person type users with a verified email address,
+        since Organization cannot login using a 3rd party IDP.
+        """
+
+        emails = sociallogin.email_addresses
+        if not emails:
+            return None
+
+        matching_users = []
+
+        for email_address in emails:
+            email = email_address.email
+
+            users = User.objects.filter(
+                type=User.Type.PERSON,
+                email__iexact=email,
+                is_active=True,
+            )
+
+            # here we check if the email address is verified, but only if the email verification is mandatory,
+            # otherwise we allow unverified emails to authenticate as well.
+            if (
+                settings.ACCOUNT_EMAIL_VERIFICATION
+                == app_settings.EmailVerificationMethod.MANDATORY
+            ):
+                verified_users_ids = EmailAddress.objects.filter(
+                    email__iexact=email,
+                    primary=True,
+                    verified=True,
+                ).values_list("user_id", flat=True)
+
+                users = users.filter(pk__in=verified_users_ids)
+
+            matching_users.extend(users.all())
+
+        for user in matching_users:
+            if not self.can_authenticate_by_email(sociallogin, user.email):
+                continue
+
+            logger.info(
+                f"Authenticated user '{user.username}' with email '{user.email}' for social login."
+            )
+
+            return user, user.email
+
+        return None

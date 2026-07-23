@@ -7,9 +7,9 @@ from uuid import UUID
 
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import OfflinerType, PythonMiniOffliner, QgisCoreOffliner
-from libqfieldsync.project import ProjectConfiguration
+from libqfieldsync.project import ProjectConfig
 from libqfieldsync.utils.file_utils import get_project_in_folder
-from qgis.core import QgsCoordinateTransform, QgsRectangle
+from qgis.core import QgsCoordinateTransform, QgsCsException, QgsRectangle
 
 import qfc_worker.utils
 from qfc_worker.commands_base import QfcBaseCommand
@@ -38,7 +38,7 @@ def call_libqfieldsync_packager(
     project = open_qgis_project(str(the_qgis_file_name))
 
     layers = project.mapLayers()
-    project_config = ProjectConfiguration(project)
+    project_config = ProjectConfig(project)
     vl_extent_wkt = ""
     vl_extent = QgsRectangle()
     vl_extent_crs = project.crs()
@@ -56,12 +56,13 @@ def call_libqfieldsync_packager(
             if layer_extent.isNull() or not layer_extent.isFinite():
                 continue
 
+            transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
+
             try:
-                transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
                 vl_extent.combineExtentWith(
                     transform.transformBoundingBox(layer_extent)
                 )
-            except Exception as err:
+            except QgsCsException as err:
                 logger.error(
                     "Failed to transform the bbox for layer {} from {} to {} CRS.".format(
                         layer.name(), layer.crs(), project.crs()
@@ -72,15 +73,9 @@ def call_libqfieldsync_packager(
         if vl_extent.isNull() or not vl_extent.isFinite():
             logger.info("Failed to obtain the project extent from project layers.")
 
-            try:
-                vl_extent = QgsRectangle.fromWkt(
-                    qfc_worker.utils.extract_project_details(project)["extent"]
-                )
-            except Exception as err:
-                logger.error(
-                    "Failed to get the project extent from the current map canvas.",
-                    exc_info=err,
-                )
+            vl_extent = QgsRectangle.fromWkt(
+                qfc_worker.utils.extract_project_details(project)["extent"]
+            )
 
         if vl_extent.isNull() or not vl_extent.isFinite():
             raise Exception("Failed to obtain the project extent.")
@@ -111,7 +106,7 @@ def call_libqfieldsync_packager(
     logger.info("Packaging…")
 
     the_packaged_qgis_filename = package_dir.joinpath(
-        f"{the_qgis_file_name.stem}_qfield.qgs"
+        f"{the_qgis_file_name.stem}_qfield.qgz"
     )
     offline_converter = OfflineConverter(
         project,
@@ -126,7 +121,7 @@ def call_libqfieldsync_packager(
 
     # Disable the basemap generation because it needs the processing
     # plugin to be installed
-    offline_converter.project_configuration.create_base_map = False
+    offline_converter._project_config.create_base_map = False
     offline_converter.convert(reload_original_project=False)
 
     logger.info("Packaging finished!")

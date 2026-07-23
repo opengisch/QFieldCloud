@@ -1,0 +1,81 @@
+.object-tools{
+    margin-bottom: 1rem;
+}
+
+#jazzy-logo img{
+    box-shadow: none!important;
+}
+
+.qfc-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.qfc-table thead {
+    background-color: #ddd;
+}
+
+.qfc-table th,
+.qfc-table td {
+    padding: 10px;
+    text-align: left;
+}
+
+.qfc-table th {
+    border-bottom: 2px solid #ddd;
+    font-weight: 600;
+}
+
+.qfc-table tbody tr {
+    border-bottom: 1px solid #ddd;
+    background-color: #f8f9fa;
+}
+
+/* Pretty text fields */
+.qfc-pretty-field {
+    position: relative;
+}
+
+.qfc-pretty-field .qfc-code {
+    padding: 1rem;
+    overflow: auto;
+    background: #f6f8fa;
+    color: #24292f;
+    white-space: pre;
+    display: block;
+    line-height: 1.4;
+    font-size: 0.875rem;
+    font-family: monospace;
+}
+
+.qfc-pretty-field .qfc-code.qfc-wrapped {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.qfc-pretty-field .qfc-pretty-field-actions {
+    position: sticky;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: .5rem;
+    padding: .5rem;
+    background: rgba(255,255,255,.92);
+    border: 1px solid rgba(0,0,0,.08);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    z-index: 1000;
+}
+
+.qfc-pretty-field .qfc-pretty-field-actions button {
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.qfc-pretty-field .qfc-code .key     { color: #0033cc; }
+.qfc-pretty-field .qfc-code .string  { color: #067d17; }
+.qfc-pretty-field .qfc-code .number  { color: #b54708; }
+.qfc-pretty-field .qfc-code .boolean { color: #7a1cac; }
+.qfc-pretty-field .qfc-code .null    { color: #c62828; }
+/* /Pretty text fields */

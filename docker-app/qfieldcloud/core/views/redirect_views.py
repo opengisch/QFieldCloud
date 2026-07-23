@@ -6,7 +6,7 @@ from django.http.response import (
 )
 from django.shortcuts import redirect
 from django.urls import reverse
-from qfieldcloud.core.models import Project
+from qfieldcloud.project.models import Project
 
 
 def redirect_to_admin_project_view(
@@ -17,7 +17,7 @@ def redirect_to_admin_project_view(
             name=project_name,
             owner__username=username,
         )
-    except Exception:
+    except Project.DoesNotExist:
         raise Http404()
 
     return redirect(reverse("admin:core_project_change", args=(project.id,)))

@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 
 from django.conf import settings
 from django.db import transaction
@@ -6,19 +7,26 @@ from django.db.models import Q
 
 import qfieldcloud.core.models as models
 from qfieldcloud.core import exceptions
+from qfieldcloud.project.models import Project, ProjectQueryset
 
 logger = logging.getLogger(__name__)
+
+# the job types that can be triggered by the `queue_job` function.
+TRIGGERABLE_JOBS = [models.ProcessProjectfileJob]
 
 
 @transaction.atomic
 def apply_deltas(
-    project: "models.Project",
+    project: "Project",
     user: "models.User",
     project_file: str,
     overwrite_conflicts: bool,
-    delta_ids: list[str] = [],
+    delta_ids: list[str] | None = None,
 ) -> list["models.ApplyJob"]:
     """Apply a deltas"""
+
+    if delta_ids is None:
+        delta_ids = []
 
     logger.info(
         f"Requested apply_deltas on {project} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
@@ -96,7 +104,7 @@ def apply_deltas(
     return apply_jobs
 
 
-def repackage(project: "models.Project", user: "models.User") -> "models.PackageJob":
+def repackage(project: "Project", user: "models.User") -> "models.PackageJob":
     """Returns an unfinished or freshly created package job.
 
     Checks if there is already an unfinished package job and returns it,
@@ -124,9 +132,7 @@ def repackage(project: "models.Project", user: "models.User") -> "models.Package
     return package_job
 
 
-def repackage_if_needed(
-    project: "models.Project", user: "models.User"
-) -> "models.PackageJob":
+def repackage_if_needed(project: "Project", user: "models.User") -> "models.PackageJob":
     if not project.has_the_qgis_file:
         raise exceptions.NoQGISProjectError()
 
@@ -143,3 +149,53 @@ def repackage_if_needed(
         )
 
     return package_job
+
+
+def queue_job(
+    projects: Project | Iterable[Project],
+    job_model: type[models.Job],
+    triggered_by: models.Person | None = None,
+) -> list[models.Job]:
+    """
+    Queues a job of the given type for given project(s), triggered by the given person.
+
+    If triggered by person is not provided, the job will appear to be triggered by the project owner or the project's organization owner.
+
+    This function is not running in a transaction by default, it's caller's responsibility to determine this.
+    """
+
+    assert job_model in TRIGGERABLE_JOBS
+
+    if isinstance(projects, Project):
+        projects = [projects]
+
+    if isinstance(projects, ProjectQueryset):
+        projects = projects.select_related("owner")
+
+    jobs: list[models.Job] = []
+
+    for project in projects:
+        if triggered_by:
+            assert triggered_by.is_person
+
+            triggered_by_id = triggered_by.id
+        else:
+            if project.owner.is_organization:
+                triggered_by_id = project.owner.organization_owner_id
+            else:
+                triggered_by_id = project.owner_id
+
+        jobs.append(
+            job_model(
+                project=project,
+                created_by_id=triggered_by_id,
+                triggered_by_id=triggered_by_id,
+            )
+        )
+
+    # here, using `job_model.objects.bulk_create(jobs)` could be more efficient,
+    # though it throws `ValueError: Can't bulk create a multi-table inherited model`.
+    for job in jobs:
+        job.save()
+
+    return jobs

@@ -10,10 +10,18 @@ QFieldCloud allows seamless synchronization of your field data with your spatial
 If you're interested in quickly getting up and running, we suggest subscribing to the version hosted by OPENGIS.ch at https://qfield.cloud. This is also the instance that is integrated by default into QField.
 <a href="https://qfield.cloud"><img alt="QFieldCloud logo" src="https://qfield.cloud/img/logo_horizontal_embedded_font.svg" width="100%"/></a>
 
+That hosted service runs on the same open-source backend, but adds a polished web frontend and account, subscription, and payment management for the hosted offering. The hosted service helps fund ongoing development of QField and QFieldCloud.
+
+## Self-hosting
+
+The full QFieldCloud backend — this repo — is open source and production-ready. You can self-host it and get everything needed to work with QField. QFieldCloud also exposes a complete REST API, so you can build your own frontend or integrate it into existing systems. Contributions are welcome via the [contributor guide](CONTRIBUTING.md).
+
+Self-hosting gives you full control over data residency, user management, and configuration.
+
 
 ## Documentation
 
-QField and QFieldCloud documentation is deployed [here](https://docs.qfield.org).
+QField and QFieldCloud documentation is at [docs.qfield.org](https://docs.qfield.org), with self-hosting specifics at [docs.qfield.org/reference/qfieldcloud/self_hosted](https://docs.qfield.org/reference/qfieldcloud/self_hosted/).
 
 
 ## Feature requests and issue reports
@@ -34,11 +42,15 @@ For self-hosted issues, please use the GitHub issues at https://github.com/openg
 
 Clone the repository and all its submodules:
 
-    git clone --recurse-submodules git@github.com:opengisch/QFieldCloud.git
+```shell
+git clone --recurse-submodules git@github.com:opengisch/QFieldCloud.git
+```
 
 To fetch upstream development, don't forget to update the submodules too:
 
-    git pull --recurse-submodules  && git submodule update --recursive
+```shell
+git pull --recurse-submodules  && git submodule update --recursive
+```
 
 
 ### Launch a local instance
@@ -98,7 +110,7 @@ To verify the instance is working fine, you can check using the healthcheck endp
 curl https://localhost/api/v1/status/
 ```
 
-If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain the most of the relevant information.
+If there is some kind of problem, first check the `nginx` and `app` logs, usually they contain most of the relevant information.
 
 ```shell
 docker compose logs nginx app
@@ -112,64 +124,81 @@ It is stored in the `postgres_data` volume and managed via the `db` container.
 
 One can connect to the database via running the `psql` command within the `db` container:
 
-    docker compose exec -it db psql -U qfieldcloud_db_admin -d qfieldcloud_db
+```shell
+docker compose exec -it db psql -U qfieldcloud_db_admin -d qfieldcloud_db
+```
 
 Or by creating `~/.pg_service.conf` in their user home directory and appending:
 
-    [localhost.qfield.cloud]
-    host=localhost
-    dbname=qfieldcloud_db
-    user=qfieldcloud_db_admin
-    port=5433
-    password=3shJDd2r7Twwkehb
-    sslmode=disable
+```shell
+[localhost.qfield.cloud]
+host=localhost
+dbname=qfieldcloud_db
+user=qfieldcloud_db_admin
+port=5433
+password=3shJDd2r7Twwkehb
+sslmode=disable
 
-    [test.localhost.qfield.cloud]
-    host=localhost
-    dbname=test_qfieldcloud_db
-    user=qfieldcloud_db_admin
-    port=5433
-    password=3shJDd2r7Twwkehb
-    sslmode=disable
+[test.localhost.qfield.cloud]
+host=localhost
+dbname=test_qfieldcloud_db
+user=qfieldcloud_db_admin
+port=5433
+password=3shJDd2r7Twwkehb
+sslmode=disable
+```
 
 And then connecting to the database via:
 
-    psql 'service=localhost.qfield.cloud'
-
+```shell
+psql 'service=localhost.qfield.cloud'
+```
 
 ### Dependencies
 
-QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage it's dependencies.
+QFieldCloud uses [`pip-compile`](https://pypi.org/project/pip-tools/) to manage its dependencies.
 All dependencies are listed in `requirements*.in` files.
 When a `pip` a dependency is changed, the developer should produce the new `requirements*.txt` files.
 
-    docker compose run --rm pipcompile
+```shell
+docker compose run --rm pipcompile
+```
 
 Alternatively, one can create only a `requirements.txt` file for a single `requirements.in`:
 
+```shell
     docker compose run --rm pipcompile pip-compile --no-strip-extras -o requirements/requirements_worker_wrapper.txt requirements/requirements_worker_wrapper.in
+```
 
 ### Tests
 
 Rebuild the docker compose stack with the `docker-compose.override.test.yml` file added to the `COMPOSE_FILE` environment variable:
 
-    export COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
-    # (Re-)build the app service to install necessary test utilities (requirements_test.txt)
-    docker compose up -d --build
-    docker compose run app python manage.py migrate
-    docker compose run app python manage.py collectstatic --noinput
+```shell
+export COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
+# (Re-)build the app service to install necessary test utilities (requirements_test.txt)
+docker compose up -d --build
+docker compose run app python manage.py migrate
+docker compose run app python manage.py collectstatic --noinput
+```
 
 You can then run all the unit and functional tests:
 
-    docker compose run app python manage.py test --keepdb
+```shell
+docker compose run app python manage.py test --keepdb
+```
 
 To run only a test module (e.g. `test_permission.py`):
 
-    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
+```shell
+docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission
+```
 
 To run a specific test:
 
-    docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission.QfcTestCase.test_collaborator_project_takeover
+```shell
+docker compose run app python manage.py test --keepdb qfieldcloud.core.tests.test_permission.QfcTestCase.test_collaborator_project_takeover
+```
 
 <details>
 <summary>
@@ -177,36 +206,41 @@ Instructions to have a test instance running in parallel to a dev instance
 </summary>
 Create an <code>.env.test</code> file with the following variables that override the ones in <code>.env</code>:
 
-    ENVIRONMENT=test
-    QFIELDCLOUD_HOST=nginx
-    DJANGO_SETTINGS_MODULE=qfieldcloud.settings
-    STORAGE_ENDPOINT_URL=http://172.17.0.1:8109
-    MINIO_API_PORT=8109
-    MINIO_BROWSER_PORT=8110
-    WEB_HTTP_PORT=8101
-    WEB_HTTPS_PORT=8102
-    HOST_POSTGRES_PORT=8103
-    QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
-    QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
-    DJANGO_DEV_PORT=8111
-    SMTP4DEV_WEB_PORT=8112
-    SMTP4DEV_SMTP_PORT=8125
-    SMTP4DEV_IMAP_PORT=8143
-    COMPOSE_PROJECT_NAME=qfieldcloud_test
-    COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
-    DEBUG_APP_DEBUGPY_PORT=5781
-    DEBUG_WORKER_WRAPPER_DEBUGPY_PORT=5780
-    DEMGEN_PORT=8201
+```shell
+ENVIRONMENT=test
+QFIELDCLOUD_HOST=nginx
+DJANGO_SETTINGS_MODULE=qfieldcloud.settings
+OBJECT_STORAGE_API_PORT=8109
+OBJECT_STORAGE_BROWSER_PORT=8110
+WEB_HTTP_PORT=8101
+WEB_HTTPS_PORT=8102
+HOST_POSTGRES_PORT=8103
+QFIELDCLOUD_DEFAULT_NETWORK=qfieldcloud_test_default
+QFIELDCLOUD_SUBSCRIPTION_MODEL=subscription.Subscription
+DJANGO_DEV_PORT=8111
+SMTP4DEV_WEB_PORT=8112
+SMTP4DEV_SMTP_PORT=8125
+SMTP4DEV_IMAP_PORT=8143
+COMPOSE_PROJECT_NAME=qfieldcloud_test
+COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.test.yml
+DEBUG_APP_DEBUGPY_PORT=5781
+DEBUG_WORKER_WRAPPER_DEBUGPY_PORT=5780
+DEMGEN_PORT=8201
+```
 
 Build the test docker compose stack:
 
-    docker compose --env-file .env --env-file .env.test up -d --build
-    docker compose --env-file .env --env-file .env.test run app python manage.py migrate
-    docker compose --env-file .env --env-file .env.test run app python manage.py collectstatic --noinput
+```shell
+docker compose --env-file .env --env-file .env.test up -d --build
+docker compose --env-file .env --env-file .env.test run app python manage.py migrate
+docker compose --env-file .env --env-file .env.test run app python manage.py collectstatic --noinput
+```
 
 You can then launch the tests:
 
-    docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
+```shell
+docker compose --env-file .env --env-file .env.test run app python manage.py test --keepdb
+```
 
 Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in your `.pg_service.conf` file](#accessing-the-database).
 
@@ -217,7 +251,7 @@ Don't forget to update the `port` value in [`[test.localhost.qfield.cloud]` in y
 
 To get information about the current test coverage, run:
 
-```
+```shell
 docker compose exec app coverage run manage.py test --keepdb
 docker compose exec app coverage report
 ```
@@ -233,9 +267,9 @@ For local development you use `docker-compose.override.local.yml` with `DEBUG=Tr
 The VSCode debugger will attach to the debugger in the container as configured in `.vscode/launch.json`.
 
 There are two debugger configurations: for `app` and for `worker_wrapper` services.
-The debugger can triggered with `F5`.
+The debugger can be triggered with `F5`.
 
-The default debugger configuration would not pause on boostrapping operations (module imports, class/function definitions etc).
+The default debugger configuration would not pause on bootstrapping operations (module imports, class/function definitions etc).
 
 To make sure the debugger is running before any application code is running, you have several options.
 
@@ -248,7 +282,7 @@ print("debugpy waiting for debugger... 🐛")
 debugpy.wait_for_client()  # optional
 ```
 
-2. Alternativley, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`. Note the exposed port here might be different from your local configuration.
+2. Alternatively, prefix your commands with `python -m debugpy --listen 0.0.0.0:5680 --wait-for-client`. Note the exposed port here might be different from your local configuration.
 
 ```shell
     docker compose run --rm -p 5680:5680 app python -m debugpy --listen 0.0.0.0:5680 --wait-for-client manage.py test
@@ -260,7 +294,7 @@ debugpy.wait_for_client()  # optional
 To add breakpoints in vendor modules installed via `pip` or `apt`, you need a copy of their source code on your host machine.
 The easiest way to achieve that is do actual copy of them:
 
-```
+```shell
 docker compose cp app:/usr/local/lib/python3.10/site-packages/ docker-app/site-packages
 ```
 
@@ -278,48 +312,87 @@ so other programs (e.g. `curl`) can create secure connection to the local QField
 
 On Debian/Ubuntu, copy the root certificate to the directory with trusted certificates. Note the extension has been changed to `.crt`:
 
-    sudo cp ./conf/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+```shell
+sudo cp ./conf/nginx/certs/rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+```
 
 Trust the newly added certificate:
 
-    sudo update-ca-certificates
+```shell
+sudo update-ca-certificates
+```
 
 Connecting with `curl` should return no errors:
-    curl https://localhost:8002/
+```shell
+curl https://localhost:8002/
+```
 
 ### Remove the root certificate
 
 If you want to remove or change the root certificate, you need to remove the root certificate file and refresh the list of certificates:
 
-    sudo rm /usr/local/share/ca-certificates/rootCA.crt
-    sudo update-ca-certificates --fresh
+```shell
+sudo rm /usr/local/share/ca-certificates/rootCA.crt
+sudo update-ca-certificates --fresh
+```
 
 Now connecting with `curl` should fail with a similar error:
 
-    $ curl https://localhost:8002/
+```
+$ curl https://localhost:8002/
 
-    curl: (60) SSL certificate problem: unable to get local issuer certificate
-    More details here: https://curl.haxx.se/docs/sslcerts.html
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.haxx.se/docs/sslcerts.html
 
-    curl failed to verify the legitimacy of the server and therefore could not
-    establish a secure connection to it. To learn more about this situation and
-    how to fix it, please visit the web page mentioned above.
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+```
+
+## Connecting QField to a local QFieldCloud instance
+
+The QFieldCloud REST API is used across clients, including the QField app.
+One can test their local QFieldCloud instance by running QField on their development machine.
+[Install QField](https://qfield.org/get) for your operating system.
+
+If you need to connect to your local QFieldCloud instance from a device different from your development machine however (e.g. your mobile phone), the following prerequisites must be met:
+
+- The QFieldCloud app container's ports must be exposed on the public interface (0.0.0.0) of your dev machine.
+  To check this, run `docker compose ps app`. It should say `0.0.0.0:8011->8000/tcp`.
+- Your dev machine and your mobile phone need to be on the same network (e.g. same WiFi)
+- Find out the external IP address of the interface that the app container's HTTP port is bound to.
+  E.g. something like `ip -f inet addr show eth1` (make sure to pick the right interface if you have several NICs, like Ethernet and WiFi).
+- For easier access via hostname, you need to have an mDNS service like `avahi` running on your dev machine.
+  On Linux, check that `avahi` is running: `systemctl status avahi-daemon`
+  If not, install `avahi-daemon` and make sure it's running.
+  That should then allow you to access your dev machine as `<your-dev-machine-hostname>.local` from devices on the same network.
+  E.g. if the hostname of your dev machine is `foo`, you should be able to reach it using `ping foo.local` from another machine on the same network.
+- In QFieldCloud's settings, the external IP address and hostname need to be added to `DJANGO_ALLOWED_HOSTS`.
+
+This should then be enough to connect the QField mobile app to your local QFieldCloud instance:
+
+- Start QField
+- When asked to sign in, double tap on the Nyuki logo to enter a custom QFieldCloud server URL
+- Enter the URL using your mDNS hostname (or IP address, if mDNS doesn't work for you):
+  - `http://192.168.1.x:8011/` or
+  - `http://<your-dev-machine-hostname>.local:8011/`
 
 ## Code style
 
-Code style done with [`pre-commit`](https://pre-commit.com):
+This project uses [`pre-commit`](https://pre-commit.com) to automatically run linters and formatters before each commit.
 
-    pip install pre-commit
-    # install pre-commit hook
-    pre-commit install
-
+```shell
+pip install pre-commit
+# install pre-commit hook
+pre-commit install
+```
 
 ## Deployment
 
 ### Launch a server instance
 
 > [!CAUTION]
-> QFieldCloud is designed to work with externally managed services for it's database (PostgreSQL), Object Storage (S3) and mailing provider.
+> QFieldCloud is designed to work with externally managed services for its database (PostgreSQL), Object Storage (S3) and mailing provider.
 >
 > For small self-hosted environments you may run QFieldCloud on a single server using `docker-compose.override.standalone.yml`, but this is **entirely at your own risk**.
 >
@@ -327,22 +400,31 @@ Code style done with [`pre-commit`](https://pre-commit.com):
 
 Copy the `.env.example` into `.env` file:
 
-    cp .env.example .env
-    vi .env
+```shell
+cp .env.example .env
+vi .env
+```
 
 Do not forget to set `DEBUG=0` and to adapt `COMPOSE_FILE` environment variable to not load local development configurations.
 
 Run and build the docker containers:
 
-    docker compose up -d --build
+```shell
+docker compose up -d --build
+```
 
 Run the django database migrations:
 
-    docker compose exec app python manage.py migrate
+```shell
+docker compose exec app python manage.py migrate
+```
 
 Collect the static files:
 
-    docker compose exec app python manage.py collectstatic
+```shell
+docker compose exec app python manage.py collectstatic
+```
+
 
 ### Using certificate from Let's Encrypt
 
@@ -352,61 +434,70 @@ Note you want to change the `LETSENCRYPT_EMAIL`, `LETSENCRYPT_RSA_KEY_SIZE` and 
 
 On a server with a public domain, you can get a certificate issued by Let's Encrypt using certbot running the following command:
 
-    ./scripts/init_letsencrypt.sh
+```shell
+./scripts/init_letsencrypt.sh
+```
 
 The certificates will be renewed automatically.
 
 To use this Let's Encrypt certificate within QFieldCloud you just need to uncomment the following lines in your `.env`:
 
-    QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
-    QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
+```shell
+QFIELDCLOUD_TLS_CERT=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/fullchain.pem
+QFIELDCLOUD_TLS_KEY=/etc/letsencrypt/live/${QFIELDCLOUD_HOST}/privkey.pem
+```
 
 You can also use your own certificates by placing them in `conf/nginx/certs/` and changing `QFIELDCLOUD_TLS_CERT` and `QFIELDCLOUD_TLS_KEY` accordingly.
 Don't forget to create your Diffie-Hellman parameters.
+
 
 ### Additional NGINX config
 
 You can add additional config to nginx placing files in `conf/nginx/config.d/` ending with `.conf`. They will be included in the main `nginx.conf`.
 
+
 ## Infrastructure
 
-Based on this example
-<https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/>
 
 ### Ports
 
-| service       | port  | configuration        | local              | development        | production         |
-|---------------|-------|----------------------|--------------------|--------------------|--------------------|
-| nginx http    | 80    | WEB_HTTP_PORT        | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| nginx https   | 443   | WEB_HTTPS_PORT       | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| django http   | 8011  | DJANGO_DEV_PORT      | :white_check_mark: | :x:                | :x:                |
-| postgres      | 5433  | HOST_POSTGRES_PORT   | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| minio API     | 8009  | MINIO_API_PORT       | :white_check_mark: | :x:                | :x:                |
-| minio browser | 8010  | MINIO_BROWSER_PORT   | :white_check_mark: | :x:                | :x:                |
-| smtp web      | 8012  | SMTP4DEV_WEB_PORT    | :white_check_mark: | :x:                | :x:                |
-| smtp          | 25    | SMTP4DEV_SMTP_PORT   | :white_check_mark: | :x:                | :x:                |
-| imap          | 143   | SMTP4DEV_IMAP_PORT   | :white_check_mark: | :x:                | :x:                |
+Table of some of the relevant ports being exposed and how to configure them.
+
+| service                | port | configuration               | local              | staging            | production         |
+|------------------------|------|-----------------------------|--------------------|--------------------|--------------------|
+| nginx http             | 80   | WEB_HTTP_PORT               | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| nginx https            | 443  | WEB_HTTPS_PORT              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| django http            | 8011 | DJANGO_DEV_PORT             | :white_check_mark: | :x:                | :x:                |
+| postgres               | 5433 | HOST_POSTGRES_PORT          | :white_check_mark: | :x:                | :x:                |
+| object storage API     | 8009 | OBJECT_STORAGE_API_PORT     | :white_check_mark: | :x:                | :x:                |
+| object storage browser | 8010 | OBJECT_STORAGE_BROWSER_PORT | :white_check_mark: | :x:                | :x:                |
+| smtp web               | 8012 | SMTP4DEV_WEB_PORT           | :white_check_mark: | :x:                | :x:                |
+| smtp                   | 25   | SMTP4DEV_SMTP_PORT          | :white_check_mark: | :x:                | :x:                |
+| imap                   | 143  | SMTP4DEV_IMAP_PORT          | :white_check_mark: | :x:                | :x:                |
+| imap                   | 8020 | WEBDAV_PUBLIC_PORT          | :white_check_mark: | :x:                | :x:                |
 
 ### Logs
 
 Docker logs are managed by docker in the default way. To read the logs:
 
-    docker compose logs
-
+```shell
+docker compose logs
+```
 
 For great `nginx` logs, use:
 
-    QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
-    docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
-
+```shell
+QFC_JQ='[.ts, .ip, (.method + " " + (.status|tostring) + " " + (.resp_time|tostring) + "s"), .uri, "I " + (.request_length|tostring) + " O " + (.resp_body_size|tostring), "C " + (.upstream_connect_time|tostring) + "s", "H " + (.upstream_header_time|tostring) + "s", "R " + (.upstream_response_time|tostring) + "s", .user_agent] | @tsv'
+docker compose logs nginx -f --no-log-prefix | grep ':"nginx"' | jq -r $QFC_JQ
+```
 
 ### Storage
 
-You can use either the integrated `minio` object storage, or use an external provider (e.g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
+You can use either the integrated `rustfs` object storage, or use an external provider (e.g. S3) with versioning enabled. Check the corresponding `STORAGE_*` environment variables for more info.
 
 ### Database
 
-QFieldCloud requires a PostgreSQL/PostGIS database persisting it's own data.
+QFieldCloud requires a PostgreSQL/PostGIS database persisting its own data.
 The recommended and only supported way is to use an external to the docker-compose stack PostgreSQL/PostGIS database.
 Check the corresponding `POSTGRES_*` environment variables for more info.
 
@@ -431,15 +522,15 @@ For the best chance of having your PR merged, you must first communicate your id
 
 Discussing it first is crucial. Not every idea is accepted, and these steps will save you the time and energy of creating a PR that wouldn't be merged.
 
-Any new, follow-up discussions should be opened in a new issue that references the original.
+Any new follow-up discussions should be opened in a new issue that references the original.
 
 
 ### Before opening a new PR
 
-- Make sure you prepare a small focused branch with your changes, properly referencing the source issue and add a detailed description to the PR opening message.
+- Make sure you prepare a small, focused branch with your changes, properly referencing the source issue and add a detailed description to the PR opening message.
 - If the change addresses a UI/UX change, provide a before and after screenshot.
 - Your branch should be based on the latest `master` branch.
-- In the rare occurances when it is not based on `master`, please base your PR on the respective branch.
+- In the rare occurences when it is not based on `master`, please base your PR on the respective branch.
 
 
 ### Pull requests
