@@ -23,7 +23,6 @@ from qfieldcloud.core.models import Organization, Person, User, UserAccount
 from qfieldcloud.subscription.exceptions import NotPremiumPlanException
 from qfieldcloud.subscription.functions import TsTzRange
 
-
 logger = logging.getLogger(__name__)
 
 
