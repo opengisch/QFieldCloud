@@ -612,7 +612,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.create_file(keyA, "A" * 100)
         self.delete_file(keyA)
 
-        time.sleep(2)
+        time.sleep(5)
 
         self.create_file(keyB, "B" * 100)
         self.delete_file(keyB)
@@ -624,7 +624,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
                 "--prefix",
                 self.unique_prefix,
                 "--retention-period",
-                "2 second",
+                "5 seconds",
             ]
         )
         self.assertIn("Total deleted keys found: 1", result.stdout)
@@ -638,7 +638,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
                 "--prefix",
                 self.unique_prefix,
                 "--retention-period",
-                "2 second",
+                "5 seconds",
             ]
         )
 
