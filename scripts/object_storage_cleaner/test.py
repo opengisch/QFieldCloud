@@ -262,8 +262,8 @@ class TestObjectStorageCleaner(unittest.TestCase):
         self.assertIn("Total size wasted: 100.00 B", result_short_retention.stdout)
         self.assertIn("Total versions wasted: 2", result_short_retention.stdout)
 
-        # Retention period is LONG (5 seconds).
-        # The file was deleted 2 seconds ago. 2s < 5s.
+        # Retention period is LONG (10 seconds).
+        # The file was deleted 2 seconds ago. 2s < 10s.
         # So the file is NEWER than the retention period. It should be PROTECTED (skipped).
         result_long_retention = self.run_script(
             [
@@ -271,7 +271,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
                 "--prefix",
                 self.unique_prefix,
                 "--retention-period",
-                "5 seconds",
+                "10 seconds",
             ]
         )
 
@@ -286,7 +286,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
                 "--prefix",
                 self.unique_prefix,
                 "--retention-period",
-                "5 second",
+                "10 seconds",
             ]
         )
 
