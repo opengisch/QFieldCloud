@@ -155,7 +155,7 @@ services:
         DEBUG_BUILD: ${DEBUG}
         UBUNTU_VERSION: noble
         QGIS_REPOSITORY: ubuntu-ltr
-        QGIS_VERSION: 1:3.44.10+40noble
+        QGIS_VERSION: 1:3.44.12+40noble
     tty: true
     command: bash -c "echo QGIS3 built"
     logging: *default-logging
@@ -169,7 +169,7 @@ services:
         DEBUG_BUILD: ${DEBUG}
         UBUNTU_VERSION: resolute
         QGIS_REPOSITORY: debian
-        QGIS_VERSION: 1:4.0.2+44resolute
+        QGIS_VERSION: 1:4.0.3+44resolute
     tty: true
     command: bash -c "echo QGIS4 built"
     logging: *default-logging
