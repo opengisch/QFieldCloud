@@ -8,7 +8,8 @@ ARG QGIS_REPOSITORY=ubuntu-ltr
 
 # Set QGIS version as in the ubuntu/debian repos.
 # Choose your version from here: https://debian.qgis.org/ubuntu-ltr/dists/noble/main/binary-amd64/Packages or https://debian.qgis.org/debian/dists/resolute/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.44.10+40noble
+# NOTE: `QGIS_VERSION` is most likely overridden by the `docker-compose.yml` file, this is just a default value.
+ARG QGIS_VERSION=1:3.44.12+40noble
 
 # Start from a basic Ubuntu image
 FROM ubuntu:${UBUNTU_VERSION}
