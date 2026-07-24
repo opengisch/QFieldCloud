@@ -5,13 +5,9 @@
 # pull a builder image, the same as the base
 FROM python:3.14-slim-trixie AS build
 
+COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /bin/
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# Disable annoying pip version check, we don't care if pip is slightly older
-ARG PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Do not create and use redundant cache dir in the current user home
-ARG PIP_NO_CACHE_DIR=1
 
 # install system-wide requirements
 RUN apt-get update \
@@ -24,12 +20,9 @@ RUN apt-get update \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# install `pip-compile` (as part of `pip-tools`)
-RUN pip3 install --no-cache-dir pip-tools
-
-# install pip dependencies
+# install Python dependencies
 COPY ./requirements/requirements.txt /requirements/requirements.txt
-RUN pip3 install --no-cache-dir -r requirements/requirements.txt \
+RUN uv pip install --system --no-cache -r requirements/requirements.txt \
     && rm requirements/requirements.txt
 
 # save 60 MB of data... Safe to delete according to botocore contributor https://github.com/boto/botocore/issues/1629#issuecomment-451309885
@@ -42,16 +35,14 @@ RUN ls -Q /usr/local/lib/python3.14/site-packages/botocore/data | grep -xv "endp
 # pull official base image
 FROM python:3.14-slim-trixie AS base
 
+COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /bin/
+
 # set work directory
 WORKDIR /usr/src/app
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-# check `build` stage for more info
-# NOTE while using ARG would be more appropriate, the following vars would have to be redifined for each build stage.
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1
-ENV PIP_NO_CACHE_DIR=1
 
 # install dependencies
 RUN apt-get update \
@@ -75,7 +66,7 @@ COPY --from=build /usr/local/lib/python3.14/site-packages/ /usr/local/lib/python
 ARG DEBUG_BUILD
 
 RUN if [ "$DEBUG_BUILD" = "1" ]; then apt-get update && apt-get install -y --no-install-recommends gdb procps && rm -rf /var/lib/apt/lists/*; fi
-RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --no-cache-dir debugpy ipython memray py-spy; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then uv pip install --system --no-cache debugpy ipython memray py-spy; fi
 
 # add app group
 RUN addgroup --system app && adduser --system app --ingroup app
@@ -102,7 +93,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 FROM base AS webserver_runtime
 ENV LOGGER_SOURCE=app
 COPY ./requirements/requirements_runtime.txt requirements/requirements_runtime.txt
-RUN pip3 install --no-cache-dir -r requirements/requirements_runtime.txt
+RUN uv pip install --system --no-cache -r requirements/requirements_runtime.txt
 EXPOSE 8000
 
 COPY . .
@@ -117,7 +108,7 @@ USER app
 FROM base AS webserver_test
 ENV LOGGER_SOURCE=app
 COPY ./requirements/requirements_test.txt requirements/requirements_test.txt
-RUN pip3 install -r requirements/requirements_test.txt
+RUN uv pip install --system --no-cache -r requirements/requirements_test.txt
 EXPOSE 8000
 
 COPY . .
@@ -132,7 +123,7 @@ USER app
 FROM base AS worker_wrapper_runtime
 ENV LOGGER_SOURCE=worker_wrapper
 COPY ./requirements/requirements_worker_wrapper.txt requirements/requirements_worker_wrapper.txt
-RUN pip3 install --no-cache-dir -r requirements/requirements_worker_wrapper.txt
+RUN uv pip install --system --no-cache -r requirements/requirements_worker_wrapper.txt
 
 COPY . .
 RUN chown -R app:app .
