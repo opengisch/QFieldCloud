@@ -610,6 +610,7 @@ def apply_deltas_without_transaction(
 
             raise err
 
+    # Exits editing mode for modified layers, there is nothing to commit at this stage
     for layer_id in layer_ids_to_commit:
         layer = project.mapLayer(layer_id)
         layer.commitChanges()
