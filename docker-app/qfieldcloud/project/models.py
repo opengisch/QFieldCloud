@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
 from django.conf import settings
@@ -17,6 +17,7 @@ from django.core.validators import (
     MinValueValidator,
     RegexValidator,
 )
+from django.db import transaction
 from django.db.models import Case, Exists, F, OuterRef, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
@@ -37,6 +38,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.project.enums import ErrorCode, QgsGeometryType, QgsLayerType
 from qfieldcloud.project.utils.geometry_utils import transform_wkt_crs
 
 if TYPE_CHECKING:
@@ -46,6 +48,7 @@ if TYPE_CHECKING:
         SecretQueryset,
     )
     from qfieldcloud.filestorage.models import File, FileQueryset, FileVersion
+    from qfieldcloud.project.type_defs import LayerDetails, QgisProjectDetails
 
     pass
 
@@ -191,25 +194,20 @@ class Project(models.Model):
         SHARED_DATASETS = 2, _("Shared Datasets")
 
     @property
-    def localized_layers(self) -> list[dict[str, Any]]:
+    def localized_layers(self) -> list[QgisLayer]:
         """
-        Retrieve all layers from `Project.project_details` that have their `is_localized` flag set to `True`.
+        Retrieve all `Layer` rows of this project's `QgisProject` that have their `is_localized` flag set to `True`.
 
         Returns:
-            A list of layer detail dictionaries where each dict has 'is_localized' == True.
-            If project_details is missing or empty, returns an empty list.
+            A list of `Layer` instances with `is_localized == True`.
+            If the project has no associated `QgisProject`, returns an empty list.
         """
-        if not self.project_details:
+        qgis_project = getattr(self, "qgis_project", None)
+
+        if qgis_project is None:
             return []
 
-        layers_by_id = self.project_details.get("layers_by_id", {})
-
-        localized_layers = []
-        for layer_detail in layers_by_id.values():
-            if layer_detail.get("is_localized", False):
-                localized_layers.append(layer_detail)
-
-        return localized_layers
+        return list(qgis_project.layers.filter(is_localized=True))
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
@@ -238,6 +236,9 @@ class Project(models.Model):
 
     # The project create seed.
     seed: "ProjectSeed"
+
+    # The QGIS project for this project.
+    qgis_project: "QgisProject"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
@@ -570,18 +571,19 @@ class Project(models.Model):
         """
         return self.project_type == self.ProjectType.SHARED_DATASETS
 
-    def get_missing_localized_layers(self) -> list[dict[str, Any]]:
+    def get_missing_localized_layers(self) -> list["QgisLayer"]:
         """
         Of all localized layers, return those whose filenames aren’t in `available_filenames`,
         which means they are not present in the associated localized datasets project storage.
 
         Returns:
-            A list of layer-detail dicts (same shape as in `localized_layers`)
-            that need to be added/uploaded.
+            A list of `Layer` instances (same as in `localized_layers`) that need to be added/uploaded.
         """
         from qfieldcloud.filestorage.models import File
 
-        if not self.project_details:
+        qgis_project = getattr(self, "qgis_project", None)
+
+        if qgis_project is None:
             return []
 
         if not self.shared_datasets_project:
@@ -596,10 +598,10 @@ class Project(models.Model):
 
         missing_localized_layers = []
         for layer in self.localized_layers:
-            if "filename" not in layer:
+            if not layer.file_name:
                 continue
-            # TODO: refactor and extract filename splitting logic into a reusable utility.
-            filename = layer["filename"].split("localized:")[-1]
+
+            filename = layer.file_name.split("localized:")[-1]
 
             if filename not in available_filenames:
                 missing_localized_layers.append(layer)
@@ -684,9 +686,11 @@ class Project(models.Model):
 
     @property
     def has_online_vector_data(self) -> bool | None:
-        """Returns None if project details or layers details are not available"""
+        """Returns None if the project has no associated `QgisProject`"""
 
-        if not self.project_details or not self.project_details.get("layers_by_id"):
+        qgis_project = getattr(self, "qgis_project", None)
+
+        if qgis_project is None:
             return None
 
         from qfieldcloud.project.utils.project_utils import has_online_vector_data
@@ -782,7 +786,7 @@ class Project(models.Model):
                 }
             )
 
-        elif self.project_details:
+        elif getattr(self, "qgis_project", None):
             if self.localized_layers:
                 if self.shared_datasets_project:
                     localized_project_url = reverse_lazy(
@@ -814,24 +818,24 @@ class Project(models.Model):
                 for missing_layer in self.get_missing_localized_layers():
                     problems.append(
                         {
-                            "layer": missing_layer.get("filename"),
+                            "layer": missing_layer.file_name,
                             "level": "warning",
                             "code": "missing_localized_file",
                             "description": _(
                                 'Localized dataset stored at "{}" is missing.'
-                            ).format(missing_layer.get("filename")),
+                            ).format(missing_layer.file_name),
                             "solution": missing_localized_file_solution,
                         }
                     )
 
-            for layer_data in self.project_details.get("layers_by_id", {}).values():
-                layer_name = layer_data.get("name")
+            for layer in self.qgis_project.layers.all():
+                layer_name = layer.name
 
                 # All the layers stored in the localized datasets project will be with errors, so we just skip them. We handled them separately before this for loop.
-                if layer_data.get("error_code") == "localized_dataprovider":
+                if layer.error_code == "localized_dataprovider":
                     continue
 
-                if layer_data.get("error_code") != "no_error":
+                if layer.error_code != "no_error":
                     problems.append(
                         {
                             "layer": layer_name,
@@ -841,8 +845,8 @@ class Project(models.Model):
                                 'Layer "{}" has an error with code "{}": {}'
                             ).format(
                                 layer_name,
-                                layer_data.get("error_code"),
-                                layer_data.get("error_summary"),
+                                layer.error_code,
+                                layer.error_summary,
                             ),
                             "solution": _(
                                 'Check the latest "process_projectfile" job logs for more info and reupload the project files with the required changes.'
@@ -850,8 +854,8 @@ class Project(models.Model):
                         }
                     )
                 # the layer is missing a primary key, warn it is going to be read-only
-                elif layer_data.get("layer_type_name") in ("VectorLayer", "Vector"):
-                    if layer_data.get("qfc_source_data_pk_name") == "":
+                elif layer.layer_type == QgsLayerType.Vector:
+                    if layer.qfs_settings.get("qfc_source_data_pk_name") == "":
                         problems.append(
                             {
                                 "layer": layer_name,
@@ -1092,17 +1096,8 @@ class ProjectSeed(models.Model):
         return super().save(*args, **kwargs)
 
 
-class QgisProjectDetails(TypedDict, total=False):
-    project_name: str
-    qgis_version: str
-    crs: str
-    extent: str
-    background_color: str
-    attachment_dirs: list[str]
-    data_dirs: list[str]
-
-
 class QgisProjectQueryset(models.QuerySet):
+    @transaction.atomic()
     def update_from_details(
         self,
         project: "Project",
@@ -1131,13 +1126,21 @@ class QgisProjectQueryset(models.QuerySet):
             defaults={
                 "file_version": file_version,
                 "name": details.get("project_name"),
-                "qgis_version": qgis_version[:100] or "",
+                "qgis_version": qgis_version[:100],
                 "crs": crs,
                 "extent": extent,
                 "background_color": details.get("background_color") or "#ffffff",
                 "custom_properties": custom_properties,
             },
         )
+
+        layers_by_id = details.get("layers_by_id") or {}
+        ordered_layer_ids = details.get("ordered_layer_ids")
+
+        QgisLayer.objects.update_from_details(  # type: ignore[attr-defined]
+            qgis_project, ordered_layer_ids, layers_by_id
+        )
+
         return qgis_project
 
 
@@ -1205,6 +1208,9 @@ class QgisProject(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # The layers that belong to this QGIS project.
+    layers: "QgisLayerQuerySet"
+
     @property
     def attachment_dirs(self) -> list[str]:
         """Returns a list of configured attachment dirs for the project.
@@ -1246,3 +1252,223 @@ class QgisProject(models.Model):
             data_dirs = self.custom_properties.get(self.DATA_DIRS_KEY, [])
 
         return data_dirs
+
+
+class QgisLayerQuerySet(models.QuerySet):
+    @transaction.atomic()
+    def update_from_details(
+        self,
+        qgis_project: "QgisProject",
+        ordered_layer_ids: list[str],
+        layers_by_id: dict[str, "LayerDetails"],
+    ) -> None:
+        """Sync QGIS project's `Layer` rows to match `layers_by_id`.
+
+        Creates/updates a `Layer` row per entry in `layers_by_id`, in the order
+        given by `ordered_layer_ids`, then deletes any existing `Layer` rows
+        for the project that were not present in this update.
+
+        Existing rows are only written to the database if a field actually
+        changed, to avoid needless `updated_at` bumps and writes on re-sync.
+        """
+
+        existing_layers_by_qgis_layer_id = {}
+        for layer in qgis_project.layers.select_for_update():
+            existing_layers_by_qgis_layer_id[layer.qgis_layer_id] = layer
+
+        qgis_layer_ids_to_keep = set()
+
+        for ordering, qgis_layer_id in enumerate(ordered_layer_ids):
+            layer_data = layers_by_id.get(qgis_layer_id)
+            if layer_data is None:
+                continue
+
+            geom_type = layer_data.get("geom_type")
+            if geom_type is None:
+                geom_type = QgsGeometryType.Null
+
+            defaults = {
+                "name": layer_data.get("name"),
+                "crs": layer_data.get("crs"),
+                "geom_type": geom_type,
+                "wkb_type_name": layer_data.get("wkb_type_name") or "",
+                "layer_type": layer_data.get("type"),
+                "provider_name": layer_data.get("provider_name") or "",
+                "ordering": ordering,
+                "datasource": layer_data.get("datasource"),
+                "file_name": layer_data.get("filename") or "",
+                "is_valid": layer_data.get("is_valid", False),
+                "is_localized": layer_data.get("is_localized", False),
+                "error_code": layer_data.get("error_code") or ErrorCode.NO_ERROR,
+                "error_summary": layer_data.get("error_summary") or "",
+                "error_message": layer_data.get("error_message") or "",
+                "provider_error_summary": layer_data.get("provider_error_summary")
+                or "",
+                "provider_error_message": layer_data.get("provider_error_message")
+                or "",
+                "qfs_settings": {
+                    "qfs_action": layer_data.get("qfs_action"),
+                    "qfs_cloud_action": layer_data.get("qfs_cloud_action"),
+                    "qfs_photo_naming": layer_data.get("qfs_photo_naming"),
+                    "qfs_is_geometry_locked": layer_data.get("qfs_is_geometry_locked"),
+                    "qfs_unsupported_source_pk": layer_data.get(
+                        "qfs_unsupported_source_pk"
+                    ),
+                    "qfc_source_data_pk_name": layer_data.get(
+                        "qfc_source_data_pk_name"
+                    ),
+                },
+            }
+
+            existing_layer = existing_layers_by_qgis_layer_id.get(qgis_layer_id)
+
+            # If this `qgis_layer_id` has no matching row, create a new `Layer`.
+            # If it does, update only the fields that changed, otherwise skip the
+            # save entirely.
+            if existing_layer is None:
+                QgisLayer(
+                    qgis_project=qgis_project,
+                    qgis_layer_id=qgis_layer_id,
+                    **defaults,
+                ).save()
+            else:
+                changed_fields = []
+                for field, value in defaults.items():
+                    if getattr(existing_layer, field) != value:
+                        setattr(existing_layer, field, value)
+                        changed_fields.append(field)
+
+                if changed_fields:
+                    existing_layer.save(
+                        update_fields=[*changed_fields, "updated_at"],
+                    )
+
+            qgis_layer_ids_to_keep.add(qgis_layer_id)
+
+        qgis_project.layers.exclude(qgis_layer_id__in=qgis_layer_ids_to_keep).delete()
+
+
+class QgisLayer(models.Model):
+    objects = QgisLayerQuerySet.as_manager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    qgis_project = models.ForeignKey(
+        to=QgisProject,
+        on_delete=models.CASCADE,
+        related_name="layers",
+        help_text=_("QGIS project that this layer belongs to."),
+    )
+
+    qgis_layer_id = models.TextField(help_text=_("QGIS layer id."))
+
+    name = models.TextField(help_text=_("QGIS layer name."))
+
+    crs = models.TextField(
+        blank=True,
+        help_text=_(
+            "The coordinate reference system of the layer as EPSG code. Empty for non-spatial layers, e.g. a database table with no geometry column."
+        ),
+    )
+
+    geom_type = models.PositiveSmallIntegerField(
+        choices=QgsGeometryType.choices,
+        help_text=_("The geometry type of the layer."),
+    )
+
+    # The name comes from QGIS's own `Qgis.WkbType` enum (`Qgis::WkbType`).
+    # Source: `enum class WkbType` in `src/core/qgis.h` in the
+    # QGIS repo (https://github.com/qgis/QGIS/blob/master/src/core/qgis.h#L293).
+    wkb_type_name = models.CharField(
+        blank=True,
+        max_length=50,
+        help_text=_(
+            "The WKB type of the layer, stored by name since the WKB type enum is very big."
+        ),
+    )
+
+    layer_type = models.PositiveSmallIntegerField(
+        choices=QgsLayerType.choices,
+        help_text=_("The type of the layer, e.g. vector, raster, etc."),
+    )
+
+    provider_name = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text=_("The name of the data provider, e.g. `ogr`, `gdal`, `postgres`."),
+    )
+
+    ordering = models.PositiveIntegerField(
+        help_text=_("The order position of the layer within the project.")
+    )
+
+    datasource = models.TextField(
+        blank=True,
+        help_text=_(
+            "QGIS layer datasource string. Empty for layers with no data source, e.g. group layers."
+        ),
+    )
+
+    file_name = models.TextField(
+        blank=True, help_text=_("The (main) filename in the datasource.")
+    )
+
+    is_valid = models.BooleanField(
+        default=False, help_text=_("Whether the layer is valid.")
+    )
+
+    is_localized = models.BooleanField(
+        default=False, help_text=_("Whether the layer is using a localized dataset.")
+    )
+
+    error_code = models.CharField(
+        max_length=100,
+        choices=ErrorCode.choices,
+        default=ErrorCode.NO_ERROR,
+        help_text=_("A code representing the error reason if the layer is not valid."),
+    )
+
+    error_summary = models.TextField(
+        blank=True,
+        help_text=_("A short summary of the error, if the layer is not valid."),
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        help_text=_("The full error message from QGIS, if the layer is not valid."),
+    )
+
+    provider_error_summary = models.TextField(
+        blank=True,
+        help_text=_(
+            "A short summary of the data provider error, if the data provider is not valid."
+        ),
+    )
+
+    provider_error_message = models.TextField(
+        blank=True,
+        help_text=_("The full data provider error, if the data provider is not valid."),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    qfs_settings = models.JSONField(
+        blank=True,
+        default=dict,
+        help_text=_(
+            "A dict of settings configured by QFieldSync and consumed by libqfieldsync, QFieldSync, QField and QFieldCloud."
+        ),
+    )
+
+    class Meta:
+        verbose_name = _("QGIS layer")
+        verbose_name_plural = _("QGIS layers")
+        ordering = ["qgis_project", "ordering"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["qgis_project", "qgis_layer_id"],
+                name="layer_qgis_project_qgis_layer_id_uniq",
+            )
+        ]

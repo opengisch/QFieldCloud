@@ -682,6 +682,7 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
     "/admin/filestorage/file/add/",
     "/admin/filestorage/fileversion/add/",
+    "/admin/project/layer/add/",
 )
 
 # Admin sort URLs which will be skipped from checking if they return HTTP 200

@@ -23,6 +23,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2.jobs import queue_job
+from qfieldcloud.project.enums import QgsGeometryType
 from qfieldcloud.project.models import Project, ProjectSeed
 from qfieldcloud.project.utils import projectseed_utils
 
@@ -115,6 +116,28 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             is_localized=False,
             error_code="invalid_dataprovider",
         )
+
+        # the same layer data should also be synced into the relational `Layer` model
+        self.assertTrue(self.p1.qgis_project.layers.exists())
+
+        layer = self.p1.qgis_project.layers.get(
+            qgis_layer_id="valid_localized_point_layer_id"
+        )
+        self.assertFalse(layer.is_valid)
+        self.assertTrue(layer.is_localized)
+        self.assertEqual(layer.error_code, "localized_dataprovider")
+
+        layer = self.p1.qgis_project.layers.get(
+            qgis_layer_id="invalid_localized_polygon_layer_id"
+        )
+        self.assertFalse(layer.is_valid)
+        self.assertTrue(layer.is_localized)
+        self.assertEqual(layer.error_code, "localized_dataprovider")
+
+        layer = self.p1.qgis_project.layers.get(qgis_layer_id="invalid_point_layer_id")
+        self.assertFalse(layer.is_valid)
+        self.assertFalse(layer.is_localized)
+        self.assertEqual(layer.error_code, "invalid_dataprovider")
 
     def test_bad_layer_handler_values_for_package_job(self):
         # Test that BadLayerHandler is parsing data properly during package jobs
@@ -362,25 +385,27 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertIsNotNone(pd)
 
         self.assertEqual(pd["crs"], "EPSG:3857")
-        self.assertEqual(len(pd["layers_by_id"]), 7)
 
-        layers = list(pd["layers_by_id"].values())
-        layers.sort(key=lambda layer: layer["name"])
+        layers = list(self.p1.qgis_project.layers.all())
+        layers.sort(key=lambda layer: layer.name)
 
-        self.assertEqual(layers[0]["name"], "OpenStreetMap (Standard)")
-        self.assertEqual(layers[1]["name"], "Survey")
-        self.assertEqual(layers[1]["crs"], "EPSG:3857")
-        self.assertEqual(layers[1]["wkb_type"], 4)
-        self.assertEqual(layers[2]["name"], "list_rating")
-        self.assertEqual(layers[2]["wkb_type"], 100)
-        self.assertEqual(layers[3]["name"], "list_role")
-        self.assertEqual(layers[3]["wkb_type"], 100)
-        self.assertEqual(layers[4]["name"], "list_salutation")
-        self.assertEqual(layers[4]["wkb_type"], 100)
-        self.assertEqual(layers[5]["name"], "list_services")
-        self.assertEqual(layers[5]["wkb_type"], 100)
-        self.assertEqual(layers[6]["name"], "list_yes_no")
-        self.assertEqual(layers[6]["wkb_type"], 100)
+        self.assertEqual(len(layers), 7)
+        self.assertEqual(layers[0].name, "OpenStreetMap (Standard)")
+        self.assertEqual(layers[1].name, "Survey")
+        self.assertEqual(layers[1].crs, "EPSG:3857")
+        # wkb_type 4 = MultiPoint -> geometryType() = Point
+        self.assertEqual(layers[1].geom_type, QgsGeometryType.Point)
+        self.assertEqual(layers[2].name, "list_rating")
+        # wkb_type 100 = NoGeometry
+        self.assertEqual(layers[2].geom_type, QgsGeometryType.Null)
+        self.assertEqual(layers[3].name, "list_role")
+        self.assertEqual(layers[3].geom_type, QgsGeometryType.Null)
+        self.assertEqual(layers[4].name, "list_salutation")
+        self.assertEqual(layers[4].geom_type, QgsGeometryType.Null)
+        self.assertEqual(layers[5].name, "list_services")
+        self.assertEqual(layers[5].geom_type, QgsGeometryType.Null)
+        self.assertEqual(layers[6].name, "list_yes_no")
+        self.assertEqual(layers[6].geom_type, QgsGeometryType.Null)
 
         # TODO @suricactus: The fields will be present again once `Layer` and `LayerField` models are implemented as the data will no longer fatten the `Project` model, see https://app.clickup.com/t/2192114/QF-8219
         # fields = layers[6]["fields"]
@@ -534,10 +559,14 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # compare QGIS file name
         self.assertEqual(cloned_project.the_qgis_file_name, self.p1.the_qgis_file_name)
 
-        self.assertIsNotNone(cloned_project.project_details)
+        self.assertIsNotNone(cloned_project.qgis_project)
         self.assertEqual(
-            set(cloned_project.project_details["layers_by_id"].keys()),
-            set(self.p1.project_details["layers_by_id"].keys()),
+            set(
+                cloned_project.qgis_project.layers.values_list(
+                    "qgis_layer_id", flat=True
+                )
+            ),
+            set(self.p1.qgis_project.layers.values_list("qgis_layer_id", flat=True)),
         )
 
     def test_process_projectfile_job_sets_the_qgis_version(self):
