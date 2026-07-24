@@ -83,6 +83,7 @@ from qfieldcloud.project.models import (
     SHARED_DATASETS_PROJECT_NAME,
     Project,
     ProjectSeed,
+    QgisProject,
 )
 from qfieldcloud.subscription.models import get_subscription_model
 
@@ -1168,6 +1169,33 @@ class ProjectSeedInline(admin.StackedInline):
         return False
 
 
+class QgisProjectInline(admin.StackedInline):
+    model = QgisProject
+    extra = 0
+    has_direct_delete_permission = False
+    fk_name = "project"
+
+    fields = (
+        "name",
+        "qgis_version",
+        "crs",
+        "extent",
+        "background_color",
+        "custom_properties__pre",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("Custom properties"))
+    def custom_properties__pre(self, instance: QgisProject) -> SafeText:
+        return format_text(instance.custom_properties, "json")
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
 class ProjectForm(ModelForm):
     project_files = fields.CharField(
         disabled=True, required=False, widget=ProjectFilesWidget
@@ -1300,6 +1328,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         ProjectSeedInline,
         ProjectSecretInline,
         ProjectCollaboratorInline,
+        QgisProjectInline,
     )
     search_fields = (
         "id",

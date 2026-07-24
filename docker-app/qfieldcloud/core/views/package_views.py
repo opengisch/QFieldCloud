@@ -82,7 +82,9 @@ class LatestPackageView(views.APIView):
 
     def get(self, request, project_id):
         """Get last project package status and file list."""
-        project = get_object_or_404(Project, id=project_id)
+        project = get_object_or_404(
+            Project.objects.select_related("qgis_project"), id=project_id
+        )
         latest_finished_package_job = project.latest_finished_package_job_for_user(
             request.user
         )
@@ -100,12 +102,15 @@ class LatestPackageView(views.APIView):
         )
 
         # get attachment files directly from the original project files, not from the package
-        for attachment_dir in project.attachment_dirs:
-            files_qs |= File.objects.filter(
-                project_id=project_id,
-                file_type=File.FileType.PROJECT_FILE,
-                name__startswith=attachment_dir,
-            )
+        qgis_project = getattr(project, "qgis_project", None)
+
+        if qgis_project:
+            for attachment_dir in qgis_project.attachment_dirs:
+                files_qs |= File.objects.filter(
+                    project_id=project_id,
+                    file_type=File.FileType.PROJECT_FILE,
+                    name__startswith=attachment_dir,
+                )
 
         files_qs = files_qs.distinct()
 
@@ -163,7 +168,9 @@ class LatestPackageDownloadFilesView(views.APIView):
         Raises:
             exceptions.InvalidJobError: raised when packaging has never been triggered or successful for this project
         """
-        project = get_object_or_404(Project, id=project_id)
+        project = get_object_or_404(
+            Project.objects.select_related("qgis_project"), id=project_id
+        )
         latest_finished_package_job = project.latest_finished_package_job_for_user(
             request.user
         )

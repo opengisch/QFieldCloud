@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 from uuid import uuid4
 
 from django.conf import settings
@@ -37,6 +37,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
+from qfieldcloud.project.utils.geometry_utils import transform_wkt_crs
 
 if TYPE_CHECKING:
     from qfieldcloud.core.models import (
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
         ProjectCollaboratorQueryset,
         SecretQueryset,
     )
-    from qfieldcloud.filestorage.models import File, FileQueryset
+    from qfieldcloud.filestorage.models import File, FileQueryset, FileVersion
 
     pass
 
@@ -380,6 +381,10 @@ class Project(models.Model):
         default=get_project_file_storage_default,
     )
 
+    # NOTE `Project.qgis_version` is used by `wrapper.JobRun.get_qgis_image()` to detect
+    # the correct QGIS docker image to run the job.
+    # Therefore, we cannot use the very similar `QgisProject.qgis_version` field,
+    # which is not populated until the first `process_projectfile` job is run.
     qgis_version = models.CharField(
         _("QGIS project version"),
         help_text=_(
@@ -651,46 +656,6 @@ class Project(models.Model):
     @property
     def name_with_owner(self) -> str:
         return f"{self.owner.username}/{self.name}"
-
-    @property
-    def attachment_dirs(self) -> list[str]:
-        """Returns a list of configured attachment dirs for the project.
-
-        Attachment dir is a special directory in the QField infrastructure that holds attachment files
-        such as images, pdf etc. By default "DCIM" is considered a attachment directory.
-
-        Returns:
-            A list configured attachment dirs for the project.
-        """
-        attachment_dirs = []
-
-        if self.project_details and self.project_details.get("attachment_dirs"):
-            attachment_dirs = self.project_details.get("attachment_dirs", [])
-
-        if not attachment_dirs:
-            attachment_dirs = ["DCIM"]
-
-        return attachment_dirs
-
-    @property
-    def data_dirs(self) -> list[str]:
-        """Returns a list of configured data dirs for the project.
-
-        Data dir is a special directory in the QField infrastructure that holds assets
-        used by the project symbology, layouts, or project plugins.
-
-        Unlike `attachmentDirs`, the `dataDirs` should always be served as a undivisible
-        part of project files.
-
-        Returns:
-            A list configured data dirs for the project.
-        """
-        data_dirs = []
-
-        if self.project_details and self.project_details.get("data_dirs"):
-            data_dirs = self.project_details.get("data_dirs", [])
-
-        return data_dirs
 
     @property
     def has_attachments_files(self) -> bool:
@@ -1125,3 +1090,159 @@ class ProjectSeed(models.Model):
         self.full_clean()
 
         return super().save(*args, **kwargs)
+
+
+class QgisProjectDetails(TypedDict, total=False):
+    project_name: str
+    qgis_version: str
+    crs: str
+    extent: str
+    background_color: str
+    attachment_dirs: list[str]
+    data_dirs: list[str]
+
+
+class QgisProjectQueryset(models.QuerySet):
+    def update_from_details(
+        self,
+        project: "Project",
+        file_version: "FileVersion",
+        details: QgisProjectDetails,
+    ) -> "QgisProject":
+        extent_wkt = details.get("extent")
+        crs = details.get("crs") or ""
+        extent = None
+
+        if extent_wkt and crs:
+            try:
+                extent = transform_wkt_crs(extent_wkt, crs)
+            except ValueError:
+                pass
+
+        qgis_version = details.get("qgis_version") or ""
+
+        custom_properties = {
+            QgisProject.ATTACHMENT_DIRS_KEY: details.get("attachment_dirs") or ["DCIM"],
+            QgisProject.DATA_DIRS_KEY: details.get("data_dirs") or [],
+        }
+
+        qgis_project, _ = self.update_or_create(
+            project=project,
+            defaults={
+                "file_version": file_version,
+                "name": details.get("project_name"),
+                "qgis_version": qgis_version[:100] or "",
+                "crs": crs,
+                "extent": extent,
+                "background_color": details.get("background_color") or "#ffffff",
+                "custom_properties": custom_properties,
+            },
+        )
+        return qgis_project
+
+
+class QgisProject(models.Model):
+    ATTACHMENT_DIRS_KEY = "attachment_dirs"
+    DATA_DIRS_KEY = "data_dirs"
+
+    objects = QgisProjectQueryset.as_manager()
+
+    project = models.OneToOneField(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="qgis_project",
+        primary_key=True,
+        help_text=_("The QFieldCloud project that this QGIS project belongs to."),
+    )
+
+    file_version = models.OneToOneField(
+        "filestorage.FileVersion",
+        on_delete=models.CASCADE,
+        related_name="qgis_project",
+        help_text=_("The QGIS file version that this project belongs to."),
+    )
+
+    name = models.TextField(
+        help_text=_("Project name as defined in the QGIS project file.")
+    )
+
+    qgis_version = models.CharField(
+        _("QGIS project version"),
+        help_text=_(
+            "The QGIS project version as detected from the uploaded project file."
+        ),
+        max_length=100,
+        blank=True,
+        editable=False,
+    )
+
+    crs = models.TextField(
+        help_text=_("The coordinate reference system of the project as EPSG code.")
+    )
+
+    extent = models.PolygonField(
+        null=True,
+        blank=True,
+        srid=4326,
+        help_text=_("The extent of the project in WGS84 coordinates."),
+    )
+
+    background_color = models.CharField(
+        max_length=7,
+        default="#ffffff",
+        help_text=_("The background color of the project as a hex color code."),
+    )
+
+    custom_properties = models.JSONField(
+        default=dict,
+        help_text=_(
+            """A dictionary of custom properties that can be used to store
+            additional information about the project. QFieldSync configured properties are set here.
+            """
+        ),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def attachment_dirs(self) -> list[str]:
+        """Returns a list of configured attachment dirs for the project.
+
+        Attachment dir is a special directory in the QField infrastructure that holds attachment files
+        such as images, pdf etc. By default "DCIM" is considered a attachment directory.
+
+        Returns:
+            A list configured attachment dirs for the project.
+        """
+        attachment_dirs = []
+
+        if self.custom_properties and self.custom_properties.get(
+            self.ATTACHMENT_DIRS_KEY
+        ):
+            attachment_dirs = self.custom_properties.get(self.ATTACHMENT_DIRS_KEY, [])
+
+        if not attachment_dirs:
+            attachment_dirs = ["DCIM"]
+
+        return attachment_dirs
+
+    @property
+    def data_dirs(self) -> list[str]:
+        """Returns a list of configured data dirs for the project.
+
+        Data dir is a special directory in the QField infrastructure that holds assets
+        used by the project symbology, layouts, or project plugins.
+
+        Unlike `attachmentDirs`, the `dataDirs` should always be served as a undivisible
+        part of project files.
+
+        Returns:
+            A list configured data dirs for the project.
+        """
+        data_dirs = []
+
+        if self.custom_properties and self.custom_properties.get(self.DATA_DIRS_KEY):
+            data_dirs = self.custom_properties.get(self.DATA_DIRS_KEY, [])
+
+        return data_dirs

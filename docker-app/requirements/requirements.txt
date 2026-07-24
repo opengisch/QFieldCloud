@@ -184,7 +184,9 @@ pycparser==2.22
 pyjwt[crypto]==2.13.0
     # via django-allauth
 pymemcache==4.0.0
-    # via -r requirements/requirements.in
+    # via -r /requirements/requirements.in
+pyproj==3.7.2
+    # via -r /requirements/requirements.in
 python-dateutil==2.9.0.post0
     # via
     #   botocore
