@@ -208,6 +208,16 @@ def can_create_project(
     return False
 
 
+def can_read_organization_secrets(user: QfcUser, organization: Organization) -> bool:
+    return user_has_organization_roles(
+        user,
+        organization,
+        [
+            OrganizationMember.Roles.ADMIN,
+        ],
+    )
+
+
 def can_create_organization_secrets(user: QfcUser, organization: Organization) -> bool:
     return user_has_organization_roles(
         user,
@@ -515,6 +525,16 @@ def can_create_jobs(user: QfcUser, project: Project, job_type: Job.Type) -> bool
         raise NotImplementedError(f'Unknown job type "{job_type}"')
 
     return user_has_project_roles(user, project, roles)
+
+
+def can_read_project_secrets(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+        ],
+    )
 
 
 def can_create_project_secrets(user: QfcUser, project: Project) -> bool:
