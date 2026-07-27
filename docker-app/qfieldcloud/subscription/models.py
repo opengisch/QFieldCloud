@@ -260,7 +260,7 @@ class Plan(models.Model):
     )
 
     @property
-    def is_trialable(self) -> bool:
+    def has_trial_plan(self) -> bool:
         return self.trial_plan_id is not None
 
     @property
