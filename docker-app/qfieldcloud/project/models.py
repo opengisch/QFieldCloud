@@ -17,9 +17,10 @@ from django.core.validators import (
     MinValueValidator,
     RegexValidator,
 )
-from django.db.models import Case, Exists, F, OuterRef, Q, When
+from django.db.models import Case, Exists, IntegerField, OuterRef, Q, Subquery, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
+from django.db.models.functions import Coalesce
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django_stubs_ext import StrOrPromise
@@ -33,6 +34,8 @@ from qfieldcloud.core.models import (
     PackageJobQuerySet,
     Person,
     PersonQueryset,
+    ProjectCollaborator,
+    ProjectRolesView,
     Secret,
     TeamMember,
     User,
@@ -50,6 +53,33 @@ if TYPE_CHECKING:
 
 SHARED_DATASETS_PROJECT_NAME = "shared_datasets"
 logger = logging.getLogger(__name__)
+
+
+class ProjectCoreFields(models.Model):
+    """Abstract base holding the fields shared between `Project` and `SlimProject`."""
+
+    class Meta:
+        abstract = True
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(
+        max_length=255,
+        validators=[
+            RegexValidator(
+                r"^[a-zA-Z0-9-_\.]+$",
+                _("Only letters, numbers, underscores, hyphens and dots are allowed."),
+            )
+        ],
+        help_text=_(
+            _("Only letters, numbers, underscores, hyphens and dots are allowed.")
+        ),
+    )
+    is_public = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Projects marked as public are visible to (but not editable by) anyone."
+        ),
+    )
 
 
 class ProjectQueryset(models.QuerySet):
@@ -71,10 +101,26 @@ class ProjectQueryset(models.QuerySet):
     """
 
     def for_user(self, user: "User", skip_invalid: bool = False):
-        count = Count(
-            "collaborators",
-            filter=Q(collaborators__collaborator__type=User.Type.PERSON),
+        # NOTE `ProjectRolesView.project` and `ProjectCollaborator.project` are FKs
+        # to `project.Project`, so their reverse relations (`user_roles`, `collaborators`)
+        # don't exist on other models backed by the same table (e.g. `SlimProject`).
+        user_role_qs = ProjectRolesView.objects.filter(
+            project_id=OuterRef("pk"), user=user
         )
+
+        collaborators_count_sq = Subquery(
+            ProjectCollaborator.objects.filter(
+                project_id=OuterRef("pk"),
+                collaborator__type=User.Type.PERSON,
+            )
+            .order_by()
+            .values("project_id")
+            .annotate(c=Count("pk"))
+            .values("c"),
+            output_field=IntegerField(),
+        )
+        count = Coalesce(collaborators_count_sq, 0)
+
         is_public_q = Q(is_public=True)
         is_person_q = Q(owner__type=User.Type.PERSON)
         is_org_q = Q(owner__type=User.Type.ORGANIZATION)
@@ -98,18 +144,17 @@ class ProjectQueryset(models.QuerySet):
         )
 
         qs = (
-            self.defer("user_roles__user_id", "user_roles__project_id")
-            .filter(
-                user_roles__user=user,
-            )
+            self.filter(Exists(user_role_qs))
             .select_related("owner")
             .annotate(
-                user_role=F("user_roles__name"),
-                user_role_origin=F("user_roles__origin"),
+                user_role=Subquery(user_role_qs.values("name")[:1]),
+                user_role_origin=Subquery(user_role_qs.values("origin")[:1]),
                 user_role_is_valid=Case(
                     When(is_valid_user_role_q, then=True), default=False
                 ),
-                user_role_is_incognito=F("user_roles__is_incognito"),
+                user_role_is_incognito=Subquery(
+                    user_role_qs.values("is_incognito")[:1]
+                ),
             )
         )
 
@@ -160,7 +205,7 @@ def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
     return f"projects/{instance.id}/meta/thumbnail_{ts}_{suffix}.png"
 
 
-class Project(models.Model):
+class Project(ProjectCoreFields):
     """Represent a QFieldcloud project.
     It corresponds to a directory on the file system.
 
@@ -238,20 +283,6 @@ class Project(models.Model):
     # The project create seed.
     seed: "ProjectSeed"
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(
-        max_length=255,
-        validators=[
-            RegexValidator(
-                r"^[a-zA-Z0-9-_\.]+$",
-                _("Only letters, numbers, underscores, hyphens and dots are allowed."),
-            )
-        ],
-        help_text=_(
-            _("Only letters, numbers, underscores, hyphens and dots are allowed.")
-        ),
-    )
-
     description = models.TextField(blank=True)
 
     the_qgis_file_id: int | None
@@ -263,12 +294,6 @@ class Project(models.Model):
         related_name="+",
     )
     project_details = models.JSONField(blank=True, null=True)
-    is_public = models.BooleanField(
-        default=False,
-        help_text=_(
-            "Projects marked as public are visible to (but not editable by) anyone."
-        ),
-    )
 
     project_type = models.IntegerField(
         choices=ProjectType.choices, default=ProjectType.REGULAR
@@ -1054,6 +1079,60 @@ class Project(models.Model):
 
     def get_file(self, filename: str) -> File:
         return self.project_files.get_by_name(filename)  # type: ignore
+
+
+READ_ONLY_ERROR_MSG = "SlimProject is read-only; use Project to write."
+
+
+class ReadOnlySlimProjectQueryset(ProjectQueryset):
+    """Blocks bulk writes, since `SlimProject` is read-only; use `Project` to write.
+
+    `update()`/`delete()` are also blocked by `Model.save()`/`Model.delete()`
+    for the single-instance case, but bulk queryset operations bypass those
+    entirely, so they need their own guards. `bulk_create()`/`bulk_update()`
+    likewise never call `Model.save()`.
+    """
+
+    def update(self, *args, **kwargs):
+        raise NotImplementedError(READ_ONLY_ERROR_MSG)
+
+    def delete(self, *args, **kwargs):
+        raise NotImplementedError(READ_ONLY_ERROR_MSG)
+
+    def bulk_create(self, *args, **kwargs):
+        raise NotImplementedError(READ_ONLY_ERROR_MSG)
+
+    def bulk_update(self, *args, **kwargs):
+        raise NotImplementedError(READ_ONLY_ERROR_MSG)
+
+
+class SlimProject(ProjectCoreFields):
+    # the Person or Organization that owns the project
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="slim_project",
+        limit_choices_to=models.Q(type__in=[User.Type.PERSON, User.Type.ORGANIZATION]),
+        help_text=_(
+            "The project owner can be either you or any of the organization you are member of."
+        ),
+    )
+
+    objects = ReadOnlySlimProjectQueryset.as_manager()
+
+    class Meta:
+        managed = False
+        db_table = "project_project"
+
+    @property
+    def collaborators(self) -> "ProjectCollaboratorQueryset":
+        return ProjectCollaborator.objects.filter(project_id=self.pk)
+
+    def save(self, *args, **kwargs):
+        raise NotImplementedError(READ_ONLY_ERROR_MSG)
+
+    def delete(self, *args, **kwargs):
+        raise NotImplementedError(READ_ONLY_ERROR_MSG)
 
 
 def get_seed_xlsform_upload_to(instance: "ProjectSeed", filename: str) -> str:

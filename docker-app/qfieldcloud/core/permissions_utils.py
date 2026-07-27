@@ -15,7 +15,7 @@ from qfieldcloud.core.models import (
 )
 from qfieldcloud.core.models import User as QfcUser
 from qfieldcloud.project.enums import ProjectRoleOrigins
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, SlimProject
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
     PlanInsufficientError,
@@ -56,9 +56,9 @@ def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
     return user1.pk == user2.pk
 
 
-def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
+def _project_for_owner(user: QfcUser, project: SlimProject, skip_invalid: bool):
     return (
-        Project.objects.for_user(user, skip_invalid)
+        SlimProject.objects.for_user(user, skip_invalid)
         .select_related(None)
         .filter(pk=project.pk)
     )
