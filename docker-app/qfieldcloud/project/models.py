@@ -20,6 +20,7 @@ from django.core.validators import (
 from django.db.models import Case, Exists, F, OuterRef, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django_stubs_ext import StrOrPromise
@@ -117,6 +118,26 @@ class ProjectQueryset(models.QuerySet):
             qs = qs.filter(user_role_is_valid=True)
 
         return qs
+
+    def slim(self) -> "ProjectQueryset":
+        """A light-weight fetch for permission checks, which run on every
+        request and only need a project's id, owner, and public flag.
+        """
+        return self.only("id", "name", "is_public", "owner_id")
+
+
+def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
+    """Fetch a project for a permission check, or raise `Http404` if it doesn't exist.
+
+    Only use this where the caller needs `pk`/`owner`/`is_public` and nothing
+    else — the returned project has every other field deferred (see `slim()`
+    in `ProjectQueryset`). Fetching more fields off the result triggers extra queries,
+    so for anything that needs the full project, use `get_object_or_404(Project, ...)`.
+    """
+
+    # NOTE raises `Http404`, not `Project.DoesNotExist`: DRF treats both the same, see `core.rest_utils.exception_handler`.
+    # TODO @suricactus: add `qs.fetch_mode(models.RAISE)` once on Django 6.1, see https://app.clickup.com/t/2192114/QF-8624
+    return get_object_or_404(Project.objects.slim(), pk=project_id)  # type: ignore[attr-defined]
 
 
 def get_project_file_storage_default() -> str:

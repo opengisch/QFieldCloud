@@ -34,7 +34,7 @@ from qfieldcloud.filestorage.view_helpers import (
     download_project_file_version,
     upload_project_file_version,
 )
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, get_slim_project_or_raise
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class FileListViewPermissions(permissions.BasePermission):
             return False
 
         project_id = request.parser_context["kwargs"]["project_id"]
-        project = get_object_or_404(Project, id=project_id)
+        project = get_slim_project_or_raise(project_id)
 
         return permissions_utils.can_read_files(request.user, project)
 
@@ -56,7 +56,7 @@ class FileCrudViewPermissions(permissions.BasePermission):
             return False
 
         project_id = request.parser_context["kwargs"]["project_id"]
-        project = get_object_or_404(Project, id=project_id)
+        project = get_slim_project_or_raise(project_id)
         user = request.user
 
         if request.method == "GET":
