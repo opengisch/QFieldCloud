@@ -603,11 +603,11 @@ class Project(models.Model):
 
     @property
     def has_the_qgis_file(self) -> bool:
-        return self.the_qgis_file_id is not None
+        return self.the_qgis_file is not None
 
     @property
     def the_qgis_file_name(self) -> str | None:
-        if not self.the_qgis_file_id:
+        if self.the_qgis_file is None:
             return None
 
         return self.the_qgis_file.name
