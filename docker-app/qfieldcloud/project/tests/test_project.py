@@ -1508,7 +1508,7 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # Cloning a non-existent project returns 403
+        # Cloning a non-existent project returns 404
         response = self.client.post(
             "/api/v1/projects/",
             {
@@ -1518,7 +1518,7 @@ class QfcTestCase(APITransactionTestCase):
             },
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_project_type_defaults_to_regular(self):
         """Test that a normally named project gets a project type of REGULAR"""

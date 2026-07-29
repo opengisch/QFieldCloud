@@ -18,7 +18,7 @@ from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
 from qfieldcloud.core.models import Delta, FaultyDeltaFile
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, get_slim_project_or_raise
 from rest_framework import generics, permissions, views
 from rest_framework.response import Response
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class DeltaFilePermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         projectid = permissions_utils.get_param_from_request(request, "projectid")
-        project = Project.objects.get(id=projectid)
+        project = get_slim_project_or_raise(projectid)
         user = request.user
 
         if request.method == "GET":
