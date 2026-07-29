@@ -1,0 +1,18 @@
+{% if rows %}
+<table class="table table-sm table-striped table-bordered w-100">
+    <thead>
+        <tr>
+            {% for key, label in headers.items %}<th>{{ label }}</th>{% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            {% for key, value in row.items %}<td>{{ value|safe }}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+-
+{% endif %}
