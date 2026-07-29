@@ -87,6 +87,7 @@ class FileListView(generics.ListAPIView):
             File.objects.select_related(
                 # NOTE needed as we check `get_attachment_dir_prefix(project)` for each file
                 "project",
+                "project__qgis_project",
                 # NOTE needed as we add the `latest_version`'s timestamp
                 "latest_version",
             )
