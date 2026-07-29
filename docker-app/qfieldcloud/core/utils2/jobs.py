@@ -32,6 +32,9 @@ def apply_deltas(
         f"Requested apply_deltas on {project} with {project_file}; overwrite_conflicts: {overwrite_conflicts}; delta_ids: {delta_ids}"
     )
 
+    if project.is_template_project:
+        raise exceptions.OperationNotAllowedForTemplateProjectError()
+
     # 1. Check if project owner is permitted to trigger a job.
     if not project.owner_can_create_job:
         return []
@@ -112,6 +115,9 @@ def repackage(project: "Project", user: "models.User") -> "models.PackageJob":
     """
     if not project.has_the_qgis_file:
         raise exceptions.NoQGISProjectError()
+
+    if project.is_template_project:
+        raise exceptions.OperationNotAllowedForTemplateProjectError()
 
     # Check if active package job already exists
     query = (

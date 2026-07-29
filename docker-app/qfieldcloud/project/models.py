@@ -127,7 +127,7 @@ class ProjectQueryset(models.QuerySet):
         """A light-weight fetch for permission checks, which run on every
         request and only need a project's id, owner, and public flag.
         """
-        return self.only("id", "name", "is_public", "owner_id")
+        return self.only("id", "name", "is_public", "project_type", "owner_id")
 
 
 def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
@@ -213,6 +213,13 @@ class Project(models.Model):
     class ProjectType(models.TextChoices):
         REGULAR = "regular", _("Regular")
         SHARED_DATASETS = "shared_datasets", _("Shared Datasets")
+        TEMPLATE = "template", _("Template")
+
+    # Project types configurable from clients
+    CONFIGURABLE_PROJECT_TYPES = [
+        ProjectType.REGULAR,
+        ProjectType.TEMPLATE,
+    ]
 
     @property
     def localized_layers(self) -> list[QgisLayer]:
@@ -586,11 +593,25 @@ class Project(models.Model):
         return jobs_qs
 
     @cached_property
+    def is_regular_project(self) -> bool:
+        """
+        Returns `True` if the project type is a regular project, otherwise `False`.
+        """
+        return self.project_type == self.ProjectType.REGULAR
+
+    @cached_property
     def is_shared_datasets_project(self) -> bool:
         """
         Returns `True` if the project is the shared datasets project, otherwise `False`.
         """
         return self.project_type == self.ProjectType.SHARED_DATASETS
+
+    @cached_property
+    def is_template_project(self) -> bool:
+        """
+        Returns `True` if the project type is a template project, otherwise `False`.
+        """
+        return self.project_type == self.ProjectType.TEMPLATE
 
     def get_missing_localized_layers(self) -> list["QgisLayer"]:
         """
@@ -720,7 +741,10 @@ class Project(models.Model):
 
     @property
     def can_repackage(self) -> bool:
-        return True
+        if self.is_template_project:
+            return False
+        else:
+            return True
 
     def needs_repackaging(self, user: User) -> bool:
         latest_package_job_for_user = self.latest_package_job_for_user(user)
@@ -1035,10 +1059,20 @@ class Project(models.Model):
                 set(kwargs["update_fields"]) | additional_update_fields
             )
 
-        self.project_type = self.ProjectType.REGULAR
-
         if self.name == SHARED_DATASETS_PROJECT_NAME:
             self.project_type = self.ProjectType.SHARED_DATASETS
+        elif self.project_type == self.ProjectType.SHARED_DATASETS:
+            raise ValidationError(
+                _(
+                    "`project_type` cannot be set to `{}` unless the project is named `{}`."
+                ).format(self.ProjectType.SHARED_DATASETS, SHARED_DATASETS_PROJECT_NAME)
+            )
+        elif self.project_type not in self.CONFIGURABLE_PROJECT_TYPES:
+            raise ValidationError(
+                _("`project_type` must be one of `{}`, got `{}`.").format(
+                    self.CONFIGURABLE_PROJECT_TYPES, self.project_type
+                )
+            )
 
         super().save(*args, **kwargs)
 

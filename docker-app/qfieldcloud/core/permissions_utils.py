@@ -395,6 +395,9 @@ def can_delete_unnecessary_file_versions(user: QfcUser, project: Project) -> boo
 
 def can_create_deltas(user: QfcUser, project: Project) -> bool:
     """Whether the user can store deltas in a project."""
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -408,6 +411,9 @@ def can_create_deltas(user: QfcUser, project: Project) -> bool:
 
 
 def can_read_deltas(user: QfcUser, project: Project) -> bool:
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -421,6 +427,9 @@ def can_read_deltas(user: QfcUser, project: Project) -> bool:
 
 
 def can_apply_pending_deltas_for_project(user: QfcUser, project: Project) -> bool:
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -432,6 +441,9 @@ def can_apply_pending_deltas_for_project(user: QfcUser, project: Project) -> boo
 
 
 def can_set_delta_status_for_project(user: QfcUser, project: Project) -> bool:
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -463,6 +475,9 @@ def can_set_delta_status(user: QfcUser, delta: Delta) -> bool:
 def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     """Whether the user can store given delta."""
     project: Project = delta.project
+
+    if project.is_template_project:
+        return False
 
     if user_has_project_roles(
         user,

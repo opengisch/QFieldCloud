@@ -1520,39 +1520,60 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_project_type_defaults_to_regular(self):
-        """Test that a normally named project gets a project type of REGULAR"""
-        project = Project.objects.create(name="project", owner=self.user1)
+    def test_cloning_by_project_type(self):
+        """Test which project types are allowed to be cloned: `REGULAR` and `TEMPLATE` are allowed, `SHARED_DATASETS` is not allowed."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
-        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+        def clone_project(source_project):
+            return self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": f"cloned_{source_project.name}",
+                    "owner": self.user1.username,
+                    "clone_from_project": str(source_project.id),
+                },
+                format="json",
+            )
 
-    def test_project_type_set_to_shared_datasets_on_create(self):
-        """Test that creating a project named as the constant SHARED_DATASETS_PROJECT_NAME sets project type of SHARED_DATASETS."""
-        project = Project.objects.create(
-            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
-        )
+        with self.subTest("Prjects of type `REGULAR` can be cloned"):
+            regular_project = Project.objects.create(
+                name="regular_project", owner=self.user1
+            )
+            response = clone_project(regular_project)
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            cloned_project_id = response.json().get("id")
+            self.assertTrue(Project.objects.filter(pk=cloned_project_id).exists())
+            cloned_project = Project.objects.get(pk=cloned_project_id)
+            self.assertTrue(
+                Job.objects.filter(
+                    project=cloned_project, type=Job.Type.CREATE_PROJECT
+                ).exists()
+            )
 
-        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
+        with self.subTest("Projects of type `TEMPLATE` can be cloned"):
+            template_project = Project.objects.create(
+                name="template_project",
+                owner=self.user1,
+                project_type=Project.ProjectType.TEMPLATE,
+            )
+            response = clone_project(template_project)
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            cloned_project_id = response.json().get("id")
+            self.assertTrue(Project.objects.filter(pk=cloned_project_id).exists())
+            cloned_project = Project.objects.get(pk=cloned_project_id)
+            self.assertTrue(
+                Job.objects.filter(
+                    project=cloned_project, type=Job.Type.CREATE_PROJECT
+                ).exists()
+            )
 
-    def test_project_type_updates_when_renamed_to_shared_datasets(self):
-        """Test that renaming an existing empty project (no QGIS project file) as the constant SHARED_DATASETS_PROJECT_NAME flips project_type"""
-        project = Project.objects.create(name="project", owner=self.user1)
-        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
-
-        project.name = SHARED_DATASETS_PROJECT_NAME
-        project.save()
-        project.refresh_from_db()
-
-        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
-
-    def test_project_type_updates_when_renamed_away_from_shared_datasets(self):
-        """Test that renaming the shared_datasets project away reverts project_type to default value."""
-        project = Project.objects.create(
-            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
-        )
-
-        project.name = "no_longer_shared"
-        project.save()
-        project.refresh_from_db()
-
-        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+        with self.subTest("Projects of type `SHARED_DATASETS` cannot be cloned"):
+            shared_project = Project.objects.create(
+                name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+            )
+            response = clone_project(shared_project)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data["code"], "not_cloneable_project")
+            self.assertFalse(
+                Project.objects.filter(name=f"cloned_{shared_project.name}").exists()
+            )
