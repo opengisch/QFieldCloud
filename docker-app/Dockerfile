@@ -69,7 +69,13 @@ RUN if [ "$DEBUG_BUILD" = "1" ]; then apt-get update && apt-get install -y --no-
 RUN if [ "$DEBUG_BUILD" = "1" ]; then uv pip install --system --no-cache debugpy ipython memray py-spy; fi
 
 # add app group
-RUN addgroup --system app && adduser --system app --ingroup app
+RUN groupadd --system --gid 10001 app \
+    && useradd --system \
+        --uid 10001 \
+        --gid 10001 \
+        --no-log-init \
+        --shell /usr/sbin/nologin \
+        app
 
 # create the appropriate directories
 RUN mkdir staticfiles
@@ -98,7 +104,7 @@ EXPOSE 8000
 
 COPY . .
 RUN chown -R app:app .
-USER app
+USER 10001
 
 ##########################
 # WEBSERVER TEST         #
@@ -113,7 +119,7 @@ EXPOSE 8000
 
 COPY . .
 RUN chown -R app:app .
-USER app
+USER 10001
 
 ##########################
 # WORKER WRAPPER RUNTIME #
@@ -127,4 +133,4 @@ RUN uv pip install --system --no-cache -r requirements/requirements_worker_wrapp
 
 COPY . .
 RUN chown -R app:app .
-USER app
+USER 10001
