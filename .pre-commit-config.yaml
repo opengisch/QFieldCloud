@@ -61,5 +61,8 @@ repos:
     rev: v2.14.0
     hooks:
       - id: hadolint-docker
+        # Pinning hadolint to v2.14.0 to avoid breaking changes
+        entry: ghcr.io/hadolint/hadolint:v2.14.0 hadolint
+
 
 exclude: '(docker-app/qfieldcloud/locale/.*)|(.vscode/.*)'
