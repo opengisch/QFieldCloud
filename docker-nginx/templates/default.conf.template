@@ -89,6 +89,9 @@ server {
   # include additional config from the current QFieldCloud instance. This is different from the default `conf.d` directory.
   include config.d/*.conf;
 
+  # Include optional instance-specific configurations
+  include instance.d/*.conf;
+
   # include proxy settings and location blocks for the QFieldCloud instance.
   include conf.d/includes/qfieldcloud.conf;
 }
@@ -125,6 +128,9 @@ server {
 
   # include additional config from the current QFieldCloud instance. This is different from the default `conf.d` directory.
   include config.d/*.conf;
+
+  # Include optional instance-specific configurations
+  include instance.d/*.conf;
 
   # include proxy settings and location blocks for the QFieldCloud instance.
   include conf.d/includes/qfieldcloud.conf;
