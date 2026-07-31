@@ -58,11 +58,8 @@ repos:
         entry: bash -c 'mypy -p docker-app -p docker-qgis "$@"' --
 
   - repo: https://github.com/hadolint/hadolint
-    rev: v2.14.0
+    rev: v2.15.0
     hooks:
       - id: hadolint-docker
-        # Pinning hadolint to v2.14.0 to avoid breaking changes
-        entry: ghcr.io/hadolint/hadolint:v2.14.0 hadolint
-
 
 exclude: '(docker-app/qfieldcloud/locale/.*)|(.vscode/.*)'
