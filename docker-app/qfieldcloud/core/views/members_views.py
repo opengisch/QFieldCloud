@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import Organization, OrganizationMember
@@ -39,6 +40,9 @@ class ListCreateMembersView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, ListCreateMembersViewPermissions]
     serializer_class = OrganizationMemberSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
+
+    def get_view_name(self):
+        return _("Member List")
 
     def get_queryset(self):
         organization = self.request.parser_context["kwargs"]["organization"]
