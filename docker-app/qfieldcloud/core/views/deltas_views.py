@@ -196,6 +196,9 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
         return faulty_deltafile
 
+    def get_view_name(self):
+        return _("Delta List")
+
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
