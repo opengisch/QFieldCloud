@@ -210,9 +210,9 @@ class Project(models.Model):
         QGISCORE = "qgiscore", _("QGIS Core Offline Editing (deprecated)")
         PYTHONMINI = "pythonmini", _("Optimized Packager")
 
-    class ProjectType(models.IntegerChoices):
-        REGULAR = 1, _("Regular")
-        SHARED_DATASETS = 2, _("Shared Datasets")
+    class ProjectType(models.TextChoices):
+        REGULAR = "regular", _("Regular")
+        SHARED_DATASETS = "shared_datasets", _("Shared Datasets")
 
     @property
     def localized_layers(self) -> list[QgisLayer]:
@@ -293,8 +293,8 @@ class Project(models.Model):
         ),
     )
 
-    project_type = models.IntegerField(
-        choices=ProjectType.choices, default=ProjectType.REGULAR
+    project_type = models.CharField(
+        max_length=32, choices=ProjectType.choices, default=ProjectType.REGULAR
     )
 
     # the Person or Organization id that owns the project
