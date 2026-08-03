@@ -226,3 +226,13 @@ class NotCloneableProjectError(QFieldCloudException):
     code = "not_cloneable_project"
     message = "This project cannot be cloned."
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class OperationNotAllowedForTemplateProjectError(QFieldCloudException):
+    """Raised when attempting to package or apply deltas on a template project.
+
+    Template projects can only be cloned or have files uploaded to them."""
+
+    code = "operation_not_allowed_for_template_project"
+    message = "This operation is not allowed on a template project."
+    status_code = status.HTTP_400_BAD_REQUEST

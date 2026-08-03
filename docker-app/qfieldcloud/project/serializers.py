@@ -17,6 +17,13 @@ from qfieldcloud.subscription.exceptions import QuotaError
 
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
+    project_type = serializers.ChoiceField(
+        choices=[
+            (choice.value, choice.label)
+            for choice in Project.CONFIGURABLE_PROJECT_TYPES
+        ],
+        required=False,
+    )
     user_role = serializers.CharField(read_only=True)
     user_role_origin = serializers.CharField(read_only=True)
     private = serializers.BooleanField(allow_null=True, default=None)
@@ -210,7 +217,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             "the_qgis_file_name",
         )
         read_only_fields = (
-            "project_type",
             "private",
             "created_at",
             "updated_at",
