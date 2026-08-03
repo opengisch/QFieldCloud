@@ -1405,7 +1405,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "owner",
         "status",
         "status_code",
-        "the_qgis_file_name",
+        "the_qgis_file",
         "overwrite_conflicts",
         "has_restricted_projectfiles",
         "file_storage_bytes",
@@ -1440,7 +1440,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "project_details__pre",
         "locked_at",
         "file_storage_migrated_at",
-        "the_qgis_file_name",
+        "the_qgis_file",
     )
     inlines = (
         ProjectSeedInline,
@@ -1482,10 +1482,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     def project_files(self, instance):
         return instance.pk
-
-    @admin.display(description=_("QGIS project file"))
-    def the_qgis_file_name(self, obj: Project) -> str | None:
-        return obj.the_qgis_file_name
 
     def project_details__pre(self, instance):
         if instance.project_details is None:
