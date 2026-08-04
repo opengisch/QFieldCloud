@@ -357,6 +357,12 @@ QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_DIMENSION = 10000
 # 5MB
 QFIELDCLOUD_PROJECT_THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024
 
+# Default team automatically added to newly created projects.
+# Example: @<organisation>/<team>
+QFIELDCLOUD_DEFAULT_PROJECT_TEAM = os.environ.get(
+    "QFIELDCLOUD_DEFAULT_PROJECT_TEAM"
+)
+
 AUTH_USER_MODEL = "core.User"
 
 # QFieldCloud variables

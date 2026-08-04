@@ -2,6 +2,7 @@
 This module logs activity streams using the `django-activity-stream` package.
 """
 
+from django.conf import settings
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from django_currentuser.middleware import get_current_authenticated_user
@@ -19,6 +20,16 @@ from qfieldcloud.core.models import (
 from qfieldcloud.project.enums import ProjectRoleOrigins
 from qfieldcloud.project.models import Project
 
+def _get_default_project_team():
+    team_username = settings.QFIELDCLOUD_DEFAULT_PROJECT_TEAM
+
+    if not team_username:
+        return None
+
+    try:
+        return User.objects.get(username=team_username)
+    except User.DoesNotExist:
+        return None
 
 def _send_notif(verb, action_object, recipient, target=None):
     """
@@ -200,6 +211,17 @@ def project_created(sender, instance, created, **kwargs):
     # We don't notify for simple updates
     if not created:
         return
+
+    default_team = _get_default_project_team()
+
+    if default_team:
+        ProjectCollaborator.objects.get_or_create(
+            project=project,
+            collaborator=default_team,
+            defaults={
+                "role": ProjectCollaborator.Roles.EDITOR,
+            },
+        )
 
     _send_notif(
         verb="created",
