@@ -101,3 +101,21 @@ def create_collaborator_by_username_or_email(
         success, message = create_collaborator(project, users[0], created_by)
 
     return success, message
+
+
+def create_collaborators_by_username_or_email(
+    project: Project, usernames: list[str], created_by: Person
+) -> tuple[list[str], list[str]]:
+    success_messages = []
+    failure_messages = []
+    for username in usernames:
+        success, message = create_collaborator_by_username_or_email(
+            project, username, created_by
+        )
+
+        if success:
+            success_messages.append(message)
+        else:
+            failure_messages.append(message)
+
+    return success_messages, failure_messages
