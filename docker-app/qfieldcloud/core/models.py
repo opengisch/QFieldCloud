@@ -921,6 +921,11 @@ class Team(User):
 
         return f"@{organization_name}/{team_name}"
 
+    @staticmethod
+    def is_team_username(username: str) -> bool:
+        """Whether `username` has the `@organization/team` shape of a team's username."""
+        return username.startswith("@") and "/" in username
+
 
 class TeamMemberQuerySet(models.QuerySet):
     def get_by_natural_key(
