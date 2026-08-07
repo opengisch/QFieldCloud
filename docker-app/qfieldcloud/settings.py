@@ -107,8 +107,6 @@ INSTALLED_APPS = [
     # if django_filters defined after [rest_framework] caused '... _frozen_importlib._DeadlockError ...'
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
     "django_filters",
-    # debug
-    "debug_toolbar",
     # style
     "rest_framework",
     "rest_framework.authtoken",
@@ -150,7 +148,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -1075,3 +1072,7 @@ QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"
 
 # Maximum number of GET/POST parameters, avoids `TooManyFieldsSent` error.
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
+
+if DEBUG:
+    INSTALLED_APPS.insert(0, "debug_toolbar")
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
