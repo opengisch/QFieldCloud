@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils, querysets_utils
-from qfieldcloud.core.models import Organization
+from qfieldcloud.core.models import Organization, Team
 from qfieldcloud.core.serializers import (
     CompleteUserSerializer,
     CreateUserSerializer,
@@ -53,6 +53,15 @@ class ListCreateUsersView(generics.ListCreateAPIView):
             except Project.DoesNotExist:
                 pass
 
+        exclude_members_of_team = None
+        if params.get("exclude_members_of_team"):
+            try:
+                exclude_members_of_team = Team.objects.get(
+                    pk=params.get("exclude_members_of_team")
+                )
+            except (Team.DoesNotExist, ValueError):
+                pass
+
         # TODO : are these GET paremters documented somewhere ? Shouldn't we use something
         # like django_filters.rest_framework.DjangoFilterBackend so they get auto-documented
         # in DRF's views, or is that supposedly done with swagger ?
@@ -63,6 +72,7 @@ class ListCreateUsersView(generics.ListCreateAPIView):
             query,
             project=project,
             organization=organization,
+            exclude_members_of_team=exclude_members_of_team,
             exclude_organizations=exclude_organizations,
             exclude_teams=exclude_teams,
             invert=invert,

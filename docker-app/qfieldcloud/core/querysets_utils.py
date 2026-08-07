@@ -39,6 +39,7 @@ def get_users(
     username: str,
     project: Project | None = None,
     organization: Organization | None = None,
+    exclude_members_of_team: Team | None = None,
     exclude_organizations: bool = False,
     exclude_teams: bool = False,
     invert: bool = False,
@@ -104,6 +105,12 @@ def get_users(
             users = users.filter(reduce(and_, [c for c in conditions]))
         else:
             users = users.exclude(reduce(or_, [c for c in conditions]))
+
+    if exclude_members_of_team:
+        team_member_ids = TeamMember.objects.filter(
+            team=exclude_members_of_team
+        ).values_list("member", flat=True)
+        users = users.exclude(pk__in=team_member_ids)
 
     return users.annotate(
         ordering=StrIndex("username", V(username)),
