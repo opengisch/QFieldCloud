@@ -271,6 +271,27 @@ class QfcTestCase(APITransactionTestCase):
         self.assertTrue(self.user3.id in queryset_ids)
         self.assertTrue(self.user4.id in queryset_ids)
 
+        # should get all the users, except those already a member of the team
+        queryset_ids = querysets_utils.get_users(
+            "", exclude_members_of_team=self.team1_1
+        ).values_list("id", flat=True)
+        self.assertEqual(len(queryset_ids), 7)
+        self.assertFalse(self.user3.id in queryset_ids)
+
+        # should get the users that are members/owner of the organization
+        # (via `invert`), except those already a member of the team
+        queryset_ids = querysets_utils.get_users(
+            "",
+            organization=self.organization1,
+            invert=True,
+            exclude_members_of_team=self.team1_1,
+        ).values_list("id", flat=True)
+        self.assertEqual(len(queryset_ids), 3)
+        self.assertTrue(self.user1.id in queryset_ids)
+        self.assertTrue(self.user2.id in queryset_ids)
+        self.assertTrue(self.organization1.user_ptr_id in queryset_ids)
+        self.assertFalse(self.user3.id in queryset_ids)
+
     def test_projects_roles_and_role_origins(self):
         """
         Checks user_role and user_role_origin are correctly defined
