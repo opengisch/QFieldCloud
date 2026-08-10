@@ -101,7 +101,7 @@ django-extensions==4.1
     # via -r requirements/requirements.in
 django-fernet-encrypted-fields==0.4.0
     # via -r requirements/requirements.in
-django-filter==25.2
+django-filter==26.1
     # via -r requirements/requirements.in
 django-invitations==2.1.0
     # via -r requirements/requirements.in

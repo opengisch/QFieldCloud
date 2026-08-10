@@ -16,7 +16,7 @@ django-currentuser==0.10.0
 django-debug-toolbar==7.0.0
 django-extensions==4.1
 django-fernet-encrypted-fields==0.4.0
-django-filter==25.2
+django-filter==26.1
 django-invitations==2.1.0
 # django-jazzmin 3.0.2 onwards breaks manifest static storages by passing a directory to {% static %}, see https://github.com/farridav/django-jazzmin/issues/684
 django-jazzmin==3.0.1
