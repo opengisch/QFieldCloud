@@ -33,6 +33,8 @@ services:
     volumes:
       # mount the source for live reload
       - ./docker-app/requirements:/requirements
+    environment:
+      UV_CACHE_DIR: /tmp/uv-cache
     command: bash -c 'apt update && apt install -y git && for f in /requirements/*.in; do uv pip compile --no-strip-extras -q -o "$${f%.in}.txt" "$$f"; done'
 
   worker_wrapper:
