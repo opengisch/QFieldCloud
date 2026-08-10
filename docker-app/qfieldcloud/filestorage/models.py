@@ -156,7 +156,7 @@ class File(models.Model):
         return self.versions.aggregate(size=Sum("size", default=0))["size"]
 
     def __repr__(self) -> str:
-        return f'File({self.pk}) in "{self.project_id}" "{self.name}"'  # type: ignore
+        return f"{self.project_id}/{self.name} [id={self.id}]"  # type: ignore
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -391,9 +391,11 @@ class FileVersion(models.Model):
 
     def __repr__(self) -> str:
         if hasattr(self, "file"):
-            return f'FileVersion({self.id}) in "{self.file.project_id}" "{self.file.name}" "{self.display}"'  # type: ignore
+            return (
+                f"{self.file.project_id}/{self.file.name}/{self.display} [id={self.id}]"  # type: ignore
+            )
         else:
-            return f'FileVersion({self.id}) in "UNKNOWN_PROJECT_ID" "UNKNOWN_FILENAME" "{self.display}"'  # type: ignore
+            return f"UNKNOWN_PROJECT_ID/UNKNOWN_FILENAME/{self.display} [id={self.id}]"  # type: ignore
 
     def __str__(self) -> str:
         return self.__repr__()
