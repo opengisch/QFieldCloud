@@ -770,11 +770,12 @@ class UserAccountInline(admin.StackedInline):
 
 class ProjectInline(admin.TabularInline):
     model = Project
+    fk_name = "owner"
     extra = 0
     absolute_max = 5000
 
-    fields = ("owned_project", "is_public", "overwrite_conflicts")
-    readonly_fields = ("owned_project",)
+    fields = ("owned_project", "created_by", "is_public", "overwrite_conflicts")
+    readonly_fields = ("owned_project", "created_by")
     has_direct_delete_permission = False
 
     # Override django.forms.formsets.DEFAULT_MAX_NUM for organizations with a large number of projects
@@ -1385,6 +1386,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "id",
         "name",
         "owner",
+        "created_by",
         "is_public",
         "description",
         "created_at",
@@ -1403,6 +1405,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "description",
         "is_public",
         "owner",
+        "created_by",
         "status",
         "status_code",
         "the_qgis_file",
@@ -1428,6 +1431,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     readonly_fields = (
         "id",
+        "created_by",
         "status",
         "status_code",
         "file_storage_bytes",
