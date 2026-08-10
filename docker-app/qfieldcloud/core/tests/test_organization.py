@@ -348,3 +348,68 @@ class QfcTestCase(APITestCase):
         self.assertEqual(self.organization1.organization_owner, self.user2)
         self.assertIn(self.user1.id, members_ids)
         self.assertNotIn(self.user2.id, members_ids)
+
+    def test_create_project_by_role(self):
+        def add_organization_member(member, role):
+            OrganizationMember.objects.create(
+                organization=self.organization1,
+                member=member,
+                role=role,
+            )
+            return AuthToken.objects.get_or_create(user=member)[0]
+
+        def create_project(token, project_name):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+            return self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": project_name,
+                    "owner": "organization1",
+                    "is_public": False,
+                },
+            )
+
+        with self.subTest(
+            "`ADMIN` role members can create organization projects",
+        ):
+            project_name = "admin_project"
+            token = add_organization_member(self.user2, OrganizationMember.Roles.ADMIN)
+            response = create_project(token, project_name)
+
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertTrue(
+                Project.objects.filter(
+                    name=project_name, owner=self.organization1
+                ).exists()
+            )
+
+        with self.subTest(
+            "`CREATOR` role members can create organization projects",
+        ):
+            token = add_organization_member(
+                self.user3, OrganizationMember.Roles.CREATOR
+            )
+            project_name = "creator_project"
+            response = create_project(token, project_name)
+
+            self.assertTrue(status.is_success(response.status_code))
+            self.assertTrue(
+                Project.objects.filter(
+                    name=project_name, owner=self.organization1
+                ).exists()
+            )
+
+        with self.subTest(
+            "`MEMBER` role members cannot create organization projects",
+        ):
+            user_member_role = Person.objects.create_user(
+                username="user_member", password="abc123"
+            )
+            token = add_organization_member(
+                user_member_role, OrganizationMember.Roles.MEMBER
+            )
+            project_name = "member_project"
+            response = create_project(token, project_name)
+
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertFalse(Project.objects.filter(name=project_name).exists())

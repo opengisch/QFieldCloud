@@ -202,7 +202,9 @@ def can_create_project(
         return user == organization
 
     if user_has_organization_roles(
-        user, organization, [OrganizationMember.Roles.ADMIN]
+        user,
+        organization,
+        [OrganizationMember.Roles.ADMIN, OrganizationMember.Roles.CREATOR],
     ):
         return True
 
@@ -749,7 +751,11 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             check_user_has_organization_roles(
                 user,
                 project.owner,
-                [OrganizationMember.Roles.MEMBER, OrganizationMember.Roles.ADMIN],
+                [
+                    OrganizationMember.Roles.MEMBER,
+                    OrganizationMember.Roles.CREATOR,
+                    OrganizationMember.Roles.ADMIN,
+                ],
             )
     else:
         if user.is_team:

@@ -779,6 +779,7 @@ class OrganizationMember(models.Model):
 
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
+        CREATOR = "creator", _("Creator")
         MEMBER = "member", _("Member")
 
     ALL_ROLES = list(Roles)
