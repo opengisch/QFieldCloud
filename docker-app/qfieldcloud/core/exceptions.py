@@ -236,3 +236,12 @@ class OperationNotAllowedForTemplateProjectError(QFieldCloudException):
     code = "operation_not_allowed_for_template_project"
     message = "This operation is not allowed on a template project."
     status_code = status.HTTP_400_BAD_REQUEST
+
+
+class UnexpectedProjectCollaboratorError(QFieldCloudException):
+    """Raised when the project creator is unexpectedly already a project collaborator
+    at the time of the automatic `ADMIN` collaborator grant."""
+
+    code = "unexpected_project_collaborator"
+    message = "Project creator is already a project collaborator."
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR

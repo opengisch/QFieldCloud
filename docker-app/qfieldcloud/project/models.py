@@ -319,7 +319,7 @@ class Project(models.Model):
     )
 
     created_by = models.ForeignKey(
-        # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
+        # NOTE should be `Person`, but Django sometimes has troubles with `Person`/`User` (e.g. `Form.full_clean()`), see #514 #515
         User,
         on_delete=models.SET_NULL,
         related_name="+",
