@@ -147,7 +147,7 @@ djangorestframework==3.18.0
     #   drf-spectacular
 djangorestframework-stubs==3.16.9
     # via -r requirements/requirements.in
-drf-spectacular==0.29.0
+drf-spectacular==0.30.0
     # via -r requirements/requirements.in
 idna==3.16
     # via requests
