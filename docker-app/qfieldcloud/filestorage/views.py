@@ -194,7 +194,8 @@ class ProjectMetaFileReadView(views.APIView):
 
     def get(self, request: Request, project_id: UUID) -> HttpResponseBase:
         project = get_object_or_404(
-            Project, Q(id=project_id) & Q(thumbnail__isnull=False) & ~Q(thumbnail="")
+            Project.objects.only("thumbnail"),
+            Q(id=project_id) & Q(thumbnail__isnull=False) & ~Q(thumbnail=""),
         )
 
         return download_field_file(
