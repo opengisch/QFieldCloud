@@ -123,7 +123,7 @@ django-phonenumber-field==8.5.0
     # via -r requirements/requirements.in
 django-ranged-response==0.2.0
     # via django-simple-captcha
-django-simple-captcha==0.6.3
+django-simple-captcha==0.7.0
     # via -r requirements/requirements.in
 django-sri==0.8.0
     # via -r requirements/requirements.in
