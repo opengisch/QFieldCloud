@@ -103,7 +103,13 @@ urlpatterns = [
     path("accounts/password/change/", blocked_view),
     path("accounts/", include("allauth.urls")),
     path("invitations/", include("invitations.urls", namespace="invitations")),
-    path("__debug__/", include("debug_toolbar.urls")),
     path("captcha/", include("captcha.urls")),
     path("a/<str:username>/<str:project_name>/", redirect_to_admin_project_view),
 ]
+
+if "debug_toolbar" in settings.INSTALLED_APPS:
+    urlpatterns = [
+        *urlpatterns[:-1],
+        path("__debug__/", include("debug_toolbar.urls")),
+        *urlpatterns[-1:],
+    ]
