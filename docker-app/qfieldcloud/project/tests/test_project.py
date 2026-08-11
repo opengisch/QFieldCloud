@@ -1577,3 +1577,92 @@ class QfcTestCase(APITransactionTestCase):
             self.assertFalse(
                 Project.objects.filter(name=f"cloned_{shared_project.name}").exists()
             )
+
+    def test_create_project_sets_created_by(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "created_by_project",
+                "owner": "user1",
+                "is_public": False,
+            },
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project = Project.objects.get(name="created_by_project")
+        self.assertEqual(project.created_by, self.user1)
+
+    def test_create_organization_project_admin_access(self):
+        def add_organization_member(organization, member, role):
+            OrganizationMember.objects.create(
+                organization=organization,
+                member=member,
+                role=role,
+            )
+            return AuthToken.objects.get_or_create(user=member)[0]
+
+        def create_organization_project(token, project_name, owner_username):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+            return self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": project_name,
+                    "owner": owner_username,
+                    "is_public": False,
+                },
+            )
+
+        # user1 owns organization1
+        organization1 = Organization.objects.create(
+            username="organization1", organization_owner=self.user1
+        )
+
+        with self.subTest("`CREATOR` role gets implicit admin access to the project"):
+            token = add_organization_member(
+                organization1, self.user2, OrganizationMember.Roles.CREATOR
+            )
+            response = create_organization_project(
+                token, "creator_project", "organization1"
+            )
+            self.assertTrue(status.is_success(response.status_code))
+
+            project = Project.objects.get(name="creator_project")
+            collaborator = ProjectCollaborator.objects.get(
+                project=project, collaborator=self.user2
+            )
+            self.assertEqual(collaborator.role, ProjectCollaborator.Roles.ADMIN)
+
+        with self.subTest(
+            "`organization_owner` gets implicit admin access to the project"
+        ):
+            response = create_organization_project(
+                self.token1, "owner_project", "organization1"
+            )
+            self.assertTrue(status.is_success(response.status_code))
+
+            project = Project.objects.get(name="owner_project")
+            # the owner already gets implicit admin access, no extra grant needed
+            self.assertFalse(
+                ProjectCollaborator.objects.filter(
+                    project=project, collaborator=self.user1
+                ).exists()
+            )
+
+        with self.subTest("`ADMIN` role gets implicit admin access to the project"):
+            token = add_organization_member(
+                organization1, self.user3, OrganizationMember.Roles.ADMIN
+            )
+            response = create_organization_project(
+                token, "admin_project", "organization1"
+            )
+            self.assertTrue(status.is_success(response.status_code))
+
+            project = Project.objects.get(name="admin_project")
+            # `ADMIN` members already get implicit admin access via
+            # `projects_with_roles_vw`, no extra grant needed
+            self.assertFalse(
+                ProjectCollaborator.objects.filter(
+                    project=project, collaborator=self.user3
+                ).exists()
+            )

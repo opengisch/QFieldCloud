@@ -317,6 +317,17 @@ class Project(models.Model):
             "The project owner can be either you or any of the organization you are member of."
         ),
     )
+
+    created_by = models.ForeignKey(
+        # NOTE should be `Person`, but Django sometimes has troubles with `Person`/`User` (e.g. `Form.full_clean()`), see #514 #515
+        User,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        limit_choices_to=models.Q(type=User.Type.PERSON),
+        null=True,
+        blank=True,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

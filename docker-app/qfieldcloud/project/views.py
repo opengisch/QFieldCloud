@@ -179,7 +179,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer: ProjectSerializer) -> None:
-        super().perform_create(serializer)
+        # The `created_by` field is set to the user that made the request.
+        serializer.save(created_by=self.request.user)
 
         project = serializer.instance
         clone_from_project = serializer.validated_data.get("clone_from_project", None)
