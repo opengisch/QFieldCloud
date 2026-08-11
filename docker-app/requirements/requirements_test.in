@@ -1,5 +1,5 @@
 imageio==2.*
 requests-mock==1.*
 selenium==4.*
-coverage==7.14.1
+coverage==7.15.4
 geopandas==1.*

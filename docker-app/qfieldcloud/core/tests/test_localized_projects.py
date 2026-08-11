@@ -44,20 +44,17 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.shared_datasets_project.refresh_from_db()
 
-    def get_localized_filenames_by_project_details(self, project: Project) -> list:
+    def get_localized_filenames(self, project: Project) -> list:
         filenames = []
-        for layer in project.project_details["layers_by_id"].values():
-            if layer["is_localized"]:
-                # Extract the filename from the localized layer
-                filename = layer["filename"].split("localized:")[-1]
-                filenames.append(filename)
+        for layer in project.qgis_project.layers.filter(is_localized=True):
+            filenames.append(layer.file_name.split("localized:")[-1])
 
         return filenames
 
     def get_filenames_from_missing_localized_layers(self):
         missing_localized_layers = self.project1.get_missing_localized_layers()
         filenames = [
-            layer["datasource"].split("|")[0].split(":")[-1]
+            layer.datasource.split("|")[0].split(":")[-1]
             for layer in missing_localized_layers
         ]
         return filenames
@@ -143,9 +140,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(len(available_localized_filenames), 1)
 
         # Localized layers found in the project1 project
-        project_localized_filenames = self.get_localized_filenames_by_project_details(
-            self.project1
-        )
+        project_localized_filenames = self.get_localized_filenames(self.project1)
 
         missing_localized_layers_filenames = (
             self.get_filenames_from_missing_localized_layers()
@@ -156,7 +151,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(len(missing_localized_layers_filenames), 2)
 
         self.assertListEqual(
-            missing_localized_layers_filenames,
+            sorted(missing_localized_layers_filenames),
             ["bumblebees.gpkg", "bumblebees_doesnotexist.gpkg"],
         )
 
@@ -243,7 +238,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(processprojectfile_job.status, Job.Status.FINISHED)
         self.assertIsNotNone(processprojectfile_job.feedback)
 
-        localized_layers = self.get_localized_filenames_by_project_details(project2)
+        localized_layers = self.get_localized_filenames(project2)
 
         missing_localized_layers = project2.get_missing_localized_layers()
 

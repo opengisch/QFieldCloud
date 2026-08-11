@@ -21,7 +21,14 @@ def get_attachment_dir_prefix(project: Project, filename: str) -> str:  # noqa: 
     Returns:
         the attachment dir or empty string if no match found
     """
-    for attachment_dir in project.attachment_dirs:
+    qgis_project = getattr(project, "qgis_project", None)
+
+    if qgis_project:
+        attachment_dirs = qgis_project.attachment_dirs
+    else:
+        attachment_dirs = ["DCIM"]
+
+    for attachment_dir in attachment_dirs:
         if filename.startswith(attachment_dir):
             return attachment_dir
 

@@ -58,7 +58,8 @@ def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
 
 def _project_for_owner(user: QfcUser, project: Project, skip_invalid: bool):
     return (
-        Project.objects.for_user(user, skip_invalid)
+        Project.objects.slim()
+        .for_user(user, skip_invalid)
         .select_related(None)
         .filter(pk=project.pk)
     )
@@ -201,11 +202,23 @@ def can_create_project(
         return user == organization
 
     if user_has_organization_roles(
-        user, organization, [OrganizationMember.Roles.ADMIN]
+        user,
+        organization,
+        [OrganizationMember.Roles.ADMIN, OrganizationMember.Roles.CREATOR],
     ):
         return True
 
     return False
+
+
+def can_read_organization_secrets(user: QfcUser, organization: Organization) -> bool:
+    return user_has_organization_roles(
+        user,
+        organization,
+        [
+            OrganizationMember.Roles.ADMIN,
+        ],
+    )
 
 
 def can_create_organization_secrets(user: QfcUser, organization: Organization) -> bool:
@@ -384,6 +397,9 @@ def can_delete_unnecessary_file_versions(user: QfcUser, project: Project) -> boo
 
 def can_create_deltas(user: QfcUser, project: Project) -> bool:
     """Whether the user can store deltas in a project."""
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -397,6 +413,9 @@ def can_create_deltas(user: QfcUser, project: Project) -> bool:
 
 
 def can_read_deltas(user: QfcUser, project: Project) -> bool:
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -410,6 +429,9 @@ def can_read_deltas(user: QfcUser, project: Project) -> bool:
 
 
 def can_apply_pending_deltas_for_project(user: QfcUser, project: Project) -> bool:
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -421,6 +443,9 @@ def can_apply_pending_deltas_for_project(user: QfcUser, project: Project) -> boo
 
 
 def can_set_delta_status_for_project(user: QfcUser, project: Project) -> bool:
+    if project.is_template_project:
+        return False
+
     return user_has_project_roles(
         user,
         project,
@@ -452,6 +477,9 @@ def can_set_delta_status(user: QfcUser, delta: Delta) -> bool:
 def can_create_delta(user: QfcUser, delta: Delta) -> bool:
     """Whether the user can store given delta."""
     project: Project = delta.project
+
+    if project.is_template_project:
+        return False
 
     if user_has_project_roles(
         user,
@@ -515,6 +543,16 @@ def can_create_jobs(user: QfcUser, project: Project, job_type: Job.Type) -> bool
         raise NotImplementedError(f'Unknown job type "{job_type}"')
 
     return user_has_project_roles(user, project, roles)
+
+
+def can_read_project_secrets(user: QfcUser, project: Project) -> bool:
+    return user_has_project_roles(
+        user,
+        project,
+        [
+            ProjectCollaborator.Roles.ADMIN,
+        ],
+    )
 
 
 def can_create_project_secrets(user: QfcUser, project: Project) -> bool:
@@ -713,7 +751,11 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             check_user_has_organization_roles(
                 user,
                 project.owner,
-                [OrganizationMember.Roles.MEMBER, OrganizationMember.Roles.ADMIN],
+                [
+                    OrganizationMember.Roles.MEMBER,
+                    OrganizationMember.Roles.CREATOR,
+                    OrganizationMember.Roles.ADMIN,
+                ],
             )
     else:
         if user.is_team:

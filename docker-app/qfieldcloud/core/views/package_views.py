@@ -1,7 +1,6 @@
 import logging
 from uuid import UUID
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from drf_spectacular.utils import (
@@ -24,7 +23,7 @@ from qfieldcloud.filestorage.view_helpers import (
     download_project_file_version,
     upload_project_file_version,
 )
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, get_slim_project_or_raise
 from rest_framework import permissions, status, views
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -34,12 +33,9 @@ logger = logging.getLogger(__name__)
 
 class PackageViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        try:
-            project_id = request.parser_context["kwargs"].get("project_id")
-            project = Project.objects.get(pk=project_id)
-            return perms.can_access_project(request.user, project)
-        except ObjectDoesNotExist:
-            return False
+        project_id = request.parser_context["kwargs"].get("project_id")
+        project = get_slim_project_or_raise(project_id)
+        return perms.can_access_project(request.user, project)
 
 
 class PackageUploadViewPermissions(permissions.BasePermission):
@@ -50,25 +46,20 @@ class PackageUploadViewPermissions(permissions.BasePermission):
         if request.auth.client_type != AuthToken.ClientType.WORKER:
             return False
 
-        try:
-            project_id = request.parser_context["kwargs"].get("project_id")
-            job_id = request.parser_context["kwargs"].get("job_id")
-            project = Project.objects.get(pk=project_id)
+        project_id = request.parser_context["kwargs"].get("project_id")
+        job_id = request.parser_context["kwargs"].get("job_id")
+        project = get_slim_project_or_raise(project_id)
 
-            if not perms.can_retrieve_project(request.user, project):
-                return False
-
-            # Check if the package job exists and it is already started, but not finished yet.
-            # This is extra check that the request is coming from a currently active job.
-            PackageJob.objects.get(
-                id=job_id,
-                status=PackageJob.Status.STARTED,
-                project=project,
-            )
-
-            return True
-        except ObjectDoesNotExist:
+        if not perms.can_retrieve_project(request.user, project):
             return False
+
+        # Check if the package job exists and it is already started, but not finished yet.
+        # This is extra check that the request is coming from a currently active job.
+        return PackageJob.objects.filter(
+            id=job_id,
+            status=PackageJob.Status.STARTED,
+            project=project,
+        ).exists()
 
 
 @extend_schema_view(
@@ -82,7 +73,9 @@ class LatestPackageView(views.APIView):
 
     def get(self, request, project_id):
         """Get last project package status and file list."""
-        project = get_object_or_404(Project, id=project_id)
+        project = get_object_or_404(
+            Project.objects.select_related("qgis_project"), id=project_id
+        )
         latest_finished_package_job = project.latest_finished_package_job_for_user(
             request.user
         )
@@ -100,12 +93,15 @@ class LatestPackageView(views.APIView):
         )
 
         # get attachment files directly from the original project files, not from the package
-        for attachment_dir in project.attachment_dirs:
-            files_qs |= File.objects.filter(
-                project_id=project_id,
-                file_type=File.FileType.PROJECT_FILE,
-                name__startswith=attachment_dir,
-            )
+        qgis_project = getattr(project, "qgis_project", None)
+
+        if qgis_project:
+            for attachment_dir in qgis_project.attachment_dirs:
+                files_qs |= File.objects.filter(
+                    project_id=project_id,
+                    file_type=File.FileType.PROJECT_FILE,
+                    name__startswith=attachment_dir,
+                )
 
         files_qs = files_qs.distinct()
 
@@ -163,7 +159,9 @@ class LatestPackageDownloadFilesView(views.APIView):
         Raises:
             exceptions.InvalidJobError: raised when packaging has never been triggered or successful for this project
         """
-        project = get_object_or_404(Project, id=project_id)
+        project = get_object_or_404(
+            Project.objects.select_related("qgis_project"), id=project_id
+        )
         latest_finished_package_job = project.latest_finished_package_job_for_user(
             request.user
         )

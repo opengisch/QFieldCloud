@@ -83,8 +83,10 @@ def create_collaborator_by_username_or_email(
     ) + list(Team.objects.filter(username=username, team_organization=project.owner))
 
     if len(users) == 0:
+        if Team.is_team_username(username):
+            message = _('Team "{}" does not exist.').format(username)
         # No user found, if string is an email address, we try to send a link
-        if invitation.is_valid_email(username):
+        elif invitation.is_valid_email(username):
             success, message = invitation.invite_user_by_email(username, created_by)
         else:
             message = _('User "{}" does not exist.').format(username)
@@ -101,3 +103,21 @@ def create_collaborator_by_username_or_email(
         success, message = create_collaborator(project, users[0], created_by)
 
     return success, message
+
+
+def create_collaborators_by_username_or_email(
+    project: Project, usernames: list[str], created_by: Person
+) -> tuple[list[str], list[str]]:
+    success_messages = []
+    failure_messages = []
+    for username in usernames:
+        success, message = create_collaborator_by_username_or_email(
+            project, username, created_by
+        )
+
+        if success:
+            success_messages.append(message)
+        else:
+            failure_messages.append(message)
+
+    return success_messages, failure_messages

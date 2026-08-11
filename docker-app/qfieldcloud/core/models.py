@@ -779,6 +779,7 @@ class OrganizationMember(models.Model):
 
     class Roles(models.TextChoices):
         ADMIN = "admin", _("Admin")
+        CREATOR = "creator", _("Creator")
         MEMBER = "member", _("Member")
 
     ALL_ROLES = list(Roles)
@@ -920,6 +921,11 @@ class Team(User):
             raise ValueError("Team name is required.")
 
         return f"@{organization_name}/{team_name}"
+
+    @staticmethod
+    def is_team_username(username: str) -> bool:
+        """Whether `username` has the `@organization/team` shape of a team's username."""
+        return username.startswith("@") and "/" in username
 
 
 class TeamMemberQuerySet(models.QuerySet):

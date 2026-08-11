@@ -24,7 +24,7 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: '1.30.0'
+    rev: '1.31.1'
     hooks:
     -   id: django-upgrade
         args: [--target-version, '4.2', '--skip', 'admin_register']
@@ -50,7 +50,7 @@ repos:
 
   # Static type-checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.3.0
     hooks:
       - id: mypy
         additional_dependencies: [types-pytz, types-Deprecated, types-PyYAML, types-requests, types-tabulate, types-jsonschema, django-stubs, django-stubs-ext, djangorestframework-stubs]
@@ -58,7 +58,7 @@ repos:
         entry: bash -c 'mypy -p docker-app -p docker-qgis "$@"' --
 
   - repo: https://github.com/hadolint/hadolint
-    rev: v2.14.0
+    rev: v2.15.1
     hooks:
       - id: hadolint-docker
 

@@ -7,7 +7,7 @@ from drf_spectacular.utils import (
 )
 from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, get_slim_project_or_raise
 from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
@@ -28,10 +28,7 @@ class JobPermissions(permissions.BasePermission):
             job_type = request.data.get("type")
 
         if should_expect_project_id:
-            try:
-                project = Project.objects.get(id=project_id)
-            except ObjectDoesNotExist:
-                return False
+            project = get_slim_project_or_raise(project_id)
         else:
             job_id = permissions_utils.get_param_from_request(request, "job_id")
 

@@ -2,12 +2,14 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import TypedDict, cast
+from typing import Self, TypedDict, cast
 
 from constance import config
 from deprecated import deprecated
 from django.apps import apps
 from django.conf import settings
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -19,6 +21,7 @@ from model_utils.managers import InheritanceManagerMixin
 
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
 from qfieldcloud.subscription.exceptions import NotPremiumPlanException
+from qfieldcloud.subscription.functions import TsTzRange
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +62,7 @@ class SubscriptionStatus(models.TextChoices):
 
 class Plan(models.Model):
     @classmethod
-    def get_or_create_default(cls) -> "Plan":
+    def get_or_create_default(cls) -> Self:
         """Returns the default plan, creating one if none exists.
         To be used as a default value for UserAccount.type"""
         if not cls.objects.exists():
@@ -89,10 +92,12 @@ class Plan(models.Model):
 
         result = cls.objects.order_by("-is_default").first()
 
-        return cast(Plan, result)
+        assert result is not None
+
+        return result
 
     @classmethod
-    def get_plans_for_user(cls, user: User, user_type: User.Type) -> QuerySet["Plan"]:
+    def get_plans_for_user(cls, user: User, user_type: User.Type) -> QuerySet[Self]:
         """
         Return all public plans of the given `user_type`, filtering out
         trial plans for organizations when no trials remain.
@@ -109,6 +114,8 @@ class Plan(models.Model):
             filters["is_trial"] = False
 
         return cls.objects.filter(**filters)
+
+    trial_plan_id: int | None
 
     # unique identifier of the subscription plan
     code = models.CharField(max_length=100, unique=True)
@@ -239,6 +246,23 @@ class Plan(models.Model):
         ),
     )
 
+    trial_plan = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"is_trial": True},
+        help_text=_(
+            "Plan used as the trial version of this plan. "
+            "If set, users can start this plan with a trial period."
+        ),
+    )
+
+    @property
+    def has_trial_plan(self) -> bool:
+        return self.trial_plan_id is not None
+
     @property
     def storage_bytes(self) -> int:
         return self.storage_mb * 1000 * 1000
@@ -277,6 +301,29 @@ class Plan(models.Model):
         if errors:
             raise ValidationError(errors)
 
+    def clean_trial_plan(self):
+        if self.trial_plan_id is None:
+            return
+
+        if self.is_trial:
+            raise ValidationError(
+                {"trial_plan": _("Trial plans cannot have their own trial plan.")}
+            )
+
+        if not self.trial_plan.is_trial:
+            raise ValidationError(
+                {"trial_plan": _("The selected trial plan must be marked as a trial.")}
+            )
+
+        if self.trial_plan.user_type != self.user_type:
+            raise ValidationError(
+                {
+                    "trial_plan": _(
+                        "Trial plan must have the same user type as this plan."
+                    )
+                }
+            )
+
     def clean(self):
         if self.storage_mb == 0:
             raise ValidationError({"storage_mb": _("Must be greater than 0.")})
@@ -287,6 +334,7 @@ class Plan(models.Model):
             )
 
         self.clean_storage_threshold_bytes()
+        self.clean_trial_plan()
 
         return super().clean()
 
@@ -368,7 +416,7 @@ class PackageType(models.Model):
 
     @classmethod
     @lru_cache
-    def get_storage_package_type(cls) -> "PackageType":
+    def get_storage_package_type(cls) -> Self:
         # NOTE if the cache is still returning the old result, please restart the whole `app` container
         try:
             return cls.objects.get(type=cls.Type.STORAGE)
@@ -437,6 +485,22 @@ class Package(models.Model):
             "These notes are for internal purposes only and will never be shown to the end users."
         ),
     )
+
+    class Meta:
+        constraints = [
+            ExclusionConstraint(
+                name="subscription_package_prevent_overlaps",
+                index_type="GIST",
+                expressions=[
+                    ("subscription_id", RangeOperators.EQUAL),
+                    (
+                        TsTzRange("active_since", "active_until", RangeBoundary()),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+                condition=Q(active_since__isnull=False),
+            ),
+        ]
 
 
 # TODO add check constraint makes sure there are no two active additional packages at the same time,
@@ -822,7 +886,7 @@ class AbstractSubscription(models.Model):
         return old_package, new_package
 
     @classmethod
-    def get_or_create_current_subscription(cls, account: UserAccount) -> "Subscription":
+    def get_or_create_current_subscription(cls, account: UserAccount) -> Self:
         """Returns the current subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
@@ -830,32 +894,34 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the current subscription
-
-        TODO Python 3.11 the actual return type is Self
         """
         try:
-            subscription = cls.objects.current().get(account_id=account.pk)  # type: ignore
+            subscription = (
+                cls.objects.current()  # type: ignore
+                .select_related("plan")
+                .get(account_id=account.pk)
+            )
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
-        return cast(Subscription, subscription)
+        return cast(Self, subscription)
 
     @classmethod
-    def get_upcoming_subscription(cls, account: UserAccount) -> "Subscription":
+    def get_upcoming_subscription(cls, account: UserAccount) -> Self | None:
         result = (
             cls.objects.filter(account_id=account.pk, active_since__gt=timezone.now())
             .exclude(status__in=[Subscription.Status.INACTIVE_CANCELLED])
             .order_by("active_since")
             .first()
         )
-        return cast(Subscription, result)
+        return result
 
     @classmethod
     def update_subscription(
         cls,
-        subscription: "Subscription",
+        subscription: Self,
         **kwargs: UpdateSubscriptionKwargs,
-    ) -> "Subscription":
+    ) -> Self:
         """Updates the subscription properties.
 
         Args:
@@ -863,8 +929,6 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the same as the subscription argument
-
-        TODO Python 3.11 the actual return type is Self
         """
         if not kwargs:
             return subscription
@@ -899,7 +963,7 @@ class AbstractSubscription(models.Model):
     @classmethod
     def create_default_plan_subscription(
         cls, account: UserAccount, active_since: datetime | None = None
-    ) -> "AbstractSubscription":
+    ) -> Self:
         """Creates the default subscription for a given account.
 
         Args:
@@ -908,8 +972,6 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the created subscription.
-
-        TODO Python 3.11 the actual return type is Self
         """
         most_recent_subscription = (
             cls.objects.filter(account=account)
@@ -958,7 +1020,7 @@ class AbstractSubscription(models.Model):
         created_by: Person,
         active_since: datetime | None = None,
         regular_plan: Plan | None = None,
-    ) -> tuple[type["AbstractSubscription"] | None, "AbstractSubscription"]:
+    ) -> tuple[Self | None, Self]:
         """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
@@ -970,8 +1032,6 @@ class AbstractSubscription(models.Model):
 
         Returns:
             the created trial subscription if the given plan was a trial and the regular subscription.
-
-        TODO Python 3.11 the actual return type is Self
         """
         if active_since:
             # remove microseconds as there will be slight shift with the remote system data
@@ -1092,7 +1152,21 @@ class AbstractSubscription(models.Model):
 
 
 class Subscription(AbstractSubscription):
-    pass
+    class Meta:
+        constraints = [
+            ExclusionConstraint(
+                name="subscription_subscription_prevent_overlaps",
+                index_type="GIST",
+                expressions=[
+                    ("account_id", RangeOperators.EQUAL),
+                    (
+                        TsTzRange("active_since", "active_until", RangeBoundary()),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+                condition=Q(active_since__isnull=False),
+            ),
+        ]
 
 
 class CurrentSubscription(AbstractSubscription):

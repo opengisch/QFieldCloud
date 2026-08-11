@@ -31,6 +31,7 @@ from qfieldcloud.core.models import (
     Secret,
 )
 from qfieldcloud.core.utils2 import packages
+from qfieldcloud.project.models import QgisProject
 from qfieldcloud.project.utils.project_utils import get_qgis_major_version
 from tenacity import (
     retry,
@@ -679,6 +680,10 @@ class ProcessProjectfileJobRun(JobRun):
 
         # Since the `Project.qgis_version` field is newly added, we want to backfill it for old projects that didn't have it set,
         # but the `process_projectfile` job can detect the QGIS version from the project file and return it in the feedback, we can set it here.
+        # NOTE `Project.qgis_version` is used by `wrapper.JobRun.get_qgis_image()` to detect
+        # the correct QGIS docker image to run the job.
+        # Therefore, we cannot use the very similar `QgisProject.qgis_version` field,
+        # which is not populated until the first `process_projectfile` job is run.
         if self.job.project.qgis_version is None and project.project_details.get(
             "qgis_version"
         ):
@@ -687,9 +692,17 @@ class ProcessProjectfileJobRun(JobRun):
 
         project.save(update_fields=update_fields)
 
+        QgisProject.objects.update_from_details(
+            project, project.the_qgis_file.latest_version, project.project_details
+        )
+
     def after_docker_exception(self) -> None:
         project = self.job.project
 
+        if hasattr(project, "qgis_project"):
+            project.qgis_project.delete()
+
+        # TODO @manylon: keep in sync with `QgisProject` until `Project.project_details` is dropped, see https://app.clickup.com/t/2192114/QF-8600
         if project.project_details is not None:
             project.project_details = None
             project.save(update_fields=("project_details",))

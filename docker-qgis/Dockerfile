@@ -8,10 +8,13 @@ ARG QGIS_REPOSITORY=ubuntu-ltr
 
 # Set QGIS version as in the ubuntu/debian repos.
 # Choose your version from here: https://debian.qgis.org/ubuntu-ltr/dists/noble/main/binary-amd64/Packages or https://debian.qgis.org/debian/dists/resolute/main/binary-amd64/Packages
-ARG QGIS_VERSION=1:3.44.10+40noble
+# NOTE: `QGIS_VERSION` is most likely overridden by the `docker-compose.yml` file, this is just a default value.
+ARG QGIS_VERSION=1:3.44.13+40noble
 
 # Start from a basic Ubuntu image
 FROM ubuntu:${UBUNTU_VERSION}
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /bin/
 
 # Redeclare within the stage, otherwise the variables will not be available in the `RUN` commands.
 ARG UBUNTU_VERSION
@@ -47,16 +50,9 @@ Components: main
 Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
 EOF
 
-# Disable annoying pip version check, we don't care if pip is slightly older
-ARG PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Do not create and use redundant cache dir in the current user home
-ARG PIP_NO_CACHE_DIR=1
-
 # Install non-QGIS dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    python3-pip \
     xvfb \
     iputils-ping \
     glibc-tools \
@@ -110,15 +106,15 @@ ENV IS_WITHIN_QFC_WORKER=1
 
 # Install debugpy for local development and debuggability
 ARG DEBUG_BUILD
-RUN if [ "$DEBUG_BUILD" = "1" ]; then pip3 install --no-cache-dir --break-system-packages debugpy; fi
+RUN if [ "$DEBUG_BUILD" = "1" ]; then uv pip install --system --no-cache --break-system-packages debugpy; fi
 
 # Install regular dependencies that rarely change
 COPY requirements.txt /tmp/
-RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed -r /tmp/requirements.txt
+RUN uv pip install --system --no-cache --break-system-packages --reinstall -r /tmp/requirements.txt
 
 # Install `libqfieldsync` dependency since it changes more frequently compared to regular dependencies
 COPY requirements_internal.txt /tmp/
-RUN pip3 install --no-cache-dir --break-system-packages --use-deprecated=legacy-resolver -r /tmp/requirements_internal.txt
+RUN uv pip install --system --no-cache --break-system-packages -r /tmp/requirements_internal.txt
 
 COPY schemas schemas
 COPY qfc_worker qfc_worker

@@ -119,14 +119,14 @@ FROM point;""")
         # check that the service is in the project details (layer).
         has_service_in_layer = False
         pg_layer_id = ""
-        for layer_id, layer_details in self.p1.project_details["layers_by_id"].items():  # type: ignore
+        for layer in self.p1.qgis_project.layers.all():
             if (
-                layer_details["provider_name"] == "postgres"
-                and "service='qfctestci'" in layer_details["datasource"]
-                and layer_details["is_valid"]
+                layer.provider_name == "postgres"
+                and "service='qfctestci'" in layer.datasource
+                and layer.is_valid
             ):
                 has_service_in_layer = True
-                pg_layer_id = layer_id
+                pg_layer_id = layer.qgis_layer_id
                 break
 
         self.assertTrue(has_service_in_layer)

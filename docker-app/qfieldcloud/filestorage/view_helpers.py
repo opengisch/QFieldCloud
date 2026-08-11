@@ -148,7 +148,7 @@ def upload_project_file_version(
             # Select for update the project so we can update it.
             # It guarantees there will be no other file upload editing the same project row.
             project = (
-                Project.objects.select_related("the_qgis_file")
+                Project.objects.select_related("the_qgis_file", "qgis_project")
                 .select_for_update(of=("self",))
                 .get(id=project.id)
             )

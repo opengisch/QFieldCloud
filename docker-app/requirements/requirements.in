@@ -1,7 +1,7 @@
-boto3-stubs==1.43.38
-boto3==1.43.38
+boto3-stubs==1.43.67
+boto3==1.43.67
 deprecated==1.3.1
-django-allauth[socialaccount]==65.18.0
+django-allauth[socialaccount]==65.19.0
 django-auditlog==3.4.1
 django-axes==8.3.1
 django-bootstrap4==26.1
@@ -13,10 +13,10 @@ django-constance==4.3.5
 django-countries==9.0.0
 django-cron-django5==0.6.2
 django-currentuser==0.10.0
-django-debug-toolbar==6.3.0
+django-debug-toolbar==7.0.0
 django-extensions==4.1
 django-fernet-encrypted-fields==0.4.0
-django-filter==25.2
+django-filter==26.1
 django-invitations==2.1.0
 # django-jazzmin 3.0.2 onwards breaks manifest static storages by passing a directory to {% static %}, see https://github.com/farridav/django-jazzmin/issues/684
 django-jazzmin==3.0.1
@@ -26,23 +26,24 @@ django-model-utils==5.0.0
 django-nonrelated-inlines==0.2
 # Unfortunately the version is not released yet on pypi, so we need to install it from the git repository, currently # 1.9.0
 django-notifications-hq @ git+https://github.com/django-notifications/django-notifications.git@4c44bcea2504d9a3fcd26366b232a13732a08f2a
-django-phonenumber-field==8.4.0
-django-simple-captcha==0.6.3
+django-phonenumber-field==8.5.0
+django-simple-captcha==0.7.0
 django-sri==0.8.0
 django-storages==1.14.6
 django-tables2==3.0.0
-django-timezone-field==7.2.1
-django==5.2.16
+django-timezone-field==7.2.2
+django==5.2.17
 django-stubs==5.2.9
 django-stubs-ext==5.2.9
-djangorestframework==3.17.1
+djangorestframework==3.18.0
 djangorestframework-stubs==3.16.9
-drf-spectacular==0.29.0
+drf-spectacular==0.30.0
 json-log-formatter==1.2.1
-mypy-boto3-s3==1.43.31
-phonenumbers==9.0.27
-Pillow==12.2.0
+mypy-boto3-s3==1.43.66
+phonenumbers==9.0.36
+Pillow==12.3.0
 psycopg2==2.9.12
 pymemcache==4.0.0
-sentry-sdk==2.62.0
+pyproj==3.7.2
+sentry-sdk==2.66.1
 stripe==4.2.0

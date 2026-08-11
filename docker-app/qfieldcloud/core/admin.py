@@ -24,6 +24,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_urls import admin_urlname
+from django.contrib.admin.utils import display_for_value
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import logout_then_login, redirect_to_login
@@ -43,6 +44,7 @@ from django.forms import ModelForm, fields, widgets
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import render, resolve_url
+from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
@@ -79,10 +81,13 @@ from qfieldcloud.core.utils2 import delta_utils, jobs, pg_service_file
 from qfieldcloud.core.utils2.storage import format_storage_usage
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
+from qfieldcloud.project.enums import QgsLayerErrorCode
 from qfieldcloud.project.models import (
     SHARED_DATASETS_PROJECT_NAME,
     Project,
     ProjectSeed,
+    QgisLayer,
+    QgisProject,
 )
 from qfieldcloud.subscription.models import get_subscription_model
 
@@ -649,9 +654,42 @@ def search_parser(
     return custom_filter
 
 
-def model_admin_url(obj, name: str | None = None) -> str:
+def model_admin_url(obj, name: str | None = None) -> SafeText:
     url = resolve_url(admin_urlname_by_obj(obj, SafeText("change")), obj.pk)
     return format_html('<a href="{}">{}</a>', url, name or str(obj))
+
+
+def qgis_project_layers_list(qgis_project: "QgisProject") -> SafeText:
+    headers = {
+        "name": _("Name"),
+        "layer_type": _("Type"),
+        "geom_type": _("Geometry"),
+        "is_valid": _("Valid"),
+        "error": _("Error"),
+    }
+    rows = []
+    for layer in qgis_project.layers.order_by("ordering"):
+        if layer.error_code != QgsLayerErrorCode.NO_ERROR:
+            error_display = layer.get_error_code_display()
+        else:
+            error_display = "-"
+
+        rows.append(
+            {
+                "name": model_admin_url(layer, layer.name),
+                "layer_type": layer.get_layer_type_display(),
+                "geom_type": layer.get_geom_type_display(),
+                "is_valid": display_for_value(layer.is_valid, "-", boolean=True),
+                "error": error_display,
+            }
+        )
+
+    return SafeText(
+        render_to_string(
+            "admin/simple_table.html",
+            {"headers": headers, "rows": rows},
+        )
+    )
 
 
 def format_text(value, syntax: Literal["text", "json"]) -> SafeText:
@@ -732,11 +770,12 @@ class UserAccountInline(admin.StackedInline):
 
 class ProjectInline(admin.TabularInline):
     model = Project
+    fk_name = "owner"
     extra = 0
     absolute_max = 5000
 
-    fields = ("owned_project", "is_public", "overwrite_conflicts")
-    readonly_fields = ("owned_project",)
+    fields = ("owned_project", "created_by", "is_public", "overwrite_conflicts")
+    readonly_fields = ("owned_project", "created_by")
     has_direct_delete_permission = False
 
     # Override django.forms.formsets.DEFAULT_MAX_NUM for organizations with a large number of projects
@@ -1168,6 +1207,114 @@ class ProjectSeedInline(admin.StackedInline):
         return False
 
 
+class QgisProjectInline(admin.StackedInline):
+    model = QgisProject
+    extra = 0
+    has_direct_delete_permission = False
+    fk_name = "project"
+
+    fields = (
+        "name",
+        "qgis_version",
+        "crs",
+        "extent",
+        "background_color",
+        "custom_properties__pre",
+        "layers__list",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("Custom properties"))
+    def custom_properties__pre(self, instance: QgisProject) -> SafeText:
+        return format_text(instance.custom_properties, "json")
+
+    @admin.display(description=_("Layers"))
+    def layers__list(self, instance: QgisProject) -> SafeText:
+        return qgis_project_layers_list(instance)
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
+class LayerAdmin(QFieldCloudModelAdmin):
+    has_direct_delete_permission = False
+
+    OWNER_LOOKUP = "qgis_project__project__owner"
+
+    list_display = (
+        "name",
+        "qgis_project__link",
+        "owner__link",
+        "ordering",
+        "layer_type",
+        "geom_type",
+        "is_valid",
+        "error_code",
+    )
+    list_filter = (
+        "layer_type",
+        "geom_type",
+        "is_valid",
+        "is_localized",
+        "error_code",
+        (OWNER_LOOKUP, admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = (
+        "name__icontains",
+        "qgis_project__name__icontains",
+    )
+    ordering = ("qgis_project", "ordering")
+    list_select_related = (OWNER_LOOKUP,)
+
+    fields = (
+        "qgis_project__link",
+        "qgis_layer_id",
+        "name",
+        "ordering",
+        "crs",
+        "geom_type",
+        "wkb_type_name",
+        "layer_type",
+        "provider_name",
+        "datasource",
+        "file_name",
+        "is_valid",
+        "is_localized",
+        "error_code",
+        "error_summary",
+        "error_message",
+        "provider_error_summary",
+        "provider_error_message",
+        "qfs_settings__pre",
+        "created_at",
+        "updated_at",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("QGIS project"))
+    def qgis_project__link(self, instance: QgisLayer) -> SafeText:
+        return model_admin_url(
+            instance.qgis_project.project, instance.qgis_project.name
+        )
+
+    @admin.display(description=_("Owner"), ordering=OWNER_LOOKUP)
+    def owner__link(self, instance: QgisLayer) -> SafeText:
+        return model_admin_url(instance.qgis_project.project.owner)
+
+    @admin.display(description=_("QFieldSync settings"))
+    def qfs_settings__pre(self, instance: QgisLayer) -> SafeText:
+        return format_text(instance.qfs_settings, "json")
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+
 class ProjectForm(ModelForm):
     project_files = fields.CharField(
         disabled=True, required=False, widget=ProjectFilesWidget
@@ -1239,6 +1386,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "id",
         "name",
         "owner",
+        "created_by",
         "is_public",
         "description",
         "created_at",
@@ -1257,9 +1405,10 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "description",
         "is_public",
         "owner",
+        "created_by",
         "status",
         "status_code",
-        "the_qgis_file_name",
+        "the_qgis_file",
         "overwrite_conflicts",
         "has_restricted_projectfiles",
         "file_storage_bytes",
@@ -1282,7 +1431,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
     )
     readonly_fields = (
         "id",
-        "project_type",
+        "created_by",
         "status",
         "status_code",
         "file_storage_bytes",
@@ -1294,12 +1443,13 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "project_details__pre",
         "locked_at",
         "file_storage_migrated_at",
-        "the_qgis_file_name",
+        "the_qgis_file",
     )
     inlines = (
         ProjectSeedInline,
         ProjectSecretInline,
         ProjectCollaboratorInline,
+        QgisProjectInline,
     )
     search_fields = (
         "id",
@@ -1335,10 +1485,6 @@ class ProjectAdmin(QFieldCloudModelAdmin):
 
     def project_files(self, instance):
         return instance.pk
-
-    @admin.display(description=_("QGIS project file"))
-    def the_qgis_file_name(self, obj: Project) -> str | None:
-        return obj.the_qgis_file_name
 
     def project_details__pre(self, instance):
         if instance.project_details is None:
@@ -2058,6 +2204,7 @@ qfc_admin_site.register(Person, PersonAdmin)
 qfc_admin_site.register(Organization, OrganizationAdmin)
 qfc_admin_site.register(Team, TeamAdmin)
 qfc_admin_site.register(Project, ProjectAdmin)
+qfc_admin_site.register(QgisLayer, LayerAdmin)
 qfc_admin_site.register(Secret, SecretAdmin)
 qfc_admin_site.register(Delta, DeltaAdmin)
 qfc_admin_site.register(Job, JobAdmin)

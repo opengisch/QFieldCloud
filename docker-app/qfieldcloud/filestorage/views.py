@@ -34,7 +34,7 @@ from qfieldcloud.filestorage.view_helpers import (
     download_project_file_version,
     upload_project_file_version,
 )
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, get_slim_project_or_raise
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class FileListViewPermissions(permissions.BasePermission):
             return False
 
         project_id = request.parser_context["kwargs"]["project_id"]
-        project = get_object_or_404(Project, id=project_id)
+        project = get_slim_project_or_raise(project_id)
 
         return permissions_utils.can_read_files(request.user, project)
 
@@ -56,7 +56,7 @@ class FileCrudViewPermissions(permissions.BasePermission):
             return False
 
         project_id = request.parser_context["kwargs"]["project_id"]
-        project = get_object_or_404(Project, id=project_id)
+        project = get_slim_project_or_raise(project_id)
         user = request.user
 
         if request.method == "GET":
@@ -87,6 +87,7 @@ class FileListView(generics.ListAPIView):
             File.objects.select_related(
                 # NOTE needed as we check `get_attachment_dir_prefix(project)` for each file
                 "project",
+                "project__qgis_project",
                 # NOTE needed as we add the `latest_version`'s timestamp
                 "latest_version",
             )
@@ -193,7 +194,8 @@ class ProjectMetaFileReadView(views.APIView):
 
     def get(self, request: Request, project_id: UUID) -> HttpResponseBase:
         project = get_object_or_404(
-            Project, Q(id=project_id) & Q(thumbnail__isnull=False) & ~Q(thumbnail="")
+            Project.objects.only("thumbnail"),
+            Q(id=project_id) & Q(thumbnail__isnull=False) & ~Q(thumbnail=""),
         )
 
         return download_field_file(

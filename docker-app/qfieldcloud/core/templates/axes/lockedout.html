@@ -13,7 +13,7 @@
     <h5 class="card-title">{% trans 'Account Locked' %}</h5>
     <p class="card-text">
       {% blocktrans with username=username timedelta=cooloff_timedelta|smooth_timedelta %}
-        Too many failed login attempts for {{ username }}! Please try again {{ timedelta }} after your last login attempt.
+        Too many failed login attempts for {{ username }}! Please try again {{ timedelta }} after last login attempt.
       {% endblocktrans %}
     </p>
   </div>

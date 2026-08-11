@@ -21,11 +21,10 @@ from rest_framework.response import Response
 
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.drf_utils import QfcOrderingFilter
-from qfieldcloud.core.exceptions import ObjectNotFoundError
 from qfieldcloud.core.models import Job
 from qfieldcloud.project.enums import ProjectRoleOrigins
 from qfieldcloud.project.filters import ProjectFilterSet
-from qfieldcloud.project.models import Project, ProjectSeed
+from qfieldcloud.project.models import Project, ProjectSeed, get_slim_project_or_raise
 from qfieldcloud.project.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
@@ -64,10 +63,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
 
             clone_from_project_id = request.data.get("clone_from_project")
             if clone_from_project_id:
-                try:
-                    clone_from_project = Project.objects.get(id=clone_from_project_id)
-                except Project.DoesNotExist:
-                    return False
+                clone_from_project = get_slim_project_or_raise(clone_from_project_id)
 
                 if not permissions_utils.can_access_project(user, clone_from_project):
                     return False
@@ -75,11 +71,7 @@ class ProjectViewSetPermissions(permissions.BasePermission):
             return True
 
         projectid = permissions_utils.get_param_from_request(request, "projectid")
-
-        try:
-            project = Project.objects.get(id=projectid)
-        except Project.DoesNotExist:
-            raise ObjectNotFoundError(detail="Project not found.")
+        project = get_slim_project_or_raise(projectid)
 
         if view.action == "retrieve":
             return permissions_utils.can_retrieve_project(user, project)
@@ -187,7 +179,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer: ProjectSerializer) -> None:
-        super().perform_create(serializer)
+        # The `created_by` field is set to the user that made the request.
+        serializer.save(created_by=self.request.user)
 
         project = serializer.instance
         clone_from_project = serializer.validated_data.get("clone_from_project", None)

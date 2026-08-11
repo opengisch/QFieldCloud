@@ -407,6 +407,7 @@ def apply_deltas_without_transaction(
     overwrite_conflicts: bool = False,
 ) -> bool:
     has_applied_all_deltas = True
+    layer_ids_to_commit = []
 
     # apply deltas on each individual layer
     for idx, delta in enumerate(delta_file.deltas):
@@ -427,6 +428,9 @@ def apply_deltas_without_transaction(
                     f'Cannot start editing layer "{layer_id}"',
                     provider_errors=layer.dataProvider().errors(),
                 )
+
+            if layer_id not in layer_ids_to_commit:
+                layer_ids_to_commit.append(layer_id)
 
             # check if a PostGIS layer's session_role override is requested.
             if layer.providerType() == "postgres" and QFC_PG_EFFECTIVE_USER:
@@ -495,7 +499,7 @@ def apply_deltas_without_transaction(
                 # in QGIS the only way to get the real features that have been added after commit, if edit buffer is present, is to use this signal.
                 layer.committedFeaturesAdded.connect(committed_features_added_cb)
 
-            if not layer.commitChanges():
+            if not layer.commitChanges(False):
                 raise DeltaException(
                     "Failed to commit changes",
                     provider_errors=layer.dataProvider().errors(),
@@ -605,6 +609,11 @@ def apply_deltas_without_transaction(
             )
 
             raise err
+
+    # Exits editing mode for modified layers, there is nothing to commit at this stage
+    for layer_id in layer_ids_to_commit:
+        layer = project.mapLayer(layer_id)
+        layer.commitChanges()
 
     return has_applied_all_deltas
 

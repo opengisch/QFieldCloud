@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from django.contrib.gis.geos import Polygon
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase
@@ -27,10 +28,14 @@ from qfieldcloud.core.tests.utils import (
     testdata_path,
     wait_for_project_ok_status,
 )
+from qfieldcloud.filestorage.models import File, FileVersion
+from qfieldcloud.project.enums import QgsGeometryType, QgsLayerType
 from qfieldcloud.project.models import (
     SHARED_DATASETS_PROJECT_NAME,
     Project,
     ProjectSeed,
+    QgisLayer,
+    QgisProject,
 )
 from qfieldcloud.project.utils import projectseed_utils
 from qfieldcloud.subscription.models import Subscription
@@ -892,18 +897,58 @@ class QfcTestCase(APITransactionTestCase):
         """Test get_missing_localized_layers returns all localized layers if no shared datasets project exists."""
         project = Project.objects.create(name="project", owner=self.user1)
 
-        project.project_details = {
-            "layers_by_id": {
-                "layer1": {"is_localized": True, "filename": "localized:layer1.gpkg"},
-                "layer2": {"is_localized": False, "filename": "normal_layer.gpkg"},
-                "layer3": {"is_localized": True, "filename": "localized:layer3.gpkg"},
-            }
-        }
+        file_version = FileVersion.objects.add_version(
+            project=project,
+            filename="project.qgs",
+            content=ContentFile(b"", "project.qgs"),
+            file_type=File.FileType.PROJECT_FILE,
+            uploaded_by=self.user1,
+        )
 
-        project.save()
+        qgis_project = QgisProject.objects.create(
+            project=project, file_version=file_version, crs="EPSG:3857"
+        )
+        QgisLayer.objects.create(
+            qgis_project=qgis_project,
+            qgis_layer_id="layer1",
+            name="layer1",
+            crs="EPSG:3857",
+            geom_type=QgsGeometryType.Point,
+            layer_type=QgsLayerType.Vector,
+            datasource="",
+            is_localized=True,
+            file_name="localized:layer1.gpkg",
+            ordering=0,
+        )
+        QgisLayer.objects.create(
+            qgis_project=qgis_project,
+            qgis_layer_id="layer2",
+            name="layer2",
+            crs="EPSG:3857",
+            geom_type=QgsGeometryType.Point,
+            layer_type=QgsLayerType.Vector,
+            datasource="",
+            is_localized=False,
+            file_name="normal_layer.gpkg",
+            ordering=1,
+        )
+        QgisLayer.objects.create(
+            qgis_project=qgis_project,
+            qgis_layer_id="layer3",
+            name="layer3",
+            crs="EPSG:3857",
+            geom_type=QgsGeometryType.Point,
+            layer_type=QgsLayerType.Vector,
+            datasource="",
+            is_localized=True,
+            file_name="localized:layer3.gpkg",
+            ordering=2,
+        )
 
         missing_layers = project.get_missing_localized_layers()
-        missing_filenames = [layer["filename"] for layer in missing_layers]
+        missing_filenames = []
+        for layer in missing_layers:
+            missing_filenames.append(layer.file_name)
 
         self.assertEqual(len(missing_filenames), 2)
         self.assertIn("localized:layer1.gpkg", missing_filenames)
@@ -1463,7 +1508,7 @@ class QfcTestCase(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # Cloning a non-existent project returns 403
+        # Cloning a non-existent project returns 404
         response = self.client.post(
             "/api/v1/projects/",
             {
@@ -1473,41 +1518,151 @@ class QfcTestCase(APITransactionTestCase):
             },
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_project_type_defaults_to_regular(self):
-        """Test that a normally named project gets a project type of REGULAR"""
-        project = Project.objects.create(name="project", owner=self.user1)
+    def test_cloning_by_project_type(self):
+        """Test which project types are allowed to be cloned: `REGULAR` and `TEMPLATE` are allowed, `SHARED_DATASETS` is not allowed."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
-        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+        def clone_project(source_project):
+            return self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": f"cloned_{source_project.name}",
+                    "owner": self.user1.username,
+                    "clone_from_project": str(source_project.id),
+                },
+                format="json",
+            )
 
-    def test_project_type_set_to_shared_datasets_on_create(self):
-        """Test that creating a project named as the constant SHARED_DATASETS_PROJECT_NAME sets project type of SHARED_DATASETS."""
-        project = Project.objects.create(
-            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+        with self.subTest("Prjects of type `REGULAR` can be cloned"):
+            regular_project = Project.objects.create(
+                name="regular_project", owner=self.user1
+            )
+            response = clone_project(regular_project)
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            cloned_project_id = response.json().get("id")
+            self.assertTrue(Project.objects.filter(pk=cloned_project_id).exists())
+            cloned_project = Project.objects.get(pk=cloned_project_id)
+            self.assertTrue(
+                Job.objects.filter(
+                    project=cloned_project, type=Job.Type.CREATE_PROJECT
+                ).exists()
+            )
+
+        with self.subTest("Projects of type `TEMPLATE` can be cloned"):
+            template_project = Project.objects.create(
+                name="template_project",
+                owner=self.user1,
+                project_type=Project.ProjectType.TEMPLATE,
+            )
+            response = clone_project(template_project)
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            cloned_project_id = response.json().get("id")
+            self.assertTrue(Project.objects.filter(pk=cloned_project_id).exists())
+            cloned_project = Project.objects.get(pk=cloned_project_id)
+            self.assertTrue(
+                Job.objects.filter(
+                    project=cloned_project, type=Job.Type.CREATE_PROJECT
+                ).exists()
+            )
+
+        with self.subTest("Projects of type `SHARED_DATASETS` cannot be cloned"):
+            shared_project = Project.objects.create(
+                name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
+            )
+            response = clone_project(shared_project)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data["code"], "not_cloneable_project")
+            self.assertFalse(
+                Project.objects.filter(name=f"cloned_{shared_project.name}").exists()
+            )
+
+    def test_create_project_sets_created_by(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+        response = self.client.post(
+            "/api/v1/projects/",
+            {
+                "name": "created_by_project",
+                "owner": "user1",
+                "is_public": False,
+            },
+        )
+        self.assertTrue(status.is_success(response.status_code))
+
+        project = Project.objects.get(name="created_by_project")
+        self.assertEqual(project.created_by, self.user1)
+
+    def test_create_organization_project_admin_access(self):
+        def add_organization_member(organization, member, role):
+            OrganizationMember.objects.create(
+                organization=organization,
+                member=member,
+                role=role,
+            )
+            return AuthToken.objects.get_or_create(user=member)[0]
+
+        def create_organization_project(token, project_name, owner_username):
+            self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+            return self.client.post(
+                "/api/v1/projects/",
+                {
+                    "name": project_name,
+                    "owner": owner_username,
+                    "is_public": False,
+                },
+            )
+
+        # user1 owns organization1
+        organization1 = Organization.objects.create(
+            username="organization1", organization_owner=self.user1
         )
 
-        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
+        with self.subTest("`CREATOR` role gets implicit admin access to the project"):
+            token = add_organization_member(
+                organization1, self.user2, OrganizationMember.Roles.CREATOR
+            )
+            response = create_organization_project(
+                token, "creator_project", "organization1"
+            )
+            self.assertTrue(status.is_success(response.status_code))
 
-    def test_project_type_updates_when_renamed_to_shared_datasets(self):
-        """Test that renaming an existing empty project (no QGIS project file) as the constant SHARED_DATASETS_PROJECT_NAME flips project_type"""
-        project = Project.objects.create(name="project", owner=self.user1)
-        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+            project = Project.objects.get(name="creator_project")
+            collaborator = ProjectCollaborator.objects.get(
+                project=project, collaborator=self.user2
+            )
+            self.assertEqual(collaborator.role, ProjectCollaborator.Roles.ADMIN)
 
-        project.name = SHARED_DATASETS_PROJECT_NAME
-        project.save()
-        project.refresh_from_db()
+        with self.subTest(
+            "`organization_owner` gets implicit admin access to the project"
+        ):
+            response = create_organization_project(
+                self.token1, "owner_project", "organization1"
+            )
+            self.assertTrue(status.is_success(response.status_code))
 
-        self.assertEqual(project.project_type, Project.ProjectType.SHARED_DATASETS)
+            project = Project.objects.get(name="owner_project")
+            # the owner already gets implicit admin access, no extra grant needed
+            self.assertFalse(
+                ProjectCollaborator.objects.filter(
+                    project=project, collaborator=self.user1
+                ).exists()
+            )
 
-    def test_project_type_updates_when_renamed_away_from_shared_datasets(self):
-        """Test that renaming the shared_datasets project away reverts project_type to default value."""
-        project = Project.objects.create(
-            name=SHARED_DATASETS_PROJECT_NAME, owner=self.user1
-        )
+        with self.subTest("`ADMIN` role gets implicit admin access to the project"):
+            token = add_organization_member(
+                organization1, self.user3, OrganizationMember.Roles.ADMIN
+            )
+            response = create_organization_project(
+                token, "admin_project", "organization1"
+            )
+            self.assertTrue(status.is_success(response.status_code))
 
-        project.name = "no_longer_shared"
-        project.save()
-        project.refresh_from_db()
-
-        self.assertEqual(project.project_type, Project.ProjectType.REGULAR)
+            project = Project.objects.get(name="admin_project")
+            # `ADMIN` members already get implicit admin access via
+            # `projects_with_roles_vw`, no extra grant needed
+            self.assertFalse(
+                ProjectCollaborator.objects.filter(
+                    project=project, collaborator=self.user3
+                ).exists()
+            )

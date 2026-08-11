@@ -1,10 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qfieldcloud.core import pagination, permissions_utils
 from qfieldcloud.core.models import ProjectCollaborator
 from qfieldcloud.core.serializers import ProjectCollaboratorSerializer
-from qfieldcloud.project.models import Project
+from qfieldcloud.project.models import Project, get_slim_project_or_raise
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
@@ -16,10 +15,7 @@ class ListCreateCollaboratorsViewPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         projectid = permissions_utils.get_param_from_request(request, "projectid")
-        try:
-            project = Project.objects.get(id=projectid)
-        except ObjectDoesNotExist:
-            return False
+        project = get_slim_project_or_raise(projectid)
 
         if request.method == "GET":
             return permissions_utils.can_read_collaborators(user, project)
@@ -76,10 +72,7 @@ class GetUpdateDestroyCollaboratorViewPermissions(permissions.BasePermission):
         user = request.user
         projectid = permissions_utils.get_param_from_request(request, "projectid")
 
-        try:
-            project = Project.objects.get(id=projectid)
-        except ObjectDoesNotExist:
-            return False
+        project = get_slim_project_or_raise(projectid)
 
         if request.method == "GET":
             return permissions_utils.can_read_collaborators(user, project)

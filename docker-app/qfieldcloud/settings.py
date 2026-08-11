@@ -107,8 +107,6 @@ INSTALLED_APPS = [
     # if django_filters defined after [rest_framework] caused '... _frozen_importlib._DeadlockError ...'
     # https://stackoverflow.com/questions/55844680/deadlock-detected-when-trying-to-start-server
     "django_filters",
-    # debug
-    "debug_toolbar",
     # style
     "rest_framework",
     "rest_framework.authtoken",
@@ -150,7 +148,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -682,6 +679,7 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/account/emailaddress/admin/export_emails_to_csv/",
     "/admin/filestorage/file/add/",
     "/admin/filestorage/fileversion/add/",
+    "/admin/project/qgislayer/add/",
 )
 
 # Admin sort URLs which will be skipped from checking if they return HTTP 200
@@ -701,10 +699,6 @@ APPLY_DELTAS_LIMIT = 1000
 # The value of the "source" key in each logger entry.
 # Filters what logs are printed based on in which image we are running ("app" or "worker_wrapper").
 LOGGER_SOURCE = os.environ["LOGGER_SOURCE"]
-
-DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK": lambda r: DEBUG and ENVIRONMENT == "development",
-}
 
 QFIELDCLOUD_ADMIN_URI = os.environ["QFIELDCLOUD_ADMIN_URI"]
 
@@ -1074,3 +1068,12 @@ QFIELDCLOUD_CUSTOM_CA_FILENAME = f"{QFIELDCLOUD_CUSTOM_CA_DIR}/custom_ca.crt"
 
 # Maximum number of GET/POST parameters, avoids `TooManyFieldsSent` error.
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
+
+# Enable Django Debug Toolbar only in development environment, see https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
+if DEBUG and ENVIRONMENT == "development":
+    INSTALLED_APPS.insert(0, "debug_toolbar")
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+    DEBUG_TOOLBAR_CONFIG = {
+        "SHOW_TOOLBAR_CALLBACK": lambda r: True,
+    }
