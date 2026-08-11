@@ -695,7 +695,7 @@ class Project(models.Model):
         )
 
     def __str__(self):
-        return self.name + " (" + str(self.id) + ")" + " owner: " + self.owner.username
+        return f"{self.owner.username}/{self.name} [id={self.id}]"
 
     @property
     def name_with_owner(self) -> str:
