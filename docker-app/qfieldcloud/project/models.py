@@ -1361,7 +1361,7 @@ class QgisLayerQuerySet(models.QuerySet):
                 "layer_type": layer_data.get("type"),
                 "provider_name": layer_data.get("provider_name") or "",
                 "ordering": ordering,
-                "datasource": layer_data.get("datasource"),
+                "datasource": layer_data.get("datasource") or "",
                 "file_name": layer_data.get("filename") or "",
                 "is_valid": layer_data.get("is_valid", False),
                 "is_localized": layer_data.get("is_localized", False),
