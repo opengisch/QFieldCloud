@@ -55,3 +55,17 @@ class QgsLayerErrorCode(models.TextChoices):
     )
     INVALID_DATAPROVIDER = "invalid_dataprovider", _("Invalid data provider")
     MISSING_DATAPROVIDER = "missing_dataprovider", _("Missing data provider")
+
+
+class QgsFieldConstraintStrength(models.TextChoices):
+    """Close mirror to QGIS's own `ConstraintStrength` enum (`ConstraintStrength`).
+    Source: `enum ConstraintStrength` in `src/core/qgsfieldconstraints.h` in the QGIS repo
+    (https://github.com/qgis/QGIS/blob/master/src/core/qgsfieldconstraints.h#L63)
+
+    Values are produced by `get_constraint_strength()` in
+    `docker-qgis/qfc_worker/utils.py`. Keep this in sync with that function.
+    """
+
+    NOT_SET = "not_set", _("Not set")
+    HARD = "hard", _("Hard")
+    SOFT = "soft", _("Soft")

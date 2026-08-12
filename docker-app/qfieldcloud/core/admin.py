@@ -87,6 +87,7 @@ from qfieldcloud.project.models import (
     Project,
     ProjectSeed,
     QgisLayer,
+    QgisLayerField,
     QgisProject,
 )
 from qfieldcloud.subscription.models import get_subscription_model
@@ -681,6 +682,32 @@ def qgis_project_layers_list(qgis_project: "QgisProject") -> SafeText:
                 "geom_type": layer.get_geom_type_display(),
                 "is_valid": display_for_value(layer.is_valid, "-", boolean=True),
                 "error": error_display,
+            }
+        )
+
+    return SafeText(
+        render_to_string(
+            "admin/simple_table.html",
+            {"headers": headers, "rows": rows},
+        )
+    )
+
+
+def qgis_layer_fields_list(layer: "QgisLayer") -> SafeText:
+    headers = {
+        "name": _("Name"),
+        "type": _("Type"),
+        "alias": _("Alias"),
+        "comment": _("Comment"),
+    }
+    rows = []
+    for field in layer.fields.order_by("ordering"):
+        rows.append(
+            {
+                "name": model_admin_url(field, field.name),
+                "type": field.type,
+                "alias": field.alias or "-",
+                "comment": field.comment or "-",
             }
         )
 
@@ -1289,6 +1316,7 @@ class LayerAdmin(QFieldCloudModelAdmin):
         "provider_error_summary",
         "provider_error_message",
         "qfs_settings__pre",
+        "fields__list",
         "created_at",
         "updated_at",
     )
@@ -1307,6 +1335,85 @@ class LayerAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("QFieldSync settings"))
     def qfs_settings__pre(self, instance: QgisLayer) -> SafeText:
         return format_text(instance.qfs_settings, "json")
+
+    @admin.display(description=_("Fields"))
+    def fields__list(self, instance: QgisLayer) -> SafeText:
+        return qgis_layer_fields_list(instance)
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+
+class LayerFieldAdmin(QFieldCloudModelAdmin):
+    has_direct_delete_permission = False
+
+    OWNER_LOOKUP = "layer__qgis_project__project__owner"
+
+    list_display = (
+        "name",
+        "layer__link",
+        "project__link",
+        "owner__link",
+        "ordering",
+        "type",
+        "is_not_null_strength",
+        "is_unique_strength",
+    )
+    list_filter = (
+        "type",
+        "is_not_null_strength",
+        "is_unique_strength",
+        (OWNER_LOOKUP, admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = (
+        "name__icontains",
+        "layer__name__icontains",
+        "layer__qgis_project__project__name__icontains",
+    )
+    ordering = ("layer", "ordering")
+    list_select_related = (OWNER_LOOKUP,)
+
+    fields = (
+        "project__link",
+        "layer__link",
+        "name",
+        "ordering",
+        "alias",
+        "comment",
+        "type",
+        "length",
+        "precision",
+        "is_not_null_strength",
+        "constraint_expression",
+        "constraint_expression_description",
+        "constraint_expression_strength",
+        "is_unique_strength",
+        "default_value",
+        "set_default_value_on_update",
+        "widget_type",
+        "widget_config__pre",
+    )
+    readonly_fields = fields
+
+    @admin.display(description=_("Layer"))
+    def layer__link(self, instance: QgisLayerField) -> SafeText:
+        return model_admin_url(instance.layer, instance.layer.name)
+
+    @admin.display(description=_("Project"))
+    def project__link(self, instance: QgisLayerField) -> SafeText:
+        project = instance.layer.qgis_project.project
+        return model_admin_url(project, project.name)
+
+    @admin.display(description=_("Owner"), ordering=OWNER_LOOKUP)
+    def owner__link(self, instance: QgisLayerField) -> SafeText:
+        return model_admin_url(instance.layer.qgis_project.project.owner)
+
+    @admin.display(description=_("Widget config"))
+    def widget_config__pre(self, instance: QgisLayerField) -> SafeText:
+        return format_text(instance.widget_config, "json")
 
     def has_add_permission(self, request, obj=None) -> bool:
         return False
@@ -2205,6 +2312,7 @@ qfc_admin_site.register(Organization, OrganizationAdmin)
 qfc_admin_site.register(Team, TeamAdmin)
 qfc_admin_site.register(Project, ProjectAdmin)
 qfc_admin_site.register(QgisLayer, LayerAdmin)
+qfc_admin_site.register(QgisLayerField, LayerFieldAdmin)
 qfc_admin_site.register(Secret, SecretAdmin)
 qfc_admin_site.register(Delta, DeltaAdmin)
 qfc_admin_site.register(Job, JobAdmin)

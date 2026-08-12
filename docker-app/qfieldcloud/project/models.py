@@ -39,7 +39,12 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from qfieldcloud.project.enums import QgsGeometryType, QgsLayerErrorCode, QgsLayerType
+from qfieldcloud.project.enums import (
+    QgsFieldConstraintStrength,
+    QgsGeometryType,
+    QgsLayerErrorCode,
+    QgsLayerType,
+)
 from qfieldcloud.project.utils.geometry_utils import transform_wkt_crs
 
 if TYPE_CHECKING:
@@ -49,7 +54,11 @@ if TYPE_CHECKING:
         SecretQueryset,
     )
     from qfieldcloud.filestorage.models import File, FileQueryset, FileVersion
-    from qfieldcloud.project.type_defs import LayerDetails, QgisProjectDetails
+    from qfieldcloud.project.type_defs import (
+        FieldDetails,
+        LayerDetails,
+        QgisProjectDetails,
+    )
 
     pass
 
@@ -1393,12 +1402,14 @@ class QgisLayerQuerySet(models.QuerySet):
             # If it does, update only the fields that changed, otherwise skip the
             # save entirely.
             if existing_layer is None:
-                QgisLayer(
+                layer = QgisLayer(
                     qgis_project=qgis_project,
                     qgis_layer_id=qgis_layer_id,
                     **defaults,
-                ).save()
+                )
+                layer.save()
             else:
+                layer = existing_layer
                 changed_fields = []
                 for field, value in defaults.items():
                     if getattr(existing_layer, field) != value:
@@ -1409,6 +1420,10 @@ class QgisLayerQuerySet(models.QuerySet):
                     existing_layer.save(
                         update_fields=[*changed_fields, "updated_at"],
                     )
+
+            QgisLayerField.objects.update_from_details(  # type: ignore[attr-defined]
+                layer, layer_data.get("fields") or []
+            )
 
             qgis_layer_ids_to_keep.add(qgis_layer_id)
 
@@ -1529,6 +1544,9 @@ class QgisLayer(models.Model):
         ),
     )
 
+    # The fields that belong to this layer.
+    fields: "QgisLayerFieldQuerySet"
+
     class Meta:
         verbose_name = _("QGIS layer")
         verbose_name_plural = _("QGIS layers")
@@ -1537,5 +1555,197 @@ class QgisLayer(models.Model):
             models.UniqueConstraint(
                 fields=["qgis_project", "qgis_layer_id"],
                 name="layer_qgis_project_qgis_layer_id_uniq",
+            )
+        ]
+
+
+class QgisLayerFieldQuerySet(models.QuerySet):
+    @transaction.atomic()
+    def update_from_details(
+        self,
+        layer: "QgisLayer",
+        fields: "list[FieldDetails]",
+    ) -> None:
+        """Sync a `QgisLayer`'s `QgisLayerField`'s to match `fields`.
+
+        Creates/updates a `QgisLayerField` per entry in `fields`, in the
+        given order, then deletes any existing `QgisLayerField` for the
+        layer that were not present in this update.
+
+        Existing fields are only updated in the database if a field actually
+        changed, to avoid needless writes on re-sync.
+        """
+
+        existing_fields_by_name = {}
+        for field in layer.fields.select_for_update():
+            existing_fields_by_name[field.name] = field
+
+        field_names_to_keep = set()
+
+        for ordering, field_data in enumerate(fields):
+            name = field_data.get("name")
+            if not name:
+                continue
+
+            defaults = {
+                "ordering": ordering,
+                "alias": field_data.get("alias") or "",
+                "comment": field_data.get("comment") or "",
+                "type": field_data.get("type") or "",
+                "length": field_data.get("length") or 0,
+                "precision": field_data.get("precision") or 0,
+                "is_not_null_strength": field_data.get("constraint_strength")
+                or QgsFieldConstraintStrength.NOT_SET,
+                "constraint_expression": field_data.get("constraint_expression") or "",
+                "constraint_expression_description": field_data.get(
+                    "constraint_expression_description"
+                )
+                or "",
+                "constraint_expression_strength": field_data.get(
+                    "constraint_expression_strength"
+                )
+                or QgsFieldConstraintStrength.NOT_SET,
+                "is_unique_strength": field_data.get("is_unique_strength")
+                or QgsFieldConstraintStrength.NOT_SET,
+                "default_value": field_data.get("default_value") or "",
+                "set_default_value_on_update": field_data.get(
+                    "set_default_value_on_update", False
+                ),
+                "widget_type": field_data.get("widget_type") or "",
+                "widget_config": field_data.get("widget_config") or {},
+            }
+
+            existing_field = existing_fields_by_name.get(name)
+
+            # If this `name` has no match, create a new `QgisLayerField`.
+            # If it does, update only the fields that changed, otherwise
+            # skip the save entirely.
+            if existing_field is None:
+                QgisLayerField(layer=layer, name=name, **defaults).save()
+            else:
+                changed_fields = []
+                for field, value in defaults.items():
+                    if getattr(existing_field, field) != value:
+                        setattr(existing_field, field, value)
+                        changed_fields.append(field)
+
+                if changed_fields:
+                    existing_field.save(update_fields=changed_fields)
+
+            field_names_to_keep.add(name)
+
+        layer.fields.exclude(name__in=field_names_to_keep).delete()
+
+
+class QgisLayerField(models.Model):
+    """A single field  of a QgisLayer, as read from the QGIS project.
+
+    Close mirror to QGIS's `QgsField` class, with additional fields for QFieldCloud's purposes.
+    QGIS repo source: https://github.com/qgis/QGIS/blob/master/src/core/qgsfield.h
+    """
+
+    objects = QgisLayerFieldQuerySet.as_manager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    layer = models.ForeignKey(
+        to=QgisLayer,
+        on_delete=models.CASCADE,
+        related_name="fields",
+        help_text=_("The QGIS layer that owns this field."),
+    )
+
+    ordering = models.PositiveIntegerField(
+        help_text=_("The position in order of the field within the layer.")
+    )
+
+    name = models.TextField(
+        help_text=_("Field name as defined in the QGIS layer data source.")
+    )
+
+    alias = models.TextField(
+        blank=True, help_text=_("Optional user-facing alias configured in QGIS.")
+    )
+
+    comment = models.TextField(
+        blank=True,
+        help_text=_("Optional field comment or description configured in QGIS."),
+    )
+
+    type = models.CharField(
+        max_length=100,
+        help_text=_("QGIS field type name, such as integer, text, or date."),
+    )
+
+    length = models.IntegerField(
+        default=0, help_text=_("Declared field length reported by QGIS.")
+    )
+
+    precision = models.IntegerField(
+        default=0, help_text=_("Declared numeric precision reported by QGIS.")
+    )
+
+    is_not_null_strength = models.CharField(
+        max_length=10,
+        choices=QgsFieldConstraintStrength.choices,
+        default=QgsFieldConstraintStrength.NOT_SET,
+        help_text=_("Strength of the not-null constraint."),
+    )
+
+    constraint_expression = models.TextField(
+        blank=True,
+        help_text=_("Optional QGIS constraint expression."),
+    )
+
+    constraint_expression_description = models.TextField(
+        blank=True,
+        help_text=_(
+            "Optional human-readable error message when the constraint expression is violated."
+        ),
+    )
+
+    constraint_expression_strength = models.CharField(
+        max_length=10,
+        choices=QgsFieldConstraintStrength.choices,
+        default=QgsFieldConstraintStrength.NOT_SET,
+        help_text=_("Strength of the expression constraint."),
+    )
+
+    is_unique_strength = models.CharField(
+        max_length=10,
+        choices=QgsFieldConstraintStrength.choices,
+        default=QgsFieldConstraintStrength.NOT_SET,
+        help_text=_("Strength of the unique constraint."),
+    )
+
+    default_value = models.TextField(
+        blank=True, help_text=_("QGIS default value expression for new features.")
+    )
+
+    set_default_value_on_update = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Whether QGIS reapplies the default value when a feature is updated."
+        ),
+    )
+
+    widget_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_("QGIS editor widget type configured for the field."),
+    )
+
+    widget_config = models.JSONField(
+        blank=True, default=dict, help_text=_("QGIS editor widget configuration.")
+    )
+
+    class Meta:
+        verbose_name = _("QGIS layer field")
+        verbose_name_plural = _("QGIS layer fields")
+        ordering = ["layer", "ordering"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["layer", "name"],
+                name="field_qgis_layer_qgis_field_name_uniq",
             )
         ]

@@ -56,3 +56,29 @@ class LayerDetails(TypedDict):
     qfs_is_geometry_locked: bool
     qfs_unsupported_source_pk: str
     qfc_source_data_pk_name: str
+    fields: list[FieldDetails] | None
+
+
+class FieldDetails(TypedDict):
+    """Shape of a single entry in `LayerDetails.fields`.
+
+    Must be kept in sync with `docker-qgis/qfc_worker/utils.py::get_layers_data`, which produces this data structure.
+    """
+
+    name: str
+    alias: str
+    comment: str
+    type: str
+    length: int
+    precision: int
+    is_not_null: bool
+    constraint_strength: str
+    constraint_expression: str
+    constraint_expression_description: str
+    constraint_expression_strength: str
+    is_unique: bool
+    is_unique_strength: str
+    default_value: str
+    set_default_value_on_update: bool
+    widget_type: str
+    widget_config: dict
