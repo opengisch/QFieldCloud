@@ -614,6 +614,8 @@ class Project(models.Model):
     def is_shared_datasets_project(self) -> bool:
         """
         Returns `True` if the project is the shared datasets project, otherwise `False`.
+
+        Deprecated: use `project_type` instead.
         """
         return self.project_type == self.ProjectType.SHARED_DATASETS
 

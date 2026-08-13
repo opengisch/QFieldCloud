@@ -1,5 +1,6 @@
 from typing import Any
 
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -15,6 +16,7 @@ from qfieldcloud.project.models import (
 from qfieldcloud.subscription.exceptions import QuotaError
 
 
+@extend_schema_serializer(deprecate_fields=["is_shared_datasets_project"])
 class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField()
     project_type = serializers.ChoiceField(
