@@ -8,8 +8,6 @@ from constance import config
 from deprecated import deprecated
 from django.apps import apps
 from django.conf import settings
-from django.contrib.postgres.constraints import ExclusionConstraint
-from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -21,7 +19,6 @@ from model_utils.managers import InheritanceManagerMixin
 
 from qfieldcloud.core.models import Organization, Person, User, UserAccount
 from qfieldcloud.subscription.exceptions import NotPremiumPlanException
-from qfieldcloud.subscription.functions import TsTzRange
 
 logger = logging.getLogger(__name__)
 
@@ -485,22 +482,6 @@ class Package(models.Model):
             "These notes are for internal purposes only and will never be shown to the end users."
         ),
     )
-
-    class Meta:
-        constraints = [
-            ExclusionConstraint(
-                name="subscription_package_prevent_overlaps",
-                index_type="GIST",
-                expressions=[
-                    ("subscription_id", RangeOperators.EQUAL),
-                    (
-                        TsTzRange("active_since", "active_until", RangeBoundary()),
-                        RangeOperators.OVERLAPS,
-                    ),
-                ],
-                condition=Q(active_since__isnull=False),
-            ),
-        ]
 
 
 # TODO add check constraint makes sure there are no two active additional packages at the same time,
@@ -1152,21 +1133,7 @@ class AbstractSubscription(models.Model):
 
 
 class Subscription(AbstractSubscription):
-    class Meta:
-        constraints = [
-            ExclusionConstraint(
-                name="subscription_subscription_prevent_overlaps",
-                index_type="GIST",
-                expressions=[
-                    ("account_id", RangeOperators.EQUAL),
-                    (
-                        TsTzRange("active_since", "active_until", RangeBoundary()),
-                        RangeOperators.OVERLAPS,
-                    ),
-                ],
-                condition=Q(active_since__isnull=False),
-            ),
-        ]
+    pass
 
 
 class CurrentSubscription(AbstractSubscription):
