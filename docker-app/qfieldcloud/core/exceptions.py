@@ -55,6 +55,7 @@ class AuthenticationViaTokenFailedError(QFieldCloudException):
     code = "token_authentication_failed"
     message = "Token authentication failed"
     status_code = status.HTTP_401_UNAUTHORIZED
+    log_as_error = False
 
 
 class NotAuthenticatedError(QFieldCloudException):
