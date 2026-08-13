@@ -680,6 +680,7 @@ QFIELDCLOUD_TEST_SKIP_VIEW_ADMIN_URLS = (
     "/admin/filestorage/file/add/",
     "/admin/filestorage/fileversion/add/",
     "/admin/project/qgislayer/add/",
+    "/admin/project/qgislayerfield/add/",
 )
 
 # Admin sort URLs which will be skipped from checking if they return HTTP 200
