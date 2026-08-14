@@ -660,7 +660,7 @@ def model_admin_url(obj, name: str | None = None) -> SafeText:
     return format_html('<a href="{}">{}</a>', url, name or str(obj))
 
 
-def qgis_project_layers_list(qgis_project: "QgisProject") -> SafeText:
+def render_qgis_project_layers_table(qgis_project: "QgisProject") -> SafeText:
     headers = {
         "name": _("Name"),
         "layer_type": _("Type"),
@@ -693,7 +693,7 @@ def qgis_project_layers_list(qgis_project: "QgisProject") -> SafeText:
     )
 
 
-def qgis_layer_fields_list(layer: "QgisLayer") -> SafeText:
+def render_qgis_layer_fields_table(layer: "QgisLayer") -> SafeText:
     headers = {
         "name": _("Name"),
         "type": _("Type"),
@@ -1257,7 +1257,7 @@ class QgisProjectInline(admin.StackedInline):
 
     @admin.display(description=_("Layers"))
     def layers__list(self, instance: QgisProject) -> SafeText:
-        return qgis_project_layers_list(instance)
+        return render_qgis_project_layers_table(instance)
 
     def has_add_permission(self, request, obj=None) -> bool:
         return False
@@ -1338,7 +1338,7 @@ class LayerAdmin(QFieldCloudModelAdmin):
 
     @admin.display(description=_("Fields"))
     def fields__list(self, instance: QgisLayer) -> SafeText:
-        return qgis_layer_fields_list(instance)
+        return render_qgis_layer_fields_table(instance)
 
     def has_add_permission(self, request, obj=None) -> bool:
         return False
