@@ -690,11 +690,17 @@ class ProcessProjectfileJobRun(JobRun):
             project.qgis_version = project.project_details["qgis_version"]
             update_fields.append("qgis_version")
 
-        project.save(update_fields=update_fields)
-
         QgisProject.objects.update_from_details(
             project, project.the_qgis_file.latest_version, project.project_details
         )
+
+        # Avoid saving potentially very long field values which can affect performance in the `Project.project_details` JSON field.
+        # The fields data is already stored in the `QgisLayerField` model.
+        # TODO @manylon: keep in sync with `QgisProject` until `Project.project_details` is dropped, see https://app.clickup.com/t/2192114/QF-8600
+        for layer_data in project.project_details.get("layers_by_id", {}).values():
+            layer_data.pop("fields", None)
+
+        project.save(update_fields=update_fields)
 
     def after_docker_exception(self) -> None:
         project = self.job.project
