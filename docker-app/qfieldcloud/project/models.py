@@ -44,6 +44,7 @@ from qfieldcloud.project.enums import (
     QgsGeometryType,
     QgsLayerErrorCode,
     QgsLayerType,
+    QtType,
 )
 from qfieldcloud.project.utils.geometry_utils import transform_wkt_crs
 
@@ -1591,7 +1592,8 @@ class QgisLayerFieldQuerySet(models.QuerySet):
                 "ordering": ordering,
                 "alias": field_data.get("alias") or "",
                 "comment": field_data.get("comment") or "",
-                "type": field_data.get("type") or "",
+                "type": field_data.get("type") or None,
+                "type_display": field_data.get("type_display") or "",
                 "length": field_data.get("length") or 0,
                 "precision": field_data.get("precision") or 0,
                 "is_not_null_strength": field_data.get("constraint_strength")
@@ -1672,9 +1674,16 @@ class QgisLayerField(models.Model):
         help_text=_("Optional field comment or description configured in QGIS."),
     )
 
-    type = models.CharField(
+    type = models.PositiveIntegerField(
+        null=True,
+        choices=QtType.choices,
+        help_text=_("QGIS field type as a Qt type enum value."),
+    )
+
+    type_display = models.CharField(
+        blank=True,
         max_length=100,
-        help_text=_("QGIS field type name, such as integer, text, or date."),
+        help_text=_("QGIS field type display name"),
     )
 
     length = models.IntegerField(

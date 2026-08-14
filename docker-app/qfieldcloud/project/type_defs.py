@@ -68,7 +68,8 @@ class FieldDetails(TypedDict):
     name: str
     alias: str
     comment: str
-    type: str
+    type: int
+    type_display: str
     length: int
     precision: int
     is_not_null: bool

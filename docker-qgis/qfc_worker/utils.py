@@ -700,7 +700,8 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                         "name": field.name(),
                         "alias": field.alias(),
                         "comment": field.comment(),
-                        "type": field.typeName(),
+                        "type": field.type(),
+                        "type_display": field.displayType(),
                         "length": field.length(),
                         "precision": field.precision(),
                         "is_not_null": bool(

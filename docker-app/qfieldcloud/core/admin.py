@@ -696,7 +696,7 @@ def render_qgis_project_layers_table(qgis_project: "QgisProject") -> SafeText:
 def render_qgis_layer_fields_table(layer: "QgisLayer") -> SafeText:
     headers = {
         "name": _("Name"),
-        "type": _("Type"),
+        "type_display": _("Type"),
         "alias": _("Alias"),
         "comment": _("Comment"),
     }
@@ -705,7 +705,7 @@ def render_qgis_layer_fields_table(layer: "QgisLayer") -> SafeText:
         rows.append(
             {
                 "name": model_admin_url(field, field.name),
-                "type": field.type,
+                "type_display": field.type_display,
                 "alias": field.alias or "-",
                 "comment": field.comment or "-",
             }
@@ -1359,11 +1359,13 @@ class LayerFieldAdmin(QFieldCloudModelAdmin):
         "owner__link",
         "ordering",
         "type",
+        "type_display",
         "is_not_null_strength",
         "is_unique_strength",
     )
     list_filter = (
         "type",
+        "type_display",
         "is_not_null_strength",
         "is_unique_strength",
         (OWNER_LOOKUP, admin.RelatedOnlyFieldListFilter),
@@ -1384,6 +1386,7 @@ class LayerFieldAdmin(QFieldCloudModelAdmin):
         "alias",
         "comment",
         "type",
+        "type_display",
         "length",
         "precision",
         "is_not_null_strength",
