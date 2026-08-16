@@ -203,7 +203,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
 
-        return Delta.objects.filter(project=project_obj)
+        return Delta.objects.prefetch_related("created_by").filter(project=project_obj)
 
 
 @extend_schema_view(
@@ -218,7 +218,11 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
         deltafile_id = self.request.parser_context["kwargs"]["deltafileid"]
-        return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
+
+        return Delta.objects.prefetch_related("created_by").filter(
+            project=project_obj,
+            deltafile_id=deltafile_id,
+        )
 
 
 @extend_schema(
