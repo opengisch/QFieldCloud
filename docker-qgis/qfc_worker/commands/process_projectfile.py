@@ -5,7 +5,13 @@ from typing import Any, TypedDict, cast
 from uuid import UUID
 from xml.etree import ElementTree
 
-from qgis.core import QgsMapRendererCustomPainterJob, QgsProject
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsGeometry,
+    QgsMapRendererCustomPainterJob,
+    QgsProject,
+    QgsRectangle,
+)
 from qgis.PyQt.QtCore import QTimer
 from qgis.PyQt.QtGui import QImage, QPainter
 
@@ -80,6 +86,8 @@ class ProjectDetails(TypedDict):
     background_color: str
     extent: str
     """The project extent, reprojected to WGS84 (EPSG:4326) WKT, or an empty string if the reprojection failed."""
+    area_of_interest: str
+    """The area of interest, reprojected to WGS84 (EPSG:4326) WKT, or an empty string if not set or if the reprojection failed."""
     crs: str
     project_name: str
     layers_by_id: dict[str, Any]
@@ -87,6 +95,35 @@ class ProjectDetails(TypedDict):
     attachment_dirs: list[str]
     data_dirs: list[str]
     qgis_version: str
+
+
+def _get_area_of_interest(project: QgsProject) -> QgsRectangle | None:
+    aoi_wkt, _ = project.readEntry("qfieldsync", "/areaOfInterest")
+    aoi_crs, _ = project.readEntry("qfieldsync", "/areaOfInterestCrs")
+
+    if not aoi_wkt or not aoi_crs:
+        return None
+
+    aoi_crs_obj = QgsCoordinateReferenceSystem(aoi_crs)
+    geom = QgsGeometry.fromWkt(aoi_wkt).boundingBox()
+
+    if not aoi_crs_obj.isValid():
+        logger.warning("Invalid CRS for area of interest: %s.", aoi_crs)
+        return None
+
+    if geom.isNull() or geom.isEmpty():
+        logger.warning("Failed to parse area of interest WKT: %s.", aoi_wkt)
+        return None
+
+    try:
+        return reproject_extent(geom, aoi_crs_obj)
+    except ValueError as error:
+        logger.warning(
+            "Failed to reproject the area of interest from %s to EPSG:4326. Error: %s.",
+            aoi_crs,
+            error,
+        )
+        return None
 
 
 def _extract_project_details(project: QgsProject) -> ProjectDetails:
@@ -115,8 +152,14 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
             error,
         )
 
+    area_of_interest = _get_area_of_interest(project)
+    area_of_interest_wkt = ""
+    if area_of_interest:
+        area_of_interest_wkt = area_of_interest.asWktPolygon()
+
     details["background_color"] = tmp_project_details["background_color"]
     details["extent"] = extent_wkt
+    details["area_of_interest"] = area_of_interest_wkt
     details["crs"] = project_crs.authid()
     details["project_name"] = project.title()
 
