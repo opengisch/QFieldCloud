@@ -62,7 +62,7 @@ class JobException(Exception):
 
 
 class JobRun:
-    container_timeout_secs = config.WORKER_TIMEOUT_S
+    container_timeout_secs = settings.QFIELDCLOUD_WORKER_TIMEOUT_S
     job_class = Job
     command = []
 
