@@ -15,6 +15,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
+from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.models import Delta, FaultyDeltaFile
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
@@ -64,6 +65,8 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
+    filter_backends = [QfcOrderingFilter]
+    ordering_fields = ["created_at"]
 
     def post(self, request, projectid):
         project_obj = Project.objects.select_related("the_qgis_file").get(id=projectid)
