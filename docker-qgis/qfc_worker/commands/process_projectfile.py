@@ -24,6 +24,7 @@ from qfc_worker.utils import (
     layers_data_to_string,
     open_qgis_project_as_readonly,
     open_qgis_project_temporarily,
+    reproject_extent,
     start_app,
     stop_app,
     upload_project_thumbnail,
@@ -78,6 +79,7 @@ class ProjectDetails(TypedDict):
 
     background_color: str
     extent: str
+    """The project extent, reprojected to WGS84 (EPSG:4326) WKT, or an empty string if the reprojection failed."""
     crs: str
     project_name: str
     layers_by_id: dict[str, Any]
@@ -99,9 +101,23 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
     # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
     del tmp_project
 
+    extent_wkt = ""
+    project_crs = project.crs()
+    try:
+        reprojected_extent = reproject_extent(
+            tmp_project_details["map_settings"].extent(), project_crs
+        )
+        extent_wkt = reprojected_extent.asWktPolygon()
+    except ValueError as error:
+        logger.warning(
+            "Failed to reproject the project extent from %s to EPSG:4326. Error: %s.",
+            project_crs.authid(),
+            error,
+        )
+
     details["background_color"] = tmp_project_details["background_color"]
-    details["extent"] = tmp_project_details["extent"]
-    details["crs"] = project.crs().authid()
+    details["extent"] = extent_wkt
+    details["crs"] = project_crs.authid()
     details["project_name"] = project.title()
 
     logger.info("Extracting layer and datasource details…")

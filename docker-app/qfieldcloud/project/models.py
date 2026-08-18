@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.contrib.gis.geos import GEOSException, GEOSGeometry
 from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
@@ -40,7 +41,6 @@ from qfieldcloud.core.models import (
     User,
 )
 from qfieldcloud.project.enums import QgsGeometryType, QgsLayerErrorCode, QgsLayerType
-from qfieldcloud.project.utils.geometry_utils import transform_wkt_crs
 
 if TYPE_CHECKING:
     from qfieldcloud.core.models import (
@@ -1176,11 +1176,14 @@ class QgisProjectQueryset(models.QuerySet):
         crs = details.get("crs") or ""
         extent = None
 
-        if extent_wkt and crs:
+        if extent_wkt:
+            # Check if the extent is a valid WKT string and parse it into a GEOSGeometry object
             try:
-                extent = transform_wkt_crs(extent_wkt, crs)
-            except ValueError:
-                pass
+                extent = GEOSGeometry(extent_wkt, srid=4326)
+            except (GEOSException, ValueError) as error:
+                logger.warning(
+                    f"Failed to parse the project extent {extent_wkt=} for {project=}. Error: {error}."
+                )
 
         qgis_version = details.get("qgis_version") or ""
 

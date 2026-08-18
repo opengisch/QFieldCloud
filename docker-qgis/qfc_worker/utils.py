@@ -26,6 +26,7 @@ from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
     QgsApplication,
+    QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsCsException,
     QgsFieldConstraints,
@@ -266,12 +267,87 @@ class OpenQgisProjectTemporarilySettings(TypedDict):
 
 class OpenQgisProjectTemporarilyDetailsInner(TypedDict):
     background_color: str
-    extent: str
     map_settings: QgsMapSettings
 
 
 class OpenQgisProjectTemporarilyDetails(OpenQgisProjectTemporarilyDetailsInner):
     project: QgsProject
+
+
+def reproject_extent(
+    extent: QgsRectangle,
+    source_crs: QgsCoordinateReferenceSystem,
+    target_crs: QgsCoordinateReferenceSystem | None = None,
+) -> QgsRectangle:
+    """Reprojects `extent` from `source_crs` to `target_crs`.
+
+    Args:
+        target_crs: defaults to WGS84 (EPSG:4326) when not provided.
+
+    Returns:
+        the reprojected extent.
+
+    Raises:
+        ValueError: if `extent` is null, if `source_crs` or `target_crs` is
+            invalid, if the transform fails, or if the result falls outside
+            `target_crs`'s declared area of use.
+    """
+    wgs84_crs = QgsCoordinateReferenceSystem("EPSG:4326")
+    target_crs = target_crs or wgs84_crs
+
+    if extent.isNull():
+        raise ValueError(f"Invalid extent: {extent.asWktPolygon()!r}.")
+
+    if Qgis.versionInt() >= 40000 and not extent.isValid():
+        raise ValueError(f"Invalid extent: {extent.asWktPolygon()!r}.")
+
+    if not source_crs.isValid():
+        raise ValueError(f"Invalid source CRS: {source_crs.authid()!r}.")
+
+    if not target_crs.isValid():
+        raise ValueError(f"Invalid target CRS: {target_crs.authid()!r}.")
+
+    transform = QgsCoordinateTransform(source_crs, target_crs, QgsProject.instance())
+
+    try:
+        transformed_extent = transform.transformBoundingBox(extent)
+    except QgsCsException as error:
+        raise ValueError(
+            f"Failed to transform extent from {source_crs.authid()} to {target_crs.authid()}. Error: {error}."
+        ) from error
+
+    # NOTE `QgsCoordinateReferenceSystem.bounds()` is always expressed in WGS84 lon/lat, see:
+    # https://qgis.org/pyqgis/4.2/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
+    target_bounds_wgs84 = target_crs.bounds()
+
+    if target_bounds_wgs84.isEmpty():
+        # some CRSs (e.g. custom or engineering CRSs) do not declare an area of use, nothing to validate against
+        return transformed_extent
+
+    if target_crs == wgs84_crs:
+        # already in WGS84, no need to transform again for the area-of-use comparison
+        transformed_extent_wgs84 = transformed_extent
+    else:
+        # transform the reprojected extent back to WGS84, so it can be compared against `target_bounds_wgs84` directly
+        to_wgs84_transform = QgsCoordinateTransform(
+            target_crs, wgs84_crs, QgsProject.instance()
+        )
+
+        try:
+            transformed_extent_wgs84 = to_wgs84_transform.transformBoundingBox(
+                transformed_extent
+            )
+        except QgsCsException as error:
+            raise ValueError(
+                f"Failed to transform the reprojected extent from {target_crs.authid()} to WGS84 for area-of-use validation. Error: {error}."
+            ) from error
+
+    if not target_bounds_wgs84.contains(transformed_extent_wgs84):
+        raise ValueError(
+            f"Transformed extent {transformed_extent.asWktPolygon()} from {source_crs.authid()} falls outside {target_crs.authid()}'s area of use {target_bounds_wgs84.asWktPolygon()}."
+        )
+
+    return transformed_extent
 
 
 def open_qgis_project_temporarily(
@@ -327,7 +403,6 @@ def open_qgis_project_temporarily(
                 map_settings.setExtent(map_settings.fullExtent())
 
             details["background_color"] = background_color.name()
-            details["extent"] = map_settings.extent().asWktPolygon()
             details["map_settings"] = map_settings
 
         return on_project_read
