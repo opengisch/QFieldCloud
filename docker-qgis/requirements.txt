@@ -39,7 +39,7 @@ tabulate==0.10.0
     # via -r docker-qgis/requirements.in
 tqdm==4.70.0
     # via qfieldcloud-sdk
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   -r docker-qgis/requirements.in
     #   referencing
