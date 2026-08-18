@@ -139,6 +139,33 @@ jobs:
       #   with:
       #     limit-access-to-actor: true
 
+  qgis_worker_tests:
+    name: Run QGIS worker tests (${{ matrix.qgis_service }})
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        qgis_service:
+          - qgis3
+          - qgis4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Export the env variables file
+        run: cp .env.example .env
+
+      - name: Build QGIS image
+        run: docker compose build ${{ matrix.qgis_service }}
+
+      - name: Run QGIS worker unit tests
+        run: |
+          docker compose run --rm \
+            ${{ matrix.qgis_service }} python3 -m unittest discover -s qfc_worker/tests -v
+
   django_checks:
     name: Run Django checks
     runs-on: ubuntu-24.04

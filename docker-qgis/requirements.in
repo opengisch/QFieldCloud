@@ -1,5 +1,5 @@
 jsonschema==4.26.0
-typing-extensions==4.15.0
+typing-extensions==4.16.0
 tabulate==v0.10.0
-requests==2.33.1
+requests==2.34.2
 qfieldcloud-sdk==0.16.0

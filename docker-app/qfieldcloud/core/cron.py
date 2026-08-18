@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from constance import config
+from django.conf import settings
 from django.utils import timezone
 from django_cron import CronJobBase, Schedule
 from invitations.utils import get_invitation_model
@@ -55,7 +56,7 @@ class SetTerminatedWorkersToFinalStatusJob(CronJobBase):
             status__in=[Job.Status.QUEUED, Job.Status.STARTED],
             # add extra seconds just to make sure a properly finished job properly updated the status.
             started_at__lt=timezone.now()
-            - timedelta(seconds=config.WORKER_TIMEOUT_S + 10),
+            - timedelta(seconds=settings.QFIELDCLOUD_WORKER_TIMEOUT_S + 10),
         )
 
         for job in jobs:

@@ -26,6 +26,7 @@ from qfieldcloud_sdk import sdk
 from qgis.core import (
     Qgis,
     QgsApplication,
+    QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsCsException,
     QgsFieldConstraints,
@@ -143,11 +144,13 @@ def start_app() -> str:
 
     extra_envvars = os.environ.get("QFIELDCLOUD_EXTRA_ENVVARS", "[]")
 
-    logging.info(f"Available user defined environment variables: {extra_envvars}")
+    logging.info("Available user defined environment variables: %s", extra_envvars)
 
     if QGISAPP is None:
         logging.info(
-            f"Starting QGIS app version {Qgis.versionInt()} ({Qgis.devVersion()})..."
+            "Starting QGIS app version %s (%s)...",
+            Qgis.versionInt(),
+            Qgis.devVersion(),
         )
         argvb = []
 
@@ -210,7 +213,7 @@ def open_qgis_project(
     disable_feature_count: bool = False,
     flags: Qgis.ProjectReadFlags = Qgis.ProjectReadFlags(),
 ) -> QgsProject:
-    logging.info(f'Loading the QGIS file "{the_qgis_file_name}"…')
+    logging.info('Loading the QGIS file "%s"…', the_qgis_file_name)
 
     if not Path(the_qgis_file_name).exists():
         raise FileNotFoundError(f"File not found: {the_qgis_file_name}")
@@ -221,7 +224,8 @@ def open_qgis_project(
 
     if project.fileName() == str(the_qgis_file_name) and not force_reload:
         logging.info(
-            f'Skip loading the QGIS file "{the_qgis_file_name}", it is already loaded'
+            'Skip loading the QGIS file "%s", it is already loaded',
+            the_qgis_file_name,
         )
         return project
 
@@ -230,7 +234,7 @@ def open_qgis_project(
 
     with set_bad_layer_handler(project):
         if not project.read(str(the_qgis_file_name), flags):
-            logging.error(f'Failed to load the QGIS file "{the_qgis_file_name}"!')
+            logging.error('Failed to load the QGIS file "%s"!', the_qgis_file_name)
 
             project.setFileName("")
 
@@ -263,12 +267,87 @@ class OpenQgisProjectTemporarilySettings(TypedDict):
 
 class OpenQgisProjectTemporarilyDetailsInner(TypedDict):
     background_color: str
-    extent: str
     map_settings: QgsMapSettings
 
 
 class OpenQgisProjectTemporarilyDetails(OpenQgisProjectTemporarilyDetailsInner):
     project: QgsProject
+
+
+def reproject_extent(
+    extent: QgsRectangle,
+    source_crs: QgsCoordinateReferenceSystem,
+    target_crs: QgsCoordinateReferenceSystem | None = None,
+) -> QgsRectangle:
+    """Reprojects `extent` from `source_crs` to `target_crs`.
+
+    Args:
+        target_crs: defaults to WGS84 (EPSG:4326) when not provided.
+
+    Returns:
+        the reprojected extent.
+
+    Raises:
+        ValueError: if `extent` is null, if `source_crs` or `target_crs` is
+            invalid, if the transform fails, or if the result falls outside
+            `target_crs`'s declared area of use.
+    """
+    wgs84_crs = QgsCoordinateReferenceSystem("EPSG:4326")
+    target_crs = target_crs or wgs84_crs
+
+    if extent.isNull():
+        raise ValueError(f"Invalid extent: {extent.asWktPolygon()!r}.")
+
+    if Qgis.versionInt() >= 40000 and not extent.isValid():
+        raise ValueError(f"Invalid extent: {extent.asWktPolygon()!r}.")
+
+    if not source_crs.isValid():
+        raise ValueError(f"Invalid source CRS: {source_crs.authid()!r}.")
+
+    if not target_crs.isValid():
+        raise ValueError(f"Invalid target CRS: {target_crs.authid()!r}.")
+
+    transform = QgsCoordinateTransform(source_crs, target_crs, QgsProject.instance())
+
+    try:
+        transformed_extent = transform.transformBoundingBox(extent)
+    except QgsCsException as error:
+        raise ValueError(
+            f"Failed to transform extent from {source_crs.authid()} to {target_crs.authid()}. Error: {error}."
+        ) from error
+
+    # NOTE `QgsCoordinateReferenceSystem.bounds()` is always expressed in WGS84 lon/lat, see:
+    # https://qgis.org/pyqgis/4.2/core/QgsCoordinateReferenceSystem.html#qgis.core.QgsCoordinateReferenceSystem.bounds
+    target_bounds_wgs84 = target_crs.bounds()
+
+    if target_bounds_wgs84.isEmpty():
+        # some CRSs (e.g. custom or engineering CRSs) do not declare an area of use, nothing to validate against
+        return transformed_extent
+
+    if target_crs == wgs84_crs:
+        # already in WGS84, no need to transform again for the area-of-use comparison
+        transformed_extent_wgs84 = transformed_extent
+    else:
+        # transform the reprojected extent back to WGS84, so it can be compared against `target_bounds_wgs84` directly
+        to_wgs84_transform = QgsCoordinateTransform(
+            target_crs, wgs84_crs, QgsProject.instance()
+        )
+
+        try:
+            transformed_extent_wgs84 = to_wgs84_transform.transformBoundingBox(
+                transformed_extent
+            )
+        except QgsCsException as error:
+            raise ValueError(
+                f"Failed to transform the reprojected extent from {target_crs.authid()} to WGS84 for area-of-use validation. Error: {error}."
+            ) from error
+
+    if not target_bounds_wgs84.contains(transformed_extent_wgs84):
+        raise ValueError(
+            f"Transformed extent {transformed_extent.asWktPolygon()} from {source_crs.authid()} falls outside {target_crs.authid()}'s area of use {target_bounds_wgs84.asWktPolygon()}."
+        )
+
+    return transformed_extent
 
 
 def open_qgis_project_temporarily(
@@ -324,7 +403,6 @@ def open_qgis_project_temporarily(
                 map_settings.setExtent(map_settings.fullExtent())
 
             details["background_color"] = background_color.name()
-            details["extent"] = map_settings.extent().asWktPolygon()
             details["map_settings"] = map_settings
 
         return on_project_read
@@ -430,7 +508,7 @@ def download_project(
     working_dir = destination.joinpath("files")
     working_dir.mkdir(parents=True)
 
-    logging.info(f"Downloading project files to {working_dir}…")
+    logging.info("Downloading project files to %s…", working_dir)
 
     client = sdk.Client()
     files = client.list_remote_files(project_id)
@@ -516,11 +594,14 @@ def list_local_files(project_id: str, project_dir: Path):
     files = client.list_local_files(str(project_dir), "*")
     if files:
         logging.info(
-            f'Local files list for project "{project_id}":\n{files_list_to_string(files)}',
+            'Local files list for project "%s":\n%s',
+            project_id,
+            files_list_to_string(files),
         )
     else:
         logging.info(
-            f'Local files list for project "{project_id}": empty!',
+            'Local files list for project "%s": empty!',
+            project_id,
         )
 
 
@@ -1069,7 +1150,10 @@ def save_project(
                 extent = transform.transform(safe_source_rect)
             except QgsCsException as err:
                 logging.warning(
-                    f"Failed to transform {ref_extent.crs().authid()} bbox CRS to {project.crs().authid()} project CRS. Error: {err}."
+                    "Failed to transform %s bbox CRS to %s project CRS. Error: %s.",
+                    ref_extent.crs().authid(),
+                    project.crs().authid(),
+                    err,
                 )
                 extent = QgsRectangle()
 
@@ -1128,8 +1212,11 @@ def open_qgis_file(filename: str | Path) -> Iterator[TextIO]:
                         )
 
                     logging.info(
-                        f"Expected '.qgs' file '{expected_qgs_name}' not found in '.qgz' archive '{filename}', "
-                        f"found and fallback to '{qgs_filename}' instead!"
+                        "Expected '.qgs' file '%s' not found in '.qgz' archive '%s', "
+                        "found and fallback to '%s' instead!",
+                        expected_qgs_name,
+                        filename,
+                        qgs_filename,
                     )
 
                 assert qgs_filename

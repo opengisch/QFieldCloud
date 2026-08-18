@@ -15,6 +15,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from qfieldcloud.core import exceptions, pagination, permissions_utils, utils
+from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.models import Delta, FaultyDeltaFile
 from qfieldcloud.core.serializers import DeltaSerializer
 from qfieldcloud.core.utils2 import jobs
@@ -64,6 +65,8 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, DeltaFilePermissions]
     serializer_class = DeltaSerializer
     pagination_class = pagination.QfcLimitOffsetPagination()
+    filter_backends = [QfcOrderingFilter]
+    ordering_fields = ["created_at"]
 
     def post(self, request, projectid):
         project_obj = Project.objects.select_related("the_qgis_file").get(id=projectid)
@@ -203,7 +206,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
 
-        return Delta.objects.filter(project=project_obj)
+        return Delta.objects.prefetch_related("created_by").filter(project=project_obj)
 
 
 @extend_schema_view(
@@ -218,7 +221,11 @@ class ListDeltasByDeltafileView(generics.ListAPIView):
         project_id = self.request.parser_context["kwargs"]["projectid"]
         project_obj = Project.objects.get(id=project_id)
         deltafile_id = self.request.parser_context["kwargs"]["deltafileid"]
-        return Delta.objects.filter(project=project_obj, deltafile_id=deltafile_id)
+
+        return Delta.objects.prefetch_related("created_by").filter(
+            project=project_obj,
+            deltafile_id=deltafile_id,
+        )
 
 
 @extend_schema(
