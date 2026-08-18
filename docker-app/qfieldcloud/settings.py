@@ -748,11 +748,6 @@ CONSTANCE_CONFIG = {
         "Number of days to retain job logs before they are automatically deleted.",
         int,
     ),
-    "WORKER_TIMEOUT_S": (
-        600,
-        "Timeout of the workers before being terminated by the wrapper in seconds.",
-        int,
-    ),
     "WORKER_QGIS_MEMORY_LIMIT": (
         "1000m",
         "Maximum memory for each QGIS worker container.",
@@ -806,7 +801,6 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Jobs": ("JOBS_LOGS_RETENTION_PERIOD_DAYS",),
     "Worker": (
-        "WORKER_TIMEOUT_S",
         "WORKER_QGIS_MEMORY_LIMIT",
         "WORKER_QGIS_CPU_SHARES",
     ),
@@ -820,6 +814,9 @@ CONSTANCE_CONFIG_FIELDSETS = {
 
 # Minimum number of bytes to ask a range when requesting a file part, otherwise a HTTP 416 is returned. Set to 0 to allow any number of bytes in the range.
 QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
+
+# Timeout of the workers before being terminated by the wrapper, in seconds.
+QFIELDCLOUD_WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 600))
 
 # Name of the QGIS 3 docker image used as a worker by `worker_wrapper`
 QFIELDCLOUD_QGIS3_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS3_IMAGE_NAME"]
