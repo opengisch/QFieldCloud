@@ -204,9 +204,10 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         project_id = self.request.parser_context["kwargs"]["projectid"]
-        project_obj = Project.objects.get(id=project_id)
 
-        return Delta.objects.prefetch_related("created_by").filter(project=project_obj)
+        return Delta.objects.prefetch_related("created_by").filter(
+            project_id=project_id
+        )
 
 
 @extend_schema_view(
