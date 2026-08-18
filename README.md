@@ -256,6 +256,21 @@ docker compose exec app coverage run manage.py test --keepdb
 docker compose exec app coverage report
 ```
 
+## Testing QGIS worker (`docker-qgis`)
+
+The `docker-qgis` worker's in-process PyQGIS unit tests live under `qfc_worker/tests/`, so they need to run inside the `qgis3`/`qgis4` container itself.
+
+```sh
+docker compose run --rm qgis3 python3 -m unittest discover -s qfc_worker/tests -v
+```
+
+To run a single test file (e.g. `test_geometry_utils.py`):
+
+```sh
+docker compose run --rm qgis3 python3 -m unittest qfc_worker.tests.test_geometry_utils -v
+```
+
+The same works for QGIS 4 by swapping `qgis3` for `qgis4`.
 
 ### Debugging
 
