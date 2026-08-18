@@ -13,11 +13,11 @@ attrs==26.1.0
     #   referencing
 beautifulsoup4==4.15.0
     # via django-bootstrap4
-boto3==1.43.67
+boto3==1.43.73
     # via -r requirements/requirements.in
-boto3-stubs==1.43.67
+boto3-stubs==1.43.73
     # via -r requirements/requirements.in
-botocore==1.43.67
+botocore==1.43.73
     # via
     #   boto3
     #   s3transfer
@@ -30,7 +30,7 @@ certifi==2026.7.22
     #   sentry-sdk
 cffi==2.1.1
     # via cryptography
-charset-normalizer==3.4.9
+charset-normalizer==3.5.1
     # via requests
 cryptography==50.0.0
     # via
@@ -72,7 +72,7 @@ django==5.2.17
     #   djangorestframework
     #   drf-spectacular
     #   jsonfield
-django-allauth[socialaccount]==65.19.0
+django-allauth[socialaccount]==65.19.1
     # via -r requirements/requirements.in
 django-auditlog==3.4.1
     # via -r requirements/requirements.in
@@ -96,7 +96,7 @@ django-cron-django5==0.6.2
     # via -r requirements/requirements.in
 django-currentuser==0.10.0
     # via -r requirements/requirements.in
-django-debug-toolbar==7.0.0
+django-debug-toolbar==7.1.1
     # via -r requirements/requirements.in
 django-extensions==4.1
     # via -r requirements/requirements.in
@@ -130,11 +130,11 @@ django-sri==0.8.0
     # via -r requirements/requirements.in
 django-storages==1.14.6
     # via -r requirements/requirements.in
-django-stubs==5.2.9
+django-stubs==6.1.0
     # via
     #   -r requirements/requirements.in
     #   djangorestframework-stubs
-django-stubs-ext==5.2.9
+django-stubs-ext==6.1.0
     # via
     #   -r requirements/requirements.in
     #   django-stubs
@@ -146,11 +146,11 @@ djangorestframework==3.18.0
     # via
     #   -r requirements/requirements.in
     #   drf-spectacular
-djangorestframework-stubs==3.16.9
+djangorestframework-stubs==3.18.0
     # via -r requirements/requirements.in
 drf-spectacular==0.30.0
     # via -r requirements/requirements.in
-idna==3.18
+idna==3.19
     # via requests
 inflection==0.5.1
     # via drf-spectacular
@@ -172,7 +172,7 @@ oauthlib==3.3.1
     # via django-allauth
 packaging==26.3
     # via django-notifications-hq
-phonenumbers==9.0.36
+phonenumbers==9.0.37
     # via -r requirements/requirements.in
 pillow==12.3.0
     # via
@@ -208,13 +208,13 @@ rpds-py==2026.6.3
     #   referencing
 s3transfer==0.19.2
     # via boto3
-sentry-sdk==2.66.1
+sentry-sdk==2.68.0
     # via -r requirements/requirements.in
 six==1.17.0
     # via python-dateutil
 soupsieve==2.9.2
     # via beautifulsoup4
-sqlparse==0.5.5
+sqlparse==0.6.0
     # via
     #   django
     #   django-debug-toolbar
@@ -222,7 +222,7 @@ stripe==4.2.0
     # via -r requirements/requirements.in
 swapper==1.4.0
     # via django-notifications-hq
-types-pyyaml==6.0.12.20260724
+types-pyyaml==6.0.12.20260815
     # via
     #   django-stubs
     #   djangorestframework-stubs
