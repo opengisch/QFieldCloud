@@ -24,7 +24,7 @@ sql_items = [
                     FALSE AS "is_incognito",
                     'project_owner' AS "origin"
                 FROM
-                    "core_project" P1
+                    "project_project" P1
                     INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
                 WHERE
                     U1."type" = 1
@@ -39,7 +39,7 @@ sql_items = [
                     'organization_owner' AS "origin"
                 FROM
                     "core_organization" O1
-                    INNER JOIN "core_project" P1 ON (P1."owner_id" = O1."user_ptr_id")
+                    INNER JOIN "project_project" P1 ON (P1."owner_id" = O1."user_ptr_id")
             ),
             organization_admin AS (
                 SELECT
@@ -51,7 +51,7 @@ sql_items = [
                     'organization_admin' AS "origin"
                 FROM
                     "core_organizationmember" OM1
-                    INNER JOIN "core_project" P1 ON (P1."owner_id" = OM1."organization_id")
+                    INNER JOIN "project_project" P1 ON (P1."owner_id" = OM1."organization_id")
                 WHERE
                     (
                         OM1."role" = 'admin'
@@ -67,7 +67,7 @@ sql_items = [
                     'collaborator' AS "origin"
                 FROM
                     "core_projectcollaborator" C1
-                    INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")
+                    INNER JOIN "project_project" P1 ON (P1."id" = C1."project_id")
                     INNER JOIN "core_user" U1 ON (P1."owner_id" = U1."id")
             ),
             project_collaborator_team AS (
@@ -83,7 +83,7 @@ sql_items = [
                     INNER JOIN "core_user" U1 ON (C1."collaborator_id" = U1."id")
                     INNER JOIN "core_team" T1 ON (U1."id" = T1."user_ptr_id")
                     INNER JOIN "core_teammember" TM1 ON (T1."user_ptr_id" = TM1."team_id")
-                    INNER JOIN "core_project" P1 ON (P1."id" = C1."project_id")
+                    INNER JOIN "project_project" P1 ON (P1."id" = C1."project_id")
             ),
             public_project AS (
                 SELECT
@@ -94,7 +94,7 @@ sql_items = [
                     FALSE AS "is_incognito",
                     'public' AS "origin"
                 FROM
-                    "core_project" P1
+                    "project_project" P1
                     CROSS JOIN "core_user" U1
                 WHERE
                     is_public = TRUE
