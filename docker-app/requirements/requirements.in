@@ -33,8 +33,8 @@ django-storages==1.14.6
 django-tables2==3.0.0
 django-timezone-field==7.2.2
 django==5.2.17
-django-stubs==5.2.9
-django-stubs-ext==5.2.9
+django-stubs==6.1.0
+django-stubs-ext==6.1.0
 djangorestframework==3.18.0
 djangorestframework-stubs==3.16.9
 drf-spectacular==0.30.0
