@@ -2,7 +2,7 @@
 
 import uuid
 
-import migrate_sql.operations
+import django_migrate_sql.operations
 from django.db import migrations, models
 
 
@@ -97,7 +97,7 @@ class Migration(migrations.Migration):
                 "managed": False,
             },
         ),
-        migrate_sql.operations.CreateSQL(
+        django_migrate_sql.operations.CreateSQL(
             name="current_subscriptions_vw",
             sql="\n            CREATE VIEW current_subscriptions_vw AS\n            SELECT\n                *\n            FROM\n                subscription_subscription\n            WHERE\n                active_since < now()\n                AND (\n                    active_until IS NULL\n                    OR active_until > now()\n                )\n        ",
             reverse_sql="\n            DROP VIEW current_subscriptions_vw\n        ",
