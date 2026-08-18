@@ -7,8 +7,8 @@ from drf_spectacular.utils import (
 )
 from qfieldcloud.core import pagination, permissions_utils, serializers
 from qfieldcloud.core.models import Job
-from qfieldcloud.project.models import Project, get_slim_project_or_raise
-from rest_framework import generics, permissions, viewsets
+from qfieldcloud.project.models import get_slim_project_or_raise
+from rest_framework import permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 
@@ -157,7 +157,6 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
 
         if self.action == "list":
             project_id = self.request.GET.get("project_id")
-            project = generics.get_object_or_404(Project, pk=project_id)
-            qs = qs.filter(project=project)
+            qs = qs.filter(project_id=project_id)
 
         return qs
