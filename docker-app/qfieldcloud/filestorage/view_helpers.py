@@ -227,7 +227,10 @@ def download_project_file_version(
                 | Q(file__file_type=File.FileType.PROJECT_FILE)
             )
 
-        file_version = FileVersion.objects.get(filters)
+        file_version = FileVersion.objects.only(
+            "content",
+            "file_storage",
+        ).get(filters)
     else:
         filters = Q(
             project_id=project_id,
@@ -241,7 +244,14 @@ def download_project_file_version(
                 | Q(file_type=File.FileType.PROJECT_FILE)
             )
 
-        file = File.objects.select_related("latest_version").get(filters)
+        file = (
+            File.objects.only(
+                "latest_version__content",
+                "latest_version__file_storage",
+            )
+            .select_related("latest_version")
+            .get(filters)
+        )
 
         assert file.latest_version
 
