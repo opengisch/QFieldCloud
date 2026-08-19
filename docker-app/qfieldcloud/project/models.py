@@ -1043,6 +1043,28 @@ class Project(models.Model):
 
         return is_supported_regarding_owner_account(self)
 
+    def clean(self, *args, **kwargs) -> None:
+        is_shared_datasets_type = self.project_type == self.ProjectType.SHARED_DATASETS
+
+        if is_shared_datasets_type and self.name != SHARED_DATASETS_PROJECT_NAME:
+            raise ValidationError(
+                _(
+                    "Project type cannot be set to `{}` unless the project is named `{}`."
+                ).format(self.ProjectType.SHARED_DATASETS, SHARED_DATASETS_PROJECT_NAME)
+            )
+
+        if (
+            not is_shared_datasets_type
+            and self.project_type not in self.CONFIGURABLE_PROJECT_TYPES
+        ):
+            raise ValidationError(
+                _("Project type must be one of `{}`, got `{}`.").format(
+                    self.CONFIGURABLE_PROJECT_TYPES, self.project_type
+                )
+            )
+
+        super().clean(*args, **kwargs)
+
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
         logger.debug(f"Saving project {self}...")
@@ -1074,18 +1096,6 @@ class Project(models.Model):
 
         if self.name == SHARED_DATASETS_PROJECT_NAME:
             self.project_type = self.ProjectType.SHARED_DATASETS
-        elif self.project_type == self.ProjectType.SHARED_DATASETS:
-            raise ValidationError(
-                _(
-                    "`project_type` cannot be set to `{}` unless the project is named `{}`."
-                ).format(self.ProjectType.SHARED_DATASETS, SHARED_DATASETS_PROJECT_NAME)
-            )
-        elif self.project_type not in self.CONFIGURABLE_PROJECT_TYPES:
-            raise ValidationError(
-                _("`project_type` must be one of `{}`, got `{}`.").format(
-                    self.CONFIGURABLE_PROJECT_TYPES, self.project_type
-                )
-            )
 
         super().save(*args, **kwargs)
 
