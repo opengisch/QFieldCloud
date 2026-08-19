@@ -1,7 +1,10 @@
-from django.core.exceptions import ObjectDoesNotExist
+from typing import Any
+
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.views import APIView
 
 from qfieldcloud.core import permissions_utils
 from qfieldcloud.core.models import User
@@ -10,15 +13,13 @@ from qfieldcloud.subscription.serializers import CurrentSubscriptionSerializer
 
 
 class RetrieveCurrentSubscriptionViewPermissions(BasePermission):
-    def has_permission(self, request, view):
-        username = permissions_utils.get_param_from_request(request, "username")
+    def has_object_permission(self, request: Request, view: APIView, obj: Any) -> bool:
+        user_for_account: User = obj.account.user
 
-        try:
-            user = User.objects.get(username=username)
-        except ObjectDoesNotExist:
-            return False
-
-        return permissions_utils.can_read_current_subscription(request.user, user)
+        return permissions_utils.can_read_current_subscription(
+            request.user,
+            user_for_account,
+        )
 
 
 @extend_schema_view(
