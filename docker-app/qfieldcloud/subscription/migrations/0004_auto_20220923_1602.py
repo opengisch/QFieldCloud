@@ -4,7 +4,7 @@ import uuid
 
 import django.db.migrations.state
 import django.db.models.deletion
-import migrate_sql.operations
+import django_migrate_sql.operations
 from django.conf import settings
 from django.contrib.postgres.operations import BtreeGistExtension
 from django.db import migrations, models
@@ -193,7 +193,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunPython(populate_subscriptions_model, populate_account_plan_field),
-        migrate_sql.operations.CreateSQL(
+        django_migrate_sql.operations.CreateSQL(
             name="subscription_subscription_prevent_overlaps_idx",
             sql="\n            ALTER TABLE subscription_subscription\n            ADD CONSTRAINT subscription_subscription_prevent_overlaps\n            EXCLUDE USING gist (\n                account_id WITH =,\n                tstzrange(active_since, active_until) WITH &&\n            )\n            WHERE (active_since IS NOT NULL)\n        ",
             reverse_sql="\n            ALTER TABLE subscription_subscription DROP CONSTRAINT subscription_subscription_prevent_overlaps\n        ",
@@ -277,7 +277,7 @@ class Migration(migrations.Migration):
                 null=False,
             ),
         ),
-        migrate_sql.operations.CreateSQL(
+        django_migrate_sql.operations.CreateSQL(
             name="subscription_package_prevent_overlaps_idx",
             sql="\n            ALTER TABLE subscription_package\n            ADD CONSTRAINT subscription_package_prevent_overlaps\n            EXCLUDE USING gist (\n                subscription_id WITH =,\n                tstzrange(active_since, active_until) WITH &&\n            )\n            WHERE (active_since IS NOT NULL)\n        ",
             reverse_sql="\n            ALTER TABLE subscription_package DROP CONSTRAINT subscription_package_prevent_overlaps\n        ",

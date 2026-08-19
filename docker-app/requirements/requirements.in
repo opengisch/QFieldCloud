@@ -21,7 +21,7 @@ django-invitations==2.1.0
 # django-jazzmin 3.0.2 onwards breaks manifest static storages by passing a directory to {% static %}, see https://github.com/farridav/django-jazzmin/issues/684
 django-jazzmin==3.0.1
 django-log-request-id==2.1.2
-django-migrate-sql-3==3.0.2
+django-migrate-sql-deux==2.1.0
 django-model-utils==5.0.0
 django-nonrelated-inlines==0.2
 # Unfortunately the version is not released yet on pypi, so we need to install it from the git repository, currently # 1.9.0

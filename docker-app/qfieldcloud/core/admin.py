@@ -1218,6 +1218,7 @@ class QgisProjectInline(admin.StackedInline):
         "qgis_version",
         "crs",
         "extent",
+        "area_of_interest",
         "background_color",
         "custom_properties__pre",
         "layers__list",

@@ -136,7 +136,8 @@ INSTALLED_APPS = [
     # 3rd party - keep at bottom to allow overrides
     "notifications",
     "axes",
-    "migrate_sql",
+    # allow raw SQL migrations defined in `sql_config.py`
+    "django_migrate_sql",
     "constance",
     "django_extensions",
     "bootstrap4",
