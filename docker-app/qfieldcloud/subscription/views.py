@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -37,8 +38,20 @@ class RetrieveCurrentSubscriptionView(RetrieveAPIView):
     serializer_class = CurrentSubscriptionSerializer
 
     def get_object(self) -> Subscription:
-        user = User.objects.select_related("useraccount").get(
-            username=self.kwargs["username"]
+        user = get_object_or_404(
+            User.objects.select_related(
+                # Even though `User` has direct `useraccount` relation, the polymorphic nature of User-Person-Organization
+                # prevents Django to detect that `useraccount` is `select_related`,
+                # so we need to explicitly select the related `useraccount` for both `Person` and `Organization`.
+                "person__useraccount",
+                "organization__useraccount",
+            ),
+            username=self.kwargs["username"],
         )
 
-        return user.useraccount.current_subscription
+        subscription = user.useraccount.current_subscription
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, subscription)
+
+        return subscription
