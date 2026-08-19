@@ -1164,6 +1164,18 @@ class ProjectSeed(models.Model):
         return super().save(*args, **kwargs)
 
 
+def to_geom_or_none(geom_str: str | None, srid: int = 4326) -> GEOSGeometry | None:
+    """geom_wkt may be WKT, EWKT or HEXEWKB"""
+    if not geom_str:
+        return None
+
+    try:
+        return GEOSGeometry(geom_str, srid=srid)
+    except (GEOSException, ValueError) as err:
+        logger.warning(f"Failed to parse {geom_str=}! Error: {err}.")
+        return None
+
+
 class QgisProjectQueryset(models.QuerySet):
     @transaction.atomic()
     def update_from_details(
@@ -1172,21 +1184,6 @@ class QgisProjectQueryset(models.QuerySet):
         file_version: "FileVersion",
         details: QgisProjectDetails,
     ) -> "QgisProject":
-        extent_wkt = details.get("extent")
-        crs = details.get("crs") or ""
-        extent = None
-
-        if extent_wkt:
-            # Check if the extent is a valid WKT string and parse it into a GEOSGeometry object
-            try:
-                extent = GEOSGeometry(extent_wkt, srid=4326)
-            except (GEOSException, ValueError) as error:
-                logger.warning(
-                    f"Failed to parse the project extent {extent_wkt=} for {project=}. Error: {error}."
-                )
-
-        qgis_version = details.get("qgis_version") or ""
-
         custom_properties = {
             QgisProject.ATTACHMENT_DIRS_KEY: details.get("attachment_dirs") or ["DCIM"],
             QgisProject.DATA_DIRS_KEY: details.get("data_dirs") or [],
@@ -1197,9 +1194,10 @@ class QgisProjectQueryset(models.QuerySet):
             defaults={
                 "file_version": file_version,
                 "name": details.get("project_name"),
-                "qgis_version": qgis_version[:100],
-                "crs": crs,
-                "extent": extent,
+                "qgis_version": (details.get("qgis_version") or "")[:100],
+                "crs": details.get("crs") or "",
+                "extent": to_geom_or_none(details.get("extent")),
+                "area_of_interest": to_geom_or_none(details.get("area_of_interest")),
                 "background_color": details.get("background_color") or "#ffffff",
                 "custom_properties": custom_properties,
             },
@@ -1259,6 +1257,13 @@ class QgisProject(models.Model):
         blank=True,
         srid=4326,
         help_text=_("The extent of the project in WGS84 coordinates."),
+    )
+
+    area_of_interest = models.PolygonField(
+        null=True,
+        blank=True,
+        srid=4326,
+        help_text=_("The area of interest of the project in WGS84 coordinates."),
     )
 
     background_color = models.CharField(

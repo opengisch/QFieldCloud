@@ -17,6 +17,8 @@ class QgisProjectDetails(TypedDict, total=False):
     crs: str
     extent: str
     """The project extent, already reprojected to WGS84 (EPSG:4326) WKT by the worker, or an empty string if the reprojection failed."""
+    area_of_interest: str
+    """The area of interest, already reprojected to WGS84 (EPSG:4326) WKT by the worker, or an empty string if not set or if the reprojection failed."""
     background_color: str
     attachment_dirs: list[str]
     data_dirs: list[str]
