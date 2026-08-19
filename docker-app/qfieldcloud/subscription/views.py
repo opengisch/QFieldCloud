@@ -1,13 +1,12 @@
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
 from qfieldcloud.core import permissions_utils
+from qfieldcloud.core.models import User
+from qfieldcloud.subscription.models import Subscription
 from qfieldcloud.subscription.serializers import CurrentSubscriptionSerializer
-
-User = get_user_model()
 
 
 class RetrieveCurrentSubscriptionViewPermissions(BasePermission):
@@ -36,7 +35,9 @@ class RetrieveCurrentSubscriptionView(RetrieveAPIView):
     ]
     serializer_class = CurrentSubscriptionSerializer
 
-    def get_object(self):
-        username = self.kwargs["username"]
-        user = User.objects.get(username=username)
+    def get_object(self) -> Subscription:
+        user = User.objects.select_related("useraccount").get(
+            username=self.kwargs["username"]
+        )
+
         return user.useraccount.current_subscription
