@@ -3,61 +3,13 @@
 import django.db.models.deletion
 from django.db import migrations, models
 
-DROP_VIEW = "DROP VIEW IF EXISTS current_subscriptions_vw;"
-
-# The previous view definition (see migration 0009), kept so this migration is
-# reversible.
-OLD_CREATE_VIEW = """\
-CREATE VIEW current_subscriptions_vw AS
-SELECT *
-FROM subscription_subscription
-WHERE active_since < now()
-AND (active_until IS NULL OR active_until > now());
-"""
-
-# New view: `plan_id` is the trial plan while the trial is active, else the
-# regular plan. Done in SQL because quota checks join through this view's `plan`
-# in the ORM, where the Python `effective_plan` property can't reach.
-#
-# Columns are listed out (not `SELECT *`) only because we override `plan_id`
-NEW_CREATE_VIEW = """\
-CREATE VIEW current_subscriptions_vw AS
-SELECT
-    s.id,
-    s.uuid,
-    CASE
-        WHEN s.trial_expires_at > now() AND s.trial_plan_id IS NOT NULL
-        THEN s.trial_plan_id
-        ELSE s.plan_id
-    END AS plan_id,
-    s.purchased_seats,
-    s.account_id,
-    s.status,
-    s.created_by_id,
-    s.created_at,
-    s.updated_at,
-    s.requested_cancel_at,
-    s.active_since,
-    s.active_until,
-    s.billing_cycle_anchor_at,
-    s.current_period_since,
-    s.current_period_until,
-    s.notes,
-    s.trial_plan_id,
-    s.trial_expires_at
-FROM subscription_subscription s
-WHERE s.active_since < now()
-AND (s.active_until IS NULL OR s.active_until > now());
-"""
-
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("subscription", "0011_plan_trial_plan"),
+        ("subscription", "0012_auto_20260818_1831"),
     ]
 
     operations = [
-        migrations.RunSQL(sql=DROP_VIEW, reverse_sql=OLD_CREATE_VIEW),
         migrations.AddField(
             model_name="subscription",
             name="trial_expires_at",
@@ -110,5 +62,4 @@ class Migration(migrations.Migration):
                 max_length=100,
             ),
         ),
-        migrations.RunSQL(sql=NEW_CREATE_VIEW, reverse_sql=DROP_VIEW),
     ]

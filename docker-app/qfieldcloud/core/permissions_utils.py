@@ -720,7 +720,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
             )
         )
 
-    max_premium_collaborators_per_private_project = project.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
+    max_premium_collaborators_per_private_project = project.owner.useraccount.current_subscription.effective_plan.max_premium_collaborators_per_private_project
     if max_premium_collaborators_per_private_project >= 0 and not project.is_public:
         project_collaborators_count = project.direct_collaborators.count()
         if project_collaborators_count >= max_premium_collaborators_per_private_project:
@@ -770,7 +770,7 @@ def check_can_become_collaborator(user: QfcUser, project: Project) -> bool:
 
         # Rules for private projects
         if not project.is_public:
-            if not user.useraccount.current_subscription.plan.is_premium:
+            if not user.useraccount.current_subscription.effective_plan.is_premium:
                 raise ExpectedPremiumUserError(
                     _(
                         "Only users who upgraded from free plan can be added as collaborators on private projects."
@@ -848,6 +848,7 @@ def can_read_current_subscription(user: QfcUser, account: QfcUser) -> bool:
 
 
 def can_change_additional_storage(user: QfcUser, subscription: Subscription) -> bool:
+    # NOTE buying storage acts on the plan that will be billed, not on the trial
     if not subscription.plan.is_storage_modifiable:
         return False
 
@@ -879,7 +880,7 @@ def can_cancel_subscription_at_period_end(
     if subscription.active_until is not None:
         return False
 
-    if not subscription.plan.is_cancellable:
+    if not subscription.effective_plan.is_cancellable:
         return False
 
     if subscription.account.user.is_person:
@@ -947,7 +948,7 @@ def check_supported_regarding_owner_account(
     if not ignore_online_layers:
         if (
             project.has_online_vector_data
-            and not subscription.plan.is_external_db_supported
+            and not subscription.effective_plan.is_external_db_supported
         ):
             raise PlanInsufficientError(
                 _(
