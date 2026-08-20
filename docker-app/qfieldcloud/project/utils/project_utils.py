@@ -31,9 +31,11 @@ def has_online_vector_data(project: Project) -> bool:
     if qgis_project is None:
         return False
 
-    vector_layers = qgis_project.layers.filter(layer_type=QgsLayerType.Vector)
+    for layer in qgis_project.layers.all():
+        #  skip vector layers
+        if layer.layer_type != QgsLayerType.Vector:
+            continue
 
-    for layer in vector_layers:
         # memory layers are not having a filename, but should not be considered online
         if layer.provider_name == "memory":
             continue

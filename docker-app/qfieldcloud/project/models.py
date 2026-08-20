@@ -235,7 +235,9 @@ class Project(models.Model):
         if qgis_project is None:
             return []
 
-        return list(qgis_project.layers.filter(is_localized=True))
+        # filter the layers in Python to avoid an extra query to the database,
+        # since the `QgisLayer` instances are already fetched in memory via `prefetch_related`
+        return [layer for layer in qgis_project.layers.all() if layer.is_localized]
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
