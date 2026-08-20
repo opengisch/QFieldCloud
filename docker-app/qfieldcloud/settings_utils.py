@@ -93,6 +93,27 @@ def get_socialaccount_providers_config() -> dict:
     return providers
 
 
+def get_account_rate_limits_config() -> dict:
+    rate_limits_json: str = os.environ.get("ACCOUNT_RATE_LIMITS", "")
+
+    if not rate_limits_json:
+        raise ConfigValidationError("No `ACCOUNT_RATE_LIMITS` envvar configured!")
+
+    try:
+        rate_limits = json.loads(rate_limits_json)
+    except json.JSONDecodeError:
+        raise ConfigValidationError(
+            "Envvar `ACCOUNT_RATE_LIMITS` should be a parsable `JSON` string!"
+        )
+
+    if not isinstance(rate_limits, dict):
+        raise ConfigValidationError(
+            "Envvar `ACCOUNT_RATE_LIMITS` should be a `JSON` string that parses to dictionary!"
+        )
+
+    return rate_limits
+
+
 def parse_string_to_list(input_str: str, *, delimiter: str) -> list[str]:
     assert delimiter
 
