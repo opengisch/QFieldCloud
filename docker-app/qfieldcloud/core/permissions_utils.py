@@ -530,6 +530,9 @@ def can_read_jobs(user: QfcUser, project: Project) -> bool:
 
 def can_create_jobs(user: QfcUser, project: Project, job_type: Job.Type) -> bool:
     """Check if the user has permission to create a job of the given type."""
+    if job_type == Job.Type.PACKAGE and not project.is_regular_project:
+        return False
+
     if job_type == Job.Type.PACKAGE:
         roles = list(ProjectCollaborator.Roles)
     elif job_type in (Job.Type.PROCESS_PROJECTFILE, Job.Type.DELTA_APPLY):
