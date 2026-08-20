@@ -950,7 +950,7 @@ class Project(models.Model):
 
             # TODO use self.problems to get if there are project problems
             if (
-                not self.has_the_qgis_file or not self.project_details
+                not self.has_the_qgis_file or not self.qgis_project
             ) and not self.is_shared_datasets_project:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
