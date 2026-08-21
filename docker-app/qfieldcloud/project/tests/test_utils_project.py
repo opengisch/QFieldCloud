@@ -1,4 +1,3 @@
-# from unittest import TestCase
 import logging
 
 from django.test import TestCase
