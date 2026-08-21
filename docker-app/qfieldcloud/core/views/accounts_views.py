@@ -1,8 +1,10 @@
 from allauth.account.models import EmailAddress
+from allauth.core import ratelimit
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 
@@ -28,7 +30,9 @@ def redirect_to_referer_or_view(
     if url_has_allowed_host_and_scheme(referer, allowed_hosts=settings.ALLOWED_HOSTS):
         return HttpResponseRedirect(referer)
     else:
-        return HttpResponseRedirect(view_name)
+        return HttpResponseRedirect(
+            reverse(view_name, args=view_args, kwargs=view_kwargs)
+        )
 
 
 def resend_confirmation_email(request: HttpRequest) -> HttpResponse:
@@ -38,29 +42,35 @@ def resend_confirmation_email(request: HttpRequest) -> HttpResponse:
     if request.method != "POST":
         return redirect_to_referer_or_view(request, "account_login")
 
-    if "account_verified_email" not in request.session:
+    email_address = request.session.get("account_verified_email")
+    if not email_address:
         messages.error(request, _("No email found."))
+
         return redirect_to_referer_or_view(request, "account_login")
 
-    email_address = request.session["account_verified_email"]
+    try:
+        email_obj = EmailAddress.objects.get(email=email_address)
+    except EmailAddress.DoesNotExist:
+        messages.error(
+            request,
+            # Do not show the email to prevent leaking of email by hijacking a session.
+            _("Email not found. Please go through sign-up process again."),
+        )
 
-    if email_address:
-        try:
-            email_obj = EmailAddress.objects.get(email=email_address)
-            email_obj.send_confirmation(request)
-            messages.success(
-                request,
-                _("A new verification email has been sent to {}!").format(
-                    email_address
-                ),
-            )
-        except EmailAddress.DoesNotExist:
-            messages.error(
-                request,
-                _("Email {} not found. Please register again.").format(email_address),
-            )
+        return redirect_to_referer_or_view(request, "account_login")
 
-    else:
-        messages.error(request, _("No email found."))
+    allowed = ratelimit.consume(request, action="confirm_email", key=email_address)
+    if not allowed:
+        messages.error(
+            request, _("Please wait before requesting another verification email.")
+        )
+
+        return redirect_to_referer_or_view(request, "account_login")
+
+    email_obj.send_confirmation(request)
+    messages.success(
+        request,
+        _("A new verification email has been sent to {}!").format(email_address),
+    )
 
     return redirect_to_referer_or_view(request, "account_login")

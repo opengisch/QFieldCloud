@@ -31,6 +31,9 @@ location @proxy_to_app {
     error_page 403 =403 /pages/403.html;
     error_page 404 =404 /pages/404.html;
 
+    # Rate limit exceeded, shown when app returns 429 (e.g. too many password reset attempts)
+    error_page 429 =429 /pages/429.html;
+
     # Initial loading page for upstream issues (502, 503, 504 for timeouts)
     error_page 502 503 504 =503 /pages/loading.html;
 
