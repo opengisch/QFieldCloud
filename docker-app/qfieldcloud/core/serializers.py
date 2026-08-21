@@ -392,9 +392,9 @@ class JobMixin:
     def get_lastest_not_finished_job(self) -> Job | None:
         ModelClass: Job = self.Meta.model
         last_active_job = (
-            ModelClass.objects.filter(
+            ModelClass.objects.unfinished()
+            .filter(
                 project=self.initial_data.get("project_id"),  # type: ignore
-                status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
             )
             .only("id")
             .order_by("-started_at", "-created_at")
