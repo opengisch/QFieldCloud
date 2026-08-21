@@ -24,7 +24,11 @@ from qfieldcloud.core.drf_utils import QfcOrderingFilter
 from qfieldcloud.core.models import Job
 from qfieldcloud.project.enums import ProjectRoleOrigins
 from qfieldcloud.project.filters import ProjectFilterSet
-from qfieldcloud.project.models import Project, ProjectSeed, get_slim_project_or_raise
+from qfieldcloud.project.models import (
+    Project,
+    ProjectSeed,
+    get_slim_project_or_raise,
+)
 from qfieldcloud.project.serializers import (
     ProjectSeedSerializer,
     ProjectSerializer,
@@ -152,7 +156,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        projects = Project.objects.for_user(self.request.user)
+        projects = Project.objects.with_prefetch().for_user(self.request.user)
 
         if self.action == "list":
             # In the list endpoint, by default we filter out public projects.

@@ -209,7 +209,7 @@ def wait_for_project_ok_status(project: Project, wait_s: int = 30):
 
         sleep(1)
 
-    fail(f"Waited for ok status for {wait_s} seconds")
+    fail(f"Waited for ok status for {wait_s} seconds, but got {project.status}")
 
 
 def fail(msg):
