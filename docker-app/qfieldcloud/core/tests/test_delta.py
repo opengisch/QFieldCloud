@@ -107,18 +107,7 @@ class QfcTestCase(APITransactionTestCase):
     def tearDown(self):
         while True:
             # make sure there are no active jobs in the queue
-            if (
-                Job.objects.all()
-                .filter(
-                    status__in=[
-                        Job.Status.PENDING,
-                        Job.Status.QUEUED,
-                        Job.Status.STARTED,
-                    ]
-                )
-                .count()
-                == 0
-            ):
+            if not Job.objects.unfinished().exists():
                 time.sleep(1)
                 return
 

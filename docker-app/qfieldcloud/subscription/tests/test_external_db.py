@@ -27,13 +27,10 @@ class QfcTestCase(APITransactionTestCase):
         # print(f"Waiting for {job_type} status {expected_result}", end="")
         for _ in range(30):
             job = (
-                Job.objects.filter(project=project, type=job_type)
-                .exclude(
-                    status__in=[
-                        Job.Status.PENDING,
-                        Job.Status.QUEUED,
-                        Job.Status.STARTED,
-                    ]
+                Job.objects.finished()
+                .filter(
+                    project=project,
+                    type=job_type,
                 )
                 .last()
             )
