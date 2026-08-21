@@ -19,7 +19,7 @@ from django.core.validators import (
     RegexValidator,
 )
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Q, When
+from django.db.models import Case, Exists, F, OuterRef, Prefetch, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
 from django.shortcuts import get_object_or_404
@@ -128,6 +128,24 @@ class ProjectQueryset(models.QuerySet):
         request and only need a project's id, owner, and public flag.
         """
         return self.only("id", "name", "is_public", "project_type", "owner_id")
+
+    def with_prefetch(self) -> "ProjectQueryset":
+        """A heavier version of the `Project` with all common `select_related` and `prefetch_related` in place."""
+        return (
+            self.defer("project_details")
+            .select_related(
+                "qgis_project",
+                "owner",
+                "owner__useraccount",
+                "the_qgis_file",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "qgis_project__layers",
+                    queryset=QgisLayer.objects.order_by("ordering"),
+                )
+            )
+        )
 
 
 def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":

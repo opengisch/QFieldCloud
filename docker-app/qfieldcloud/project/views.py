@@ -4,7 +4,6 @@ from uuid import UUID
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Prefetch
 from django.http import Http404, StreamingHttpResponse
 from django_filters import rest_framework as filters
 from drf_spectacular.types import OpenApiTypes
@@ -28,7 +27,6 @@ from qfieldcloud.project.filters import ProjectFilterSet
 from qfieldcloud.project.models import (
     Project,
     ProjectSeed,
-    QgisLayer,
     get_slim_project_or_raise,
 )
 from qfieldcloud.project.serializers import (
@@ -158,22 +156,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
-        projects = (
-            Project.objects.defer("project_details")
-            .select_related(
-                "qgis_project",
-                "owner",
-                "owner__useraccount",
-                "the_qgis_file",
-            )
-            .prefetch_related(
-                Prefetch(
-                    "qgis_project__layers",
-                    queryset=QgisLayer.objects.order_by("ordering"),
-                )
-            )
-            .for_user(self.request.user)
-        )
+        projects = Project.objects.with_prefetch().for_user(self.request.user)
 
         if self.action == "list":
             # In the list endpoint, by default we filter out public projects.
