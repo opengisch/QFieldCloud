@@ -1557,15 +1557,10 @@ class IsFinalizedJobFilter(admin.SimpleListFilter):
         if value is None:
             return queryset
 
-        not_finalized = (
-            Q(status=Job.Status.PENDING)
-            | Q(status=Job.Status.STARTED)
-            | Q(status=Job.Status.QUEUED)
-        )
         if value == "not finalized":
-            return queryset.filter(not_finalized)
+            return queryset.unfinished()
         elif value == "finalized":
-            return queryset.filter(~not_finalized)
+            return queryset.finished()
         else:
             raise NotImplementedError(
                 f"Unknown filter: {value} (was expecting 'finalized' or 'not finalized')"
