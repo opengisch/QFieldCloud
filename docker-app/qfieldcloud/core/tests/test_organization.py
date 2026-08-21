@@ -17,6 +17,7 @@ from qfieldcloud.core.models import (
     ProjectCollaborator,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
@@ -165,7 +166,7 @@ class QfcTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=project,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.EDITOR,
+            role=ProjectCollaboratorRole.EDITOR,
         )
 
         self.assertEqual(ProjectCollaborator.objects.filter(project=project).count(), 1)

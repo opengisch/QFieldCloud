@@ -7,11 +7,10 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     Person,
-    ProjectCollaborator,
     Team,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
-from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
 from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 from qfieldcloud.subscription.models import Subscription
@@ -31,7 +30,7 @@ class QfcTestCase(APITransactionTestCase):
         self,
         project,
         user,
-        role: ProjectCollaborator.Roles | None = None,
+        role: ProjectCollaboratorRole | None = None,
         origin: ProjectRoleOrigins | None = None,
         is_valid: bool = True,
     ):
@@ -66,7 +65,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(p.user_role_is_valid, is_valid)
 
     def test_max_premium_collaborators_per_private_project(self):
-        Roles = ProjectCollaborator.Roles
+        Roles = ProjectCollaboratorRole
         RoleOrigins = ProjectRoleOrigins
 
         u1 = Person.objects.create(username="u1")

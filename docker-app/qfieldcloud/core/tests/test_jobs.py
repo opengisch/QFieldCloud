@@ -23,7 +23,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2.jobs import queue_job
-from qfieldcloud.project.enums import QgsGeometryType
+from qfieldcloud.project.enums import ProjectCollaboratorRole, QgsGeometryType
 from qfieldcloud.project.models import Project, ProjectSeed
 from qfieldcloud.project.utils import projectseed_utils
 
@@ -295,7 +295,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_can_create_and_read_job_created_by_their_own(self):
-        for idx, role in enumerate(ProjectCollaborator.Roles):
+        for idx, role in enumerate(ProjectCollaboratorRole):
             user = Person.objects.create_user(
                 username=f"collaborator_{idx}", password="abc123"
             )
@@ -318,7 +318,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 },
             )
 
-            if role == ProjectCollaborator.Roles.READER:
+            if role == ProjectCollaboratorRole.READER:
                 self.assertEqual(resp_post.status_code, status.HTTP_403_FORBIDDEN)
                 continue
 

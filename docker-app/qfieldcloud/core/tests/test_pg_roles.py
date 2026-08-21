@@ -19,6 +19,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2.jobs import repackage
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 
@@ -49,7 +50,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ProjectCollaborator(
                 project=self.p1,
                 collaborator=self.u2,
-                role=ProjectCollaborator.Roles.EDITOR,
+                role=ProjectCollaboratorRole.EDITOR,
             ),
         ]
 

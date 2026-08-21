@@ -2,6 +2,14 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext as _
 
 
+class ProjectCollaboratorRole(models.TextChoices):
+    ADMIN = "admin", _("Admin")
+    MANAGER = "manager", _("Manager")
+    EDITOR = "editor", _("Editor")
+    REPORTER = "reporter", _("Reporter")
+    READER = "reader", _("Reader")
+
+
 class ProjectRoleOrigins(models.TextChoices):
     PROJECTOWNER = "project_owner", _("Project owner")
     ORGANIZATIONOWNER = "organization_owner", _("Organization owner")

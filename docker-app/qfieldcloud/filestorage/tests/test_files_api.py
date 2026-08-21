@@ -29,6 +29,7 @@ from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
 )
 from qfieldcloud.filestorage.models import File, FileVersion
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
@@ -369,7 +370,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # create a new user that is has collaborator role ADMIN
         u2 = Person.objects.create_user(username="u2", password="abc123")
         ProjectCollaborator.objects.create(
-            project=self.p1, collaborator=u2, role=ProjectCollaborator.Roles.ADMIN
+            project=self.p1, collaborator=u2, role=ProjectCollaboratorRole.ADMIN
         )
 
         self.assertFileUploaded(u2, self.p1, "project1.qgs", qgis_contents(1))
@@ -379,7 +380,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # create a new user that is has collaborator role MANAGER
         u3 = Person.objects.create_user(username="u3", password="abc123")
         ProjectCollaborator.objects.create(
-            project=self.p1, collaborator=u3, role=ProjectCollaborator.Roles.MANAGER
+            project=self.p1, collaborator=u3, role=ProjectCollaboratorRole.MANAGER
         )
 
         self.assertFileUploaded(u3, self.p1, "project1.qgs", qgis_contents(2))
@@ -390,7 +391,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # create a new user that is has collaborator role EDITOR
         u2 = Person.objects.create_user(username="u2", password="abc123")
         ProjectCollaborator.objects.create(
-            project=self.p1, collaborator=u2, role=ProjectCollaborator.Roles.EDITOR
+            project=self.p1, collaborator=u2, role=ProjectCollaboratorRole.EDITOR
         )
 
         self.assertFileUploaded(u2, self.p1, "project1.qgs", qgis_contents())
@@ -405,7 +406,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # create a new user that is has collaborator role EDITOR
         u2 = Person.objects.create_user(username="u2", password="abc123")
         ProjectCollaborator.objects.create(
-            project=self.p1, collaborator=u2, role=ProjectCollaborator.Roles.EDITOR
+            project=self.p1, collaborator=u2, role=ProjectCollaboratorRole.EDITOR
         )
 
         response = self._upload_file(u2, self.p1, "project1.qgs", qgis_contents())
@@ -809,7 +810,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # create a new user that is has collaborator role ADMIN
         u2 = Person.objects.create_user(username="u2", password="abc123")
         ProjectCollaborator.objects.create(
-            project=self.p1, collaborator=u2, role=ProjectCollaborator.Roles.READER
+            project=self.p1, collaborator=u2, role=ProjectCollaboratorRole.READER
         )
 
         response = self._delete_file(u2, self.p1, "file.name")
@@ -820,7 +821,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # create a new user that is has collaborator role ADMIN
         u3 = Person.objects.create_user(username="u3", password="abc123")
         ProjectCollaborator.objects.create(
-            project=self.p1, collaborator=u3, role=ProjectCollaborator.Roles.REPORTER
+            project=self.p1, collaborator=u3, role=ProjectCollaboratorRole.REPORTER
         )
 
         response = self._delete_file(u3, self.p1, "file.name")
@@ -835,7 +836,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         # create a new user that is has collaborator role ADMIN
         u2 = Person.objects.create_user(username="u2", password="abc123")
         ProjectCollaborator.objects.create(
-            project=self.p1, collaborator=u2, role=ProjectCollaborator.Roles.EDITOR
+            project=self.p1, collaborator=u2, role=ProjectCollaboratorRole.EDITOR
         )
 
         self.assertFileDeleted(u2, self.p1, "file.name")
@@ -896,7 +897,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
     def test_user_deletion_sets_uploaded_by_to_null(self):
         u2 = Person.objects.create_user(username="u2", password="abc123")
         ProjectCollaborator.objects.create(
-            collaborator=u2, project=self.p1, role=ProjectCollaborator.Roles.EDITOR
+            collaborator=u2, project=self.p1, role=ProjectCollaboratorRole.EDITOR
         )
 
         self.assertFileUploaded(u2, self.p1, "file.name", StringIO("Hello!"))
