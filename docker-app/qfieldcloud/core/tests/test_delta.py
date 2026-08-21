@@ -29,6 +29,7 @@ from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
     testdata_path,
 )
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import Subscription
 
@@ -91,7 +92,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.REPORTER,
+            role=ProjectCollaboratorRole.REPORTER,
         )
         OrganizationMember.objects.create(
             organization=self.org1,
@@ -100,7 +101,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user3,
-            role=ProjectCollaborator.Roles.ADMIN,
+            role=ProjectCollaboratorRole.ADMIN,
         )
 
     def tearDown(self):

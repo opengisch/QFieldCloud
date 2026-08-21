@@ -11,6 +11,7 @@ from qfieldcloud.core.permissions_utils import (
     UserProjectRoleError,
 )
 from qfieldcloud.core.tests.utils import setup_subscription_plans
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 
@@ -43,12 +44,12 @@ class QfcTestCase(APITestCase):
             ProjectCollaborator(
                 project=cls.p1,
                 collaborator=cls.u2,
-                role=ProjectCollaborator.Roles.ADMIN,
+                role=ProjectCollaboratorRole.ADMIN,
             ),
             ProjectCollaborator(
                 project=cls.p1,
                 collaborator=cls.u3,
-                role=ProjectCollaborator.Roles.READER,
+                role=ProjectCollaboratorRole.READER,
             ),
         ]
 

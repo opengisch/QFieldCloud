@@ -14,7 +14,7 @@ from qfieldcloud.core.models import (
     User,
 )
 from qfieldcloud.core.tests.utils import set_subscription, setup_subscription_plans
-from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
@@ -131,13 +131,13 @@ class QfcTestCase(APITransactionTestCase):
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project7,
             collaborator=self.user1,
-            role=ProjectCollaborator.Roles.REPORTER,
+            role=ProjectCollaboratorRole.REPORTER,
         )
 
         self.collaborator2 = ProjectCollaborator.objects.create(
             project=self.project9,
             collaborator=self.team1_1,
-            role=ProjectCollaborator.Roles.EDITOR,
+            role=ProjectCollaboratorRole.EDITOR,
         )
 
         # update user default plan to disable collaborations
@@ -155,7 +155,7 @@ class QfcTestCase(APITransactionTestCase):
         self,
         project,
         user,
-        role: ProjectCollaborator.Roles | None = None,
+        role: ProjectCollaboratorRole | None = None,
         origin: ProjectRoleOrigins | None = None,
         is_valid: bool = True,
     ):
@@ -297,7 +297,7 @@ class QfcTestCase(APITransactionTestCase):
         Checks user_role and user_role_origin are correctly defined
         """
 
-        roles = ProjectCollaborator.Roles
+        roles = ProjectCollaboratorRole
         role_origins = ProjectRoleOrigins
 
         # fmt: off
@@ -335,7 +335,7 @@ class QfcTestCase(APITransactionTestCase):
     def test_private_project_memberships(self):
         """Tests for QF-1553 - limit collaboration on private projects"""
         # Shorthands
-        roles = ProjectCollaborator.Roles
+        roles = ProjectCollaboratorRole
         role_origins = ProjectRoleOrigins
 
         # Initial user setup

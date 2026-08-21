@@ -33,6 +33,7 @@ from qfieldcloud.core.tests.utils import (
 from qfieldcloud.core.utils2.jobs import repackage
 from qfieldcloud.filestorage.models import File
 from qfieldcloud.filestorage.utils import open_qgis_file
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
@@ -566,7 +567,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
         )
 
-        for idx, role in enumerate(ProjectCollaborator.Roles):
+        for idx, role in enumerate(ProjectCollaboratorRole):
             u1 = Person.objects.create(username=f"user_with_role_{idx}")
             ProjectCollaborator.objects.create(
                 collaborator=u1, project=self.project1, role=role
@@ -602,7 +603,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ],
         )
 
-        for idx, role in enumerate(ProjectCollaborator.Roles):
+        for idx, role in enumerate(ProjectCollaboratorRole):
             team = Team.objects.create(
                 username=f"@{o1.username}/team_{idx}", team_organization=o1
             )
@@ -705,7 +706,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ProjectCollaborator(
                 project=self.project1,
                 collaborator=other_user,
-                role=ProjectCollaborator.Roles.ADMIN,
+                role=ProjectCollaboratorRole.ADMIN,
             ),
         ]
         self.project1.direct_collaborators.bulk_create(collaborators)
@@ -789,7 +790,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         ProjectCollaborator.objects.create(
             collaborator=u2,
             project=p1,
-            role=ProjectCollaborator.Roles.EDITOR,
+            role=ProjectCollaboratorRole.EDITOR,
         )
 
         # 1. Upload files to the project

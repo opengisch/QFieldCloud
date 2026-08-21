@@ -9,6 +9,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     ProjectCollaborator,
 )
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ def grant_creator_organization_project_admin_access(
     ProjectCollaborator.objects.create(
         project=instance,
         collaborator=instance.created_by,
-        role=ProjectCollaborator.Roles.ADMIN,
+        role=ProjectCollaboratorRole.ADMIN,
         created_by=instance.created_by,
         updated_by=instance.created_by,
     )
