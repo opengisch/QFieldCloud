@@ -145,6 +145,19 @@ class ProjectQueryset(models.QuerySet):
                     queryset=QgisLayer.objects.order_by("ordering"),
                 )
             )
+            .annotate(
+                unfinished_jobs_count=Count(
+                    "jobs", filter=Q(jobs__status__in=Job.UNFINISHED_STATUS)
+                ),
+                # ideally we have `has_active_create_job`, but `annotate` does not support `Exists`
+                unfinished_create_jobs_count=Count(
+                    "jobs",
+                    filter=Q(
+                        jobs__type=Job.Type.CREATE_PROJECT,
+                        jobs__status__in=Job.UNFINISHED_STATUS,
+                    ),
+                ),
+            )
         )
 
 
@@ -793,10 +806,14 @@ class Project(models.Model):
             # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
             return True
 
+    @property
     def has_active_create_job(self) -> bool:
         """Check if there's an active create_project job."""
         if not hasattr(self, "seed") or self.seed is None:
             return False
+
+        if hasattr(self, "unfinished_create_jobs_count"):
+            return self.unfinished_create_jobs_count > 0
 
         return (
             self.jobs.unfinished()
@@ -811,7 +828,7 @@ class Project(models.Model):
         problems = []
 
         # If there is an active create job, return empty list
-        if self.has_active_create_job():
+        if self.has_active_create_job:
             problems.append(
                 {
                     "layer": None,
@@ -954,12 +971,17 @@ class Project(models.Model):
 
         return problems
 
+    @property
+    def has_unfinished_jobs(self) -> bool:
+        if hasattr(self, "unfinished_jobs_count"):
+            return self.unfinished_jobs_count > 0
+
+        return self.jobs.unfinished().exists()
+
     @cached_property
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
-        if (
-            self.jobs.unfinished()  # type: ignore
-        ).exists():
+        if self.has_unfinished_jobs:
             return Project.Status.BUSY
         else:
             status = Project.Status.OK
