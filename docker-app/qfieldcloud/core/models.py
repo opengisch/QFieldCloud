@@ -654,6 +654,17 @@ class Organization(User):
 
     is_initially_trial = models.BooleanField(default=False)
 
+    default_project_role_for_members = models.CharField(
+        max_length=10,
+        choices=ProjectCollaboratorRole.choices,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_(
+            "Default project access for non-admin members. If set, every non-admin member will automatically get this role on all projects owned by the organization."
+        ),
+    )
+
     created_by = models.ForeignKey(
         # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
         User,

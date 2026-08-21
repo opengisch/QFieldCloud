@@ -85,9 +85,27 @@ sql_items = [
                     INNER JOIN "core_teammember" TM1 ON (T1."user_ptr_id" = TM1."team_id")
                     INNER JOIN "project_project" P1 ON (P1."id" = C1."project_id")
             ),
-            public_project AS (
+            organization_member AS (
                 SELECT
                     6 AS rank,
+                    P1."id" AS "project_id",
+                    OM1."member_id" AS "user_id",
+                    O1."default_project_role_for_members" AS "name",
+                    FALSE AS "is_incognito",
+                    'organization_member' AS "origin"
+                FROM
+                    "core_organizationmember" OM1
+                    INNER JOIN "core_organization" O1 ON (O1."user_ptr_id" = OM1."organization_id")
+                    INNER JOIN "project_project" P1 ON (P1."owner_id" = O1."user_ptr_id")
+                WHERE
+                    (
+                        OM1."role" != 'admin'
+                        AND O1."default_project_role_for_members" IS NOT NULL
+                    )
+            ),
+            public_project AS (
+                SELECT
+                    7 AS rank,
                     P1."id" AS "project_id",
                     U1."id" AS "user_id",
                     'reader' AS "name",
@@ -112,6 +130,8 @@ sql_items = [
                 SELECT * FROM project_collaborator
                 UNION
                 SELECT * FROM project_collaborator_team
+                UNION
+                SELECT * FROM organization_member
                 UNION
                 SELECT * FROM public_project
             ) R1

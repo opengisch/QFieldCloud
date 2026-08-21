@@ -1957,6 +1957,7 @@ class OrganizationAdmin(QFieldCloudModelAdmin):
         "username",
         "email",
         "organization_owner",
+        "default_project_role_for_members",
         "date_joined",
         "active_users_links",
     )
