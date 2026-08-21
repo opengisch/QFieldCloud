@@ -159,7 +159,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         projects = (
-            Project.objects.select_related("qgis_project")
+            Project.objects.select_related(
+                "qgis_project",
+                "owner",
+                "owner__useraccount",
+                "the_qgis_file",
+            )
             .prefetch_related(
                 Prefetch(
                     "qgis_project__layers",
