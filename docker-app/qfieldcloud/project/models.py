@@ -548,16 +548,7 @@ class Project(models.Model):
             The last finished package job for the user.
         """
         return (
-            self.package_jobs_for_user(user)
-            .exclude(
-                status__in=[
-                    Job.Status.PENDING,
-                    Job.Status.QUEUED,
-                    Job.Status.STARTED,
-                ]
-            )
-            .order_by("-created_at")
-            .first()
+            self.package_jobs_for_user(user).finished().order_by("-created_at").first()
         )
 
     def latest_package_job_for_user(self, user: User) -> PackageJob | None:
@@ -787,10 +778,13 @@ class Project(models.Model):
         if not hasattr(self, "seed") or self.seed is None:
             return False
 
-        return self.jobs.filter(
-            type=Job.Type.CREATE_PROJECT,
-            status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
-        ).exists()
+        return (
+            self.jobs.unfinished()
+            .filter(
+                type=Job.Type.CREATE_PROJECT,
+            )
+            .exists()
+        )
 
     @property
     def problems(self) -> list[dict[str, Any]]:
@@ -944,9 +938,7 @@ class Project(models.Model):
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
         if (
-            self.jobs.filter(
-                status__in=[Job.Status.QUEUED, Job.Status.STARTED, Job.Status.PENDING]
-            )  # type: ignore
+            self.jobs.unfinished()  # type: ignore
         ).exists():
             return Project.Status.BUSY
         else:

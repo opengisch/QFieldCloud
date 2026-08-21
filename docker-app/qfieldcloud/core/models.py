@@ -1281,6 +1281,12 @@ class JobQuerySet(InheritanceQuerySet):
 
         return jobs_qs.order_by("-created_at")
 
+    def unfinished(self) -> models.QuerySet[Job]:
+        return self.filter(status__in=Job.UNFINISHED_STATUS)
+
+    def finished(self) -> models.QuerySet[Job]:
+        return self.exclude(status__in=Job.UNFINISHED_STATUS)
+
 
 class Job(models.Model):
     objects = JobQuerySet.as_manager()
@@ -1298,6 +1304,12 @@ class Job(models.Model):
         FINISHED = "finished", _("Finished")
         STOPPED = "stopped", _("Stopped")
         FAILED = "failed", _("Failed")
+
+    UNFINISHED_STATUS = (
+        Status.PENDING,
+        Status.QUEUED,
+        Status.STARTED,
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
