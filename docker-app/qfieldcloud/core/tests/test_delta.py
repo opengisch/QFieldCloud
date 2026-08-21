@@ -75,7 +75,7 @@ class QfcTestCase(APITransactionTestCase):
             is_public=False,
             owner=self.user2,
         )
-        self.project1.save()
+        self.project2.save()
 
         self.project3 = Project.objects.create(
             name="project3",
