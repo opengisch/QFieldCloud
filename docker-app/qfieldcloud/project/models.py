@@ -683,12 +683,13 @@ class Project(models.Model):
         """
         subscription = self.owner.useraccount.current_subscription
 
-        if subscription.plan.is_premium:
+        if subscription.effective_plan.is_premium:
             keep_count = (
-                self.storage_keep_versions or subscription.plan.storage_keep_versions
+                self.storage_keep_versions
+                or subscription.effective_plan.storage_keep_versions
             )
         else:
-            keep_count = subscription.plan.storage_keep_versions
+            keep_count = subscription.effective_plan.storage_keep_versions
 
         assert keep_count >= 1, "Ensure that we don't destroy all file versions!"
 
@@ -952,7 +953,7 @@ class Project(models.Model):
         else:
             status = Project.Status.OK
             status_code = Project.StatusCode.OK
-            max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.plan.max_premium_collaborators_per_private_project
+            max_premium_collaborators_per_private_project = self.owner.useraccount.current_subscription.effective_plan.max_premium_collaborators_per_private_project
 
             # TODO use self.problems to get if there are project problems
             if (
@@ -1079,9 +1080,7 @@ class Project(models.Model):
 
         # Ensure that the Project's storage_keep_versions is at least 1, and reflects the plan's default storage_keep_versions value.
         if not self.storage_keep_versions:
-            self.storage_keep_versions = (
-                self.owner.useraccount.current_subscription.plan.storage_keep_versions
-            )
+            self.storage_keep_versions = self.owner.useraccount.current_subscription.effective_plan.storage_keep_versions
 
             additional_update_fields.add("storage_keep_versions")
 

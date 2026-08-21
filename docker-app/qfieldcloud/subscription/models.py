@@ -55,6 +55,8 @@ class SubscriptionStatus(models.TextChoices):
     ACTIVE_PAST_DUE = "active_past_due", _("Active Past Due")
     # successfully cancelled
     INACTIVE_CANCELLED = "inactive_cancelled", _("Inactive Cancelled")
+    # subscription is in trial
+    ACTIVE_TRIAL = "active_trial", _("Active Trial")
 
 
 class Plan(models.Model):
@@ -499,7 +501,7 @@ class SubscriptionQuerySet(models.QuerySet):
         qs = self.filter(
             Q(active_since__lte=now)
             & (Q(active_until__isnull=True) | Q(active_until__gte=now))
-        ).select_related("plan")
+        ).select_related("plan", "trial_plan")
 
         return qs
 
@@ -534,10 +536,15 @@ class SubscriptionQuerySet(models.QuerySet):
                 Subscription.Status.ACTIVE_PAST_DUE,
             )
         )
+        is_trial_condition = Q(status=Subscription.Status.ACTIVE_TRIAL) & Q(
+            trial_expires_at__gt=V("now")
+        )
         return self.annotate(
             is_active=Case(
                 When(
-                    is_period_active_condition & is_status_active_condition, then=True
+                    is_period_active_condition
+                    & (is_status_active_condition | is_trial_condition),
+                    then=True,
                 ),
                 default=False,
             ),
@@ -557,6 +564,7 @@ class SubscriptionManager(models.Manager):
 
 class AbstractSubscription(models.Model):
     id: int
+    trial_plan_id: int | None
 
     class Meta:
         abstract = True
@@ -643,6 +651,31 @@ class AbstractSubscription(models.Model):
             "These notes are for internal purposes only and will never be shown to the end users."
         ),
     )
+
+    trial_plan = models.ForeignKey(
+        Plan,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+
+    trial_expires_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_trialing(self) -> bool:
+        return (
+            self.status == self.Status.ACTIVE_TRIAL
+            and self.trial_expires_at is not None
+            and self.trial_expires_at > timezone.now()
+        )
+
+    @property
+    def effective_plan(self) -> Plan:
+        if self.is_trialing and self.trial_plan_id is not None:
+            return self.trial_plan
+
+        return self.plan
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
@@ -757,11 +790,11 @@ class AbstractSubscription(models.Model):
             return 1
 
         # seat based plans
-        if self.plan.is_seat_based:
+        if self.effective_plan.is_seat_based:
             return self.purchased_seats
 
         # all other plans - either unlimited (-1) or capped
-        return self.account.current_subscription.plan.max_organization_members
+        return self.effective_plan.max_organization_members
 
     @property
     def organization_members_count(self) -> int:
@@ -781,10 +814,10 @@ class AbstractSubscription(models.Model):
         For seat based plans, this is an amount *per seat*. For all other plans,
         it's a simple fixed amount for the entire plan.
         """
-        if self.plan.is_seat_based:
-            return self.purchased_seats * self.plan.storage_bytes
+        if self.effective_plan.is_seat_based:
+            return self.purchased_seats * self.effective_plan.storage_bytes
 
-        return self.plan.storage_bytes
+        return self.effective_plan.storage_bytes
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
@@ -822,7 +855,7 @@ class AbstractSubscription(models.Model):
         quantity: int,
         active_since: datetime | None = None,
     ):
-        if not self.plan.is_premium:
+        if not self.effective_plan.is_premium:
             raise NotPremiumPlanException(
                 "Only premium accounts can have additional packages!"
             )
@@ -898,6 +931,40 @@ class AbstractSubscription(models.Model):
         return result
 
     @classmethod
+    def cancel_current_subscriptions(
+        cls,
+        account: UserAccount,
+        active_until: datetime,
+        exclude_pk: int | None = None,
+    ) -> int:
+        """Cancels all the current subscriptions of a given account at a given moment.
+
+        An account can have at most one subscription active at a time, so whenever a
+        subscription starts being active, the one it replaces must be closed at that
+        exact boundary. Call this before a subscription starts being active, either
+        because it is born with `active_since` set, or because `active_since` is set
+        on it later on (e.g. when the remote system confirms the payment).
+
+        Args:
+            account: the account whose current subscriptions are cancelled.
+            active_until: the moment the cancelled subscriptions stop being active.
+                Usually the `active_since` of the subscription that takes over.
+            exclude_pk: primary key of a subscription that should not be cancelled.
+
+        Returns:
+            the number of cancelled subscriptions.
+        """
+        subscriptions_qs = cls.objects.current().filter(account=account)  # type: ignore
+
+        if exclude_pk is not None:
+            subscriptions_qs = subscriptions_qs.exclude(pk=exclude_pk)
+
+        return subscriptions_qs.update(
+            status=cls.Status.INACTIVE_CANCELLED,
+            active_until=active_until,
+        )
+
+    @classmethod
     def update_subscription(
         cls,
         subscription: Self,
@@ -917,18 +984,13 @@ class AbstractSubscription(models.Model):
         with transaction.atomic():
             cls.objects.select_for_update().get(id=subscription.id)  # type: ignore
             update_fields = []
+            active_since = kwargs.get("active_since")
 
-            if (
-                subscription.active_since is None
-                and kwargs.get("active_since") is not None
-            ):
-                cls.objects.current().filter(
-                    account=subscription.account,
-                ).exclude(  # type: ignore
-                    pk=subscription.pk,
-                ).update(
-                    status=Subscription.Status.INACTIVE_CANCELLED,
-                    active_until=kwargs["active_since"],
+            if subscription.active_since is None and active_since is not None:
+                cls.cancel_current_subscriptions(
+                    subscription.account,
+                    active_until=cast(datetime, kwargs["active_since"]),
+                    exclude_pk=subscription.pk,
                 )
 
             for attr_name, attr_value in kwargs.items():
@@ -984,14 +1046,14 @@ class AbstractSubscription(models.Model):
         if active_since is None:
             active_since = timezone.now()
 
-        _trial_subscription, regular_subscription = cls.create_subscription(
+        subscription = cls.create_subscription(
             account=account,
             plan=plan,
             created_by=created_by,
             active_since=active_since,
         )
 
-        return regular_subscription
+        return subscription
 
     @classmethod
     def create_subscription(
@@ -1000,90 +1062,96 @@ class AbstractSubscription(models.Model):
         plan: Plan,
         created_by: Person,
         active_since: datetime | None = None,
-        regular_plan: Plan | None = None,
-    ) -> tuple[Self | None, Self]:
-        """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
+        start_trial: bool = False,
+    ) -> Self:
+        """Creates a subscription for a given account to a given plan.
+
+        If `start_trial` is True, the subscription is born as a trial: `plan` stays the
+        commercial commitment of the subscription, but the quotas are resolved through
+        a snapshot of `plan.trial_plan` until `trial_expires_at` (see `effective_plan`).
 
         Args:
             account: the account the subscription belongs to.
-            plan: the plan to subscribe to. Note if the the plan is a trial, the first return value would be the trial subscription, otherwise it would be None.
+            plan: the plan to subscribe to.
             created_by: created by.
             active_since: active since for the subscription.
-            regular_plan: For trials only: The follow up plan that should be used to create the subscription after the trial period.
+            start_trial: whether to start the subscription as a trial of `plan.trial_plan`.
+                Requires both `active_since` and a `plan` that has a `trial_plan`.
 
         Returns:
-            the created trial subscription if the given plan was a trial and the regular subscription.
+            the created subscription.
         """
         if active_since:
             # remove microseconds as there will be slight shift with the remote system data
             active_since = active_since.replace(microsecond=0)
 
-        regular_active_since: datetime | None = None
-        if plan.is_trial:
-            assert isinstance(active_since, datetime), (
-                "Creating a trial plan requires `active_since` to be a valid datetime object"
-            )
+        if start_trial:
+            if not isinstance(active_since, datetime):
+                raise ValueError(
+                    "Starting a trial requires `active_since` to be a valid datetime object."
+                )
 
-            active_until = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
+            if not plan.has_trial_plan:
+                raise ValueError(
+                    f'Starting a trial requires the plan "{plan.code}" to have a `trial_plan`.'
+                )
+
+            # the trial is granted right away, the payment method is collected later
+            status = cls.Status.ACTIVE_TRIAL
+            trial_plan = plan.trial_plan
+            trial_expires_at = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
+
             logger.info(
-                f"Creating trial subscription from {active_since=} to {active_until=}"
+                f"Creating trial subscription from {active_since=} to {trial_expires_at=}"
             )
-            trial_subscription = cls.objects.create(
+        else:
+            status = plan.initial_subscription_status
+            trial_plan = None
+            trial_expires_at = None
+
+            logger.info(f"Creating regular subscription from {active_since=}")
+
+        with transaction.atomic():
+            if active_since is not None:
+                # the subscription is born already active, so the one it replaces has to
+                # be closed at the very same moment. Subscriptions born without
+                # `active_since` (e.g. checkout drafts) are closed by `update_subscription`
+                # instead, once the remote system confirms when they start.
+                cls.cancel_current_subscriptions(account, active_until=active_since)
+
+            subscription = cls.objects.create(
                 plan=plan,
                 account=account,
                 created_by=created_by,
-                status=plan.initial_subscription_status,
+                status=status,
                 active_since=active_since,
-                active_until=active_until,
+                trial_plan=trial_plan,
+                trial_expires_at=trial_expires_at,
             )
-            # NOTE to get annotations, mostly `is_active`
-            trial_subscription_obj = cls.objects.get(pk=trial_subscription.pk)
 
-            if (
-                account.user.is_organization
-                and account.user.organization_owner.remaining_trial_organizations > 0
-            ):
-                account.user.organization_owner.remaining_trial_organizations -= 1
-                account.user.organization_owner.save(
-                    update_fields=["remaining_trial_organizations"]
-                )
+            if start_trial:
+                if account.user.is_organization:
+                    organization_owner = Organization.objects.get(
+                        pk=account.pk
+                    ).organization_owner
 
-            if not regular_plan:
-                # If no particular regular follow up plan was specified, choose
-                # the default plan for the given user type.
-                regular_plan = Plan.objects.get(
-                    user_type=account.user.type,
-                    is_default=True,
-                )
+                    if organization_owner.remaining_trial_organizations > 0:
+                        organization_owner.remaining_trial_organizations -= 1
+                        organization_owner.save(
+                            update_fields=["remaining_trial_organizations"]
+                        )
+            else:
+                # NOTE in case the user had a custom amount set (e.g manually set by support) this will
+                # be overwritten by a subscription plan change.
+                # But taking care of this would add quite some complexity.
+                if account.user.is_person:
+                    account.user.remaining_trial_organizations = (
+                        plan.max_trial_organizations
+                    )
+                    account.user.save(update_fields=["remaining_trial_organizations"])
 
-            # the end date of the trial is the start date of the regular
-            regular_active_since = active_until
-        else:
-            trial_subscription_obj = None
-            regular_plan = plan
-            regular_active_since = active_since
-
-            # NOTE in case the user had a custom amount set (e.g manually set by support) this will
-            # be overwritten by a subscription plan change.
-            # But taking care of this would add quite some complexity.
-            if account.user.is_person:
-                account.user.remaining_trial_organizations = (
-                    regular_plan.max_trial_organizations
-                )
-                account.user.save(update_fields=["remaining_trial_organizations"])
-
-        logger.info(f"Creating regular subscription from {regular_active_since}")
-        regular_subscription = cls.objects.create(
-            plan=regular_plan,
-            account=account,
-            created_by=created_by,
-            status=regular_plan.initial_subscription_status,
-            active_since=regular_active_since,
-        )
         # NOTE to get annotations, mostly `is_active`
-        regular_subscription_obj = cls.objects.get(pk=regular_subscription.pk)
-
-        return trial_subscription_obj, regular_subscription_obj
+        return cls.objects.get(pk=subscription.pk)
 
     def clean(self):
         """

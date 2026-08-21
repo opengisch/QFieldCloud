@@ -552,7 +552,7 @@ class UserAccount(models.Model):
     def has_premium_support(self) -> bool:
         """A user has premium support if they have an active premium subscription plan or a at least one organization that they have admin role."""
         subscription = self.current_subscription
-        if subscription.plan.is_premium:
+        if subscription.effective_plan.is_premium:
             return True
 
         if self.user.is_organization:

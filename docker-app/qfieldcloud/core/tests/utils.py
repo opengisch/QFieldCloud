@@ -36,6 +36,7 @@ def get_filename(response):
 
 
 def setup_subscription_plans():
+    Plan.objects.update(trial_plan=None)
     Plan.objects.all().delete()
     Plan.objects.bulk_create(
         [

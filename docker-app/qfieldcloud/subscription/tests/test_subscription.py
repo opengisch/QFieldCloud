@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-import django.db.utils
+import django.core.exceptions
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
 
@@ -719,18 +719,26 @@ class QfcTestCase(APITransactionTestCase):
         self.assertIsNotNone(subscription.active_since)
         self.assertIsNone(subscription.active_until)
 
-    def test_create_default_plan_subscription_raises_when_subscription_already_exists(
+    def test_create_default_plan_subscription_replaces_the_existing_subscription(
         self,
     ):
         u1 = Person.objects.create(username="u1")
 
         # the subscription is created anyway
         self.assertEqual(Subscription.objects.count(), 1)
+        old_subscription = u1.useraccount.current_subscription
 
-        with self.assertRaises(django.db.utils.IntegrityError):
-            Subscription.create_default_plan_subscription(u1.useraccount)
+        new_subscription = Subscription.create_default_plan_subscription(u1.useraccount)
 
-    def test_remaining_trial_organizations_is_set_and_decremented(
+        # the new subscription is born active, so the old one is closed at that moment
+        old_subscription.refresh_from_db()
+        self.assertEqual(
+            old_subscription.status, Subscription.Status.INACTIVE_CANCELLED
+        )
+        self.assertEqual(old_subscription.active_until, new_subscription.active_since)
+        self.assertEqual(u1.useraccount.current_subscription, new_subscription)
+
+    def test_remaining_trial_organizations_is_set_from_the_plan(
         self,
     ):
         user_plan = Plan.objects.get(code="default_user")
@@ -743,33 +751,14 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.remaining_trial_organizations, 2)
         self.assertEqual(u2.remaining_trial_organizations, 2)
 
-        trial_plan = Plan.objects.get(code="default_org")
-        trial_plan.is_trial = True
-        trial_plan.save(update_fields=["is_trial"])
-
-        # remaining_trial_organizations is decremented for owner when creating a trial organization
+        # creating an organization does not start a trial, so nothing is consumed
         Organization.objects.create(
             username="org2", organization_owner=u2, created_by=u1
         )
         u2.refresh_from_db()
-        self.assertEqual(u2.remaining_trial_organizations, 1)
-        u1.refresh_from_db()
-        self.assertEqual(u1.remaining_trial_organizations, 2)
+        self.assertEqual(u2.remaining_trial_organizations, 2)
 
-        # remaining_trial_organizations is decremented down to 0
-        Organization.objects.create(
-            username="org3", organization_owner=u2, created_by=u1
-        )
-        u2.refresh_from_db()
-        self.assertEqual(u2.remaining_trial_organizations, 0)
-
-        # It doesn't directly prevent creating more trials, is just a counter that stays at 0
-        Organization.objects.create(
-            username="org4", organization_owner=u2, created_by=u1
-        )
-        u2.refresh_from_db()
-        self.assertEqual(u2.remaining_trial_organizations, 0)
-
+        # NOTE the counter is decremented when a trial is explicitly started,
         # NOTE changing ownership does not affect the `remaining_trial_organizations` and is not tested
 
     def test_project_lists_duplicates_if_multiple_subscriptions(self):
