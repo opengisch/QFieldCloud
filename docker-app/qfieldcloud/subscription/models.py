@@ -879,7 +879,7 @@ class AbstractSubscription(models.Model):
         try:
             subscription = (
                 cls.objects.current()  # type: ignore
-                .select_related("plan")
+                .select_related("plan", "account", "account__user")
                 .get(account_id=account.pk)
             )
         except cls.DoesNotExist:
