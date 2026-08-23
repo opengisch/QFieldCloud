@@ -85,6 +85,7 @@ jobs:
               }
           }'
           EOF
+          sed -ri 's/^QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S=(.*)/QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S=1/g' .env
 
       - name: Pull docker containers
         run: docker compose pull
