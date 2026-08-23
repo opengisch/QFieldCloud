@@ -10,8 +10,10 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
+from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from storages.backends.s3 import S3Storage
+from urllib3.util.retry import Retry
 
 from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 
@@ -93,6 +95,10 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         return params
 
 
+HTTP_RETRIES_COUNT = 3
+HTTP_RETRIES_BACKOFF_FACTOR = 0.5
+
+
 class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     """
     Storage backend using WebDAV.
@@ -134,6 +140,17 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Authenticates using the `basic_auth` storage option.
         """
         session = requests.Session()
+
+        retries = Retry(
+            total=HTTP_RETRIES_COUNT,
+            backoff_factor=HTTP_RETRIES_BACKOFF_FACTOR,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "PUT", "DELETE", "MKCOL"],
+        )
+
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
 
         username, _, password = self.basic_auth.partition(":")
         session.auth = HTTPBasicAuth(username, password)
