@@ -68,7 +68,7 @@ jobs:
               "webdav": {
                   "BACKEND": "qfieldcloud.filestorage.backend.QfcWebDavStorage",
                   "OPTIONS": {
-                      "webdav_url": "http://qfc_webdav_user:qfc_webdav_pwd@webdav",
+                      "webdav_url": "http://webdav",
                       "public_url": "http://webdav",
                       "basic_auth": "qfc_webdav_user:qfc_webdav_pwd"
                   }
