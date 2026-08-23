@@ -23,7 +23,6 @@ from qfieldcloud.core.exceptions import (
     RestrictedProjectModificationError,
 )
 from qfieldcloud.core.models import (
-    Job,
     ProcessProjectfileJob,
 )
 from qfieldcloud.core.utils2.storage import (
@@ -161,14 +160,9 @@ def upload_project_file_version(
                     project.the_qgis_file = file_version.file
                     update_fields.append("the_qgis_file")
 
-                running_jobs = ProcessProjectfileJob.objects.filter(
+                running_jobs = ProcessProjectfileJob.objects.unfinished().filter(
                     project=project,
                     created_by=request.user,
-                    status__in=[
-                        Job.Status.PENDING,
-                        Job.Status.QUEUED,
-                        Job.Status.STARTED,
-                    ],
                 )
 
                 if not running_jobs.exists():

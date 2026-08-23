@@ -58,13 +58,8 @@ def apply_deltas(
     # 4. Find all the pending or queued jobs in the queue.
     # If an "apply_delta" job is in a "started" status, we don't know how far the execution reached
     # so we better assume the deltas will reach a non-"pending" status.
-    apply_jobs = models.ApplyJob.objects.filter(
+    apply_jobs = models.ApplyJob.objects.unfinished().filter(
         project=project,
-        status__in=[
-            models.Job.Status.PENDING,
-            models.Job.Status.QUEUED,
-            models.Job.Status.STARTED,
-        ],
     )
 
     # 5. Check whether there are jobs found in the queue and exclude all deltas that are part of any pending job.

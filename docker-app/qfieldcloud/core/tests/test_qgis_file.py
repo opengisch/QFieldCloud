@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Job, Person, ProcessProjectfileJob
+from qfieldcloud.core.models import Person, ProcessProjectfileJob
 from qfieldcloud.core.tests.utils import (
     get_filename,
     set_subscription,
@@ -747,9 +747,8 @@ class QfcTestCase(APITransactionTestCase):
             )
             self.assertTrue(status.is_success(response.status_code))
 
-        jobs = ProcessProjectfileJob.objects.filter(
+        jobs = ProcessProjectfileJob.objects.unfinished().filter(
             project=self.project1,
-            status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
         )
 
         self.assertEqual(jobs.count(), 1)
