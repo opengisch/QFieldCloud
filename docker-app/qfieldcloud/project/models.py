@@ -19,7 +19,7 @@ from django.core.validators import (
     RegexValidator,
 )
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Q, When
+from django.db.models import Case, Exists, F, OuterRef, Prefetch, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
 from django.shortcuts import get_object_or_404
@@ -129,6 +129,37 @@ class ProjectQueryset(models.QuerySet):
         """
         return self.only("id", "name", "is_public", "project_type", "owner_id")
 
+    def with_prefetch(self) -> "ProjectQueryset":
+        """A heavier version of the `Project` with all common `select_related` and `prefetch_related` in place."""
+        return (
+            self.defer("project_details")
+            .select_related(
+                "qgis_project",
+                "owner",
+                "owner__useraccount",
+                "the_qgis_file",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "qgis_project__layers",
+                    queryset=QgisLayer.objects.order_by("ordering"),
+                )
+            )
+            .annotate(
+                unfinished_jobs_count=Count(
+                    "jobs", filter=Q(jobs__status__in=Job.UNFINISHED_STATUS)
+                ),
+                # ideally we have `has_active_create_job`, but `annotate` does not support `Exists`
+                unfinished_create_jobs_count=Count(
+                    "jobs",
+                    filter=Q(
+                        jobs__type=Job.Type.CREATE_PROJECT,
+                        jobs__status__in=Job.UNFINISHED_STATUS,
+                    ),
+                ),
+            )
+        )
+
 
 def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
     """Fetch a project for a permission check, or raise `Http404` if it doesn't exist.
@@ -235,7 +266,9 @@ class Project(models.Model):
         if qgis_project is None:
             return []
 
-        return list(qgis_project.layers.filter(is_localized=True))
+        # filter the layers in Python to avoid an extra query to the database,
+        # since the `QgisLayer` instances are already fetched in memory via `prefetch_related`
+        return [layer for layer in qgis_project.layers.all() if layer.is_localized]
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
@@ -773,10 +806,14 @@ class Project(models.Model):
             # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
             return True
 
+    @property
     def has_active_create_job(self) -> bool:
         """Check if there's an active create_project job."""
         if not hasattr(self, "seed") or self.seed is None:
             return False
+
+        if hasattr(self, "unfinished_create_jobs_count"):
+            return self.unfinished_create_jobs_count > 0
 
         return (
             self.jobs.unfinished()
@@ -791,7 +828,7 @@ class Project(models.Model):
         problems = []
 
         # If there is an active create job, return empty list
-        if self.has_active_create_job():
+        if self.has_active_create_job:
             problems.append(
                 {
                     "layer": None,
@@ -934,12 +971,17 @@ class Project(models.Model):
 
         return problems
 
+    @property
+    def has_unfinished_jobs(self) -> bool:
+        if hasattr(self, "unfinished_jobs_count"):
+            return self.unfinished_jobs_count > 0
+
+        return self.jobs.unfinished().exists()
+
     @cached_property
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
-        if (
-            self.jobs.unfinished()  # type: ignore
-        ).exists():
+        if self.has_unfinished_jobs:
             return Project.Status.BUSY
         else:
             status = Project.Status.OK
@@ -948,7 +990,7 @@ class Project(models.Model):
 
             # TODO use self.problems to get if there are project problems
             if (
-                not self.has_the_qgis_file or not self.project_details
+                not self.has_the_qgis_file or not self.qgis_project
             ) and not self.is_shared_datasets_project:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
