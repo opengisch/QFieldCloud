@@ -65,3 +65,22 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         response = self._delete_file(self.u1, self.p1, "file.name")
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_upload_then_download_file_with_spaces(self):
+        # 1) first upload of the file
+        response = self._upload_file(
+            self.u1, self.p1, "file name with spaces.txt", StringIO("Hello!")
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.p1.project_files.count(), 1)
+        self.assertEqual(
+            self.p1.get_file("file name with spaces.txt").versions.count(), 1
+        )
+
+        # 2) download file
+        response = self._download_file(self.u1, self.p1, "file name with spaces.txt")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response, FileResponse)
+        self.assertEqual(b"".join(response.streaming_content), b"Hello!")
