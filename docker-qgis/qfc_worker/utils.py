@@ -411,7 +411,7 @@ def open_qgis_project_temporarily(
 
         return on_project_read
 
-    details = cast(OpenQgisProjectTemporarilyDetailsInner, {})
+    details = cast("OpenQgisProjectTemporarilyDetailsInner", {})
     tmp_project = QgsProject()
     tmp_layer_tree = tmp_project.layerTreeRoot()
 
@@ -429,7 +429,7 @@ def open_qgis_project_temporarily(
     tmp_project.read(qgis_filename, qgis_project_readonly_flags)
 
     details = cast(
-        OpenQgisProjectTemporarilyDetails,
+        "OpenQgisProjectTemporarilyDetails",
         {
             **details,
             "project": tmp_project,

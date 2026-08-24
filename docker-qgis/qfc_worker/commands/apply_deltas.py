@@ -132,7 +132,7 @@ class DeltaFile:
         self.deltas: list[Delta] = []
 
         for d in deltas:
-            self.deltas.append(cast(Delta, d))
+            self.deltas.append(cast("Delta", d))
 
 
 # /TYPE DEFINITIONS
@@ -322,7 +322,7 @@ def delta_file_args_loader(args: DeltaOptions) -> DeltaFile | None:
     if not obj:
         return None
 
-    obj = cast(dict, obj)
+    obj = cast("dict", obj)
 
     get_json_schema_validator().validate(obj)
     delta_file = DeltaFile(
@@ -1130,7 +1130,7 @@ def inverse_delta(delta: Delta) -> Delta:
     elif copy["method"] == DeltaMethod.DELETE.name:
         copy["method"] = DeltaMethod.CREATE.name
 
-    return cast(Delta, copy)
+    return cast("Delta", copy)
 
 
 class ApplyDeltasCommand(QfcBaseCommand):

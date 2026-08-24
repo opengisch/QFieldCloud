@@ -131,7 +131,7 @@ def _extract_project_details(project: QgsProject) -> ProjectDetails:
     logger.info("Extract project details…")
     logger.info("Reading QGIS project file…")
 
-    details: ProjectDetails = cast(ProjectDetails, {})
+    details: ProjectDetails = cast("ProjectDetails", {})
     tmp_project_details = open_qgis_project_temporarily(project.fileName())
     tmp_project = tmp_project_details["project"]
 

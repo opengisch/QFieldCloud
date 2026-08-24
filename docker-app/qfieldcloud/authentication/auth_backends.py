@@ -43,6 +43,6 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
             return None
 
         if self.user_can_authenticate(user):
-            return cast(Person, user)
+            return cast("Person", user)
 
         return None

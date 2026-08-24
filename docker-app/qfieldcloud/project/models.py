@@ -1117,7 +1117,7 @@ class Project(models.Model):
             .values_list("member_id", flat=True)
         )
         return cast(
-            PersonQueryset,
+            "PersonQueryset",
             Person.objects.filter(
                 Q(pk__in=direct_ids) | Q(pk__in=team_member_ids)
             ).distinct(),
