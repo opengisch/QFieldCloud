@@ -55,7 +55,8 @@ def filesizeformat10(bytes_) -> str:
 
 @register.filter()
 def smooth_timedelta(timedeltaobj):
-    """Convert a datetime.timedelta object into Days, Hours, Minutes, Seconds.
+    """
+    Convert a datetime.timedelta object into Days, Hours, Minutes, Seconds.
     Inspired by: https://stackoverflow.com/a/46928226/1226137
     """
     secs = timedeltaobj.total_seconds()

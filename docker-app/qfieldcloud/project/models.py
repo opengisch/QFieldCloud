@@ -58,7 +58,8 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectQueryset(models.QuerySet):
-    """Adds for_user(user) method to the project's querysets, allowing to filter only projects visible to that user.
+    """
+    Adds for_user(user) method to the project's querysets, allowing to filter only projects visible to that user.
 
     Projects are annotated with the user's role (`user_role`) and the origin of this role (`user_role_origin`).
 
@@ -124,7 +125,8 @@ class ProjectQueryset(models.QuerySet):
         return qs
 
     def slim(self) -> "ProjectQueryset":
-        """A light-weight fetch for permission checks, which run on every
+        """
+        A light-weight fetch for permission checks, which run on every
         request and only need a project's id, owner, and public flag.
         """
         return self.only("id", "name", "is_public", "project_type", "owner_id")
@@ -162,7 +164,8 @@ class ProjectQueryset(models.QuerySet):
 
 
 def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
-    """Fetch a project for a permission check, or raise `Http404` if it doesn't exist.
+    """
+    Fetch a project for a permission check, or raise `Http404` if it doesn't exist.
 
     Only use this where the caller needs `pk`/`owner`/`is_public` and nothing
     else — the returned project has every other field deferred (see `slim()`
@@ -176,7 +179,8 @@ def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
 
 
 def get_project_file_storage_default() -> str:
-    """Get the default file storage for the newly created project
+    """
+    Get the default file storage for the newly created project
 
     Returns:
         the name of the storage
@@ -185,7 +189,8 @@ def get_project_file_storage_default() -> str:
 
 
 def get_project_attachments_file_storage_default() -> str:
-    """Get the default attachments file storage for the newly created project.
+    """
+    Get the default attachments file storage for the newly created project.
 
     Returns:
         the name of the storage
@@ -194,7 +199,8 @@ def get_project_attachments_file_storage_default() -> str:
 
 
 def get_project_are_attachments_versioned_default() -> bool:
-    """Get the default value for versioning of project attachments.
+    """
+    Get the default value for versioning of project attachments.
 
     Returns:
         whether the attachments are versioned by default
@@ -203,7 +209,8 @@ def get_project_are_attachments_versioned_default() -> bool:
 
 
 def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
-    """Variable storage key for thumbnails.
+    """
+    Variable storage key for thumbnails.
 
     We use a variable storage key to avoid creating object storage level versions for
     thumbnails that we then would need to manage (purge old versions, make sure we don't
@@ -217,7 +224,8 @@ def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
 
 
 class Project(models.Model):
-    """Represent a QFieldcloud project.
+    """
+    Represent a QFieldcloud project.
     It corresponds to a directory on the file system.
 
     The owner of a project is an Organization.
@@ -533,9 +541,7 @@ class Project(models.Model):
 
     @cached_property
     def shared_datasets_project(self) -> Project | None:
-        """
-        Returns the localized datasets project for the same owner, or `None` if no such project exists.
-        """
+        """Returns the localized datasets project for the same owner, or `None` if no such project exists."""
         try:
             project = Project.objects.get(
                 project_type=self.ProjectType.SHARED_DATASETS,
@@ -546,7 +552,8 @@ class Project(models.Model):
             return None
 
     def package_jobs_for_user(self, user: User) -> PackageJobQuerySet:
-        """Returns all package jobs for the user.
+        """
+        Returns all package jobs for the user.
 
         Args:
             user: The user to check for.
@@ -572,7 +579,8 @@ class Project(models.Model):
         return jobs_qs
 
     def latest_finished_package_job_for_user(self, user: User) -> PackageJob | None:
-        """Returns the last finished package job for the user.
+        """
+        Returns the last finished package job for the user.
 
         Args:
             user: The user to check for.
@@ -585,7 +593,8 @@ class Project(models.Model):
         )
 
     def latest_package_job_for_user(self, user: User) -> PackageJob | None:
-        """Returns the last package job for the user.
+        """
+        Returns the last package job for the user.
 
         Args:
             user: The user to check for.
@@ -596,7 +605,8 @@ class Project(models.Model):
         return self.package_jobs_for_user(user).order_by("-created_at").first()
 
     def latest_package_jobs(self) -> PackageJobQuerySet:
-        """Returns all the last package jobs for the users of the project.
+        """
+        Returns all the last package jobs for the users of the project.
 
         Returns:
             QuerySet of all the last package jobs.
@@ -629,9 +639,7 @@ class Project(models.Model):
 
     @cached_property
     def is_regular_project(self) -> bool:
-        """
-        Returns `True` if the project type is a regular project, otherwise `False`.
-        """
+        """Returns `True` if the project type is a regular project, otherwise `False`."""
         return self.project_type == self.ProjectType.REGULAR
 
     @cached_property
@@ -645,9 +653,7 @@ class Project(models.Model):
 
     @cached_property
     def is_template_project(self) -> bool:
-        """
-        Returns `True` if the project type is a template project, otherwise `False`.
-        """
+        """Returns `True` if the project type is a template project, otherwise `False`."""
         return self.project_type == self.ProjectType.TEMPLATE
 
     def get_missing_localized_layers(self) -> list["QgisLayer"]:
@@ -700,7 +706,8 @@ class Project(models.Model):
 
     @property
     def owner_aware_storage_keep_versions(self) -> int:
-        """Determine the storage versions to keep based on the owner's subscription plan and project settings.
+        """
+        Determine the storage versions to keep based on the owner's subscription plan and project settings.
 
         Returns:
             the number of file versions, should be always greater than 1
@@ -740,9 +747,7 @@ class Project(models.Model):
 
     @property
     def has_attachments_files(self) -> bool:
-        """
-        Checks if the project has at least one attachment file.
-        """
+        """Checks if the project has at least one attachment file."""
         return any(f.is_attachment() for f in self.project_files)
 
     @property
@@ -1333,7 +1338,8 @@ class QgisProject(models.Model):
 
     @property
     def attachment_dirs(self) -> list[str]:
-        """Returns a list of configured attachment dirs for the project.
+        """
+        Returns a list of configured attachment dirs for the project.
 
         Attachment dir is a special directory in the QField infrastructure that holds attachment files
         such as images, pdf etc. By default "DCIM" is considered a attachment directory.
@@ -1355,7 +1361,8 @@ class QgisProject(models.Model):
 
     @property
     def data_dirs(self) -> list[str]:
-        """Returns a list of configured data dirs for the project.
+        """
+        Returns a list of configured data dirs for the project.
 
         Data dir is a special directory in the QField infrastructure that holds assets
         used by the project symbology, layouts, or project plugins.
@@ -1382,7 +1389,8 @@ class QgisLayerQuerySet(models.QuerySet):
         ordered_layer_ids: list[str],
         layers_by_id: dict[str, "LayerDetails"],
     ) -> None:
-        """Sync QGIS project's `QgisLayer` rows to match `layers_by_id`.
+        """
+        Sync QGIS project's `QgisLayer` rows to match `layers_by_id`.
 
         Creates/updates a `QgisLayer` row per entry in `layers_by_id`, in the order
         given by `ordered_layer_ids`, then deletes any existing `QgisLayer` rows

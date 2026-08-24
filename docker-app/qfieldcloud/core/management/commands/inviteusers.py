@@ -6,9 +6,7 @@ from qfieldcloud.core.models import Person
 
 
 class Command(BaseCommand):
-    """
-    Invite one or more users using the CLI.
-    """
+    """Invite one or more users using the CLI."""
 
     help = """
         Create a user with given username, email and password

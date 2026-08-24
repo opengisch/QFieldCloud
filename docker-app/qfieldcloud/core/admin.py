@@ -125,7 +125,8 @@ class QfcAdminSite(AdminSite):
         return custom_urls + urls
 
     def global_search_view(self, request: HttpRequest) -> HttpResponse:
-        """Custom multi-model search view with exact username/email matching.
+        """
+        Custom multi-model search view with exact username/email matching.
 
         Searches across Person, Organization, Project, and Subscription models
         using exact username or email matching. Results are paginated independently
@@ -317,9 +318,7 @@ class ModelAdminEstimateCountMixin:
 
 
 class ModelAdminSearchParserMixin:
-    """
-    Mixin to add search parser to the model admin.
-    """
+    """Mixin to add search parser to the model admin."""
 
     search_parser_config: dict[str, dict[str, Any]] | None = None
 
@@ -416,7 +415,8 @@ class QFieldCloudModelAdmin(  # type: ignore
     admin.ModelAdmin,
 ):
     def has_delete_permission(self, request, obj=None):
-        """Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
+        """
+        Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
 
         If one tries to delete a Project with already ran Jobs, they cannot, because the Job ModelAdmin has  def has_delete_permission: return True .
         """

@@ -31,9 +31,7 @@ filename_validator = RegexValidator(
 
 
 def validate_filename(filename: str) -> None:
-    """
-    Check if the filename is valid.
-    """
+    """Check if the filename is valid."""
     if not len(filename):
         raise ValidationError("Filename must not be empty!")
 
@@ -53,7 +51,8 @@ def validate_filename(filename: str) -> None:
 
 
 def is_valid_filename(filename: str) -> bool:
-    """Whether the provided filename is valid.
+    """
+    Whether the provided filename is valid.
 
     Args:
         filename: the filename to be checked
@@ -79,7 +78,8 @@ def is_qgis_project_file(filename: str) -> bool:
 
 
 def is_admin_restricted_file(filename: str, projectfile_filename: str | None) -> bool:
-    """Whether the file has modifications restricted only to users with elevated permissions.
+    """
+    Whether the file has modifications restricted only to users with elevated permissions.
 
     Such files are the QGIS project file, QField extensions and QGIS sidecar filed (e.g. `_attachments.zip`).
 
@@ -121,7 +121,8 @@ def is_admin_restricted_file(filename: str, projectfile_filename: str | None) ->
 
 
 def calc_etag(file: ContentFile, part_size: int = 8 * 1024 * 1024) -> str:
-    """Calculate ETag as in Object Storage (S3) of a local file.
+    """
+    Calculate ETag as in Object Storage (S3) of a local file.
 
     ETag is a MD5. But for the multipart uploaded files, the MD5 is computed from the concatenation of the MD5s of each uploaded part.
 
@@ -174,7 +175,8 @@ def parse_range_header(
     input_range: str,
     file_size: int,
 ) -> tuple[int, int | None] | None:
-    """Parses a range HTTP Header string.
+    """
+    Parses a range HTTP Header string.
 
     Arguments:
         range: string value of a HTTP range header to parse.
@@ -218,7 +220,8 @@ class RangeForFile:
 
 
 def get_range(request: HttpRequest, total_size: int) -> RangeForFile | None:
-    """Get a parsed range for a file, if any.
+    """
+    Get a parsed range for a file, if any.
 
     Arguments:
         request: the HTTP request to get the range from.
@@ -262,7 +265,8 @@ def open_qgis_file(
     filename: str | Path,
     fh: BinaryIO,
 ) -> Iterator[TextIO]:
-    """Open a QGIS project file from a file handle, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
+    """
+    Open a QGIS project file from a file handle, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
 
     NOTE there is a very similar sister function with the same name in `docker-qgis/qfc_worker/utils.py`.
     """

@@ -197,7 +197,8 @@ def _create_project_from_xlsform(
 def prepare_project_files(
     project_seed: ProjectSeed, tmp_project_dir: str, xlsform_filename: str
 ) -> str:
-    """Prepare QGIS project files from seed (clone, XLSForm, or empty).
+    """
+    Prepare QGIS project files from seed (clone, XLSForm, or empty).
 
     Returns the path to the QGIS project file on disk.
     """
@@ -246,7 +247,8 @@ def prepare_project_files(
 
 
 def configure_qgis_project(project_seed: ProjectSeed, project_filename: str) -> str:
-    """Open the QGIS project and apply all seed configuration.
+    """
+    Open the QGIS project and apply all seed configuration.
 
     Sets title, CRS, basemaps.
     """

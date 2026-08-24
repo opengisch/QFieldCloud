@@ -31,7 +31,8 @@ class QfcFilesTestCaseMixin:
     def _upload_file(
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
-        """Uploads a file to the API.
+        """
+        Uploads a file to the API.
 
         Arguments:
             user: User that uploads the file.

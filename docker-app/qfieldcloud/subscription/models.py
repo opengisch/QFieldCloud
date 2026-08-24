@@ -29,7 +29,8 @@ def get_subscription_model() -> "Subscription":
 
 
 class SubscriptionStatus(models.TextChoices):
-    """Status of the subscription.
+    """
+    Status of the subscription.
 
     Initially the status is INACTIVE_DRAFT.
 
@@ -60,7 +61,8 @@ class SubscriptionStatus(models.TextChoices):
 class Plan(models.Model):
     @classmethod
     def get_or_create_default(cls) -> Self:
-        """Returns the default plan, creating one if none exists.
+        """
+        Returns the default plan, creating one if none exists.
         To be used as a default value for UserAccount.type
         """
         if not cls.objects.exists():
@@ -505,7 +507,8 @@ class SubscriptionQuerySet(models.QuerySet):
         return qs
 
     def managed_by(self, user_id: int):
-        """Returns all subscriptions that are managed by given `user_id`. It means the owner personal account and all organizations they own.
+        """
+        Returns all subscriptions that are managed by given `user_id`. It means the owner personal account and all organizations they own.
 
         Args:
             user_id: the user we are searching against
@@ -520,7 +523,8 @@ class SubscriptionQuerySet(models.QuerySet):
         )
 
     def activeness(self):
-        """Annotates with additional `is_active` boolean field.
+        """
+        Annotates with additional `is_active` boolean field.
 
         `is_active` - if the period and status are active.
 
@@ -775,7 +779,8 @@ class AbstractSubscription(models.Model):
 
     @property
     def included_storage_bytes(self) -> int:
-        """How much storage is included in the subscription.
+        """
+        How much storage is included in the subscription.
 
         (Before any additional storage packages).
 
@@ -869,7 +874,8 @@ class AbstractSubscription(models.Model):
 
     @classmethod
     def get_or_create_current_subscription(cls, account: UserAccount) -> Self:
-        """Returns the current subscription, if not exists returns a newly created subscription with the default plan.
+        """
+        Returns the current subscription, if not exists returns a newly created subscription with the default plan.
 
         Args:
             account: the account the subscription belongs to.
@@ -904,7 +910,8 @@ class AbstractSubscription(models.Model):
         subscription: Self,
         **kwargs: UpdateSubscriptionKwargs,
     ) -> Self:
-        """Updates the subscription properties.
+        """
+        Updates the subscription properties.
 
         Args:
             subscription: subscription to be updated
@@ -946,7 +953,8 @@ class AbstractSubscription(models.Model):
     def create_default_plan_subscription(
         cls, account: UserAccount, active_since: datetime | None = None
     ) -> Self:
-        """Creates the default subscription for a given account.
+        """
+        Creates the default subscription for a given account.
 
         Args:
             account: the account the subscription belongs to.
@@ -1003,7 +1011,8 @@ class AbstractSubscription(models.Model):
         active_since: datetime | None = None,
         regular_plan: Plan | None = None,
     ) -> tuple[Self | None, Self]:
-        """Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
+        """
+        Creates a subscription for a given account to a given plan. If the plan is a trial, create the default subscription in the end of the period.
 
         Args:
             account: the account the subscription belongs to.

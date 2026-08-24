@@ -6,7 +6,8 @@ from rest_framework.request import Request
 
 
 class QfcOrderingFilter(filters.OrderingFilter):
-    """Custom QFC OrderingFilter class that allows usage of custom attributes expression.
+    """
+    Custom QFC OrderingFilter class that allows usage of custom attributes expression.
 
     Use it in a ModelViewSet by setting the `filter_backends` and `ordering_fields` fields.
     It is possible to use an `ordering_fields` expression value with attributes.
@@ -18,7 +19,8 @@ class QfcOrderingFilter(filters.OrderingFilter):
     TOKENS_VALUE_SEPARATOR = "="
 
     def _get_query_field(self, fields: Iterable[str], term: str) -> str | None:
-        """Searches a term in a query field list.
+        """
+        Searches a term in a query field list.
 
         The field list elements may start with "-".
         This method should be used to search a term from a query's ordering fields.
@@ -44,7 +46,8 @@ class QfcOrderingFilter(filters.OrderingFilter):
         return None
 
     def _parse_tokenized_attributes(self, raw: str) -> dict[str, str]:
-        """Parses an ordering field attributes expression.
+        """
+        Parses an ordering field attributes expression.
 
         Args:
             raw: raw expression to parse, e.g.: "alias=my_field_alias,key=value"
@@ -61,7 +64,8 @@ class QfcOrderingFilter(filters.OrderingFilter):
         return attr_dict
 
     def _parse_definition(self, definition: str) -> tuple[str, dict[str, str]]:
-        """Parses a custom ordering field with attributes expression.
+        """
+        Parses a custom ordering field with attributes expression.
 
         Args:
             definition: raw definition of the ordering field to parse,
@@ -82,7 +86,8 @@ class QfcOrderingFilter(filters.OrderingFilter):
         view: views.APIView,
         request: Request,
     ) -> list[str]:
-        """Process ordering fields by parsing custom field expression.
+        """
+        Process ordering fields by parsing custom field expression.
 
         Custom attributes expression has form : "my_field::alias=my_field_alias,key=value".
         In the above example, `alias` is the URL GET param value,

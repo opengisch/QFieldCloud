@@ -49,7 +49,8 @@ class ExpectedPremiumUserError(CheckPermError): ...
 
 
 def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
-    """Checks if User model derivatives are equal.
+    """
+    Checks if User model derivatives are equal.
 
     NOTE User(pk=12) is not equal to Person(pk=12)!
     """
@@ -170,7 +171,8 @@ def user_has_organization_role_origins(
 
 
 def get_param_from_request(request, param):
-    """Try to get the param from the request data or the request
+    """
+    Try to get the param from the request data or the request
     context, returns None otherwise
     """
 
@@ -188,7 +190,8 @@ def get_param_from_request(request, param):
 def can_create_project(
     user: QfcUser, organization: QfcUser | Organization = None
 ) -> bool:
-    """Return True if the `user` can create a project. Accepts additional
+    """
+    Return True if the `user` can create a project. Accepts additional
     `organization` to check whether the user has permissions to do so on
     that organization. Return False otherwise.
     """
@@ -581,7 +584,8 @@ def can_delete_project_secrets(user: QfcUser, project: Project) -> bool:
 
 
 def can_list_users_organizations(user: QfcUser) -> bool:
-    """Return True if the `user` can list users and organizations.
+    """
+    Return True if the `user` can list users and organizations.
     Return False otherwise.
     """
 
@@ -589,7 +593,8 @@ def can_list_users_organizations(user: QfcUser) -> bool:
 
 
 def can_create_user(user: QfcUser) -> bool:
-    """Return True if the user can create new QFieldCloud accounts.
+    """
+    Return True if the user can create new QFieldCloud accounts.
 
     Restricted to staff so only service accounts and admins can provision
     users programmatically via the API.
@@ -680,7 +685,8 @@ def can_read_packages(user: QfcUser, project: Project) -> bool:
 
 
 def can_create_members(user: QfcUser, organization: Organization) -> bool:
-    """Return True if the `user` can create members (incl. teams) of `organization`.
+    """
+    Return True if the `user` can create members (incl. teams) of `organization`.
     Return False otherwise.
     """
 
@@ -690,7 +696,8 @@ def can_create_members(user: QfcUser, organization: Organization) -> bool:
 
 
 def can_read_members(user: QfcUser, organization: Organization) -> bool:
-    """Return True if the `user` can list members (incl. teams) of `organization`.
+    """
+    Return True if the `user` can list members (incl. teams) of `organization`.
     Return False otherwise.
     """
 

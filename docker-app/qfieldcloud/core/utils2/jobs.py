@@ -103,7 +103,8 @@ def apply_deltas(
 
 
 def repackage(project: "Project", user: "models.User") -> "models.PackageJob":
-    """Returns an unfinished or freshly created package job.
+    """
+    Returns an unfinished or freshly created package job.
 
     Checks if there is already an unfinished package job and returns it,
     or creates a new package job and returns it.
