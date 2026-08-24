@@ -38,11 +38,12 @@ sql_items = [
             SELECT
                 s.id,
                 s.uuid,
+                s.regular_plan_id,
                 CASE
                     WHEN s.trial_expires_at > now() AND s.trial_plan_id IS NOT NULL
                     THEN s.trial_plan_id
-                    ELSE s.plan_id
-                END AS plan_id,
+                    ELSE s.regular_plan_id
+                END AS active_plan_id,
                 s.purchased_seats,
                 s.account_id,
                 s.status,

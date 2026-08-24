@@ -1007,7 +1007,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         oldest_version_id = None
 
-        for i in range(s1.plan.storage_keep_versions + 1):
+        for i in range(s1.regular_plan.storage_keep_versions + 1):
             self.assertFileUploaded(
                 self.u1, self.p1, "file.name", StringIO(f"Hello{i}!")
             )
@@ -1017,7 +1017,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(self.p1.project_files.count(), 1)
         self.assertEqual(
-            self.p1.project_files[0].versions.count(), s1.plan.storage_keep_versions
+            self.p1.project_files[0].versions.count(),
+            s1.regular_plan.storage_keep_versions,
         )
         self.assertFalse(
             self.p1.project_files[0].versions.filter(id=oldest_version_id).exists()

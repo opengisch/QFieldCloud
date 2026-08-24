@@ -436,7 +436,7 @@ class PackageQuerySet(models.QuerySet):
     def active(self):
         now = timezone.now()
         qs = self.filter(
-            active_since__lte=now, subscription__plan__is_premium=True
+            active_since__lte=now, subscription__regular_plan__is_premium=True
         ).filter(Q(active_until__isnull=True) | Q(active_until__gte=now))
 
         return qs
@@ -444,7 +444,7 @@ class PackageQuerySet(models.QuerySet):
     def future(self):
         now = timezone.now()
         qs = self.filter(
-            active_since__gte=now, subscription__plan__is_premium=True
+            active_since__gte=now, subscription__regular_plan__is_premium=True
         ).order_by("active_since")
 
         return qs
@@ -501,7 +501,7 @@ class SubscriptionQuerySet(models.QuerySet):
         qs = self.filter(
             Q(active_since__lte=now)
             & (Q(active_until__isnull=True) | Q(active_until__gte=now))
-        ).select_related("plan", "trial_plan")
+        ).select_related("regular_plan", "trial_plan")
 
         return qs
 
@@ -581,7 +581,7 @@ class AbstractSubscription(models.Model):
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
 
-    plan = models.ForeignKey(
+    regular_plan = models.ForeignKey(
         Plan,
         on_delete=models.DO_NOTHING,
         related_name="+",
@@ -671,11 +671,11 @@ class AbstractSubscription(models.Model):
         )
 
     @property
-    def effective_plan(self) -> Plan:
+    def plan(self) -> Plan:
         if self.is_trialing and self.trial_plan_id is not None:
             return self.trial_plan
 
-        return self.plan
+        return self.regular_plan
 
     @property
     @deprecated("Use `AbstractSubscription.active_storage_total_bytes` instead")
@@ -684,6 +684,9 @@ class AbstractSubscription(models.Model):
 
     @property
     def active_storage_total_bytes(self) -> int:
+        if self.is_trialing:
+            return self.included_storage_bytes
+
         return self.included_storage_bytes + self.active_storage_package_bytes
 
     @property
@@ -715,7 +718,7 @@ class AbstractSubscription(models.Model):
 
     @property
     def future_storage_total_mb(self) -> int:
-        return self.plan.storage_mb + self.future_storage_package_mb
+        return self.regular_plan.storage_mb + self.future_storage_package_mb
 
     @property
     def future_storage_package(self) -> Package:
@@ -790,11 +793,11 @@ class AbstractSubscription(models.Model):
             return 1
 
         # seat based plans
-        if self.effective_plan.is_seat_based:
+        if self.plan.is_seat_based:
             return self.purchased_seats
 
         # all other plans - either unlimited (-1) or capped
-        return self.effective_plan.max_organization_members
+        return self.plan.max_organization_members
 
     @property
     def organization_members_count(self) -> int:
@@ -814,10 +817,10 @@ class AbstractSubscription(models.Model):
         For seat based plans, this is an amount *per seat*. For all other plans,
         it's a simple fixed amount for the entire plan.
         """
-        if self.effective_plan.is_seat_based:
-            return self.purchased_seats * self.effective_plan.storage_bytes
+        if self.plan.is_seat_based:
+            return self.purchased_seats * self.plan.storage_bytes
 
-        return self.effective_plan.storage_bytes
+        return self.plan.storage_bytes
 
     def get_active_package(self, package_type: PackageType) -> Package:
         storage_package_qs = self.packages.active().filter(type=package_type)  # type: ignore
@@ -855,7 +858,7 @@ class AbstractSubscription(models.Model):
         quantity: int,
         active_since: datetime | None = None,
     ):
-        if not self.effective_plan.is_premium:
+        if not self.plan.is_premium:
             raise NotPremiumPlanException(
                 "Only premium accounts can have additional packages!"
             )
@@ -912,7 +915,7 @@ class AbstractSubscription(models.Model):
         try:
             subscription = (
                 cls.objects.current()  # type: ignore
-                .select_related("plan")
+                .select_related("regular_plan")
                 .get(account_id=account.pk)
             )
         except cls.DoesNotExist:
@@ -1026,7 +1029,7 @@ class AbstractSubscription(models.Model):
         # For organization users, use plan from the user's most recent subscription.
         # Otherwise fall back to default plan for the given user type.
         if most_recent_subscription and account.user.is_organization:
-            plan = most_recent_subscription.plan
+            plan = most_recent_subscription.regular_plan
         else:
             plan = Plan.objects.get(
                 user_type=account.user.type,
@@ -1048,7 +1051,7 @@ class AbstractSubscription(models.Model):
 
         subscription = cls.create_subscription(
             account=account,
-            plan=plan,
+            regular_plan=plan,
             created_by=created_by,
             active_since=active_since,
         )
@@ -1059,24 +1062,24 @@ class AbstractSubscription(models.Model):
     def create_subscription(
         cls,
         account: UserAccount,
-        plan: Plan,
+        regular_plan: Plan,
         created_by: Person,
         active_since: datetime | None = None,
         start_trial: bool = False,
     ) -> Self:
         """Creates a subscription for a given account to a given plan.
 
-        If `start_trial` is True, the subscription is born as a trial: `plan` stays the
+        If `start_trial` is True, the subscription is born as a trial: `regular_plan` stays the
         commercial commitment of the subscription, but the quotas are resolved through
-        a snapshot of `plan.trial_plan` until `trial_expires_at` (see `effective_plan`).
+        a snapshot of `regular_plan.trial_plan` until `trial_expires_at` (see `plan` property).
 
         Args:
             account: the account the subscription belongs to.
-            plan: the plan to subscribe to.
+            regular_plan: the plan to subscribe to.
             created_by: created by.
             active_since: active since for the subscription.
-            start_trial: whether to start the subscription as a trial of `plan.trial_plan`.
-                Requires both `active_since` and a `plan` that has a `trial_plan`.
+            start_trial: whether to start the subscription as a trial of `regular_plan.trial_plan`.
+                Requires both `active_since` and a `regular_plan` that has a `trial_plan`.
 
         Returns:
             the created subscription.
@@ -1091,21 +1094,21 @@ class AbstractSubscription(models.Model):
                     "Starting a trial requires `active_since` to be a valid datetime object."
                 )
 
-            if not plan.has_trial_plan:
+            if not regular_plan.has_trial_plan:
                 raise ValueError(
-                    f'Starting a trial requires the plan "{plan.code}" to have a `trial_plan`.'
+                    f'Starting a trial requires the plan "{regular_plan.code}" to have a `trial_plan`.'
                 )
 
             # the trial is granted right away, the payment method is collected later
             status = cls.Status.ACTIVE_TRIAL
-            trial_plan = plan.trial_plan
+            trial_plan = regular_plan.trial_plan
             trial_expires_at = active_since + timedelta(days=config.TRIAL_PERIOD_DAYS)
 
             logger.info(
                 f"Creating trial subscription from {active_since=} to {trial_expires_at=}"
             )
         else:
-            status = plan.initial_subscription_status
+            status = regular_plan.initial_subscription_status
             trial_plan = None
             trial_expires_at = None
 
@@ -1120,7 +1123,7 @@ class AbstractSubscription(models.Model):
                 cls.cancel_current_subscriptions(account, active_until=active_since)
 
             subscription = cls.objects.create(
-                plan=plan,
+                regular_plan=regular_plan,
                 account=account,
                 created_by=created_by,
                 status=status,
@@ -1146,7 +1149,7 @@ class AbstractSubscription(models.Model):
                 # But taking care of this would add quite some complexity.
                 if account.user.is_person:
                     account.user.remaining_trial_organizations = (
-                        plan.max_trial_organizations
+                        regular_plan.max_trial_organizations
                     )
                     account.user.save(update_fields=["remaining_trial_organizations"])
 
@@ -1213,4 +1216,11 @@ class CurrentSubscription(AbstractSubscription):
         UserAccount,
         on_delete=models.CASCADE,
         related_name="current_subscription_vw",
+    )
+
+    active_plan = models.ForeignKey(
+        Plan,
+        on_delete=models.DO_NOTHING,
+        db_column="active_plan_id",
+        related_name="+",
     )

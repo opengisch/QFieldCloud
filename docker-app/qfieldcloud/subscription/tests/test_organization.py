@@ -102,8 +102,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertProjectRole(p1, u8, None, None)
 
         # plan.max_premium_collaborators_per_private_project=-1 => add unlimited collaborators
-        subscription.plan.max_premium_collaborators_per_private_project = -1
-        subscription.plan.save()
+        subscription.regular_plan.max_premium_collaborators_per_private_project = -1
+        subscription.regular_plan.save()
 
         # adding an org admin user as project reader collaborator should not affect their admin rights
         p1.collaborators.create(collaborator=u2, role=Roles.READER)
@@ -164,8 +164,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertProjectRole(p1, u8, None, None)
 
         # plan.max_premium_collaborators_per_private_project=0
-        subscription.plan.max_premium_collaborators_per_private_project = 0
-        subscription.plan.save()
+        subscription.regular_plan.max_premium_collaborators_per_private_project = 0
+        subscription.regular_plan.save()
         self.assertProjectRole(
             p1, u1, Roles.ADMIN, RoleOrigins.ORGANIZATIONOWNER, False
         )
@@ -180,8 +180,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertProjectRole(p1, u8, None, None)
 
         # plan.max_premium_collaborators_per_private_project=6
-        subscription.plan.max_premium_collaborators_per_private_project = 6
-        subscription.plan.save()
+        subscription.regular_plan.max_premium_collaborators_per_private_project = 6
+        subscription.regular_plan.save()
         self.assertProjectRole(p1, u1, Roles.ADMIN, RoleOrigins.ORGANIZATIONOWNER, True)
         self.assertProjectRole(p1, u2, Roles.ADMIN, RoleOrigins.ORGANIZATIONADMIN, True)
         self.assertProjectRole(p1, u3, Roles.READER, RoleOrigins.COLLABORATOR, True)
@@ -192,8 +192,8 @@ class QfcTestCase(APITransactionTestCase):
         self.assertProjectRole(p1, u8, None, None)
 
         # plan.max_premium_collaborators_per_private_project=6 and is_public=True
-        subscription.plan.max_premium_collaborators_per_private_project = 0
-        subscription.plan.save()
+        subscription.regular_plan.max_premium_collaborators_per_private_project = 0
+        subscription.regular_plan.save()
         self.assertProjectRole(
             p1, u1, Roles.ADMIN, RoleOrigins.ORGANIZATIONOWNER, False
         )

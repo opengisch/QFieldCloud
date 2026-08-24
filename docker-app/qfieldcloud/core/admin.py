@@ -233,11 +233,11 @@ class QfcAdminSite(AdminSite):
                     "model": subscription_model,
                     "email_filter": {"account__user__email__iexact": query},
                     "username_filter": {"account__user__username__iexact": query},
-                    "select_related": ["account__user", "plan"],
+                    "select_related": ["account__user", "regular_plan"],
                     "only_fields": [
                         "id",
                         "account__user__username",
-                        "plan__display_name",
+                        "regular_plan__display_name",
                         "status",
                         "active_since",
                     ],
@@ -245,7 +245,7 @@ class QfcAdminSite(AdminSite):
                     "fields": [
                         ("id", "ID"),
                         ("account__user", "User"),
-                        ("plan__display_name", "Plan Name"),
+                        ("regular_plan__display_name", "Plan Name"),
                         ("status", "Status"),
                         ("active_since", "Active Since"),
                     ],

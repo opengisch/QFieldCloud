@@ -57,7 +57,7 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
         self.subscription = Person.objects.create(
             username="user1"
         ).useraccount.current_subscription
-        self.subscription.plan = self.regular_plan
+        self.subscription.regular_plan = self.regular_plan
         self.subscription.trial_plan = self.trial_plan
         self.subscription.trial_expires_at = timezone.now() + timedelta(days=5)
         self.subscription.status = Subscription.Status.ACTIVE_TRIAL
@@ -73,28 +73,28 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
         self.assertFalse(Subscription.objects.get(pk=self.subscription.pk).is_active)
 
     def test_trial_uses_trial_plan_limits_until_it_expires(self):
-        self.assertEqual(self.subscription.effective_plan, self.trial_plan)
+        self.assertEqual(self.subscription.plan, self.trial_plan)
         self.assertEqual(
             self.subscription.included_storage_bytes, self.trial_plan.storage_bytes
         )
 
         self._expire_trial()
 
-        self.assertEqual(self.subscription.effective_plan, self.regular_plan)
+        self.assertEqual(self.subscription.plan, self.regular_plan)
         self.assertEqual(
             self.subscription.included_storage_bytes, self.regular_plan.storage_bytes
         )
 
-    def test_current_subscription_view_resolves_the_effective_plan(self):
+    def test_current_subscription_view_resolves_the_plan(self):
         account_id = self.subscription.account_id
 
         current = CurrentSubscription.objects.get(account_id=account_id)
-        self.assertEqual(current.plan, self.trial_plan)
+        self.assertEqual(current.regular_plan, self.trial_plan)
 
         self._expire_trial()
 
         current = CurrentSubscription.objects.get(account_id=account_id)
-        self.assertEqual(current.plan, self.regular_plan)
+        self.assertEqual(current.regular_plan, self.regular_plan)
 
     def test_repointing_the_plan_trial_does_not_affect_running_trials(self):
         other_trial_plan = self._create_plan("pro_trial_v2", is_trial=True)
@@ -103,7 +103,7 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
         self.regular_plan.save(update_fields=["trial_plan"])
 
         self.subscription.refresh_from_db()
-        self.assertEqual(self.subscription.effective_plan, self.trial_plan)
+        self.assertEqual(self.subscription.plan, self.trial_plan)
 
     def test_start_trial_creates_a_single_trial_subscription(self):
         account = self.subscription.account
@@ -114,7 +114,7 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
             Subscription.objects.current().filter(account=account).count(), 1
         )
         self.assertEqual(account.current_subscription, subscription)
-        self.assertEqual(subscription.plan, self.regular_plan)
+        self.assertEqual(subscription.regular_plan, self.regular_plan)
         self.assertEqual(subscription.trial_plan, self.trial_plan)
         self.assertEqual(subscription.status, Subscription.Status.ACTIVE_TRIAL)
         self.assertEqual(
@@ -163,7 +163,7 @@ class TrialSubscriptionTestCase(APITransactionTestCase):
         self.assertEqual(
             subscription.status, self.regular_plan.initial_subscription_status
         )
-        self.assertEqual(subscription.effective_plan, self.regular_plan)
+        self.assertEqual(subscription.plan, self.regular_plan)
 
     def test_start_trial_requires_active_since(self):
         with self.assertRaises(ValueError):

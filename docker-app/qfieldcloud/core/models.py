@@ -98,11 +98,11 @@ class PersonQueryset(models.QuerySet):
         )
 
         max_premium_collaborators_per_private_project_q = Q(
-            project_roles__project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
+            project_roles__project__owner__useraccount__current_subscription_vw__active_plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project_roles__project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count_collaborators
+            project_roles__project__owner__useraccount__current_subscription_vw__active_plan__max_premium_collaborators_per_private_project__gte=count_collaborators
         )
 
         project_role_is_valid_condition_q = is_public_q | (
@@ -552,7 +552,7 @@ class UserAccount(models.Model):
     def has_premium_support(self) -> bool:
         """A user has premium support if they have an active premium subscription plan or a at least one organization that they have admin role."""
         subscription = self.current_subscription
-        if subscription.effective_plan.is_premium:
+        if subscription.plan.is_premium:
             return True
 
         if self.user.is_organization:
@@ -1012,11 +1012,11 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         is_team_collaborator = Q(collaborator__type=User.Type.TEAM)
         # max_premium_collaborators_per_private_project_q = current_subscription_q & (
         max_premium_collaborators_per_private_project_q = Q(
-            project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project=V(
+            project__owner__useraccount__current_subscription_vw__active_plan__max_premium_collaborators_per_private_project=V(
                 -1
             )
         ) | Q(
-            project__owner__useraccount__current_subscription_vw__plan__max_premium_collaborators_per_private_project__gte=count
+            project__owner__useraccount__current_subscription_vw__active_plan__max_premium_collaborators_per_private_project__gte=count
         )
 
         # Assemble the condition
