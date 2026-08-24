@@ -78,7 +78,7 @@ class BasemapStyle(str, enum.Enum):
 
 @dataclass
 class ProjectSeedSettings:
-    schemaId: SchemaId
+    schemaId: SchemaId  # noqa: N815
     xlsform: XlsformConfigDict | None = None
     basemaps: list[BasemapConfig] = field(default_factory=list)
 
