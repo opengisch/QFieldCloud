@@ -151,7 +151,7 @@ class QfcTestCase(APITransactionTestCase):
             max_premium_collaborators_per_private_project=0,
         )
 
-    def assertProjectRole(
+    def assertProjectRole(  # noqa: N802
         self,
         project,
         user,

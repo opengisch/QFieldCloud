@@ -38,7 +38,7 @@ class QfcTestCase(TestCase):
         # restore above monkeypatch
         runcrons.close_old_connections = cls._close_old_connections
 
-    def assertNotifs(self, expected_count, filter=None):
+    def assertNotifs(self, expected_count, filter=None):  # noqa: N802
         if filter is None:
             filter = {}
 

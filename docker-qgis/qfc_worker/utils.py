@@ -173,7 +173,7 @@ def start_app() -> str:
 
         # make sure the app is closed, otherwise the container exists with non-zero
         @atexit.register
-        def exitQgis():
+        def exitQgis():  # noqa: N802
             stop_app()
 
         logging.info("QGIS app started!")
@@ -934,7 +934,7 @@ def get_file_size(filename: str) -> int:
 
 
 def get_file_md5sum(filename: str) -> str:
-    BLOCKSIZE = 65536
+    BLOCKSIZE = 65536  # noqa: N806
     hasher = hashlib.md5()
 
     with open(filename, "rb") as f:
