@@ -847,7 +847,8 @@ def can_read_current_subscription(user: QfcUser, account: QfcUser) -> bool:
 
 
 def can_change_additional_storage(user: QfcUser, subscription: Subscription) -> bool:
-    if not subscription.plan.is_storage_modifiable:
+    # NOTE buying storage acts on the plan that will be billed, not on the trial
+    if not subscription.regular_plan.is_storage_modifiable:
         return False
 
     # assuming that active until is the same as current_period_until
@@ -899,7 +900,7 @@ def can_cancel_subscription_immediately(
     Organization can be downgraded only by owners, need to be deleted.
     In any case cancellation is only possible if the plan allows it.
     """
-    if not subscription.plan.is_cancellable:
+    if not subscription.regular_plan.is_cancellable:
         return False
 
     if subscription.account.user.is_person:
@@ -918,7 +919,7 @@ def can_abort_subscription_cancellation(
     if subscription.active_until is None:
         return False
 
-    if not subscription.plan.is_cancellable:
+    if not subscription.regular_plan.is_cancellable:
         return False
 
     if subscription.account.user.is_person:
