@@ -1,4 +1,5 @@
 import base64
+import contextlib
 import mimetypes
 import os
 from abc import ABC
@@ -254,10 +255,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Arguments:
             name: relative path of the file on the webdav server.
         """
-        try:
+        with contextlib.suppress(requests.HTTPError):
             self.perform_webdav_request("DELETE", name)
-        except requests.HTTPError:
-            pass
 
     def exists(self, name: str) -> bool:
         """Checks if a file exists on a configured webdav storage.

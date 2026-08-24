@@ -1,3 +1,5 @@
+import contextlib
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -39,28 +41,22 @@ class ListCreateUsersView(generics.ListCreateAPIView):
 
         project = None
         if params.get("project"):
-            try:
+            with contextlib.suppress(Project.DoesNotExist):
                 project = Project.objects.get(id=params.get("project"))
-            except Project.DoesNotExist:
-                pass
 
         organization = None
         if params.get("organization"):
-            try:
+            with contextlib.suppress(Project.DoesNotExist):
                 organization = Organization.objects.get(
                     username=params.get("organization")
                 )
-            except Project.DoesNotExist:
-                pass
 
         exclude_members_of_team = None
         if params.get("exclude_members_of_team"):
-            try:
+            with contextlib.suppress(Team.DoesNotExist, ValueError):
                 exclude_members_of_team = Team.objects.get(
                     pk=params.get("exclude_members_of_team")
                 )
-            except (Team.DoesNotExist, ValueError):
-                pass
 
         # TODO : are these GET paremters documented somewhere ? Shouldn't we use something
         # like django_filters.rest_framework.DjangoFilterBackend so they get auto-documented
