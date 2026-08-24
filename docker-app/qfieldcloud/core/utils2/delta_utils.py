@@ -10,6 +10,7 @@ def generate_deltafile(
 ) -> dict[str, Any]:
     """
     Returns a deltafile-structured dictionary with the given deltas.
+
     The given deltas must be an iterable with at least one element.
 
     Args:

@@ -231,6 +231,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
     def test_retention_period_filter(self):
         """
         Test that a file is NOT found if the retention period covers it (recent deletion).
+
         And that a file IS found if the retention period has passed (old deletion).
         """
         key = f"{self.unique_prefix}file_date_test.txt"

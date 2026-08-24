@@ -131,8 +131,7 @@ def analyze_key_history(
     retention_cutoff_ts: datetime | None,
 ) -> LogicallyDeletedObject | None:
     """
-    Analyze a list of versions for a single key to see if it's logically deleted
-    and return a LogicallyDeletedObject if it is, otherwise None.
+    Analyze a list of versions for a single key to see if it's logically deleted and return a LogicallyDeletedObject if it is, otherwise None.
 
     Args:
         key: The key of the object.

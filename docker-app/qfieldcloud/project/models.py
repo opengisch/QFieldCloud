@@ -133,6 +133,8 @@ class ProjectQueryset(models.QuerySet):
 
     def slim(self) -> "ProjectQueryset":
         """
+        A minimal fetch of projects with only a few pre-loaded fields.
+
         A light-weight fetch for permission checks, which run on every
         request and only need a project's id, owner, and public flag.
         """
@@ -233,6 +235,7 @@ def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
 class Project(models.Model):
     """
     Represent a QFieldcloud project.
+
     It corresponds to a directory on the file system.
 
     The owner of a project is an Organization.
@@ -681,6 +684,8 @@ class Project(models.Model):
 
     def get_missing_localized_layers(self) -> list["QgisLayer"]:
         """
+        Return list of missing localized layers.
+
         Of all localized layers, return those whose filenames aren’t in `available_filenames`,
         which means they are not present in the associated localized datasets project storage.
 
@@ -1089,8 +1094,7 @@ class Project(models.Model):
 
     @property
     def total_collaborators(self) -> PersonQueryset:
-        """Every person with access to the project, whether added directly or as a
-        member of a team that collaborates on it.
+        """Every person with access to the project, whether added directly or as a member of a team that collaborates on it.
 
         Merges the direct collaborators with the members of each collaborating team,
         drops the owner and incognito entries, and returns a deduplicated `Person` queryset.
@@ -1186,7 +1190,6 @@ class Project(models.Model):
         Only the switch from public to private is checked. A project that is already
         private and over the limit (say, after a plan downgrade) is left as it is.
         """
-
         # only when an existing public project is being turned private
         if self.is_public or get_stored_value(self, "is_public") is not True:
             return

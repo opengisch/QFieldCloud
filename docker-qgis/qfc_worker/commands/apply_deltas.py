@@ -293,8 +293,9 @@ def apply_deltas(
 @lru_cache(maxsize=128)
 def get_json_schema_validator() -> jsonschema.Draft7Validator:
     """
-    Creates a JSON schema validator to check whether the provided delta
-    file is valid. The function result is cached.
+    Creates a JSON schema validator to check whether the provided delta file is valid.
+
+    The function result is cached.
 
     Returns:
         jsonschema.Draft7Validator -- JSON Schema validator
@@ -693,8 +694,7 @@ def rollback_deltas(
 
 def cleanup_backups(layer_paths: set[str]) -> bool:
     """
-    Cleanup the layer backups. Attempts to remove all backup files, whether
-    or not there is an error.
+    Cleanup the layer backups. Attempts to remove all backup files, whether or not there is an error.
 
     Args:
         layer_paths: layer paths, which should have their backups removed
@@ -1010,8 +1010,9 @@ def compare_feature(
     feature: QgsFeature, delta_feature: DeltaFeature, is_delta_subset: bool = False
 ) -> list[str]:
     """
-    Compares a feature with delta description of a feature and reports the
-    differences. Checks both the geometry and the attributes. If
+    Compares a feature with delta description of a feature and reports the differences.
+
+    Checks both the geometry and the attributes. If
     {is_delta_subset} is true, allows the delta attributes to be subset of the
     {feature} attributes.
 

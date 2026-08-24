@@ -165,9 +165,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
     delete=extend_schema(description="Delete a team member"),
 )
 class DestroyTeamMemberView(generics.DestroyAPIView):
-    """
-    View to handle adding and listing team members. --> organizations/<str:organization_name>/team/<str:team_name>/members/"
-    """
+    """View to handle adding and listing team members."""
 
     permission_classes = [permissions.IsAuthenticated, TeamMemberPermission]
     serializer_class = TeamMemberSerializer

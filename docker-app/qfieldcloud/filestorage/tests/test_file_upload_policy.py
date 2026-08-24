@@ -22,8 +22,10 @@ logging.disable(logging.CRITICAL)
 
 class QfcTestCase(APITransactionTestCase):
     """
+    Check file upload policy.
+
     The current policy is that a user can always push/upload a file to QFieldCloud
-    from the field, i.e. from Qfield. Also we already running jobs can always upload
+    from the field, i.e. from QField. Also we already running jobs can always upload
     files. Therefore we check for the client type in the post request.
     """
 

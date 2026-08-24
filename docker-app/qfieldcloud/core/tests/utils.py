@@ -167,6 +167,7 @@ class get_named_file_with_size:
 def wait_for_project_ok_status(project: Project, wait_s: int = 30):
     """
     Helper that waits for any jobs (worker) of the project to finish.
+
     NOTE this does not mean the project is updated yet as there
     is some processing to be done and saved to the project in the app.
     So maybe a better name would be 'wait_for_project_jobs_ok_status'.

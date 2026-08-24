@@ -46,6 +46,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
     def to_json(self, record):
         """
         Converts record dict to a JSON string.
+
         It makes best effort to serialize a record (represents an object as a string)
         instead of raising TypeError if json library supports default argument.
         Note, ujson doesn't support it.

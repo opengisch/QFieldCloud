@@ -23,9 +23,7 @@ class QfcTestCase(TestCase):
         self.qgis_project = self._create_qgis_project()
 
     def _create_qgis_project(self) -> QgisProject:
-        """Create a `Project`, an uploaded `.qgs` file and its `QgisProject`, so
-        a `QgisLayer` has something to attach to.
-        """
+        """Create a `Project`, an uploaded `.qgs` file and its `QgisProject`, so a `QgisLayer` has something to attach to."""
         project = Project.objects.create(name="project", owner=self.user1)
 
         file_version = FileVersion.objects.add_version(
@@ -41,9 +39,6 @@ class QfcTestCase(TestCase):
         )
 
     def _create_layer(self, qgis_layer_id: str, **overrides) -> QgisLayer:
-        """Create a `QgisLayer` on `self.qgis_project` with defaults.
-        Pass `overrides` to change any field.
-        """
         kwargs = {
             "qgis_project": self.qgis_project,
             "qgis_layer_id": qgis_layer_id,
@@ -57,9 +52,6 @@ class QfcTestCase(TestCase):
         return QgisLayer.objects.create(**kwargs)
 
     def _layer_details(self, **overrides) -> dict:
-        """Build one layer-details dict in the shape `update_from_details`
-        expects. Pass `overrides` to change any key.
-        """
         details = {
             "name": "layer",
             "crs": "EPSG:3857",
@@ -71,7 +63,9 @@ class QfcTestCase(TestCase):
         return details
 
     def test_very_long_qgis_layer_id_does_not_break_unique_constraint(self):
-        """A `qgis_layer_id` long enough to overflow the Postgres btree index
+        """Test very long qgis layer ids.
+
+        A `qgis_layer_id` long enough to overflow the Postgres btree index
         row size limit used to break the unique constraint. The constraint now
         indexes `MD5(qgis_layer_id)` instead, which is fixed-size, so it no longer does.
         """
@@ -82,7 +76,9 @@ class QfcTestCase(TestCase):
         self.assertEqual(layer.qgis_layer_id, long_id)
 
     def test_duplicate_qgis_layer_id_in_same_project_violates_constraint(self):
-        """Two layers with the same `qgis_layer_id` in the same project still
+        """Test two layers with the same layer id.
+
+        Two layers with the same `qgis_layer_id` in the same project still
         violate the uniqueness constraint, now enforced on the hash.
         """
         self._create_layer("layer1")
@@ -91,7 +87,9 @@ class QfcTestCase(TestCase):
             self._create_layer("layer1", name="layer1 duplicate")
 
     def test_empty_qgis_layer_id_hashes_like_any_other_string(self):
-        """An empty `qgis_layer_id` hashes like any other value. A second
+        """Test an empty layer id.
+
+        An empty `qgis_layer_id` hashes like any other value. A second
         layer with the same empty `qgis_layer_id` in the same project still
         violates the constraint.
         """
@@ -103,9 +101,6 @@ class QfcTestCase(TestCase):
             )
 
     def test_update_from_details_create_update_delete_cycle(self):
-        """`update_from_details` creates, renames, adds and drops `QgisLayer`
-        rows correctly.
-        """
         QgisLayer.objects.update_from_details(
             self.qgis_project,
             ["layer1", "layer2"],

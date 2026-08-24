@@ -130,9 +130,9 @@ qgis_project_readonly_flags = (
 
 def start_app() -> str:
     """
-    Will start a QgsApplication and call all initialization code like
-    registering the providers and other infrastructure. It will not load
-    any plugins.
+    Will start a `QgsApplication` and call all initialization code like registering the providers and other infrastructure.
+
+    It will not load any plugins.
 
     You can always get the reference to a running app by calling `QgsApplication.instance()`.
 
@@ -500,7 +500,8 @@ def download_project(
     project_id: str, destination: Path | None = None, skip_attachments: bool = True
 ) -> Path:
     """
-    Download the files in the project "working" directory from the S3
+    Download the files in the project "working" directory from the Object storage.
+
     Storage into a temporary directory. Returns the directory path
     """
     logging.info("Preparing a temporary directory for project files…")

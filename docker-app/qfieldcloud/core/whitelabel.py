@@ -19,6 +19,7 @@ DEFAULT_WHITELABEL = {
 def get_whitelabel_settings() -> dict[str, Any]:
     """
     Get whitelabel settings by merging user settings with defaults.
+
     Filters out None values from user settings to preserve defaults.
     """
     # Start with a deep copy of defaults
