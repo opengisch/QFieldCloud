@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-import django.db.utils
+import django.core.exceptions
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
 
@@ -45,7 +45,7 @@ class QfcTestCase(APITransactionTestCase):
 
         with self.assertRaises(django.core.exceptions.ValidationError):
             Subscription.objects.create(
-                plan=Plan.get_or_create_default(),
+                regular_plan=Plan.get_or_create_default(),
                 account=u1.useraccount,
                 created_by=u1,
                 status=Subscription.Status.ACTIVE_PAID,
@@ -636,7 +636,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
         created_subscription = Subscription.objects.create(
-            plan=plan,
+            regular_plan=plan,
             account=u1.useraccount,
             created_by=u1,
             status=Subscription.Status.ACTIVE_PAID,
@@ -668,7 +668,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
         created_subscription = Subscription.objects.create(
-            plan=plan,
+            regular_plan=plan,
             account=u1.useraccount,
             created_by=u1,
             status=Subscription.Status.ACTIVE_PAID,
