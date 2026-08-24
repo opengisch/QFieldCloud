@@ -49,7 +49,7 @@ def invite_user_by_email(
     if not permissions_utils.can_send_invitations(inviter, inviter):
         return False, _("Your user cannot send invitations.")
 
-    Invitation = get_invitation_model()
+    Invitation = get_invitation_model()  # noqa: N806
     Invitation.objects.filter(email=email, sent__isnull=True).delete()
     qs = Invitation.objects.filter(email=email)
 

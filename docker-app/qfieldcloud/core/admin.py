@@ -136,7 +136,7 @@ class QfcAdminSite(AdminSite):
 
         results: dict[str, dict[str, Any]] = {}
         person_result: Person | None = None
-        PAGE_SIZE = 5
+        PAGE_SIZE = 5  # noqa: N806
 
         if query:
             # Validate query length
@@ -623,7 +623,7 @@ def search_parser(
     _request, _queryset, search_term: str, filter_config: dict[str, dict[str, Any]]
 ) -> dict[str, Any]:
     custom_filter = {}
-    CUSTOM_SEARCH_DIVIDER = ":"
+    CUSTOM_SEARCH_DIVIDER = ":"  # noqa: N806
     if CUSTOM_SEARCH_DIVIDER in search_term:
         prefix, search = search_term.split(CUSTOM_SEARCH_DIVIDER, 1)
         prefix_config = filter_config.get(prefix)

@@ -136,7 +136,7 @@ def calc_etag(file: ContentFile, part_size: int = 8 * 1024 * 1024) -> str:
         the calculated ETag value
     """
     if file.size <= part_size:
-        BLOCKSIZE = 65536
+        BLOCKSIZE = 65536  # noqa: N806
         hasher = hashlib.md5()
 
         buf = file.read(BLOCKSIZE)

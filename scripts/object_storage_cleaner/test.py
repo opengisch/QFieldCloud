@@ -591,16 +591,16 @@ class TestObjectStorageCleaner(unittest.TestCase):
 
     def test_selective_retention_with_multiple_keys(self):
         """Test that different keys are identified and deleted. With the same prefix but different keys."""
-        keyA = f"{self.unique_prefix}keyA.txt"
-        keyB = f"{self.unique_prefix}keyB.txt"
+        key_a = f"{self.unique_prefix}key_a.txt"
+        key_b = f"{self.unique_prefix}key_b.txt"
 
-        self.create_file(keyA, "A" * 100)
-        self.delete_file(keyA)
+        self.create_file(key_a, "A" * 100)
+        self.delete_file(key_a)
 
         time.sleep(5)
 
-        self.create_file(keyB, "B" * 100)
-        self.delete_file(keyB)
+        self.create_file(key_b, "B" * 100)
+        self.delete_file(key_b)
 
         # 1. Run with dry-run
         result = self.run_script(
@@ -631,24 +631,24 @@ class TestObjectStorageCleaner(unittest.TestCase):
         versions = self.list_versions(self.unique_prefix)
         self.assertEqual(len(versions), 2)
 
-        # 4. Verify that KeyB is not deleted
+        # 4. Verify that key_b is not deleted
         for version in versions:
             assert "Key" in version
 
-            self.assertEqual(version["Key"], keyB)
+            self.assertEqual(version["Key"], key_b)
 
     def test_selective_retention_with_multiple_keys_and_different_prefixes(self):
         """Test that different keys with different prefixes are not identified and deleted."""
-        prefixA = f"{self.unique_prefix}A/"
-        prefixB = f"{self.unique_prefix}B/"
-        keyA = f"{prefixA}keyA.txt"
-        keyB = f"{prefixB}keyB.txt"
+        prefix_a = f"{self.unique_prefix}A/"
+        prefix_b = f"{self.unique_prefix}B/"
+        key_a = f"{prefix_a}key_a.txt"
+        key_b = f"{prefix_b}key_b.txt"
 
-        self.create_file(keyA, "A" * 100)
-        self.delete_file(keyA)
+        self.create_file(key_a, "A" * 100)
+        self.delete_file(key_a)
 
-        self.create_file(keyB, "B" * 100)
-        self.delete_file(keyB)
+        self.create_file(key_b, "B" * 100)
+        self.delete_file(key_b)
 
         time.sleep(2)
 
@@ -657,7 +657,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
             [
                 "--dry-run",
                 "--prefix",
-                prefixA,
+                prefix_a,
                 "--retention-period",
                 "2 second",
             ]
@@ -671,24 +671,24 @@ class TestObjectStorageCleaner(unittest.TestCase):
             [
                 "--force",
                 "--prefix",
-                prefixA,
+                prefix_a,
                 "--retention-period",
                 "2 second",
             ]
         )
 
-        # 3. Verify that KeyB still exists
-        versions = self.list_versions(prefixB)
+        # 3. Verify that key_b still exists
+        versions = self.list_versions(prefix_b)
         self.assertEqual(len(versions), 2)
 
-        # 4. Verify that KeyB is not deleted
+        # 4. Verify that key_b is not deleted
         for version in versions:
             assert "Key" in version
 
-            self.assertEqual(version["Key"], keyB)
+            self.assertEqual(version["Key"], key_b)
 
-        # 5. Verify that KeyA is deleted
-        versions = self.list_versions(prefixA)
+        # 5. Verify that key_a is deleted
+        versions = self.list_versions(prefix_a)
         self.assertEqual(len(versions), 0)
 
     def test_parse_retention_period_valid_inputs(self):

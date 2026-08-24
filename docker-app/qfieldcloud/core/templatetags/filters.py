@@ -23,11 +23,11 @@ def filesizeformat10(bytes_) -> str:
     def filesize_number_format(value):
         return formats.number_format(round(value, 1), 1)
 
-    KB = 10**3
-    MB = 10**6
-    GB = 10**9
-    TB = 10**12
-    PB = 10**15
+    KB = 10**3  # noqa: N806
+    MB = 10**6  # noqa: N806
+    GB = 10**9  # noqa: N806
+    TB = 10**12  # noqa: N806
+    PB = 10**15  # noqa: N806
 
     negative = bytes_ < 0
     if negative:
