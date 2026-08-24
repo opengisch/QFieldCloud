@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.core.validators import (
     MaxLengthValidator,
     MinLengthValidator,
@@ -27,6 +26,11 @@ from qfieldcloud.core.validators import MaxBytesLengthValidator
 from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 from qfieldcloud.filestorage.utils import calc_etag, filename_validator
 from qfieldcloud.project.models import Project, get_project_file_storage_default
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from django.core.files.base import ContentFile
 
 
 class FileQueryset(models.QuerySet):

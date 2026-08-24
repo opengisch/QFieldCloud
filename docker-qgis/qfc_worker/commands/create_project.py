@@ -3,11 +3,10 @@ import enum
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 from uuid import UUID
 
 from convert2qgis.errors import Convert2QgisBaseError
-from convert2qgis.xlsform2qgis.type_defs import ConverterSettings
 from convert2qgis.xlsform2qgis.xlsform2qgis import (
     convert_xlsform_to_qgis_project,
 )
@@ -40,6 +39,9 @@ from qfc_worker.workflow import (
     WorkDirPath,
     Workflow,
 )
+
+if TYPE_CHECKING:
+    from convert2qgis.xlsform2qgis.type_defs import ConverterSettings
 
 logger = logging.getLogger(__name__)
 

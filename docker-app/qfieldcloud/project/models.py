@@ -26,7 +26,6 @@ from django.db.models.functions import MD5
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
-from django_stubs_ext import StrOrPromise
 
 from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField
@@ -50,6 +49,8 @@ from qfieldcloud.project.enums import (
 )
 
 if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
+
     from qfieldcloud.core.models import (
         JobQuerySet,
         ProjectCollaboratorQueryset,

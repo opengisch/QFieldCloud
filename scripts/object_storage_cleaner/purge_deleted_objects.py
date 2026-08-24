@@ -16,13 +16,11 @@ import logging
 import re
 import signal
 import sys
-from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import boto3
-from botocore.client import BaseClient
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -34,6 +32,9 @@ DELETE_BATCH_SIZE = 1000
 LIST_OBJECT_VERSIONS_MAX_KEYS = 1000
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from botocore.client import BaseClient
     from mypy_boto3_s3.type_defs import (
         DeleteObjectsOutputTypeDef,
         ListObjectVersionsOutputTypeDef,
