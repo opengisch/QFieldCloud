@@ -546,10 +546,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json["code"], "object_not_found")
 
     def test_push_delta_allowed_for_insufficient_subscription(self):
-        """
-        Test that deltas can always be pushed, even if project has
-        unsoppurted online layer or owner (token3) is inactive or over qouta .
-        """
+        """Test that deltas can always be pushed, even if project has unsoppurted online layer or owner (token3) is inactive or over qouta ."""
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token3.key)
         project = self.upload_project_files(self.project1)
 

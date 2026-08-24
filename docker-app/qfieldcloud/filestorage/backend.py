@@ -31,8 +31,7 @@ class QfcBackendStorageMixin(ABC):
 
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
         """
-        Patches a nginx redirect response for usage with the storage backend.
-        At the moment, does nothing.
+        Patches a nginx redirect response for usage with the storage backend. At the moment, does nothing.
 
         Arguments:
             response: HTTP redirect response to patch.
@@ -59,8 +58,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
 
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
         """
-        Patches a nginx redirect response for usage with S3.
-        At the moment, does nothing.
+        Patches a nginx redirect response for usage with S3. At the moment, does nothing.
 
         Arguments:
             response: HTTP redirect response to patch.
@@ -101,6 +99,7 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
 class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     """
     Storage backend using WebDAV.
+
     Adapted and inspired by this repository: https://github.com/marazmiki/django-webdav-storage
     Copyright (c) 2020, Mikhail Porokhovnichenko
     """
@@ -242,6 +241,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     def make_collection(self, name: str) -> None:
         """
         Creates a so-called collection on the configured webdav storage for a file.
+
         Typically creates parent folders if not existing.
 
         Arguments:
@@ -322,6 +322,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     def patch_nginx_download_redirect(self, response: HttpResponse) -> None:
         """
         Patches a nginx redirect response for usage with WebDAV.
+
         Adds configured webdav/HTTP basic auth, required for nginx redirect.
 
         Arguments:

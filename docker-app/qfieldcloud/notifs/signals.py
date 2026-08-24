@@ -20,8 +20,9 @@ from qfieldcloud.project.models import Project
 
 def _send_notif(verb, action_object, recipient, target=None):
     """
-    Sends a notification through django-notifications, but sets it as already read
-    if the actor is the same as the recipient
+    Sends a notification through django-notifications.
+
+    Sets it as already read if the actor is the same as the recipient
     """
     authenticated_user = get_current_authenticated_user()
 

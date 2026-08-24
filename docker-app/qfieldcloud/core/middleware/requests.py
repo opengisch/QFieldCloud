@@ -10,7 +10,10 @@ logger = logging.getLogger(__name__)
 
 def attach_keys(get_response):
     """
-    QF-2540
+    Debug `EmptyContentError` when uploading files by attaching the body of the request to `request.body_stream`.
+
+    See https://app.clickup.com/t/2192114/QF-2540
+
     Annotate request with:
     - a `str` representation of relevant fields, so as to obtain a diff by comparing with the post-serialized request later in the callstack;
     - a byte-for-byte, non stealing copy of the raw body to inspect multipart boundaries.

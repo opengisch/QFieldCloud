@@ -63,6 +63,7 @@ class Plan(models.Model):
     def get_or_create_default(cls) -> Self:
         """
         Returns the default plan, creating one if none exists.
+
         To be used as a default value for UserAccount.type
         """
         if not cls.objects.exists():
@@ -98,10 +99,7 @@ class Plan(models.Model):
 
     @classmethod
     def get_plans_for_user(cls, user: User, user_type: User.Type) -> QuerySet[Self]:
-        """
-        Return all public plans of the given `user_type`, filtering out
-        trial plans for organizations when no trials remain.
-        """
+        """Return all public plans of the given `user_type`, filtering out trial plans for organizations when no trials remain."""
         filters = {
             "is_public": True,
             "user_type": user_type,
@@ -496,6 +494,7 @@ class SubscriptionQuerySet(models.QuerySet):
     def current(self):
         """
         Returns the subscriptions which are relevant to the current moment.
+
         NOTE Some of the subscriptions in the queryset might not be active, but cancelled or drafted.
         """
         now = timezone.now()
@@ -1096,10 +1095,7 @@ class AbstractSubscription(models.Model):
         return trial_subscription_obj, regular_subscription_obj
 
     def clean(self):
-        """
-        Validates that the subscription's active period does not overlap with
-        any other active subscriptions for the same account.
-        """
+        """Validates that the subscription's active period does not overlap with any other active subscriptions for the same account."""
         # If there is no `active_since`, nothing to check.
         if not self.active_since:
             return

@@ -97,10 +97,7 @@ class SubscriptionModelForm(forms.ModelForm):
             active_storage_field.initial = subscription.active_storage_package_quantity
 
     def save(self, commit=True):
-        """
-        Adds an extra field, 'aditional_storage_quantity' allowing, from the `SubscriptionAdmin` view, to increase
-        the plan's storage capacity.
-        """
+        """Adds an extra field, 'aditional_storage_quantity' allowing, from the `SubscriptionAdmin` view, to increase the plan's storage capacity."""
         additional_storage_quantity = self.cleaned_data.get(
             "additional_storage_quantity", None
         )

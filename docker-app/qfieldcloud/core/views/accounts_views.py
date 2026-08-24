@@ -16,6 +16,7 @@ def redirect_to_referer_or_view(
 ) -> HttpResponseRedirect:
     """
     Redirects a request to a referer provided by a client.
+
     If no referer provided or the referer is not safe,
     this will create a redirection to a default view.
 

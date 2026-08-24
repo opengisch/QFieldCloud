@@ -579,10 +579,7 @@ class UserAccount(models.Model):
 
 
 def random_string() -> str:
-    """
-    Generate random sting starting with a lowercase letter and then
-    lowercase letters and digits
-    """
+    """Generate random sting starting with a lowercase letter and then lowercase letters and digits"""
 
     first_letter = secrets.choice(string.ascii_lowercase)
     letters_and_digits = string.ascii_lowercase + string.digits
@@ -593,10 +590,7 @@ def random_string() -> str:
 
 
 def random_password() -> str:
-    """
-    Generate secure random password composed of
-    letters, digits and special characters
-    """
+    """Generate secure random password composed of letters, digits and special characters"""
 
     password_characters = (
         string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"

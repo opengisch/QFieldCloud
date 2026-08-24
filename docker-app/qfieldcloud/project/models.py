@@ -126,6 +126,8 @@ class ProjectQueryset(models.QuerySet):
 
     def slim(self) -> "ProjectQueryset":
         """
+        A minimal fetch of projects with only a few pre-loaded fields.
+
         A light-weight fetch for permission checks, which run on every
         request and only need a project's id, owner, and public flag.
         """
@@ -226,6 +228,7 @@ def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
 class Project(models.Model):
     """
     Represent a QFieldcloud project.
+
     It corresponds to a directory on the file system.
 
     The owner of a project is an Organization.
@@ -658,6 +661,8 @@ class Project(models.Model):
 
     def get_missing_localized_layers(self) -> list["QgisLayer"]:
         """
+        Return list of missing localized layers.
+
         Of all localized layers, return those whose filenames aren’t in `available_filenames`,
         which means they are not present in the associated localized datasets project storage.
 

@@ -74,10 +74,7 @@ class QfcS3Boto3StorageTestCase(TestCase):
     # ==================================================================
 
     def test_no_extension_versioned(self):
-        """
-        Versioned path where the original filename has no extension
-        — no Content-Type should be set.
-        """
+        """Versioned path where the original filename has no extension — no Content-Type should be set."""
         params = self._call("projects/abc123/files/README/v20260317162354-512bd29b")
         self.assertNotIn("ContentType", params)
 
@@ -92,6 +89,8 @@ class QfcS3Boto3StorageTestCase(TestCase):
 
     def test_old_year_format_not_matched(self):
         """
+        Compatibility check for file versions.
+
         v1999… does not match the regex — falls through safely
         to guess_type on the last path component (no extension).
         """

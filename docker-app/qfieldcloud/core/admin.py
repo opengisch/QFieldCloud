@@ -285,11 +285,10 @@ qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
 
 class NoPkOrderChangeList(ChangeList):
     """
-    DjangoAdmin ChangeList adds an ordering -pk to ensure
-    'deterministic ordering to all db backends'. This has a negative
-    impact on performance and optimization.
-    Therefore remove the extra ordering -pk if custom
-    order fields are provided.
+    DjangoAdmin ChangeList adds an ordering -pk to ensure 'deterministic ordering to all db backends'.
+
+    This has a negative impact on performance and optimization.
+    Therefore remove the extra ordering -pk if custom order fields are provided.
     """
 
     def get_ordering(self, request, queryset):
