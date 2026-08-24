@@ -3,7 +3,8 @@ from rest_framework import status
 from qfieldcloud.core.exceptions import QFieldCloudError
 
 
-class SubscriptionException(QFieldCloudError): ...
+# TODO @suricactus: Rename `SubscriptionException` related exceptions to suffix with `Error` instead of `Exception` and drop N818 noqa, see https://app.clickup.com/t/2192114/QF-8734
+class SubscriptionException(QFieldCloudError): ...  # noqa: N818
 
 
 class NotPremiumPlanException(SubscriptionException): ...
