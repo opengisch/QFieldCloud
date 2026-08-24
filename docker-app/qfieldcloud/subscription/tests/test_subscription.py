@@ -55,7 +55,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(u1.useraccount.current_subscription, subscription)
 
     def test_active_storage_total_mb(self):
-        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package"""
+        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package."""
         u1 = Person.objects.create(username="u1")
         subscription = set_subscription(
             u1,
@@ -78,7 +78,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(subscription.active_storage_total_mb, 3001)
 
     def test_active_storage_package(self):
-        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package"""
+        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package."""
         u1 = Person.objects.create(username="u1")
         subscription = set_subscription(
             u1,
@@ -101,7 +101,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(subscription.active_storage_package, new)
 
     def test_active_storage_package_quantity(self):
-        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package"""
+        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package."""
         u1 = Person.objects.create(username="u1")
         subscription = set_subscription(
             u1,
@@ -124,7 +124,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(subscription.active_storage_package_quantity, 3)
 
     def test_active_storage_package_mb(self):
-        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package"""
+        """Test property has correct values in cases of no packages, with active package, and rewrite of the active package."""
         u1 = Person.objects.create(username="u1")
         subscription = set_subscription(
             u1,

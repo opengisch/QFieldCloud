@@ -803,7 +803,7 @@ def create_feature(
     layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
 ) -> QgsFeature:
     """
-    Creates new feature in layer
+    Creates new feature in layer.
 
     Args:
         layer: target layer. Must be in editing mode!
@@ -873,7 +873,7 @@ def patch_feature(
     client_pks: dict[str, str],
 ) -> QgsFeature:
     """
-    Patches a feature in layer
+    Patches a feature in layer.
 
     Args:
         layer: target layer. Must be in edit mode!
@@ -964,7 +964,7 @@ def delete_feature(
     client_pks: dict[str, str],
 ) -> QgsFeature:
     """
-    Deletes a feature from layer
+    Deletes a feature from layer.
 
     Args:
         layer: target layer. Must be in edit mode!
@@ -1095,7 +1095,7 @@ def get_layer_path(layer: QgsMapLayer) -> Path:
 
 def get_backup_path(path: Path) -> Path:
     """
-    Returns a `Path` object of with backup suffix
+    Returns a `Path` object of with backup suffix.
 
     Args:
         path: target path
@@ -1112,7 +1112,7 @@ def is_layer_file_based(layer: QgsMapLayer) -> bool:
 
 def inverse_delta(delta: Delta) -> Delta:
     """
-    Returns shallow copy of the delta with reversed `old` and `new` keys
+    Returns shallow copy of the delta with reversed `old` and `new` keys.
 
     Args:
         delta: delta

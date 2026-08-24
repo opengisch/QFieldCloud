@@ -1,5 +1,5 @@
 """
-Object Storage Logically Deleted Object Cleaner
+Object Storage Logically Deleted Object Cleaner.
 
 This script scans an object storage bucket for "logically deleted" objects (objects where the
 latest version is a Delete Marker) and optionally permanently deletes all versions

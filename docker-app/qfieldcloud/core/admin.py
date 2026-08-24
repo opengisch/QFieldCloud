@@ -578,7 +578,7 @@ class EmailAddressAdmin(EmailAddressAdminBase):
 
     @admin.action(description="Export all users' email contact details to .csv")  # type: ignore
     def export_emails_to_csv(self, request) -> StreamingHttpResponse:
-        """ "Export all users' email contact details to .csv"""
+        """ "Export all users' email contact details to .csv."""
 
         class PseudoBuffer:
             # Good idea from https://docs.djangoproject.com/en/4.1/howto/outputting-csv/

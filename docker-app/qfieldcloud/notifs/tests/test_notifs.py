@@ -21,7 +21,7 @@ from qfieldcloud.project.models import Project
 
 
 class QfcTestCase(TestCase):
-    """This tests that the notifications are sent"""
+    """This tests that the notifications are sent."""
 
     @classmethod
     def setUpClass(cls):

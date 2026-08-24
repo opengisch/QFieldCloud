@@ -127,7 +127,7 @@ def _get_area_of_interest(project: QgsProject) -> QgsRectangle | None:
 
 
 def _extract_project_details(project: QgsProject) -> ProjectDetails:
-    """Extract project details"""
+    """Extract project details."""
     logger.info("Extract project details…")
     logger.info("Reading QGIS project file…")
 
@@ -188,7 +188,7 @@ def _generate_thumbnail(
     thumbnail_timeout_s: int = THUMBNAIL_TIMEOUT_S,
 ) -> Path | None:
     """
-    Create a thumbnail for the project
+    Create a thumbnail for the project.
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
     """

@@ -114,7 +114,7 @@ class RetrieveUpdateUserViewPermissions(permissions.BasePermission):
     patch=extend_schema("Partially update a user"),
 )
 class RetrieveUpdateUserView(generics.RetrieveUpdateAPIView):
-    """Get or Update the authenticated user"""
+    """Get or Update the authenticated user."""
 
     permission_classes = [
         permissions.IsAuthenticated,
@@ -160,7 +160,7 @@ class ListUserOrganizationsViewPermissions(permissions.BasePermission):
     get=extend_schema(description="Get a user's organization"),
 )
 class ListUserOrganizationsView(generics.ListAPIView):
-    """Get user's organizations"""
+    """Get user's organizations."""
 
     permission_classes = [
         permissions.IsAuthenticated,

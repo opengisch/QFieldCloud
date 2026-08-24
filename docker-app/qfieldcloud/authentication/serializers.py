@@ -12,7 +12,7 @@ User = get_user_model()
 
 
 class LoginSerializer(serializers.Serializer):
-    """Based on https://github.com/Tivix/django-rest-auth/blob/rest_auth/serializers.py#L19"""
+    """Based on https://github.com/Tivix/django-rest-auth/blob/rest_auth/serializers.py#L19."""
 
     username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
@@ -129,7 +129,7 @@ class TokenSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """User model w/o password"""
+    """User model w/o password."""
 
     class Meta:
         model = User

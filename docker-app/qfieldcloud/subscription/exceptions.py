@@ -10,7 +10,7 @@ class NotPremiumPlanException(SubscriptionException): ...
 
 
 class ReachedMaxOrganizationMembersError(SubscriptionException):
-    """Raised when an organization has exhausted its quota of members"""
+    """Raised when an organization has exhausted its quota of members."""
 
     code = "organization_has_max_number_of_members"
     message = "Cannot add new organization members, account limit has been reached."
@@ -42,7 +42,7 @@ class PlanInsufficientError(SubscriptionException):
 
 
 class QuotaError(SubscriptionException):
-    """Raised when a quota limitation is hit"""
+    """Raised when a quota limitation is hit."""
 
     code = "over_quota"
     message = "Quota error"

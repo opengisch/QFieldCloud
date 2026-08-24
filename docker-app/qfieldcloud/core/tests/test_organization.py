@@ -228,7 +228,7 @@ class QfcTestCase(APITestCase):
         self.assertTrue(status.is_success(response.status_code))
 
     def test_active_users_count(self):
-        """Tests billable users calculations"""
+        """Tests billable users calculations."""
 
         # Set user1 and user2 as member of organization1
         OrganizationMember.objects.create(
@@ -251,7 +251,7 @@ class QfcTestCase(APITestCase):
         project1 = Project.objects.create(name="p1", owner=self.organization1)
 
         def _active_users_count(base_date=None):
-            """Helper to get count of billable users"""
+            """Helper to get count of billable users."""
             if base_date is None:
                 base_date = now()
 

@@ -1133,7 +1133,7 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_push_list_multilayer_multidelta_same_pk(self):
         """
-        Test that multiple deltas with same PK value in different layers are applied correctly
+        Test that multiple deltas with same PK value in different layers are applied correctly.
 
         1. Create two features with same local PK in different layers (and unknown remote PK).
         2. Push the deltas (NOT sync, we should not know the remote PK on the client).
@@ -1211,7 +1211,7 @@ class QfcTestCase(APITransactionTestCase):
             return response.content
 
     def get_delta_file_with_project_id(self, project, delta_filename):
-        """Retrieves a delta json file with the project id replaced by the project.id"""
+        """Retrieves a delta json file with the project id replaced by the project.id."""
         with open(delta_filename) as f:
             deltafile = json.load(f)
             deltafile["project"] = str(project.id)

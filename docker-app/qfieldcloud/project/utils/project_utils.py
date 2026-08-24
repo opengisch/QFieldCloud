@@ -25,7 +25,7 @@ def is_virtual_layer_with_embedded_layers(datasource: str) -> bool:
 
 
 def has_online_vector_data(project: Project) -> bool:
-    """Returns `False` if the project has no associated `QgisProject`, or no online vector layers"""
+    """Returns `False` if the project has no associated `QgisProject`, or no online vector layers."""
 
     qgis_project = getattr(project, "qgis_project", None)
 

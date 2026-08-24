@@ -159,7 +159,7 @@ class QfcTestCase(APITransactionTestCase):
         origin: ProjectRoleOrigins | None = None,
         is_valid: bool = True,
     ):
-        """Asserts that user has give role/origin on project"""
+        """Asserts that user has give role/origin on project."""
         assert (role is None) == (origin is None), (
             "Both role and origin should be either defined or undefined!"
         )
@@ -293,7 +293,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertFalse(self.user3.id in queryset_ids)
 
     def test_projects_roles_and_role_origins(self):
-        """Checks user_role and user_role_origin are correctly defined"""
+        """Checks user_role and user_role_origin are correctly defined."""
 
         roles = ProjectCollaboratorRole
         role_origins = ProjectRoleOrigins
@@ -331,7 +331,7 @@ class QfcTestCase(APITransactionTestCase):
         # fmt: on
 
     def test_private_project_memberships(self):
-        """Tests for QF-1553 - limit collaboration on private projects"""
+        """Tests for QF-1553 - limit collaboration on private projects."""
         # Shorthands
         roles = ProjectCollaboratorRole
         role_origins = ProjectRoleOrigins

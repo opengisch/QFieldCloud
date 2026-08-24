@@ -182,7 +182,7 @@ def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
 
 def get_project_file_storage_default() -> str:
     """
-    Get the default file storage for the newly created project
+    Get the default file storage for the newly created project.
 
     Returns:
         the name of the storage
@@ -775,7 +775,7 @@ class Project(models.Model):
 
     @property
     def has_online_vector_data(self) -> bool | None:
-        """Returns None if the project has no associated `QgisProject`"""
+        """Returns None if the project has no associated `QgisProject`."""
 
         qgis_project = getattr(self, "qgis_project", None)
 
@@ -1219,7 +1219,7 @@ class ProjectSeed(models.Model):
 
 
 def to_geom_or_none(geom_str: str | None, srid: int = 4326) -> GEOSGeometry | None:
-    """geom_wkt may be WKT, EWKT or HEXEWKB"""
+    """geom_wkt may be WKT, EWKT or HEXEWKB."""
     if not geom_str:
         return None
 

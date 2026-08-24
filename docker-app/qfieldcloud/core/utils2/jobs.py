@@ -23,7 +23,7 @@ def apply_deltas(
     overwrite_conflicts: bool,
     delta_ids: list[str] | None = None,
 ) -> list["models.ApplyJob"]:
-    """Apply a deltas"""
+    """Apply a deltas."""
 
     if delta_ids is None:
         delta_ids = []

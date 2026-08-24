@@ -141,7 +141,7 @@ def qgz_from_qgs(qgs_path: str | Path, qgz_name: str | None = None) -> Iterator[
 
 
 def get_random_file(mb: float) -> IO:
-    """Helper that returns a file of given size in megabytes"""
+    """Helper that returns a file of given size in megabytes."""
     bytes_size = 1000 * int(mb * 1000)
     return io.BytesIO(os.urandom(bytes_size))
 

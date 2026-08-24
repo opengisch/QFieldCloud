@@ -595,7 +595,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[1]["user_role_origin"], "public")
 
     def test_private_project_memberships(self):
-        """Tests for QF-1553 - limit collaboration on private projects"""
+        """Tests for QF-1553 - limit collaboration on private projects."""
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
