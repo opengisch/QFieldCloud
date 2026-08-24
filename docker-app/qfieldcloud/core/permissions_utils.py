@@ -51,7 +51,8 @@ class ExpectedPremiumUserError(CheckPermError): ...
 def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
     """Checks if User model derivatives are equal.
 
-    NOTE User(pk=12) is not equal to Person(pk=12)!"""
+    NOTE User(pk=12) is not equal to Person(pk=12)!
+    """
     return user1.pk == user2.pk
 
 
@@ -170,7 +171,8 @@ def user_has_organization_role_origins(
 
 def get_param_from_request(request, param):
     """Try to get the param from the request data or the request
-    context, returns None otherwise"""
+    context, returns None otherwise
+    """
 
     if isinstance(request.data, dict):
         result = request.data.get(param, None)
@@ -188,7 +190,8 @@ def can_create_project(
 ) -> bool:
     """Return True if the `user` can create a project. Accepts additional
     `organization` to check whether the user has permissions to do so on
-    that organization. Return False otherwise."""
+    that organization. Return False otherwise.
+    """
 
     if organization is None:
         return True
@@ -579,7 +582,8 @@ def can_delete_project_secrets(user: QfcUser, project: Project) -> bool:
 
 def can_list_users_organizations(user: QfcUser) -> bool:
     """Return True if the `user` can list users and organizations.
-    Return False otherwise."""
+    Return False otherwise.
+    """
 
     return True
 
@@ -677,7 +681,8 @@ def can_read_packages(user: QfcUser, project: Project) -> bool:
 
 def can_create_members(user: QfcUser, organization: Organization) -> bool:
     """Return True if the `user` can create members (incl. teams) of `organization`.
-    Return False otherwise."""
+    Return False otherwise.
+    """
 
     return user_has_organization_roles(
         user, organization, [OrganizationMember.Roles.ADMIN]
@@ -686,7 +691,8 @@ def can_create_members(user: QfcUser, organization: Organization) -> bool:
 
 def can_read_members(user: QfcUser, organization: Organization) -> bool:
     """Return True if the `user` can list members (incl. teams) of `organization`.
-    Return False otherwise."""
+    Return False otherwise.
+    """
 
     if not organization.is_organization:
         return False
