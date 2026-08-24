@@ -51,6 +51,8 @@ from tabulate import tabulate
 # Get environment variables
 JOB_ID = os.environ.get("JOB_ID")
 
+PROJECT_DOWNLOAD_DIR = "/tmp/project"
+
 # Network timeout for QGIS. Reduced from default 60 seconds to fail fast
 # when layers are unreachable (e.g. network outage, blocked external access).
 # This prevents long blocking delays when loading project file.
@@ -501,8 +503,18 @@ def download_project(
     logging.info("Preparing a temporary directory for project files…")
 
     if not destination:
-        # Create a temporary directory
-        destination = Path(tempfile.mkdtemp())
+        destination = Path(PROJECT_DOWNLOAD_DIR)
+        """Download the project files in the project "working" directory from the Object storage.
+
+        The destination may be passed as destination or will be a fixed temporary directory (PROJECT_DOWNLOAD_DIR).
+        Return:
+        the directory path
+        """
+        destination.mkdir(parents=True, exist_ok=True)
+
+    assert destination.is_dir() and not any(destination.iterdir()), (
+        f"Destination directory {destination} must exist and be empty!"
+    )
 
     # Create a local working directory
     working_dir = destination.joinpath("files")
@@ -816,6 +828,9 @@ def get_layers_data(project: QgsProject) -> dict[str, dict]:
                 )
         else:
             fields = None
+
+        if filename:
+            filename = filename.removeprefix(PROJECT_DOWNLOAD_DIR)
 
         # Must be kept in sync with `LayerDetails` in `qfieldcloud/project/type_defs.py`, which consumes this data structure.
         # WARNING: this shape has evolved over time, so feedback stored by older jobs is not guaranteed to match it.
