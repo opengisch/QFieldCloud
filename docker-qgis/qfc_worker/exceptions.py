@@ -20,7 +20,7 @@ def humanize_error(exc: BaseException) -> str:
     return "\n  - Caused by: ".join(parts)
 
 
-class QfcWorkerException(Exception):
+class QfcWorkerError(Exception):
     """QFieldCloud Exception."""
 
     message = ""
@@ -32,27 +32,27 @@ class QfcWorkerException(Exception):
         super().__init__(self.message)
 
 
-class ProjectFileNotFoundException(QfcWorkerException):
+class ProjectFileNotFoundError(QfcWorkerError):
     message = 'Project file "%(the_qgis_file_name)s" does not exist'
 
 
-class InvalidFileExtensionException(QfcWorkerException):
+class InvalidFileExtensionError(QfcWorkerError):
     message = 'Project file "%(the_qgis_file_name)s" has unknown file extension "%(extension)s"'
 
 
-class InvalidXmlFileException(QfcWorkerException):
+class InvalidXmlFileError(QfcWorkerError):
     message = "Project file is an invalid XML document:\n%(xml_error)s"
 
 
-class FailedThumbnailGenerationException(QfcWorkerException):
+class FailedThumbnailGenerationError(QfcWorkerError):
     message = "Failed to generate project thumbnail:\n%(reason)s"
 
 
-class UnableToContinueException(QfcWorkerException):
+class UnableToContinueError(QfcWorkerError):
     message = "Unable to continue workflow:\n%(reason)s"
 
 
-class WorkflowModificationException(Exception): ...
+class WorkflowModificationError(Exception): ...
 
 
-class WorkflowValidationException(Exception): ...
+class WorkflowValidationError(Exception): ...

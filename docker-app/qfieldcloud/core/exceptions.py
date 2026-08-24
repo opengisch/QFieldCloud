@@ -7,7 +7,7 @@ class QfcError(Exception): ...
 class IntegrationError(QfcError): ...
 
 
-class QFieldCloudException(Exception):
+class QFieldCloudError(Exception):
     """
     Generic QFieldCloud Exception.
 
@@ -41,7 +41,7 @@ class QFieldCloudException(Exception):
         return self.message
 
 
-class AuthenticationFailedError(QFieldCloudException):
+class AuthenticationFailedError(QFieldCloudError):
     """Raised when QFieldCloud incoming request includes incorrect authentication."""
 
     code = "authentication_failed"
@@ -50,7 +50,7 @@ class AuthenticationFailedError(QFieldCloudException):
     log_as_error = False
 
 
-class AuthenticationViaTokenFailedError(QFieldCloudException):
+class AuthenticationViaTokenFailedError(QFieldCloudError):
     """Raised when QFieldCloud incoming request includes incorrect authentication token."""
 
     code = "token_authentication_failed"
@@ -59,7 +59,7 @@ class AuthenticationViaTokenFailedError(QFieldCloudException):
     log_as_error = False
 
 
-class NotAuthenticatedError(QFieldCloudException):
+class NotAuthenticatedError(QFieldCloudError):
     """Raised when QFieldCloud unauthenticated request fails the permission checks."""
 
     code = "not_authenticated"
@@ -68,7 +68,7 @@ class NotAuthenticatedError(QFieldCloudException):
     log_as_error = False
 
 
-class TooManyLoginAttemptsError(QFieldCloudException):
+class TooManyLoginAttemptsError(QFieldCloudError):
     """Raised when QFieldCloud had too many failed login attempts."""
 
     code = "too_many_failed_login_attempts"
@@ -76,7 +76,7 @@ class TooManyLoginAttemptsError(QFieldCloudException):
     status_code = status.HTTP_401_UNAUTHORIZED
 
 
-class PermissionDeniedError(QFieldCloudException):
+class PermissionDeniedError(QFieldCloudError):
     """Raised when the user has not the required permission for an action."""
 
     code = "permission_denied"
@@ -85,7 +85,7 @@ class PermissionDeniedError(QFieldCloudException):
     log_as_error = False
 
 
-class EmptyContentError(QFieldCloudException):
+class EmptyContentError(QFieldCloudError):
     """Raised when a request doesn't contain an expected content (e.g. a file)."""
 
     code = "empty_content"
@@ -93,7 +93,7 @@ class EmptyContentError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class MultipleContentsError(QFieldCloudException):
+class MultipleContentsError(QFieldCloudError):
     """Raised when a request contains multiple files (i.e. when it should contain at most one)."""
 
     code = "multiple_contents"
@@ -101,7 +101,7 @@ class MultipleContentsError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class ExplicitDeletionOfLastFileVersionError(QFieldCloudException):
+class ExplicitDeletionOfLastFileVersionError(QFieldCloudError):
     """Raised when the only file version is explicitly requested for deletion."""
 
     code = "explicit_deletion_of_last_version"
@@ -109,7 +109,7 @@ class ExplicitDeletionOfLastFileVersionError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class ObjectNotFoundError(QFieldCloudException):
+class ObjectNotFoundError(QFieldCloudError):
     """Raised when a requested object doesn't exist (e.g. wrong project id into the request)."""
 
     code = "object_not_found"
@@ -118,7 +118,7 @@ class ObjectNotFoundError(QFieldCloudException):
     log_as_error = False
 
 
-class APIError(QFieldCloudException):
+class APIError(QFieldCloudError):
     """Raised in case of an API error."""
 
     code = "api_error"
@@ -126,7 +126,7 @@ class APIError(QFieldCloudException):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-class ValidationError(QFieldCloudException):
+class ValidationError(QFieldCloudError):
     """Raised when validation of form data or model field fails (e.g. wrong field in request object)."""
 
     code = "validation_error"
@@ -135,7 +135,7 @@ class ValidationError(QFieldCloudException):
     log_as_error = False
 
 
-class InvalidQgisProjectFileError(QFieldCloudException):
+class InvalidQgisProjectFileError(QFieldCloudError):
     """Raised when the user is trying to upload an invalid QGIS project file into a QFieldCloud project."""
 
     code = "invalid_qgis_project_file"
@@ -143,7 +143,7 @@ class InvalidQgisProjectFileError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class MultipleProjectsError(QFieldCloudException):
+class MultipleProjectsError(QFieldCloudError):
     """Raised when the user is trying to upload more than one QGIS project into a QFieldCloud project."""
 
     code = "multiple_projects"
@@ -151,7 +151,7 @@ class MultipleProjectsError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class RestrictedProjectModificationError(QFieldCloudException):
+class RestrictedProjectModificationError(QFieldCloudError):
     """Raised when a user with insufficient role is trying to modify QGIS/QField projectfiles of a project that has the 'has_restricted_projectfiles' flag set."""
 
     code = "restricted_project_modification"
@@ -159,7 +159,7 @@ class RestrictedProjectModificationError(QFieldCloudException):
     status_code = status.HTTP_403_FORBIDDEN
 
 
-class DeltafileValidationError(QFieldCloudException):
+class DeltafileValidationError(QFieldCloudError):
     """Raised when a deltafile validation fails."""
 
     code = "invalid_deltafile"
@@ -167,7 +167,7 @@ class DeltafileValidationError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class NoDeltasToApplyError(QFieldCloudException):
+class NoDeltasToApplyError(QFieldCloudError):
     """Raised when a deltafile validation fails."""
 
     code = "no_deltas_to_apply"
@@ -175,7 +175,7 @@ class NoDeltasToApplyError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class NoQGISProjectError(QFieldCloudException):
+class NoQGISProjectError(QFieldCloudError):
     """Raised when a QFieldCloud doesn't contain a QGIS project that is needed for the requested operation."""
 
     code = "no_qgis_project"
@@ -183,7 +183,7 @@ class NoQGISProjectError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class InvalidJobError(QFieldCloudException):
+class InvalidJobError(QFieldCloudError):
     """Raised when a requested job doesn't exist."""
 
     code = "invalid_job"
@@ -191,7 +191,7 @@ class InvalidJobError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class ProjectAlreadyExistsError(QFieldCloudException):
+class ProjectAlreadyExistsError(QFieldCloudError):
     """Raised when a quota limitation is hit."""
 
     code = "project_already_exists"
@@ -199,13 +199,13 @@ class ProjectAlreadyExistsError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class InvalidRangeError(QFieldCloudException):
+class InvalidRangeError(QFieldCloudError):
     code = "invalid_http_range"
     message = "The provided HTTP range header is invalid."
     status_code = status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
 
 
-class QGISProjectFileNotAllowedError(QFieldCloudException):
+class QGISProjectFileNotAllowedError(QFieldCloudError):
     """Raised when a QGIS project file is uploaded to a project that does not allow it (e.g. shared datasets project)."""
 
     code = "qgis_project_file_not_allowed"
@@ -213,7 +213,7 @@ class QGISProjectFileNotAllowedError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class NotCloneableProjectError(QFieldCloudException):
+class NotCloneableProjectError(QFieldCloudError):
     """Raised when a project cannot be cloned."""
 
     code = "not_cloneable_project"
@@ -221,7 +221,7 @@ class NotCloneableProjectError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class OperationNotAllowedForTemplateProjectError(QFieldCloudException):
+class OperationNotAllowedForTemplateProjectError(QFieldCloudError):
     """
     Raised when attempting to package or apply deltas on a template project.
 
@@ -233,7 +233,7 @@ class OperationNotAllowedForTemplateProjectError(QFieldCloudException):
     status_code = status.HTTP_400_BAD_REQUEST
 
 
-class UnexpectedProjectCollaboratorError(QFieldCloudException):
+class UnexpectedProjectCollaboratorError(QFieldCloudError):
     """Raised when the project creator is unexpectedly already a project collaborator at the time of the automatic `ADMIN` collaborator grant."""
 
     code = "unexpected_project_collaborator"

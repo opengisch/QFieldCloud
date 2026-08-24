@@ -57,7 +57,7 @@ TOKEN_EXPIRATION_TIME_BUFFER_S = 60
 """Extra time in seconds for the dedicated worker token to keep the token valid, in addition to `JobRun.container_timeout_secs`. Useful when the worker takes longer to start."""
 
 
-class JobException(Exception):
+class JobError(Exception):
     pass
 
 
@@ -217,7 +217,7 @@ class JobRun:
             qgis_major_project_version = 3
 
         if qgis_major_project_version not in self.qgis_images:
-            raise JobException(
+            raise JobError(
                 f"Unsupported QGIS major version {qgis_major_project_version} for project {self.job.project.id} stored with {self.job.project.qgis_version}."
             )
 
@@ -747,7 +747,7 @@ class CreateProjectJobRun(JobRun):
         )
 
         if qgis_major_project_version not in self.qgis_images:
-            raise JobException(
+            raise JobError(
                 f"Unsupported QGIS major version {qgis_major_project_version} for project {self.job.project.id} cloned from project {clone_from_project.id} stored with {clone_from_project.qgis_version}."
             )
 

@@ -77,7 +77,7 @@ class DeltaMethod(str, Enum):
     DELETE = "delete"
 
 
-class DeltaExceptionType(str, Enum):
+class DeltaErrorType(str, Enum):
     def __str__(self):
         return str(self.value)
 
@@ -139,11 +139,11 @@ class DeltaFile:
 
 
 # EXCEPTION DEFINITIONS\
-class DeltaException(Exception):
+class DeltaError(Exception):
     def __init__(
         self,
         msg: str,
-        e_type: DeltaExceptionType = DeltaExceptionType.Error,
+        e_type: DeltaErrorType = DeltaErrorType.Error,
         delta_file_id: str | None = None,
         layer_id: str | None = None,
         delta_idx: int | None = None,
@@ -219,7 +219,7 @@ def get_geometry_from_delta(
         layer: layer the feature is part of
 
     Raises:
-        DeltaException
+        DeltaError
 
     Returns:
         the parsed `QgsGeometry`. Might be invalid geometry. Returns `None` if no geometry has been modified.
@@ -234,19 +234,19 @@ def get_geometry_from_delta(
             wkt = delta_feature["geometry"].strip()
 
             if not isinstance(wkt, str):
-                raise DeltaException(
+                raise DeltaError(
                     f"The provided geometry is of type {type(wkt)} which is neither null nor a WKT string."
                 )
 
             if len(wkt) == 0:
-                raise DeltaException("Empty WKT string!")
+                raise DeltaError("Empty WKT string!")
 
             wkt = wkt_nan_to_zero(wkt)
             geometry = QgsGeometry.fromWkt(wkt)
 
             # TODO consider also checking for `isEmpty()`. Not enabling it for now.
             if geometry.isNull():
-                raise DeltaException(f"Null geometry from {wkt=}")
+                raise DeltaError(f"Null geometry from {wkt=}")
 
             # E.g. Shapefile might report a `Polygon` geometry, even though it is a `MultiPolygon`
             if geometry.type() != layer.geometryType():
@@ -425,13 +425,13 @@ def apply_deltas_without_transaction(
 
         try:
             if not isinstance(layer, QgsVectorLayer):
-                raise DeltaException(f'No layer with id "{layer_id}"')
+                raise DeltaError(f'No layer with id "{layer_id}"')
 
             if not layer.isValid():
-                raise DeltaException(f'Invalid layer "{layer_id}"')
+                raise DeltaError(f'Invalid layer "{layer_id}"')
 
             if not layer.isEditable() and not layer.startEditing():
-                raise DeltaException(
+                raise DeltaError(
                     f'Cannot start editing layer "{layer_id}"',
                     provider_errors=layer.dataProvider().errors(),
                 )
@@ -452,7 +452,7 @@ def apply_deltas_without_transaction(
 
             pk_attr_name = get_pk_attr_name(layer)
             if not pk_attr_name:
-                raise DeltaException(f'Layer "{layer.name()}" has no primary key.')
+                raise DeltaError(f'Layer "{layer.name()}" has no primary key.')
 
             has_edit_buffer = layer.editBuffer() and not isinstance(
                 layer.editBuffer(), QgsVectorLayerEditPassthrough
@@ -486,16 +486,16 @@ def apply_deltas_without_transaction(
                     client_pks=delta_file.client_pks,
                 )
             else:
-                raise DeltaException("Unknown delta method")
+                raise DeltaError("Unknown delta method")
 
             def committed_features_added_cb(layer_id, features):
                 if len(features) != 0 and len(features) != 1:
-                    raise DeltaException(
+                    raise DeltaError(
                         f"Expected only one feature, but actually {len(features)} were added."
                     )
 
                 if layer_id != layer.id():
-                    raise DeltaException(
+                    raise DeltaError(
                         f"Expected the layer with the added layer to be {layer.id()}, but got {layer_id}."
                     )
 
@@ -507,7 +507,7 @@ def apply_deltas_without_transaction(
                 layer.committedFeaturesAdded.connect(committed_features_added_cb)
 
             if not layer.commitChanges(False):
-                raise DeltaException(
+                raise DeltaError(
                     "Failed to commit changes",
                     provider_errors=layer.dataProvider().errors(),
                 )
@@ -557,7 +557,7 @@ def apply_deltas_without_transaction(
                 }
             )
 
-        except DeltaException as err:
+        except DeltaError as err:
             err.layer_id = err.layer_id or layer_id
             err.delta_file_id = err.delta_file_id or delta_file.id
             err.delta_idx = err.delta_idx or idx
@@ -565,7 +565,7 @@ def apply_deltas_without_transaction(
             err.feature_pk = err.feature_pk or delta.get("sourcePk")
             err.method = err.method or delta.get("method")
 
-            if err.e_type == DeltaExceptionType.Conflict:
+            if err.e_type == DeltaErrorType.Conflict:
                 delta_status = DeltaStatus.Conflict
                 logger.warning(f"Conflicts while applying a single delta: {err}")
             else:
@@ -725,7 +725,7 @@ def get_pk_attr_name(layer: QgsVectorLayer) -> str:
     pk_attr_name: str = ""
 
     if layer.type() != QgsMapLayer.LayerType.VectorLayer:
-        raise DeltaException(f"Expected layer {layer.name()} to be a vector layer!")
+        raise DeltaError(f"Expected layer {layer.name()} to be a vector layer!")
 
     pk_indexes = layer.primaryKeyAttributes()
     fields = layer.fields()
@@ -733,7 +733,7 @@ def get_pk_attr_name(layer: QgsVectorLayer) -> str:
     if len(pk_indexes) == 1:
         pk_attr_name = fields[pk_indexes[0]].name()
     elif len(pk_indexes) > 1:
-        raise DeltaException("Composite (multi-column) primary keys are not supported!")
+        raise DeltaError("Composite (multi-column) primary keys are not supported!")
     else:
         logger.info(
             f'Layer "{layer.name()}" does not have a primary key. Trying to fallback to `fid`…'
@@ -752,12 +752,12 @@ def get_pk_attr_name(layer: QgsVectorLayer) -> str:
             pk_attr_name = fid_name
 
     if not pk_attr_name:
-        raise DeltaException(
+        raise DeltaError(
             f'Layer "{layer.name()}" neither has a primary key, nor an attribute `fid`! '
         )
 
     if "," in pk_attr_name:
-        raise DeltaException(f'Comma in field name "{pk_attr_name}" is not allowed!')
+        raise DeltaError(f'Comma in field name "{pk_attr_name}" is not allowed!')
 
     logger.info(
         f'Layer "{layer.name()}" will use attribute "{pk_attr_name}" as a primary key.'
@@ -811,7 +811,7 @@ def create_feature(
         overwrite_conflicts: if there are conflicts with an existing feature, ignore them
 
     Raises:
-        DeltaException: whenever the feature cannot be created
+        DeltaError: whenever the feature cannot be created
 
     Returns:
         The created QGIS feature.
@@ -842,7 +842,7 @@ def create_feature(
     new_feat = QgsVectorLayerUtils.createFeature(layer, geometry, feat_attrs)
 
     if not new_feat.isValid():
-        raise DeltaException("Unable to create a valid feature")
+        raise DeltaError("Unable to create a valid feature")
 
     # Restore values that were overwritten in QgsVectorLayerUtils.createFeature for
     # attributes having a valid default value set to apply on update,
@@ -859,7 +859,7 @@ def create_feature(
                     new_feat.setAttribute(attr_index, attr_value)
 
     if not layer.addFeature(new_feat):
-        raise DeltaException(
+        raise DeltaError(
             "Unable to add new feature", provider_errors=layer.dataProvider().errors()
         )
 
@@ -882,7 +882,7 @@ def patch_feature(
         client_pks: a mapping between the client and datasource PKs
 
     Raises:
-        DeltaException: whenever the feature cannot be patched
+        DeltaError: whenever the feature cannot be patched
 
     Returns:
         The patched QGIS feature.
@@ -892,7 +892,7 @@ def patch_feature(
     old_feature = get_feature(layer, delta, client_pks)
 
     if not old_feature.isValid():
-        raise DeltaException("Unable to find feature")
+        raise DeltaError("Unable to find feature")
 
     conflicts = compare_feature(old_feature, old_feature_delta, True)
 
@@ -902,10 +902,10 @@ def patch_feature(
                 f'Conflicts while applying delta "{delta["uuid"]}". Ignoring since `overwrite_conflicts` flag set to `True`.\nConflicts:\n{conflicts}'
             )
         else:
-            raise DeltaException(
+            raise DeltaError(
                 "There are conflicts with the already existing feature!",
                 conflicts=conflicts,
-                e_type=DeltaExceptionType.Conflict,
+                e_type=DeltaErrorType.Conflict,
             )
 
     geometry = None
@@ -922,7 +922,7 @@ def patch_feature(
                 # NOTE if the geometry is `None`, it means the geometry has not been modified.
                 if geometry is not None:
                     if not layer.changeGeometry(old_feature.id(), geometry, True):
-                        raise DeltaException(
+                        raise DeltaError(
                             "Unable to change geometry",
                             provider_errors=layer.dataProvider().errors(),
                         )
@@ -950,7 +950,7 @@ def patch_feature(
             old_attrs[attr_name],
             True,
         ):
-            raise DeltaException(
+            raise DeltaError(
                 f'Unable to change attribute "{attr_name}"',
                 provider_errors=layer.dataProvider().errors(),
             )
@@ -974,7 +974,7 @@ def delete_feature(
         client_pks: a mapping between the client and datasource PKs
 
     Raises:
-        DeltaException: whenever the feature cannot be deleted
+        DeltaError: whenever the feature cannot be deleted
 
     Returns:
         The deleted QGIS feature.
@@ -983,7 +983,7 @@ def delete_feature(
     old_feature = get_feature(layer, delta, client_pks)
 
     if not old_feature.isValid():
-        raise DeltaException("Unable to find feature")
+        raise DeltaError("Unable to find feature")
 
     conflicts = compare_feature(old_feature, old_feature_delta)
 
@@ -996,14 +996,14 @@ def delete_feature(
             logger.warning(
                 f'Conflicts while applying delta "{delta["uuid"]}".\nConflicts:\n{conflicts}'
             )
-            raise DeltaException(
+            raise DeltaError(
                 "There are conflicts with the already existing feature!",
                 conflicts=conflicts,
-                e_type=DeltaExceptionType.Conflict,
+                e_type=DeltaErrorType.Conflict,
             )
 
     if not layer.deleteFeature(old_feature.id()):
-        raise DeltaException("Unable delete feature")
+        raise DeltaError("Unable delete feature")
 
     return old_feature
 

@@ -151,7 +151,7 @@ class ListCreateDeltasView(generics.ListCreateAPIView):
             elif isinstance(err, exceptions.DeltafileValidationError):
                 raise err
             else:
-                raise exceptions.QFieldCloudException() from err
+                raise exceptions.QFieldCloudError() from err
 
         if created_deltas and not jobs.apply_deltas(
             project_obj,

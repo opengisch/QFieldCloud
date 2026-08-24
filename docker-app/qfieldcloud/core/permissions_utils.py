@@ -33,7 +33,7 @@ class AlreadyCollaboratorError(CheckPermError): ...
 class ReachedCollaboratorLimitError(CheckPermError): ...
 
 
-class UserHasProjectRoleOrigins(CheckPermError): ...
+class UserHasProjectRoleOriginsError(CheckPermError): ...
 
 
 class UserProjectRoleError(CheckPermError): ...
@@ -112,7 +112,7 @@ def check_user_has_project_role_origins(
     ):
         return True
 
-    raise UserHasProjectRoleOrigins(
+    raise UserHasProjectRoleOriginsError(
         'User "{}" has not role origins "{}" on project {}.'.format(
             user.username,
             [origin.name for origin in origins],
