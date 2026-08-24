@@ -61,7 +61,8 @@ class Plan(models.Model):
     @classmethod
     def get_or_create_default(cls) -> Self:
         """Returns the default plan, creating one if none exists.
-        To be used as a default value for UserAccount.type"""
+        To be used as a default value for UserAccount.type
+        """
         if not cls.objects.exists():
             with transaction.atomic():
                 cls.objects.create(

@@ -499,7 +499,8 @@ def download_project(
     project_id: str, destination: Path | None = None, skip_attachments: bool = True
 ) -> Path:
     """Download the files in the project "working" directory from the S3
-    Storage into a temporary directory. Returns the directory path"""
+    Storage into a temporary directory. Returns the directory path
+    """
     logging.info("Preparing a temporary directory for project files…")
 
     if not destination:

@@ -320,7 +320,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
         Arguments:
             name: desired relative path of the file on the webdav server.
-            max_length: maximum length of the filename (not used)."""
+            max_length: maximum length of the filename (not used).
+        """
 
         if self.is_name_available(name, max_length):
             return super().get_available_name(name, max_length)

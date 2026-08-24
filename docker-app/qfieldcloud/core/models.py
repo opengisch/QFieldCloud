@@ -187,7 +187,8 @@ class PersonQueryset(models.QuerySet):
     def for_entity(self, entity: "User") -> "PersonQueryset":
         """Returns all users grouped in given entity (any type)
 
-        Internally calls for_team or for_organization depending on the entity."""
+        Internally calls for_team or for_organization depending on the entity.
+        """
 
         if entity.type == User.Type.PERSON:
             return self.filter(pk=entity.pk)
@@ -575,7 +576,8 @@ class UserAccount(models.Model):
 
 def random_string() -> str:
     """Generate random sting starting with a lowercase letter and then
-    lowercase letters and digits"""
+    lowercase letters and digits
+    """
 
     first_letter = secrets.choice(string.ascii_lowercase)
     letters_and_digits = string.ascii_lowercase + string.digits
@@ -587,7 +589,8 @@ def random_string() -> str:
 
 def random_password() -> str:
     """Generate secure random password composed of
-    letters, digits and special characters"""
+    letters, digits and special characters
+    """
 
     password_characters = (
         string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
@@ -1008,7 +1011,8 @@ class ProjectCollaboratorQueryset(models.QuerySet):
         `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
 
         Args:
-            skip_invalid:   if true, invalid rows are removed"""
+            skip_invalid:   if true, invalid rows are removed
+        """
         count = Count(
             "project__collaborators",
             filter=Q(

@@ -383,7 +383,8 @@ class FileVersion(models.Model):
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored.
-        Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
+        Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`.
+        """
         return self.file_storage
 
     def __repr__(self) -> str:
