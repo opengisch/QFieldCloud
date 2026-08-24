@@ -8,8 +8,7 @@ from qfieldcloud.core.models import Person
 
 
 class AuthenticationBackend(AllAuthAuthenticationBackend):
-    """
-    Extend the original `allauth` authentication backend to limit user types who can sign in.
+    """Extend the original `allauth` authentication backend to limit user types who can sign in.
 
     Sign in via team or organization should be forbidden.
     """
@@ -31,8 +30,7 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
         return None
 
     def get_user(self, user_id: int) -> Person | None:
-        """
-        Almost the same as `contrib.auth.backends.ModelBackend`, but not using the default manager, but the normal `objects` manager.
+        """Almost the same as `contrib.auth.backends.ModelBackend`, but not using the default manager, but the normal `objects` manager.
 
         Returns:
             In theory it can return any of `Person` | `Organization` | `Team` | `None` types, however it will always be a `Person` or `None`

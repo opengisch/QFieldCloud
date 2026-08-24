@@ -64,8 +64,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(system_info["site_title"], "My Custom Title")
 
     def test_server_info_signup_url_open(self):
-        """
-        Test that signup_url is an absolute URL to the signup page when signup is open.
+        """Test that signup_url is an absolute URL to the signup page when signup is open.
 
         By default, the adapter is open to signup.
         """

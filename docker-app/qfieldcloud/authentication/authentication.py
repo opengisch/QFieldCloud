@@ -38,8 +38,7 @@ def create_token(
 
 
 class TokenAuthentication(DjangoRestFrameworkTokenAuthentication):
-    """
-    Multi token authentication based on simple token based authentication.
+    """Multi token authentication based on simple token based authentication.
 
     Clients should authenticate by passing the token key in the "Authorization"
     HTTP header, prepended with the string "Token ".  For example:

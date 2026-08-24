@@ -20,8 +20,7 @@ class ProjectRoleOrigins(models.TextChoices):
 
 
 class QgsLayerType(models.IntegerChoices):
-    """
-    QGIS layer types, e.g. vector, raster etc.
+    """QGIS layer types, e.g. vector, raster etc.
 
     Mirrors QGIS's own `Qgis.LayerType` enum (`Qgis::LayerType`)
     Source: `enum class LayerType` in `src/core/qgis.h` in the QGIS repo
@@ -40,8 +39,7 @@ class QgsLayerType(models.IntegerChoices):
 
 
 class QgsGeometryType(models.IntegerChoices):
-    """
-    QGIS geometry types, e.g. point, line, polygon etc.
+    """QGIS geometry types, e.g. point, line, polygon etc.
 
     Mirrors QGIS's own `Qgis.GeometryType` enum (`Qgis::GeometryType`).
     Source: `enum class GeometryType` in `src/core/qgis.h` in the
@@ -56,8 +54,7 @@ class QgsGeometryType(models.IntegerChoices):
 
 
 class LayerErrorCode(models.TextChoices):
-    """
-    Error codes for QGIS layers, e.g. invalid layer, missing data provider etc.
+    """Error codes for QGIS layers, e.g. invalid layer, missing data provider etc.
 
     QFieldCloud's own error taxonomy for layer processing.
     Values are produced in `docker-qgis/qfc_worker/utils.py`.

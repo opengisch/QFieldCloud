@@ -15,8 +15,7 @@ class ReprojectExtentTestCase(unittest.TestCase):
         stop_app()
 
     def test_reproject_extent_valid(self):
-        """
-        A box in a real CRS transforms into WGS84 degrees.
+        """A box in a real CRS transforms into WGS84 degrees.
 
         EPSG:3857 (Web Mercator)'s origin (0, 0) is, by definition, exactly
         (0, 0) in WGS84 (equator/prime meridian), so this is an exact check
@@ -80,8 +79,7 @@ class ReprojectExtentTestCase(unittest.TestCase):
             reproject_extent(QgsRectangle(500000, 4649776, 500001, 4649777), local_crs)
 
     def test_reproject_extent_valid_non_default_target(self):
-        """
-        A box within a non-EPSG:4326 target's area of use transforms successfully.
+        """A box within a non-EPSG:4326 target's area of use transforms successfully.
 
         Latitude 45 is well within EPSG:3857 (Web Mercator)'s area of use
         (85.06°S to 85.06°N), so this should succeed without raising.
@@ -95,8 +93,7 @@ class ReprojectExtentTestCase(unittest.TestCase):
         self.assertAlmostEqual(extent.xMinimum(), 0.0, places=6)
 
     def test_reproject_extent_outside_non_default_target_area_of_use_raises(self):
-        """
-        A box outside a non-EPSG:4326 target's specific area of use raises.
+        """A box outside a non-EPSG:4326 target's specific area of use raises.
 
         Latitude 89 is a valid WGS84 latitude (within the global -90/90 range),
         but EPSG:3857 (Web Mercator)'s area of use only covers 85.06°S to
@@ -111,8 +108,7 @@ class ReprojectExtentTestCase(unittest.TestCase):
             )
 
     def test_reproject_extent_mismatched_crs_raises(self):
-        """
-        A mislabeled CRS (source == target) is caught by the area-of-use check.
+        """A mislabeled CRS (source == target) is caught by the area-of-use check.
 
         When `source_crs` and `target_crs` are the same, no real transform happens,
         so coordinates that are actually in a different unit/CRS than declared

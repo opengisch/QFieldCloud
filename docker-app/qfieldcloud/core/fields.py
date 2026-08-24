@@ -34,8 +34,7 @@ class EmptyStorageNameError(Exception):
 
 
 class DynamicStorageFieldFile(FieldFile):
-    """
-    The file with a dynamic storage - it is determined by the instance of the model.
+    """The file with a dynamic storage - it is determined by the instance of the model.
 
     Read more: https://docs.djangoproject.com/en/5.1/ref/models/fields/#filefield-and-fieldfile
 
@@ -65,8 +64,7 @@ class DynamicStorageFieldFile(FieldFile):
 
 
 class DynamicStorageFileField(models.FileField):
-    """
-    The field for storing files with a dynamic storage - it is determined by the instance of the model.
+    """The field for storing files with a dynamic storage - it is determined by the instance of the model.
 
     Read more: https://docs.djangoproject.com/en/5.1/ref/models/fields/#filefield-and-fieldfile
 

@@ -1,6 +1,5 @@
 def humanize_error(exc: BaseException) -> str:
-    """
-    Extracts the messages from an exception and its causes, and joins them in a single string.
+    """Extracts the messages from an exception and its causes, and joins them in a single string.
 
     Will result in like:
     ```
@@ -9,7 +8,6 @@ def humanize_error(exc: BaseException) -> str:
       - Caused by: Second cause message
     ```
     """
-
     prev_exc: BaseException | None = exc
     parts = []
 

@@ -28,8 +28,7 @@ class QfcFilesTestCaseMixin:
     def _upload_file(
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
-        """
-        Uploads a file to the API.
+        """Uploads a file to the API.
 
         Arguments:
             user: User that uploads the file.
@@ -40,7 +39,6 @@ class QfcFilesTestCaseMixin:
         Returns:
             Response answered by the API.
         """
-
         token = self._get_token_for_user(user)
         self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
 
@@ -64,14 +62,12 @@ class QfcFilesTestCaseMixin:
     def _upload_files(
         self, user: User, project: Project, files: list[tuple[str, IO | str | Path]]
     ) -> list[HttpResponse | Response]:
-        """
-        Uploads several files to the API.
+        """Uploads several files to the API.
 
         Note that the `files` argument is a list of tuple:
             - first element is the remote filename
             - second element is the file content
         """
-
         responses = []
         for remote_filename, content in files:
             if isinstance(content, (str, Path)):

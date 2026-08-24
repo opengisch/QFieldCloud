@@ -75,8 +75,7 @@ def _check_valid_project_file(the_qgis_file_name: Path) -> None:
 
 
 class ProjectDetails(TypedDict):
-    """
-    The data structure built by `_extract_project_details` and returned as the `process_projectfile` job's `project_details` output.
+    """The data structure built by `_extract_project_details` and returned as the `process_projectfile` job's `project_details` output.
 
     Must be kept in sync with `QgisProjectDetails` in `qfieldcloud/project/type_defs.py`, which consumes this data structure.
 
@@ -187,8 +186,7 @@ def _generate_thumbnail(
     thumbnail_filename: Path,
     thumbnail_timeout_s: int = THUMBNAIL_TIMEOUT_S,
 ) -> Path | None:
-    """
-    Create a thumbnail for the project.
+    """Create a thumbnail for the project.
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
     """

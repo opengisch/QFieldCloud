@@ -670,7 +670,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_purge_old_versions(self):
         """Test automated purging of old versions when uploading files."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         apipath = f"/api/v1/files/{self.project1.id}/file.txt/"

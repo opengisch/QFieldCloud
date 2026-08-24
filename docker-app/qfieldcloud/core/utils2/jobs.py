@@ -24,7 +24,6 @@ def apply_deltas(
     delta_ids: list[str] | None = None,
 ) -> list["models.ApplyJob"]:
     """Apply a deltas."""
-
     if delta_ids is None:
         delta_ids = []
 
@@ -103,8 +102,7 @@ def apply_deltas(
 
 
 def repackage(project: "Project", user: "models.User") -> "models.PackageJob":
-    """
-    Returns an unfinished or freshly created package job.
+    """Returns an unfinished or freshly created package job.
 
     Checks if there is already an unfinished package job and returns it,
     or creates a new package job and returns it.
@@ -158,14 +156,12 @@ def queue_job(
     job_model: type[models.Job],
     triggered_by: models.Person | None = None,
 ) -> list[models.Job]:
-    """
-    Queues a job of the given type for given project(s), triggered by the given person.
+    """Queues a job of the given type for given project(s), triggered by the given person.
 
     If triggered by person is not provided, the job will appear to be triggered by the project owner or the project's organization owner.
 
     This function is not running in a transaction by default, it's caller's responsibility to determine this.
     """
-
     assert job_model in TRIGGERABLE_JOBS
 
     if isinstance(projects, Project):

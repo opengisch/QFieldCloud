@@ -66,8 +66,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectQueryset(models.QuerySet):
-    """
-    Adds for_user(user) method to the project's querysets, allowing to filter only projects visible to that user.
+    """Adds for_user(user) method to the project's querysets, allowing to filter only projects visible to that user.
 
     Projects are annotated with the user's role (`user_role`) and the origin of this role (`user_role_origin`).
 
@@ -133,8 +132,7 @@ class ProjectQueryset(models.QuerySet):
         return qs
 
     def slim(self) -> ProjectQueryset:
-        """
-        A minimal fetch of projects with only a few pre-loaded fields.
+        """A minimal fetch of projects with only a few pre-loaded fields.
 
         A light-weight fetch for permission checks, which run on every
         request and only need a project's id, owner, and public flag.
@@ -174,23 +172,20 @@ class ProjectQueryset(models.QuerySet):
 
 
 def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> Project:
-    """
-    Fetch a project for a permission check, or raise `Http404` if it doesn't exist.
+    """Fetch a project for a permission check, or raise `Http404` if it doesn't exist.
 
     Only use this where the caller needs `pk`/`owner`/`is_public` and nothing
     else — the returned project has every other field deferred (see `slim()`
     in `ProjectQueryset`). Fetching more fields off the result triggers extra queries,
     so for anything that needs the full project, use `get_object_or_404(Project, ...)`.
     """
-
     # NOTE raises `Http404`, not `Project.DoesNotExist`: DRF treats both the same, see `core.rest_utils.exception_handler`.
     # TODO @suricactus: add `qs.fetch_mode(models.RAISE)` once on Django 6.1, see https://app.clickup.com/t/2192114/QF-8624
     return get_object_or_404(Project.objects.slim(), pk=project_id)  # type: ignore[attr-defined]
 
 
 def get_project_file_storage_default() -> str:
-    """
-    Get the default file storage for the newly created project.
+    """Get the default file storage for the newly created project.
 
     Returns:
         the name of the storage
@@ -199,8 +194,7 @@ def get_project_file_storage_default() -> str:
 
 
 def get_project_attachments_file_storage_default() -> str:
-    """
-    Get the default attachments file storage for the newly created project.
+    """Get the default attachments file storage for the newly created project.
 
     Returns:
         the name of the storage
@@ -209,8 +203,7 @@ def get_project_attachments_file_storage_default() -> str:
 
 
 def get_project_are_attachments_versioned_default() -> bool:
-    """
-    Get the default value for versioning of project attachments.
+    """Get the default value for versioning of project attachments.
 
     Returns:
         whether the attachments are versioned by default
@@ -219,8 +212,7 @@ def get_project_are_attachments_versioned_default() -> bool:
 
 
 def get_project_thumbnail_upload_to(instance: Project, _filename: str) -> str:
-    """
-    Variable storage key for thumbnails.
+    """Variable storage key for thumbnails.
 
     We use a variable storage key to avoid creating object storage level versions for
     thumbnails that we then would need to manage (purge old versions, make sure we don't
@@ -234,8 +226,7 @@ def get_project_thumbnail_upload_to(instance: Project, _filename: str) -> str:
 
 
 class Project(models.Model):
-    """
-    Represent a QFieldcloud project.
+    """Represent a QFieldcloud project.
 
     It corresponds to a directory on the file system.
 
@@ -280,8 +271,7 @@ class Project(models.Model):
 
     @property
     def localized_layers(self) -> list[QgisLayer]:
-        """
-        Retrieve all `QgisLayer` rows of this project's `QgisProject` that have their `is_localized` flag set to `True`.
+        """Retrieve all `QgisLayer` rows of this project's `QgisProject` that have their `is_localized` flag set to `True`.
 
         Returns:
             A list of `QgisLayer` instances with `is_localized == True`.
@@ -579,8 +569,7 @@ class Project(models.Model):
             return None
 
     def package_jobs_for_user(self, user: User) -> PackageJobQuerySet:
-        """
-        Returns all package jobs for the user.
+        """Returns all package jobs for the user.
 
         Args:
             user: The user to check for.
@@ -606,8 +595,7 @@ class Project(models.Model):
         return jobs_qs
 
     def latest_finished_package_job_for_user(self, user: User) -> PackageJob | None:
-        """
-        Returns the last finished package job for the user.
+        """Returns the last finished package job for the user.
 
         Args:
             user: The user to check for.
@@ -620,8 +608,7 @@ class Project(models.Model):
         )
 
     def latest_package_job_for_user(self, user: User) -> PackageJob | None:
-        """
-        Returns the last package job for the user.
+        """Returns the last package job for the user.
 
         Args:
             user: The user to check for.
@@ -632,8 +619,7 @@ class Project(models.Model):
         return self.package_jobs_for_user(user).order_by("-created_at").first()
 
     def latest_package_jobs(self) -> PackageJobQuerySet:
-        """
-        Returns all the last package jobs for the users of the project.
+        """Returns all the last package jobs for the users of the project.
 
         Returns:
             QuerySet of all the last package jobs.
@@ -671,8 +657,7 @@ class Project(models.Model):
 
     @cached_property
     def is_shared_datasets_project(self) -> bool:
-        """
-        Returns `True` if the project is the shared datasets project, otherwise `False`.
+        """Returns `True` if the project is the shared datasets project, otherwise `False`.
 
         Deprecated: use `project_type` instead.
         """
@@ -684,8 +669,7 @@ class Project(models.Model):
         return self.project_type == self.ProjectType.TEMPLATE
 
     def get_missing_localized_layers(self) -> list[QgisLayer]:
-        """
-        Return list of missing localized layers.
+        """Return list of missing localized layers.
 
         Of all localized layers, return those whose filenames aren’t in `available_filenames`,
         which means they are not present in the associated localized datasets project storage.
@@ -735,8 +719,7 @@ class Project(models.Model):
 
     @property
     def owner_aware_storage_keep_versions(self) -> int:
-        """
-        Determine the storage versions to keep based on the owner's subscription plan and project settings.
+        """Determine the storage versions to keep based on the owner's subscription plan and project settings.
 
         Returns:
             the number of file versions, should be always greater than 1
@@ -800,7 +783,6 @@ class Project(models.Model):
     @property
     def has_online_vector_data(self) -> bool | None:
         """Returns None if the project has no associated `QgisProject`."""
-
         qgis_project = getattr(self, "qgis_project", None)
 
         if qgis_project is None:
@@ -1477,8 +1459,7 @@ class QgisProject(models.Model):
 
     @property
     def attachment_dirs(self) -> list[str]:
-        """
-        Returns a list of configured attachment dirs for the project.
+        """Returns a list of configured attachment dirs for the project.
 
         Attachment dir is a special directory in the QField infrastructure that holds attachment files
         such as images, pdf etc. By default "DCIM" is considered a attachment directory.
@@ -1500,8 +1481,7 @@ class QgisProject(models.Model):
 
     @property
     def data_dirs(self) -> list[str]:
-        """
-        Returns a list of configured data dirs for the project.
+        """Returns a list of configured data dirs for the project.
 
         Data dir is a special directory in the QField infrastructure that holds assets
         used by the project symbology, layouts, or project plugins.
@@ -1528,8 +1508,7 @@ class QgisLayerQuerySet(models.QuerySet):
         ordered_layer_ids: list[str],
         layers_by_id: dict[str, LayerDetails],
     ) -> None:
-        """
-        Sync QGIS project's `QgisLayer` rows to match `layers_by_id`.
+        """Sync QGIS project's `QgisLayer` rows to match `layers_by_id`.
 
         Creates/updates a `QgisLayer` row per entry in `layers_by_id`, in the order
         given by `ordered_layer_ids`, then deletes any existing `QgisLayer` rows
@@ -1538,7 +1517,6 @@ class QgisLayerQuerySet(models.QuerySet):
         Existing rows are only written to the database if a field actually
         changed, to avoid needless `updated_at` bumps and writes on re-sync.
         """
-
         existing_layers_by_qgis_layer_id = {}
         for layer in qgis_project.layers.select_for_update():
             existing_layers_by_qgis_layer_id[layer.qgis_layer_id] = layer

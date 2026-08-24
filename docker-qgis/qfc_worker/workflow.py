@@ -222,8 +222,7 @@ def run_workflow(
     workflow: Workflow,
     feedback_filename: Path | IO | None,
 ) -> dict[str, Any]:
-    """
-    Executes the steps required to run a task and return structured feedback from the execution.
+    """Executes the steps required to run a task and return structured feedback from the execution.
 
     Each step has a method that is executed.
     Method may take arguments as defined in `arguments` and ordered in `arg_names`.

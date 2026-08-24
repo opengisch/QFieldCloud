@@ -14,8 +14,7 @@ def report_serialization_diff_to_sentry(
     body_stream: BytesIO | None,
     capture_message=False,
 ) -> bool:
-    """
-    Sends a report to sentry to debug QF-2540. The report includes request information from before and after middleware handle the request as well as a traceback.
+    """Sends a report to sentry to debug QF-2540. The report includes request information from before and after middleware handle the request as well as a traceback.
 
     Args:
         name: name of the error

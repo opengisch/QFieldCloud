@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def attach_keys(get_response):
-    """
-    Debug `EmptyContentError` when uploading files by attaching the body of the request to `request.body_stream`.
+    """Debug `EmptyContentError` when uploading files by attaching the body of the request to `request.body_stream`.
 
     See https://app.clickup.com/t/2192114/QF-2540
 

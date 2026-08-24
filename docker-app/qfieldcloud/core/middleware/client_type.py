@@ -6,8 +6,7 @@ from qfieldcloud.authentication.models import AuthToken
 
 
 class ClientTypeMiddleware:
-    """
-    Client type middleware.
+    """Client type middleware.
 
     This middleware detects the client type based on the user agent
     and sets it on the session object.
@@ -22,8 +21,7 @@ class ClientTypeMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        """
-        Sets the client type in the session.
+        """Sets the client type in the session.
 
         This client type will be required later for the QField/Sync requests process.
         """

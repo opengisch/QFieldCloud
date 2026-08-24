@@ -27,8 +27,7 @@ def is_valid_email(email: str) -> bool:
 def invite_user_by_email(
     email: str, inviter: Person, send: bool = True
 ) -> tuple[bool, str]:
-    """
-    Sends an invite for a given email address.
+    """Sends an invite for a given email address.
 
     Args :
         email:      recipient's email
@@ -38,7 +37,6 @@ def invite_user_by_email(
     Returns :
         (bool, str) success, message
     """
-
     try:
         validate_email(email)
     except ValidationError:
@@ -97,8 +95,7 @@ def invite_user_by_email(
 
 
 def send_invitation(invite, **kwargs):
-    """
-    Sends invitation.
+    """Sends invitation.
 
     Args:
         invite: the invitation to be sent

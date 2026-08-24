@@ -13,8 +13,7 @@ class JsonEncoder(DjangoJSONEncoder):
 
 class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
     def json_record(self, message, extra, record):
-        """
-        Prepares a JSON payload which will be logged.
+        """Prepares a JSON payload which will be logged.
 
         Override this method to change JSON log format.
 
@@ -44,8 +43,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
         return extra
 
     def to_json(self, record):
-        """
-        Converts record dict to a JSON string.
+        """Converts record dict to a JSON string.
 
         It makes best effort to serialize a record (represents an object as a string)
         instead of raising TypeError if json library supports default argument.

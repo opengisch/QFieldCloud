@@ -26,8 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
-    """
-    Custom account adapter, inheriting the invitations adapter.
+    """Custom account adapter, inheriting the invitations adapter.
 
     NOTE Unfortunately there is no way to setup the User model for allauth,
     except changing it globally for everyone. Therefore this adapter tries
@@ -91,8 +90,7 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
         return result
 
     def populate_username(self, request: HttpRequest, user: AbstractUser) -> None:
-        """
-        Customize username population for signups via social logins.
+        """Customize username population for signups via social logins.
 
         When a user signs up via username and password, we try to respect their
         choice of username, and just delegate to the default implementation to
@@ -133,8 +131,7 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
         email_confirmation: EmailConfirmationHMAC,
         signup: bool,
     ) -> None:
-        """
-        Overrides allauth's default method for sending a confirmation email.
+        """Overrides allauth's default method for sending a confirmation email.
 
         Adds the email provided by the future user in the session.
         """
@@ -146,8 +143,7 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
         super().send_confirmation_mail(request, email_confirmation, signup)
 
     def get_user_signed_up_signal(self):
-        """
-        Return the allauth signal for user signup.
+        """Return the allauth signal for user signup.
 
         This is required when INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP is True,
         so django-invitations can connect to the signup signal and mark
@@ -159,8 +155,7 @@ class AccountAdapter(DefaultAccountAdapter, BaseInvitationsAdapter):
 
 
 class AccountAdapterSignUpOpen(AccountAdapter):
-    """
-    Account adapter for open signup.
+    """Account adapter for open signup.
 
     This adapter is used when the signup is open, i.e. when users can register themselves.
     """
@@ -170,16 +165,14 @@ class AccountAdapterSignUpOpen(AccountAdapter):
 
 
 class AccountAdapterSignUpClosed(AccountAdapter):
-    """
-    Account adapter for closed signup.
+    """Account adapter for closed signup.
 
     This adapter is used when the signup is closed, i.e. when users cannot register themselves.
     A user can still be added via Django admin.
     """
 
     def is_open_for_signup(self, request: HttpRequest) -> bool:
-        """
-        Allow signup only if the user has a valid invitation.
+        """Allow signup only if the user has a valid invitation.
 
         This keeps signups closed to the general public while allowing invited users to register.
         """
@@ -195,8 +188,7 @@ class AccountAdapterSignUpClosed(AccountAdapter):
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
-    """
-    Custom SocialAccountAdapter to aid SSO integration in QFC.
+    """Custom SocialAccountAdapter to aid SSO integration in QFC.
 
     Logs stack trace and error details on 3rd party authentication errors.
     """
@@ -229,8 +221,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         )
 
     def list_providers(self, request: HttpRequest) -> list:
-        """
-        Extend providers with styling information.
+        """Extend providers with styling information.
 
         This adds a `styles` dictionary to each provider, which contains
         the styling information for that provider from the
@@ -250,8 +241,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         return True
 
     def pre_social_login(self, request, sociallogin):
-        """
-        Fix user instance mismatch caused by Django multi-table inheritance.
+        """Fix user instance mismatch caused by Django multi-table inheritance.
 
         QFieldCloud's UserManager uses `django-model-utils`
         `select_subclasses()`, which JOINs the child tables and returns the
@@ -292,8 +282,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
     def authenticate_by_email(
         self, sociallogin: SocialLogin
     ) -> tuple[AbstractUser, str] | None:
-        """
-        Authenticate user and find User matching by email.
+        """Authenticate user and find User matching by email.
 
         This hook happens the first time an email is submitted for 3rd party authentication.
 

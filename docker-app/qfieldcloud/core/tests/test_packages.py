@@ -1002,7 +1002,6 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
     def test_public_project_non_member_latest_package_jobs(self):
         """Non-members who trigger package jobs on public projects must be included in latest_package_jobs so their files are not deleted by cleanup."""
-
         owner = Person.objects.create_user(username="project_owner")
 
         project = Project.objects.create(

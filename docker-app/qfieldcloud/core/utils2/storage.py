@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_attachment_dir_prefix(project: Project, filename: str) -> str:  # noqa: F821
-    """
-    Returns the attachment dir where the file belongs to or empty string if it does not.
+    """Returns the attachment dir where the file belongs to or empty string if it does not.
 
     Args:
         project: project to check

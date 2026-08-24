@@ -124,8 +124,7 @@ class QfcAdminSite(AdminSite):
         return custom_urls + urls
 
     def global_search_view(self, request: HttpRequest) -> HttpResponse:
-        """
-        Custom multi-model search view with exact username/email matching.
+        """Custom multi-model search view with exact username/email matching.
 
         Searches across Person, Organization, Project, and Subscription models
         using exact username or email matching. Results are paginated independently
@@ -283,8 +282,7 @@ qfc_admin_site = QfcAdminSite(name="qfc_admin_site")
 
 
 class NoPkOrderChangeList(ChangeList):
-    """
-    DjangoAdmin ChangeList adds an ordering -pk to ensure 'deterministic ordering to all db backends'.
+    """DjangoAdmin ChangeList adds an ordering -pk to ensure 'deterministic ordering to all db backends'.
 
     This has a negative impact on performance and optimization.
     Therefore remove the extra ordering -pk if custom order fields are provided.
@@ -413,8 +411,7 @@ class QFieldCloudModelAdmin(  # type: ignore
     admin.ModelAdmin,
 ):
     def has_delete_permission(self, request, obj=None):
-        """
-        Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
+        """Reimplementing this Django Admin method to allow deleting related objects in django admin from another ModelAdmin.
 
         If one tries to delete a Project with already ran Jobs, they cannot, because the Job ModelAdmin has  def has_delete_permission: return True .
         """
@@ -1706,7 +1703,6 @@ class FaultyDeltaFilesAdmin(QFieldCloudModelAdmin):
     @admin.display(description=_("Faulty deltafile"))
     def short_file_link(self, obj: FaultyDeltaFile) -> str:
         """Shorten storage path to make list view less unwieldy."""
-
         if obj.deltafile:
             filename = basename(obj.deltafile.name)
             return format_html(

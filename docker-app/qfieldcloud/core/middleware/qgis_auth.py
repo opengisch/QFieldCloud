@@ -10,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class QGISAuthenticationMiddleware:
-    """
-    Authentication middleware for OIDC authentication using QGIS.
+    """Authentication middleware for OIDC authentication using QGIS.
 
     This middleware allows to authenticate a user based on an OIDC ID token
     that is passed in a custom HTTP header.
@@ -54,8 +53,7 @@ class QGISAuthenticationMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest):
-        """
-        Detect and extract HTTP headers intended for SSO auth.
+        """Detect and extract HTTP headers intended for SSO auth.
 
         Because this code gets called for *every* single request, we need to
         be quite defensive here. For reasons of performance and robustness.
