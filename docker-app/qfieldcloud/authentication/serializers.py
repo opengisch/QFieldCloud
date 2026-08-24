@@ -1,3 +1,5 @@
+import contextlib
+
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
@@ -91,10 +93,8 @@ class LoginSerializer(serializers.Serializer):
         else:
             # Authentication without using allauth
             if email:
-                try:
+                with contextlib.suppress(User.DoesNotExist):
                     username = User.objects.get(email__iexact=email).get_username()
-                except User.DoesNotExist:
-                    pass
 
             if username:
                 user = self._validate_username_email(username, "", password)
