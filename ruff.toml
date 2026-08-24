@@ -32,7 +32,9 @@ ignore = [
     # No need to force f-strings everywhere, something `"".format()` is more readable
     # See https://docs.astral.sh/ruff/rules/f-string/
     "UP032",
-
+    # Django encourages `Value as V`, so don't flag it as an error
+    # See https://docs.astral.sh/ruff/rules/camelcase-imported-as-acronym/
+    "N817",
 ]
 
 [lint.flake8-tidy-imports]
