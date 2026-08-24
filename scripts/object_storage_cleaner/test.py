@@ -325,7 +325,7 @@ class TestObjectStorageCleaner(unittest.TestCase):
             if v.get("IsDeleteMarker", False):
                 continue
 
-            v = cast(ObjectVersionTypeDef, v)
+            v = cast("ObjectVersionTypeDef", v)
             data_version = v
 
             break

@@ -165,7 +165,7 @@ def _create_project_from_xlsform(
 
     output_dir = Path(tmp_project_dir).joinpath("files")
     converter_settings = cast(
-        ConverterSettings,
+        "ConverterSettings",
         {
             "title": project_seed.name,
             "show_groups_as_tabs": project_seed.settings.xlsform["show_groups_as_tabs"],

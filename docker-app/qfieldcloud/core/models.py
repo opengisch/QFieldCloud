@@ -195,10 +195,10 @@ class PersonQueryset(models.QuerySet):
             return self.filter(pk=entity.pk)
 
         if entity.type == User.Type.TEAM:
-            return self.for_team(cast(Team, entity))
+            return self.for_team(cast("Team", entity))
 
         if entity.type == User.Type.ORGANIZATION:
-            return self.for_organization(cast(Organization, entity))
+            return self.for_organization(cast("Organization", entity))
 
         raise RuntimeError(f"Unsupported entity : {entity}")
 
@@ -414,7 +414,7 @@ def get_user_account_avatar_upload_to(
     instance: models.Model,
     filename: str,
 ) -> str:
-    instance = cast(UserAccount, instance)
+    instance = cast("UserAccount", instance)
     filename_path = Path(filename)
 
     return f"account/{instance.user.username}/avatars/{filename_path.name}"
@@ -426,7 +426,7 @@ def get_user_account_avatar_download_from(
     if not value:
         return None
 
-    useraccount = cast(UserAccount, value.instance)
+    useraccount = cast("UserAccount", value.instance)
 
     return reverse(
         "filestorage_avatars",
@@ -1771,7 +1771,7 @@ def get_faulty_deltafile_upload_to(
     instance: models.Model,
     filename: str,
 ) -> str:
-    instance = cast(FaultyDeltaFile, instance)
+    instance = cast("FaultyDeltaFile", instance)
     key = f"{datetime.now().isoformat()}-{filename}"
     return f"projects/{instance.project.id}/deltafiles/{key}"
 

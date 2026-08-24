@@ -25,7 +25,8 @@ extend-select = [
     "B006",     # Mutable argument default
     "BLE001",   # Checks for except clauses that catch all exceptions, see https://docs.astral.sh/ruff/rules/blind-except/
     "UP035",    # Checks for uses of deprecated imports based on the minimum supported Python version, see https://docs.astral.sh/ruff/rules/deprecated-import/
-    "TID252",   # Bans relative imports, requires absolute imports, see https://docs.astral.sh/ruff/rules/relative-imports/
+    "TID252",   # Bans relative imports, requires absolute imports, see https://docs.astral.sh/ruff/rules/relative-imports/    "TC",
+    "TC", # Type checking rules, https://docs.astral.sh/ruff/rules/#flake8-type-checking-tc
 ]
 ignore = []
 

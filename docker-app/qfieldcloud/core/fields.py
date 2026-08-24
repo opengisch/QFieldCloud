@@ -46,7 +46,7 @@ class DynamicStorageFieldFile(FieldFile):
     def __init__(
         self, instance: models.Model, field: DynamicStorageFileField, name: str
     ):
-        instance = cast(ModelWithDynamicStorage, instance)
+        instance = cast("ModelWithDynamicStorage", instance)
 
         super().__init__(instance, field, name)
 
@@ -77,7 +77,7 @@ class DynamicStorageFileField(models.FileField):
     attr_class = DynamicStorageFieldFile
 
     def pre_save(self, model_instance: models.Model, add: bool) -> Any:
-        model_instance = cast(ModelWithDynamicStorage, model_instance)
+        model_instance = cast("ModelWithDynamicStorage", model_instance)
 
         storage_name = model_instance._get_file_storage_name()
 

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def get_subscription_model() -> "Subscription":
     model = apps.get_model(settings.QFIELDCLOUD_SUBSCRIPTION_MODEL)
-    return cast(Subscription, model)
+    return cast("Subscription", model)
 
 
 class SubscriptionStatus(models.TextChoices):
@@ -891,7 +891,7 @@ class AbstractSubscription(models.Model):
         except cls.DoesNotExist:
             subscription = cls.create_default_plan_subscription(account)
 
-        return cast(Self, subscription)
+        return cast("Self", subscription)
 
     @classmethod
     def get_upcoming_subscription(cls, account: UserAccount) -> Self | None:
