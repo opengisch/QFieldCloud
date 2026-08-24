@@ -39,8 +39,7 @@ from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigin
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
 if TYPE_CHECKING:
-    from qfieldcloud.project.models import Project
-
+    from qfieldcloud.project.models import Project  # noqa: TC004
 
 # http://springmeblog.com/2018/how-to-implement-multiple-user-types-with-django/
 
@@ -1634,6 +1633,8 @@ class SecretQueryset(models.QuerySet):
         Returns:
             a Secret queryset assigned secrets for the given user.
         """
+        from qfieldcloud.project.models import Project
+
         # ensure the user type is a person
         assert user.type == User.Type.PERSON, (
             f"Expected the passed user to be of type PERSON, but got {user.type}!"

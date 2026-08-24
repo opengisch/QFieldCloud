@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path
 from traceback import TracebackException
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import docker
 import docker.client
@@ -19,7 +19,6 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from docker.models.containers import Container
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import (
     ApplyJob,
@@ -39,6 +38,9 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )
+
+if TYPE_CHECKING:
+    from docker.models.containers import Container
 
 logger = logging.getLogger(__name__)
 

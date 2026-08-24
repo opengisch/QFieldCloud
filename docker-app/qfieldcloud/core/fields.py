@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from django.core.files.storage import storages
 from django.db import models
 from django.db.models.fields.files import FieldFile, ImageField, ImageFieldFile
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class FileStorageNameModelProtocol(Protocol):

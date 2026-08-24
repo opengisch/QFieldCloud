@@ -1,5 +1,3 @@
-from typing import Optional
-
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.providers.base import Provider
 from allauth.socialaccount.providers.oauth2.views import OAuth2Adapter
