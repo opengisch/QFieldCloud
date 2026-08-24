@@ -37,7 +37,7 @@ class DynamicStorageFieldFile(FieldFile):
 
     Read more: https://docs.djangoproject.com/en/5.1/ref/models/fields/#filefield-and-fieldfile
 
-    See also:
+    See Also:
         - DynamicStorageFileField
     """
 
@@ -68,7 +68,7 @@ class DynamicStorageFileField(models.FileField):
 
     Read more: https://docs.djangoproject.com/en/5.1/ref/models/fields/#filefield-and-fieldfile
 
-    See also:
+    See Also:
         - DynamicStorageFieldFile
     """
 

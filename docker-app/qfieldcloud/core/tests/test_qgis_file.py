@@ -676,13 +676,13 @@ class QfcTestCase(APITransactionTestCase):
         apipath = f"/api/v1/files/{self.project1.id}/file.txt/"
 
         def count_versions():
-            """counts the versions in first file of project1."""
+            """Counts the versions in first file of project1."""
             project = Project.objects.get(pk=self.project1.pk)
 
             return project.get_file("file.txt").versions.count()
 
         def read_version(n):
-            """returns the content of version in first file of project1."""
+            """Returns the content of version in first file of project1."""
             project = Project.objects.get(pk=self.project1.pk)
 
             file = (
