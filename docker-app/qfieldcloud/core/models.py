@@ -330,7 +330,7 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         from qfieldcloud.subscription.models import get_subscription_model
 
-        Subscription = get_subscription_model()
+        Subscription = get_subscription_model()  # noqa: N806
 
         # if the user is created, we need to create a user account
         if self._state.adding and self.type != User.Type.TEAM:
@@ -499,14 +499,14 @@ class UserAccount(models.Model):
     def current_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
-        Subscription = get_subscription_model()
+        Subscription = get_subscription_model()  # noqa: N806
         return Subscription.get_or_create_current_subscription(self)
 
     @property
     def upcoming_subscription(self):
         from qfieldcloud.subscription.models import get_subscription_model
 
-        Subscription = get_subscription_model()
+        Subscription = get_subscription_model()  # noqa: N806
         return Subscription.get_upcoming_subscription(self)
 
     @property

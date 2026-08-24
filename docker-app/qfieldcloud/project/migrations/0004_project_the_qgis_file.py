@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 
 def backfill_the_qgis_file(apps, schema_editor):
-    FILE_TYPE_PROJECT_FILE = 1
+    FILE_TYPE_PROJECT_FILE = 1  # noqa: N806
 
     Project = apps.get_model("project", "Project")
     File = apps.get_model("filestorage", "File")
