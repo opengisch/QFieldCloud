@@ -294,7 +294,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_projects_roles_and_role_origins(self):
         """Checks user_role and user_role_origin are correctly defined."""
-
         roles = ProjectCollaboratorRole
         role_origins = ProjectRoleOrigins
 

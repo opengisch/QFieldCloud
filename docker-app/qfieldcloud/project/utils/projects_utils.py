@@ -13,8 +13,7 @@ from qfieldcloud.project.models import Project
 def create_collaborator(
     project: Project, user: Person | Team, created_by: Person
 ) -> tuple[bool, str]:
-    """
-    Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible.
+    """Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible.
 
     Args:
         project: the project to add collaborator to
@@ -64,8 +63,7 @@ def create_collaborator(
 def create_collaborator_by_username_or_email(
     project: Project, username: str, created_by: Person
 ) -> tuple[bool, str]:
-    """
-    Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible.
+    """Creates a new collaborator (qfieldcloud.core.ProjectCollaborator) if possible.
 
     Args:
         project: the project to add collaborator to

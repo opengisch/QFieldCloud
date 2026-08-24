@@ -407,7 +407,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_max_organization_members(self):
         """Test quotas."""
-
         u1 = Person.objects.create(username="u1")
         u2 = Person.objects.create(username="u2")
         u3 = Person.objects.create(username="u3")

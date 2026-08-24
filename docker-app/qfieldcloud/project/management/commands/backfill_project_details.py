@@ -17,8 +17,7 @@ class BackfillResult(StrEnum):
 
 
 def backfill_qgis_project(project: Project) -> BackfillResult:
-    """
-    Create/update the `QgisProject` and its `QgisLayer` rows for `project` from `Project.project_details`.
+    """Create/update the `QgisProject` and its `QgisLayer` rows for `project` from `Project.project_details`.
 
     Runs even if the `QgisProject` already exists.
     """

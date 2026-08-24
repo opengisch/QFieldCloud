@@ -20,8 +20,7 @@ def parameterize_pagination(_class: type) -> Callable:
 
 @parameterize_pagination
 class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
-    """
-    Based on LimitOffsetPagination.
+    """Based on LimitOffsetPagination.
 
     Custom implementation such that `response.data = LimitOffsetPagination.data.results` from DRF's blanket implementation.
     Inject pagination controls and counter into the response headers.

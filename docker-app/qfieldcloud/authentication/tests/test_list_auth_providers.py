@@ -73,8 +73,7 @@ class QfcTestCase(APITestCase):
         self.mock_oidc_requests()
 
     def mock_oidc_requests(self):
-        """
-        Mock requests to OIDC configuration endpoint.
+        """Mock requests to OIDC configuration endpoint.
 
         For OpenID Connect providers, configuration settings like the token URL
         and authorization URL are fetched dynamically from the provider's OIDC

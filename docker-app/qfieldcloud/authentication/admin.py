@@ -24,8 +24,7 @@ class AuthTokenClientTypeFilter(admin.SimpleListFilter):
     def lookups(
         self, request: HttpRequest, model_admin: admin.ModelAdmin
     ) -> list[tuple[str, StrOrPromise]]:
-        """
-        Returns a list of tuples for choices.
+        """Returns a list of tuples for choices.
 
         The first element in each tuple is the coded value for the option that will
         appear in the URL query. The second element is the

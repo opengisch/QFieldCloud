@@ -14,8 +14,7 @@ import qfieldcloud.project.models
 
 
 def move_content_type(apps, schema_editor):
-    """
-    Takes care of moving the `core.Project` to `project.Project`.
+    """Takes care of moving the `core.Project` to `project.Project`.
 
     Project was moved from the `core` app to this app above via
     SeparateDatabaseAndState, which only changes Django's model state, not

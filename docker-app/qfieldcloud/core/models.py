@@ -59,8 +59,7 @@ class BasemapStyle(models.TextChoices):
 
 
 class PersonQueryset(models.QuerySet):
-    """
-    Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
+    """Adds for_project(user) method to the user's querysets, allowing to filter only users part of a project.
 
     Users are annotated with the user's project role (`project_role`) and the origin of this role (`project_role_origin`).
     If the project is public, it will return only the directly collaborated users.
@@ -185,12 +184,10 @@ class PersonQueryset(models.QuerySet):
         return qs
 
     def for_entity(self, entity: User) -> PersonQueryset:
-        """
-        Returns all users grouped in given entity (any type).
+        """Returns all users grouped in given entity (any type).
 
         Internally calls for_team or for_organization depending on the entity.
         """
-
         if entity.type == User.Type.PERSON:
             return self.filter(pk=entity.pk)
 
@@ -210,8 +207,7 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
         return super().get_queryset().select_subclasses()
 
     def fast_search(self, username_or_email: str) -> User:
-        """
-        Searches a user by `username` or `email` field.
+        """Searches a user by `username` or `email` field.
 
         Args:
             username_or_email: username or email to search for
@@ -240,8 +236,7 @@ class PersonManager(UserManager):
 
 
 class User(AbstractUser):
-    """
-    User model. Used as base for organizations and teams too.
+    """User model. Used as base for organizations and teams too.
 
     Args:
         the django's abstract user base
@@ -529,7 +524,6 @@ class UserAccount(models.Model):
     @property
     def storage_free_bytes(self) -> float:
         """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)."""
-
         return (
             self.current_subscription.active_storage_total_bytes
             - self.storage_used_bytes
@@ -579,7 +573,6 @@ class UserAccount(models.Model):
 
 def random_string() -> str:
     """Generate random sting starting with a lowercase letter and then lowercase letters and digits."""
-
     first_letter = secrets.choice(string.ascii_lowercase)
     letters_and_digits = string.ascii_lowercase + string.digits
     secure_str = first_letter + "".join(
@@ -590,7 +583,6 @@ def random_string() -> str:
 
 def random_password() -> str:
     """Generate secure random password composed of letters, digits and special characters."""
-
     password_characters = (
         string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"
     )
@@ -599,8 +591,7 @@ def random_password() -> str:
 
 
 class OrganizationQueryset(models.QuerySet):
-    """
-    Adds of_user(user) method to the organization's querysets, allowing to filter only organization related to that user.
+    """Adds of_user(user) method to the organization's querysets, allowing to filter only organization related to that user.
 
     Organizations are annotated with the user's role (`membership_role`), the origin of this role (`membership_role_origin`)
     and whether it is public (`membership_is_public`).
@@ -683,8 +674,7 @@ class Organization(User):
     updated_at = models.DateTimeField(auto_now=True)
 
     def active_users(self, period_since: datetime, period_until: datetime):
-        """
-        Returns the queryset of active users in the given time interval.
+        """Returns the queryset of active users in the given time interval.
 
         Active users are users triggering a job or pushing a delta on a project owned by the organization.
 
@@ -1006,8 +996,7 @@ class TeamMember(models.Model):
 
 class ProjectCollaboratorQueryset(models.QuerySet):
     def validated(self, skip_invalid=False):
-        """
-        Annotates the queryset with `is_valid` and by default filters out all invalid memberships if `skip_invalid` is set to True.
+        """Annotates the queryset with `is_valid` and by default filters out all invalid memberships if `skip_invalid` is set to True.
 
         A membership to a private project is valid when the owning user plan has a
         `max_premium_collaborators_per_private_project` >= of the total count of project collaborators.
@@ -1265,8 +1254,7 @@ class Delta(models.Model):
 
 class JobQuerySet(InheritanceQuerySet):
     def for_user(self, user: User) -> models.QuerySet[Job]:
-        """
-        Returns the jobs applicable to the user. If the user has assigned secrets, only jobs triggered by the user are returned.
+        """Returns the jobs applicable to the user. If the user has assigned secrets, only jobs triggered by the user are returned.
 
         Args:
             user: The user to check for.
@@ -1389,8 +1377,7 @@ class Job(models.Model):
 
     @property
     def qgis_version(self) -> str | None:
-        """
-        Returns QGIS app version used for the job.
+        """Returns QGIS app version used for the job.
 
         The QGIS version is the one coming from the instanciated worker QGIS app.
         The version number would be in `Major.Minor.Patch-NAME` format, e.g. 3.40.2-Bratislava
@@ -1434,8 +1421,7 @@ class Job(models.Model):
         return super().save(*args, **kwargs)
 
     def get_feedback_step_data(self, step_name: str) -> dict[str, Any] | None:
-        """
-        Extract a step data of a job's feedback.
+        """Extract a step data of a job's feedback.
 
         Args:
             step_name: name of the step to extract data from.
@@ -1535,8 +1521,7 @@ class ApplyJobDelta(models.Model):
 
 class SecretQueryset(models.QuerySet):
     def for_user_and_project(self, user: User, project: Project) -> SecretQueryset:
-        """
-        Returns a queryset with secrets for a specific user and project.
+        """Returns a queryset with secrets for a specific user and project.
 
         NOTE Do not set `order_by` at the queryset.
 
@@ -1624,8 +1609,7 @@ class SecretQueryset(models.QuerySet):
         return secrets_qs
 
     def assigned_for_user(self, user: User) -> models.QuerySet[Secret]:
-        """
-        Returns a queryset with secrets assigned to a specific user.
+        """Returns a queryset with secrets assigned to a specific user.
 
         Args:
             user: the user to which secrets are assigned

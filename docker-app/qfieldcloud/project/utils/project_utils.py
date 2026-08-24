@@ -5,8 +5,7 @@ from qfieldcloud.project.models import Project
 
 
 def is_virtual_layer_with_embedded_layers(datasource: str) -> bool:
-    """
-    Check if a virtual layer source has embedded layers.
+    """Check if a virtual layer source has embedded layers.
 
     The source is expected to be a valid virtual layer source string.
 
@@ -15,7 +14,6 @@ def is_virtual_layer_with_embedded_layers(datasource: str) -> bool:
     - "?query=SELECT%20*%20FROM%20points"
     - "?layer=ogr:%2Fhome%2Fuser%2Ftestdata.gpkg%7Clayername%3Dpoints_xy:points_xy:&layer=ogr:%2Fhome%2Fuser%2Ftestdata.gpkg%7Clayername%3Dpoints_xy:points_xy:&query=SELECT%20*%20FROM%20points"
     """
-
     url = urlparse(datasource)
     query = parse_qs(url.query)
 
@@ -26,7 +24,6 @@ def is_virtual_layer_with_embedded_layers(datasource: str) -> bool:
 
 def has_online_vector_data(project: Project) -> bool:
     """Returns `False` if the project has no associated `QgisProject`, or no online vector layers."""
-
     qgis_project = getattr(project, "qgis_project", None)
 
     if qgis_project is None:
@@ -60,8 +57,7 @@ def has_online_vector_data(project: Project) -> bool:
 
 
 def get_qgis_major_version(version: str) -> int:
-    """
-    Extract the major version number from a QGIS version string.
+    """Extract the major version number from a QGIS version string.
 
     The version string is expected to be in the format "X.Y.Z" or "X.Y.Z-rcN", where X is the major version number.
 
@@ -70,7 +66,6 @@ def get_qgis_major_version(version: str) -> int:
     - "3.30.0-rc1" -> 3
     - "4.0.0" -> 4
     """
-
     try:
         major_version_str = version.split(".")[0]
         major_version = int(major_version_str)

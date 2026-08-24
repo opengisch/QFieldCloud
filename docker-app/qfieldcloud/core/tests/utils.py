@@ -116,8 +116,7 @@ def set_subscription(
 
 @contextmanager
 def qgz_from_qgs(qgs_path: str | Path, qgz_name: str | None = None) -> Iterator[Path]:
-    """
-    Context manager that creates a temporary .qgz file from a .qgs file.
+    """Context manager that creates a temporary .qgz file from a .qgs file.
 
     The .qgz file is placed in a temporary directory that is removed together
     with all its contents when the context exits.
@@ -165,8 +164,7 @@ class get_named_file_with_size:  # noqa: N801
 
 
 def wait_for_project_ok_status(project: Project, wait_s: int = 30):
-    """
-    Helper that waits for any jobs (worker) of the project to finish.
+    """Helper that waits for any jobs (worker) of the project to finish.
 
     NOTE this does not mean the project is updated yet as there
     is some processing to be done and saved to the project in the app.

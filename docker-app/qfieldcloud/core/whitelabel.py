@@ -17,8 +17,7 @@ DEFAULT_WHITELABEL = {
 
 
 def get_whitelabel_settings() -> dict[str, Any]:
-    """
-    Get whitelabel settings by merging user settings with defaults.
+    """Get whitelabel settings by merging user settings with defaults.
 
     Filters out None values from user settings to preserve defaults.
     """
@@ -44,7 +43,6 @@ def get_whitelabel_settings() -> dict[str, Any]:
 
 def whitelabel(request: HttpRequest) -> dict[str, Any]:
     """Make whitelabel configuration available to all templates with translations."""
-
     whitelabel_config = get_whitelabel_settings()
 
     return {

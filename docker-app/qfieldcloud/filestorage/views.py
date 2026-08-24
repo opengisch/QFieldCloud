@@ -160,8 +160,7 @@ class FileCrudView(views.APIView):
         return Response({}, status=status.HTTP_201_CREATED, headers=headers)
 
     def delete(self, request: Request, project_id: UUID, filename: str) -> Response:
-        """
-        Delete a file by filename in a project.
+        """Delete a file by filename in a project.
 
         This function deliberately does not check for project existance in advance to save a database query.
         The check is done anyways when we search for a file.
@@ -212,8 +211,7 @@ class AvatarFileReadView(views.APIView):
     def get(
         self, request: Request, public_id: str, filename: str = ""
     ) -> HttpResponseBase:
-        """
-        Returns an internal redirect within nginx to serve the `avatar` file directly from the Object Storage.
+        """Returns an internal redirect within nginx to serve the `avatar` file directly from the Object Storage.
 
         NOTE the filename field is completely ignored and redundant, it exists only to satisfy backwards compatible expectations in QField/QFieldSync that avatars will have filename with file extension.
 
@@ -225,7 +223,6 @@ class AvatarFileReadView(views.APIView):
         Returns:
             internal redirect to the Object Storage
         """
-
         try:
             data = signing.loads(public_id)
             user_id = data["id"]

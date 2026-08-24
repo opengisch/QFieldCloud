@@ -8,8 +8,7 @@ def generate_deltafile(
     project_id: UUID,
     id: UUID = UUID("111111111-1111-1111-1111-11111111111"),
 ) -> dict[str, Any]:
-    """
-    Returns a deltafile-structured dictionary with the given deltas.
+    """Returns a deltafile-structured dictionary with the given deltas.
 
     The given deltas must be an iterable with at least one element.
 

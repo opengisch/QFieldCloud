@@ -229,7 +229,6 @@ class QfcTestCase(APITestCase):
 
     def test_active_users_count(self):
         """Tests billable users calculations."""
-
         # Set user1 and user2 as member of organization1
         OrganizationMember.objects.create(
             organization=self.organization1,

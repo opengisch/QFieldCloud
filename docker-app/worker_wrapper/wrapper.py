@@ -229,8 +229,7 @@ class JobRun:
         pass
 
     def run(self):
-        """
-        The main and first method to be called on `JobRun`.
+        """The main and first method to be called on `JobRun`.
 
         Should not be overloaded by inheriting classes,
         they should use `before_docker_run`, `after_docker_run`

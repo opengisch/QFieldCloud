@@ -377,8 +377,7 @@ def delete_project_file_version(
     project_id: UUID,
     filename: str,
 ) -> None:
-    """
-    Deletes a given project file, or if the version is passed, only specific version.
+    """Deletes a given project file, or if the version is passed, only specific version.
 
     The version can be passed either with `version` query parameter or `x-file-version` header.
 

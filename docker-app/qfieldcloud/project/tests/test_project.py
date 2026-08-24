@@ -596,7 +596,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_private_project_memberships(self):
         """Tests for QF-1553 - limit collaboration on private projects."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project with a collaborator
@@ -1110,7 +1109,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_restricted_data_last_updated_at_on_file_upload(self):
         """Test that restricted_data_last_updated_at is updated when restricted files are uploaded."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project
@@ -1168,7 +1166,6 @@ class QfcTestCase(APITransactionTestCase):
 
     def test_restricted_data_last_updated_at_on_file_delete(self):
         """Test that restricted_data_last_updated_at is updated when restricted files are deleted."""
-
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 
         # Create a project

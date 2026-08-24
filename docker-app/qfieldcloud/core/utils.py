@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class S3ObjectVersion:
-    """
-    A QFC wrapper around a raw `S3ObjectVersion` from `boto3`.
+    """A QFC wrapper around a raw `S3ObjectVersion` from `boto3`.
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -62,8 +61,7 @@ class S3ObjectVersion:
 
 
 class S3ObjectWithVersions(NamedTuple):
-    """
-    A QFC wrapper around a raw `S3Object` from `boto3`.
+    """A QFC wrapper around a raw `S3Object` from `boto3`.
 
     Todo:
         * Delete with QF-4963 Drop support for legacy storage
@@ -90,8 +88,7 @@ def strip_json_null_bytes(file: IO) -> IO:
 
 
 def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
-    """
-    Creates a JSON schema validator to check whether the provided delta file is valid.
+    """Creates a JSON schema validator to check whether the provided delta file is valid.
 
     Returns:
         jsonschema.Draft7Validator -- JSON Schema validator

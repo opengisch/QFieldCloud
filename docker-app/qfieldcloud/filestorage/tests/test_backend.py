@@ -9,8 +9,7 @@ logging.disable(logging.CRITICAL)
 
 
 class QfcS3Boto3StorageTestCase(TestCase):
-    """
-    Tests for _get_write_parameters Content-Type detection.
+    """Tests for _get_write_parameters Content-Type detection.
 
     The version-detection regex mirrors the S3 key format produced by
     FileVersion.display and get_file_version_upload_to in models.py.
@@ -88,8 +87,7 @@ class QfcS3Boto3StorageTestCase(TestCase):
         self.assertEqual(params["ContentType"], "image/jpeg")
 
     def test_old_year_format_not_matched(self):
-        """
-        Compatibility check for file versions.
+        """Compatibility check for file versions.
 
         v1999… does not match the regex — falls through safely
         to guess_type on the last path component (no extension).

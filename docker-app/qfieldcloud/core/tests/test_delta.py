@@ -1132,8 +1132,7 @@ class QfcTestCase(APITransactionTestCase):
         )
 
     def test_push_list_multilayer_multidelta_same_pk(self):
-        """
-        Test that multiple deltas with same PK value in different layers are applied correctly.
+        """Test that multiple deltas with same PK value in different layers are applied correctly.
 
         1. Create two features with same local PK in different layers (and unknown remote PK).
         2. Push the deltas (NOT sync, we should not know the remote PK on the client).

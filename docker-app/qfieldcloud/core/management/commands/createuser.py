@@ -3,8 +3,7 @@ from qfieldcloud.core.models import Person
 
 
 class Command(BaseCommand):
-    """
-    Creates a normal or super user using the CLI.
+    """Creates a normal or super user using the CLI.
 
     Unlike the Django's createsuperuser command, here we can pass the password as an argument.
     This is a utility function that is expected to be used only for testing purposes.

@@ -9,12 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 def purge_old_file_versions(project: Project) -> None:
-    """
-    Deletes old versions of all files in the given project.
+    """Deletes old versions of all files in the given project.
 
     Will keep __3__ versions for COMMUNITY user accounts, and __10__ versions for PRO user accounts.
     """
-
     keep_count = project.owner_aware_storage_keep_versions
 
     logger.info(f"Cleaning up old files for {project} to {keep_count} versions")

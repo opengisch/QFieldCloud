@@ -188,8 +188,7 @@ def project_decorator(f):
 
 
 def wkt_nan_to_zero(wkt: WKT) -> WKT:
-    """
-    Support of `nan` values is non-standard in WKT.
+    """Support of `nan` values is non-standard in WKT.
 
     Since it is poorly supported on QGIS and other FOSS tools, it's safer to convert the `nan` values to 0s for now. See https://github.com/qgis/QGIS/pull/47034/ .
 
@@ -211,8 +210,7 @@ def wkt_nan_to_zero(wkt: WKT) -> WKT:
 def get_geometry_from_delta(
     delta_feature: DeltaFeature, layer: QgsVectorLayer
 ) -> QgsGeometry | None:
-    """
-    Converts the `geometry` WKT from the `DeltaFeature` to a `QgsGeometry` instance.
+    """Converts the `geometry` WKT from the `DeltaFeature` to a `QgsGeometry` instance.
 
     Args:
         delta_feature: delta feature
@@ -292,8 +290,7 @@ def apply_deltas(
 
 @lru_cache(maxsize=128)
 def get_json_schema_validator() -> jsonschema.Draft7Validator:
-    """
-    Creates a JSON schema validator to check whether the provided delta file is valid.
+    """Creates a JSON schema validator to check whether the provided delta file is valid.
 
     The function result is cached.
 
@@ -309,8 +306,7 @@ def get_json_schema_validator() -> jsonschema.Draft7Validator:
 
 
 def delta_file_args_loader(args: DeltaOptions) -> DeltaFile | None:
-    """
-    Get delta file contents as a dictionary passed in the args. Mostly used for testing.
+    """Get delta file contents as a dictionary passed in the args. Mostly used for testing.
 
     Args:
         args: main options
@@ -338,8 +334,7 @@ def delta_file_args_loader(args: DeltaOptions) -> DeltaFile | None:
 
 
 def delta_file_file_loader(args: DeltaOptions) -> DeltaFile | None:
-    """
-    Get delta file contents from a filesystem file.
+    """Get delta file contents from a filesystem file.
 
     Args:
         args: main options
@@ -380,8 +375,7 @@ def delta_file_file_loader(args: DeltaOptions) -> DeltaFile | None:
 
 
 def load_delta_file(args: DeltaOptions) -> DeltaFile:
-    """
-    Loads delta file, using the provided {args}.
+    """Loads delta file, using the provided {args}.
 
     Args:
         args: main options
@@ -629,8 +623,7 @@ def rollback_deltas(
     layers_by_id: dict[LayerId, QgsVectorLayer],
     committed_layer_ids: set[LayerId] | None = None,
 ) -> bool:
-    """
-    Rollback applied deltas by restoring the layer data source backup files.
+    """Rollback applied deltas by restoring the layer data source backup files.
 
     Args:
         layers_by_id: layers
@@ -693,8 +686,7 @@ def rollback_deltas(
 
 
 def cleanup_backups(layer_paths: set[str]) -> bool:
-    """
-    Cleanup the layer backups. Attempts to remove all backup files, whether or not there is an error.
+    """Cleanup the layer backups. Attempts to remove all backup files, whether or not there is an error.
 
     Args:
         layer_paths: layer paths, which should have their backups removed
@@ -802,8 +794,7 @@ def get_feature(
 def create_feature(
     layer: QgsVectorLayer, delta: Delta, overwrite_conflicts: bool
 ) -> QgsFeature:
-    """
-    Creates new feature in layer.
+    """Creates new feature in layer.
 
     Args:
         layer: target layer. Must be in editing mode!
@@ -872,8 +863,7 @@ def patch_feature(
     overwrite_conflicts: bool,
     client_pks: dict[str, str],
 ) -> QgsFeature:
-    """
-    Patches a feature in layer.
+    """Patches a feature in layer.
 
     Args:
         layer: target layer. Must be in edit mode!
@@ -964,8 +954,7 @@ def delete_feature(
     overwrite_conflicts: bool,
     client_pks: dict[str, str],
 ) -> QgsFeature:
-    """
-    Deletes a feature from layer.
+    """Deletes a feature from layer.
 
     Args:
         layer: target layer. Must be in edit mode!
@@ -1011,8 +1000,7 @@ def delete_feature(
 def compare_feature(
     feature: QgsFeature, delta_feature: DeltaFeature, is_delta_subset: bool = False
 ) -> list[str]:
-    """
-    Compares a feature with delta description of a feature and reports the differences.
+    """Compares a feature with delta description of a feature and reports the differences.
 
     Checks both the geometry and the attributes. If
     {is_delta_subset} is true, allows the delta attributes to be subset of the
@@ -1079,8 +1067,7 @@ def compare_feature(
 
 @lru_cache(maxsize=128)
 def get_layer_path(layer: QgsMapLayer) -> Path:
-    """
-    Returns a `Path` object of the data source filename of the given layer.
+    """Returns a `Path` object of the data source filename of the given layer.
 
     Args:
         layer: target layer
@@ -1096,8 +1083,7 @@ def get_layer_path(layer: QgsMapLayer) -> Path:
 
 
 def get_backup_path(path: Path) -> Path:
-    """
-    Returns a `Path` object of with backup suffix.
+    """Returns a `Path` object of with backup suffix.
 
     Args:
         path: target path
@@ -1113,8 +1099,7 @@ def is_layer_file_based(layer: QgsMapLayer) -> bool:
 
 
 def inverse_delta(delta: Delta) -> Delta:
-    """
-    Returns shallow copy of the delta with reversed `old` and `new` keys.
+    """Returns shallow copy of the delta with reversed `old` and `new` keys.
 
     Args:
         delta: delta

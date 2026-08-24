@@ -8,8 +8,7 @@ class IntegrationError(QfcError): ...
 
 
 class QFieldCloudError(Exception):
-    """
-    Generic QFieldCloud Exception.
+    """Generic QFieldCloud Exception.
 
     Attributes:
         code (str): error code
@@ -222,8 +221,7 @@ class NotCloneableProjectError(QFieldCloudError):
 
 
 class OperationNotAllowedForTemplateProjectError(QFieldCloudError):
-    """
-    Raised when attempting to package or apply deltas on a template project.
+    """Raised when attempting to package or apply deltas on a template project.
 
     Template projects can only be cloned or have files uploaded to them.
     """

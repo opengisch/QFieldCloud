@@ -92,8 +92,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(len(localized_layers), 2)
 
     def test_localized_layers_and_missing_localized_layers(self):
-        """
-        Tests the detection of available and missing localized layers.
+        """Tests the detection of available and missing localized layers.
 
         - Uploads one localized file and a QGIS project referencing two
         - Verifies which layers are marked as missing
@@ -166,8 +165,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(len(missing_localized_layers_filenames), 1)
 
     def test_no_missing_localized_layers(self):
-        """
-        Checks for missing localized layers.
+        """Checks for missing localized layers.
 
         Ensures that when all localized layers referenced in the QGIS project
         are available in the localized datasets project, the list of missing

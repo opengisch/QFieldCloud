@@ -49,8 +49,7 @@ class ExpectedPremiumUserError(CheckPermError): ...
 
 
 def user_eq(user1: QfcUser, user2: QfcUser) -> bool:
-    """
-    Checks if User model derivatives are equal.
+    """Checks if User model derivatives are equal.
 
     NOTE User(pk=12) is not equal to Person(pk=12)!
     """
@@ -172,7 +171,6 @@ def user_has_organization_role_origins(
 
 def get_param_from_request(request, param):
     """Try to get the param from the request data or the request context, returns None otherwise."""
-
     if isinstance(request.data, dict):
         result = request.data.get(param, None)
     else:
@@ -187,13 +185,11 @@ def get_param_from_request(request, param):
 def can_create_project(
     user: QfcUser, organization: QfcUser | Organization = None
 ) -> bool:
-    """
-    Return True if the `user` can create a project.
+    """Return True if the `user` can create a project.
 
     Accepts additional `organization` to check whether the user has permissions to do so on that organization.
     Return False otherwise.
     """
-
     if organization is None:
         return True
 
@@ -583,13 +579,11 @@ def can_delete_project_secrets(user: QfcUser, project: Project) -> bool:
 
 def can_list_users_organizations(user: QfcUser) -> bool:
     """Return True if the `user` can list users and organizations. Return False otherwise."""
-
     return True
 
 
 def can_create_user(user: QfcUser) -> bool:
-    """
-    Return True if the user can create new QFieldCloud accounts.
+    """Return True if the user can create new QFieldCloud accounts.
 
     Restricted to staff so only service accounts and admins can provision
     users programmatically via the API.
@@ -681,7 +675,6 @@ def can_read_packages(user: QfcUser, project: Project) -> bool:
 
 def can_create_members(user: QfcUser, organization: Organization) -> bool:
     """Return True if the `user` can create members (incl. teams) of `organization`. Return False otherwise."""
-
     return user_has_organization_roles(
         user, organization, [OrganizationMember.Roles.ADMIN]
     )
@@ -689,7 +682,6 @@ def can_create_members(user: QfcUser, organization: Organization) -> bool:
 
 def can_read_members(user: QfcUser, organization: Organization) -> bool:
     """Return True if the `user` can list members (incl. teams) of `organization`. Return False otherwise."""
-
     if not organization.is_organization:
         return False
 
@@ -872,8 +864,7 @@ def can_change_additional_storage(user: QfcUser, subscription: Subscription) -> 
 def can_cancel_subscription_at_period_end(
     user: QfcUser, subscription: Subscription
 ) -> bool:
-    """
-    Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
+    """Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
 
     Organization can be downgraded only by owners, need to be deleted.
     In any case cancellation is only possible if the plan allows it.
@@ -897,8 +888,7 @@ def can_cancel_subscription_at_period_end(
 def can_cancel_subscription_immediately(
     user: QfcUser, subscription: Subscription
 ) -> bool:
-    """
-    Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
+    """Cannot cancel subscription if different from the personal account, or the plan is not cancellable.
 
     Organization can be downgraded only by owners, need to be deleted.
     In any case cancellation is only possible if the plan allows it.
