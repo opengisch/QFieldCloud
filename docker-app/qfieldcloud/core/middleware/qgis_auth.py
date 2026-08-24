@@ -108,7 +108,7 @@ class QGISAuthenticationMiddleware:
         # the user, links the social account, and creates a session.
         complete_social_login(request, social_login)
 
-        logger.info("Authenticated user: %s" % request.user)
+        logger.info("Authenticated user: %s", request.user)
         return self.get_response(request)
 
     def get_id_token(self, request: HttpRequest):

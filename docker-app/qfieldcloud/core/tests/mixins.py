@@ -75,7 +75,7 @@ class QfcFilesTestCaseMixin:
         responses = []
         for remote_filename, content in files:
             if isinstance(content, (str, Path)):
-                file = open(testdata_path(content), "r")
+                file = open(testdata_path(content))
             else:
                 file = content
 
