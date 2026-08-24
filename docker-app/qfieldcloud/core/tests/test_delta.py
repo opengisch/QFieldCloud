@@ -129,7 +129,7 @@ class QfcTestCase(APITransactionTestCase):
 
         super().fail(msg)
 
-    def assertHttpOk(self, response: response.Response):
+    def assertHttpOk(self, response: response.Response):  # noqa: N802
         self.assertTrue(
             status.is_success(response.status_code),
             f"Response: {response.content}",

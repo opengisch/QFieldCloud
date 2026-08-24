@@ -46,7 +46,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             from_queryset=Project.objects.select_related("the_qgis_file")
         )
 
-    def assertLayerData(
+    def assertLayerData(  # noqa: N802
         self, layer_data: dict, is_valid: bool, is_localized: bool, error_code: str
     ) -> None:
         self.assertEqual(layer_data["is_valid"], is_valid)

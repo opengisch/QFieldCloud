@@ -26,7 +26,7 @@ class QfcTestCase(APITransactionTestCase):
     def setUp(self):
         setup_subscription_plans()
 
-    def assertProjectRole(
+    def assertProjectRole(  # noqa: N802
         self,
         project,
         user,

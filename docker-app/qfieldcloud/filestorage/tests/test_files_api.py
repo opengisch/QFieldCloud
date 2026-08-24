@@ -62,12 +62,12 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             from_queryset=Project.objects.select_related("the_qgis_file")
         )
 
-    def assertFileUploaded(
+    def assertFileUploaded(  # noqa: N802
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
         return self._assertFileUploaded(user, project, filename, content)
 
-    def _assertFileUploaded(
+    def _assertFileUploaded(  # noqa: N802
         self, user: User, project: Project, filename: str, content: IO
     ) -> HttpResponse | Response:
         files_count = project.project_files.exclude(name=filename).count()
@@ -98,7 +98,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         return response
 
-    def assertFileDeleted(
+    def assertFileDeleted(  # noqa: N802
         self,
         user: User,
         project: Project,

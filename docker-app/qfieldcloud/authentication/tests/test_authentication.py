@@ -22,7 +22,7 @@ class QfcTestCase(APITransactionTestCase):
         # Create a user
         self.user1 = Person.objects.create_user(username="user1", password="abc123")
 
-    def assertTokenMatch(self, token, payload, force_avatar_check: bool = False):
+    def assertTokenMatch(self, token, payload, force_avatar_check: bool = False):  # noqa: N802
         expires_at = payload.pop("expires_at")
         avatar_url = payload.pop("avatar_url")
         self.assertDictEqual(
