@@ -23,6 +23,8 @@ def redirect_to_referer_or_view(
     Args:
         request: incoming client request.
         view_name: name of the view to redirect to.
+        *view_args: view arguments
+        **view_kwargs: view arguments
 
     Returns:
         client redirect http response.

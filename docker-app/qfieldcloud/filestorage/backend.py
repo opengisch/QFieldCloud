@@ -171,6 +171,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Arguments:
             method: webdav method, e.g. "HEAD", "GET", "PUT", "DELETE", etc.
             name: relative path of the file on the webdav server.
+            *args: additional arguments
+            **kwargs: additional keyword arguments
 
         Returns:
             HTTP response related to the sent request.
@@ -330,6 +332,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
         Arguments:
             name: relative path of the file on the webdav server.
+            **kwargs: additional keyword arguments
 
         Returns:
             Public webdav URL of the file.

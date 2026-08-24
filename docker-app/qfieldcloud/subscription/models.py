@@ -918,6 +918,7 @@ class AbstractSubscription(models.Model):
 
         Args:
             subscription: subscription to be updated
+            **kwargs: additional keyword arguments
 
         Returns:
             the same as the subscription argument

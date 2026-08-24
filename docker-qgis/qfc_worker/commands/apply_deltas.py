@@ -879,6 +879,7 @@ def patch_feature(
         layer: target layer. Must be in edit mode!
         delta: delta describing the patch
         overwrite_conflicts: if there are conflicts with an existing feature, ignore them
+        client_pks: a mapping between the client and datasource PKs
 
     Raises:
         DeltaException: whenever the feature cannot be patched
@@ -970,6 +971,7 @@ def delete_feature(
         layer: target layer. Must be in edit mode!
         delta: delta describing the deleted feature
         overwrite_conflicts: if there are conflicts with an existing feature, ignore them
+        client_pks: a mapping between the client and datasource PKs
 
     Raises:
         DeltaException: whenever the feature cannot be deleted
