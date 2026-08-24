@@ -283,7 +283,9 @@ def reproject_extent(
     Reprojects `extent` from `source_crs` to `target_crs`.
 
     Args:
-        target_crs: defaults to WGS84 (EPSG:4326) when not provided.
+        extent: a `QgsRectangle` to be reprojected
+        source_crs: The CRS that the `extent` coordinates are currently in.
+        target_crs: The CRS that the `extent` coordinated should be converted to. Defaults to WGS84 (EPSG:4326) when not provided.
 
     Returns:
         the reprojected extent.

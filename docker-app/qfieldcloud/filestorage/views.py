@@ -219,7 +219,7 @@ class AvatarFileReadView(views.APIView):
 
         Args:
             request: incoming request
-            username: the username we are serving avatar for
+            public_id: the public identifier, usually the `username` of the served file.
             filename: the filename in the URL, but ignored in the function execution. Defaults to "".
 
         Returns:

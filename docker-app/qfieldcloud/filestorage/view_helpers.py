@@ -384,6 +384,7 @@ def delete_project_file_version(
 
     Args:
         request: The Django request
+        project_id: Project ID
         filename: The filename to be deleted
 
     Raises:

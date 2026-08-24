@@ -69,7 +69,7 @@ def create_collaborator_by_username_or_email(
 
     Args:
         project: the project to add collaborator to
-        user: the username or email to be added as collaborator or invited to join QFieldCloud
+        username: the username or email to be added as collaborator or invited to join QFieldCloud
         created_by: the user that initiated the collaborator creation
 
     Returns:

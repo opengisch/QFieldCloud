@@ -179,7 +179,7 @@ def parse_range_header(
     Parses a range HTTP Header string.
 
     Arguments:
-        range: string value of a HTTP range header to parse.
+        input_range: string value of a HTTP range header to parse.
         file_size: size of the file to get range for, in bytes.
 
     Returns:
@@ -225,7 +225,7 @@ def get_range(request: HttpRequest, total_size: int) -> RangeForFile | None:
 
     Arguments:
         request: the HTTP request to get the range from.
-        file: the file to get the range for.
+        total_size: the total size of the requested file in bytes.
     """
     range_header = request.headers.get("Range", "")
 
