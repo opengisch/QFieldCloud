@@ -40,7 +40,12 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from qfieldcloud.project.enums import LayerErrorCode, QgsGeometryType, QgsLayerType
+from qfieldcloud.project.enums import (
+    LayerErrorCode,
+    ProjectCollaboratorRole,
+    QgsGeometryType,
+    QgsLayerType,
+)
 
 if TYPE_CHECKING:
     from qfieldcloud.core.models import (
@@ -252,6 +257,13 @@ class Project(models.Model):
         ProjectType.TEMPLATE,
     ]
 
+    # Roles that can be granted to all users when a project is public.
+    PUBLIC_COLLABORATOR_ROLES = [
+        ProjectCollaboratorRole.READER,
+        ProjectCollaboratorRole.REPORTER,
+        ProjectCollaboratorRole.EDITOR,
+    ]
+
     @property
     def localized_layers(self) -> list[QgisLayer]:
         """
@@ -330,6 +342,15 @@ class Project(models.Model):
         default=False,
         help_text=_(
             "Projects marked as public are visible to (but not editable by) anyone."
+        ),
+    )
+
+    public_collaborator_role = models.CharField(
+        max_length=10,
+        choices=[(role.value, role.label) for role in PUBLIC_COLLABORATOR_ROLES],
+        default=ProjectCollaboratorRole.READER,
+        help_text=_(
+            "The role automatically granted to every user on this project. This setting only takes effect if the project is marked as public."
         ),
     )
 
@@ -1094,6 +1115,13 @@ class Project(models.Model):
             raise ValidationError(
                 _("Project type must be one of `{}`, got `{}`.").format(
                     self.CONFIGURABLE_PROJECT_TYPES, self.project_type
+                )
+            )
+
+        if self.public_collaborator_role not in self.PUBLIC_COLLABORATOR_ROLES:
+            raise ValidationError(
+                _("`public_collaborator_role` must be one of `{}`, got `{}`.").format(
+                    self.PUBLIC_COLLABORATOR_ROLES, self.public_collaborator_role
                 )
             )
 

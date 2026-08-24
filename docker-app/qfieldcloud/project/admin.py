@@ -369,6 +369,7 @@ class ProjectAdmin(QFieldCloudModelAdmin):
         "name",
         "description",
         "is_public",
+        "public_collaborator_role",
         "owner",
         "created_by",
         "status",
