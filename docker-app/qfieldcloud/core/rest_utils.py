@@ -23,7 +23,7 @@ def exception_handler(exc, context):
         qfc_exc = qfieldcloud_exceptions.ObjectNotFoundError(detail=str(exc))
     elif isinstance(exc, exceptions.ValidationError):
         qfc_exc = qfieldcloud_exceptions.ValidationError(detail=str(exc))
-    elif isinstance(exc, qfieldcloud_exceptions.QFieldCloudException):
+    elif isinstance(exc, qfieldcloud_exceptions.QFieldCloudError):
         qfc_exc = exc
     elif isinstance(exc, rest_exceptions.APIException):
         # Map DRF API exceptions to qfc exceptions.
@@ -38,7 +38,7 @@ def exception_handler(exc, context):
         if settings.IN_TEST_SUITE:
             raise exc
 
-        qfc_exc = qfieldcloud_exceptions.QFieldCloudException(detail=str(exc))
+        qfc_exc = qfieldcloud_exceptions.QFieldCloudError(detail=str(exc))
 
     # Log level is defined by the exception
     if qfc_exc.log_as_error:

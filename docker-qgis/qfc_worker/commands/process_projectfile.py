@@ -17,10 +17,10 @@ from qgis.PyQt.QtGui import QImage, QPainter
 
 from qfc_worker.commands_base import QfcBaseCommand
 from qfc_worker.exceptions import (
-    FailedThumbnailGenerationException,
-    InvalidFileExtensionException,
-    InvalidXmlFileException,
-    ProjectFileNotFoundException,
+    FailedThumbnailGenerationError,
+    InvalidFileExtensionError,
+    InvalidXmlFileError,
+    ProjectFileNotFoundError,
 )
 from qfc_worker.utils import (
     download_project,
@@ -52,7 +52,7 @@ def _check_valid_project_file(the_qgis_file_name: Path) -> None:
     logger.info("Check QGIS project file validity…")
 
     if not the_qgis_file_name.exists():
-        raise ProjectFileNotFoundException(the_qgis_file_name=the_qgis_file_name)
+        raise ProjectFileNotFoundError(the_qgis_file_name=the_qgis_file_name)
 
     if the_qgis_file_name.suffix == ".qgs":
         with open(the_qgis_file_name, "rb") as fh:
@@ -61,12 +61,12 @@ def _check_valid_project_file(the_qgis_file_name: Path) -> None:
                     continue
             except ElementTree.ParseError as error:
                 error_msg = str(error)
-                raise InvalidXmlFileException(
+                raise InvalidXmlFileError(
                     xml_error=get_qgis_xml_error_context(error_msg, fh) or error_msg,
                     the_qgis_file_name=the_qgis_file_name,
                 )
     elif the_qgis_file_name.suffix != ".qgz":
-        raise InvalidFileExtensionException(
+        raise InvalidFileExtensionError(
             the_qgis_file_name=the_qgis_file_name,
             extension=the_qgis_file_name.suffix,
         )
@@ -247,7 +247,7 @@ def _generate_thumbnail(
 
     if is_thumbnail_generated:
         if not img.save(str(thumbnail_filename)):
-            raise FailedThumbnailGenerationException(
+            raise FailedThumbnailGenerationError(
                 reason=f"Failed to save thumbnail to {thumbnail_filename}."
             )
 

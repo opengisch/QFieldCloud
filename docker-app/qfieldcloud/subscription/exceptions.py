@@ -1,9 +1,9 @@
 from rest_framework import status
 
-from qfieldcloud.core.exceptions import QFieldCloudException
+from qfieldcloud.core.exceptions import QFieldCloudError
 
 
-class SubscriptionException(QFieldCloudException): ...
+class SubscriptionException(QFieldCloudError): ...
 
 
 class NotPremiumPlanException(SubscriptionException): ...

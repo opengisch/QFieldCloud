@@ -36,7 +36,7 @@ from qfc_worker.utils import (
 from qfc_worker.workflow import (
     Step,
     StepOutput,
-    UnableToContinueException,
+    UnableToContinueError,
     WorkDirPath,
     Workflow,
 )
@@ -185,7 +185,7 @@ def _create_project_from_xlsform(
             "Failed to convert XLSForm to QGIS project: %s", humanize_error(err)
         )
 
-        raise UnableToContinueException(
+        raise UnableToContinueError(
             reason="Unable to continue project creation, this job will be cancelled and have failed status!",
         ) from err
 
