@@ -562,7 +562,7 @@ class QfcTestCase(APITransactionTestCase):
             subscription.status = Subscription.Status.INACTIVE_DRAFT
             subscription.save()
 
-            plan = subscription.plan
+            plan = subscription.regular_plan
             # Make sure the user's plan is inactive and does not allow online vector data
             self.assertFalse(project.owner.useraccount.current_subscription.is_active)
             self.assertFalse(plan.is_external_db_supported)
