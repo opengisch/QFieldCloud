@@ -139,7 +139,7 @@ def start_app() -> str:
     The initialization will only happen once, so it is safe to call this method repeatedly.
 
     Returns
-    ------
+    -------
         str: QGIS app version that was started.
     """
     global QGISAPP
@@ -624,7 +624,7 @@ def list_local_files(project_id: str, project_dir: Path):
 
 
 def is_localhost(hostname: str, port: int | None = None) -> bool:
-    """returns True if the hostname points to the localhost, otherwise False."""
+    """Returns True if the hostname points to the localhost, otherwise False."""
     if port is None:
         port = 22  # no port specified, lets just use the ssh port
 
