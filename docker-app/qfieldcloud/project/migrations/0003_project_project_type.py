@@ -13,6 +13,7 @@ def set_shared_datasets_project_type(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("project", "0002_projectseed"),
+        ("core", "0104_alter_projectcollaborator_project_and_more"),
     ]
 
     operations = [
