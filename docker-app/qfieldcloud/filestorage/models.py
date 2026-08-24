@@ -149,9 +149,6 @@ class File(models.Model):
     def is_attachment(self):
         return storage.get_attachment_dir_prefix(self.project, self.name) != ""
 
-    def remove_version(self, version_id):
-        self.versions.get(version_id).delete
-
     def get_total_versions_size(self) -> int:
         return self.versions.aggregate(size=Sum("size", default=0))["size"]
 
