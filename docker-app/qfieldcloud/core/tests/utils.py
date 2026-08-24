@@ -146,7 +146,7 @@ def get_random_file(mb: float) -> IO:
     return io.BytesIO(os.urandom(bytes_size))
 
 
-class get_named_file_with_size:
+class get_named_file_with_size:  # noqa: N801
     def __init__(self, mb: int) -> None:
         self.bytes_size = 1000 * int(mb * 1000)
 
