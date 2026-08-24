@@ -127,9 +127,7 @@ class Workflow:
 
         if after_id is not None:
             if after_id not in self._step_idx_by_id:
-                raise WorkflowModificationError(
-                    f'Step with id "{after_id}" not found.'
-                )
+                raise WorkflowModificationError(f'Step with id "{after_id}" not found.')
 
             insert_idx = self._step_idx_by_id[after_id] + 1
 
