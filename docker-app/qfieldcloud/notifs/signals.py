@@ -1,6 +1,4 @@
-"""
-This module logs activity streams using the `django-activity-stream` package.
-"""
+"""This module logs activity streams using the `django-activity-stream` package."""
 
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver

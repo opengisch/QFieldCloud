@@ -18,7 +18,8 @@ class BasemapConfig(TypedDict):
 
 
 def parse_extent_coords(extent_coords: str) -> tuple[float, float, float, float]:
-    """Parses the extent coordinates from a string and validates them for EPSG:4326.
+    """
+    Parses the extent coordinates from a string and validates them for EPSG:4326.
 
     Args:
         extent_coords: the extent coordinates to parse in the format "minX, minY, maxX, maxY"
@@ -63,7 +64,8 @@ def parse_extent_coords(extent_coords: str) -> tuple[float, float, float, float]
 
 
 def get_extent_polygon(extent_str: str | None) -> Polygon:
-    """Cleans the extent by ensuring it is a valid rectangle and normalizing it.
+    """
+    Cleans the extent by ensuring it is a valid rectangle and normalizing it.
 
     Args:
         extent_str: Expected input is EPSG:4326 coordinates in the format "minX, minY, maxX, maxY".
@@ -88,7 +90,8 @@ def build_basemap_config(
     basemap_style: str,
     basemap_url: str,
 ) -> list[BasemapConfig]:
-    """Build basemap configuration list from provider/style/url inputs.
+    """
+    Build basemap configuration list from provider/style/url inputs.
 
     Returns:
         List of basemap configs (empty if provider is "none").
@@ -139,7 +142,8 @@ def build_seed_data(
     extent_input: str | None,
     xlsform_file: UploadedFile | None,
 ) -> tuple[list[BasemapConfig], Polygon, dict | None]:
-    """Build all seed components from raw inputs.
+    """
+    Build all seed components from raw inputs.
 
     Returns:
         Tuple of (basemaps_list, extent_polygon, xlsform_config or None).

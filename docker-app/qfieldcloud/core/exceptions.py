@@ -8,7 +8,8 @@ class IntegrationError(QfcError): ...
 
 
 class QFieldCloudException(Exception):
-    """Generic QFieldCloud Exception
+    """
+    Generic QFieldCloud Exception
 
     Attributes:
         code (str): error code
@@ -85,7 +86,8 @@ class PermissionDeniedError(QFieldCloudException):
 
 
 class EmptyContentError(QFieldCloudException):
-    """Raised when a request doesn't contain an expected content
+    """
+    Raised when a request doesn't contain an expected content
     (e.g. a file)
     """
 
@@ -95,7 +97,8 @@ class EmptyContentError(QFieldCloudException):
 
 
 class MultipleContentsError(QFieldCloudException):
-    """Raised when a request contains multiple files
+    """
+    Raised when a request contains multiple files
     (i.e. when it should contain at most one)
     """
 
@@ -113,7 +116,8 @@ class ExplicitDeletionOfLastFileVersionError(QFieldCloudException):
 
 
 class ObjectNotFoundError(QFieldCloudException):
-    """Raised when a requested object doesn't exist
+    """
+    Raised when a requested object doesn't exist
     (e.g. wrong project id into the request)
     """
 
@@ -132,7 +136,8 @@ class APIError(QFieldCloudException):
 
 
 class ValidationError(QFieldCloudException):
-    """Raised when validation of form data or model field fails
+    """
+    Raised when validation of form data or model field fails
     (e.g. wrong field in request object)
     """
 
@@ -143,7 +148,8 @@ class ValidationError(QFieldCloudException):
 
 
 class InvalidQgisProjectFileError(QFieldCloudException):
-    """Raised when the user is trying to upload an invalid QGIS project file
+    """
+    Raised when the user is trying to upload an invalid QGIS project file
     into a QFieldCloud project
     """
 
@@ -153,7 +159,8 @@ class InvalidQgisProjectFileError(QFieldCloudException):
 
 
 class MultipleProjectsError(QFieldCloudException):
-    """Raised when the user is trying to upload more than one QGIS project
+    """
+    Raised when the user is trying to upload more than one QGIS project
     into a QFieldCloud project
     """
 
@@ -163,7 +170,8 @@ class MultipleProjectsError(QFieldCloudException):
 
 
 class RestrictedProjectModificationError(QFieldCloudException):
-    """Raised when a user with insufficient role is trying to modify QGIS/QField projectfiles
+    """
+    Raised when a user with insufficient role is trying to modify QGIS/QField projectfiles
     of a project that has the 'has_restricted_projectfiles' flag set
     """
 
@@ -189,7 +197,8 @@ class NoDeltasToApplyError(QFieldCloudException):
 
 
 class NoQGISProjectError(QFieldCloudException):
-    """Raised when a QFieldCloud doesn't contain a QGIS project that is needed
+    """
+    Raised when a QFieldCloud doesn't contain a QGIS project that is needed
     for the requested operation
     """
 
@@ -221,7 +230,8 @@ class InvalidRangeError(QFieldCloudException):
 
 
 class QGISProjectFileNotAllowedError(QFieldCloudException):
-    """Raised when a QGIS project file is uploaded to a project that does not allow it
+    """
+    Raised when a QGIS project file is uploaded to a project that does not allow it
     (e.g. shared datasets project)
     """
 
@@ -239,7 +249,8 @@ class NotCloneableProjectError(QFieldCloudException):
 
 
 class OperationNotAllowedForTemplateProjectError(QFieldCloudException):
-    """Raised when attempting to package or apply deltas on a template project.
+    """
+    Raised when attempting to package or apply deltas on a template project.
 
     Template projects can only be cloned or have files uploaded to them.
     """
@@ -250,7 +261,8 @@ class OperationNotAllowedForTemplateProjectError(QFieldCloudException):
 
 
 class UnexpectedProjectCollaboratorError(QFieldCloudException):
-    """Raised when the project creator is unexpectedly already a project collaborator
+    """
+    Raised when the project creator is unexpectedly already a project collaborator
     at the time of the automatic `ADMIN` collaborator grant.
     """
 

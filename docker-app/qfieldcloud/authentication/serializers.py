@@ -129,9 +129,7 @@ class TokenSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    User model w/o password
-    """
+    """User model w/o password"""
 
     class Meta:
         model = User

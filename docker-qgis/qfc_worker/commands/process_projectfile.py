@@ -187,7 +187,8 @@ def _generate_thumbnail(
     thumbnail_filename: Path,
     thumbnail_timeout_s: int = THUMBNAIL_TIMEOUT_S,
 ) -> Path | None:
-    """Create a thumbnail for the project
+    """
+    Create a thumbnail for the project
 
     As from https://docs.qgis.org/3.16/en/docs/pyqgis_developer_cookbook/composer.html#simple-rendering
     """

@@ -97,7 +97,8 @@ def invite_user_by_email(
 
 
 def send_invitation(invite, **kwargs):
-    """Sends invitation.
+    """
+    Sends invitation.
 
     Args:
         invite: the invitation to be sent

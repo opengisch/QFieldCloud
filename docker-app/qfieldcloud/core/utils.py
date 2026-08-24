@@ -86,7 +86,8 @@ def strip_json_null_bytes(file: IO) -> IO:
 
 
 def get_deltafile_schema_validator() -> jsonschema.Draft7Validator:
-    """Creates a JSON schema validator to check whether the provided delta
+    """
+    Creates a JSON schema validator to check whether the provided delta
     file is valid.
 
     Returns:

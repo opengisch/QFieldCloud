@@ -158,7 +158,8 @@ class LatestPackageDownloadFilesView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, PackageViewPermissions]
 
     def get(self, request, project_id, filename):
-        """Download package file.
+        """
+        Download package file.
 
         Raises:
             exceptions.InvalidJobError: raised when packaging has never been triggered or successful for this project

@@ -31,7 +31,8 @@ sensitive_post_parameters_m = method_decorator(
 
 
 class LoginView(ObtainAuthToken):
-    """Create a new user session.
+    """
+    Create a new user session.
 
     Check the credentials and return the REST Token if the credentials are valid and authenticated.
     Accept the following POST parameters: username OR email, password
@@ -67,7 +68,8 @@ class LoginView(ObtainAuthToken):
 
 
 class LogoutView(APIView):
-    """Invalidate the user session.
+    """
+    Invalidate the user session.
 
     Calls Django logout method and invalidate the Token object assigned to the current User object.
     Accepts nothing, returns a details message.
@@ -102,7 +104,8 @@ class LogoutView(APIView):
 
 
 class UserView(RetrieveAPIView):
-    """Read user fields.
+    """
+    Read user fields.
 
     Accepts nothing, returns the user fields.
     """
@@ -132,7 +135,8 @@ class UserView(RetrieveAPIView):
     ),
 )
 class ListProvidersView(APIView):
-    """Lists the available authentication providers.
+    """
+    Lists the available authentication providers.
 
     This will mostly be allauth SocialAccount providers, plus the
     username/password login.

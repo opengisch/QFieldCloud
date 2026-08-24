@@ -20,7 +20,8 @@ class ProjectRoleOrigins(models.TextChoices):
 
 
 class QgsLayerType(models.IntegerChoices):
-    """Mirrors QGIS's own `Qgis.LayerType` enum (`Qgis::LayerType`)
+    """
+    Mirrors QGIS's own `Qgis.LayerType` enum (`Qgis::LayerType`)
     Source: `enum class LayerType` in `src/core/qgis.h` in the QGIS repo
     (https://github.com/qgis/QGIS/blob/master/src/core/qgis.h).
     """
@@ -37,7 +38,8 @@ class QgsLayerType(models.IntegerChoices):
 
 
 class QgsGeometryType(models.IntegerChoices):
-    """Mirrors QGIS's own `Qgis.GeometryType` enum (`Qgis::GeometryType`).
+    """
+    Mirrors QGIS's own `Qgis.GeometryType` enum (`Qgis::GeometryType`).
     Source: `enum class GeometryType` in `src/core/qgis.h` in the
     QGIS repo (https://github.com/qgis/QGIS/blob/master/src/core/qgis.h).
     """
@@ -50,7 +52,8 @@ class QgsGeometryType(models.IntegerChoices):
 
 
 class LayerErrorCode(models.TextChoices):
-    """QFieldCloud's own error taxonomy for layer processing.
+    """
+    QFieldCloud's own error taxonomy for layer processing.
     Values are produced in `docker-qgis/qfc_worker/utils.py`.
     Keep this in sync with that file.
     """

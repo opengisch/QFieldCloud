@@ -18,9 +18,7 @@ class ReachedMaxOrganizationMembersError(SubscriptionException):
 
 
 class AccountInactiveError(SubscriptionException):
-    """
-    Raised when a permission (action) is denied because the useraccount is inactive.
-    """
+    """Raised when a permission (action) is denied because the useraccount is inactive."""
 
     code = "permission_denied_inactive"
     message = "Permission denied because the useraccount is inactive"
@@ -28,9 +26,7 @@ class AccountInactiveError(SubscriptionException):
 
 
 class InactiveSubscriptionError(SubscriptionException):
-    """
-    Raised when a permission (action) is denied because the useraccount subscription is inactive.
-    """
+    """Raised when a permission (action) is denied because the useraccount subscription is inactive."""
 
     code = "inactive_subscription"
     message = "Permission denied because the subscription is inactive"
@@ -38,9 +34,7 @@ class InactiveSubscriptionError(SubscriptionException):
 
 
 class PlanInsufficientError(SubscriptionException):
-    """
-    Raised when a permission (action) is denied because the useraccount plan is insufficient.
-    """
+    """Raised when a permission (action) is denied because the useraccount plan is insufficient."""
 
     code = "permission_denied_plan_insufficient"
     message = "Permission denied because the useraccount's plan is insufficient"

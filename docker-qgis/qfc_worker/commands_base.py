@@ -80,9 +80,7 @@ class QfcBaseCommand(metaclass=QfcBaseCommandRegistry):
         )
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
-        """
-        Entry point for subclassed commands to add custom arguments.
-        """
+        """Entry point for subclassed commands to add custom arguments."""
         pass
 
     def get_workflow(self, /, **kwargs) -> Workflow:

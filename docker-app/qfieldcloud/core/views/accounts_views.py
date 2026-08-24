@@ -36,9 +36,7 @@ def redirect_to_referer_or_view(
 
 
 def resend_confirmation_email(request: HttpRequest) -> HttpResponse:
-    """
-    Resends a confirmation email to a new unverified user.
-    """
+    """Resends a confirmation email to a new unverified user."""
     if request.method != "POST":
         return redirect_to_referer_or_view(request, "account_login")
 

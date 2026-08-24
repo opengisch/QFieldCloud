@@ -138,8 +138,8 @@ def start_app() -> str:
 
     The initialization will only happen once, so it is safe to call this method repeatedly.
 
-        Returns
-        -------
+    Returns
+    ------
         str: QGIS app version that was started.
     """
     global QGISAPP
@@ -185,9 +185,7 @@ def start_app() -> str:
 
 
 def stop_app():
-    """
-    Cleans up and exits QGIS
-    """
+    """Cleans up and exits QGIS"""
     global QGISAPP
 
     # note that if this function is called from @atexit.register, the globals are cleaned up
@@ -281,7 +279,8 @@ def reproject_extent(
     source_crs: QgsCoordinateReferenceSystem,
     target_crs: QgsCoordinateReferenceSystem | None = None,
 ) -> QgsRectangle:
-    """Reprojects `extent` from `source_crs` to `target_crs`.
+    """
+    Reprojects `extent` from `source_crs` to `target_crs`.
 
     Args:
         target_crs: defaults to WGS84 (EPSG:4326) when not provided.
@@ -355,7 +354,8 @@ def reproject_extent(
 def open_qgis_project_temporarily(
     qgis_filename: str,
 ) -> OpenQgisProjectTemporarilyDetails:
-    """Opens a QGIS project temporarily to extract some details from it and returns the details and the project instance.
+    """
+    Opens a QGIS project temporarily to extract some details from it and returns the details and the project instance.
 
     Args:
         qgis_filename: the path of the QGIS project file (.qgs or .qgz)
@@ -438,7 +438,8 @@ def open_qgis_project_temporarily(
 
 
 def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
-    """Rewrites project XML file with feature count disabled.
+    """
+    Rewrites project XML file with feature count disabled.
 
     Args:
         the_qgis_file_name: filename of the QGIS filename (.qgs or .qgz)
@@ -498,7 +499,8 @@ def strip_feature_count_from_project_xml(the_qgis_file_name: str) -> None:
 def download_project(
     project_id: str, destination: Path | None = None, skip_attachments: bool = True
 ) -> Path:
-    """Download the files in the project "working" directory from the S3
+    """
+    Download the files in the project "working" directory from the S3
     Storage into a temporary directory. Returns the directory path
     """
     logging.info("Preparing a temporary directory for project files…")
@@ -1039,7 +1041,8 @@ def layers_data_to_string(layers_by_id):
 
 
 class RedactingFormatter(logging.Formatter):
-    """Filter out sensitive information such as passwords from the logs.
+    """
+    Filter out sensitive information such as passwords from the logs.
 
     Note: this is done via logging.Formatter instead of logging.Filter,
     because modified default handler formatter affects all existing loggers,
@@ -1083,7 +1086,8 @@ class RedactingFormatter(logging.Formatter):
 
 
 def setup_basic_logging_config():
-    """Set the default logger level to debug and set a password censoring formatter.
+    """
+    Set the default logger level to debug and set a password censoring formatter.
 
     This will affect all child loggers with the default handler,
     no matter if they are created before or after calling this function.
@@ -1199,7 +1203,8 @@ def save_project(
 
 @contextmanager
 def open_qgis_file(filename: str | Path) -> Iterator[TextIO]:
-    """Open a QGIS project file by filename, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
+    """
+    Open a QGIS project file by filename, either a `.qgs` or a `.qgz`, and yield a text file handle to the `.qgs` content.
 
     NOTE there is a very similar sister function with the same name in `docker-app/filestorage/utils.py`
     """

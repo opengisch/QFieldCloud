@@ -10,9 +10,7 @@ def blocked_view(request: HttpRequest, *args: Any, **kwargs: Any) -> None:
 
 
 def get_signup_url(request: HttpRequest) -> str | None:
-    """
-    Get the signup url if the adapter is open to signup, else return None.
-    """
+    """Get the signup url if the adapter is open to signup, else return None."""
     adapter = get_adapter()
 
     if adapter.is_open_for_signup(request):

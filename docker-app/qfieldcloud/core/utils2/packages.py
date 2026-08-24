@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 def delete_obsolete_packages(projects: Iterable[Project]) -> None:
-    """Delete obsolete packages for the given projects.
+    """
+    Delete obsolete packages for the given projects.
 
     We need to keep only the packages that are still in use by users and they are at their latest version.
     Any other packages should be considered obsolete and deleted.

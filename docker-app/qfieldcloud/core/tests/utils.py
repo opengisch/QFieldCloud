@@ -116,7 +116,8 @@ def set_subscription(
 
 @contextmanager
 def qgz_from_qgs(qgs_path: str | Path, qgz_name: str | None = None) -> Iterator[Path]:
-    """Context manager that creates a temporary .qgz file from a .qgs file.
+    """
+    Context manager that creates a temporary .qgz file from a .qgs file.
 
     The .qgz file is placed in a temporary directory that is removed together
     with all its contents when the context exits.

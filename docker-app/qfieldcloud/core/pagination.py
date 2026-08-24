@@ -7,9 +7,7 @@ from rest_framework import pagination, response
 
 
 def parameterize_pagination(_class: type) -> Callable:
-    """
-    Set as class attributes the items passed as kwargs.
-    """
+    """Set as class attributes the items passed as kwargs."""
 
     def configure_class_object(*args, **kwargs) -> type:
         for k, v in kwargs.items():
@@ -30,9 +28,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
     """
 
     def get_headers(self) -> dict[str, Any]:
-        """
-        Set new header fields to carry pagination controls.
-        """
+        """Set new header fields to carry pagination controls."""
         headers = {
             "X-Total-Count": str(self.count),
         }
@@ -49,9 +45,7 @@ class QfcLimitOffsetPagination(pagination.LimitOffsetPagination):
         return headers
 
     def get_paginated_response(self, data) -> response.Response:
-        """
-        Paginate results injecting pagination controls and counter into response headers.
-        """
+        """Paginate results injecting pagination controls and counter into response headers."""
         if (
             self.request is not None
             and self.request.GET.get("offset")

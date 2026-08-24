@@ -178,7 +178,8 @@ class FileVersionQueryset(models.QuerySet):
         version_id: UUID | None = None,
         package_job_id: UUID | None = None,
     ) -> FileVersion:
-        """Adds a new file version with specific filename.
+        """
+        Adds a new file version with specific filename.
 
         If the `File` object does not exist, this method will create it.
 
@@ -382,7 +383,8 @@ class FileVersion(models.Model):
         return super().delete(*args, **kwargs)
 
     def _get_file_storage_name(self) -> str:
-        """Returns the file storage name where all the files are stored.
+        """
+        Returns the file storage name where all the files are stored.
         Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`.
         """
         return self.file_storage

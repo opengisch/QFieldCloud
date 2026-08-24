@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_attachment_dir_prefix(project: Project, filename: str) -> str:  # noqa: F821
-    """Returns the attachment dir where the file belongs to or empty string if it does not.
+    """
+    Returns the attachment dir where the file belongs to or empty string if it does not.
 
     Args:
         project: project to check
@@ -57,9 +58,7 @@ def calculate_checksums(
 
 
 def format_storage_usage(useraccount: qfieldcloud.core.models.UserAccount) -> str:
-    """
-    Returns a string with the storage usage in a human readable format
-    """
+    """Returns a string with the storage usage in a human readable format"""
     active_storage_total = filesizeformat10(
         useraccount.current_subscription.active_storage_total_bytes
     )

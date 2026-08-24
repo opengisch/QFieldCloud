@@ -1001,7 +1001,8 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertIn(package_job_member, latest_package_jobs_qs)
 
     def test_public_project_non_member_latest_package_jobs(self):
-        """Non-members who trigger package jobs on public projects must be
+        """
+        Non-members who trigger package jobs on public projects must be
         included in latest_package_jobs so their files are not deleted by cleanup.
         """
 
