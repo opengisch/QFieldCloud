@@ -731,7 +731,7 @@ class AbstractSubscription(models.Model):
 
     @property
     def active_users(self):
-        "Returns the queryset of active users for running stripe billing period or None."
+        """Returns the queryset of active users for running stripe billing period or None."""
         if not self.account.user.is_organization:
             return None
 
