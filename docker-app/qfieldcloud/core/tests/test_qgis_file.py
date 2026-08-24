@@ -669,7 +669,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(response.json()[0]["size"], 10000000)
 
     def test_purge_old_versions(self):
-        """This tests automated purging of old versions when uploading files."""
+        """Test automated purging of old versions when uploading files."""
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
 

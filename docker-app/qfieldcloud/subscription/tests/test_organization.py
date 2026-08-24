@@ -217,7 +217,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertProjectRole(p1, u8, Roles.READER, RoleOrigins.PUBLIC, True)
 
     def test_max_organization_members(self):
-        """This tests quotas."""
+        """Test quotas."""
 
         u1 = Person.objects.create(username="u1")
         u2 = Person.objects.create(username="u2")

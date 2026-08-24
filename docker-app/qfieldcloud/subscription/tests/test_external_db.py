@@ -61,7 +61,7 @@ class QfcTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
     def test_is_external_db_supported(self):
-        """This tests is_external_db_supported property of accounts types."""
+        """Test `is_external_db_supported` property of accounts types."""
 
         u1 = Person.objects.create(username="u1")
         self._login(u1)
