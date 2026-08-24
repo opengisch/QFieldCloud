@@ -34,7 +34,7 @@ class QfcTestCase(APITransactionTestCase):
         origin: ProjectRoleOrigins | None = None,
         is_valid: bool = True,
     ):
-        """Asserts that user has give role/origin on project"""
+        """Asserts that user has give role/origin on project."""
         assert (role is None) == (origin is None), (
             "Both role and origin should be either defined or undefined!"
         )
@@ -217,7 +217,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertProjectRole(p1, u8, Roles.READER, RoleOrigins.PUBLIC, True)
 
     def test_max_organization_members(self):
-        """This tests quotas"""
+        """This tests quotas."""
 
         u1 = Person.objects.create(username="u1")
         u2 = Person.objects.create(username="u2")

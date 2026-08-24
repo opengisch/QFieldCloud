@@ -5,7 +5,7 @@ from qfieldcloud.project.models import Project
 
 
 class Command(BaseCommand):
-    """Recalculate projects storage size"""
+    """Recalculate projects storage size."""
 
     def add_arguments(self, parser):
         parser.add_argument("project_id", type=uuid.UUID, nargs="?")

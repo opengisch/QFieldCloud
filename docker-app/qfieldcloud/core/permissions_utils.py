@@ -171,7 +171,7 @@ def user_has_organization_role_origins(
 
 
 def get_param_from_request(request, param):
-    """Try to get the param from the request data or the request context, returns None otherwise"""
+    """Try to get the param from the request data or the request context, returns None otherwise."""
 
     if isinstance(request.data, dict):
         result = request.data.get(param, None)

@@ -32,7 +32,7 @@ logger.setLevel(logging.INFO)
 def call_libqfieldsync_packager(
     the_qgis_file_name: Path, package_dir: Path, offliner_type: OfflinerType
 ) -> Path:
-    """Call `libqfieldsync` to package a project for QField"""
+    """Call `libqfieldsync` to package a project for QField."""
     logger.info("Preparing QGIS project for packaging…")
 
     project = open_qgis_project(str(the_qgis_file_name))

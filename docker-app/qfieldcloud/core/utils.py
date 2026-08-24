@@ -28,7 +28,7 @@ class S3ObjectVersion:
 
     @property
     def id(self) -> str:
-        """Returns the version id"""
+        """Returns the version id."""
         # NOTE id and version_id are the same thing
         return self._data.id
 
@@ -74,7 +74,7 @@ class S3ObjectWithVersions(NamedTuple):
 
     @property
     def total_size(self) -> int:
-        """Total size of all versions"""
+        """Total size of all versions."""
         # latest is also in versions
         return sum(v.size for v in self.versions if v.size is not None)
 

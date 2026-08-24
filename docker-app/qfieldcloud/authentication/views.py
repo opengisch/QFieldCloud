@@ -120,7 +120,7 @@ class UserView(RetrieveAPIView):
 
     def get_queryset(self):
         """
-        Adding this method since it is sometimes called when using `django-rest-swagger`
+        Adding this method since it is sometimes called when using `django-rest-swagger`.
 
         See: https://github.com/Tivix/django-rest-auth/issues/275
         """

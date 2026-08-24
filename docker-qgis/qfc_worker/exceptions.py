@@ -21,7 +21,7 @@ def humanize_error(exc: BaseException) -> str:
 
 
 class QfcWorkerException(Exception):
-    """QFieldCloud Exception"""
+    """QFieldCloud Exception."""
 
     message = ""
 

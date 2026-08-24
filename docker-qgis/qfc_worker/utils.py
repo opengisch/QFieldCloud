@@ -185,7 +185,7 @@ def start_app() -> str:
 
 
 def stop_app():
-    """Cleans up and exits QGIS"""
+    """Cleans up and exits QGIS."""
     global QGISAPP
 
     # note that if this function is called from @atexit.register, the globals are cleaned up
@@ -673,7 +673,7 @@ def get_layer_filename(layer: QgsMapLayer) -> str | None:
 
 
 def extract_project_details(project: QgsProject) -> dict[str, str]:
-    """Extract project details"""
+    """Extract project details."""
     map_settings = QgsMapSettings()
     details = {}
 

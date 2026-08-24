@@ -187,7 +187,7 @@ class PersonQueryset(models.QuerySet):
 
     def for_entity(self, entity: "User") -> "PersonQueryset":
         """
-        Returns all users grouped in given entity (any type)
+        Returns all users grouped in given entity (any type).
 
         Internally calls for_team or for_organization depending on the entity.
         """
@@ -212,7 +212,7 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
 
     def fast_search(self, username_or_email: str) -> "User":
         """
-        Searches a user by `username` or `email` field
+        Searches a user by `username` or `email` field.
 
         Args:
             username_or_email: username or email to search for
@@ -512,7 +512,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_used_bytes(self) -> int:
-        """Returns the storage used in bytes"""
+        """Returns the storage used in bytes."""
         from qfieldcloud.filestorage.models import File, FileVersion
 
         project_files_used_quota = (
@@ -529,7 +529,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_free_bytes(self) -> float:
-        """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)"""
+        """Returns the storage quota left in bytes (quota from account and packages minus storage of all owned projects)."""
 
         return (
             self.current_subscription.active_storage_total_bytes
@@ -538,7 +538,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_used_ratio(self) -> float:
-        """Returns the storage used in fraction of the total storage"""
+        """Returns the storage used in fraction of the total storage."""
         if self.current_subscription.active_storage_total_bytes > 0:
             return min(
                 self.storage_used_bytes
@@ -550,7 +550,7 @@ class UserAccount(models.Model):
 
     @property
     def storage_free_ratio(self) -> float:
-        """Returns the storage used in fraction of the total storage"""
+        """Returns the storage used in fraction of the total storage."""
         return 1 - self.storage_used_ratio
 
     @property
@@ -579,7 +579,7 @@ class UserAccount(models.Model):
 
 
 def random_string() -> str:
-    """Generate random sting starting with a lowercase letter and then lowercase letters and digits"""
+    """Generate random sting starting with a lowercase letter and then lowercase letters and digits."""
 
     first_letter = secrets.choice(string.ascii_lowercase)
     letters_and_digits = string.ascii_lowercase + string.digits
@@ -590,7 +590,7 @@ def random_string() -> str:
 
 
 def random_password() -> str:
-    """Generate secure random password composed of letters, digits and special characters"""
+    """Generate secure random password composed of letters, digits and special characters."""
 
     password_characters = (
         string.ascii_letters + string.digits + "!#$%&()*+,-.:;<=>?@[]_{}~"

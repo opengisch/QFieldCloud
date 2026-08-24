@@ -28,7 +28,7 @@ def invite_user_by_email(
     email: str, inviter: Person, send: bool = True
 ) -> tuple[bool, str]:
     """
-    Sends an invite for a given email address
+    Sends an invite for a given email address.
 
     Args :
         email:      recipient's email

@@ -13,7 +13,7 @@ class FileStorageNameModelProtocol(Protocol):
 
 
 class FileStorageNameModelProtocolMetaclass(type(models.Model), type(Protocol)):  # type: ignore
-    """Required to prevent metaclass error: Metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases"""
+    """Required to prevent metaclass error: Metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases."""
 
 
 class ModelWithDynamicStorage(

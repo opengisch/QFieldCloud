@@ -50,7 +50,7 @@ class QfcTestCase(APITransactionTestCase):
             raise Exception("Processing did no finish, did the worker hang ?")
 
     def _get_delta_file_with_project_id(self, project, delta_filename):
-        """Retrieves a delta json file with the project id replaced by the project.id"""
+        """Retrieves a delta json file with the project id replaced by the project.id."""
         with open(delta_filename) as f:
             deltafile = json.load(f)
             deltafile["project"] = str(project.id)
@@ -61,7 +61,7 @@ class QfcTestCase(APITransactionTestCase):
         setup_subscription_plans()
 
     def test_is_external_db_supported(self):
-        """This tests is_external_db_supported property of accounts types"""
+        """This tests is_external_db_supported property of accounts types."""
 
         u1 = Person.objects.create(username="u1")
         self._login(u1)
