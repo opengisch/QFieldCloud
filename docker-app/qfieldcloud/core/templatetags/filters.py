@@ -47,7 +47,7 @@ def filesizeformat10(bytes_) -> str:
         value = _("%s PB") % filesize_number_format(bytes_ / PB)
 
     if negative:
-        value = "-%s" % value
+        value = "-{}".format(value)
 
     return avoid_wrapping(value)
 

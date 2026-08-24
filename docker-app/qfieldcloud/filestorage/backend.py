@@ -307,7 +307,7 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
                 self.perform_webdav_request("HEAD", name).headers["content-length"]
             )
         except (ValueError, requests.exceptions.HTTPError):
-            raise IOError("Unable get size for %s" % name)
+            raise OSError("Unable get size for {}".format(name))
 
     def url(self, name: str, **kwargs) -> str:  # type: ignore
         """

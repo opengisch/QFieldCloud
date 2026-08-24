@@ -79,7 +79,7 @@ class PersonQueryset(models.QuerySet):
     This query is very similar to `ProjectQueryset.for_user`, don't forget to update it too.
     """
 
-    def for_project(self, project: "Project", skip_invalid: bool) -> "PersonQueryset":
+    def for_project(self, project: Project, skip_invalid: bool) -> PersonQueryset:
         count_collaborators = Count(
             "project_roles__project__collaborators",
             filter=Q(
@@ -131,7 +131,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_organization(self, organization: "Organization") -> "PersonQueryset":
+    def for_organization(self, organization: Organization) -> PersonQueryset:
         qs = (
             self.defer(
                 "organization_roles__user_id",
@@ -150,7 +150,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_team(self, team: "Team") -> "PersonQueryset":
+    def for_team(self, team: Team) -> PersonQueryset:
         permissions_config = [
             # Direct ownership of the organization
             (
@@ -185,7 +185,7 @@ class PersonQueryset(models.QuerySet):
 
         return qs
 
-    def for_entity(self, entity: "User") -> "PersonQueryset":
+    def for_entity(self, entity: User) -> PersonQueryset:
         """
         Returns all users grouped in given entity (any type).
 
@@ -210,7 +210,7 @@ class UserManager(InheritanceManagerMixin, DjangoUserManager):
     def get_queryset(self):
         return super().get_queryset().select_subclasses()
 
-    def fast_search(self, username_or_email: str) -> "User":
+    def fast_search(self, username_or_email: str) -> User:
         """
         Searches a user by `username` or `email` field.
 
@@ -227,7 +227,7 @@ class PersonManager(UserManager):
     def get_queryset(self):
         return PersonQueryset(self.model, using=self._db)
 
-    def for_project(self, project: "Project", skip_invalid: bool = False):
+    def for_project(self, project: Project, skip_invalid: bool = False):
         return self.get_queryset().for_project(project, skip_invalid)
 
     def for_organization(self, organization):
@@ -258,7 +258,7 @@ class User(AbstractUser):
     projects: models.QuerySet[Project]
 
     # The secrets that are assigned to a user.
-    assigned_secrets: "models.QuerySet[Secret]"
+    assigned_secrets: models.QuerySet[Secret]
 
     # The `UserAccount` stores non-critical user information such as avatar, bio, timezone settings etc.
     useraccount: UserAccount
@@ -639,7 +639,7 @@ class OrganizationManager(UserManager):
 
 
 class Organization(User):
-    members: models.QuerySet["OrganizationMember"]
+    members: models.QuerySet[OrganizationMember]
     organization_owner_id: int
 
     class Meta(User.Meta):
@@ -760,7 +760,7 @@ class Organization(User):
 class OrganizationMemberQueryset(models.QuerySet):
     def get_by_natural_key(
         self, organization_username: str, member_username: str
-    ) -> "OrganizationMember":
+    ) -> OrganizationMember:
         return self.get(
             organization__username=organization_username,
             member__username=member_username,
@@ -947,7 +947,7 @@ class Team(User):
 class TeamMemberQuerySet(models.QuerySet):
     def get_by_natural_key(
         self, team_username: str, member_username: str
-    ) -> "TeamMember":
+    ) -> TeamMember:
         return self.get(
             team__username=team_username,
             member__username=member_username,

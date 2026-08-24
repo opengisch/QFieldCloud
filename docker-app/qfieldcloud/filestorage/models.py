@@ -261,7 +261,7 @@ class FileVersionQueryset(models.QuerySet):
         return file_version
 
 
-def get_file_version_upload_to(instance: "FileVersion", _filename: str) -> str:
+def get_file_version_upload_to(instance: FileVersion, _filename: str) -> str:
     if instance.file.file_type == File.FileType.PROJECT_FILE:
         # if the project is configured to not version attachments, store them without version id.
         if (
@@ -360,7 +360,7 @@ class FileVersion(models.Model):
         return self.uploaded_at.strftime("v%Y%m%d%H%M%S")
 
     @property
-    def previous_version(self) -> "FileVersion | None":
+    def previous_version(self) -> FileVersion | None:
         file_version_qs = FileVersion.objects.filter(
             file=self.file,
             uploaded_at__lt=self.uploaded_at,
@@ -369,7 +369,7 @@ class FileVersion(models.Model):
         return file_version_qs.first()
 
     @property
-    def next_version(self) -> "FileVersion | None":
+    def next_version(self) -> FileVersion | None:
         file_version_qs = FileVersion.objects.filter(
             file=self.file,
             uploaded_at__gt=self.uploaded_at,

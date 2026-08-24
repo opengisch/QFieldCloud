@@ -443,15 +443,15 @@ class QFieldCloudInlineAdmin(admin.TabularInline):
 def admin_urlname_by_obj(value, arg):
     if isinstance(value, User):
         if value.is_person:
-            return "admin:core_person_%s" % (arg)
+            return "admin:core_person_{}".format(arg)
         elif value.is_organization:
-            return "admin:core_organization_%s" % (arg)
+            return "admin:core_organization_{}".format(arg)
         elif value.is_team:
-            return "admin:core_team_%s" % (arg)
+            return "admin:core_team_{}".format(arg)
         else:
             raise NotImplementedError("Unknown user type!")
     elif isinstance(value, Job):
-        return "admin:core_job_%s" % (arg)
+        return "admin:core_job_{}".format(arg)
     else:
         return admin_urlname(value._meta, arg)
 

@@ -76,7 +76,7 @@ class ProjectQueryset(models.QuerySet):
     This query is very similar to `PersonQueryset.for_project`, don't forget to update it too.
     """
 
-    def for_user(self, user: "User", skip_invalid: bool = False):
+    def for_user(self, user: User, skip_invalid: bool = False):
         count = Count(
             "collaborators",
             filter=Q(collaborators__collaborator__type=User.Type.PERSON),
@@ -124,7 +124,7 @@ class ProjectQueryset(models.QuerySet):
 
         return qs
 
-    def slim(self) -> "ProjectQueryset":
+    def slim(self) -> ProjectQueryset:
         """
         A minimal fetch of projects with only a few pre-loaded fields.
 
@@ -133,7 +133,7 @@ class ProjectQueryset(models.QuerySet):
         """
         return self.only("id", "name", "is_public", "project_type", "owner_id")
 
-    def with_prefetch(self) -> "ProjectQueryset":
+    def with_prefetch(self) -> ProjectQueryset:
         """A heavier version of the `Project` with all common `select_related` and `prefetch_related` in place."""
         return (
             self.defer("project_details")
@@ -165,7 +165,7 @@ class ProjectQueryset(models.QuerySet):
         )
 
 
-def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
+def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> Project:
     """
     Fetch a project for a permission check, or raise `Http404` if it doesn't exist.
 
@@ -210,7 +210,7 @@ def get_project_are_attachments_versioned_default() -> bool:
     return settings.STORAGE_PROJECT_DEFAULT_ATTACHMENTS_VERSIONED
 
 
-def get_project_thumbnail_upload_to(instance: "Project", _filename: str) -> str:
+def get_project_thumbnail_upload_to(instance: Project, _filename: str) -> str:
     """
     Variable storage key for thumbnails.
 
@@ -298,19 +298,19 @@ class Project(models.Model):
         ]
 
     # All files related to the project, including both the `PROJECT_FILE` and `PACKAGE_FILE` file types.
-    all_files: "FileQueryset"
+    all_files: FileQueryset
 
     # The secrets that are attached for a specific project.
-    secrets: "SecretQueryset"
+    secrets: SecretQueryset
 
     # The jobs that are ran for a specific project.
-    jobs: "JobQuerySet"
+    jobs: JobQuerySet
 
     # The project create seed.
-    seed: "ProjectSeed"
+    seed: ProjectSeed
 
     # The QGIS project for this project.
-    qgis_project: "QgisProject"
+    qgis_project: QgisProject
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
@@ -659,7 +659,7 @@ class Project(models.Model):
         """Returns `True` if the project type is a template project, otherwise `False`."""
         return self.project_type == self.ProjectType.TEMPLATE
 
-    def get_missing_localized_layers(self) -> list["QgisLayer"]:
+    def get_missing_localized_layers(self) -> list[QgisLayer]:
         """
         Return list of missing localized layers.
 
@@ -761,7 +761,7 @@ class Project(models.Model):
         return not self.is_public
 
     @property
-    def project_files(self) -> "FileQueryset":
+    def project_files(self) -> FileQueryset:
         """Returns the files of type PROJECT related to the project."""
         return self.all_files.with_type_project()
 
@@ -989,7 +989,7 @@ class Project(models.Model):
         return self.jobs.unfinished().exists()
 
     @cached_property
-    def status(self) -> "Project.Status":
+    def status(self) -> Project.Status:
         # NOTE the status is NOT stored in the db, because it might be outdated
         if self.has_unfinished_jobs:
             return Project.Status.BUSY
@@ -1147,7 +1147,7 @@ class Project(models.Model):
         return self.project_files.get_by_name(filename)  # type: ignore
 
 
-def get_seed_xlsform_upload_to(instance: "ProjectSeed", filename: str) -> str:
+def get_seed_xlsform_upload_to(instance: ProjectSeed, filename: str) -> str:
     file_extension = Path(filename).suffix.lower()
     return f"projects/{instance.project.id}/seeds/xlsforms/xlsform{file_extension}"
 
@@ -1234,10 +1234,10 @@ class QgisProjectQueryset(models.QuerySet):
     @transaction.atomic()
     def update_from_details(
         self,
-        project: "Project",
-        file_version: "FileVersion",
+        project: Project,
+        file_version: FileVersion,
         details: QgisProjectDetails,
-    ) -> "QgisProject":
+    ) -> QgisProject:
         custom_properties = {
             QgisProject.ATTACHMENT_DIRS_KEY: details.get("attachment_dirs") or ["DCIM"],
             QgisProject.DATA_DIRS_KEY: details.get("data_dirs") or [],
@@ -1339,7 +1339,7 @@ class QgisProject(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # The layers that belong to this QGIS project.
-    layers: "QgisLayerQuerySet"
+    layers: QgisLayerQuerySet
 
     @property
     def attachment_dirs(self) -> list[str]:
@@ -1390,9 +1390,9 @@ class QgisLayerQuerySet(models.QuerySet):
     @transaction.atomic()
     def update_from_details(
         self,
-        qgis_project: "QgisProject",
+        qgis_project: QgisProject,
         ordered_layer_ids: list[str],
-        layers_by_id: dict[str, "LayerDetails"],
+        layers_by_id: dict[str, LayerDetails],
     ) -> None:
         """
         Sync QGIS project's `QgisLayer` rows to match `layers_by_id`.

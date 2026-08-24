@@ -720,7 +720,7 @@ def cleanup_backups(layer_paths: set[str]) -> bool:
 
 # NOTE this is very similar to the implementation in `libqfieldsync`.
 # I preferred to copy-paste it, rather than adding `libqfieldsync` as a dependency on the `apply_deltas`.
-@lru_cache()
+@lru_cache
 def get_pk_attr_name(layer: QgsVectorLayer) -> str:
     pk_attr_name: str = ""
 

@@ -31,7 +31,7 @@ def get_credentials_provider() -> dict[str, str]:
 
 def get_oauth2_provider(
     provider: Provider,
-    request: Optional[HttpRequest] = None,
+    request: HttpRequest | None = None,
 ) -> dict:
     oauth2_adapter = provider.get_oauth2_adapter(request)
 

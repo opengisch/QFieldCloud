@@ -40,5 +40,5 @@ class Command(BaseCommand):
 
         # Catch any other unknown error and print it
         except Exception as err:  # noqa: BLE001
-            print("ERROR: Unable to create user\n%s\n" % err)
+            print("ERROR: Unable to create user\n{}\n".format(err))
             exit(1)
