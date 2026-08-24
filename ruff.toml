@@ -28,7 +28,12 @@ extend-select = [
     "TID252",   # Bans relative imports, requires absolute imports, see https://docs.astral.sh/ruff/rules/relative-imports/    "TC",
     "TC", # Type checking rules, https://docs.astral.sh/ruff/rules/#flake8-type-checking-tc
 ]
-ignore = []
+ignore = [
+    # No need to force f-strings everywhere, something `"".format()` is more readable
+    # See https://docs.astral.sh/ruff/rules/f-string/
+    "UP032",
+
+]
 
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"
