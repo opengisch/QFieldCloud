@@ -569,6 +569,62 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             set(self.p1.qgis_project.layers.values_list("qgis_layer_id", flat=True)),
         )
 
+    def test_clone_project_keeps_source_crs(self):
+        """Cloning a project must preserve the source project's CRS.
+
+        The source project is set up with CRS `EPSG:7801`, which is
+        deliberately different from the project seed's hardcoded fallback
+        CRS (`EPSG:3857`). If the clone incorrectly fell back to that
+        default instead of inheriting the source's CRS, this test would
+        catch it.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "project.qgs",
+            io.FileIO(testdata_path("self_contained_crs_7801.qgs"), "rb"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        wait_for_project_ok_status(self.p1)
+        self.refresh_project(self.p1)
+
+        self.assertEqual(self.p1.qgis_project.crs, "EPSG:7801")
+
+        # Clone the project
+        cloned_project = Project.objects.create(
+            name="cloned_project",
+            owner=self.u1,
+            is_public=False,
+            overwrite_conflicts=True,
+            has_restricted_projectfiles=True,
+            is_attachment_download_on_demand=True,
+        )
+
+        ProjectSeed.objects.create(
+            project=cloned_project,
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+            clone_from_project=self.p1,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=cloned_project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(cloned_project)
+        self.refresh_project(cloned_project)
+
+        self.assertEqual(cloned_project.qgis_project.crs, self.p1.qgis_project.crs)
+
     def test_process_projectfile_job_sets_the_qgis_version(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
 
