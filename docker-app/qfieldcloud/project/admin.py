@@ -24,7 +24,7 @@ from qfieldcloud.core.utils import get_file_storage_choices
 from qfieldcloud.core.utils2 import jobs
 from qfieldcloud.filestorage.backend import QfcS3Boto3Storage
 from qfieldcloud.filestorage.models import File
-from qfieldcloud.project.enums import QgsLayerErrorCode
+from qfieldcloud.project.enums import LayerErrorCode
 from qfieldcloud.project.models import (
     SHARED_DATASETS_PROJECT_NAME,
     Project,
@@ -44,7 +44,7 @@ def qgis_project_layers_list(qgis_project: "QgisProject") -> SafeText:
     }
     rows = []
     for layer in qgis_project.layers.order_by("ordering"):
-        if layer.error_code != QgsLayerErrorCode.NO_ERROR:
+        if layer.error_code != LayerErrorCode.NO_ERROR:
             error_display = layer.get_error_code_display()
         else:
             error_display = "-"
