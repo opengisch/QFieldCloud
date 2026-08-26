@@ -819,7 +819,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
 QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
 
 # Timeout of the workers before being terminated by the wrapper, in seconds.
-QFIELDCLOUD_WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 600))
+QFIELDCLOUD_WORKER_TIMEOUT_S = int(os.environ["QFIELDCLOUD_WORKER_TIMEOUT_S"])
 
 # Interval at which the wrapper will check for new jobs to dequeue, in seconds.
 QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S = int(
