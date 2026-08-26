@@ -40,7 +40,7 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from qfieldcloud.project.enums import QgsGeometryType, QgsLayerErrorCode, QgsLayerType
+from qfieldcloud.project.enums import LayerErrorCode, QgsGeometryType, QgsLayerType
 
 if TYPE_CHECKING:
     from qfieldcloud.core.models import (
@@ -1419,8 +1419,7 @@ class QgisLayerQuerySet(models.QuerySet):
                 "file_name": layer_data.get("filename") or "",
                 "is_valid": layer_data.get("is_valid", False),
                 "is_localized": layer_data.get("is_localized", False),
-                "error_code": layer_data.get("error_code")
-                or QgsLayerErrorCode.NO_ERROR,
+                "error_code": layer_data.get("error_code") or LayerErrorCode.NO_ERROR,
                 "error_summary": layer_data.get("error_summary") or "",
                 "error_message": layer_data.get("error_message") or "",
                 "provider_error_summary": layer_data.get("provider_error_summary")
@@ -1544,8 +1543,8 @@ class QgisLayer(models.Model):
 
     error_code = models.CharField(
         max_length=100,
-        choices=QgsLayerErrorCode.choices,
-        default=QgsLayerErrorCode.NO_ERROR,
+        choices=LayerErrorCode.choices,
+        default=LayerErrorCode.NO_ERROR,
         help_text=_("A code representing the error reason if the layer is not valid."),
     )
 

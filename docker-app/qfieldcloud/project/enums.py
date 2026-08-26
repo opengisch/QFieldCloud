@@ -49,7 +49,7 @@ class QgsGeometryType(models.IntegerChoices):
     Null = 4, _("Null")
 
 
-class QgsLayerErrorCode(models.TextChoices):
+class LayerErrorCode(models.TextChoices):
     """QFieldCloud's own error taxonomy for layer processing.
     Values are produced in `docker-qgis/qfc_worker/utils.py`.
     Keep this in sync with that file.
