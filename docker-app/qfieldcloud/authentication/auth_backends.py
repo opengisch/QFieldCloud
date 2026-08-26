@@ -3,7 +3,6 @@ from typing import cast
 from allauth.account.auth_backends import (
     AuthenticationBackend as AllAuthAuthenticationBackend,
 )
-from django.contrib.auth import get_user_model
 
 from qfieldcloud.core.models import Person
 
@@ -36,11 +35,9 @@ class AuthenticationBackend(AllAuthAuthenticationBackend):
         Returns:
             In theory it can return any of `Person` | `Organization` | `Team` | `None` types, however it will always be a `Person` or `None`
         """
-        UserModel = get_user_model()
-
         try:
-            user = UserModel.objects.get(pk=user_id)
-        except UserModel.DoesNotExist:
+            user = Person.objects.select_related("useraccount").get(pk=user_id)
+        except Person.DoesNotExist:
             return None
 
         if self.user_can_authenticate(user):

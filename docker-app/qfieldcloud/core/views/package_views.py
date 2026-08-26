@@ -86,7 +86,11 @@ class LatestPackageView(views.APIView):
                 "Packaging has never been triggered or successful for this project."
             )
 
-        files_qs = File.objects.filter(
+        files_qs = File.objects.select_related(
+            "latest_version",
+            "project",
+            "project__qgis_project",
+        ).filter(
             project_id=project_id,
             package_job=latest_finished_package_job,
             file_type=File.FileType.PACKAGE_FILE,
