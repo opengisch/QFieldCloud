@@ -11,6 +11,7 @@ class TimezoneMiddleware:
     def __call__(self, request):
         if request.user.is_authenticated and hasattr(request.user, "useraccount"):
             user_tz = request.user.useraccount.timezone
+            assert user_tz, "UserAccount.timezone must not be empty"
         elif settings.TIME_ZONE:
             user_tz = zoneinfo.ZoneInfo(settings.TIME_ZONE)
         else:
