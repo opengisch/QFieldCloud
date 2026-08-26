@@ -261,11 +261,16 @@ def configure_qgis_project(project_seed: ProjectSeed, project_filename: str) -> 
 
     project.setTitle(project_seed.name)
 
-    crs = QgsCoordinateReferenceSystem(project_seed.crs)
-    if crs.isValid():
-        project.setCrs(crs)
+    if project_seed.clone_from_project:
+        logger.info("Cloning an existing project, keeping the source project's CRS.")
     else:
-        logger.warning("Project CRS parameter is invalid, skipping CRS configuration.")
+        crs = QgsCoordinateReferenceSystem(project_seed.crs)
+        if crs.isValid():
+            project.setCrs(crs)
+        else:
+            logger.warning(
+                "Project CRS parameter is invalid, skipping CRS configuration."
+            )
 
     if project_seed.settings.basemaps and not project_seed.clone_from_project:
         logger.info("Adding basemaps to the project...")
