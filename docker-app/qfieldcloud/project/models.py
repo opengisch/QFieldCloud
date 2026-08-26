@@ -1248,7 +1248,7 @@ class QgisProjectQueryset(models.QuerySet):
         )
 
         layers_by_id = details.get("layers_by_id") or {}
-        ordered_layer_ids = details.get("ordered_layer_ids")
+        ordered_layer_ids = details.get("ordered_layer_ids") or []
 
         QgisLayer.objects.update_from_details(  # type: ignore[attr-defined]
             qgis_project, ordered_layer_ids, layers_by_id
