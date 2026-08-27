@@ -108,7 +108,7 @@ sql_items = [
                     7 AS rank,
                     P1."id" AS "project_id",
                     U1."id" AS "user_id",
-                    'reader' AS "name",
+                    P1."public_collaborator_role" AS "name",
                     FALSE AS "is_incognito",
                     'public' AS "origin"
                 FROM
