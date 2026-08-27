@@ -625,6 +625,58 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
 
         self.assertEqual(cloned_project.qgis_project.crs, self.p1.qgis_project.crs)
 
+    def test_clone_project_uses_source_qgis_version_for_worker_image(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        ProjectSeed.objects.create(
+            project=self.p1,
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=self.p1,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        # Force the source project to look like it was last saved with QGIS 4,
+        # so the clone's worker image selection has a QGIS 4 version to inherit.
+        self.p1.qgis_version = "4.2.1"
+        self.p1.save(update_fields=["qgis_version"])
+
+        cloned_project = Project.objects.create(name="cloned_project", owner=self.u1)
+
+        ProjectSeed.objects.create(
+            project=cloned_project,
+            clone_from_project=self.p1,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        job = Job.objects.create(
+            project=cloned_project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(cloned_project)
+
+        job.refresh_from_db()
+
+        # `Job.qgis_version` reports the QGIS app version that actually ran the
+        # job, so this confirms the worker was spawned from the QGIS 4 image.
+        self.assertTrue(job.qgis_version.startswith("4."))
+
     def test_process_projectfile_job_sets_the_qgis_version(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
 
