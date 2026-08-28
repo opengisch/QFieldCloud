@@ -35,7 +35,7 @@ from timezone_field import TimeZoneField
 
 from qfieldcloud.core import validators
 from qfieldcloud.core.fields import DynamicStorageFileField, QfcImageField, QfcImageFile
-from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
 from qfieldcloud.subscription.exceptions import ReachedMaxOrganizationMembersError
 
 if TYPE_CHECKING:
@@ -654,6 +654,17 @@ class Organization(User):
 
     is_initially_trial = models.BooleanField(default=False)
 
+    default_project_role_for_members = models.CharField(
+        max_length=10,
+        choices=ProjectCollaboratorRole.choices,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=_(
+            "Default project access for non-admin members. If set, every non-admin member will automatically get this role on all projects owned by the organization."
+        ),
+    )
+
     created_by = models.ForeignKey(
         # NOTE should be Person, but Django sometimes has troubles with Person/User (e.g. Form.full_clean()), see #514 #515
         User,
@@ -1042,14 +1053,7 @@ class ProjectCollaboratorQueryset(models.QuerySet):
 
 
 class ProjectCollaborator(models.Model):
-    class Roles(models.TextChoices):
-        ADMIN = "admin", _("Admin")
-        MANAGER = "manager", _("Manager")
-        EDITOR = "editor", _("Editor")
-        REPORTER = "reporter", _("Reporter")
-        READER = "reader", _("Reader")
-
-    ALL_ROLES = list(Roles)
+    ALL_ROLES = list(ProjectCollaboratorRole)
 
     class Meta:
         constraints = [
@@ -1071,7 +1075,11 @@ class ProjectCollaborator(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(type__in=[User.Type.PERSON, User.Type.TEAM]),
     )
-    role = models.CharField(max_length=10, choices=Roles.choices, default=Roles.READER)
+    role = models.CharField(
+        max_length=10,
+        choices=ProjectCollaboratorRole.choices,
+        default=ProjectCollaboratorRole.READER,
+    )
 
     # whether the collaborator is incognito, e.g. shown in the UI and billed
     is_incognito = models.BooleanField(
@@ -1152,7 +1160,7 @@ class ProjectRolesView(models.Model):
         on_delete=models.DO_NOTHING,
         related_name="user_roles",
     )
-    name = models.CharField(max_length=100, choices=ProjectCollaborator.Roles.choices)
+    name = models.CharField(max_length=100, choices=ProjectCollaboratorRole.choices)
     origin = models.CharField(max_length=100, choices=ProjectRoleOrigins.choices)
     is_incognito = models.BooleanField()
 
@@ -1273,6 +1281,12 @@ class JobQuerySet(InheritanceQuerySet):
 
         return jobs_qs.order_by("-created_at")
 
+    def unfinished(self) -> models.QuerySet[Job]:
+        return self.filter(status__in=Job.UNFINISHED_STATUS)
+
+    def finished(self) -> models.QuerySet[Job]:
+        return self.exclude(status__in=Job.UNFINISHED_STATUS)
+
 
 class Job(models.Model):
     objects = JobQuerySet.as_manager()
@@ -1290,6 +1304,12 @@ class Job(models.Model):
         FINISHED = "finished", _("Finished")
         STOPPED = "stopped", _("Stopped")
         FAILED = "failed", _("Failed")
+
+    UNFINISHED_STATUS = (
+        Status.PENDING,
+        Status.QUEUED,
+        Status.STARTED,
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 

@@ -4,6 +4,7 @@ from rest_framework.test import APITransactionTestCase
 from qfieldcloud.authentication.models import AuthToken
 from qfieldcloud.core.models import Person, ProjectCollaborator
 from qfieldcloud.core.tests.utils import setup_subscription_plans
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 
@@ -49,7 +50,7 @@ class QfcTestCase(APITransactionTestCase):
         project_collaborator = collaborators.first()
 
         self.assertEqual(project_collaborator.collaborator, self.user2)
-        self.assertEqual(project_collaborator.role, ProjectCollaborator.Roles.MANAGER)
+        self.assertEqual(project_collaborator.role, ProjectCollaboratorRole.MANAGER)
 
     def test_add_unknown_collaborator_bad_request(self):
         project = Project.objects.create(

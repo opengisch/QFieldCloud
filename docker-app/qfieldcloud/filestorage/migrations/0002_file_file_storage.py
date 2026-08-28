@@ -42,6 +42,13 @@ class Migration(migrations.Migration):
         ("core", "0082_project_attachments_file_storage"),
     ]
 
+    # `set_file_storage_for_files` reads the `core_project` table by its original name via raw
+    # SQL. `core.0104_alter_projectcollaborator_project_and_more` renames it to `project_project`,
+    # so this must be pinned to run before that rename rather than relying on incidental ordering.
+    run_before = [
+        ("core", "0104_alter_projectcollaborator_project_and_more"),
+    ]
+
     operations = [
         migrations.AddField(
             model_name="file",

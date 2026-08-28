@@ -18,6 +18,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 from qfieldcloud.settings_utils import (
     ConfigValidationError,
+    get_account_rate_limits_config,
     get_socialaccount_providers_config,
     get_storages_config,
     parse_string_to_bool,
@@ -489,7 +490,8 @@ ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 ACCOUNT_EMAIL_VERIFICATION = os.environ["ACCOUNT_EMAIL_VERIFICATION"]
 
 # https://docs.allauth.org/en/latest/account/rate_limits.html
-ACCOUNT_RATE_LIMITS = False
+# Configured via the `ACCOUNT_RATE_LIMITS` envvar as a JSON object
+ACCOUNT_RATE_LIMITS = get_account_rate_limits_config()
 
 # https://docs.allauth.org/en/latest/account/configuration.html#user-model
 # NOTE when casing is preserved, potentially expensive `__iexact`` lookups are performed when filter on username.
@@ -817,7 +819,12 @@ CONSTANCE_CONFIG_FIELDSETS = {
 QFIELDCLOUD_MINIMUM_RANGE_HEADER_LENGTH = 0
 
 # Timeout of the workers before being terminated by the wrapper, in seconds.
-QFIELDCLOUD_WORKER_TIMEOUT_S = int(os.environ.get("QFIELDCLOUD_WORKER_TIMEOUT_S", 600))
+QFIELDCLOUD_WORKER_TIMEOUT_S = int(os.environ["QFIELDCLOUD_WORKER_TIMEOUT_S"])
+
+# Interval at which the wrapper will check for new jobs to dequeue, in seconds.
+QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S = int(
+    os.environ["QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S"]
+)
 
 # Name of the QGIS 3 docker image used as a worker by `worker_wrapper`
 QFIELDCLOUD_QGIS3_IMAGE_NAME = os.environ["QFIELDCLOUD_QGIS3_IMAGE_NAME"]

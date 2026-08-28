@@ -19,7 +19,7 @@ from django.core.validators import (
     RegexValidator,
 )
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Q, When
+from django.db.models import Case, Exists, F, OuterRef, Prefetch, Q, When
 from django.db.models import Value as V
 from django.db.models.aggregates import Count, Sum
 from django.shortcuts import get_object_or_404
@@ -40,7 +40,12 @@ from qfieldcloud.core.models import (
     TeamMember,
     User,
 )
-from qfieldcloud.project.enums import QgsGeometryType, QgsLayerErrorCode, QgsLayerType
+from qfieldcloud.project.enums import (
+    LayerErrorCode,
+    ProjectCollaboratorRole,
+    QgsGeometryType,
+    QgsLayerType,
+)
 
 if TYPE_CHECKING:
     from qfieldcloud.core.models import (
@@ -128,6 +133,37 @@ class ProjectQueryset(models.QuerySet):
         request and only need a project's id, owner, and public flag.
         """
         return self.only("id", "name", "is_public", "project_type", "owner_id")
+
+    def with_prefetch(self) -> "ProjectQueryset":
+        """A heavier version of the `Project` with all common `select_related` and `prefetch_related` in place."""
+        return (
+            self.defer("project_details")
+            .select_related(
+                "qgis_project",
+                "owner",
+                "owner__useraccount",
+                "the_qgis_file",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "qgis_project__layers",
+                    queryset=QgisLayer.objects.order_by("ordering"),
+                )
+            )
+            .annotate(
+                unfinished_jobs_count=Count(
+                    "jobs", filter=Q(jobs__status__in=Job.UNFINISHED_STATUS)
+                ),
+                # ideally we have `has_active_create_job`, but `annotate` does not support `Exists`
+                unfinished_create_jobs_count=Count(
+                    "jobs",
+                    filter=Q(
+                        jobs__type=Job.Type.CREATE_PROJECT,
+                        jobs__status__in=Job.UNFINISHED_STATUS,
+                    ),
+                ),
+            )
+        )
 
 
 def get_slim_project_or_raise(project_id: uuid.UUID | str | None) -> "Project":
@@ -221,6 +257,13 @@ class Project(models.Model):
         ProjectType.TEMPLATE,
     ]
 
+    # Roles that can be granted to all users when a project is public.
+    PUBLIC_COLLABORATOR_ROLES = [
+        ProjectCollaboratorRole.READER,
+        ProjectCollaboratorRole.REPORTER,
+        ProjectCollaboratorRole.EDITOR,
+    ]
+
     @property
     def localized_layers(self) -> list[QgisLayer]:
         """
@@ -235,7 +278,9 @@ class Project(models.Model):
         if qgis_project is None:
             return []
 
-        return list(qgis_project.layers.filter(is_localized=True))
+        # filter the layers in Python to avoid an extra query to the database,
+        # since the `QgisLayer` instances are already fetched in memory via `prefetch_related`
+        return [layer for layer in qgis_project.layers.all() if layer.is_localized]
 
     def _get_file_storage_name(self) -> str:
         """Returns the file storage name where all the files are stored. Used by `DynamicStorageFileField` and `DynamicStorageFieldFile`."""
@@ -297,6 +342,15 @@ class Project(models.Model):
         default=False,
         help_text=_(
             "Projects marked as public are visible to (but not editable by) anyone."
+        ),
+    )
+
+    public_collaborator_role = models.CharField(
+        max_length=10,
+        choices=[(role.value, role.label) for role in PUBLIC_COLLABORATOR_ROLES],
+        default=ProjectCollaboratorRole.READER,
+        help_text=_(
+            "The role automatically granted to every user on this project. This setting only takes effect if the project is marked as public."
         ),
     )
 
@@ -548,16 +602,7 @@ class Project(models.Model):
             The last finished package job for the user.
         """
         return (
-            self.package_jobs_for_user(user)
-            .exclude(
-                status__in=[
-                    Job.Status.PENDING,
-                    Job.Status.QUEUED,
-                    Job.Status.STARTED,
-                ]
-            )
-            .order_by("-created_at")
-            .first()
+            self.package_jobs_for_user(user).finished().order_by("-created_at").first()
         )
 
     def latest_package_job_for_user(self, user: User) -> PackageJob | None:
@@ -782,22 +827,29 @@ class Project(models.Model):
             # if the project has online vector layers (PostGIS/WFS/etc) we cannot be sure if there are modification or not, so better say there are
             return True
 
+    @property
     def has_active_create_job(self) -> bool:
         """Check if there's an active create_project job."""
         if not hasattr(self, "seed") or self.seed is None:
             return False
 
-        return self.jobs.filter(
-            type=Job.Type.CREATE_PROJECT,
-            status__in=[Job.Status.PENDING, Job.Status.QUEUED, Job.Status.STARTED],
-        ).exists()
+        if hasattr(self, "unfinished_create_jobs_count"):
+            return self.unfinished_create_jobs_count > 0
+
+        return (
+            self.jobs.unfinished()
+            .filter(
+                type=Job.Type.CREATE_PROJECT,
+            )
+            .exists()
+        )
 
     @property
     def problems(self) -> list[dict[str, Any]]:
         problems = []
 
         # If there is an active create job, return empty list
-        if self.has_active_create_job():
+        if self.has_active_create_job:
             problems.append(
                 {
                     "layer": None,
@@ -940,14 +992,17 @@ class Project(models.Model):
 
         return problems
 
+    @property
+    def has_unfinished_jobs(self) -> bool:
+        if hasattr(self, "unfinished_jobs_count"):
+            return self.unfinished_jobs_count > 0
+
+        return self.jobs.unfinished().exists()
+
     @cached_property
     def status(self) -> "Project.Status":
         # NOTE the status is NOT stored in the db, because it might be outdated
-        if (
-            self.jobs.filter(
-                status__in=[Job.Status.QUEUED, Job.Status.STARTED, Job.Status.PENDING]
-            )  # type: ignore
-        ).exists():
+        if self.has_unfinished_jobs:
             return Project.Status.BUSY
         else:
             status = Project.Status.OK
@@ -956,7 +1011,7 @@ class Project(models.Model):
 
             # TODO use self.problems to get if there are project problems
             if (
-                not self.has_the_qgis_file or not self.project_details
+                not self.has_the_qgis_file or not self.qgis_project
             ) and not self.is_shared_datasets_project:
                 status = Project.Status.FAILED
                 status_code = Project.StatusCode.FAILED_PROCESS_PROJECTFILE
@@ -1043,6 +1098,35 @@ class Project(models.Model):
 
         return is_supported_regarding_owner_account(self)
 
+    def clean(self, *args, **kwargs) -> None:
+        is_shared_datasets_type = self.project_type == self.ProjectType.SHARED_DATASETS
+
+        if is_shared_datasets_type and self.name != SHARED_DATASETS_PROJECT_NAME:
+            raise ValidationError(
+                _(
+                    "Project type cannot be set to `{}` unless the project is named `{}`."
+                ).format(self.ProjectType.SHARED_DATASETS, SHARED_DATASETS_PROJECT_NAME)
+            )
+
+        if (
+            not is_shared_datasets_type
+            and self.project_type not in self.CONFIGURABLE_PROJECT_TYPES
+        ):
+            raise ValidationError(
+                _("Project type must be one of `{}`, got `{}`.").format(
+                    self.CONFIGURABLE_PROJECT_TYPES, self.project_type
+                )
+            )
+
+        if self.public_collaborator_role not in self.PUBLIC_COLLABORATOR_ROLES:
+            raise ValidationError(
+                _("`public_collaborator_role` must be one of `{}`, got `{}`.").format(
+                    self.PUBLIC_COLLABORATOR_ROLES, self.public_collaborator_role
+                )
+            )
+
+        super().clean(*args, **kwargs)
+
     def save(self, recompute_storage=False, *args, **kwargs):
         self.clean()
         logger.debug(f"Saving project {self}...")
@@ -1074,18 +1158,6 @@ class Project(models.Model):
 
         if self.name == SHARED_DATASETS_PROJECT_NAME:
             self.project_type = self.ProjectType.SHARED_DATASETS
-        elif self.project_type == self.ProjectType.SHARED_DATASETS:
-            raise ValidationError(
-                _(
-                    "`project_type` cannot be set to `{}` unless the project is named `{}`."
-                ).format(self.ProjectType.SHARED_DATASETS, SHARED_DATASETS_PROJECT_NAME)
-            )
-        elif self.project_type not in self.CONFIGURABLE_PROJECT_TYPES:
-            raise ValidationError(
-                _("`project_type` must be one of `{}`, got `{}`.").format(
-                    self.CONFIGURABLE_PROJECT_TYPES, self.project_type
-                )
-            )
 
         super().save(*args, **kwargs)
 
@@ -1204,7 +1276,7 @@ class QgisProjectQueryset(models.QuerySet):
         )
 
         layers_by_id = details.get("layers_by_id") or {}
-        ordered_layer_ids = details.get("ordered_layer_ids")
+        ordered_layer_ids = details.get("ordered_layer_ids") or []
 
         QgisLayer.objects.update_from_details(  # type: ignore[attr-defined]
             qgis_project, ordered_layer_ids, layers_by_id
@@ -1375,8 +1447,7 @@ class QgisLayerQuerySet(models.QuerySet):
                 "file_name": layer_data.get("filename") or "",
                 "is_valid": layer_data.get("is_valid", False),
                 "is_localized": layer_data.get("is_localized", False),
-                "error_code": layer_data.get("error_code")
-                or QgsLayerErrorCode.NO_ERROR,
+                "error_code": layer_data.get("error_code") or LayerErrorCode.NO_ERROR,
                 "error_summary": layer_data.get("error_summary") or "",
                 "error_message": layer_data.get("error_message") or "",
                 "provider_error_summary": layer_data.get("provider_error_summary")
@@ -1500,8 +1571,8 @@ class QgisLayer(models.Model):
 
     error_code = models.CharField(
         max_length=100,
-        choices=QgsLayerErrorCode.choices,
-        default=QgsLayerErrorCode.NO_ERROR,
+        choices=LayerErrorCode.choices,
+        default=LayerErrorCode.NO_ERROR,
         help_text=_("A code representing the error reason if the layer is not valid."),
     )
 

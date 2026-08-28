@@ -23,7 +23,7 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.core.utils2.jobs import queue_job
-from qfieldcloud.project.enums import QgsGeometryType
+from qfieldcloud.project.enums import ProjectCollaboratorRole, QgsGeometryType
 from qfieldcloud.project.models import Project, ProjectSeed
 from qfieldcloud.project.utils import projectseed_utils
 
@@ -295,7 +295,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_can_create_and_read_job_created_by_their_own(self):
-        for idx, role in enumerate(ProjectCollaborator.Roles):
+        for idx, role in enumerate(ProjectCollaboratorRole):
             user = Person.objects.create_user(
                 username=f"collaborator_{idx}", password="abc123"
             )
@@ -318,7 +318,7 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
                 },
             )
 
-            if role == ProjectCollaborator.Roles.READER:
+            if role == ProjectCollaboratorRole.READER:
                 self.assertEqual(resp_post.status_code, status.HTTP_403_FORBIDDEN)
                 continue
 
@@ -568,6 +568,114 @@ class QfcTestCase(QfcFilesTestCaseMixin, APITransactionTestCase):
             ),
             set(self.p1.qgis_project.layers.values_list("qgis_layer_id", flat=True)),
         )
+
+    def test_clone_project_keeps_source_crs(self):
+        """Cloning a project must preserve the source project's CRS.
+
+        The source project is set up with CRS `EPSG:7801`, which is
+        deliberately different from the project seed's hardcoded fallback
+        CRS (`EPSG:3857`). If the clone incorrectly fell back to that
+        default instead of inheriting the source's CRS, this test would
+        catch it.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        response = self._upload_file(
+            self.u1,
+            self.p1,
+            "project.qgs",
+            io.FileIO(testdata_path("self_contained_crs_7801.qgs"), "rb"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        wait_for_project_ok_status(self.p1)
+        self.refresh_project(self.p1)
+
+        self.assertEqual(self.p1.qgis_project.crs, "EPSG:7801")
+
+        # Clone the project
+        cloned_project = Project.objects.create(
+            name="cloned_project",
+            owner=self.u1,
+            is_public=False,
+            overwrite_conflicts=True,
+            has_restricted_projectfiles=True,
+            is_attachment_download_on_demand=True,
+        )
+
+        ProjectSeed.objects.create(
+            project=cloned_project,
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+            clone_from_project=self.p1,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=cloned_project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(cloned_project)
+        self.refresh_project(cloned_project)
+
+        self.assertEqual(cloned_project.qgis_project.crs, self.p1.qgis_project.crs)
+
+    def test_clone_project_uses_source_qgis_version_for_worker_image(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)
+
+        ProjectSeed.objects.create(
+            project=self.p1,
+            extent=Polygon.from_bbox(projectseed_utils.DEFAULT_PROJECT_EXTENT),
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        Job.objects.create(
+            project=self.p1,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(self.p1)
+
+        # Force the source project to look like it was last saved with QGIS 4,
+        # so the clone's worker image selection has a QGIS 4 version to inherit.
+        self.p1.qgis_version = "4.2.1"
+        self.p1.save(update_fields=["qgis_version"])
+
+        cloned_project = Project.objects.create(name="cloned_project", owner=self.u1)
+
+        ProjectSeed.objects.create(
+            project=cloned_project,
+            clone_from_project=self.p1,
+            settings={
+                "schemaId": ProjectSeed.SETTINGS_SCHEMA_ID,
+                "basemaps": [],
+                "xlsform": None,
+            },
+        )
+
+        job = Job.objects.create(
+            project=cloned_project,
+            type=Job.Type.CREATE_PROJECT,
+            created_by=self.u1,
+        )
+
+        wait_for_project_ok_status(cloned_project)
+
+        job.refresh_from_db()
+
+        # `Job.qgis_version` reports the QGIS app version that actually ran the
+        # job, so this confirms the worker was spawned from the QGIS 4 image.
+        self.assertTrue(job.qgis_version.startswith("4."))
 
     def test_process_projectfile_job_sets_the_qgis_version(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.t1.key)

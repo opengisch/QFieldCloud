@@ -2,7 +2,6 @@ import inspect
 import io
 import json
 import sys
-import tempfile
 import traceback
 import uuid
 from collections.abc import Callable
@@ -18,6 +17,7 @@ from qfc_worker.exceptions import (
     WorkflowModificationException,
     WorkflowValidationException,
 )
+from qfc_worker.utils import PROJECT_DOWNLOAD_DIR
 
 
 class Workflow:
@@ -246,7 +246,8 @@ def run_workflow(
     step_returns = {}
 
     try:
-        root_workdir = Path(tempfile.mkdtemp())
+        root_workdir = Path(PROJECT_DOWNLOAD_DIR)
+        root_workdir.mkdir(parents=True, exist_ok=True)
         for step in workflow.steps:
             with logger_context(step):
                 arguments = {

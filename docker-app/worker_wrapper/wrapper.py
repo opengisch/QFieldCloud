@@ -715,6 +715,37 @@ class CreateProjectJobRun(JobRun):
         "%(project__id)s",
     ]
 
+    def get_qgis_image(self) -> str:
+        """Picks the QGIS image with the version of the clone project.
+
+        If the clone project doesn't have one, uses the source project's QGIS version.
+
+        A clone's own `qgis_version` is still unset at this point, so
+        without this, we'd always fall through to `JobRun.get_qgis_image()`'s
+        QGIS 3 default instead of matching the source project's version.
+        """
+        clone_from_project = None
+        if hasattr(self.job.project, "seed"):
+            clone_from_project = self.job.project.seed.clone_from_project
+
+        if (
+            self.job.project.qgis_version
+            or not clone_from_project
+            or not clone_from_project.qgis_version
+        ):
+            return super().get_qgis_image()
+
+        qgis_major_project_version = get_qgis_major_version(
+            clone_from_project.qgis_version
+        )
+
+        if qgis_major_project_version not in self.qgis_images:
+            raise JobException(
+                f"Unsupported QGIS major version {qgis_major_project_version} for project {self.job.project.id} cloned from project {clone_from_project.id} stored with {clone_from_project.qgis_version}."
+            )
+
+        return self.qgis_images[qgis_major_project_version]
+
 
 def cancel_orphaned_workers() -> None:
     client: docker.client.DockerClient = docker.from_env()

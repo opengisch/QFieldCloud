@@ -29,6 +29,7 @@ from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
     testdata_path,
 )
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.models import Subscription
 
@@ -75,7 +76,7 @@ class QfcTestCase(APITransactionTestCase):
             is_public=False,
             owner=self.user2,
         )
-        self.project1.save()
+        self.project2.save()
 
         self.project3 = Project.objects.create(
             name="project3",
@@ -91,7 +92,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.REPORTER,
+            role=ProjectCollaboratorRole.REPORTER,
         )
         OrganizationMember.objects.create(
             organization=self.org1,
@@ -100,24 +101,13 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user3,
-            role=ProjectCollaborator.Roles.ADMIN,
+            role=ProjectCollaboratorRole.ADMIN,
         )
 
     def tearDown(self):
         while True:
             # make sure there are no active jobs in the queue
-            if (
-                Job.objects.all()
-                .filter(
-                    status__in=[
-                        Job.Status.PENDING,
-                        Job.Status.QUEUED,
-                        Job.Status.STARTED,
-                    ]
-                )
-                .count()
-                == 0
-            ):
+            if not Job.objects.unfinished().exists():
                 time.sleep(1)
                 return
 
@@ -1264,6 +1254,10 @@ class QfcTestCase(APITransactionTestCase):
         immediate_values=None,
         deltafile_id=None,
     ):
+        # print(
+        #     f"Uploading and checking deltas for project {project.id} and deltafile {delta_filename}"
+        # )
+
         if failing_status is None:
             failing_status = ["STATUS_ERROR"]
 
@@ -1302,6 +1296,8 @@ class QfcTestCase(APITransactionTestCase):
         failing_status=None,
         immediate_values=None,
     ):
+        # print(f"Checking deltas for project {project.id} and deltafile {deltafile_id}")
+
         if failing_status is None:
             failing_status = ["STATUS_ERROR"]
 
@@ -1338,8 +1334,14 @@ class QfcTestCase(APITransactionTestCase):
             type=Job.Type.DELTA_APPLY,
         ).latest("updated_at")
 
-        for _ in range(10):
+        total_attempts = 10
+        for attempt_idx in range(total_attempts):
             time.sleep(3)
+
+            # print(
+            #     f"[{attempt_idx + 1}/{total_attempts}] Waiting for job {job.id} to finish, current status: {job.status}"
+            # )
+
             response = self.client.get(uri)
 
             self.assertHttpOk(response)

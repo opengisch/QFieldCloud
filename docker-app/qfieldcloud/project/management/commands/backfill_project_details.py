@@ -66,10 +66,13 @@ class Command(BaseCommand):
             if dry_run:
                 continue
 
-            with transaction.atomic():
-                result = backfill_qgis_project(project)
+            try:
+                with transaction.atomic():
+                    result = backfill_qgis_project(project)
 
-            counts[result] += 1
+                counts[result] += 1
+            except Exception as err:  # noqa: BLE001
+                print(f'Failed project migration "{project.id}": {str(err)}')
 
         if dry_run:
             print(

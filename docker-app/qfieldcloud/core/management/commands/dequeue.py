@@ -18,8 +18,6 @@ from worker_wrapper.wrapper import (
     cancel_orphaned_workers,
 )
 
-SECONDS = 5
-
 
 class GracefulKiller:
     alive = True
@@ -107,7 +105,7 @@ class Command(BaseCommand):
                 if single_shot:
                     break
 
-                for _i in range(SECONDS):
+                for _i in range(settings.QFIELDCLOUD_WORKER_DEQUEUE_INTERVAL_S):
                     if killer.alive:
                         cancel_orphaned_workers()
                         sleep(1)

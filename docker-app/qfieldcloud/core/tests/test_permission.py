@@ -18,6 +18,7 @@ from qfieldcloud.core.tests.utils import (
     setup_subscription_plans,
     testdata_path,
 )
+from qfieldcloud.project.enums import ProjectCollaboratorRole
 from qfieldcloud.project.models import Project
 
 logging.disable(logging.CRITICAL)
@@ -80,7 +81,7 @@ class QfcTestCase(APITestCase):
         ProjectCollaborator.objects.create(
             project=project,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.READER,
+            role=ProjectCollaboratorRole.READER,
         )
         OrganizationMember.objects.create(
             organization=self.organization1,
@@ -107,7 +108,7 @@ class QfcTestCase(APITestCase):
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.READER,
+            role=ProjectCollaboratorRole.READER,
         )
 
         file_path = testdata_path("file.txt")
@@ -133,7 +134,7 @@ class QfcTestCase(APITestCase):
         self.collaborator1 = ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.REPORTER,
+            role=ProjectCollaboratorRole.REPORTER,
         )
 
         file_path = testdata_path("file.txt")

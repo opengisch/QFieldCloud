@@ -9,12 +9,11 @@ from qfieldcloud.core.models import (
     Organization,
     OrganizationMember,
     OrganizationQueryset,
-    ProjectCollaborator,
     Secret,
     Team,
 )
 from qfieldcloud.core.models import User as QfcUser
-from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
 from qfieldcloud.project.models import Project
 from qfieldcloud.subscription.exceptions import (
     InactiveSubscriptionError,
@@ -76,7 +75,7 @@ def _organization_of_owner(user: QfcUser, organization: Organization):
 def user_has_project_roles(
     user: QfcUser,
     project: Project,
-    roles: list[ProjectCollaborator.Roles],
+    roles: list[ProjectCollaboratorRole],
     skip_invalid: bool = False,
 ):
     return (
@@ -87,7 +86,7 @@ def user_has_project_roles(
 
 
 def check_user_has_project_roles(
-    user: QfcUser, project: Project, roles: list[ProjectCollaborator.Roles]
+    user: QfcUser, project: Project, roles: list[ProjectCollaboratorRole]
 ) -> Literal[True]:
     if user_has_project_roles(user, project, roles):
         return True
@@ -255,7 +254,7 @@ def can_delete_secret(user: QfcUser, secret: Secret) -> bool:
             user,
             secret.project,
             [
-                ProjectCollaborator.Roles.ADMIN,
+                ProjectCollaboratorRole.ADMIN,
             ],
         )
     else:
@@ -269,11 +268,11 @@ def can_access_project(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-            ProjectCollaborator.Roles.READER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
+            ProjectCollaboratorRole.READER,
         ],
     )
 
@@ -283,11 +282,11 @@ def can_retrieve_project(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-            ProjectCollaborator.Roles.READER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
+            ProjectCollaboratorRole.READER,
         ],
         True,
     )
@@ -298,8 +297,8 @@ def can_update_project(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -309,8 +308,8 @@ def can_delete_project(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -320,10 +319,10 @@ def can_create_files(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
         ],
     )
 
@@ -334,8 +333,8 @@ def can_modify_qgis_projectfile(user: QfcUser, project: Project) -> bool:
             user,
             project,
             [
-                ProjectCollaborator.Roles.ADMIN,
-                ProjectCollaborator.Roles.MANAGER,
+                ProjectCollaboratorRole.ADMIN,
+                ProjectCollaboratorRole.MANAGER,
             ],
         )
     else:
@@ -343,10 +342,10 @@ def can_modify_qgis_projectfile(user: QfcUser, project: Project) -> bool:
             user,
             project,
             [
-                ProjectCollaborator.Roles.ADMIN,
-                ProjectCollaborator.Roles.MANAGER,
-                ProjectCollaborator.Roles.EDITOR,
-                ProjectCollaborator.Roles.REPORTER,
+                ProjectCollaboratorRole.ADMIN,
+                ProjectCollaboratorRole.MANAGER,
+                ProjectCollaboratorRole.EDITOR,
+                ProjectCollaboratorRole.REPORTER,
             ],
         )
 
@@ -364,11 +363,11 @@ def can_read_files(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-            ProjectCollaborator.Roles.READER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
+            ProjectCollaboratorRole.READER,
         ],
     )
 
@@ -378,9 +377,9 @@ def can_delete_files(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
         ],
     )
 
@@ -390,7 +389,7 @@ def can_delete_unnecessary_file_versions(user: QfcUser, project: Project) -> boo
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaboratorRole.ADMIN,
         ],
     )
 
@@ -404,10 +403,10 @@ def can_create_deltas(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
         ],
     )
 
@@ -420,10 +419,10 @@ def can_read_deltas(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
         ],
     )
 
@@ -436,8 +435,8 @@ def can_apply_pending_deltas_for_project(user: QfcUser, project: Project) -> boo
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -450,8 +449,8 @@ def can_set_delta_status_for_project(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -485,14 +484,14 @@ def can_create_delta(user: QfcUser, delta: Delta) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
         ],
     ):
         return True
 
-    if user_has_project_roles(user, project, [ProjectCollaborator.Roles.REPORTER]):
+    if user_has_project_roles(user, project, [ProjectCollaboratorRole.REPORTER]):
         if delta.method == Delta.Method.Create:
             return True
 
@@ -505,11 +504,11 @@ def can_list_jobs(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-            ProjectCollaborator.Roles.READER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
+            ProjectCollaboratorRole.READER,
         ],
     )
 
@@ -520,24 +519,27 @@ def can_read_jobs(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
         ],
     )
 
 
 def can_create_jobs(user: QfcUser, project: Project, job_type: Job.Type) -> bool:
     """Check if the user has permission to create a job of the given type."""
+    if job_type == Job.Type.PACKAGE and not project.is_regular_project:
+        return False
+
     if job_type == Job.Type.PACKAGE:
-        roles = list(ProjectCollaborator.Roles)
+        roles = list(ProjectCollaboratorRole)
     elif job_type in (Job.Type.PROCESS_PROJECTFILE, Job.Type.DELTA_APPLY):
         roles = [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
         ]
     else:
         raise NotImplementedError(f'Unknown job type "{job_type}"')
@@ -550,7 +552,7 @@ def can_read_project_secrets(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaboratorRole.ADMIN,
         ],
     )
 
@@ -560,7 +562,7 @@ def can_create_project_secrets(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaboratorRole.ADMIN,
         ],
     )
 
@@ -570,7 +572,7 @@ def can_delete_project_secrets(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
+            ProjectCollaboratorRole.ADMIN,
         ],
     )
 
@@ -620,8 +622,8 @@ def can_create_collaborators(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -631,8 +633,8 @@ def can_read_collaborators(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -642,8 +644,8 @@ def can_update_collaborators(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -653,8 +655,8 @@ def can_delete_collaborators(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
         ],
     )
 
@@ -664,11 +666,11 @@ def can_read_packages(user: QfcUser, project: Project) -> bool:
         user,
         project,
         [
-            ProjectCollaborator.Roles.ADMIN,
-            ProjectCollaborator.Roles.MANAGER,
-            ProjectCollaborator.Roles.EDITOR,
-            ProjectCollaborator.Roles.REPORTER,
-            ProjectCollaborator.Roles.READER,
+            ProjectCollaboratorRole.ADMIN,
+            ProjectCollaboratorRole.MANAGER,
+            ProjectCollaboratorRole.EDITOR,
+            ProjectCollaboratorRole.REPORTER,
+            ProjectCollaboratorRole.READER,
         ],
     )
 

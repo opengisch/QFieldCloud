@@ -2,6 +2,14 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext as _
 
 
+class ProjectCollaboratorRole(models.TextChoices):
+    ADMIN = "admin", _("Admin")
+    MANAGER = "manager", _("Manager")
+    EDITOR = "editor", _("Editor")
+    REPORTER = "reporter", _("Reporter")
+    READER = "reader", _("Reader")
+
+
 class ProjectRoleOrigins(models.TextChoices):
     PROJECTOWNER = "project_owner", _("Project owner")
     ORGANIZATIONOWNER = "organization_owner", _("Organization owner")
@@ -41,7 +49,7 @@ class QgsGeometryType(models.IntegerChoices):
     Null = 4, _("Null")
 
 
-class QgsLayerErrorCode(models.TextChoices):
+class LayerErrorCode(models.TextChoices):
     """QFieldCloud's own error taxonomy for layer processing.
     Values are produced in `docker-qgis/qfc_worker/utils.py`.
     Keep this in sync with that file.

@@ -29,7 +29,11 @@ from qfieldcloud.core.tests.utils import (
     wait_for_project_ok_status,
 )
 from qfieldcloud.filestorage.models import File, FileVersion
-from qfieldcloud.project.enums import QgsGeometryType, QgsLayerType
+from qfieldcloud.project.enums import (
+    ProjectCollaboratorRole,
+    QgsGeometryType,
+    QgsLayerType,
+)
 from qfieldcloud.project.models import (
     SHARED_DATASETS_PROJECT_NAME,
     Project,
@@ -317,7 +321,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.MANAGER,
+            role=ProjectCollaboratorRole.MANAGER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -401,7 +405,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project4,
             collaborator=self.user1,
-            role=ProjectCollaborator.Roles.MANAGER,
+            role=ProjectCollaboratorRole.MANAGER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -444,7 +448,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(collaborators), 1)
         self.assertEqual(collaborators[0].project, self.project1)
         self.assertEqual(collaborators[0].collaborator, self.user2)
-        self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.EDITOR)
+        self.assertEqual(collaborators[0].role, ProjectCollaboratorRole.EDITOR)
 
     def test_get_collaborator(self):
         # Create a project of user1
@@ -456,7 +460,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.REPORTER,
+            role=ProjectCollaboratorRole.REPORTER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -477,7 +481,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.REPORTER,
+            role=ProjectCollaboratorRole.REPORTER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -494,7 +498,7 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(len(collaborators), 1)
         self.assertEqual(collaborators[0].project, self.project1)
         self.assertEqual(collaborators[0].collaborator, self.user2)
-        self.assertEqual(collaborators[0].role, ProjectCollaborator.Roles.ADMIN)
+        self.assertEqual(collaborators[0].role, ProjectCollaboratorRole.ADMIN)
 
     def test_delete_collaborator(self):
         # Create a project of user1
@@ -506,7 +510,7 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=self.project1,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.REPORTER,
+            role=ProjectCollaboratorRole.REPORTER,
         )
 
         self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
@@ -590,6 +594,69 @@ class QfcTestCase(APITransactionTestCase):
         self.assertEqual(json[1]["user_role"], "reader")
         self.assertEqual(json[1]["user_role_origin"], "public")
 
+    def test_public_project_uses_public_collaborator_role(self):
+        """A public project's `public_collaborator_role` determines the role
+        granted to non-collaborators, and only while the project stays public.
+
+        Both projects are owned by user2 and queried as user1 below, so the
+        asserted roles always come from the `public` origin, not ownership.
+        """
+
+        # Default `public_collaborator_role` is `reader`
+        project1 = Project.objects.create(
+            name="project1", is_public=True, owner=self.user2
+        )
+
+        self.assertEqual(
+            project1.public_collaborator_role, ProjectCollaboratorRole.READER
+        )
+
+        # A public project with a non-default `public_collaborator_role` grants that role
+        project2 = Project.objects.create(
+            name="project2",
+            is_public=True,
+            owner=self.user2,
+            public_collaborator_role=ProjectCollaboratorRole.EDITOR,
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token1.key)
+
+        def get_user_role(project):
+            response = self.client.get(f"/api/v1/projects/{project.pk}/", follow=True)
+            self.assertTrue(status.is_success(response.status_code))
+            return response.json()["user_role"]
+
+        self.assertEqual(get_user_role(project1), "reader")
+        self.assertEqual(get_user_role(project2), "editor")
+
+        # `public_collaborator_role` only takes effect while the project is public
+        project2.is_public = False
+        project2.save()
+
+        response = self.client.get(f"/api/v1/projects/{project2.pk}/", follow=True)
+        self.assertEqual(response.status_code, 403)
+
+        # Changing `public_collaborator_role` on an already-public project takes effect immediately
+        project2.is_public = True
+        project2.public_collaborator_role = ProjectCollaboratorRole.REPORTER
+        project2.save()
+
+        self.assertEqual(get_user_role(project2), "reporter")
+
+    def test_public_collaborator_role_rejects_privileged_roles(self):
+        """`public_collaborator_role` must not allow granting `admin` and `manager`
+        to everyone, since that role is handed out to any user once a project is public.
+        """
+        for role in (ProjectCollaboratorRole.ADMIN, ProjectCollaboratorRole.MANAGER):
+            with self.subTest(role=role):
+                with self.assertRaises(ValidationError):
+                    Project.objects.create(
+                        name="project1",
+                        is_public=True,
+                        owner=self.user1,
+                        public_collaborator_role=role,
+                    )
+
     def test_private_project_memberships(self):
         """Tests for QF-1553 - limit collaboration on private projects"""
 
@@ -622,7 +689,7 @@ class QfcTestCase(APITransactionTestCase):
 
         # Project is public, collaboration membership is valid
         ProjectCollaborator.objects.create(
-            project=p, collaborator=self.user1, role=ProjectCollaborator.Roles.MANAGER
+            project=p, collaborator=self.user1, role=ProjectCollaboratorRole.MANAGER
         )
         assertRole("manager", "collaborator")
 
@@ -649,7 +716,9 @@ class QfcTestCase(APITransactionTestCase):
         # cannot add project collaborator if not already an org member
         with self.assertRaises(ValidationError):
             ProjectCollaborator.objects.create(
-                project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
+                project=p1,
+                collaborator=u2,
+                role=ProjectCollaboratorRole.MANAGER,
             )
 
     def test_direct_collaborators(self):
@@ -662,7 +731,7 @@ class QfcTestCase(APITransactionTestCase):
         c1 = ProjectCollaborator.objects.create(
             project=p1,
             collaborator=u2,
-            role=ProjectCollaborator.Roles.MANAGER,
+            role=ProjectCollaboratorRole.MANAGER,
             is_incognito=False,
         )
 
@@ -687,7 +756,7 @@ class QfcTestCase(APITransactionTestCase):
         TeamMember.objects.create(team=t1, member=self.user3)
         project = Project.objects.create(name="p", is_public=False, owner=o1)
         ProjectCollaborator.objects.create(
-            project=project, collaborator=t1, role=ProjectCollaborator.Roles.REPORTER
+            project=project, collaborator=t1, role=ProjectCollaboratorRole.REPORTER
         )
         self.assertEqual(project.total_collaborators_count, 2)
 
@@ -703,10 +772,10 @@ class QfcTestCase(APITransactionTestCase):
         ProjectCollaborator.objects.create(
             project=project,
             collaborator=self.user2,
-            role=ProjectCollaborator.Roles.MANAGER,
+            role=ProjectCollaboratorRole.MANAGER,
         )
         ProjectCollaborator.objects.create(
-            project=project, collaborator=t1, role=ProjectCollaborator.Roles.REPORTER
+            project=project, collaborator=t1, role=ProjectCollaboratorRole.REPORTER
         )
         self.assertEqual(project.total_collaborators_count, 2)  # user2, user3
 
@@ -719,7 +788,7 @@ class QfcTestCase(APITransactionTestCase):
         TeamMember.objects.create(team=t1, member=self.user2)
         project = Project.objects.create(name="p", is_public=False, owner=o1)
         ProjectCollaborator.objects.create(
-            project=project, collaborator=t1, role=ProjectCollaborator.Roles.REPORTER
+            project=project, collaborator=t1, role=ProjectCollaboratorRole.REPORTER
         )
         self.assertEqual(project.total_collaborators_count, 1)  # only user2, not user1
 
@@ -732,7 +801,7 @@ class QfcTestCase(APITransactionTestCase):
         # add project collaborator if the user is already an organization member
         OrganizationMember.objects.create(organization=o1, member=u2)
         ProjectCollaborator.objects.create(
-            project=p1, collaborator=u2, role=ProjectCollaborator.Roles.MANAGER
+            project=p1, collaborator=u2, role=ProjectCollaboratorRole.MANAGER
         )
 
     def test_add_team_member_without_being_org_member(self):
@@ -1328,10 +1397,10 @@ class QfcTestCase(APITransactionTestCase):
 
         # Un authorized roles that are forbidden to upload a thumbnail
         unauthorized_roles = [
-            ProjectCollaborator.Roles.READER,
+            ProjectCollaboratorRole.READER,
         ]
 
-        for role in ProjectCollaborator.Roles:
+        for role in ProjectCollaboratorRole:
             collaborator_user = Person.objects.create_user(
                 username=f"user_{role}", password="abc123"
             )
@@ -1631,7 +1700,7 @@ class QfcTestCase(APITransactionTestCase):
             collaborator = ProjectCollaborator.objects.get(
                 project=project, collaborator=self.user2
             )
-            self.assertEqual(collaborator.role, ProjectCollaborator.Roles.ADMIN)
+            self.assertEqual(collaborator.role, ProjectCollaboratorRole.ADMIN)
 
         with self.subTest(
             "`organization_owner` gets implicit admin access to the project"

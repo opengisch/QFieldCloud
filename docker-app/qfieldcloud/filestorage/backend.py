@@ -3,13 +3,17 @@ import mimetypes
 import os
 from abc import ABC
 from typing import Any
+from urllib.parse import quote
 
 import requests
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.http import HttpResponse
+from requests.adapters import HTTPAdapter
+from requests.auth import HTTPBasicAuth
 from storages.backends.s3 import S3Storage
+from urllib3.util.retry import Retry
 
 from qfieldcloud.filestorage.constants import VERSION_SUFFIX_REGEX
 
@@ -91,6 +95,10 @@ class QfcS3Boto3Storage(QfcBackendStorageMixin, S3Storage):
         return params
 
 
+HTTP_RETRIES_COUNT = 3
+HTTP_RETRIES_BACKOFF_FACTOR = 0.5
+
+
 class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     """
     Storage backend using WebDAV.
@@ -99,8 +107,6 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     """
 
     def __init__(self, **options):
-        self.requests = self.get_requests_session(**options)
-
         self.webdav_url = options.get("webdav_url")
         if not self.webdav_url:
             raise ImproperlyConfigured("Please define the `webdav_url` storage option")
@@ -112,6 +118,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         self.basic_auth = options.get("basic_auth")
         if not self.basic_auth:
             raise ImproperlyConfigured("Please define the `basic_auth` storage option")
+
+        self.requests = self.get_requests_session(**options)
 
     def check_status(self) -> bool:
         """Checks if the WebDAV storage is reachable.
@@ -129,8 +137,25 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
     def get_requests_session(self, **kwargs) -> requests.Session:
         """
         Creates a HTTP session for requesting webdav later.
+        Authenticates using the `basic_auth` storage option.
         """
-        return requests.Session()
+        session = requests.Session()
+
+        retries = Retry(
+            total=HTTP_RETRIES_COUNT,
+            backoff_factor=HTTP_RETRIES_BACKOFF_FACTOR,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "PUT", "DELETE", "MKCOL"],
+        )
+
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
+        username, _, password = self.basic_auth.partition(":")
+        session.auth = HTTPBasicAuth(username, password)
+
+        return session
 
     def perform_webdav_request(
         self, method: str, name: str, *args, **kwargs
@@ -152,6 +177,16 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
 
         return response
 
+    def encode_webdav_path(self, name: str) -> str:
+        """
+        Encodes each segment of a relative file path.
+        """
+        segments = []
+        for segment in name.split("/"):
+            segments.append(quote(segment, safe=""))
+
+        return "/".join(segments)
+
     def get_webdav_url(self, name: str) -> str:
         """Returns the HTTP url for a webdav file.
 
@@ -161,7 +196,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Returns:
             HTTP url for the file.
         """
-        return self.webdav_url.rstrip("/") + "/" + name.lstrip("/")
+        encoded_name = self.encode_webdav_path(name.lstrip("/"))
+        return self.webdav_url.rstrip("/") + "/" + encoded_name
 
     def get_public_url(self, name: str) -> str:
         """Returns the public HTTP url for a webdav file.
@@ -172,7 +208,8 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         Returns:
             Public HTTP url for the file.
         """
-        return self.public_url.rstrip("/") + "/" + name.lstrip("/")
+        encoded_name = self.encode_webdav_path(name.lstrip("/"))
+        return self.public_url.rstrip("/") + "/" + encoded_name
 
     def _open(self, name: str, mode: str = "rb") -> ContentFile:
         """Reads the content of a file from the configured webdav storage.
@@ -218,14 +255,15 @@ class QfcWebDavStorage(QfcBackendStorageMixin, Storage):
         coll_path = self.webdav_url
 
         for directory in name.split("/")[:-1]:
-            col = os.path.join(coll_path, directory, "")
+            encoded_directory = quote(directory, safe="")
+            col = os.path.join(coll_path, encoded_directory, "")
             resp = self.requests.head(col)
 
             if not resp.ok:
                 resp = self.requests.request("MKCOL", col)
                 resp.raise_for_status()
 
-            coll_path = os.path.join(coll_path, directory)
+            coll_path = os.path.join(coll_path, encoded_directory)
 
     def delete(self, name: str) -> None:
         """Deletes a file from a configured webdav storage.
